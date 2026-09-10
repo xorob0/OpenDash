@@ -11,6 +11,8 @@ import type {
   Bindings,
   Border,
   Dashboard,
+  DrawableItem,
+  EllipseItem,
   Formula,
   Item,
   ItemBase,
@@ -31,16 +33,18 @@ export interface SerializeContext {
   packageName: string;
 }
 
-/** Json.NET `$type` strings of the four item kinds, verified against SimHub 9.12 exports. */
+/** Json.NET `$type` strings of the five item kinds, verified against SimHub 9.12 exports. */
 export const ITEM_TYPES = {
   text: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins',
   rect: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins',
+  ellipse: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.EllipseItem, SimHub.Plugins',
   layer: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins',
   widget: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.WidgetItem, SimHub.Plugins',
 } as const satisfies Record<Item['kind'], string>;
 
 export const DEFAULT_OPACITY = 100;
 export const DEFAULT_BLINK_DELAY_MS = 250;
+export const DEFAULT_ROTATION = 0;
 export const DEFAULT_SPECIAL_CHARS = '.,:';
 export const DEFAULT_GRID_SIZE = 5;
 export const METADATA_VERSION = 2;
@@ -138,16 +142,21 @@ const appendTail = (o: JsonObject, item: ItemBase, id: string): void => {
   o.MinimumRefreshIntervalMS = item.minimumRefreshIntervalMs ?? 0;
 };
 
-/** The DrawableItem keys shared by text, rectangle and widget items. */
-const appendDrawable = (o: JsonObject, item: TextItem | RectangleItem | WidgetItem, id: string, border: boolean): void => {
+/**
+ * The DrawableItem keys shared by text, rectangle, ellipse and widget items. `Rotation` follows
+ * `Height` and is omitted when 0 (SimHub uses DefaultValueHandling.IgnoreAndPopulate); it is
+ * only written for the kinds it is verified on (text, rectangle, ellipse), never for a widget.
+ */
+const appendDrawable = (o: JsonObject, item: DrawableItem, id: string, opts: { border: boolean; rotation: boolean }): void => {
   o.Left = item.rect.left;
   o.Top = item.rect.top;
   o.Width = item.rect.width;
   o.Height = item.rect.height;
+  if (opts.rotation && item.rotation !== undefined && item.rotation !== DEFAULT_ROTATION) o.Rotation = item.rotation;
   o.Visible = item.visible ?? true;
   o.BackgroundColor = normaliseHex(item.backgroundColor ?? TRANSPARENT);
   appendOpacityAndBlink(o, item);
-  if (border) o.BorderStyle = buildBorderObject(item.kind === 'widget' ? undefined : item.border);
+  if (opts.border) o.BorderStyle = buildBorderObject(item.kind === 'text' || item.kind === 'rect' ? item.border : undefined);
   appendTail(o, item, id);
 };
 
@@ -177,13 +186,25 @@ const buildTextObject = (item: TextItem, id: string): JsonObject => {
     o.SpecialChars = item.monospace.specialChars ?? DEFAULT_SPECIAL_CHARS;
   }
   o.TextWrapping = item.wrap ? 'Wrap' : 'NoWrap';
-  appendDrawable(o, item, id, true);
+  appendDrawable(o, item, id, { border: true, rotation: true });
   return o;
 };
 
 const buildRectObject = (item: RectangleItem, id: string): JsonObject => {
   const o: JsonObject = { $type: ITEM_TYPES.rect, IsRectangleItem: true };
-  appendDrawable(o, item, id, true);
+  appendDrawable(o, item, id, { border: true, rotation: true });
+  return o;
+};
+
+/** Ellipse keys as a SimHub 9.12 export writes them: fill, stroke colour and thickness, then the DrawableItem keys. */
+const buildEllipseObject = (item: EllipseItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.ellipse,
+    FillColor: normaliseHex(item.fillColor),
+    EllipseColor: normaliseHex(item.strokeColor),
+    EllipseThickness: item.strokeThickness,
+  };
+  appendDrawable(o, item, id, { border: true, rotation: true });
   return o;
 };
 
@@ -208,7 +229,7 @@ const buildWidgetObject = (item: WidgetItem, id: string): JsonObject => {
     EnableScreenRolesAndActivation: false,
     IgnoreSavedScreensEx: true,
   };
-  appendDrawable(o, item, id, false);
+  appendDrawable(o, item, id, { border: false, rotation: false });
   return o;
 };
 
@@ -224,6 +245,8 @@ export const buildItemObject = (item: Item, parentPath: string): JsonObject => {
       return buildTextObject(item, id);
     case 'rect':
       return buildRectObject(item, id);
+    case 'ellipse':
+      return buildEllipseObject(item, id);
     case 'layer':
       return buildLayerObject(item, id, path);
     case 'widget':

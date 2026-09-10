@@ -60,6 +60,12 @@ export function cells(weight: DataWeight, fs: number): Monospace {
  */
 export const GEAR_CELL = 0.52;
 
+/**
+ * Advance width of "KM/H" in Barlow Medium, in em, measured from the TTF (K 0.616, M 0.715,
+ * / 0.426, H 0.645). "MPH" is 1.953 em, so a box this wide holds either unit.
+ */
+export const UNIT_KMH_EM = 2.402;
+
 /** Integer monospace cells for the gear: the letter-wide cell with the Bold face's special cell. */
 export function gearCells(fs: number): Monospace {
   return { ...cells('Bold', fs), charWidth: Math.round(GEAR_CELL * fs) };

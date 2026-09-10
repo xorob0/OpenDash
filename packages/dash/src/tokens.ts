@@ -170,8 +170,10 @@ export const ds = {
     flashHz: num('shiftLights.flashHz'),
   },
   indicator: {
-    flagBand: { height: num('indicator.flagBand.height'), flashHz: num('indicator.flagBand.flashHz') },
-    pitLimiter: { height: num('indicator.pitLimiter.height') },
+    flagBand: { height: num('indicator.flagBand.height'), heightSm: num('indicator.flagBand.heightSm'), flashHz: num('indicator.flagBand.flashHz') },
+    /** The flag ring on round faces takes the band's place; its width is the ring's stroke. */
+    flagRing: { width: num('indicator.flagRing.width') },
+    pitLimiter: { height: num('indicator.pitLimiter.height'), heightSm: num('indicator.pitLimiter.heightSm') },
   },
   card: {
     rung: { L: rung('L'), M: rung('M'), S: rung('S') },

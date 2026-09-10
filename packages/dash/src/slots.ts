@@ -10,7 +10,7 @@ import { withBindings } from './bind.ts';
 import { CARDS } from './cards/index.ts';
 import { defaultCardForSlot, setting, slotSettingName } from './contract.ts';
 import { rect } from './design/geometry.ts';
-import type { Layout } from './layouts/layout.ts';
+import { cardRung, type Layout } from './layouts/layout.ts';
 import { TRANSPARENT } from './tokens.ts';
 
 const { eq, num } = ncalc;
@@ -31,13 +31,14 @@ export const cardOrigin = (layout: Layout): Rect => rect(0, 0, layout.slotSize.w
 /** One screen per card, in card-number order, so that a card number is a screen index. */
 export function cardScreens(layout: Layout): Screen[] {
   const origin = cardOrigin(layout);
+  const rung = cardRung(layout);
   return CARDS.map((card) => ({
     name: card.id,
     inGame: true,
     idle: true,
     pit: true,
     backgroundColor: layout.background,
-    items: card.build(origin, `${card.id}.`),
+    items: card.build(origin, `${card.id}.`, rung),
   }));
 }
 
@@ -60,6 +61,7 @@ export function widgetSlotItems(layout: Layout): WidgetItem[] {
 
 /** Every card in every slot, each in a Layer visible only when the slot setting selects it. */
 export function inlineSlotItems(layout: Layout): LayerItem[] {
+  const rung = cardRung(layout);
   return layout.slots.map((slot, i) => {
     const n = i + 1;
     const name = slotName(n);
@@ -70,7 +72,7 @@ export function inlineSlotItems(layout: Layout): LayerItem[] {
         (card): LayerItem => ({
           kind: 'layer',
           name: `${name}.${card.id}`,
-          children: card.build(slot, `${name}.${card.id}.`),
+          children: card.build(slot, `${name}.${card.id}.`, rung),
           ...withBindings({ Visible: eq(setting.slot(n), num(card.number)) }),
         }),
       ),

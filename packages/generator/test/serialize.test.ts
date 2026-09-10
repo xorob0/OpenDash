@@ -14,7 +14,7 @@ import {
   serializeDashboard,
   serializeMetadata,
 } from '../src/serialize.ts';
-import { dashboard, label, layer, numeral, rect, samplePackage, screen, widget } from './fixtures.ts';
+import { dashboard, ellipse, label, layer, numeral, rect, samplePackage, screen, widget } from './fixtures.ts';
 
 const CTX = { packageName: 'openDash' };
 
@@ -112,7 +112,7 @@ describe('metadata', () => {
 
 describe('items', () => {
   test('$type is the first key of every kind', () => {
-    const items: Item[] = [label('t', 'X'), rect('r'), layer('l', [rect('c')]), widget('w')];
+    const items: Item[] = [label('t', 'X'), rect('r'), ellipse('e'), layer('l', [rect('c')]), widget('w')];
     for (const item of items) {
       const o = buildItemObject(item, 'p');
       expect(Object.keys(o)[0]).toBe('$type');
@@ -123,6 +123,7 @@ describe('items', () => {
   test('type strings are the SimHub.Plugins class names', () => {
     expect(ITEM_TYPES.text).toBe('SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins');
     expect(ITEM_TYPES.rect).toBe('SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins');
+    expect(ITEM_TYPES.ellipse).toBe('SimHub.Plugins.OutputPlugins.GraphicalDash.Models.EllipseItem, SimHub.Plugins');
     expect(ITEM_TYPES.layer).toBe('SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins');
     expect(ITEM_TYPES.widget).toBe('SimHub.Plugins.OutputPlugins.GraphicalDash.Models.WidgetItem, SimHub.Plugins');
   });
@@ -186,6 +187,34 @@ describe('items', () => {
     expect(Object.keys(o)).toEqual(['$type', 'IsRectangleItem', ...COMMON_TAIL]);
     expect(o.IsRectangleItem).toBe(true);
     expect(o.BackgroundColor).toBe('#FF1C1F24');
+  });
+
+  test('ellipse item keys: fill, stroke colour and thickness before the DrawableItem keys, as a 9.12 export writes them', () => {
+    const o = buildItemObject(ellipse('ring'), 'p');
+    expect(Object.keys(o)).toEqual(['$type', 'FillColor', 'EllipseColor', 'EllipseThickness', ...COMMON_TAIL]);
+    expect(o).toMatchObject({
+      FillColor: '#00FFFFFF', EllipseColor: '#FFFFD400', EllipseThickness: 12,
+      Left: 6, Top: 6, Width: 468, Height: 468, Visible: true, BackgroundColor: '#00FFFFFF', BorderStyle: {}, Name: 'ring',
+    });
+    expect(o).not.toHaveProperty('IsRectangleItem');
+    expect(o).not.toHaveProperty('IsTextItem');
+  });
+
+  test('Rotation follows Height on text, rectangle and ellipse items and is omitted when 0', () => {
+    for (const item of [label('t', 'X', { rotation: -84 }), rect('r', { rotation: 12.5 }), ellipse('e', { rotation: 90 })]) {
+      const o = buildItemObject(item, 'p');
+      const keys = Object.keys(o);
+      expect(keys.indexOf('Rotation')).toBe(keys.indexOf('Height') + 1);
+      expect(keys.indexOf('Visible')).toBe(keys.indexOf('Rotation') + 1);
+      expect(o.Rotation).toBe(item.rotation);
+    }
+    expect(buildItemObject(rect('r'), 'p')).not.toHaveProperty('Rotation');
+    expect(buildItemObject(rect('r', { rotation: 0 }), 'p')).not.toHaveProperty('Rotation');
+    expect(buildItemObject(layer('l', [rect('c')]), 'p')).not.toHaveProperty('Rotation');
+  });
+
+  test('a widget never writes Rotation: SimHub is not verified to honour it there', () => {
+    expect(buildItemObject(widget('w', { rotation: 45 }), 'p')).not.toHaveProperty('Rotation');
   });
 
   test('layer has no geometry or background and nests children under Childrens', () => {

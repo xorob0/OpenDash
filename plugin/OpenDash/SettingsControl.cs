@@ -154,7 +154,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildLayout()
         {
             var caption = Ui.Caption("Any card in any slot. The same card may be assigned twice; the panel says so and does not prevent it.", 846);
-            return Ui.Section("Layout", caption, BuildSlotPicker(), BuildWarning());
+            var sizes = Ui.Caption("The picture is the 1920 x 480 face. A face with fewer slots uses the first ones: a 6-slot face shows Slot 01 to Slot 06.", 846);
+            return Ui.Section("Layout", caption, BuildSlotPicker(), sizes, BuildWarning());
         }
 
         /// <summary>A picture of the dash: the left 3 x 2 grid, the hero column, the right 3 x 2 grid (846 x 165).</summary>
@@ -272,7 +273,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildDashboard()
         {
             dashboardTitle = Ui.Body("openDash");
-            var caption = Ui.Caption("Installed in SimHub DashTemplates. Reinstall restores the embedded copy; settings are kept.");
+            var caption = Ui.Caption("One dashboard per screen size, installed in SimHub DashTemplates. Reinstall restores every embedded copy; settings are kept.");
             var text = Ui.VStack(4, dashboardTitle, caption);
             text.MaxWidth = 460;
             text.HorizontalAlignment = HorizontalAlignment.Left;
@@ -298,7 +299,7 @@ namespace OpenDashPlugin
             }
             button.Content = "Reinstall";
             button.MinWidth = 96;
-            button.ToolTip = "Extract the embedded dashboard into DashTemplates again. Your settings are kept.";
+            button.ToolTip = "Extract every embedded dashboard into DashTemplates again. Your settings are kept.";
             button.Click += (sender, args) => Reinstall();
             return button;
         }
@@ -321,40 +322,36 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Title "openDash <installed version>" and the status pill: a 6 px dot and a tracked label.</summary>
+        /// <summary>Title "openDash <installed version> · <n> dashboards" and the status pill: a 6 px dot and a tracked
+        /// label showing the worst status across the packages; the tooltip lists every dashboard with its own status.</summary>
         private void RefreshStatus()
         {
             var installer = plugin.Installer;
             var version = installer.InstalledVersion ?? installer.EmbeddedVersion ?? OpenDash.Version;
-            dashboardTitle.Text = "openDash " + version;
+            dashboardTitle.Text = DashboardInstaller.Summary(version, installer.PackageCount);
 
             string dot;
-            string text;
             var label = Theme.TextPrimary;
             switch (installer.Status)
             {
                 case InstallStatus.UpToDate:
                     dot = Theme.StatusUpToDate;
-                    text = "Up to date";
                     break;
                 case InstallStatus.UpdateAvailable:
                     dot = Theme.StatusUpdateAvailable;
-                    text = "Update available";
                     break;
                 case InstallStatus.Failed:
                     dot = Theme.StatusFailed;
-                    text = "Install failed";
                     break;
                 default:
                     dot = Theme.StatusNotInstalled;
-                    text = "Not installed";
                     label = Theme.TextLabel;
                     break;
             }
-            statusHost.Child = Ui.HStack(8, Ui.Dot(dot), Ui.Label(text, label));
-            statusHost.ToolTip = installer.Status == InstallStatus.Failed && installer.LastError != null
-                ? installer.LastError
-                : (installer.HasEmbeddedPackage ? null : "This build of the plugin carries no dashboard package.");
+            statusHost.Child = Ui.HStack(8, Ui.Dot(dot), Ui.Label(installer.Status.Label(), label));
+            statusHost.ToolTip = installer.HasEmbeddedPackage
+                ? (installer.Packages.Count > 0 ? installer.PackageReport() : installer.LastError)
+                : "This build of the plugin carries no dashboard package.";
         }
 
         // Footer

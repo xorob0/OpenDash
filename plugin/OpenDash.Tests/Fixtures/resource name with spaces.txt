@@ -1,0 +1,1 @@
+Embedded by OpenDash.Tests.csproj. MSBuild keeps the spaces of this file name in the manifest resource name.

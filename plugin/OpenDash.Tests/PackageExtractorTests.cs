@@ -1,11 +1,10 @@
-// PackageExtractorTests.cs: installs a synthetic .simhubdash into a fake SimHub root and checks the
-// folder, the sidecar version, the backup, the font copy rules and the refusal of unsafe entries. When the dash
-// has been built, the real package is read as well.
+// PackageExtractorTests.cs: installs a synthetic .simhubdash (SyntheticPackage in TestSupport.cs) into a fake SimHub
+// root and checks the folder, also one with spaces in its name, the sidecar version, the backup, the font copy rules
+// and the refusal of unsafe entries. When the dash has been built, the real package is read as well.
 using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -27,26 +26,12 @@ namespace OpenDashPlugin.Tests
 
         private static MemoryStream Package(string folder, string version, params (string name, string content)[] extra)
         {
-            var stream = new MemoryStream();
-            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
-            {
-                Add(zip, folder + "/" + folder + ".djson", "{\"Version\":2}");
-                Add(zip, folder + "/" + folder + ".djson.metadata", "{\"Title\":\"openDash\",\"DashboardVersion\":\"" + version + "\"}");
-                Add(zip, folder + "/cards.djson", "{\"Version\":2}");
-                Add(zip, folder + "/_SHFonts/Barlow-Medium.ttf", "font-a");
-                Add(zip, folder + "/_SHFonts/BarlowCondensed-Bold.ttf", "font-b");
-                foreach (var (name, content) in extra) Add(zip, name, content);
-            }
-            stream.Position = 0;
-            return stream;
+            return SyntheticPackage.Zip(folder, version, extra);
         }
 
         private static void Add(ZipArchive zip, string name, string content)
         {
-            using (var writer = new StreamWriter(zip.CreateEntry(name).Open(), new UTF8Encoding(false)))
-            {
-                writer.Write(content);
-            }
+            SyntheticPackage.Add(zip, name, content);
         }
 
         private string Templates(string folder) => Path.Combine(root, "DashTemplates", folder);
@@ -112,6 +97,46 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_folder_name_with_spaces_is_read_from_the_zip_and_installed_as_it_is()
+        {
+            const string folder = "openDash 1280x480";
+            using (var package = Package(folder, "0.2.0"))
+            {
+                string read;
+                Assert.Equal("0.2.0", PackageExtractor.ReadPackageVersion(package, out read));
+                Assert.Equal(folder, read);
+            }
+
+            InstallResult result;
+            using (var package = Package(folder, "0.2.0")) result = PackageExtractor.Install(package, root, null);
+
+            Assert.Equal(folder, result.FolderName);
+            Assert.Equal("0.2.0", result.Version);
+            Assert.True(Directory.Exists(Templates(folder)));
+            Assert.True(File.Exists(Path.Combine(Templates(folder), folder + ".djson")));
+            Assert.True(File.Exists(Path.Combine(Templates(folder), folder + ".djson.metadata")));
+            Assert.True(PackageExtractor.IsInstalled(root, folder));
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, folder));
+            Assert.False(PackageExtractor.IsInstalled(root, "openDash"));
+
+            using (var package = Package(folder, "0.3.0")) result = PackageExtractor.Install(package, root, null);
+            Assert.Equal(Path.Combine(root, "DashTemplates", folder + "_backup.zip"), result.BackupPath);
+            Assert.Equal("0.3.0", PackageExtractor.ReadInstalledVersion(root, folder));
+        }
+
+        [Fact]
+        public void Two_packages_live_side_by_side_under_DashTemplates()
+        {
+            using (var package = Package("openDash", "0.2.0")) PackageExtractor.Install(package, root, null);
+            using (var package = Package("openDash 800 round", "0.2.0")) PackageExtractor.Install(package, root, null);
+
+            Assert.True(PackageExtractor.IsInstalled(root, "openDash"));
+            Assert.True(PackageExtractor.IsInstalled(root, "openDash 800 round"));
+            Assert.Equal(new[] { "openDash", "openDash 800 round" },
+                Directory.GetDirectories(Path.Combine(root, "DashTemplates")).Select(Path.GetFileName).OrderBy(name => name, StringComparer.Ordinal));
+        }
+
+        [Fact]
         public void Install_replaces_an_existing_folder_and_keeps_a_backup()
         {
             using (var package = Package("openDash", "0.1.0")) PackageExtractor.Install(package, root, null);
@@ -174,14 +199,6 @@ namespace OpenDashPlugin.Tests
             using (var package = Package("openDash", "0.2.0")) PackageExtractor.Install(package, root, log);
             Assert.Contains(log.Lines, line => line.StartsWith("info: Installed openDash 0.2.0"));
             Assert.Equal(2, log.Lines.Count(line => line.StartsWith("info: Installed font")));
-        }
-
-        private sealed class ListLog : IInstallLog
-        {
-            public System.Collections.Generic.List<string> Lines { get; } = new System.Collections.Generic.List<string>();
-            public void Info(string message) => Lines.Add("info: " + message);
-            public void Warn(string message) => Lines.Add("warn: " + message);
-            public void Error(string message) => Lines.Add("error: " + message);
         }
     }
 

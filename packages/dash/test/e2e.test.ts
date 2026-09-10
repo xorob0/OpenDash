@@ -1,7 +1,8 @@
 /**
  * End to end: run the build into a temporary directory and inspect what SimHub would import:
- * the folder layout, the zip listing, the manifest, `$type` first on every item, every colour
- * as #AARRGGBB, sidecars, fonts, widget references, both strategies, and the validation gate.
+ * one folder and zip per layout (folder names with spaces included), the manifest, `$type`
+ * first on every item, every colour as #AARRGGBB, sidecars, fonts, widget references, both
+ * strategies, reproducibility, and the validation gate.
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
@@ -10,8 +11,9 @@ import { join } from 'node:path';
 import { build, BuildError, DEFAULT_OUT_DIR, main, MANIFEST_FILE, parseArgs, readVersion, validateOrThrow, type BuildResult } from '../src/build.ts';
 import { CARD_CATALOGUE } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
-import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, listFiles, readZip } from '../src/generator.ts';
+import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, listFiles, PACKAGE_EXTENSION, readZip } from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
+import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
 import { CARDS_FILE } from '../src/slots.ts';
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -33,15 +35,17 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-const EXPECTED_FILES = [
-  `${FONTS_DIR}/Barlow-Medium.ttf`,
-  `${FONTS_DIR}/BarlowCondensed-Bold.ttf`,
-  `${FONTS_DIR}/BarlowCondensed-SemiBold.ttf`,
-  'cards.djson',
-  'cards.djson.metadata',
-  'openDash.djson',
-  'openDash.djson.metadata',
-];
+const FONT_FILES = [`${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/BarlowCondensed-Bold.ttf`, `${FONTS_DIR}/BarlowCondensed-SemiBold.ttf`];
+
+const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+/** The files of a package folder as listFiles orders them (sorted by code unit). */
+const expectedFiles = (folder: string, cards = true): string[] =>
+  [...FONT_FILES, ...(cards ? [CARDS_FILE, `${CARDS_FILE}.metadata`] : []), `${folder}.djson`, `${folder}.djson.metadata`].sort(byCodeUnit);
+
+const EXPECTED_FILES = expectedFiles('openDash');
+const FOLDERS = LAYOUTS.map((l) => l.folder);
+const zipName = (folder: string): string => `${folder}${PACKAGE_EXTENSION}`;
 
 const readJson = (file: string): JsonItem => JSON.parse(readFileSync(file, 'utf8')) as JsonItem;
 
@@ -76,82 +80,116 @@ const stringsOf = (value: Json, key = '', out: { key: string; value: string }[] 
   return out;
 };
 
-/** The four Json.NET type strings, widened so that any string can be checked against them. */
+/** The five Json.NET type strings, widened so that any string can be checked against them. */
 const TYPE_STRINGS: readonly string[] = Object.values(ITEM_TYPES);
 
 const djsonFiles = (folder: string): string[] => listFiles(folder).filter((f) => f.endsWith('.djson')).map((f) => join(folder, f));
 
 describe('widget build on disk', () => {
-  test('writes the folder, the sidecars, the fonts, the zip and the manifest', () => {
-    const folder = join(widget.out, 'openDash');
-    expect(widget.packages).toHaveLength(1);
-    expect(widget.packages[0]!.written.folder).toBe(folder);
-    expect(listFiles(folder)).toEqual(EXPECTED_FILES);
-    expect(existsSync(join(widget.out, 'openDash.simhubdash'))).toBe(true);
+  test('writes a folder, its sidecars, the fonts and a zip per layout, plus the manifest', () => {
+    expect(widget.packages.map((p) => p.layout.folder)).toEqual(FOLDERS);
+    for (const p of widget.packages) {
+      const folder = join(widget.out, p.layout.folder);
+      expect(p.written.folder).toBe(folder);
+      expect(listFiles(folder)).toEqual(expectedFiles(p.layout.folder));
+      expect(existsSync(join(widget.out, zipName(p.layout.folder)))).toBe(true);
+    }
+    expect(listFiles(join(widget.out, 'openDash'))).toEqual(EXPECTED_FILES);
     expect(existsSync(join(widget.out, MANIFEST_FILE))).toBe(true);
-    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, 'openDash', 'openDash.simhubdash']);
+    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, ...FOLDERS, ...FOLDERS.map(zipName)].sort());
   });
 
-  test('the manifest records version, SimHub version and the package', () => {
+  test('folder names with spaces are written and zipped as they are', () => {
+    const spaced = LAYOUTS.filter((l) => l.folder.includes(' '));
+    expect(spaced.length).toBeGreaterThan(0);
+    for (const layout of spaced) {
+      const folder = join(widget.out, layout.folder);
+      expect(existsSync(join(folder, `${layout.folder}.djson`))).toBe(true);
+      expect(existsSync(join(folder, `${layout.folder}.djson.metadata`))).toBe(true);
+      const zipped = widget.packages.find((p) => p.layout === layout)!.zipped;
+      expect(zipped.path).toBe(join(widget.out, zipName(layout.folder)));
+      expect(zipped.entries.every((e) => e.startsWith(`${layout.folder}/`))).toBe(true);
+    }
+  });
+
+  test('the manifest records version, SimHub version and every package with its slot count and rung', () => {
     const manifest = readJson(join(widget.out, MANIFEST_FILE));
-    expect(manifest).toEqual({
-      version: readVersion(),
-      simHubVersion: '9.12.6',
-      packages: [{ folder: 'openDash', width: 1920, height: 480, slots: 12, file: 'openDash.simhubdash' }],
-    });
+    const entry = (l: Layout): JsonItem => ({ folder: l.folder, width: l.width, height: l.height, slots: l.slots.length, rung: rungOf(l), file: zipName(l.folder) });
+    expect(manifest).toEqual({ version: readVersion(), simHubVersion: '9.12.6', packages: LAYOUTS.map(entry) });
+    expect((manifest.packages as JsonItem[])[0]).toEqual({ folder: 'openDash', width: 1920, height: 480, slots: 12, rung: 'L', file: 'openDash.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 850x480', width: 850, height: 480, slots: 6, rung: 'M', file: 'openDash 850x480.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 480 round', width: 480, height: 480, slots: 2, rung: 'S', file: 'openDash 480 round.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 1280x480', width: 1280, height: 480, slots: 8, rung: 'M', file: 'openDash 1280x480.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 1280x400', width: 1280, height: 400, slots: 8, rung: 'M', file: 'openDash 1280x400.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 800x480', width: 800, height: 480, slots: 6, rung: 'M', file: 'openDash 800x480.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 1280x720', width: 1280, height: 720, slots: 12, rung: 'M', file: 'openDash 1280x720.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 800x286', width: 800, height: 286, slots: 4, rung: 'M', file: 'openDash 800x286.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 600x686', width: 600, height: 686, slots: 6, rung: 'M', file: 'openDash 600x686.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 800 round', width: 800, height: 800, slots: 6, rung: 'M', file: 'openDash 800 round.simhubdash' });
+    expect((manifest.packages as JsonItem[]).map((p) => p.folder)).toEqual(['openDash', 'openDash 1280x480', 'openDash 1280x400', 'openDash 850x480', 'openDash 800x480', 'openDash 1280x720', 'openDash 800x286', 'openDash 600x686', 'openDash 480 round', 'openDash 800 round']);
     expect(manifest).toEqual(widget.manifest as unknown as JsonItem);
     expect(Object.keys(manifest)).toEqual(['version', 'simHubVersion', 'packages']);
+    for (const p of manifest.packages as JsonItem[]) expect(Object.keys(p)).toEqual(['folder', 'width', 'height', 'slots', 'rung', 'file']);
     expect(readFileSync(widget.manifestPath, 'utf8').endsWith('\n')).toBe(true);
   });
 
-  test('the zip lists <folder>/… entries, sorted, matching the files on disk', () => {
-    const zipped = widget.packages[0]!.zipped;
-    const bytes = readFileSync(zipped.path);
-    expect(Buffer.compare(bytes, zipped.bytes)).toBe(0);
-    const expected = EXPECTED_FILES.map((f) => `openDash/${f}`);
-    expect(zipped.entries).toEqual(expected);
-    const unzipped = readZip(new Uint8Array(bytes));
-    expect(Object.keys(unzipped).sort()).toEqual(expected);
-    for (const rel of EXPECTED_FILES) {
-      expect(Buffer.compare(Buffer.from(unzipped[`openDash/${rel}`]!), readFileSync(join(widget.out, 'openDash', rel)))).toBe(0);
+  test('each zip lists <folder>/… entries, sorted, matching the files on disk', () => {
+    for (const p of widget.packages) {
+      const folder = p.layout.folder;
+      const bytes = readFileSync(p.zipped.path);
+      expect(Buffer.compare(bytes, p.zipped.bytes)).toBe(0);
+      const expected = expectedFiles(folder).map((f) => `${folder}/${f}`);
+      expect(p.zipped.entries).toEqual(expected);
+      const unzipped = readZip(new Uint8Array(bytes));
+      expect(Object.keys(unzipped).sort(byCodeUnit)).toEqual(expected);
+      for (const rel of expectedFiles(folder)) {
+        expect(Buffer.compare(Buffer.from(unzipped[`${folder}/${rel}`]!), readFileSync(join(widget.out, folder, rel)))).toBe(0);
+      }
     }
   });
 
-  test('the bundled fonts are the three face fonts, byte-identical to fonts/', () => {
-    const fontsDir = join(widget.out, 'openDash', FONTS_DIR);
-    expect(readdirSync(fontsDir).sort()).toEqual([...FACE_FONT_FILES].sort());
-    for (const f of FACE_FONT_FILES) {
-      expect(Buffer.compare(readFileSync(join(fontsDir, f)), readFileSync(join(import.meta.dir, '..', 'fonts', f)))).toBe(0);
+  test('the bundled fonts are the three face fonts, byte-identical to fonts/, in every package', () => {
+    for (const folder of FOLDERS) {
+      const fontsDir = join(widget.out, folder, FONTS_DIR);
+      expect(readdirSync(fontsDir).sort()).toEqual([...FACE_FONT_FILES].sort());
+      for (const f of FACE_FONT_FILES) {
+        expect(Buffer.compare(readFileSync(join(fontsDir, f)), readFileSync(join(import.meta.dir, '..', 'fonts', f)))).toBe(0);
+      }
     }
   });
 
-  test('every sidecar equals the Metadata key and carries the version', () => {
-    for (const file of djsonFiles(join(widget.out, 'openDash'))) {
-      const doc = readJson(file);
-      const sidecar = readJson(`${file}.metadata`);
-      expect(sidecar).toEqual(doc.Metadata as JsonItem);
-      expect(sidecar.DashboardVersion).toBe(readVersion());
-      expect(sidecar.SimHubVersion).toBe('9.12.6');
-      expect(sidecar.Author).toBe('openDash contributors');
-      expect(sidecar.MetadataVersion).toBe(2);
+  test('every sidecar equals the Metadata key and carries the version; titles are the folder names', () => {
+    for (const layout of LAYOUTS) {
+      const folder = join(widget.out, layout.folder);
+      for (const file of djsonFiles(folder)) {
+        const doc = readJson(file);
+        const sidecar = readJson(`${file}.metadata`);
+        expect(sidecar).toEqual(doc.Metadata as JsonItem);
+        expect(sidecar.DashboardVersion).toBe(readVersion());
+        expect(sidecar.SimHubVersion).toBe('9.12.6');
+        expect(sidecar.Author).toBe('openDash contributors');
+        expect(sidecar.MetadataVersion).toBe(2);
+      }
+      expect(readJson(join(folder, `${layout.folder}.djson.metadata`))).toMatchObject({ Title: layout.folder, Description: layout.description, Width: layout.width, Height: layout.height, ScreenCount: 1 });
+      expect(readJson(join(folder, `${CARDS_FILE}.metadata`))).toMatchObject({ Title: `${layout.folder} cards`, Width: layout.slotSize.width, Height: layout.slotSize.height, ScreenCount: 12 });
     }
-    expect(readJson(join(widget.out, 'openDash', 'openDash.djson.metadata'))).toMatchObject({ Title: 'openDash', Width: 1920, Height: 480, ScreenCount: 1 });
-    expect(readJson(join(widget.out, 'openDash', 'cards.djson.metadata'))).toMatchObject({ Width: 255, Height: 187, ScreenCount: 12 });
+    expect(readJson(join(widget.out, 'openDash', 'openDash.djson.metadata'))).toMatchObject({ Title: 'openDash', Description: '1920 x 480, 12 slots', Width: 1920, Height: 480 });
+    expect(readJson(join(widget.out, 'openDash 480 round', 'openDash 480 round.djson.metadata'))).toMatchObject({ Description: '2 slots, round', Width: 480, Height: 480 });
+    expect(readJson(join(widget.out, 'openDash 800 round', 'openDash 800 round.djson.metadata'))).toMatchObject({ Description: '6 slots, round', Width: 800, Height: 800 });
   });
 
   test('the build log names every file written', () => {
-    for (const rel of [...EXPECTED_FILES.map((f) => `openDash/${f}`), 'openDash.simhubdash', MANIFEST_FILE]) {
-      expect(log.some((line) => line.startsWith('wrote ') && line.includes(rel))).toBe(true);
-    }
+    const files = [...FOLDERS.flatMap((folder) => expectedFiles(folder).map((f) => `${folder}/${f}`)), ...FOLDERS.map(zipName), MANIFEST_FILE];
+    for (const rel of files) expect({ rel, logged: log.some((line) => line.startsWith('wrote ') && line.includes(rel)) }).toEqual({ rel, logged: true });
     expect(log.some((line) => line.startsWith('warning '))).toBe(false);
   });
 });
 
 describe('the emitted JSON', () => {
   const documents = (): { file: string; doc: JsonItem; text: string }[] =>
-    [widget, inline].flatMap((r) => djsonFiles(join(r.out, 'openDash')).map((file) => ({ file, doc: readJson(file), text: readFileSync(file, 'utf8') })));
+    [widget, inline].flatMap((r) => FOLDERS.flatMap((folder) => djsonFiles(join(r.out, folder)).map((file) => ({ file, doc: readJson(file), text: readFileSync(file, 'utf8') }))));
 
-  test('has $type as the first key of every item, one of the four kinds, with unique GUID ids', () => {
+  test('has $type as the first key of every item, one of the five kinds, with unique GUID ids', () => {
     for (const { file, doc } of documents()) {
       const items = itemsOfDocument(doc);
       expect(items.length).toBeGreaterThan(0);
@@ -166,13 +204,41 @@ describe('the emitted JSON', () => {
     }
   });
 
+  test('the round faces write ellipses and rotated rectangles; Rotation follows Height and is never 0; the rectangular faces write neither', () => {
+    const round = LAYOUTS.filter((l) => l.shape === 'round');
+    expect(round.map((l) => l.folder)).toEqual(['openDash 480 round', 'openDash 800 round']);
+    for (const layout of round) {
+      const doc = readJson(join(widget.out, layout.folder, `${layout.folder}.djson`));
+      const items = itemsOfDocument(doc);
+      const ellipses = items.filter((i) => i.$type === ITEM_TYPES.ellipse);
+      expect(ellipses).toHaveLength(5);
+      for (const e of ellipses) {
+        expect(Object.keys(e).slice(0, 4)).toEqual(['$type', 'FillColor', 'EllipseColor', 'EllipseThickness']);
+        expect(e.FillColor).toBe('#00FFFFFF');
+        expect(e.EllipseThickness === 12 || e.EllipseThickness === 3).toBe(true);
+      }
+      const rotated = items.filter((i) => 'Rotation' in i);
+      // 14 rev segments per layer (the one at the top is not rotated) and 23 checks (the one at the top is not).
+      expect(rotated).toHaveLength(14 * 2 + 23);
+      for (const r of rotated) {
+        const keys = Object.keys(r);
+        expect(keys.indexOf('Rotation')).toBe(keys.indexOf('Height') + 1);
+        expect(r.Rotation).not.toBe(0);
+      }
+    }
+    for (const layout of LAYOUTS.filter((l) => l.shape === 'rect')) {
+      const items = itemsOfDocument(readJson(join(widget.out, layout.folder, `${layout.folder}.djson`)));
+      expect(items.some((i) => 'Rotation' in i || i.$type === ITEM_TYPES.ellipse)).toBe(false);
+    }
+  });
+
   test('writes every colour as #AARRGGBB', () => {
     for (const { file, doc, text } of documents()) {
       const colours = stringsOf(doc).filter((s) => s.value.startsWith('#'));
       expect(colours.length).toBeGreaterThan(0);
       for (const c of colours) expect({ file, ...c, ok: isNormalisedHex(c.value) }).toEqual({ file, ...c, ok: true });
       for (const m of text.matchAll(/"(#[0-9A-Za-z]*)"/g)) expect(m[1]).toMatch(/^#[0-9A-F]{8}$/);
-      for (const key of ['BackgroundColor', 'TextColor', 'BorderColor', 'StartColor', 'EndColor', 'MiddleColor']) {
+      for (const key of ['BackgroundColor', 'TextColor', 'BorderColor', 'StartColor', 'EndColor', 'MiddleColor', 'FillColor', 'EllipseColor']) {
         for (const c of colours.filter((s) => s.key === key)) expect(c.value).toMatch(/^#[0-9A-F]{8}$/);
       }
     }
@@ -185,41 +251,45 @@ describe('the emitted JSON', () => {
     }
   });
 
-  test('the widget strategy embeds cards.djson in twelve slots with valid screen indexes', () => {
-    const folder = join(widget.out, 'openDash');
-    const main = readJson(join(folder, 'openDash.djson'));
-    const cards = readJson(join(folder, 'cards.djson'));
-    const screens = cards.Screens as JsonItem[];
-    expect(screens.map((s) => s.Name)).toEqual(CARD_CATALOGUE.map((c) => c.id));
-    const widgets = itemsOfDocument(main).filter((i) => i.$type === ITEM_TYPES.widget);
-    expect(widgets).toHaveLength(12);
-    widgets.forEach((w, i) => {
-      expect(w.FileName).toBe(CARDS_FILE);
-      expect(w.InitialScreenIndex).toBe(i);
-      expect(w.AutoSize).toBe(true);
-      expect(w.BackgroundColor).toBe('#00FFFFFF');
-      const binding = (w.Bindings as JsonItem).InitialScreenIndex as JsonItem;
-      expect((binding.Formula as JsonItem).Expression).toBe(`isnull([OpenDash.Slot${String(i + 1).padStart(2, '0')}], ${i})`);
-      expect(binding.Mode).toBe(2);
-    });
-    expect((main.Screens as JsonItem[])[0]!.Name).toBe('Main');
-    expect(main.BaseWidth).toBe(1920);
-    expect(main.BaseHeight).toBe(480);
-    expect(cards.BaseWidth).toBe(255);
-    expect(cards.BaseHeight).toBe(187);
+  test('the widget strategy embeds cards.djson in one slot per layout slot with valid screen indexes', () => {
+    for (const layout of LAYOUTS) {
+      const folder = join(widget.out, layout.folder);
+      const main = readJson(join(folder, `${layout.folder}.djson`));
+      const cards = readJson(join(folder, CARDS_FILE));
+      const screens = cards.Screens as JsonItem[];
+      expect(screens.map((s) => s.Name)).toEqual(CARD_CATALOGUE.map((c) => c.id));
+      const widgets = itemsOfDocument(main).filter((i) => i.$type === ITEM_TYPES.widget);
+      expect(widgets).toHaveLength(layout.slots.length);
+      widgets.forEach((w, i) => {
+        expect(w.FileName).toBe(CARDS_FILE);
+        expect(w.InitialScreenIndex).toBe(i);
+        expect(w.AutoSize).toBe(true);
+        expect(w.BackgroundColor).toBe('#00FFFFFF');
+        const binding = (w.Bindings as JsonItem).InitialScreenIndex as JsonItem;
+        expect((binding.Formula as JsonItem).Expression).toBe(`isnull([OpenDash.Slot${String(i + 1).padStart(2, '0')}], ${i})`);
+        expect(binding.Mode).toBe(2);
+      });
+      expect((main.Screens as JsonItem[])[0]!.Name).toBe('Main');
+      expect(main.BaseWidth).toBe(layout.width);
+      expect(main.BaseHeight).toBe(layout.height);
+      expect(cards.BaseWidth).toBe(layout.slotSize.width);
+      expect(cards.BaseHeight).toBe(layout.slotSize.height);
+    }
   });
 });
 
 describe('inline strategy', () => {
-  test('builds a single dashboard with no widget and no cards.djson', () => {
-    const folder = join(inline.out, 'openDash');
-    expect(listFiles(folder)).toEqual(EXPECTED_FILES.filter((f) => !f.startsWith('cards.')));
-    expect(inline.packages[0]!.zipped.entries).toEqual(EXPECTED_FILES.filter((f) => !f.startsWith('cards.')).map((f) => `openDash/${f}`));
-    const items = itemsOfDocument(readJson(join(folder, 'openDash.djson')));
-    expect(items.some((i) => i.$type === ITEM_TYPES.widget)).toBe(false);
-    const slots = items.filter((i) => i.$type === ITEM_TYPES.layer && /^Slot\d\d$/.test(String(i.Name)));
-    expect(slots).toHaveLength(12);
-    expect(inline.manifest.packages[0]!.slots).toBe(12);
+  test('builds a single dashboard per layout with no widget and no cards.djson', () => {
+    for (const [i, layout] of LAYOUTS.entries()) {
+      const folder = join(inline.out, layout.folder);
+      expect(listFiles(folder)).toEqual(expectedFiles(layout.folder, false));
+      expect(inline.packages[i]!.zipped.entries).toEqual(expectedFiles(layout.folder, false).map((f) => `${layout.folder}/${f}`));
+      const items = itemsOfDocument(readJson(join(folder, `${layout.folder}.djson`)));
+      expect(items.some((i) => i.$type === ITEM_TYPES.widget)).toBe(false);
+      const slots = items.filter((i) => i.$type === ITEM_TYPES.layer && /^Slot\d\d$/.test(String(i.Name)));
+      expect(slots).toHaveLength(layout.slots.length);
+      expect(inline.manifest.packages[i]!.slots).toBe(layout.slots.length);
+    }
     expect(inline.strategy).toBe('inline');
   });
 });
@@ -227,7 +297,8 @@ describe('inline strategy', () => {
 describe('reproducibility', () => {
   test('two builds produce byte-identical packages', () => {
     const again = build({ out: join(root, 'again'), log: () => {} });
-    expect(Buffer.compare(again.packages[0]!.zipped.bytes, widget.packages[0]!.zipped.bytes)).toBe(0);
+    expect(again.packages).toHaveLength(widget.packages.length);
+    again.packages.forEach((p, i) => expect(Buffer.compare(p.zipped.bytes, widget.packages[i]!.zipped.bytes)).toBe(0));
     expect(readFileSync(again.manifestPath, 'utf8')).toBe(readFileSync(widget.manifestPath, 'utf8'));
   });
 });
@@ -260,9 +331,11 @@ describe('validation gate', () => {
     }
   });
 
-  test('a clean package validates with no warnings', () => {
-    expect(validateOrThrow(buildPackage(layout1920x480, { version: '0.0.0-test' }))).toEqual([]);
-    expect(validateOrThrow(buildPackage(layout1920x480, { version: '0.0.0-test', strategy: 'inline' }))).toEqual([]);
+  test('every clean package validates with no warnings', () => {
+    for (const layout of LAYOUTS) {
+      expect(validateOrThrow(buildPackage(layout, { version: '0.0.0-test' }))).toEqual([]);
+      expect(validateOrThrow(buildPackage(layout, { version: '0.0.0-test', strategy: 'inline' }))).toEqual([]);
+    }
   });
 
   test('two layouts sharing a folder are refused', () => {

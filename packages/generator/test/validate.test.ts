@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { DashPackage, Item } from '../src/model.ts';
 import { ALLOWED_BINDING_TARGETS, formatIssues, propertyReferences, validatePackage } from '../src/validate.ts';
-import { BARLOW_CONDENSED_SEMIBOLD, BARLOW_MEDIUM, DECLARED, dashboard, label, layer, numeral, rect, samplePackage, screen, widget } from './fixtures.ts';
+import { BARLOW_CONDENSED_SEMIBOLD, BARLOW_MEDIUM, DECLARED, dashboard, ellipse, label, layer, numeral, rect, samplePackage, screen, widget } from './fixtures.ts';
 
 const OPTS = { declaredProperties: DECLARED, propertyPrefix: 'OpenDash' };
 
@@ -187,7 +187,31 @@ describe('binding targets', () => {
     expect(ALLOWED_BINDING_TARGETS.rect).not.toContain('TextColor');
     expect(ALLOWED_BINDING_TARGETS.rect).not.toContain('FontSize');
     expect(ALLOWED_BINDING_TARGETS.text).toContain('FontSize');
-    for (const kind of ['text', 'rect', 'layer', 'widget'] as const) expect(ALLOWED_BINDING_TARGETS[kind]).not.toContain('BorderColor');
+    expect(ALLOWED_BINDING_TARGETS.ellipse).toEqual(['Left', 'Top', 'Width', 'Height', 'Visible', 'BackgroundColor', 'Opacity', 'BlinkEnabled', 'FillColor', 'EllipseColor']);
+    for (const kind of ['text', 'rect', 'layer', 'widget'] as const) {
+      expect(ALLOWED_BINDING_TARGETS[kind]).not.toContain('BorderColor');
+      expect(ALLOWED_BINDING_TARGETS[kind]).not.toContain('FillColor');
+      expect(ALLOWED_BINDING_TARGETS[kind]).not.toContain('EllipseColor');
+    }
+  });
+
+  test('FillColor and EllipseColor bind on ellipses only, as formulas or gradients', () => {
+    const fill = { mode: 'formula', formula: "'#FFFFD400'" } as const;
+    const ramp = { mode: 'gradient', formula: '[X]', startColor: '#000000', startValue: 0, endColor: '#FFFFFF', endValue: 1 } as const;
+    const ok = validatePackage(single([ellipse('e', { bindings: { FillColor: fill, EllipseColor: ramp, Visible: { mode: 'formula', formula: 'true' } } })]), OPTS);
+    expect(ok.errors).toEqual([]);
+    const bad = validatePackage(single([
+      rect('r', { bindings: { FillColor: fill } as never }),
+      label('t', 'X', { bindings: { EllipseColor: fill } as never }),
+      layer('l', [rect('c')], { bindings: { FillColor: fill } as never }),
+      widget('w', { bindings: { EllipseColor: fill } as never }),
+    ]), OPTS);
+    expect(bad.errors.filter((e) => e.code === 'binding/unknown-target').map((e) => e.path)).toEqual([
+      'openDash/openDash/Main/r#Bindings.FillColor',
+      'openDash/openDash/Main/t#Bindings.EllipseColor',
+      'openDash/openDash/Main/l#Bindings.FillColor',
+      'openDash/openDash/Main/w#Bindings.EllipseColor',
+    ]);
   });
 
   test('BorderColor is not bindable on any item: it lives on BorderStyle, so SimHub would ignore it', () => {
@@ -309,6 +333,64 @@ describe('fonts', () => {
     ]);
     expect(r.warnings).toEqual([]);
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('ellipses', () => {
+  test('fill and stroke colours are required and the thickness must not be negative', () => {
+    const r = validatePackage(single([
+      ellipse('a', { fillColor: undefined as never, strokeColor: 'red' as never }),
+      ellipse('b', { strokeThickness: -1 }),
+      ellipse('c', { strokeThickness: 0 }),
+    ]), OPTS);
+    expect(r.errors.map((e) => `${e.code} ${e.path}`)).toEqual([
+      'color/missing openDash/openDash/Main/a#fillColor',
+      'color/invalid openDash/openDash/Main/a#strokeColor',
+      'ellipse/thickness openDash/openDash/Main/b#strokeThickness',
+    ]);
+  });
+
+  test('a ring a few pixels inside the canvas raises no warning', () => {
+    const pkg = single([ellipse('ring')]);
+    pkg.dashboards[0]!.width = 480;
+    pkg.dashboards[0]!.height = 480;
+    const r = validatePackage(pkg, OPTS);
+    expect(r.errors).toEqual([]);
+    expect(r.warnings).toEqual([]);
+  });
+});
+
+describe('rotation', () => {
+  test('is accepted on text, rectangle and ellipse items and refused on layers and widgets', () => {
+    const r = validatePackage(single([
+      rect('r', { rotation: 12 }),
+      label('t', 'X', { rotation: -84 }),
+      ellipse('e', { rotation: 45 }),
+      layer('l', [rect('c')], { rotation: 90 }),
+      widget('w', { rotation: 5 }),
+      layer('zero', [rect('d')], { rotation: 0 }),
+      rect('nan', { rotation: Number.NaN }),
+    ]), OPTS);
+    // The fixture widget has no cards.djson to point at; that error is not what this test is about.
+    expect(r.errors.filter((e) => e.code !== 'widget/missing-file').map((e) => `${e.code} ${e.path}`)).toEqual([
+      'rotation/unsupported openDash/openDash/Main/l#rotation',
+      'rotation/unsupported openDash/openDash/Main/w#rotation',
+      'number/invalid openDash/openDash/Main/nan#rotation',
+    ]);
+  });
+
+  test('the canvas check uses the rotated footprint', () => {
+    const pkg = single([
+      // 20 x 12 on the rim of a 480 face at 3 o clock: the unrotated box leaves the canvas, the rotated one does not.
+      rect('tangent', { rect: { left: 464, top: 234, width: 20, height: 12 }, rotation: 90 }),
+      rect('flat', { rect: { left: 464, top: 234, width: 20, height: 12 } }),
+      rect('spun', { rect: { left: 460, top: 0, width: 20, height: 12 }, rotation: 45 }),
+    ]);
+    pkg.dashboards[0]!.width = 480;
+    pkg.dashboards[0]!.height = 480;
+    const w = validatePackage(pkg, OPTS).warnings.filter((x) => x.code === 'geometry/outside-canvas');
+    expect(w.map((x) => x.path)).toEqual(['openDash/openDash/Main/flat#rect', 'openDash/openDash/Main/spun#rect']);
+    expect(w[1]!.message).toContain('rotated 45 deg');
   });
 });
 

@@ -11,7 +11,6 @@ import { rule } from './elements/rule.ts';
 import { CARDS_DASHBOARD_NAME, cardScreens, DEFAULT_STRATEGY, inlineSlotItems, widgetSlotItems, type SlotStrategy } from './slots.ts';
 
 export const DEFAULT_SIMHUB_VERSION = '9.12.6';
-export const DEFAULT_TITLE = 'openDash';
 export const DEFAULT_AUTHOR = 'openDash contributors';
 export const MAIN_SCREEN_NAME = 'Main';
 
@@ -20,8 +19,10 @@ export interface BuildOptions {
   version: string;
   simHubVersion?: string;
   strategy?: SlotStrategy;
+  /** Default: the layout's folder name. */
   title?: string;
   author?: string;
+  /** Default: the layout's description. */
   description?: string;
 }
 
@@ -33,11 +34,11 @@ export interface BuiltLayout {
 
 export function buildLayout(layout: Layout, opts: BuildOptions): BuiltLayout {
   const strategy = opts.strategy ?? DEFAULT_STRATEGY;
-  const title = opts.title ?? DEFAULT_TITLE;
+  const title = opts.title ?? layout.folder;
   const metadata: DashboardMetadata = {
     title,
     author: opts.author ?? DEFAULT_AUTHOR,
-    description: opts.description ?? `${layout.width} x ${layout.height}, ${layout.slots.length} slots`,
+    description: opts.description ?? layout.description,
     version: opts.version,
     simHubVersion: opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION,
   };

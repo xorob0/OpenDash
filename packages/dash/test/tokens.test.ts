@@ -48,7 +48,9 @@ describe('tokens', () => {
     expect(ds.size).toEqual({ gear: 260, gearSm: 180, hero: 116, lapTime: 64, value: 46, valueSm: 34, label: 15, labelSm: 13 });
     expect(ds.space).toEqual({ 1: 4, 2: 8, 3: 12, 4: 16, 5: 24, 6: 32, 7: 48, 8: 64 });
     expect(ds.shiftLights).toEqual({ segments: 15, height: 40, flashHz: 8 });
-    expect(ds.indicator.flagBand).toEqual({ height: 40, flashHz: 2 });
+    expect(ds.indicator.flagBand).toEqual({ height: 40, heightSm: 32, flashHz: 2 });
+    expect(ds.indicator.flagRing).toEqual({ width: 12 });
+    expect(ds.indicator.pitLimiter).toEqual({ height: 36, heightSm: 28 });
     expect(ds.card.rung.L).toEqual({ minSlotWidth: 250, value: 64, denominator: 46, grid: 46 });
     expect(ds.card.rung.M).toEqual({ minSlotWidth: 180, value: 46, denominator: 34, grid: 34 });
     expect(ds.card.rung.S).toEqual({ minSlotWidth: 0, value: 34, denominator: 34, grid: 34 });
