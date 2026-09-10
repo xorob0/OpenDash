@@ -1,0 +1,22 @@
+{
+  "name": "opendash",
+  "private": true,
+  "version": "0.1.0",
+  "description": "An open-source SimHub dashboard generated from TypeScript and design tokens, with a plugin that installs it and exposes its settings.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun packages/dash/src/build.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit -p packages/generator/tsconfig.json && tsc --noEmit -p packages/dash/tsconfig.json",
+    "check": "bun run typecheck && bun test",
+    "package": "bash scripts/package.sh"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.6.0"
+  }
+}

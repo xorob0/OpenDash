@@ -1,0 +1,317 @@
+/**
+ * Turns the model into the JSON document SimHub 9.12 reads. Key order follows SimHub's own
+ * exports and the MVP spec: `$type` is always the first key of an item (Json.NET only honours it
+ * there), colours are `#AARRGGBB`, and properties that equal SimHub's defaults (Opacity 100,
+ * BlinkDelay 250, empty Bindings, zero border widths) are omitted. `buildXxxObject` functions
+ * return plain objects so that tests and snapshots can inspect the shape without re-parsing.
+ */
+
+import type {
+  Binding,
+  Bindings,
+  Border,
+  Dashboard,
+  Formula,
+  Item,
+  ItemBase,
+  LayerItem,
+  RectangleItem,
+  Screen,
+  TextItem,
+  WidgetItem,
+} from './model.ts';
+import { normaliseHex, TRANSPARENT } from './color.ts';
+import { dashboardPath, itemPath, resolveItemId, screenPath, stableGuid } from './ids.ts';
+
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonObject = { [key: string]: JsonValue };
+
+export interface SerializeContext {
+  /** Folder name of the package; the root of every derived id path. */
+  packageName: string;
+}
+
+/** Json.NET `$type` strings of the four item kinds, verified against SimHub 9.12 exports. */
+export const ITEM_TYPES = {
+  text: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins',
+  rect: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins',
+  layer: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins',
+  widget: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.WidgetItem, SimHub.Plugins',
+} as const satisfies Record<Item['kind'], string>;
+
+export const DEFAULT_OPACITY = 100;
+export const DEFAULT_BLINK_DELAY_MS = 250;
+export const DEFAULT_SPECIAL_CHARS = '.,:';
+export const DEFAULT_GRID_SIZE = 5;
+export const METADATA_VERSION = 2;
+
+export const H_ALIGN = { left: 0, center: 1, right: 2 } as const;
+export const V_ALIGN = { top: 0, center: 1, bottom: 2 } as const;
+
+const BINDING_MODE = { formula: 2, gradient: 4 } as const;
+
+/** `BorderStyle`: zero widths and radii are omitted; an empty border is `{}`. */
+export const buildBorderObject = (border: Border | undefined): JsonObject => {
+  const o: JsonObject = {};
+  if (!border) return o;
+  if (border.color !== undefined) o.BorderColor = normaliseHex(border.color);
+  const put = (key: string, value: number | undefined): void => {
+    if (value !== undefined && value !== 0) o[key] = value;
+  };
+  put('BorderTop', border.top);
+  put('BorderBottom', border.bottom);
+  put('BorderLeft', border.left);
+  put('BorderRight', border.right);
+  const r = border.radius;
+  if (typeof r === 'number') {
+    put('RadiusTopLeft', r);
+    put('RadiusTopRight', r);
+    put('RadiusBottomLeft', r);
+    put('RadiusBottomRight', r);
+  } else if (r) {
+    put('RadiusTopLeft', r.topLeft);
+    put('RadiusTopRight', r.topRight);
+    put('RadiusBottomLeft', r.bottomLeft);
+    put('RadiusBottomRight', r.bottomRight);
+  }
+  return o;
+};
+
+/** `Formula`: NCalc by default; JavaScript adds `Interpreter: 1, JSExt: 0`. */
+export const buildFormulaObject = (formula: string | Formula): JsonObject => {
+  const f: Formula = typeof formula === 'string' ? { expression: formula } : formula;
+  const o: JsonObject = {};
+  if (f.interpreter === 'js') {
+    o.Interpreter = 1;
+    o.JSExt = 0;
+  }
+  o.Expression = f.expression;
+  if (f.preExpression !== undefined && f.preExpression !== '') o.PreExpression = f.preExpression;
+  return o;
+};
+
+/** One entry of `Bindings`: Mode 2 (formula) or Mode 4 (colour gradient). */
+export const buildBindingObject = (binding: Binding): JsonObject => {
+  const o: JsonObject = {};
+  if (binding.mode === 'formula') {
+    if (binding.formatString !== undefined) o.FormatString = binding.formatString;
+    o.Formula = buildFormulaObject(binding.formula);
+    o.Mode = BINDING_MODE.formula;
+    return o;
+  }
+  o.Formula = buildFormulaObject(binding.formula);
+  o.StartColor = normaliseHex(binding.startColor);
+  o.EnableMiddleColor = binding.middleColor !== undefined;
+  o.MiddleColor = normaliseHex(binding.middleColor ?? '#FF000000');
+  o.MiddleColorValue = binding.middleValue ?? (binding.startValue + binding.endValue) / 2;
+  o.EndColor = normaliseHex(binding.endColor);
+  o.StartColorValue = binding.startValue;
+  o.EndColorValue = binding.endValue;
+  o.Mode = BINDING_MODE.gradient;
+  return o;
+};
+
+/** `Bindings` keyed by target, in the order the model declares them; undefined when empty. */
+export const buildBindingsObject = (bindings: Bindings | undefined): JsonObject | undefined => {
+  if (!bindings) return undefined;
+  const o: JsonObject = {};
+  for (const [target, binding] of Object.entries(bindings)) {
+    if (binding) o[target] = buildBindingObject(binding);
+  }
+  return Object.keys(o).length === 0 ? undefined : o;
+};
+
+const appendOpacityAndBlink = (o: JsonObject, item: ItemBase): void => {
+  if (item.opacity !== undefined && item.opacity !== DEFAULT_OPACITY) o.Opacity = item.opacity;
+  const blink = item.blink;
+  if (blink?.enabled) o.BlinkEnabled = true;
+  if (blink?.delayMs !== undefined && blink.delayMs !== DEFAULT_BLINK_DELAY_MS) o.BlinkDelay = blink.delayMs;
+  if (blink?.phaseInverted) o.BlinkPhasisInverted = true;
+};
+
+const appendTail = (o: JsonObject, item: ItemBase, id: string): void => {
+  const bindings = buildBindingsObject(item.bindings);
+  if (bindings) o.Bindings = bindings;
+  o.Id = id;
+  o.Name = item.name;
+  o.RenderingSkip = item.renderingSkip ?? 0;
+  o.MinimumRefreshIntervalMS = item.minimumRefreshIntervalMs ?? 0;
+};
+
+/** The DrawableItem keys shared by text, rectangle and widget items. */
+const appendDrawable = (o: JsonObject, item: TextItem | RectangleItem | WidgetItem, id: string, border: boolean): void => {
+  o.Left = item.rect.left;
+  o.Top = item.rect.top;
+  o.Width = item.rect.width;
+  o.Height = item.rect.height;
+  o.Visible = item.visible ?? true;
+  o.BackgroundColor = normaliseHex(item.backgroundColor ?? TRANSPARENT);
+  appendOpacityAndBlink(o, item);
+  if (border) o.BorderStyle = buildBorderObject(item.kind === 'widget' ? undefined : item.border);
+  appendTail(o, item, id);
+};
+
+const buildTextObject = (item: TextItem, id: string): JsonObject => {
+  const o: JsonObject = { $type: ITEM_TYPES.text, IsTextItem: true, Font: item.font, FontWeight: item.fontWeight };
+  const p = item.padding;
+  if (p && ((p.top ?? 0) !== 0 || (p.bottom ?? 0) !== 0 || (p.left ?? 0) !== 0 || (p.right ?? 0) !== 0)) {
+    o.TextPadding = {
+      PaddingTop: p.top ?? 0,
+      PaddingBottom: p.bottom ?? 0,
+      PaddingLeft: p.left ?? 0,
+      PaddingRight: p.right ?? 0,
+    };
+  }
+  o.FontStyle = item.fontStyle ?? 'Normal';
+  o.FontSize = item.fontSize;
+  o.Text = item.text;
+  o.TextColor = normaliseHex(item.textColor);
+  o.HorizontalAlignment = H_ALIGN[item.hAlign];
+  o.VerticalAlignment = V_ALIGN[item.vAlign];
+  if (item.monospace) {
+    o.UseMonospacedText = true;
+    o.CharWidth = item.monospace.charWidth;
+    o.SpecialCharsWidth = item.monospace.specialCharsWidth;
+    // Always written: SimHub 9.12.6's own default is ".,:;" (with the semicolon), so omitting the
+    // key would not give the model's ".,:" default.
+    o.SpecialChars = item.monospace.specialChars ?? DEFAULT_SPECIAL_CHARS;
+  }
+  o.TextWrapping = item.wrap ? 'Wrap' : 'NoWrap';
+  appendDrawable(o, item, id, true);
+  return o;
+};
+
+const buildRectObject = (item: RectangleItem, id: string): JsonObject => {
+  const o: JsonObject = { $type: ITEM_TYPES.rect, IsRectangleItem: true };
+  appendDrawable(o, item, id, true);
+  return o;
+};
+
+/** Layers carry no geometry or background (both `[JsonIgnore]` in SimHub); children are absolute. */
+const buildLayerObject = (item: LayerItem, id: string, path: string): JsonObject => {
+  const o: JsonObject = { $type: ITEM_TYPES.layer, Group: true, Visible: item.visible ?? true };
+  appendOpacityAndBlink(o, item);
+  o.Childrens = item.children.map((child) => buildItemObject(child, path));
+  appendTail(o, item, id);
+  return o;
+};
+
+const buildWidgetObject = (item: WidgetItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.widget,
+    NextScreenCommand: 0,
+    PreviousScreenCommand: 0,
+    AutoSize: item.autoSize ?? true,
+    FileName: item.fileName,
+    InitialScreenIndex: item.initialScreenIndex,
+    FreezePageChanges: false,
+    EnableScreenRolesAndActivation: false,
+    IgnoreSavedScreensEx: true,
+  };
+  appendDrawable(o, item, id, false);
+  return o;
+};
+
+/**
+ * One item as SimHub's JSON. `parentPath` is the screen's or enclosing layer's path; the item's
+ * own path is `<parentPath>/<name>` and its id derives from it unless `item.id` is set.
+ */
+export const buildItemObject = (item: Item, parentPath: string): JsonObject => {
+  const path = itemPath(parentPath, item.name);
+  const id = resolveItemId(item, path);
+  switch (item.kind) {
+    case 'text':
+      return buildTextObject(item, id);
+    case 'rect':
+      return buildRectObject(item, id);
+    case 'layer':
+      return buildLayerObject(item, id, path);
+    case 'widget':
+      return buildWidgetObject(item, id);
+  }
+};
+
+export const buildScreenObject = (screen: Screen, dashboard: Dashboard, ctx: SerializeContext): JsonObject => {
+  const path = screenPath(ctx.packageName, dashboard.name, screen.name);
+  return {
+    RenderingSkip: 0,
+    Name: screen.name,
+    InGameScreen: screen.inGame ?? true,
+    IdleScreen: screen.idle ?? true,
+    PitScreen: screen.pit ?? true,
+    ScreenId: screen.id ?? stableGuid(path),
+    AllowOverlays: true,
+    IsForegroundLayer: false,
+    IsOverlayLayer: false,
+    OverlayTriggerExpression: { Expression: '' },
+    ScreenEnabledExpression: { Expression: screen.enabledExpression ?? '' },
+    OverlayMaxDuration: 0,
+    OverlayMinDuration: 0,
+    IsBackgroundLayer: false,
+    BackgroundColor: normaliseHex(screen.backgroundColor ?? dashboard.backgroundColor),
+    Background: 'None',
+    MinimumRefreshIntervalMS: 0,
+    Items: screen.items.map((item) => buildItemObject(item, path)),
+  };
+};
+
+const screenIndexes = (dashboard: Dashboard, role: (screen: Screen) => boolean): number[] =>
+  dashboard.screens.flatMap((screen, index) => (role(screen) ? [index] : []));
+
+/** The `Metadata` object, also written verbatim as the `.djson.metadata` sidecar. */
+export const buildMetadataObject = (dashboard: Dashboard): JsonObject => {
+  const m = dashboard.metadata;
+  return {
+    SimHubVersion: m.simHubVersion,
+    Category: m.category ?? null,
+    Title: m.title,
+    Description: m.description ?? null,
+    Author: m.author,
+    Width: dashboard.width,
+    Height: dashboard.height,
+    DashboardVersion: m.version,
+    ScreenCount: dashboard.screens.length,
+    InGameScreensIndexs: screenIndexes(dashboard, (s) => s.inGame ?? true),
+    IdleScreensIndexs: screenIndexes(dashboard, (s) => s.idle ?? true),
+    PitScreensIndexs: screenIndexes(dashboard, (s) => s.pit ?? true),
+    MainPreviewIndex: m.mainPreviewIndex ?? 0,
+    IsOverlay: false,
+    OverlaySizeWarning: true,
+    MetadataVersion: METADATA_VERSION,
+    EnableOnDashboardMessaging: false,
+    PreferredTouchMode: 0,
+  };
+};
+
+export const buildDashboardObject = (dashboard: Dashboard, ctx: SerializeContext): JsonObject => ({
+  Version: 2,
+  Id: dashboard.id ?? stableGuid(dashboardPath(ctx.packageName, dashboard.name)),
+  BaseHeight: dashboard.height,
+  BaseWidth: dashboard.width,
+  BackgroundColor: normaliseHex(dashboard.backgroundColor),
+  Screens: dashboard.screens.map((screen) => buildScreenObject(screen, dashboard, ctx)),
+  SnapToGrid: true,
+  HideLabels: false,
+  ShowForeground: true,
+  ForegroundOpacity: 100,
+  ShowBackground: true,
+  BackgroundOpacity: 100,
+  ShowBoundingRectangles: true,
+  GridSize: DEFAULT_GRID_SIZE,
+  Images: [],
+  Metadata: buildMetadataObject(dashboard),
+  ShowOnScreenControls: true,
+  IsOverlay: false,
+  EnableClickThroughOverlay: true,
+  EnableOnDashboardMessaging: false,
+  UseStrictJSIsolation: true,
+  // false, otherwise the DashStudio editor shows the "Legacy Javascript isolation is enabled" banner.
+  UseStrictJSIsolationWarning: false,
+});
+
+/** The `.djson` text: 2-space indented JSON in SimHub's key order. */
+export const serializeDashboard = (dashboard: Dashboard, ctx: SerializeContext): string =>
+  JSON.stringify(buildDashboardObject(dashboard, ctx), null, 2);
+
+/** The `.djson.metadata` sidecar text. */
+export const serializeMetadata = (dashboard: Dashboard): string => JSON.stringify(buildMetadataObject(dashboard), null, 2);

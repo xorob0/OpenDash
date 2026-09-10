@@ -1,0 +1,262 @@
+/**
+ * The build: `bun run build [--out <dir>] [--strategy widget|inline]`.
+ *
+ * For every layout in src/layouts it composes the package, validates it against the settings
+ * contract (every `[OpenDash.X]` read must be a declared property, plus the generator's own
+ * checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
+ * zips that folder into `<out>/<folder>.simhubdash` and records the result in
+ * `<out>/manifest.json`. Validation errors fail the build before anything is written; warnings
+ * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
+ */
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { declaredProperties, PROPERTY_PREFIX } from './contract.ts';
+import { buildPackage, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
+import {
+  formatIssues,
+  PACKAGE_EXTENSION,
+  validatePackage,
+  writePackage,
+  zipPackage,
+  type DashPackage,
+  type ValidationIssue,
+  type WrittenPackage,
+  type ZippedPackage,
+} from './generator.ts';
+import { LAYOUTS, type Layout } from './layouts/index.ts';
+import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
+
+/** The repository root: this file lives in packages/dash/src. */
+export const REPO_ROOT = path.resolve(import.meta.dir, '..', '..', '..');
+/** Where `bun run build` writes unless `--out` says otherwise. */
+export const DEFAULT_OUT_DIR = path.join(REPO_ROOT, 'build');
+/** The one version string of the project. */
+export const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
+export const MANIFEST_FILE = 'manifest.json';
+/** Environment fallback for `--strategy`, as the spec's `SLOT_STRATEGY=inline` build flag. */
+export const STRATEGY_ENV = 'SLOT_STRATEGY';
+
+export const STRATEGIES: readonly SlotStrategy[] = ['widget', 'inline'];
+
+export const USAGE = [
+  'usage: bun run build [--out <dir>] [--strategy widget|inline]',
+  '  --out <dir>         output directory; default <repo>/build',
+  `  --strategy <name>   how slots show cards: widget (default) or inline; ${STRATEGY_ENV} is the fallback`,
+  '  --help              print this text',
+].join('\n');
+
+/** A build failure. `issues` carries the validator errors when validation is what failed. */
+export class BuildError extends Error {
+  constructor(
+    message: string,
+    readonly issues: readonly ValidationIssue[] = [],
+  ) {
+    super(message);
+    this.name = 'BuildError';
+  }
+}
+
+export interface BuildArgs {
+  /** Absolute output directory. */
+  out: string;
+  strategy: SlotStrategy;
+  help: boolean;
+}
+
+const parseStrategy = (value: string | undefined): SlotStrategy | undefined =>
+  STRATEGIES.find((s) => s === value?.trim().toLowerCase());
+
+/** Command line parsing. `--flag value` and `--flag=value` are both accepted; the flag wins over the environment. */
+export function parseArgs(argv: readonly string[], env: Record<string, string | undefined> = process.env, cwd: string = process.cwd()): BuildArgs {
+  const envStrategy = env[STRATEGY_ENV];
+  if (envStrategy !== undefined && envStrategy !== '' && parseStrategy(envStrategy) === undefined) {
+    throw new BuildError(`${STRATEGY_ENV}=${JSON.stringify(envStrategy)} is not a strategy; expected ${STRATEGIES.join(' or ')}`);
+  }
+  const args: BuildArgs = { out: DEFAULT_OUT_DIR, strategy: parseStrategy(envStrategy) ?? DEFAULT_STRATEGY, help: false };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i] ?? '';
+    const eq = arg.startsWith('--') ? arg.indexOf('=') : -1;
+    const flag = eq >= 0 ? arg.slice(0, eq) : arg;
+    const inlineValue = eq >= 0 ? arg.slice(eq + 1) : undefined;
+    const value = (): string => {
+      if (inlineValue !== undefined) return inlineValue;
+      const next = argv[++i];
+      if (next === undefined) throw new BuildError(`${flag} needs a value\n${USAGE}`);
+      return next;
+    };
+    switch (flag) {
+      case '--out':
+      case '-o':
+        args.out = path.resolve(cwd, value());
+        break;
+      case '--strategy':
+      case '-s': {
+        const raw = value();
+        const strategy = parseStrategy(raw);
+        if (strategy === undefined) throw new BuildError(`unknown strategy ${JSON.stringify(raw)}; expected ${STRATEGIES.join(' or ')}`);
+        args.strategy = strategy;
+        break;
+      }
+      case '--help':
+      case '-h':
+        args.help = true;
+        break;
+      default:
+        throw new BuildError(`unknown argument ${JSON.stringify(arg)}\n${USAGE}`);
+    }
+  }
+  return args;
+}
+
+const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+
+/** The trimmed contents of VERSION, which must look like `major.minor.patch[-prerelease]`. */
+export function readVersion(file: string = VERSION_FILE): string {
+  let text: string;
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch (e) {
+    throw new BuildError(`cannot read ${file}: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  const version = text.trim();
+  if (!VERSION_PATTERN.test(version)) throw new BuildError(`${file} must hold a version like 0.1.0, got ${JSON.stringify(version)}`);
+  return version;
+}
+
+/** Validates against the contract's declared properties; throws a BuildError on errors, returns the warnings. */
+export function validateOrThrow(pkg: DashPackage): ValidationIssue[] {
+  const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
+  if (!result.ok) {
+    const n = result.errors.length;
+    throw new BuildError(`package ${pkg.folderName} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
+  }
+  return result.warnings;
+}
+
+export interface ManifestEntry {
+  folder: string;
+  width: number;
+  height: number;
+  slots: number;
+  /** The .simhubdash, relative to the output directory. */
+  file: string;
+}
+
+export interface Manifest {
+  version: string;
+  simHubVersion: string;
+  packages: ManifestEntry[];
+}
+
+export interface BuildOptions {
+  /** Output directory; default {@link DEFAULT_OUT_DIR}. */
+  out?: string;
+  strategy?: SlotStrategy;
+  /** Default: the VERSION file. */
+  version?: string;
+  simHubVersion?: string;
+  /** Default: every layout in src/layouts. */
+  layouts?: readonly Layout[];
+  /** Progress and warnings, one line at a time. Default: console.log. */
+  log?: (line: string) => void;
+}
+
+export interface BuiltPackage {
+  layout: Layout;
+  pkg: DashPackage;
+  warnings: ValidationIssue[];
+  written: WrittenPackage;
+  zipped: ZippedPackage;
+}
+
+export interface BuildResult {
+  out: string;
+  strategy: SlotStrategy;
+  version: string;
+  simHubVersion: string;
+  packages: BuiltPackage[];
+  manifest: Manifest;
+  manifestPath: string;
+}
+
+/** A path as the log shows it: relative to the working directory when it lies below it, else absolute. */
+const relative = (file: string): string => {
+  const rel = path.relative(process.cwd(), file);
+  return rel === '' ? '.' : rel.startsWith('..') ? file : rel;
+};
+
+/**
+ * Builds every layout. Composes and validates all packages first, so that an error in any of
+ * them leaves the output directory untouched; then writes, zips and records the manifest.
+ */
+export function build(opts: BuildOptions = {}): BuildResult {
+  const out = path.resolve(opts.out ?? DEFAULT_OUT_DIR);
+  const strategy = opts.strategy ?? DEFAULT_STRATEGY;
+  const version = opts.version ?? readVersion();
+  const simHubVersion = opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION;
+  const layouts = opts.layouts ?? LAYOUTS;
+  const log = opts.log ?? ((line: string): void => console.log(line));
+  if (layouts.length === 0) throw new BuildError('there is no layout to build');
+
+  const folders = new Set<string>();
+  const staged: { layout: Layout; pkg: DashPackage; warnings: ValidationIssue[] }[] = [];
+  for (const layout of layouts) {
+    if (folders.has(layout.folder)) throw new BuildError(`two layouts use the folder ${JSON.stringify(layout.folder)}`);
+    folders.add(layout.folder);
+    const pkg = buildPackage(layout, { version, simHubVersion, strategy });
+    const warnings = validateOrThrow(pkg);
+    for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
+    staged.push({ layout, pkg, warnings });
+  }
+
+  mkdirSync(out, { recursive: true });
+  const packages: BuiltPackage[] = [];
+  const manifest: Manifest = { version, simHubVersion, packages: [] };
+  for (const { layout, pkg, warnings } of staged) {
+    const written = writePackage(pkg, out);
+    for (const file of written.files) log(`wrote ${relative(file)}`);
+    const zipped = zipPackage(out, pkg.folderName);
+    log(`wrote ${relative(zipped.path)} (${zipped.entries.length} entries, ${zipped.bytes.byteLength} bytes)`);
+    packages.push({ layout, pkg, warnings, written, zipped });
+    manifest.packages.push({
+      folder: pkg.folderName,
+      width: layout.width,
+      height: layout.height,
+      slots: layout.slots.length,
+      file: `${pkg.folderName}${PACKAGE_EXTENSION}`,
+    });
+  }
+  const manifestPath = path.join(out, MANIFEST_FILE);
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  log(`wrote ${relative(manifestPath)}`);
+  return { out, strategy, version, simHubVersion, packages, manifest, manifestPath };
+}
+
+const describe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/** The command line entry: returns the process exit code (0 ok, 1 build failed, 2 bad arguments). */
+export function main(argv: readonly string[] = process.argv.slice(2)): number {
+  let args: BuildArgs;
+  try {
+    args = parseArgs(argv);
+  } catch (e) {
+    console.error(describe(e));
+    return 2;
+  }
+  if (args.help) {
+    console.log(USAGE);
+    return 0;
+  }
+  try {
+    const result = build({ out: args.out, strategy: args.strategy });
+    const n = result.packages.length;
+    const warnings = result.packages.reduce((sum, p) => sum + p.warnings.length, 0);
+    console.log(`built ${n} package${n === 1 ? '' : 's'} (version ${result.version}, ${result.strategy} slots, ${warnings} warning${warnings === 1 ? '' : 's'}) into ${relative(result.out)}`);
+    return 0;
+  } catch (e) {
+    console.error(`build failed: ${describe(e)}`);
+    return 1;
+  }
+}
+
+if (import.meta.main) process.exit(main());
