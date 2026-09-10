@@ -2,7 +2,8 @@
 
 **Last updated:** 2026-09-10
 **Confidence:** structure, bindings, widgets, sidecars and packaging verified against real
-exports from SimHub 9.2 to 9.12; a short list of behaviours remains to be proven in the spike.
+exports from SimHub 9.2 to 9.12 and against the decompiled 9.12.6 model classes; the spike
+items were run on 2026-09-10, see the section at the end.
 
 SimHub's dashboard format is undocumented. What follows was established by reading real
 dashboards and the community build pipelines around them, and it is split into what was
@@ -278,15 +279,61 @@ Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over 
 on every pull request for diff readability. Both stop short of generating the JSON, which is
 where openDash goes further.
 
-## To be proven in the spike
+## Verified in the spike (2026-09-10, SimHub 9.12.6)
 
-Whether `InitialScreenIndex` switches the displayed screen when its binding changes at runtime,
-or only at load; whether SimHub imports a package that has no `.ressources` and no preview
-image, and what it shows as thumbnail; whether a folder extracted under `DashTemplates/` by the
-plugin behaves as an imported package, fonts included; whether Barlow Condensed digits are
-tabular, since no OpenType feature can be requested; the exact names of the class position,
-fuel unit and tyre pressure unit properties; and whether `Version` gates anything, since every
-sample says `2`.
+The gate items of the scope were run on the Windows VM with a hand-built package
+(`odSpike`) and by decompiling `SimHub.Plugins.dll`, `GameReaderCommon.dll`, `ICarsReader.dll`
+and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
+
+- A package with only `<name>.djson`, its `.metadata` sidecar, a widget `.djson` and `_SHFonts/`
+  imports and renders; the gallery shows an empty thumbnail when no preview PNG is shipped. The
+  widget file is not listed as a dashboard of its own.
+- Extracting the folder under `DashTemplates/` and copying `_SHFonts/*.ttf` into `DashFonts/`
+  is what SimHub's importer does (`ImportDashWindow`), so the plugin can do the same.
+- `Width`, `BackgroundColor`, `Visible`, `Text`, `BlinkEnabled` and `InitialScreenIndex`
+  bindings all evaluate at runtime. A `WidgetItem` whose `InitialScreenIndex` is bound switches
+  screen live, so slots do not need the "every card in every slot" fallback.
+- Barlow and Barlow Condensed resolve by family name with `FontWeight` `Medium`, `SemiBold` and
+  `Bold`. Their digits are proportional and SimHub cannot request `tnum`, so numerals use
+  `UseMonospacedText` with `CharWidth` and `SpecialCharsWidth` cells, which SimHub offers for
+  exactly this purpose.
+- `Layer` children carry absolute coordinates; a layer's own `Left`, `Top`, `Width`, `Height` and
+  `BackgroundColor` are `[JsonIgnore]` in SimHub and are not written.
+- `BlinkEnabled`, `BlinkDelay` (half period in ms, default 250) and `BlinkPhasisInverted` live on
+  every drawable item. Omitted properties take SimHub's defaults, which the decompiled
+  `ShouldSerialize*` methods document: `Opacity` 100, `BlinkDelay` 250, `CharWidth` 40,
+  `SpecialCharsWidth` 20, `SpecialChars` `.,:`.
+- The metadata object has `SimHubVersion`, `Category`, `Title`, `Description`, `Author`, `Width`,
+  `Height`, `DashboardVersion`, `ScreenCount`, the three screen index lists, `MainPreviewIndex`,
+  `IsOverlay`, `OverlaySizeWarning`, `MetadataVersion` (2), `EnableOnDashboardMessaging` and
+  `PreferredTouchMode`.
+- `UseStrictJSIsolation` should be written `true` with `UseStrictJSIsolationWarning` `false`,
+  otherwise the editor shows a "legacy Javascript isolation" banner.
+- NCalc, as verified live: `format(v, '0.00', true)` adds the sign; `toshorttime(ts, 3, false, true)`
+  gives `m:ss.fff`; `timespantoseconds`, `secondstotimespan`, `truncate`, `%`, string `+`
+  concatenation with numbers, `and`, `!`, `isnull(v, d)` for absent plugin properties,
+  `isnull(v)` for absent raw telemetry, and `driverclassposition(getplayerleaderboardposition())`
+  all behave as the generator expects. Game properties are read as
+  `[DataCorePlugin.GameData.X]`.
+- Unit strings are enum names: `SpeedLocalUnit` `KMH`/`MPH`, `FuelUnit` `Liters`/`Gallons`,
+  `TemperatureUnit` `Celcius`/`Fahrenheit`/`Kelvin`, `TyrePressureUnit` `Psi`/`Kpa`/`Bar`.
+  `Fuel`, tyre temperatures and pressures are already converted to the user's unit.
+- Class position: there is no player class position property. `[PlayerClassOpponentsCount]`
+  gives the class car count and `driverclassposition(getplayerleaderboardposition())` the
+  position in class.
+- iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
+  `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
+  the control, which is how the cards show `--`.
+- The shift-light properties are band progress values, not bar percentages; see
+  [ADR 0004](../decisions/0004-rev-bar-model.md).
+- `Flag_Green` is passed through a `GreenLimiter` in `GameManagerBase`, so SimHub reports the green
+  flag only for a short time after it is raised; a steady green flag in the sim is not a steady
+  `Flag_Green`. The other flags are reported for as long as the sim shows them. The blue flag is
+  suppressed while the green flag is up.
+
+Still open: whether `Version` gates anything (every sample says 2, and 2 is what we write), and
+verification of the plugin-driven slot switch with the real plugin, which follows the plugin
+build.
 
 ## Sources
 
