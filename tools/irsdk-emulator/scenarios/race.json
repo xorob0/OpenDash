@@ -1,0 +1,171 @@
+{
+  // IrsdkEmulator scenario. Comments and trailing commas are allowed.
+  // Race at Spa, 24 cars in two classes (GT3 / GT4), 30-lap race with 12 laps done,
+  // player (CarIdx 12, Porsche 911 GT3 R) overall P3 / class P2.
+  "name": "GT3/GT4 race, Spa, 30 laps, player P3 (class P2)",
+  "tickRate": 60,
+  "numBuf": 3,
+  "sessionInfoCapacity": 131072,
+  "mapSize": 2097152,
+  "seed": 12345,
+  "sessionYaml": "race-session.yaml",
+
+  // Values substituted into {{placeholders}} of the session YAML template.
+  "yaml": {
+    "RaceSessionLaps": "30",
+    "RaceSessionTime": "2700.0000 sec",
+    "TcSetting": "3 (TC)",
+    "AbsSetting": "2 (ABS)"
+  },
+
+  // All variables of the built-in catalogue are present (with their defaults); the entries below
+  // override values, pin them ("pin": true keeps drivers from changing them) or add variables.
+  // Type/count/unit can be omitted for catalogue variables. Arrays accept a scalar (all elements),
+  // a list, or {"index": value}.
+  "includeCatalog": true,
+  "variables": [
+    // --- session ---
+    {"name": "SessionNum", "value": 2},
+    {"name": "SessionState", "value": 4},
+    {"name": "SessionUniqueID", "value": 1},
+    {"name": "SessionTime", "value": 1180.0},
+    {"name": "SessionTick", "value": 70800},
+    {"name": "SessionTimeTotal", "value": 2700.0},
+    {"name": "SessionTimeRemain", "value": 1520.0},
+    {"name": "SessionLapsTotal", "value": 30},
+    {"name": "SessionLapsRemain", "value": 18},
+    {"name": "SessionLapsRemainEx", "value": 18},
+    {"name": "SessionTimeOfDay", "value": 51580},
+    {"name": "SessionFlags", "value": "green"},
+    {"name": "DisplayUnits", "value": 1},
+    {"name": "IsOnTrack", "value": true},
+    {"name": "IsOnTrackCar", "value": true},
+    {"name": "IsReplayPlaying", "value": false},
+    {"name": "PitsOpen", "value": true},
+    {"name": "PaceMode", "value": 4},
+
+    // --- player ---
+    {"name": "PlayerCarIdx", "value": 12},
+    {"name": "PlayerCarClass", "value": 2708},
+    {"name": "PlayerCarPosition", "value": 3, "pin": true},
+    {"name": "PlayerCarClassPosition", "value": 2, "pin": true},
+    {"name": "PlayerTrackSurface", "value": 3},
+    {"name": "CamCarIdx", "value": 12},
+    {"name": "Lap", "value": 13},
+    {"name": "LapCompleted", "value": 12},
+    {"name": "RaceLaps", "value": 13},
+    {"name": "LapBestLap", "value": 9},
+    {"name": "LapBestLapTime", "value": 97.905},
+    {"name": "LapLastLapTime", "value": 98.412},
+    {"name": "LapCurrentLapTime", "value": 36.16},
+    {"name": "LapDistPct", "value": 0.369},
+    {"name": "OnPitRoad", "value": false},
+    {"name": "Gear", "value": 4},
+    {"name": "RPM", "value": 7200},
+    {"name": "Speed", "value": 52.0},
+    {"name": "Throttle", "value": 1.0},
+    {"name": "Brake", "value": 0.0},
+    {"name": "Clutch", "value": 1.0},
+    {"name": "SteeringWheelAngleMax", "value": 7.85},
+    {"name": "YawNorth", "value": 1.2},
+
+    // --- car controls / engine ---
+    {"name": "dcTractionControl", "value": 3},
+    {"name": "dcABS", "value": 2},
+    {"name": "dcBrakeBias", "value": 54.5},
+    {"name": "dcFuelMixture", "value": 1},
+    {"name": "dcThrottleShape", "value": 1},
+    {"name": "EngineWarnings", "value": 0},
+    {"name": "FuelLevel", "value": 38.4},
+    {"name": "FuelLevelPct", "value": 0.384},
+    {"name": "WaterTemp", "value": 88.5},
+    {"name": "OilTemp", "value": 103.2},
+    {"name": "OilPress", "value": 5.6},
+    {"name": "FuelPress", "value": 4.3},
+    {"name": "Voltage", "value": 13.9},
+    {"name": "ManifoldPress", "value": 1.02},
+
+    // --- tyres: carcass temps (L/M/R), cold pressures (kPa), wear ---
+    {"name": "LFtempCL", "value": 84.2}, {"name": "LFtempCM", "value": 85.4}, {"name": "LFtempCR", "value": 86.1},
+    {"name": "RFtempCL", "value": 87.0}, {"name": "RFtempCM", "value": 85.9}, {"name": "RFtempCR", "value": 84.6},
+    {"name": "LRtempCL", "value": 83.5}, {"name": "LRtempCM", "value": 84.8}, {"name": "LRtempCR", "value": 85.7},
+    {"name": "RRtempCL", "value": 86.3}, {"name": "RRtempCM", "value": 85.1}, {"name": "RRtempCR", "value": 83.9},
+    {"name": "LFcoldPressure", "value": 190.5}, {"name": "RFcoldPressure", "value": 191.0},
+    {"name": "LRcoldPressure", "value": 189.5}, {"name": "RRcoldPressure", "value": 190.0},
+    {"name": "LFwearL", "value": 0.972}, {"name": "LFwearM", "value": 0.968}, {"name": "LFwearR", "value": 0.965},
+    {"name": "RFwearL", "value": 0.961}, {"name": "RFwearM", "value": 0.966}, {"name": "RFwearR", "value": 0.970},
+    {"name": "LRwearL", "value": 0.975}, {"name": "LRwearM", "value": 0.973}, {"name": "LRwearR", "value": 0.971},
+    {"name": "RRwearL", "value": 0.969}, {"name": "RRwearM", "value": 0.972}, {"name": "RRwearR", "value": 0.974},
+    {"name": "LFbrakeLinePress", "value": 0.0}, {"name": "RFbrakeLinePress", "value": 0.0},
+    {"name": "LRbrakeLinePress", "value": 0.0}, {"name": "RRbrakeLinePress", "value": 0.0},
+    {"name": "PitSvLFP", "value": 190}, {"name": "PitSvRFP", "value": 190}, {"name": "PitSvLRP", "value": 190}, {"name": "PitSvRRP", "value": 190},
+
+    // --- weather ---
+    {"name": "TrackTemp", "value": 31.5},
+    {"name": "TrackTempCrew", "value": 31.5},
+    {"name": "AirTemp", "value": 22.8},
+    {"name": "Skies", "value": 1},
+
+    // --- example of a variable that is not in the catalogue (fully specified) ---
+    {"name": "EmulatorMarker", "type": "int", "count": 1, "unit": "", "desc": "Set by IrsdkEmulator", "value": 1}
+  ],
+
+  // Drivers run in this order every tick (the session clock always runs first).
+  "drivers": [
+    {"type": "rpmSweep", "min": 3000, "max": 8000, "period": 6, "slFirst": 7800, "slBlink": 9000},
+    {"type": "gearFromRpm", "minGear": 2, "maxGear": 6, "redline": 9000,
+     "speedAtRedline": [0, 85, 125, 160, 195, 235, 275]},         // km/h at redline per gear (index = gear)
+    {"type": "lapTimer", "lapTime": 98.0, "jitter": 0.6, "trackLength": 7000},
+    {"type": "fuelBurn", "litersPerLap": 2.9, "maxLiters": 100, "kgPerLiter": 0.75},
+    {"type": "flagCycle", "period": 8},                              // none/yellow/blue/white/green/black/checkered
+    {"type": "pitLimiterToggle", "period": 5},                        // EngineWarnings bit 0x10
+    {"type": "sine", "var": "SteeringWheelAngle", "min": -0.35, "max": 0.35, "period": 5},
+    {"type": "sine", "var": "Throttle", "min": 0.6, "max": 1.0, "period": 3},
+    {"type": "sine", "var": "Brake", "min": 0.0, "max": 0.35, "period": 3, "phase": 3.14159},
+    {"type": "sine", "var": "LatAccel", "min": -12, "max": 12, "period": 5},
+    {"type": "sine", "var": "LFtempCM", "min": 84.8, "max": 86.0, "period": 20},
+    {"type": "field", "pace": 98.0, "jitter": 0.5, "resultsInterval": 5, "yamlIndent": 3,
+     "cars": [
+      {"idx": 1, "class": 2708, "lap": 13, "pct": 0.31},
+      {"idx": 2, "class": 2708, "lap": 12, "pct": 0.97},
+      {"idx": 3, "class": 2708, "lap": 13, "pct": 0.22},
+      {"idx": 4, "class": 2708, "lap": 13, "pct": 0.52},
+      {"idx": 5, "class": 2708, "lap": 13, "pct": 0.03},
+      {"idx": 6, "class": 2708, "lap": 12, "pct": 0.84},
+      {"idx": 7, "class": 2708, "lap": 13, "pct": 0.16},
+      {"idx": 8, "class": 2708, "lap": 12, "pct": 0.985, "pit": true},
+      {"idx": 9, "class": 2708, "lap": 13, "pct": 0.27},
+      {"idx": 10, "class": 2708, "lap": 12, "pct": 0.91},
+      {"idx": 11, "class": 2708, "lap": 13, "pct": 0.09},
+      {"idx": 12, "class": 2708, "lap": 13, "pct": 0.369},   // player: lap/pct follow the lapTimer driver
+      {"idx": 13, "class": 2709, "lap": 12, "pct": 0.66},
+      {"idx": 14, "class": 2709, "lap": 12, "pct": 0.24},
+      {"idx": 15, "class": 2709, "lap": 12, "pct": 0.5},
+      {"idx": 16, "class": 2709, "lap": 12, "pct": 0.06},
+      {"idx": 17, "class": 2709, "lap": 13, "pct": 0.43},
+      {"idx": 18, "class": 2709, "lap": 11, "pct": 0.95},
+      {"idx": 19, "class": 2709, "lap": 12, "pct": 0.41},
+      {"idx": 20, "class": 2709, "lap": 11, "pct": 0.8},
+      {"idx": 21, "class": 2709, "lap": 12, "pct": 0.58},
+      {"idx": 22, "class": 2709, "lap": 11, "pct": 0.6},
+      {"idx": 23, "class": 2709, "lap": 12, "pct": 0.33},
+      {"idx": 24, "class": 2709, "lap": 12, "pct": 0.15}
+     ]}
+  ],
+
+  // Scripted one-off changes (seconds since emulator start). "set" writes once (drivers may overwrite
+  // it next tick), "pin" writes and locks, "unpin" releases, "yaml" changes template values
+  // (bumps sessionInfoUpdate), "driver" changes driver parameters or disables a driver.
+  "timeline": [
+    {"at": 15, "log": "brake bias +0.5", "set": {"dcBrakeBias": 55.0}},
+    {"at": 30, "log": "spotter: car left", "set": {"CarLeftRight": 2}},
+    {"at": 34, "set": {"CarLeftRight": 1}},
+    {"at": 45, "log": "ABS active pulse", "set": {"BrakeABSactive": true}},
+    {"at": 47, "set": {"BrakeABSactive": false}},
+    {"at": 60, "log": "TC 3 -> 5 (also in CarSetup YAML, triggers a session info update)",
+     "set": {"dcTractionControl": 5}, "yaml": {"TcSetting": "5 (TC)"}},
+    {"at": 90, "log": "car 4 (leader) into the pit stall", "driver": {"type": "field", "pitCars": [4]}},
+    {"at": 110, "log": "car 4 leaves the pits", "driver": {"type": "field", "pitCars": []}},
+    {"at": 120, "log": "stop the flag cycle, hold green", "driver": {"type": "flagCycle", "enabled": false}, "set": {"SessionFlags": "green"}}
+  ]
+}
