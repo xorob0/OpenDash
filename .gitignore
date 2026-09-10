@@ -1,0 +1,24 @@
+# Build output — the .djson scene graph and packed dash are generated, never committed.
+# See docs/decisions/0002-djson-generated-from-source.md
+build/
+dist/
+*.simhubdash
+*.djson
+!docs/research/samples/*.djson
+
+# Generated from design/tokens.json
+design/*.generated.css
+design/renders/
+
+node_modules/
+.pnpm-store/
+*.tsbuildinfo
+
+# SimHub / Visual Studio leftovers seen in other dash repos — do not commit these
+.vs/
+bin/
+obj/
+*.user
+
+.DS_Store
+Thumbs.db
