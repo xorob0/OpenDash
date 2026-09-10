@@ -1,0 +1,16 @@
+<Project>
+  <!-- Shared by plugin/OpenDash and plugin/OpenDash.Tests. The one version string of the project
+       lives in /VERSION; it becomes the assembly, file and informational version of OpenDash.dll. -->
+  <PropertyGroup>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Authors>openDash contributors</Authors>
+    <Company>openDash contributors</Company>
+    <Product>openDash</Product>
+    <Copyright>MIT licence. openDash contributors.</Copyright>
+  </PropertyGroup>
+</Project>
