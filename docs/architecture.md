@@ -3,80 +3,175 @@
 ## The pipeline
 
 ```
-design/tokens.json ──┬──> tokens.css ──> design renders (review only)
-                     ├──> Figma variables
-                     └──> generator
-                                │
-src/components/*.ts  ───────────┤   gauge() readout() bar() indicator()
-src/layouts/*.ts     ───────────┤   compose at a given BaseWidth/BaseHeight
-assets/*.png         ───────────┤   inlined as base64 at build time
-                                ▼
-                        build/openDash.djson
-                                │  + sidecar files, + _SHFonts/
-                                ▼
-                     zip -r openDash.simhubdash openDash/
-                                │
-                                ▼
-                          SimHub renders it
-                     HDMI DDU · USB screens · phone/tablet
+design/tokens.json ───────────────┐
+packages/dash/src/cards/*.ts ─────┤  one module per card: readouts, labels, colour rules
+packages/dash/src/hero/*.ts ──────┤  gear, speed, RPM bar, flags, pit limiter
+packages/dash/src/layouts/*.ts ───┤  slot geometry and slot count for one BaseWidth x BaseHeight
+packages/dash/fonts/*.ttf ────────┤
+                                  v
+                        packages/generator
+              typed node model, binding helpers, validator, serialiser
+                                  v
+                  build/openDash/openDash.djson        main dashboard
+                  build/openDash/cards.djson           one screen per card
+                  build/openDash/*.djson.metadata
+                  build/openDash/_SHFonts/
+                                  v
+                  zip  -->  build/openDash.simhubdash
+                                  |
+                 +----------------+----------------+
+                 v                                 v
+          GitHub release                 embedded into plugin/  -->  OpenDash.dll
+                                                   v
+              SimHub renders the dashboard; the plugin's properties select what it shows
 ```
 
-Contributors write and review TypeScript. The `.djson` is build output and is gitignored.
+Contributors write and review TypeScript and C#. The `.djson`, the `.simhubdash` and the plugin
+binary are build output and are never committed.
 
 ## Why this shape
 
-Three properties fall out of it, and all three are things competitors cannot easily match:
+Three properties fall out of it, and none of them is available to a dashboard drawn in
+DashStudio.
 
-**Diffable.** A PR shows a TypeScript change, not a 2.4 MB JSON blob.
+The output is **diffable**. A pull request shows a TypeScript change rather than a JSON blob of
+several hundred kilobytes, and a reviewer can read what changed before installing the artifact
+that CI attached to the run in order to see it.
 
-**Multi-size nearly free.** Layouts are functions of the target dimensions. Adding a size is
-re-running the generator, not rebuilding a dash by hand. Competitors maintain 8+ variants
-manually and re-do every feature change in each.
+Sizes reuse everything but the layout. A card is a function that returns items, a layout is a
+function of the target dimensions that places cards in slots, and a new screen size is one new
+layout file. The design decision per aspect ratio remains, but the cards, the bindings, the
+plugin contract and the tests do not move. Competitors maintain each size as a separate
+dashboard and repeat every feature change in each of them.
 
-**One source of truth for design.** `tokens.json` feeds the dash, Figma, and the plugin UI.
-Colours cannot drift between them because there is only one place they exist.
+Design has one source of truth. `tokens.json` feeds the generator and the plugin panel, and the
+design canvas is derived from it, so a colour exists in exactly one place.
 
 ## Components
 
-### Generator (`src/`, TypeScript)
+### Generator (`packages/generator`)
 
-Emits the SimHub `.djson` scene graph. Responsibilities:
+A TypeScript library with no knowledge of openDash, which could serve any SimHub dashboard
+project. It provides a typed model of the node types the MVP needs (`TextItem`,
+`RectangleItem`, `Layer`, `WidgetItem`, and the screen and dashboard envelopes), helpers that
+build NCalc and JavaScript binding objects from typed inputs, a validator, and a serialiser
+that writes the JSON shape SimHub 9.x exports: `$type` as the first key of every item, no `$id`
+references, colours as `#AARRGGBB`, and only the properties that differ from SimHub's defaults.
+It also writes the `.metadata` sidecar and copies fonts into `_SHFonts/`.
 
-- Compose component functions into an absolutely-positioned scene graph
-- Resolve design tokens to literal values (`#AARRGGBB`, font names, pixel sizes)
-- Inline `assets/*.png` as base64 at build time — **kept as real files in source**, which is
-  what makes our diffs readable. In a real sample dash, base64 images were 87.6% of the file.
-- Assign Json.NET `$id` values consistently
-- Emit sidecar files (`.metadata`, `.ressources`) and bundle `_SHFonts/`
+The generator emits absolute positions only. SimHub does have a stacking container,
+`GroupItem` with `ChildsPositioning`, but resolving layout in the generator keeps the output
+deterministic and snapshot-testable, and it keeps the MVP to the smallest set of node types.
 
-Format details: [research/simhub-dash-format.md](research/simhub-dash-format.md).
+Every item `Id` is a GUID derived from the item's path (layout, slot, card, element) with a
+hash, so that a rebuild does not churn identifiers.
 
-### Plugin (`plugin/`, C# / .NET)
+### Dashboard (`packages/dash`)
 
-A standard SimHub plugin implementing `IPlugin`, `IDataPlugin`, `IWPFSettingsV2`.
+openDash itself. `src/cards/` holds one module per card, each exporting a function that takes
+a slot rectangle and returns items; `src/hero/` holds the fixed elements;
+`src/layouts/1920x480.ts` declares the slot geometry and the slot count; `src/build.ts`
+composes them into two documents, the main dashboard and the cards widget, and hands them to
+the generator. `fonts/` holds the Barlow files that are redistributed. Snapshot tests live next
+to the source.
 
-MVP responsibility is only: install/update the dash, launch it, select display.
+### Plugin (`plugin/`)
 
-The plugin does **not** render anything — SimHub does. Details:
+A .NET Framework 4.8 class library named `OpenDash`, implementing `IPlugin` and
+`IWPFSettingsV2`. On `Init` it reads its settings, compares the version of the embedded
+dashboard with the one installed under `DashTemplates/openDash/`, extracts the embedded package
+when the installed one is missing or older, and attaches one property per setting. The settings
+panel is a WPF control built from SimHub's own styles. The plugin renders nothing and does not
+implement `DataUpdate`. Details in
 [research/simhub-plugin-sdk.md](research/simhub-plugin-sdk.md).
 
 ### Design (`design/`)
 
-`tokens.json` is the source of truth. Everything else is generated from it.
+`tokens.json` is the source of truth for colour, type and spacing. `canvas/` holds the design
+system artboards made with Claude Design, derived from the tokens; they are the reference for
+the layout and are not consumed by the build.
+
+## How a setting reaches the dashboard
+
+A SimHub plugin cannot edit a dashboard that is being displayed, and SimHub offers no API to
+reload one. Settings therefore never regenerate anything. Instead the plugin attaches each
+setting as a property, `OpenDash.DeltaReference` for instance, and the generator emits bindings
+that read the property and fall back to the default when the plugin is absent:
+
+```
+if(isnull([OpenDash.DeltaReference], 'session') = 'alltime',
+   [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds],
+   [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])
+```
+
+Slots use SimHub's widget mechanism, which is how the commercial packages do it. The cards live
+in a second file, `cards.djson`, with one screen per card; the main dashboard contains one
+`WidgetItem` per slot pointing at that file, with `InitialScreenIndex` bound to the slot's
+property. Changing the property changes the screen the widget shows, and the card is defined
+once whatever the number of slots. The spike confirms that the screen switches at runtime; if
+it does not, the fallback is to emit every card in every slot with `Visible` bindings, which is
+known to work but multiplies the item count by the number of cards.
+
+This is [ADR 0003](decisions/0003-plugin-settings-through-properties.md).
 
 ## Constraints this imposes
 
-**The pipeline is one-way.** Edits made in SimHub's DashStudio do not flow back to source and
-**will be destroyed** on the next build. DashStudio is for previewing and inspecting only,
-never for authoring. This needs to be stated loudly in CONTRIBUTING when that exists.
+The pipeline is one-way. Edits made in DashStudio do not flow back to source and will be
+destroyed on the next build, and the copy installed by the plugin is overwritten on the next
+plugin update. DashStudio is for previewing and inspecting, never for authoring, and this must
+be stated loudly in CONTRIBUTING when that file exists.
 
-**Layout is absolute.** The `.djson` scene graph positions everything by `Left`/`Top`/
-`Width`/`Height`. There is no flow layout in SimHub. Any layout logic — stacking, alignment,
-distribution — lives in the generator and is resolved to absolute pixels before emit.
+Layout is absolute. Every position is a pixel value resolved by the generator, and any
+alignment or distribution logic lives in TypeScript.
 
-**Fonts are redistributed.** SimHub bundles fonts into `_SHFonts/` inside the dash package,
-so shipping a dash means shipping the font file. Every font must be OFL, MIT, or similar.
-This is why the tokens specify Barlow / Barlow Condensed (SIL OFL 1.1).
+Fonts are redistributed. SimHub bundles fonts into `_SHFonts/` inside the package, so shipping
+the dashboard means shipping the font files, and every font must be under the OFL, MIT or a
+similar licence. This is why the tokens specify Barlow and Barlow Condensed.
 
-**The format is undocumented.** `$type` strings are internal SimHub class names. Pin a SimHub
-version, and re-test on SimHub updates.
+The format is undocumented. `$type` strings are internal SimHub class names, and the property
+sets were established by reading real exports rather than a specification. The SimHub version
+the output was tested against is recorded in the `.metadata` sidecar and in the README, and
+every SimHub update is an occasion to re-run the spike checklist.
+
+## Testing
+
+The generator is tested with snapshot tests: each card, the hero zone and the full 1920 by 480
+build are serialised and compared to committed snapshots, so that a pull request shows the JSON
+consequence of a TypeScript change. A golden file saved from DashStudio during the spike is
+committed under `docs/research/samples/`, and a test asserts that the generator reproduces it
+from the equivalent TypeScript. The validator checks colours, unique identifiers, screen and
+slot counts, and that every `OpenDash` property read in a binding is declared in the settings
+contract. The plugin has unit tests for settings serialisation and for the version comparison;
+the rest of it is verified by hand on the Windows VM.
+
+## Continuous integration and releases
+
+Two workflows run on every pull request. The Linux one installs with Bun, runs the tests,
+builds the `.simhubdash` and uploads it as an artifact. The Windows one builds the plugin with
+MSBuild against the assemblies committed in `plugin/lib/` and uploads the DLL. Neither can run
+SimHub, so visual review remains a human step: the reviewer installs the artifact on a SimHub
+machine, or the author attaches a screenshot from the VM.
+
+On a tag, a release workflow attaches `openDash.simhubdash` and `OpenDash-plugin.zip` to the
+GitHub release. The dashboard version in the `.metadata` sidecar, the plugin assembly version
+and the tag are the same string.
+
+## Repository layout
+
+```
+design/
+  tokens.json            source of truth for colour, type and spacing
+  canvas/                design system artboards (Claude Design), derived from the tokens
+packages/
+  generator/             SimHub .djson emitter: node model, bindings, validator, serialiser
+  dash/                  openDash: cards, hero, layouts, fonts, build script, snapshots
+plugin/
+  OpenDash/              C# project: settings, properties, installer, WPF panel
+  lib/                   SimHub reference assemblies, committed for CI
+docs/
+  scope-mvp.md           the MVP contract
+  architecture.md        this document
+  decisions/             architecture decision records
+  research/              format notes, SDK notes, competitor analysis, golden samples
+  design/                brand and visual direction
+```
