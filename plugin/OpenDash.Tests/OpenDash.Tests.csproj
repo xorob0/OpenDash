@@ -17,8 +17,14 @@
     <Compile Include="../OpenDash/Versioning.cs" Link="Plugin/Versioning.cs" />
     <Compile Include="../OpenDash/Installation.cs" Link="Plugin/Installation.cs" />
     <Compile Include="../OpenDash/PackageExtractor.cs" Link="Plugin/PackageExtractor.cs" />
-    <Compile Include="../OpenDash/DashboardInstaller.Installed.cs" Link="Plugin/DashboardInstaller.Installed.cs" />
+    <Compile Include="../OpenDash/DashboardInstaller.Core.cs" Link="Plugin/DashboardInstaller.Core.cs" />
     <Compile Include="../OpenDash/Theme.cs" Link="Plugin/Theme.cs" />
+  </ItemGroup>
+
+  <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;
+       DashboardInstallerTests pins the manifest name MSBuild gives it. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures/resource name with spaces.txt" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-// Installation.cs: the small types the installer and the panel share. Pure: compiled into the tests.
+// Installation.cs: the small types the installer and the panel share, and the status labels. Pure: compiled into the tests.
 namespace OpenDashPlugin
 {
     public enum InstallStatus
@@ -7,6 +7,21 @@ namespace OpenDashPlugin
         UpToDate,
         UpdateAvailable,
         Failed,
+    }
+
+    public static class InstallStatusExtensions
+    {
+        /// <summary>The status as the panel and the log show it: "Up to date", "Update available", "Install failed", "Not installed".</summary>
+        public static string Label(this InstallStatus status)
+        {
+            switch (status)
+            {
+                case InstallStatus.UpToDate: return "Up to date";
+                case InstallStatus.UpdateAvailable: return "Update available";
+                case InstallStatus.Failed: return "Install failed";
+                default: return "Not installed";
+            }
+        }
     }
 
     /// <summary>The installer logs through this so that the IO core does not depend on SimHub.Logging.</summary>

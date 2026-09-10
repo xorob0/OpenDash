@@ -1,4 +1,4 @@
-/** Rect helpers: grids of equal cells separated by rules, integer-snapped segment edges, insets. */
+/** Rect helpers: grids of equal cells separated by rules, integer-snapped segment edges, insets, and placement on a circle for round faces. */
 import type { Rect } from '../generator.ts';
 
 export type { Rect };
@@ -74,3 +74,31 @@ export function gridRules(origin: { left: number; top: number }, cols: number, r
   for (let r = 1; r < rows; r++) out.push(rect(origin.left, origin.top + r * (cell.height + gap) - gap, totalW, gap));
   return out;
 }
+
+/** A circle on the face: the disc of a round DDU, or the ring the rev arc segments sit on. */
+export interface Circle {
+  cx: number;
+  cy: number;
+  r: number;
+}
+
+/** Centre of a rect. */
+export const centre = (r: Rect): { x: number; y: number } => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+
+/** Distance between two points. */
+export const distance = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
+
+const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
+
+/**
+ * A `size` rect whose centre lies on `circle` at `angle` degrees clockwise from the top, unrounded:
+ * `left = cx + r sin a - w / 2`, `top = cy - r cos a - h / 2`. Rotating the rect by `angle` makes
+ * it tangent to the circle.
+ */
+export function onCircle(circle: Circle, angle: number, size: Size): Rect {
+  const a = toRadians(angle);
+  return rect(circle.cx + circle.r * Math.sin(a) - size.width / 2, circle.cy - circle.r * Math.cos(a) - size.height / 2, size.width, size.height);
+}
+
+/** The bounding square of a circle. */
+export const squareOf = (circle: Circle): Rect => rect(circle.cx - circle.r, circle.cy - circle.r, 2 * circle.r, 2 * circle.r);

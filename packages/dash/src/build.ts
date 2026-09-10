@@ -4,14 +4,15 @@
  * For every layout in src/layouts it composes the package, validates it against the settings
  * contract (every `[OpenDash.X]` read must be a declared property, plus the generator's own
  * checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
- * zips that folder into `<out>/<folder>.simhubdash` and records the result in
- * `<out>/manifest.json`. Validation errors fail the build before anything is written; warnings
+ * zips that folder into `<out>/<folder>.simhubdash` and records `{ folder, width, height,
+ * slots, rung, file }` in `<out>/manifest.json`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { declaredProperties, PROPERTY_PREFIX } from './contract.ts';
 import { buildPackage, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
+import type { Rung } from './design/rung.ts';
 import {
   formatIssues,
   PACKAGE_EXTENSION,
@@ -23,7 +24,7 @@ import {
   type WrittenPackage,
   type ZippedPackage,
 } from './generator.ts';
-import { LAYOUTS, type Layout } from './layouts/index.ts';
+import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
 /** The repository root: this file lives in packages/dash/src. */
@@ -134,10 +135,13 @@ export function validateOrThrow(pkg: DashPackage): ValidationIssue[] {
 }
 
 export interface ManifestEntry {
+  /** Package folder and main dashboard name; may contain spaces ("openDash 850x480"). */
   folder: string;
   width: number;
   height: number;
   slots: number;
+  /** The card rung of the layout's slots. */
+  rung: Rung;
   /** The .simhubdash, relative to the output directory. */
   file: string;
 }
@@ -223,6 +227,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
       width: layout.width,
       height: layout.height,
       slots: layout.slots.length,
+      rung: rungOf(layout),
       file: `${pkg.folderName}${PACKAGE_EXTENSION}`,
     });
   }

@@ -2,8 +2,8 @@
  * Typed model of the subset of SimHub's DashStudio scene graph that openDash emits.
  *
  * The property names mirror SimHub 9.12's own classes (verified against the decompiled
- * SimHub.Plugins.dll and against real exports): DrawableItem, TextItem, RectangleItem, Layer,
- * WidgetItem, Dashboard, Screen and DashboardMetadata. The serialiser in ./serialize.ts turns
+ * SimHub.Plugins.dll and against real exports): DrawableItem, TextItem, RectangleItem, EllipseItem,
+ * Layer, WidgetItem, Dashboard, Screen and DashboardMetadata. The serialiser in ./serialize.ts turns
  * this model into the JSON SimHub reads. Nothing in this file knows about openDash.
  */
 
@@ -70,7 +70,10 @@ export type BindingTarget =
   | 'Opacity'
   | 'FontSize'
   | 'BlinkEnabled'
-  | 'InitialScreenIndex';
+  | 'InitialScreenIndex'
+  /** Ellipse fill and stroke; ellipse items only. `BackgroundColor` is the DrawableItem background behind the ellipse. */
+  | 'FillColor'
+  | 'EllipseColor';
 
 export type Bindings = Partial<Record<BindingTarget, Binding>>;
 
@@ -106,6 +109,11 @@ export interface ItemBase {
   opacity?: number;
   blink?: Blink;
   bindings?: Bindings;
+  /**
+   * Degrees clockwise around the item's centre (SimHub's `DrawableItem.Rotation`). Text,
+   * rectangle and ellipse items only; omitted from the file when 0.
+   */
+  rotation?: number;
   /** Render every Nth frame. 0 renders every frame. */
   renderingSkip?: number;
   minimumRefreshIntervalMs?: number;
@@ -159,6 +167,22 @@ export interface RectangleItem extends ItemBase {
 }
 
 /**
+ * An ellipse filling its rect (SimHub's EllipseItem, verified against a 9.12 export). The
+ * stroke is centred on the ellipse's edge, so a ring of thickness t drawn on a face of radius R
+ * is an ellipse rect inset by t / 2. A ring has a transparent fill.
+ */
+export interface EllipseItem extends ItemBase {
+  kind: 'ellipse';
+  rect: Rect;
+  /** `FillColor` in the file. */
+  fillColor: Hex;
+  /** `EllipseColor` in the file: the stroke colour. */
+  strokeColor: Hex;
+  /** `EllipseThickness` in the file, in px. 0 draws no stroke. */
+  strokeThickness: number;
+}
+
+/**
  * A Layer groups items in the editor tree. It has no geometry of its own: children keep
  * absolute coordinates. `Visible`, `Opacity` and blink apply to the whole group.
  */
@@ -181,7 +205,10 @@ export interface WidgetItem extends ItemBase {
   autoSize?: boolean;
 }
 
-export type Item = TextItem | RectangleItem | LayerItem | WidgetItem;
+export type Item = TextItem | RectangleItem | EllipseItem | LayerItem | WidgetItem;
+
+/** The item kinds that carry a rect (everything but a Layer). */
+export type DrawableItem = Exclude<Item, LayerItem>;
 
 export interface Screen {
   id?: string;

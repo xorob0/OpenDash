@@ -56,9 +56,11 @@
     </Reference>
   </ItemGroup>
 
-  <!-- The dashboard package(s) the plugin installs. The dash build writes build/*.simhubdash and CI
-       copies them into Resources/ before building; the folder is gitignored (see Resources/README.md).
-       Any resource whose name ends in .simhubdash is installed, so the logical name does not matter. -->
+  <!-- The dashboard packages the plugin installs, one per screen size. The dash build writes build/*.simhubdash and
+       CI copies them into Resources/ before building; the folder is gitignored (see Resources/README.md).
+       Every resource whose name ends in .simhubdash is installed, so the manifest name does not matter: MSBuild names
+       these "OpenDashPlugin.Resources.<file name>" and keeps the spaces of names like "openDash 1280x480.simhubdash";
+       the dashboard folder is read from the zip itself (PackageExtractor.PackageFolderName). -->
   <ItemGroup>
     <EmbeddedResource Include="Resources/*.simhubdash" />
   </ItemGroup>

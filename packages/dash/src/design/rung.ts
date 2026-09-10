@@ -7,6 +7,12 @@ import { ds } from '../tokens.ts';
 
 export type Rung = 'L' | 'M' | 'S';
 
+/** Card padding: top and bottom, left and right. */
+export interface Padding {
+  y: number;
+  x: number;
+}
+
 export interface RungSpec {
   rung: Rung;
   /** Card value font size. */
@@ -15,8 +21,7 @@ export interface RungSpec {
   denominator: number;
   /** Grid cell font size. */
   grid: number;
-  /** Card padding: top and bottom, left and right. */
-  padding: { y: number; x: number };
+  padding: Padding;
 }
 
 /** The canvas states the L rung also needs 150 px of height; tokens.json only carries the width. */

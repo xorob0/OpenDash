@@ -6,6 +6,7 @@
  */
 
 import type { Binding, BindingTarget, DashPackage, Dashboard, Item, Screen } from './model.ts';
+import { itemBounds } from './bounds.ts';
 import { isHex } from './color.ts';
 import { fontKey, fontNamesOf, subfamilyHasWeight, type TtfNames } from './fonts.ts';
 import { dashboardPath, isGuid, screenPath, stableGuid, walkItems } from './ids.ts';
@@ -39,16 +40,23 @@ const GEOMETRY_TARGETS: BindingTarget[] = ['Left', 'Top', 'Width', 'Height'];
 /** `BorderColor` is not here: it lives on `BorderStyle`, so SimHub ignores it as an item binding. */
 const DRAWABLE_TARGETS: BindingTarget[] = [...GEOMETRY_TARGETS, 'Visible', 'BackgroundColor', 'Opacity', 'BlinkEnabled'];
 
+/** Ellipse fill and stroke. `BackgroundColor` on an ellipse is the DrawableItem background, not the fill. */
+const ELLIPSE_TARGETS: BindingTarget[] = ['FillColor', 'EllipseColor'];
+
 /** Which `Bindings` keys each item kind accepts. */
 export const ALLOWED_BINDING_TARGETS: Record<Item['kind'], readonly BindingTarget[]> = {
   text: [...DRAWABLE_TARGETS, 'Text', 'TextColor', 'FontSize'],
   rect: DRAWABLE_TARGETS,
+  ellipse: [...DRAWABLE_TARGETS, ...ELLIPSE_TARGETS],
   layer: ['Visible', 'Opacity', 'BlinkEnabled'],
   widget: [...GEOMETRY_TARGETS, 'Visible', 'InitialScreenIndex'],
 };
 
 /** Targets a colour gradient (Mode 4) can drive. */
-export const GRADIENT_TARGETS: readonly BindingTarget[] = ['TextColor', 'BackgroundColor'];
+export const GRADIENT_TARGETS: readonly BindingTarget[] = ['TextColor', 'BackgroundColor', ...ELLIPSE_TARGETS];
+
+/** The kinds `rotation` is verified on. A Layer has no geometry; a widget's rotation is unverified, so it is refused too. */
+export const ROTATABLE_KINDS: readonly Item['kind'][] = ['text', 'rect', 'ellipse'];
 
 /**
  * Every property an expression reads: `[Plugin.Name]` in NCalc and `$prop('Plugin.Name')` in
@@ -82,6 +90,9 @@ class Collector {
 }
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
+/** Slack for the canvas check of rotated items, whose bounds are floating point: a thousandth of a pixel. */
+const EDGE_TOLERANCE = 1e-3;
 
 const checkColor = (c: Collector, path: string, property: string, value: unknown, required: boolean): void => {
   if (value === undefined) {
@@ -181,6 +192,10 @@ const checkItem = (ctx: Context, item: Item, path: string, id: string, dashboard
     c.error('blink/delay', `${path}#blink.delayMs`, `blink delay must be positive, got ${item.blink.delayMs}`);
   }
   checkBindings(ctx, item, path);
+  const rotationOk = checkNumber(c, path, 'rotation', item.rotation);
+  if (item.rotation !== undefined && item.rotation !== 0 && !ROTATABLE_KINDS.includes(item.kind)) {
+    c.error('rotation/unsupported', `${path}#rotation`, `a ${item.kind} item cannot be rotated`);
+  }
 
   if (item.kind === 'layer') {
     if (item.backgroundColor !== undefined) checkColor(c, path, 'backgroundColor', item.backgroundColor, false);
@@ -193,12 +208,23 @@ const checkItem = (ctx: Context, item: Item, path: string, id: string, dashboard
   if (geometryOk) {
     if (r.width < 0 || r.height < 0) c.error('size/negative', `${path}#rect`, `size ${r.width}x${r.height} is negative`);
     else if (r.width === 0 || r.height === 0) c.warn('size/empty', `${path}#rect`, `size ${r.width}x${r.height} draws nothing`);
-    if (r.left < 0 || r.top < 0 || r.left + r.width > dashboard.width || r.top + r.height > dashboard.height) {
+    // A rotated item's footprint is the bounds of its rotated rect, so a segment on a round face
+    // whose unrotated box pokes past the edge is not reported when its pixels stay inside.
+    const b = rotationOk ? itemBounds(item) : r;
+    if (b.left < -EDGE_TOLERANCE || b.top < -EDGE_TOLERANCE || b.left + b.width > dashboard.width + EDGE_TOLERANCE || b.top + b.height > dashboard.height + EDGE_TOLERANCE) {
       c.warn(
         'geometry/outside-canvas',
         `${path}#rect`,
-        `rect (${r.left}, ${r.top}, ${r.width}x${r.height}) leaves the ${dashboard.width}x${dashboard.height} canvas`,
+        `rect (${r.left}, ${r.top}, ${r.width}x${r.height})${item.rotation ? ` rotated ${item.rotation} deg` : ''} leaves the ${dashboard.width}x${dashboard.height} canvas`,
       );
+    }
+  }
+
+  if (item.kind === 'ellipse') {
+    checkColor(c, path, 'fillColor', item.fillColor, true);
+    checkColor(c, path, 'strokeColor', item.strokeColor, true);
+    if (checkNumber(c, path, 'strokeThickness', item.strokeThickness) && item.strokeThickness < 0) {
+      c.error('ellipse/thickness', `${path}#strokeThickness`, `stroke thickness must not be negative, got ${item.strokeThickness}`);
     }
   }
 

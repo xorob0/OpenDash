@@ -2,7 +2,9 @@
  * flagStrip: one Layer per flag, sharing the band anatomy and differing in colour, label and
  * behaviour. One shows at a time in priority order black, chequered, yellow, blue, white, green;
  * nothing is drawn when no flag is out. Black is outlined, since a black band on this face is
- * invisible; chequered is a hard-edged 20 px check pattern with no label; yellow flashes at 2 Hz.
+ * invisible; chequered is a hard-edged check pattern (half the band high) with no label; yellow
+ * flashes at 2 Hz. The nano's 12 px strip is too thin for a label, so its style drops the labels
+ * and thins the black outline to 2 px.
  */
 import type { Hex, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -16,6 +18,21 @@ const { game, eq, and, num } = ncalc;
 
 /** Border of the black flag's outline. */
 export const BLACK_FLAG_BORDER = 3;
+
+/** How a strip is dressed: whether the flag name is drawn on it, and how thick the black outline is. */
+export interface FlagStripStyle {
+  /** Draw "YELLOW FLAG" and the like centred on the band. */
+  labels: boolean;
+  /** Border of the black flag's outline. */
+  blackBorder: number;
+}
+
+export const FLAG_STRIP_STYLES = {
+  standard: { labels: true, blackBorder: BLACK_FLAG_BORDER },
+  /** The nano's 12 px strip: colour only, 2 px outline (from the canvas). */
+  nano: { labels: false, blackBorder: 2 },
+} as const satisfies Record<string, FlagStripStyle>;
+
 /** Half period of the yellow flag's flash in ms (250 at 2 Hz). */
 export const FLAG_BLINK_MS = Math.round(1000 / ds.indicator.flagBand.flashHz / 2);
 
@@ -32,26 +49,27 @@ export function flagVisible(flag: FlagProperty): Expr {
 
 const labelY = (frame: Rect): number => frame.top + (frame.height - ds.size.label) / 2;
 
-function solidFlag(frame: Rect, prefix: string, id: string, flag: FlagProperty, color: Hex, text: string, blink: boolean): LayerItem {
+/** The centred flag name, when the style draws one. */
+const flagLabel = (frame: Rect, style: FlagStripStyle, name: string, text: string, color: Hex): Item[] =>
+  style.labels ? [label(name, text, frame.left, labelY(frame), frame.width, { color, hAlign: 'center' })] : [];
+
+function solidFlag(frame: Rect, style: FlagStripStyle, prefix: string, id: string, flag: FlagProperty, color: Hex, text: string, blink: boolean): LayerItem {
   return {
     kind: 'layer',
     name: `${prefix}.${id}`,
-    children: [
-      band(`${prefix}.${id}.band`, frame, color),
-      label(`${prefix}.${id}.label`, text, frame.left, labelY(frame), frame.width, { color: ds.purpose.flag.onFlag, hAlign: 'center' }),
-    ],
+    children: [band(`${prefix}.${id}.band`, frame, color), ...flagLabel(frame, style, `${prefix}.${id}.label`, text, ds.purpose.flag.onFlag)],
     ...(blink ? { blink: { enabled: true, delayMs: FLAG_BLINK_MS } } : {}),
     ...withBindings({ Visible: flagVisible(flag) }),
   };
 }
 
-function blackFlag(frame: Rect, prefix: string): LayerItem {
+function blackFlag(frame: Rect, style: FlagStripStyle, prefix: string): LayerItem {
   return {
     kind: 'layer',
     name: `${prefix}.black`,
     children: [
-      band(`${prefix}.black.band`, frame, TRANSPARENT, { border: { color: ds.purpose.flag.black, width: BLACK_FLAG_BORDER } }),
-      label(`${prefix}.black.label`, 'BLACK FLAG', frame.left, labelY(frame), frame.width, { color: ds.color.text.primary, hAlign: 'center' }),
+      band(`${prefix}.black.band`, frame, TRANSPARENT, { border: { color: ds.purpose.flag.black, width: style.blackBorder } }),
+      ...flagLabel(frame, style, `${prefix}.black.label`, 'BLACK FLAG', ds.color.text.primary),
     ],
     ...withBindings({ Visible: flagVisible('Flag_Black') }),
   };
@@ -72,13 +90,13 @@ function chequeredFlag(frame: Rect, prefix: string): LayerItem {
   return { kind: 'layer', name: `${prefix}.chequered`, children, ...withBindings({ Visible: flagVisible('Flag_Checkered') }) };
 }
 
-export function flagStrip(frame: Rect, prefix = 'flag'): Item[] {
+export function flagStrip(frame: Rect, style: FlagStripStyle = FLAG_STRIP_STYLES.standard, prefix = 'flag'): Item[] {
   return [
-    blackFlag(frame, prefix),
+    blackFlag(frame, style, prefix),
     chequeredFlag(frame, prefix),
-    solidFlag(frame, prefix, 'yellow', 'Flag_Yellow', ds.purpose.flag.yellow, 'YELLOW FLAG', true),
-    solidFlag(frame, prefix, 'blue', 'Flag_Blue', ds.purpose.flag.blue, 'BLUE FLAG', false),
-    solidFlag(frame, prefix, 'white', 'Flag_White', ds.purpose.flag.white, 'WHITE FLAG', false),
-    solidFlag(frame, prefix, 'green', 'Flag_Green', ds.purpose.flag.green, 'GREEN FLAG', false),
+    solidFlag(frame, style, prefix, 'yellow', 'Flag_Yellow', ds.purpose.flag.yellow, 'YELLOW FLAG', true),
+    solidFlag(frame, style, prefix, 'blue', 'Flag_Blue', ds.purpose.flag.blue, 'BLUE FLAG', false),
+    solidFlag(frame, style, prefix, 'white', 'Flag_White', ds.purpose.flag.white, 'WHITE FLAG', false),
+    solidFlag(frame, style, prefix, 'green', 'Flag_Green', ds.purpose.flag.green, 'GREEN FLAG', false),
   ];
 }

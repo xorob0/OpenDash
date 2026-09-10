@@ -1,6 +1,6 @@
 /** Small dashboards and packages shared by the generator tests. Not a test file. */
 
-import type { Dashboard, DashPackage, Item, LayerItem, RectangleItem, Screen, TextItem, WidgetItem } from '../src/model.ts';
+import type { Dashboard, DashPackage, EllipseItem, Item, LayerItem, RectangleItem, Screen, TextItem, WidgetItem } from '../src/model.ts';
 
 export const FONTS_DIR = new URL('../../dash/fonts/', import.meta.url).pathname;
 export const BARLOW_MEDIUM = `${FONTS_DIR}Barlow-Medium.ttf`;
@@ -42,6 +42,17 @@ export const rect = (name: string, over: Partial<RectangleItem> = {}): Rectangle
   name,
   rect: { left: 0, top: 64, width: 1920, height: 1 },
   backgroundColor: '#1C1F24',
+  ...over,
+});
+
+/** A 12 px ring: transparent fill, a thick stroke, a rect a few pixels inside a 480 px canvas. */
+export const ellipse = (name: string, over: Partial<EllipseItem> = {}): EllipseItem => ({
+  kind: 'ellipse',
+  name,
+  rect: { left: 6, top: 6, width: 468, height: 468 },
+  fillColor: '#00FFFFFF',
+  strokeColor: '#FFD400',
+  strokeThickness: 12,
   ...over,
 });
 

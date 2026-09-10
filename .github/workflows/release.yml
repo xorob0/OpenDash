@@ -1,5 +1,5 @@
 # release.yml: on a tag v*, checks the tag against VERSION, runs the same build steps as ci.yml,
-# then publishes a GitHub release carrying openDash.simhubdash and OpenDash-plugin.zip.
+# then publishes a GitHub release carrying every .simhubdash package and OpenDash-plugin.zip.
 # Only the final job holds a token that can write to the repository.
 name: Release
 
@@ -128,7 +128,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/openDash.simhubdash
+            build/*.simhubdash
             build/OpenDash-plugin.zip
           generate_release_notes: true
           fail_on_unmatched_files: true

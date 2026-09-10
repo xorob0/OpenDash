@@ -4,8 +4,11 @@ import { cardMeta, type CardMeta } from '../contract.ts';
 import { rungForSlot, type RungSpec } from '../design/rung.ts';
 
 export interface Card extends CardMeta {
-  /** Items for the card drawn in `slot`, every item name starting with `prefix` (unique within the screen). */
-  build(slot: Rect, prefix: string): Item[];
+  /**
+   * Items for the card drawn in `slot`, every item name starting with `prefix` (unique within
+   * the screen), at the slot's rung unless the layout says otherwise (`cardRung` in layouts).
+   */
+  build(slot: Rect, prefix: string, rung?: RungSpec): Item[];
 }
 
 export type CardBuilder = (slot: Rect, rung: RungSpec, prefix: string, meta: CardMeta) => Item[];
@@ -13,5 +16,5 @@ export type CardBuilder = (slot: Rect, rung: RungSpec, prefix: string, meta: Car
 /** Binds a builder to its catalogue entry in contract.ts, which stays the single source of numbers and names. */
 export function defineCard(id: string, builder: CardBuilder): Card {
   const meta = cardMeta(id);
-  return { ...meta, build: (slot, prefix) => builder(slot, rungForSlot(slot), prefix, meta) };
+  return { ...meta, build: (slot, prefix, rung = rungForSlot(slot)) => builder(slot, rung, prefix, meta) };
 }

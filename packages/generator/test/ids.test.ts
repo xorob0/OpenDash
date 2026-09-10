@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { GUID_PATTERN, dashboardPath, isGuid, itemPath, resolveItemId, screenPath, stableGuid, walkItems } from '../src/ids.ts';
-import { layer, rect } from './fixtures.ts';
+import { ellipse, layer, rect } from './fixtures.ts';
 
 describe('stableGuid', () => {
   test('is a lower-case 8-4-4-4-12 GUID', () => {
@@ -72,6 +72,12 @@ describe('walkItems', () => {
       'pkg/dash/screen/d',
     ]);
     expect(depths).toEqual([0, 0, 1, 1, 2, 0]);
+  });
+
+  test('visits every kind, an ellipse included, and only recurses into layers', () => {
+    const seen: string[] = [];
+    walkItems([ellipse('ring'), layer('L', [ellipse('inner')])], 'p', (v) => seen.push(`${v.item.kind}:${v.path}`));
+    expect(seen).toEqual(['ellipse:p/ring', 'layer:p/L', 'ellipse:p/L/inner']);
   });
 
   test('reports enclosing layers outermost first', () => {

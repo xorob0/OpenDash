@@ -1,10 +1,10 @@
 /** Slot geometry of the 1920 x 480 layout and the rect helpers behind it. */
 import { describe, expect, test } from 'bun:test';
-import { gearSpeed } from '../src/components/gearSpeed.ts';
+import { gearSpeedRow } from '../src/components/gearSpeed.ts';
 import { contains, grid, gridRules, inset, overlaps, rect, right, snapEdges } from '../src/design/geometry.ts';
 import { gearCells } from '../src/design/metrics.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
-import { LAYOUTS } from '../src/layouts/index.ts';
+import { LAYOUTS, rungOf } from '../src/layouts/index.ts';
 
 const canvas = rect(0, 0, 1920, 480);
 
@@ -31,8 +31,9 @@ describe('1920x480 slots', () => {
   test('slots stay clear of the hero column, the header and the flag strip', () => {
     const { hero } = layout1920x480;
     for (const s of layout1920x480.slots) {
-      expect(overlaps(s, hero.column)).toBe(false);
-      expect(overlaps(s, hero.flagStrip)).toBe(false);
+      expect(overlaps(s, hero.gearSpeed.rect)).toBe(false);
+      if (hero.flags.kind !== 'flagStrip') throw new Error('1920x480 has a flag strip');
+      expect(overlaps(s, hero.flags.rect)).toBe(false);
       expect(s.top).toBeGreaterThanOrEqual(65);
       expect(s.top + s.height).toBeLessThanOrEqual(440);
     }
@@ -54,17 +55,20 @@ describe('1920x480 slots', () => {
 
   test('hero geometry matches the canvas', () => {
     const { hero } = layout1920x480;
-    expect(hero.revBar).toEqual({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
-    expect(hero.column).toEqual({ left: 769, top: 65, width: 382, height: 375 });
+    expect(hero.rev).toEqual({ kind: 'revBar', left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    expect(hero.gearSpeed).toEqual({ kind: 'gearSpeedRow', rect: { left: 769, top: 65, width: 382, height: 375 } });
     expect(hero.pitLimiter).toEqual({ left: 824, top: 75, width: 272, height: 36 });
-    expect(hero.flagStrip).toEqual({ left: 0, top: 440, width: 1920, height: 40 });
-    expect(layout1920x480.rung).toBe('L');
+    expect(hero.flags).toEqual({ kind: 'flagStrip', rect: { left: 0, top: 440, width: 1920, height: 40 } });
+    expect(layout1920x480.shape).toBe('rect');
+    expect(layout1920x480.folder).toBe('openDash');
+    expect(layout1920x480.description).toBe('1920 x 480, 12 slots');
+    expect(rungOf(layout1920x480)).toBe('L');
     expect(LAYOUTS).toContain(layout1920x480);
   });
 
   test('gear and speed block is centred in the hero column, the gear in a cell that holds "N"', () => {
-    const { column } = layout1920x480.hero;
-    const [gear, speed, speedUnit] = gearSpeed(column);
+    const column = layout1920x480.hero.gearSpeed.rect;
+    const [gear, speed, speedUnit] = gearSpeedRow(column);
     if (gear?.kind !== 'text' || speed?.kind !== 'text' || speedUnit?.kind !== 'text') throw new Error('gearSpeed returns three text items');
     // Barlow Condensed Bold "N" advances 0.514 em = 133.6 px at 260; the face's digit cell (127) clips it.
     expect(gear.rect).toEqual({ left: 801, top: 97, width: 135, height: 312 });
