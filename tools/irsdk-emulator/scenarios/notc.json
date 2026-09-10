@@ -1,0 +1,28 @@
+{
+  // Same field as race.json but the car has no in-car TC/ABS controls: dcTractionControl and dcABS are
+  // absent from the variable list (SimHub then reports TC/ABS level 0, dashes should show "--"),
+  // and the race session is timed: SessionLaps "unlimited", SessionTime "1800 sec".
+  "extends": "race.json",
+  "name": "Timed race (1800 s), car without dcTractionControl/dcABS",
+  "exclude": ["dcTractionControl", "dcABS"],
+  "yaml": {
+    "RaceSessionLaps": "unlimited",
+    "RaceSessionTime": "1800.0000 sec",
+    "TcSetting": "",
+    "AbsSetting": ""
+  },
+  "variables": [
+    {"name": "SessionLapsTotal", "value": 32767},
+    {"name": "SessionLapsRemain", "value": 32767},
+    {"name": "SessionLapsRemainEx", "value": 32767},
+    {"name": "SessionTimeTotal", "value": 1800.0},
+    {"name": "SessionTimeRemain", "value": 1130.0},
+    {"name": "SessionTime", "value": 670.0}
+  ],
+  // the inherited timeline sets dcTractionControl, which does not exist here; replace it
+  "timeline": [
+    {"at": 15, "log": "brake bias +0.5", "set": {"dcBrakeBias": 55.0}},
+    {"at": 30, "log": "spotter: car left", "set": {"CarLeftRight": 2}},
+    {"at": 34, "set": {"CarLeftRight": 1}}
+  ]
+}

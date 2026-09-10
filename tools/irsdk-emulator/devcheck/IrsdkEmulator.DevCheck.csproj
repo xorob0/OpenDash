@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Linux-side build of the same sources (net8.0) used only to run the selfcheck and dry-run modes on the dev box.
+       The deliverable is ../IrsdkEmulator.csproj (net48). Named kernel objects are Windows-only, so only dry-run works here. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>IrsdkEmulator</AssemblyName>
+    <RootNamespace>IrsdkEmulator</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../*.cs" />
+  </ItemGroup>
+</Project>

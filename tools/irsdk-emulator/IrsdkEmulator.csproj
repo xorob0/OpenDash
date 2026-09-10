@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>IrsdkEmulator</AssemblyName>
+    <RootNamespace>IrsdkEmulator</RootNamespace>
+    <StartupObject>IrsdkEmulator.Program</StartupObject>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <GenerateSupportedRuntime>false</GenerateSupportedRuntime>
+    <!-- Ship the scenarios next to the exe so the default scenario resolves relative to it. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);devcheck/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="devcheck/**" />
+    <None Include="scenarios/**" CopyToOutputDirectory="PreserveNewest" LinkBase="scenarios" />
+  </ItemGroup>
+</Project>
