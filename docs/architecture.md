@@ -78,7 +78,8 @@ to the source.
 ### Plugin (`plugin/`)
 
 A .NET Framework 4.8 class library named `OpenDash`, implementing `IPlugin` and
-`IWPFSettingsV2`. On `Init` it reads its settings, compares the version of the embedded
+`IWPFSettingsV2`. It is code-only WPF and builds with the .NET SDK on any platform, which is
+[ADR 0005](decisions/0005-plugin-builds-on-linux.md). On `Init` it reads its settings, compares the version of the embedded
 dashboard with the one installed under `DashTemplates/openDash/`, extracts the embedded package
 when the installed one is missing or older, and attaches one property per setting. The settings
 panel is a WPF control built from SimHub's own styles. The plugin renders nothing and does not
@@ -104,7 +105,8 @@ if(isnull([OpenDash.DeltaReference], 'session') = 'alltime',
    [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])
 ```
 
-Slots use SimHub's widget mechanism, which is how the commercial packages do it. The cards live
+Slots use SimHub's widget mechanism, which is how the commercial packages do it, and the
+runtime screen switch was verified on SimHub 9.12.6 during the spike. The cards live
 in a second file, `cards.djson`, with one screen per card; the main dashboard contains one
 `WidgetItem` per slot pointing at that file, with `InitialScreenIndex` bound to the slot's
 property. Changing the property changes the screen the widget shows, and the card is defined
@@ -135,6 +137,11 @@ every SimHub update is an occasion to re-run the spike checklist.
 
 ## Testing
 
+Beyond the automated tests, `tools/irsdk-emulator` feeds scripted iRacing telemetry into
+SimHub on the Windows VM through the same shared memory the sim uses, so that every card can
+be checked with real values and screenshots without iRacing being installed. See
+[testing-vm.md](testing-vm.md).
+
 The generator is tested with snapshot tests: each card, the hero zone and the full 1920 by 480
 build are serialised and compared to committed snapshots, so that a pull request shows the JSON
 consequence of a TypeScript change. A golden file saved from DashStudio during the spike is
@@ -146,9 +153,10 @@ the rest of it is verified by hand on the Windows VM.
 
 ## Continuous integration and releases
 
-Two workflows run on every pull request. The Linux one installs with Bun, runs the tests,
-builds the `.simhubdash` and uploads it as an artifact. The Windows one builds the plugin with
-MSBuild against the assemblies committed in `plugin/lib/` and uploads the DLL. Neither can run
+One workflow with two jobs runs on every pull request, both on Linux. The dash job installs
+with Bun, runs the tests, builds the `.simhubdash` and uploads it as an artifact. The plugin job
+downloads that artifact into the plugin's resources, runs the plugin tests, builds the plugin
+with the .NET SDK against the assemblies committed in `plugin/lib/` and uploads the DLL. Neither can run
 SimHub, so visual review remains a human step: the reviewer installs the artifact on a SimHub
 machine, or the author attaches a screenshot from the VM.
 
@@ -167,7 +175,10 @@ packages/
   dash/                  openDash: cards, hero, layouts, fonts, build script, snapshots
 plugin/
   OpenDash/              C# project: settings, properties, installer, WPF panel
+  OpenDash.Tests/        unit tests for the plugin's pure logic
   lib/                   SimHub reference assemblies, committed for CI
+tools/
+  irsdk-emulator/        synthetic iRacing telemetry for the test VM
 docs/
   scope-mvp.md           the MVP contract
   architecture.md        this document

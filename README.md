@@ -3,8 +3,11 @@
 An open-source sim racing dashboard for [SimHub](https://www.simhubdash.com/), released under
 the MIT licence.
 
-> **Status: pre-alpha.** Nothing is built yet. The MVP scope is signed off and the design is in
-> progress. See [docs/scope-mvp.md](docs/scope-mvp.md).
+> **Status: alpha.** The MVP is built: a 1920 by 480 dashboard for iRacing with twelve
+> configurable slots, a SimHub plugin that installs it and exposes its settings, and the
+> generator that turns TypeScript and design tokens into the `.simhubdash` package. Everything
+> below has been verified on SimHub 9.12.6. See [docs/scope-mvp.md](docs/scope-mvp.md) for what
+> version 1 is and is not.
 
 ## What makes this different
 
@@ -20,47 +23,99 @@ the dashboard itself.
 
 That buys three things. Contributors can actually contribute, because a pull request is a
 TypeScript diff rather than an opaque blob. A feature change reaches every screen size at once,
-because cards are shared components and a size is only a layout that arranges them, whereas the
-competition repeats every change by hand in each of its variants. Finally, one set of design
-tokens drives the dashboard and the plugin panel, so colours cannot drift between them.
+because cards are shared components and a size is only a layout that arranges them. Finally,
+one set of design tokens drives the dashboard and the plugin panel, so colours cannot drift
+between them.
 
 Because rendering stays native to SimHub, everything SimHub already does well is kept: HDMI
 DDUs, Vocore and USBD480 USB screens, phones and tablets, and the seventeen or so sims it
 reads.
 
+## Install
+
+Two files leave each release: `openDash.simhubdash` and `OpenDash-plugin.zip`.
+
+- **Dashboard only.** Double-click `openDash.simhubdash`; SimHub imports it. You get the
+  default layout and the default modes, and no settings page.
+- **Dashboard and plugin.** Unzip `OpenDash-plugin.zip`, copy `OpenDash.dll` into SimHub's
+  install folder, unblock it, start SimHub and accept the new plugin. The plugin installs the
+  dashboard for you and adds an "openDash" page to SimHub's left menu. The full procedure is
+  in [plugin/INSTALL.md](plugin/INSTALL.md).
+
+In both cases openDash is a normal SimHub dashboard afterwards: assign it to a display from
+Dash Studio like any other.
+
+## The dashboard
+
+The face is a fixed hero zone and twelve equal slots. The hero holds what a driver reads by
+reflex: the gear, the speed, a fifteen segment rev bar with SimHub's per-car shift lights, the
+flag strip and the pit limiter. Every other field is a card, and any card can be placed in any
+slot from the plugin: current, last and best lap, delta, position, session progress, fuel,
+fuel laps, TC, ABS, tyre temperatures and tyre pressures.
+
+The plugin settings are SimHub properties (`OpenDash.ShiftLights`, `OpenDash.PositionMode`,
+`OpenDash.DeltaReference`, `OpenDash.SessionProgress`, `OpenDash.Slot01` to `Slot12`), so
+other dashboards and LED profiles can read them too. Every change applies to the running
+dashboard immediately.
+
+## Build from source
+
+Requirements: [Bun](https://bun.sh) 1.x for the dashboard and the .NET 8 SDK for the plugin.
+No Windows machine is needed to build either.
+
+```bash
+bun install
+bun run check          # typecheck and tests
+bun run build          # build/openDash.simhubdash, build/openDash/ and build/manifest.json
+```
+
+```bash
+cp build/*.simhubdash plugin/OpenDash/Resources/
+dotnet test plugin/OpenDash.Tests
+dotnet build plugin/OpenDash -c Release   # plugin/OpenDash/bin/Release/net48/OpenDash.dll
+```
+
+The generated `.djson` is never committed and never edited by hand. DashStudio is for looking
+at the result, not for authoring it: anything changed there is overwritten by the next build.
+
 ## Repository layout
 
 ```
 design/
-  tokens.json        Design tokens, source of truth for all colour, type and spacing
-  canvas/            Design system canvas artboards (Claude Design), derived from the tokens
+  tokens.json          Design tokens, source of truth for all colour, type and spacing
+  canvas/              Design system canvas artboards (Claude Design), derived from the tokens
 packages/
-  generator/         TypeScript library that emits SimHub .djson scene graphs
-  dash/              openDash itself: cards, layouts, fonts; builds the .simhubdash
-plugin/              C# SimHub plugin: installs the dashboard and exposes its settings
+  generator/           TypeScript library that emits SimHub .djson scene graphs (no openDash knowledge)
+  dash/                openDash itself: tokens in code, elements, components, cards, hero, layouts, build
+plugin/
+  OpenDash/            C# SimHub plugin: installer, properties, settings panel (builds on Linux)
+  OpenDash.Tests/      Unit tests for the plugin's pure logic
+  lib/                 SimHub reference assemblies, committed so CI can build without SimHub
+tools/
+  irsdk-emulator/      Synthetic iRacing telemetry feed for testing dashboards without the sim
 docs/
-  scope-mvp.md       What version 1 is, and what it is not
-  architecture.md    How source becomes a .simhubdash, and how a setting reaches it
-  decisions/         Architecture decision records
-  research/          Reverse-engineered format notes, SDK notes, competitor analysis
-  design/            Brand and visual direction
+  scope-mvp.md         What version 1 is, and what it is not
+  architecture.md      How source becomes a .simhubdash, and how a setting reaches it
+  decisions/           Architecture decision records
+  research/            Format notes verified against SimHub 9.12.6, SDK notes, competitor analysis
+  design/              Brand and visual direction
+  testing-vm.md        The Windows VM that runs SimHub for tests
 ```
 
-`packages/` and `plugin/` do not exist yet; the layout above is the one the MVP builds towards.
+## Testing
 
-## MVP at a glance
+`bun test` covers the generator (serialisation, validation, packaging) and the dashboard
+(tokens, geometry, formulas, the settings contract, snapshots of every card and of the full
+face). `dotnet test` covers the plugin's version comparison, settings and card catalogue. On
+top of that the dashboard and the plugin are checked by hand on a Windows VM running SimHub,
+where [tools/irsdk-emulator](tools/irsdk-emulator/README.md) feeds scripted iRacing telemetry
+so that every card can be seen with real values.
 
-| | |
-|---|---|
-| Target sim | iRacing |
-| Target screen | 1920 by 480 (8.8 in ultrawide DDU), one screen |
-| Renderer | SimHub native (DashStudio `.djson`) |
-| Dashboard | a fixed hero zone and twelve slots holding twelve cards |
-| Plugin | installs the dashboard; settings for shift lights, position, delta, session and slot layout |
-| Licence | MIT |
+## Contributing
 
-Deferred to post-MVP: further screen sizes, theming, idle and pit screens, stream overlay,
-computed telemetry, round DDUs, and sims beyond iRacing.
+See [CONTRIBUTING.md](CONTRIBUTING.md). The short version: change the TypeScript, run
+`bun run check`, look at the snapshot diff, and open a pull request. CI builds both artifacts
+for every pull request so a reviewer can install them.
 
 ## Prior art and credit
 
@@ -76,6 +131,9 @@ This project exists because others documented the path first.
 Lovely's licence explicitly forbids reuse of its UI design. openDash's visual design is
 independently derived: do not copy Lovely layouts, and do not use its screenshots in any
 openDash material.
+
+Barlow and Barlow Condensed are redistributed under the SIL Open Font Licence 1.1; see
+`packages/dash/fonts/OFL.txt`.
 
 ## Licence
 

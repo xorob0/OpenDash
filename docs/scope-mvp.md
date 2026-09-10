@@ -1,6 +1,8 @@
 # MVP scope
 
-**Status:** signed off 2026-09-10, revised the same day after a scope review.
+**Status:** signed off 2026-09-10, revised the same day after a scope review. The spike gate
+below was passed the same day on the Windows VM, and the MVP was built against this document;
+see the release notes and [architecture.md](architecture.md) for what shipped.
 This document is the contract the tickets are cut from. Changes to it require a new sign-off.
 
 ## Product
@@ -182,6 +184,15 @@ update checks · launching the dashboard or selecting a display from the plugin 
 than iRacing
 
 ## Gate before build starts
+
+**Passed on 2026-09-10 with SimHub 9.12.6.** Items 1 to 3 were verified with a hand-built
+package rendered live, items 4 and 5 with a bound `WidgetItem` whose screen switched at
+runtime (the fallback in item 5 is therefore not used), items 6 to 9 by decompiling SimHub and
+by loading the package; the findings are recorded in
+[research/simhub-dash-format.md](research/simhub-dash-format.md). Two facts changed the plan:
+Barlow's digits are proportional, so numerals use SimHub's monospaced text cells, and the
+shift-light properties are band progress values rather than bar percentages, which is
+[ADR 0004](decisions/0004-rev-bar-model.md).
 
 The spike proves the four things the plan rests on: a generated `.djson` loads, its bindings
 resolve against replayed telemetry, a plugin property can drive the dashboard, and a slot can

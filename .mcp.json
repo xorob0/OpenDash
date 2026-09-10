@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "winvm": {
+      "type": "stdio",
+      "command": "/opt/winvm/mcp/.venv/bin/python",
+      "args": ["/opt/winvm/mcp/server.py"]
+    }
+  }
+}
