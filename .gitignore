@@ -1,23 +1,19 @@
-# Build output — the .djson scene graph and packed dash are generated, never committed.
-# See docs/decisions/0002-djson-generated-from-source.md
+# Build output: the .djson scene graph, the packed dash and the plugin binary are generated,
+# never committed. See docs/decisions/0002-djson-generated-from-source.md
 build/
 dist/
 *.simhubdash
 *.djson
 !docs/research/samples/*.djson
-
-# Generated from design/tokens.json
-design/*.generated.css
-design/renders/
+!docs/research/samples/*.djson.*
 
 node_modules/
-.pnpm-store/
 *.tsbuildinfo
 
-# SimHub / Visual Studio leftovers seen in other dash repos — do not commit these
-.vs/
+# Plugin build output. The SimHub reference assemblies under plugin/lib/ ARE committed.
 bin/
 obj/
+.vs/
 *.user
 
 .DS_Store

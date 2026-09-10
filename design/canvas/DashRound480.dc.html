@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700&amp;family=Barlow:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0A0B0D; color: #F5F7FA; font-family: Barlow, system-ui, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #F5F7FA; } a:hover { color: #8A9099; }
+    .lbl { font-family: Barlow, system-ui, sans-serif; font-weight: 500; font-size: 15px; line-height: 1; text-transform: uppercase; color: #5A6069; white-space: nowrap; }
+    .lbl-sm { font-family: Barlow, system-ui, sans-serif; font-weight: 500; font-size: 13px; line-height: 1; text-transform: uppercase; color: #8A9099; white-space: nowrap; }
+    .num { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; color: #F5F7FA; white-space: nowrap; }
+    .slotbox { box-sizing: border-box; }
+    .card { display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; height: 100%; justify-content: center; background: #0A0B0D; }
+    .row { display: flex; align-items: baseline; gap: 8px; }
+    .grid4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+    .seg { flex: 1 1 0; border-radius: 2px; }
+  </style>
+</helmet>
+<!-- 480 x 480 . round and square DDU . rev arc, gear over speed, 2 slots at rung S, flag on the outer ring -->
+<div style="position: relative; width: 480px; height: 480px; background: #0A0B0D; border-radius: 50%; overflow: hidden;">
+  <div style="position: absolute; left: 0; top: 0; width: 480px; height: 480px; border-radius: 50%; background: {{flagBg}}; border: 3px solid {{flagBorder}}; box-sizing: border-box;"></div>
+  <div style="position: absolute; left: 3px; top: 3px; width: 474px; height: 474px; border-radius: 50%; background: {{ringInner}};"></div>
+  <div style="position: absolute; left: 12px; top: 12px; width: 456px; height: 456px; border-radius: 50%; background: #0A0B0D;">
+    <div style="position: absolute; left: 50%; top: 50%; width: 0; height: 0;">
+      <sc-for list="{{segments}}" as="seg" hint-placeholder-count="15">
+        <div style="position: absolute; left: -11px; top: -7px; width: 22px; height: 14px; border-radius: 2px; background: {{seg.color}}; transform: rotate({{seg.angle}}deg) translateY(-206px); transform-origin: 11px 7px;"></div>
+      </sc-for>
+    </div>
+    <div style="position: absolute; left: 0px; top: 96px; width: 456px; height: 340px; display: flex; align-items: center; justify-content: center;"><div style="display: flex; flex-direction: column; align-items: center; gap: 4px;"><div class="num" style="font-size: 260px; font-weight: 700;">4</div><div class="row"><div class="num" style="font-size: 64px;">187</div><div class="lbl-sm">km/h</div></div></div></div>
+    <div class="slotbox" style="position: absolute; left: 8px; top: 174px; width: 140px; height: 108px;"><div class="card" style="padding: 8px 12px;"><div class="lbl">Current</div><div class="num" style="font-size: 34px;">1:42.3</div></div></div>
+    <div class="slotbox" style="position: absolute; left: 308px; top: 174px; width: 140px; height: 108px;"><div class="card" style="padding: 8px 12px;"><div class="lbl">Last</div><div class="num" style="font-size: 34px;">1:42.905</div></div></div>
+    <sc-if value="{{pitLimiter}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 153px; top: 100px; width: 150px; height: 28px; background: #FFFFFF; display: flex; align-items: center; justify-content: center;">
+      <div class="lbl" style="color: #0A0B0D;">Pit limiter</div>
+    </div>
+  </sc-if>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"litSegments":{"editor":"range","default":9,"min":0,"max":15,"step":1,"section":"Rev bar"},"flag":{"editor":"enum","default":"none","options":["none","black","chequer","yellow","blue","white","green"],"section":"Indicators"},"pitLimiter":{"editor":"boolean","default":false,"section":"Indicators"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const lit = Math.max(0, Math.min(15, Number(this.props.litSegments ?? 9)));
+    // Band boundaries are SimHub per-car values (RPMShiftLight1, RPMShiftLight2, redline); 5/5/5 is only the sample.
+    const stageColor = (i) => (i < 5 ? '#00D96A' : i < 10 ? '#FFB300' : '#FF2D46');
+    const segments = Array.from({ length: 15 }, (_, i) => ({ color: i < lit ? stageColor(i) : '#33383F', angle: -84 + i * 12 }));
+    const fills = { none: 'transparent', yellow: '#FFD400', blue: '#2E7BFF', white: '#FFFFFF', green: '#00D96A',
+      chequer: 'repeating-conic-gradient(#F5F7FA 0 25%, #0A0B0D 0 50%) 0 0 / 32px 32px' };
+    const flag = this.props.flag ?? 'none';
+    // the black flag is an outlined band, since a black fill would vanish on this face
+    const isBlack = flag === 'black';
+    return { segments, flagBg: isBlack ? '#0A0B0D' : (fills[flag] ?? 'transparent'), flagBorder: isBlack ? '#F5F7FA' : 'transparent', ringInner: isBlack ? '#0A0B0D' : 'transparent',
+      isYellow: flag === 'yellow', isBlue: flag === 'blue', isWhite: flag === 'white', isGreen: flag === 'green', isBlack, pitLimiter: !!this.props.pitLimiter };
+  }
+}
+</script>
+</body>
+</html>
