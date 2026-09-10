@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unit tests for the plugin's pure logic. The plugin targets net48 and references SimHub's WPF
+       assemblies, which cannot run here, so the files that have no SimHub or WPF dependency are compiled
+       into this net8.0 project directly. Keep those files free of SimHub and WPF types. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>OpenDashPlugin.Tests</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../OpenDash/Contract.cs" Link="Plugin/Contract.cs" />
+    <Compile Include="../OpenDash/Cards.cs" Link="Plugin/Cards.cs" />
+    <Compile Include="../OpenDash/OpenDashSettings.cs" Link="Plugin/OpenDashSettings.cs" />
+    <Compile Include="../OpenDash/Versioning.cs" Link="Plugin/Versioning.cs" />
+    <Compile Include="../OpenDash/Installation.cs" Link="Plugin/Installation.cs" />
+    <Compile Include="../OpenDash/PackageExtractor.cs" Link="Plugin/PackageExtractor.cs" />
+    <Compile Include="../OpenDash/DashboardInstaller.Installed.cs" Link="Plugin/DashboardInstaller.Installed.cs" />
+    <Compile Include="../OpenDash/Theme.cs" Link="Plugin/Theme.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>

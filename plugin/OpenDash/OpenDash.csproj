@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SimHub plugin: installs the embedded openDash package and exposes its settings as properties.
+       net48, code-only WPF (no UseWPF, no XAML) so that `dotnet build` works on Linux against the
+       Microsoft.NETFramework.ReferenceAssemblies package and the SimHub assemblies in ../lib. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>OpenDash</AssemblyName>
+    <RootNamespace>OpenDashPlugin</RootNamespace>
+    <Description>openDash: an open-source SimHub dashboard and the plugin that installs it and exposes its settings.</Description>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Framework assemblies. WPF is referenced directly; there is no XAML to compile. -->
+  <ItemGroup>
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+  </ItemGroup>
+
+  <!-- SimHub reference assemblies, committed under plugin/lib. Private=false: SimHub ships them. -->
+  <ItemGroup>
+    <Reference Include="SimHub.Plugins">
+      <HintPath>../lib/SimHub.Plugins.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SimHub.Logging">
+      <HintPath>../lib/SimHub.Logging.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GameReaderCommon">
+      <HintPath>../lib/GameReaderCommon.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>../lib/log4net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MahApps.Metro">
+      <HintPath>../lib/MahApps.Metro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>../lib/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- The dashboard package(s) the plugin installs. The dash build writes build/*.simhubdash and CI
+       copies them into Resources/ before building; the folder is gitignored (see Resources/README.md).
+       Any resource whose name ends in .simhubdash is installed, so the logical name does not matter. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/*.simhubdash" />
+  </ItemGroup>
+
+  <!-- Barlow faces for the settings panel, extracted to a private folder at runtime (PanelFonts.cs).
+       Shared with the dash package; redistributed under the SIL OFL 1.1 (fonts/OFL.txt). -->
+  <ItemGroup>
+    <EmbeddedResource Include="../../packages/dash/fonts/Barlow-Regular.ttf" Link="Fonts/Barlow-Regular.ttf" LogicalName="OpenDash.Fonts.Barlow-Regular.ttf" />
+    <EmbeddedResource Include="../../packages/dash/fonts/Barlow-Medium.ttf" Link="Fonts/Barlow-Medium.ttf" LogicalName="OpenDash.Fonts.Barlow-Medium.ttf" />
+    <EmbeddedResource Include="../../packages/dash/fonts/BarlowCondensed-Light.ttf" Link="Fonts/BarlowCondensed-Light.ttf" LogicalName="OpenDash.Fonts.BarlowCondensed-Light.ttf" />
+    <EmbeddedResource Include="../../packages/dash/fonts/BarlowCondensed-SemiBold.ttf" Link="Fonts/BarlowCondensed-SemiBold.ttf" LogicalName="OpenDash.Fonts.BarlowCondensed-SemiBold.ttf" />
+    <EmbeddedResource Include="../../packages/dash/fonts/BarlowCondensed-Bold.ttf" Link="Fonts/BarlowCondensed-Bold.ttf" LogicalName="OpenDash.Fonts.BarlowCondensed-Bold.ttf" />
+    <EmbeddedResource Include="../../packages/dash/fonts/OFL.txt" Link="Fonts/OFL.txt" LogicalName="OpenDash.Fonts.OFL.txt" />
+  </ItemGroup>
+</Project>
