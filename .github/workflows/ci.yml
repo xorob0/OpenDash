@@ -1,0 +1,95 @@
+# ci.yml: builds and tests the dashboard package (Bun) and the SimHub plugin (.NET) on every push
+# and pull request. The plugin job embeds the dash job's .simhubdash output, so it runs second.
+# Spec: docs section 12. Keep the build steps in sync with release.yml.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Read-only token everywhere; nothing in CI writes to the repository.
+permissions:
+  contents: read
+
+# One run per branch or pull request; a newer push cancels the older run.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dash:
+    name: Dash package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+      - name: Build dashboard packages
+        run: bun run build
+
+      - name: Upload dashboard packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: opendash-dash
+          path: |
+            build/*.simhubdash
+            build/manifest.json
+          if-no-files-found: error
+
+  plugin:
+    name: SimHub plugin
+    runs-on: ubuntu-latest
+    needs: dash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # The plugin embeds Resources/*.simhubdash (gitignored); take them from the dash job.
+      - name: Download dashboard packages
+        uses: actions/download-artifact@v4
+        with:
+          name: opendash-dash
+          path: plugin/OpenDash/Resources/
+
+      - name: Test plugin logic
+        run: dotnet test plugin/OpenDash.Tests
+
+      - name: Build plugin
+        run: dotnet build plugin/OpenDash -c Release
+
+      - name: Package plugin
+        run: |
+          set -euo pipefail
+          if [ -f plugin/scripts/package-plugin.sh ]; then
+            bash plugin/scripts/package-plugin.sh
+          else
+            mkdir -p build
+            zip -j build/OpenDash-plugin.zip plugin/OpenDash/bin/Release/net48/OpenDash.dll plugin/INSTALL.md
+          fi
+          ls -l build/OpenDash-plugin.zip
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: opendash-plugin
+          path: |
+            build/OpenDash-plugin.zip
+            plugin/OpenDash/bin/Release/net48/OpenDash.dll
+          if-no-files-found: error
