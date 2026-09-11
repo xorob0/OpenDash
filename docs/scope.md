@@ -124,9 +124,24 @@ waits on XOR-47 deciding where that computation may live, since it cannot live i
 
 **Licensing, activation or accounts.** openDash is MIT and there is nothing to unlock.
 
-**Telemetry about the user.** Nothing leaves the user's machine. The update check contemplated
-by XOR-29 and XOR-31 is an exception that has to be argued for in its own decision record,
-stating exactly what is sent, and it has to be possible to switch off.
+**Telemetry about the user.** Nothing leaves the user's machine.
+
+**Network update checks.** The plugin does not call home. An update check would be the first
+thing openDash ever sends anywhere, so it waits on XOR-29 to state in a decision record exactly
+what leaves the machine, and it has to be possible to switch off.
+
+**Theming and colour customisation.** Every colour, size and rule comes from `design/tokens.json`,
+is resolved at build time and is baked into the `.djson` as a literal. Making any of it the user's
+is the whole subject of the Personalisation project, which has not started; until it has, the
+answer to "can I change the colours" is no.
+
+**Idle and pit screens.** SimHub shows its own default when no game is running, and openDash draws
+the racing face and the second screens only. XOR-62 and XOR-53 hold the idle screen and XOR-64 the
+pit screen.
+
+**Deciding what SimHub displays.** The plugin installs packages and exposes settings. It does not
+launch a dashboard, choose a display or pick a screen for the user; that is SimHub's own job and
+SimHub exposes no API for it, as [architecture.md](architecture.md) records.
 
 **Copying Lovely's visual design.** Lovely's licence forbids reuse of its UI design. openDash's
 design is independently derived: do not copy its layouts, and do not use its screenshots in any
@@ -138,8 +153,10 @@ audited.
 
 ## What the MVP refused and what reversed it
 
-The MVP scope listed nine things as explicitly out of scope. Five of them have since been built,
-and each reversal is recorded here so that a reader of the old document is not misled.
+The MVP scope closes with a list of things it refused, headed "do not let these creep in". Five of
+them have since been built. Every one of the thirteen is accounted for below, by name rather than
+by count, so that a reader of the closed document can find out what became of the line they are
+reading. `XOR-nn` is an issue on the project's Linear board.
 
 | The MVP refused | Reversed by | What is true now |
 |---|---|---|
@@ -147,24 +164,16 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Multiple screen sizes | XOR-6 | Ten faces, each one layout file |
 | Round DDUs | XOR-6 | 480 and 800 round faces ship |
 | Phone and tablet layouts | XOR-8 | Two companion packages ship |
-| Page navigation | XOR-8 | The companion pages through its modules with a wheel button |
+| Page navigation | XOR-8 | The companion pages through its modules with a wheel button. The face still has none, and XOR-64 is where that is revisited |
 
-Four of the nine still stand, and are restated as refusals above: theming and colour
-customisation, idle or pit screens, network update checks, and computed telemetry of our own.
-The first is the subject of the Personalisation project, the second of XOR-62 and XOR-53, and
-the third of XOR-29; none of them is built, and until one is, the refusal is the current answer.
+Seven still stand, and each is restated as a refusal in the section above: theming and colour
+customisation, idle or pit screens, network update checks, computed telemetry of our own,
+licensing or activation, deciding what SimHub displays, and sims other than iRacing. None of them
+is built, and until one is, the refusal is the current answer.
 
-The stream overlay is neither built nor refused. Nobody has asked for it.
-
-## Definition of done, for a change
-
-A change is done when `bun run check` passes, when `dotnet test plugin/OpenDash.Tests` passes if
-the plugin changed, when the snapshot diff has been read rather than merely refreshed, and when
-whatever the change draws has been seen on the Windows VM in real SimHub. The last condition is
-the one that catches what the tests cannot: WPF clips silently, and a box measured from the
-wrong face or from a sample narrower than the runtime value loses glyphs without failing
-anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
-[testing-vm.md](testing-vm.md) explains the VM.
+That leaves the stream overlay, which the MVP deferred and which nobody has asked for since. It is
+not built, not planned and not forbidden: should somebody want one, the argument can be had on its
+merits rather than against a line in a closed document.
 
 ## Related documents
 
@@ -174,3 +183,6 @@ wall. [decisions/](decisions/) holds the records that this document summarises, 
 wins over this summary wherever the two disagree. [research/](research/) holds the format notes
 verified against SimHub 9.12.6, which are the place to check before guessing at a property name.
 [scope-mvp.md](scope-mvp.md) is closed, and is of historical interest only.
+
+What makes a change ready to merge is [CONTRIBUTING.md](../CONTRIBUTING.md), which is the one
+place that says so; this document says what may be changed rather than how.

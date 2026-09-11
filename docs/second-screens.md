@@ -1,7 +1,8 @@
 # The companion and the pit wall
 
-openDash draws three kinds of screen. The **face** is the one on the wheel: a hero zone and
-twelve slots, described in [scope.md](scope.md). The **companion** is a phone or tablet
+openDash draws three kinds of screen. The **face** is the one on the wheel: a hero zone and a grid
+of equal slots, twelve of them at 1920 by 480 and as few as two on a round 480, described in
+[scope.md](scope.md). The **companion** is a phone or tablet
 beside it showing one module at a time. The **pit wall** is a big screen for someone who is not
 driving.
 
