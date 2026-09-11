@@ -5,7 +5,7 @@
  * The validator never throws on model content; it reports.
  */
 
-import type { Binding, BindingTarget, DashPackage, Dashboard, Item, Screen } from './model.ts';
+import type { Binding, BindingTarget, DashPackage, Dashboard, DotStyle, Item, Screen } from './model.ts';
 import { itemBounds } from './bounds.ts';
 import { isHex } from './color.ts';
 import { fontKey, fontNamesOf, subfamilyHasWeight, type TtfNames } from './fonts.ts';
@@ -48,12 +48,17 @@ export const ALLOWED_BINDING_TARGETS: Record<Item['kind'], readonly BindingTarge
   text: [...DRAWABLE_TARGETS, 'Text', 'TextColor', 'FontSize'],
   rect: DRAWABLE_TARGETS,
   ellipse: [...DRAWABLE_TARGETS, ...ELLIPSE_TARGETS],
-  layer: ['Visible', 'Opacity', 'BlinkEnabled'],
+  layer: ['Visible', 'Opacity', 'BlinkEnabled', 'Repetitions'],
   widget: [...GEOMETRY_TARGETS, 'Visible', 'InitialScreenIndex'],
+  chart: [...DRAWABLE_TARGETS, 'CurrentValue', 'ChartEnabled', 'LineColor', 'Minimum', 'Maximum'],
+  linearGauge: [...DRAWABLE_TARGETS, 'Value', 'Minimum', 'Maximum', 'GaugeColor', 'AlternateGaugeColor', 'UseAlternateStyle'],
+  radar: [...DRAWABLE_TARGETS, 'Scale'],
+  staticMap: DRAWABLE_TARGETS,
+  webPage: [...DRAWABLE_TARGETS, 'StartAddress'],
 };
 
 /** Targets a colour gradient (Mode 4) can drive. */
-export const GRADIENT_TARGETS: readonly BindingTarget[] = ['TextColor', 'BackgroundColor', ...ELLIPSE_TARGETS];
+export const GRADIENT_TARGETS: readonly BindingTarget[] = ['TextColor', 'BackgroundColor', 'GaugeColor', 'AlternateGaugeColor', 'LineColor', ...ELLIPSE_TARGETS];
 
 /** The kinds `rotation` is verified on. A Layer has no geometry; a widget's rotation is unverified, so it is refused too. */
 export const ROTATABLE_KINDS: readonly Item['kind'][] = ['text', 'rect', 'ellipse'];
@@ -181,6 +186,14 @@ const checkBindings = (ctx: Context, item: Item, path: string): void => {
   }
 };
 
+const checkDotStyle = (ctx: Context, path: string, property: string, style: DotStyle | undefined): void => {
+  if (!style) return;
+  const { c } = ctx;
+  for (const k of ['labelColor', 'dotColor', 'dotBorderColor'] as const) checkColor(c, path, `${property}.${k}`, style[k], false);
+  for (const k of ['labelFontSize', 'dotBorderThickness', 'dotRadius'] as const) checkNumber(c, path, `${property}.${k}`, style[k]);
+  if (style.labelFont !== undefined && style.labelFont.trim() === '') c.error('font/empty', `${path}#${property}.labelFont`, 'label font is empty');
+};
+
 const checkItem = (ctx: Context, item: Item, path: string, id: string, dashboard: Dashboard, ownFile: string): void => {
   const { c } = ctx;
   if (typeof item.name !== 'string' || item.name.trim() === '') c.error('name/empty', path, 'item name is empty');
@@ -199,6 +212,24 @@ const checkItem = (ctx: Context, item: Item, path: string, id: string, dashboard
 
   if (item.kind === 'layer') {
     if (item.backgroundColor !== undefined) checkColor(c, path, 'backgroundColor', item.backgroundColor, false);
+    const repeats = (item.repetitions ?? 0) > 0 || item.bindings?.Repetitions !== undefined;
+    if (checkNumber(c, path, 'repetitions', item.repetitions) && item.repetitions !== undefined && (!Number.isInteger(item.repetitions) || item.repetitions < 0)) {
+      c.error('layer/repetitions', `${path}#repetitions`, `repetitions must be a non-negative integer, got ${item.repetitions}`);
+    }
+    checkNumber(c, path, 'repeatTopOffset', item.repeatTopOffset);
+    checkNumber(c, path, 'repeatLeftOffset', item.repeatLeftOffset);
+    if (!repeats && (item.repeatTopOffset !== undefined || item.repeatLeftOffset !== undefined)) {
+      c.warn('layer/repeat-offset-unused', path, 'a repeat offset is set on a layer that does not repeat');
+    }
+    // SimHub drops WidgetItems from the copies it stamps, so a repeated row would show its
+    // widget once and then nothing.
+    if (repeats) {
+      let widget: string | undefined;
+      walkItems(item.children, path, (v) => {
+        if (v.item.kind === 'widget' && widget === undefined) widget = v.path;
+      });
+      if (widget !== undefined) c.error('layer/repeated-widget', widget, 'SimHub removes widget items from a repeated layer\'s copies');
+    }
     return;
   }
 
@@ -252,6 +283,43 @@ const checkItem = (ctx: Context, item: Item, path: string, id: string, dashboard
     }
     if (item.padding) {
       for (const k of ['top', 'bottom', 'left', 'right'] as const) checkNumber(c, path, `padding.${k}`, item.padding[k]);
+    }
+  }
+
+  if (item.kind === 'chart') {
+    checkColor(c, path, 'lineColor', item.lineColor, true);
+    for (const k of ['currentValue', 'minimum', 'maximum', 'lineThickness', 'pointsCount'] as const) checkNumber(c, path, k, item[k]);
+    if (item.pointsCount !== undefined && item.pointsCount < 2) c.error('chart/points', `${path}#pointsCount`, `a trace needs at least 2 points, got ${item.pointsCount}`);
+  }
+
+  if (item.kind === 'linearGauge') {
+    checkColor(c, path, 'gaugeColor', item.gaugeColor, true);
+    checkColor(c, path, 'alternateGaugeColor', item.alternateGaugeColor, false);
+    for (const k of ['minimum', 'maximum', 'value', 'steps'] as const) checkNumber(c, path, k, item[k]);
+    if (item.minimum !== undefined && item.maximum !== undefined && item.minimum === item.maximum) {
+      c.error('gauge/empty-range', `${path}#maximum`, 'minimum and maximum are equal, so the gauge has no range');
+    }
+  }
+
+  if (item.kind === 'radar') {
+    if (checkNumber(c, path, 'scale', item.scale) && item.scale !== undefined && item.scale <= 0) {
+      c.error('radar/scale', `${path}#scale`, `scale must be positive, got ${item.scale}`);
+    }
+    checkDotStyle(ctx, path, 'playerStyle', item.playerStyle);
+    checkDotStyle(ctx, path, 'opponentStyle', item.opponentStyle);
+  }
+
+  if (item.kind === 'staticMap') {
+    checkColor(c, path, 'trackColor', item.trackColor, true);
+    checkColor(c, path, 'trackBorderColor', item.trackBorderColor, true);
+    checkColor(c, path, 'alternateTrackSectorColor', item.alternateTrackSectorColor, false);
+    for (const k of ['trackWidth', 'trackBorderWidth', 'minimumTrackWidth', 'minimumTrackBorderWidth'] as const) checkNumber(c, path, k, item[k]);
+    checkDotStyle(ctx, path, 'playerStyle', item.playerStyle);
+    checkDotStyle(ctx, path, 'opponentStyle', item.opponentStyle);
+    if (item.startLine) {
+      checkColor(c, path, 'startLine.color', item.startLine.color, false);
+      checkNumber(c, path, 'startLine.width', item.startLine.width);
+      checkNumber(c, path, 'startLine.height', item.startLine.height);
     }
   }
 

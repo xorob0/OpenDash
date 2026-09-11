@@ -10,16 +10,23 @@ import type {
   Binding,
   Bindings,
   Border,
+  ChartItem,
   Dashboard,
+  DotStyle,
   DrawableItem,
   EllipseItem,
   Formula,
   Item,
   ItemBase,
   LayerItem,
+  LinearGaugeItem,
+  RadarItem,
   RectangleItem,
   Screen,
+  SeparatorStyle,
+  StaticMapItem,
   TextItem,
+  WebPageItem,
   WidgetItem,
 } from './model.ts';
 import { normaliseHex, TRANSPARENT } from './color.ts';
@@ -40,6 +47,11 @@ export const ITEM_TYPES = {
   ellipse: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.EllipseItem, SimHub.Plugins',
   layer: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins',
   widget: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.WidgetItem, SimHub.Plugins',
+  chart: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.ChartItem, SimHub.Plugins',
+  linearGauge: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.LinearGaugeItem, SimHub.Plugins',
+  radar: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RadarItem, SimHub.Plugins',
+  staticMap: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.GeneratedStaticMapItem, SimHub.Plugins',
+  webPage: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.WebPageItem, SimHub.Plugins',
 } as const satisfies Record<Item['kind'], string>;
 
 export const DEFAULT_OPACITY = 100;
@@ -51,6 +63,52 @@ export const METADATA_VERSION = 2;
 
 export const H_ALIGN = { left: 0, center: 1, right: 2 } as const;
 export const V_ALIGN = { top: 0, center: 1, bottom: 2 } as const;
+
+/** `GaugeOrientation` and `GaugeAlignment` as SimHub's enums number them. */
+export const GAUGE_ORIENTATION = { horizontal: 0, vertical: 1 } as const;
+export const GAUGE_ALIGNMENT = { start: 0, center: 1, end: 2 } as const;
+
+/** SimHub's own default row pitch of a repeated layer: written even when it is the value we want. */
+export const DEFAULT_REPEAT_TOP_OFFSET = 30;
+
+/**
+ * A `PlayerStyle` sub-object. SimHub's class defaults differ from the defaults each item applies
+ * to it, so all seven keys are always written. `DotBordercolor` is SimHub's spelling.
+ */
+export const buildDotStyleObject = (style: DotStyle | undefined, fallback: Required<DotStyle>): JsonObject => {
+  const s = style ?? {};
+  return {
+    LabelFont: s.labelFont ?? fallback.labelFont,
+    LabelFontSize: s.labelFontSize ?? fallback.labelFontSize,
+    LabelColor: normaliseHex(s.labelColor ?? fallback.labelColor),
+    DotColor: normaliseHex(s.dotColor ?? fallback.dotColor),
+    DotBorderThickness: s.dotBorderThickness ?? fallback.dotBorderThickness,
+    DotBordercolor: normaliseHex(s.dotBorderColor ?? fallback.dotBorderColor),
+    DotRadius: s.dotRadius ?? fallback.dotRadius,
+  };
+};
+
+/** The `PlayerStyle` defaults of a map item and of a radar item, from SimHub's initialisers. */
+export const MAP_PLAYER_STYLE: Required<DotStyle> = {
+  labelFont: 'Segoe UI',
+  labelFontSize: 14,
+  labelColor: '#FFFFFFFF',
+  dotColor: '#FFFF0000',
+  dotBorderThickness: 4,
+  dotBorderColor: '#FFFFFFFF',
+  dotRadius: 30,
+};
+export const MAP_OPPONENT_STYLE: Required<DotStyle> = { ...MAP_PLAYER_STYLE, dotColor: '#FFFFFFFF', dotBorderThickness: 2, dotBorderColor: '#FF000000' };
+export const RADAR_PLAYER_STYLE: Required<DotStyle> = { ...MAP_PLAYER_STYLE, dotBorderThickness: 0, dotRadius: 40 };
+export const RADAR_OPPONENT_STYLE: Required<DotStyle> = { ...RADAR_PLAYER_STYLE, dotColor: '#FFFFFFFF', dotRadius: 30 };
+
+/** The `StartLine` sub-object of a generated map. */
+export const buildStartLineObject = (line: SeparatorStyle | undefined): JsonObject => ({
+  Color: normaliseHex(line?.color ?? '#FFFF0000'),
+  Enabled: line?.enabled ?? true,
+  Height: line?.height ?? 40,
+  Width: line?.width ?? 5,
+});
 
 const BINDING_MODE = { formula: 2, gradient: 4 } as const;
 
@@ -156,7 +214,10 @@ const appendDrawable = (o: JsonObject, item: DrawableItem, id: string, opts: { b
   o.Visible = item.visible ?? true;
   o.BackgroundColor = normaliseHex(item.backgroundColor ?? TRANSPARENT);
   appendOpacityAndBlink(o, item);
-  if (opts.border) o.BorderStyle = buildBorderObject(item.kind === 'text' || item.kind === 'rect' ? item.border : undefined);
+  if (opts.border) {
+    const border = item.kind === 'text' || item.kind === 'rect' || item.kind === 'chart' || item.kind === 'linearGauge' ? item.border : undefined;
+    o.BorderStyle = buildBorderObject(border);
+  }
   appendTail(o, item, id);
 };
 
@@ -211,6 +272,16 @@ const buildEllipseObject = (item: EllipseItem, id: string): JsonObject => {
 /** Layers carry no geometry or background (both `[JsonIgnore]` in SimHub); children are absolute. */
 const buildLayerObject = (item: LayerItem, id: string, path: string): JsonObject => {
   const o: JsonObject = { $type: ITEM_TYPES.layer, Group: true, Visible: item.visible ?? true };
+  const repetitions = item.repetitions ?? 0;
+  if (repetitions > 0 || item.bindings?.Repetitions) {
+    o.Repetitions = repetitions;
+    // Always written when repeating: SimHub's own default is 30, so a horizontal strip that
+    // leaves the key out would step 30 px down as well as across.
+    o.RepeatTopOffset = item.repeatTopOffset ?? DEFAULT_REPEAT_TOP_OFFSET;
+    if (item.repeatLeftOffset !== undefined && item.repeatLeftOffset !== 0) o.RepeatLeftOffset = item.repeatLeftOffset;
+    o.PrepareRepetitions = true;
+    if (item.bindings?.Repetitions) o.RepetitionsBound = true;
+  }
   appendOpacityAndBlink(o, item);
   o.Childrens = item.children.map((child) => buildItemObject(child, path));
   appendTail(o, item, id);
@@ -228,6 +299,89 @@ const buildWidgetObject = (item: WidgetItem, id: string): JsonObject => {
     FreezePageChanges: false,
     EnableScreenRolesAndActivation: false,
     IgnoreSavedScreensEx: true,
+  };
+  appendDrawable(o, item, id, { border: false, rotation: false });
+  return o;
+};
+
+/** A chart's own keys, then the DrawableItem ones. `LineTickness` is SimHub's spelling. */
+const buildChartObject = (item: ChartItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.chart,
+    ChartSuspended: item.chartSuspended ?? false,
+    ChartEnabled: item.chartEnabled ?? true,
+    CurrentValue: item.currentValue ?? 0,
+    Minimum: item.minimum ?? 0,
+    UseMinimum: item.useMinimum ?? true,
+    UseMaximum: item.useMaximum ?? true,
+    LineColor: normaliseHex(item.lineColor),
+    LineTickness: item.lineThickness ?? 2,
+    Maximum: item.maximum ?? 100,
+    PointsCount: item.pointsCount ?? 100,
+  };
+  appendDrawable(o, item, id, { border: true, rotation: false });
+  return o;
+};
+
+/** A linear gauge. `BackgroundColor` is the track, and SimHub's ctor makes it blue, so it is always written (appendDrawable does). */
+const buildLinearGaugeObject = (item: LinearGaugeItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.linearGauge,
+    IsLinearGauge: true,
+    GaugeOrientation: GAUGE_ORIENTATION[item.orientation ?? 'horizontal'],
+    GaugeAlignment: GAUGE_ALIGNMENT[item.alignment ?? 'start'],
+    AutoSize: false,
+    GaugeColor: normaliseHex(item.gaugeColor),
+    AlternateGaugeColor: normaliseHex(item.alternateGaugeColor ?? item.gaugeColor),
+    UseAlternateStyle: item.useAlternateStyle ?? false,
+    Minimum: item.minimum ?? 0,
+    Maximum: item.maximum ?? 100,
+    Value: item.value ?? 0,
+    Steps: item.steps ?? 0,
+  };
+  appendDrawable(o, item, id, { border: true, rotation: false });
+  return o;
+};
+
+const buildRadarObject = (item: RadarItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.radar,
+    PlayerStyle: buildDotStyleObject(item.playerStyle, RADAR_PLAYER_STYLE),
+    OpponentStyle: buildDotStyleObject(item.opponentStyle, RADAR_OPPONENT_STYLE),
+    UseSmoothedPlayerAngle: item.useSmoothedPlayerAngle ?? true,
+    Scale: item.scale ?? 0.5,
+  };
+  appendDrawable(o, item, id, { border: false, rotation: false });
+  return o;
+};
+
+const buildStaticMapObject = (item: StaticMapItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.staticMap,
+    AlternateTrackSectorColor: normaliseHex(item.alternateTrackSectorColor ?? item.trackColor),
+    MapShadow: item.mapShadow ?? false,
+    OverrideColorsWithCarClassColors: item.overrideColorsWithCarClassColors ?? false,
+    DisplayPerClassPosition: item.displayPerClassPosition ?? false,
+    MinimumTrackBorderWidth: item.minimumTrackBorderWidth ?? 0,
+    MinimumTrackWidth: item.minimumTrackWidth ?? 0,
+    OpponentStyle: buildDotStyleObject(item.opponentStyle, MAP_OPPONENT_STYLE),
+    PlayerStyle: buildDotStyleObject(item.playerStyle, MAP_PLAYER_STYLE),
+    StartLine: buildStartLineObject(item.startLine),
+    TrackBorderColor: normaliseHex(item.trackBorderColor),
+    TrackBorderWidth: item.trackBorderWidth ?? 2,
+    TrackColor: normaliseHex(item.trackColor),
+    TrackWidth: item.trackWidth ?? 10,
+  };
+  appendDrawable(o, item, id, { border: false, rotation: false });
+  return o;
+};
+
+const buildWebPageObject = (item: WebPageItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.webPage,
+    StartAddress: item.startAddress ?? '',
+    AllowTransparency: false,
+    ClickThrough: item.clickThrough ?? false,
   };
   appendDrawable(o, item, id, { border: false, rotation: false });
   return o;
@@ -251,6 +405,16 @@ export const buildItemObject = (item: Item, parentPath: string): JsonObject => {
       return buildLayerObject(item, id, path);
     case 'widget':
       return buildWidgetObject(item, id);
+    case 'chart':
+      return buildChartObject(item, id);
+    case 'linearGauge':
+      return buildLinearGaugeObject(item, id);
+    case 'radar':
+      return buildRadarObject(item, id);
+    case 'staticMap':
+      return buildStaticMapObject(item, id);
+    case 'webPage':
+      return buildWebPageObject(item, id);
   }
 };
 

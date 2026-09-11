@@ -73,7 +73,24 @@ export type BindingTarget =
   | 'InitialScreenIndex'
   /** Ellipse fill and stroke; ellipse items only. `BackgroundColor` is the DrawableItem background behind the ellipse. */
   | 'FillColor'
-  | 'EllipseColor';
+  | 'EllipseColor'
+  /** Chart: the sample appended on every tick, and whether the trace records at all. */
+  | 'CurrentValue'
+  | 'ChartEnabled'
+  | 'LineColor'
+  /** Linear gauge: the value and the ends of its scale, its fill colour and its alternate style. */
+  | 'Value'
+  | 'Minimum'
+  | 'Maximum'
+  | 'GaugeColor'
+  | 'AlternateGaugeColor'
+  | 'UseAlternateStyle'
+  /** Radar: pixels per metre are `10 x Scale`. */
+  | 'Scale'
+  /** Web page: the URL. */
+  | 'StartAddress'
+  /** Layer: the total number of rows a repeated layer stamps. */
+  | 'Repetitions';
 
 export type Bindings = Partial<Record<BindingTarget, Binding>>;
 
@@ -185,10 +202,152 @@ export interface EllipseItem extends ItemBase {
 /**
  * A Layer groups items in the editor tree. It has no geometry of its own: children keep
  * absolute coordinates. `Visible`, `Opacity` and blink apply to the whole group.
+ *
+ * A layer can also stamp its children N times, which is how a table draws one row definition as
+ * many rows: `repetitions` is the number of *extra* copies (SimHub's `Repetitions` key, total
+ * rows = repetitions + 1), each offset by `repeatTopOffset` / `repeatLeftOffset`, and children
+ * address their copy with NCalc's `repeatindex()` (1 for the original, 2.. for the copies).
+ * SimHub removes widget items from a copy, so a repeated layer must not hold one.
  */
 export interface LayerItem extends ItemBase {
   kind: 'layer';
   children: Item[];
+  /** Extra copies of the children. 0 or undefined draws the children once. */
+  repetitions?: number;
+  /** Y step between copies, in px. SimHub's own default is 30, so the serialiser always writes it when repeating. */
+  repeatTopOffset?: number;
+  /** X step between copies, in px. */
+  repeatLeftOffset?: number;
+}
+
+/**
+ * The dot and label style of a car on a map or a radar (SimHub's `PlayerStyle`, used for both
+ * the player and the opponents). SimHub's class defaults differ from the defaults each item
+ * applies, so the serialiser always writes all seven keys.
+ */
+export interface DotStyle {
+  labelFont?: string;
+  labelFontSize?: number;
+  labelColor?: Hex;
+  dotColor?: Hex;
+  dotBorderThickness?: number;
+  /** `DotBordercolor` in the file: SimHub spells the c in lower case. */
+  dotBorderColor?: Hex;
+  dotRadius?: number;
+}
+
+/** The start/finish line of a generated map (SimHub's `SeparatorStyle`). */
+export interface SeparatorStyle {
+  color?: Hex;
+  enabled?: boolean;
+  height?: number;
+  width?: number;
+}
+
+/**
+ * A time-series trace (SimHub's `ChartItem`). One series per item: on every dashboard tick
+ * SimHub appends `CurrentValue` to a ring buffer of `pointsCount` samples and draws it left
+ * (oldest) to right (newest). Overlay N traces by stacking N chart items with transparent
+ * backgrounds. There is no time base: the window is `pointsCount` x the refresh interval.
+ */
+export interface ChartItem extends ItemBase {
+  kind: 'chart';
+  rect: Rect;
+  /** Design-time sample; bind `CurrentValue` for the live one. */
+  currentValue?: number;
+  /** Y axis bottom and top. With `useMinimum`/`useMaximum` false that end autoscales. */
+  minimum?: number;
+  maximum?: number;
+  useMinimum?: boolean;
+  useMaximum?: boolean;
+  lineColor: Hex;
+  /** `LineTickness` in the file (SimHub's spelling). */
+  lineThickness?: number;
+  /** Ring buffer length, which is also the trace's horizontal resolution. */
+  pointsCount?: number;
+  /** False clears the buffer; bind `ChartEnabled` to pause a trace. */
+  chartEnabled?: boolean;
+  /** True keeps the samples but stops recording. */
+  chartSuspended?: boolean;
+  border?: Border;
+}
+
+/** Which way a linear gauge fills. */
+export type GaugeOrientation = 'horizontal' | 'vertical';
+/** Which end of its track a linear gauge's fill is anchored to. */
+export type GaugeAlignment = 'start' | 'center' | 'end';
+
+/**
+ * A bar gauge (SimHub's `LinearGaugeItem`): a `gaugeColor` rectangle over the item's background,
+ * filled to `(value - minimum) / (maximum - minimum)`. There is no centre-zero mode, so a delta
+ * bar is two gauges meeting in the middle; `maximum < minimum` is allowed and inverts the fill.
+ */
+export interface LinearGaugeItem extends ItemBase {
+  kind: 'linearGauge';
+  rect: Rect;
+  orientation?: GaugeOrientation;
+  /** `start` = left or bottom, `end` = right or top. */
+  alignment?: GaugeAlignment;
+  gaugeColor: Hex;
+  /** Fill colour while `useAlternateStyle` is true. */
+  alternateGaugeColor?: Hex;
+  useAlternateStyle?: boolean;
+  minimum?: number;
+  maximum?: number;
+  /** Design-time sample; bind `Value` for the live one. */
+  value?: number;
+  /** Above 0, quantises the fill into that many segments. */
+  steps?: number;
+  border?: Border;
+}
+
+/**
+ * The proximity radar (SimHub's `RadarItem`). The player is always drawn at the item's centre;
+ * `scale` is the zoom, 10 x scale pixels per metre. It needs the PersistantTracker recorded map
+ * on games that report relative coordinates.
+ */
+export interface RadarItem extends ItemBase {
+  kind: 'radar';
+  rect: Rect;
+  scale?: number;
+  /** Heading from the motion vector instead of the car's yaw. */
+  useSmoothedPlayerAngle?: boolean;
+  playerStyle?: DotStyle;
+  opponentStyle?: DotStyle;
+}
+
+/**
+ * The whole track drawn to fit the item (SimHub's `GeneratedStaticMapItem`), with a dot per car.
+ * The outline comes from the PersistantTracker recorded map, so a track with no recorded lap
+ * draws nothing.
+ */
+export interface StaticMapItem extends ItemBase {
+  kind: 'staticMap';
+  rect: Rect;
+  trackColor: Hex;
+  trackWidth?: number;
+  trackBorderColor: Hex;
+  trackBorderWidth?: number;
+  alternateTrackSectorColor?: Hex;
+  minimumTrackWidth?: number;
+  minimumTrackBorderWidth?: number;
+  mapShadow?: boolean;
+  /** True paints the dots from the car-class colours; openDash keeps the map achromatic. */
+  overrideColorsWithCarClassColors?: boolean;
+  /** True labels a dot with the class position instead of the overall one. */
+  displayPerClassPosition?: boolean;
+  playerStyle?: DotStyle;
+  opponentStyle?: DotStyle;
+  startLine?: SeparatorStyle;
+}
+
+/** An embedded browser (SimHub's `WebPageItem`). `startAddress` is the URL and can be bound. */
+export interface WebPageItem extends ItemBase {
+  kind: 'webPage';
+  rect: Rect;
+  startAddress?: string;
+  /** True lets clicks pass through; SimHub then freezes the item while a game runs. */
+  clickThrough?: boolean;
 }
 
 /**
@@ -205,7 +364,7 @@ export interface WidgetItem extends ItemBase {
   autoSize?: boolean;
 }
 
-export type Item = TextItem | RectangleItem | EllipseItem | LayerItem | WidgetItem;
+export type Item = TextItem | RectangleItem | EllipseItem | LayerItem | WidgetItem | ChartItem | LinearGaugeItem | RadarItem | StaticMapItem | WebPageItem;
 
 /** The item kinds that carry a rect (everything but a Layer). */
 export type DrawableItem = Exclude<Item, LayerItem>;
