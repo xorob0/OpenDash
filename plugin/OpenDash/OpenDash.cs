@@ -132,6 +132,18 @@ namespace OpenDashPlugin
                 var captured = slot;
                 this.AttachDelegate(Contract.SlotProperty(captured), () => Settings.Slot(captured));
             }
+            for (var module = 1; module <= Modules.Count; module++)
+            {
+                var captured = module;
+                this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+            }
+            foreach (var letter in Contract.ZoneLetters)
+            {
+                var captured = letter;
+                this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
+            }
+            this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
+            this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
         }
     }
 }

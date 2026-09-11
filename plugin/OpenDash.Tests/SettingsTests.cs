@@ -117,5 +117,65 @@ namespace OpenDashPlugin.Tests
             var messages = DuplicateAssignment.Warning(slots).Split(new[] { Environment.NewLine }, StringSplitOptions.None);
             Assert.Equal(new[] { "Best lap is assigned to slots 3 and 4.", "ABS is assigned to slots 1 and 2." }, messages);
         }
+
+        [Fact]
+        public void Second_screen_settings_start_at_their_defaults()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            Assert.Equal(21, settings.Modules.Length);
+            Assert.True(settings.Module(1));
+            Assert.False(settings.Module(6));
+            Assert.False(settings.Module(20));
+            Assert.False(settings.Module(21));
+            Assert.Equal(new[] { 0, 1, 4, 2 }, settings.Zones);
+            Assert.Equal(0, settings.Zone("A"));
+            Assert.Equal(2, settings.Zone("D"));
+            Assert.Equal(5, settings.WideZone);
+            Assert.Equal("", settings.WebViewUrl);
+        }
+
+        [Fact]
+        public void A_short_or_broken_second_screen_state_is_repaired()
+        {
+            var settings = new OpenDashSettings
+            {
+                Modules = new[] { false, true },
+                Zones = new[] { 99, 3 },
+                WideZone = 42,
+                WebViewUrl = "javascript:alert(1)",
+            };
+            settings.Normalise();
+            // What the file carried is kept; the rest goes back to the catalogue defaults.
+            Assert.Equal(21, settings.Modules.Length);
+            Assert.False(settings.Module(1));
+            Assert.True(settings.Module(2));
+            Assert.False(settings.Module(6));
+            // 99 is not a page, so zone A falls back; zone B keeps the 3 the file gave it.
+            Assert.Equal(new[] { 0, 3, 4, 2 }, settings.Zones);
+            Assert.Equal(Contract.DefaultWideZonePage, settings.WideZone);
+            Assert.Equal("", settings.WebViewUrl);
+        }
+
+        [Fact]
+        public void Second_screen_settings_are_copied_and_set_through_the_contract()
+        {
+            var source = new OpenDashSettings();
+            source.SetModule(6, true);
+            source.SetZone("B", 7);
+            source.WideZone = 1;
+            source.WebViewUrl = "https://garage61.net";
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(source);
+            Assert.True(copy.Module(6));
+            Assert.Equal(7, copy.Zone("B"));
+            Assert.Equal(1, copy.WideZone);
+            Assert.Equal("https://garage61.net", copy.WebViewUrl);
+            // The copy is independent: it holds its own arrays.
+            source.SetModule(6, false);
+            Assert.True(copy.Module(6));
+            Assert.Throws<ArgumentOutOfRangeException>(() => copy.SetModule(22, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => copy.SetZone("E", 0));
+        }
     }
 }

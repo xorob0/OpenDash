@@ -19,6 +19,18 @@ namespace OpenDashPlugin
         /// <summary>Card number per slot, index 0 is slot 1. Always Contract.SlotCount long after Normalise().</summary>
         public int[] Slots { get; set; } = Contract.DefaultSlots();
 
+        /// <summary>Whether each companion module is enabled, index 0 is module 1. Always Modules.Count long after Normalise().</summary>
+        public bool[] Modules { get; set; } = Contract.DefaultModules();
+
+        /// <summary>Standard zone page per pit wall zone, index 0 is zone A. Always four long after Normalise().</summary>
+        public int[] Zones { get; set; } = Contract.DefaultZones();
+
+        /// <summary>Wide zone page of the pit wall tower page.</summary>
+        public int WideZone { get; set; } = Contract.DefaultWideZonePage;
+
+        /// <summary>Address of the web view zone page; empty until the user sets one.</summary>
+        public string WebViewUrl { get; set; } = Contract.DefaultWebViewUrl;
+
         /// <summary>Clamps every value into its contract: unknown modes and card numbers fall back to the defaults,
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
         public void Normalise()
@@ -36,6 +48,60 @@ namespace OpenDashPlugin
                 }
             }
             Slots = normalised;
+
+            var modules = Contract.DefaultModules();
+            if (Modules != null)
+            {
+                for (var i = 0; i < modules.Length && i < Modules.Length; i++) modules[i] = Modules[i];
+            }
+            Modules = modules;
+
+            var zones = Contract.DefaultZones();
+            if (Zones != null)
+            {
+                for (var i = 0; i < zones.Length && i < Zones.Length; i++)
+                {
+                    zones[i] = Contract.NormaliseZonePage(Zones[i], Contract.DefaultZonePages[i]);
+                }
+            }
+            Zones = zones;
+
+            WideZone = Contract.NormaliseWideZonePage(WideZone);
+            WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
+        }
+
+        /// <summary>Whether a companion module is enabled, 1-based. Safe to call before Normalise().</summary>
+        public bool Module(int module)
+        {
+            var meta = OpenDashPlugin.Modules.ByNumber(module);
+            if (meta == null) return false;
+            var index = module - 1;
+            if (Modules == null || index >= Modules.Length) return meta.Enabled;
+            return Modules[index];
+        }
+
+        public void SetModule(int module, bool enabled)
+        {
+            if (!OpenDashPlugin.Modules.IsValidNumber(module)) throw new ArgumentOutOfRangeException(nameof(module));
+            if (Modules == null || Modules.Length != OpenDashPlugin.Modules.Count) Normalise();
+            Modules[module - 1] = enabled;
+        }
+
+        /// <summary>Page shown in a pit wall zone, by its letter. Safe to call before Normalise().</summary>
+        public int Zone(string letter)
+        {
+            var index = Array.IndexOf(Contract.ZoneLetters, letter);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
+            if (Zones == null || index >= Zones.Length) return Contract.DefaultZonePages[index];
+            return Contract.NormaliseZonePage(Zones[index], Contract.DefaultZonePages[index]);
+        }
+
+        public void SetZone(string letter, int page)
+        {
+            var index = Array.IndexOf(Contract.ZoneLetters, letter);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
+            if (Zones == null || Zones.Length != Contract.ZoneLetters.Length) Normalise();
+            Zones[index] = Contract.NormaliseZonePage(page, Contract.DefaultZonePages[index]);
         }
 
         /// <summary>Card number shown in a slot, 1-based. Safe to call before Normalise().</summary>
@@ -65,6 +131,10 @@ namespace OpenDashPlugin
             DeltaReference = other.DeltaReference;
             SessionProgress = other.SessionProgress;
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
+            Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();
+            Zones = other.Zones == null ? null : (int[])other.Zones.Clone();
+            WideZone = other.WideZone;
+            WebViewUrl = other.WebViewUrl;
             Normalise();
         }
     }

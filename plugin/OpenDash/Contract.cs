@@ -17,6 +17,8 @@ namespace OpenDashPlugin
         public const string PositionMode = "PositionMode";
         public const string DeltaReference = "DeltaReference";
         public const string SessionProgress = "SessionProgress";
+        public const string PitWallWide = "PitWallWide";
+        public const string WebViewUrl = "WebViewUrl";
 
         public const bool DefaultShiftLights = true;
 
@@ -28,6 +30,18 @@ namespace OpenDashPlugin
 
         public static readonly string[] SessionProgressModes = { "auto", "laps", "time" };
         public const string DefaultSessionProgress = "auto";
+
+        /// <summary>The four configurable zones of a pit wall page.</summary>
+        public static readonly string[] ZoneLetters = { "A", "B", "C", "D" };
+
+        /// <summary>Default page of zones A to D: fuel, tyres, relative and opponents, which is what a spotter watches.</summary>
+        public static readonly IReadOnlyList<int> DefaultZonePages = new[] { 0, 1, 4, 2 };
+
+        /// <summary>Default page of the wide zone: the car telemetry trace with the settings grid beside it.</summary>
+        public const int DefaultWideZonePage = 5;
+
+        /// <summary>The web view page shows nothing until the user sets an address.</summary>
+        public const string DefaultWebViewUrl = "";
 
         /// <summary>Property name of a slot, 1-based: Slot01 .. Slot12.</summary>
         public static string SlotProperty(int slot)
@@ -59,6 +73,43 @@ namespace OpenDashPlugin
             return slots;
         }
 
+        /// <summary>Property name of a companion module, 1-based: CompanionModule01 .. CompanionModule21.</summary>
+        public static string ModuleProperty(int module)
+        {
+            if (!Modules.IsValidNumber(module)) throw new ArgumentOutOfRangeException(nameof(module));
+            return "CompanionModule" + module.ToString("00");
+        }
+
+        /// <summary>Property name of a pit wall zone: PitWallZoneA .. PitWallZoneD.</summary>
+        public static string ZoneProperty(string letter)
+        {
+            var index = Array.IndexOf(ZoneLetters, letter);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
+            return "PitWallZone" + letter;
+        }
+
+        /// <summary>Default page of a zone, by its letter.</summary>
+        public static int DefaultZonePage(string letter)
+        {
+            var index = Array.IndexOf(ZoneLetters, letter);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
+            return DefaultZonePages[index];
+        }
+
+        /// <summary>The default on/off state of the 21 companion modules, index 0 is module 1.</summary>
+        public static bool[] DefaultModules()
+        {
+            return Modules.Defaults();
+        }
+
+        /// <summary>The default page of every zone, in letter order.</summary>
+        public static int[] DefaultZones()
+        {
+            var zones = new int[ZoneLetters.Length];
+            for (var i = 0; i < zones.Length; i++) zones[i] = DefaultZonePages[i];
+            return zones;
+        }
+
         /// <summary>Every property the plugin attaches, without the prefix, in attachment order.</summary>
         public static IEnumerable<string> PropertyNames()
         {
@@ -67,6 +118,10 @@ namespace OpenDashPlugin
             yield return DeltaReference;
             yield return SessionProgress;
             for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
+            for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(module);
+            foreach (var letter in ZoneLetters) yield return ZoneProperty(letter);
+            yield return PitWallWide;
+            yield return WebViewUrl;
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>
@@ -85,6 +140,33 @@ namespace OpenDashPlugin
         public static int NormaliseCard(int card, int fallback)
         {
             return Cards.IsValidNumber(card) ? card : fallback;
+        }
+
+        /// <summary>Clamps a standard zone page number, or returns fallback when it is outside.</summary>
+        public static int NormaliseZonePage(int page, int fallback)
+        {
+            return ZonePages.IsValidStandard(page) ? page : fallback;
+        }
+
+        /// <summary>Clamps a wide zone page number, or returns the default when it is outside.</summary>
+        public static int NormaliseWideZonePage(int page)
+        {
+            return ZonePages.IsValidWide(page) ? page : DefaultWideZonePage;
+        }
+
+        /// <summary>
+        /// Trims a web view address and keeps it only when it is an absolute http or https URL.
+        /// Anything else becomes the empty default, so the page shows its "no address" state rather
+        /// than handing SimHub's browser a file path or a script URL.
+        /// </summary>
+        public static string NormaliseUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return DefaultWebViewUrl;
+            var trimmed = url.Trim();
+            Uri parsed;
+            if (!Uri.TryCreate(trimmed, UriKind.Absolute, out parsed)) return DefaultWebViewUrl;
+            if (parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps) return DefaultWebViewUrl;
+            return trimmed;
         }
     }
 }
