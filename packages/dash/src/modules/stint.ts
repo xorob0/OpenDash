@@ -12,7 +12,7 @@ import { stack } from '../second/layout.ts';
 import { CHARS, carName, carNumber, clock, player } from '../second/values.ts';
 import { defineModule, fieldsRow, fld } from './module.ts';
 
-const { fmt, isnull, num, str, concat, driver, timespanToSeconds, game } = ncalc;
+const { fmt, isnull, num, str, concat, driver, timespanToSeconds, game, ucase } = ncalc;
 
 export const stint = defineModule('stint', (ctx) => {
   const d = densityOf(ctx.density);
@@ -35,7 +35,13 @@ export const stint = defineModule('stint', (ctx) => {
       ),
       fieldsRow(
         [
-          fld(ctx, 'driver', 'Driver', { sample: 'YOU · #12', bind: concat(carName(me), str(' · '), carNumber(me)), chars: CHARS.classPosition, fs: d.mid }),
+          // The driver's initials are a proportional label and the car number a monospaced value,
+          // rather than one string in digit cells. `YOU · #12` was the latter: the hash overruns
+          // a cell cut for digits, and so would an M or a W in somebody's initials.
+          fld(ctx, 'driver', 'Driver · YOU', { sample: '12', bind: carNumber(me), chars: CHARS.carNumber, fs: d.mid }, {
+            labelBind: concat(str('DRIVER · '), ucase(carName(me))),
+            labelWidest: 'DRIVER · WWW',
+          }),
           fld(ctx, 'stops', 'Stops', { sample: '1', bind: fmt(stops, '0'), chars: CHARS.position, fs: d.mid }),
           fld(ctx, 'lastStop', 'Last stop', { sample: '24.3', bind: fmt(lastStop, '0.0'), chars: CHARS.consumption, fs: d.mid, follower: { text: 's' } }),
         ],
