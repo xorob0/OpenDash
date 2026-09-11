@@ -169,8 +169,9 @@ describe('widget build on disk', () => {
       'openDash 600x686',
       'openDash 480 round',
       'openDash 800 round',
-      // The zone faces follow the card faces until they take their names in XOR-118.
-      'openDash zones 1920x480',
+      // The zone faces follow the card faces until they take their names in XOR-118, in the same
+      // order LAYOUTS lists the card faces, so the two halves of the manifest read alike.
+      ...ZONE_FACES.map((f) => f.folder),
     ]);
     expect(manifest).toEqual(widget.manifest as unknown as JsonItem);
     expect(Object.keys(manifest)).toEqual(['version', 'simHubVersion', 'packages']);

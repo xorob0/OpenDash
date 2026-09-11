@@ -16,7 +16,7 @@ import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { cells, monoWidth } from '../design/metrics.ts';
+import { cells, monoWidth, textBox } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
@@ -155,6 +155,28 @@ export const BAND_PAGES: Record<string, readonly BandField[]> = {
   car,
 };
 
+/**
+ * The largest value size whose line box fits the band, given the label above it.
+ *
+ * The value takes the height the band gives it rather than the height the density prefers. A band
+ * is 60 px at 1920, 58 on the nano and 54 at 1280 by 400, and a value sized for the tallest hangs
+ * out of the shortest -- where WPF clips it and the row reads as a rendering fault. A rank of one
+ * row has nothing to shed, so this is one of the two places a value shrinks instead.
+ *
+ * Solved by trying rather than by algebra, because the thing that has to fit is a WPF line box:
+ * it starts a tenth of the size above the line it is given and runs about a fifth below the
+ * baseline, and rounding at both ends is what the last pixel turns on.
+ */
+function valueSizeFor(height: number, preferred: number, labelFs: number, fieldGap: number): number {
+  for (let fs = preferred; fs > 8; fs--) {
+    const blockHeight = labelFs + fieldGap + fs;
+    const top = Math.max(0, (height - blockHeight) / 2);
+    const box = textBox(top + labelFs + fieldGap, fs);
+    if (box.top >= 0 && box.top + box.height <= height) return fs;
+  }
+  return 8;
+}
+
 /** Width the unit after a value takes. Measured, not the remainder of the field: a field whose
  *  value fills its width left the unit a box narrower than its own glyph, and WPF clipped it. */
 const unitWidth = (field: BandField, labelFs: number): number => (field.after ? Math.ceil(measureText('BarlowMedium', field.after, labelFs)) + 2 : 0);
@@ -180,9 +202,9 @@ export function bandPageItems(id: string, frame: Rect, prefix: string): Item[] {
   const fields = BAND_PAGES[id];
   if (!fields) throw new RangeError(`band D has no page "${id}"`);
   const d = densityOf('zone');
-  const valueFs = d.mid;
   const labelFs = d.labelSm;
   const gap = d.gapX;
+  const valueFs = valueSizeFor(frame.height, d.mid, labelFs, d.fieldGap);
 
   const kept = [...fields];
   const widthOf = (list: readonly BandField[]): number =>
@@ -215,7 +237,7 @@ export function bandPageItems(id: string, frame: Rect, prefix: string): Item[] {
           }),
     );
     if (field.after) {
-      items.push(unit(`${prefix}${field.id}.unit`, field.after, x + valueWidth + ds.space[2], valueTop + (valueFs - labelFs), unitWidth(field, labelFs)));
+      items.push(unit(`${prefix}${field.id}.unit`, field.after, x + valueWidth + ds.space[2], valueTop + (valueFs - labelFs), unitWidth(field, labelFs), { size: labelFs }));
     }
     x += w + gap;
   }
@@ -233,7 +255,7 @@ export function bandPageItems(id: string, frame: Rect, prefix: string): Item[] {
 export function bandCorners(frame: Rect, prefix: string): Item[] {
   const d = densityOf('zone');
   const labelFs = d.labelSm;
-  const valueFs = d.small;
+  const valueFs = valueSizeFor(frame.height, d.small, labelFs, d.fieldGap);
   const padX = 20;
   const blockHeight = labelFs + d.fieldGap + valueFs;
   const top = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
