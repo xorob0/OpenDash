@@ -36,6 +36,8 @@ export const LIST_ORDER = [
   'openDash 800x286',
   'openDash 800x480',
   'openDash 850x480',
+  // The zone face, built beside the card faces for review until it takes the name openDash.
+  'openDash zones 1920x480',
   'openDash Companion',
   'openDash Companion portrait',
   'openDash Pit wall',
