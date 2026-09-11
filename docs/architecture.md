@@ -7,6 +7,8 @@ design/tokens.json ───────────────┐
 packages/dash/src/cards/*.ts ─────┤  one module per card: readouts, labels, colour rules
 packages/dash/src/hero/*.ts ──────┤  gear, RPM bar, flags, pit limiter
 packages/dash/src/layouts/*.ts ───┤  slot geometry and slot count for one BaseWidth x BaseHeight
+packages/dash/src/modules/*.ts ───┤  one module per companion page, which is also a pit wall zone page
+packages/dash/src/screens/*.ts ───┤  the companion and pit wall packages built from those modules
 packages/dash/fonts/*.ttf ────────┤
                                   v
                         packages/generator
@@ -16,6 +18,8 @@ packages/dash/fonts/*.ttf ────────┤
                   build/openDash/cards.djson           one screen per card
                   build/openDash/*.djson.metadata
                   build/openDash/_SHFonts/
+                  build/openDash Companion/            21 screens, one per module
+                  build/openDash Pit wall/             3 pages and their zone dashboards
                                   v
                   zip  -->  build/openDash.simhubdash
                                   |
