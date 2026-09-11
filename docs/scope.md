@@ -3,10 +3,19 @@
 **Status:** current. Supersedes [scope-mvp.md](scope-mvp.md), which is closed and kept as the
 record of what the MVP was.
 
-This document describes openDash as it is today: what it is, what ships, what is deliberately
-not built, and which of the MVP's refusals have since been reversed and by what. It is the
-document a contributor or an agent should read first, and the one that has to be amended when
-the answer to "what is openDash" changes.
+This document describes what openDash is: what it ships, what is deliberately not built, and
+which of the MVP's refusals have since been reversed and by what. It is the document a
+contributor or an agent should read first, and the one that has to be amended when the answer to
+"what is openDash" changes.
+
+> **The face is being rebuilt.** The zone model described below is the settled design
+> ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)) and it is what
+> the next release ships. **0.1.0 shipped the twelve-slot face**, and until the rename in 0.2.0
+> that is what a user has installed. `README.md` and `plugin/INSTALL.md` describe that installed
+> product and stay accurate to it; this document describes the product.
+>
+> The distinction matters because of the rule at the end of the refusals: a line has to move here
+> before the code that crosses it may be written. That is the reason this document changed first.
 
 ## Product
 
@@ -41,32 +50,47 @@ Three kinds of screen, built from one set of parts and installed by one plugin.
 
 ### The face
 
-The dashboard on the wheel or the dash: a hero zone holding the gear together with the
-indicators that belong to no card, which is to say the rev bar with its shift lights, the flag
-strip and the pit limiter, and beside it a grid of equal slots. Any card may be placed in any
-slot from the plugin, and every slot is the same size so that every card fits every slot.
+The dashboard on the wheel or the dash. It is **five parts**: the rev bar with its shift lights in
+a recessed well, a bar of settled values, a body of zone B, zone A and zone C, and band D across
+the foot.
 
-Ten faces ship. A face declares its own slot count and reads the first N slot settings, so a
-smaller screen simply exposes fewer slots.
+Each zone shows **one page at a time from its own catalogue, and a wheel button cycles it**. Zone
+A chooses among four pages built around the gear; zones B and C among the twenty-one that also
+serve the companion and the pit wall; band D among eight that suit a wide short band, with a flag
+taking the band over while one is out. The bar is not a zone and does not cycle: it carries what
+does not change during a lap, which is what earns it the space.
 
-| Package | Size | Slots |
+A page is never scaled. It is laid out for the **shape** of the box it is given, and it sheds its
+secondary ranks before it shrinks its numerals, so a bigger screen shows more in each zone rather
+than more regions of the same size.
+
+Ten faces ship. Eight are rectangular and take the same five parts; the two round ones are not yet
+decided and are noted below.
+
+| Package | Size | |
 |---|---|---|
-| `openDash` | 1920 x 480 | 12 |
-| `openDash 1280x480` | 1280 x 480 | 8 |
-| `openDash 1280x400` | 1280 x 400 | 8 |
-| `openDash 1280x720` | 1280 x 720 | 12 |
-| `openDash 850x480` | 850 x 480 | 6 |
-| `openDash 800x480` | 800 x 480 | 6 |
-| `openDash 800x286` | 800 x 286 | 4 |
-| `openDash 600x686` | 600 x 686 | 6 |
-| `openDash 800 round` | 800 x 800 | 6 |
-| `openDash 480 round` | 480 x 480 | 2 |
+| `openDash` | 1920 x 480 | the reference face |
+| `openDash 1280x480` | 1280 x 480 | |
+| `openDash 1280x400` | 1280 x 400 | a shorter body, the same zones |
+| `openDash 1280x720` | 1280 x 720 | the tall body lets zone C list the field |
+| `openDash 850x480` | 850 x 480 | narrow zones, five settings in the bar |
+| `openDash 800x480` | 800 x 480 | derived from 850 x 480 |
+| `openDash 800x286` | 800 x 286 | no bar: the height is not there |
+| `openDash 600x686` | 600 x 686 | portrait, A over B over C |
+| `openDash 800 round` | 800 x 800 | still on the card model; see below |
+| `openDash 480 round` | 480 x 480 | still on the card model; see below |
 
-Thirteen cards are available to a slot: speed, current lap, last lap, best lap, delta, position,
-session, fuel, fuel laps, TC, ABS, tyre temperatures and tyre pressures.
-`packages/dash/src/contract.ts` holds the catalogue and the default assignment, and
+`packages/dash/src/contract.ts` holds the catalogues and the defaults, and
 `plugin/OpenDash/Contract.cs` mirrors it, with a test on each side reading the other file so
 that the two cannot drift.
+
+[docs/design/zones.md](design/zones.md) is the full specification: every rectangle of every face,
+every page of every catalogue, and the shape model. [ADR 0006](decisions/0006-the-zone-face.md) is
+why the model changed from twelve equal slots, which is what shipped in 0.1.0.
+
+**What a round face does with zones is not decided.** The two round artboards are still drawn on
+the slot model and the only zone-era rule touching them is that a round face uses its ring instead
+of a band. They keep building on the card path until the question is answered.
 
 ### The companion
 
@@ -95,8 +119,9 @@ anything; [ADR 0003](decisions/0003-plugin-settings-through-properties.md) is wh
 question of whether it should ever compute is open as XOR-47.
 
 The settings are the shift lights, the position mode, the delta reference, the session progress
-mode, twelve slot assignments, twenty-one companion module switches, five pit wall zone
-assignments and a web view address. Because they are ordinary SimHub properties, another
+mode, the four zones of the face (the page each shows, which pages are enabled, and the page it
+opens on), the quick glance, the bar's four end fields, twenty-one companion module switches,
+five pit wall zone assignments and a web view address. Because they are ordinary SimHub properties, another
 dashboard or an LED profile can read them, and a change reaches the running dashboard at once
 without restarting SimHub or reopening the dashboard.
 
@@ -118,9 +143,22 @@ everything SimHub already does for DDUs, USB screens, phones and the seventeen s
 overwritten by the next build, and a pull request that contains a hand-edited scene graph cannot
 be reviewed. See [ADR 0002](decisions/0002-djson-generated-from-source.md).
 
-**Computed telemetry of our own, on the dashboard.** A card shows a SimHub property. Anything
-requiring openDash to keep state across laps, such as a fuel calculator or a stint estimate,
-waits on XOR-47 deciding where that computation may live, since it cannot live in a scene graph.
+**Computed telemetry of our own, on the dashboard.** A page shows a SimHub property. Anything
+requiring openDash to keep state across laps, such as a fuel calculator, a five-lap average or a
+pit window, waits on [ADR 0009](decisions/0009-does-the-plugin-compute.md) deciding where that
+computation may live, since it cannot live in a scene graph. That record is owed before zones B
+and C ship, because the catalogue draws several such values as ordinary content.
+
+**Theming and colour customisation.** openDash ships one opinionated look, resolved at build time
+into literal values in the `.djson`. Nothing a user can change reaches a colour, a typeface or a
+size. How far personalisation could ever reach into a generated package is
+[ADR 0011](decisions/0011-personalisation.md), and it has to be written before any of it is built,
+because the one line the product holds is that two states a driver cannot tell apart is a bug
+whoever chose the colours.
+
+**Idle and pit screens.** Every screen already declares `IdleScreen`, so SimHub shows the racing
+face with no data in it between sessions, which is arguably worse than SimHub's own default. A
+screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan.
 
 **Licensing, activation or accounts.** openDash is MIT and there is nothing to unlock.
 
@@ -147,12 +185,20 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Multiple screen sizes | XOR-6 | Ten faces, each one layout file |
 | Round DDUs | XOR-6 | 480 and 800 round faces ship |
 | Phone and tablet layouts | XOR-8 | Two companion packages ship |
-| Page navigation | XOR-8 | The companion pages through its modules with a wheel button |
+| Page navigation | XOR-8, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
 
-Four of the nine still stand, and are restated as refusals above: theming and colour
-customisation, idle or pit screens, network update checks, and computed telemetry of our own.
-The first is the subject of the Personalisation project, the second of XOR-62 and XOR-53, and
-the third of XOR-29; none of them is built, and until one is, the refusal is the current answer.
+Four of the nine still stand. Each is restated above with the record that would have to move it:
+
+| Still refused | What would have to happen first |
+|---|---|
+| Theming and colour customisation | ADR 0011, and this line moving with it. The Personalisation project is unmergeable until it does |
+| Idle and pit screens | XOR-62 and XOR-53, behind the same record |
+| Network update checks | ADR 0012, stating exactly what is sent and how it is switched off |
+| Computed telemetry of our own | ADR 0009, owed before zones B and C |
+
+None of them is built, and until one is, the refusal is the current answer. **A pull request that
+falls under one of these lines is declined however well it is written**; the line moves first, in
+its record, and the code follows.
 
 The stream overlay is neither built nor refused. Nobody has asked for it.
 

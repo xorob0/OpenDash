@@ -36,9 +36,9 @@ defensible position rather than a preference: legibility first, identity second.
 
 | Role | Token | Value |
 |---|---|---|
-| Background | `color.bg.base` | `#0A0B0D` |
-| Zone fill | `color.bg.surface` | `#14161A` |
-| Separator | `color.bg.raised` | `#1C1F24` |
+| Background | `color.surface.base` | `#0A0B0D` |
+| Zone fill | `color.surface.zone` | `#14161A` |
+| Separator | `color.surface.raised` | `#1C1F24` |
 | Primary numerals | `color.text.primary` | `#F5F7FA` |
 | Supporting values | `color.text.secondary` | `#8A9099` |
 | Field labels | `color.text.label` | `#5A6069` |
@@ -51,12 +51,12 @@ panels used in DDUs and reduces perceived contrast rather than increasing it.
 
 | Meaning | Token | Value |
 |---|---|---|
-| Shift 1, delta faster, within limits | `state.good` | `#00D96A` |
-| Shift 2, caution | `state.caution` | `#FFB300` |
-| Shift 3, delta slower, alarm | `state.danger` | `#FF2D46` |
-| Blue flag | `state.info` | `#2E7BFF` |
-| Session best | `state.best` | `#B14BFF` |
-| White flag, pit limiter | `state.neutral` | `#FFFFFF` |
+| Shift 1, delta faster, within limits | `color.good.primary` | `#00D96A` |
+| Shift 2, caution | `color.caution.primary` | `#FFB300` |
+| Shift 3, delta slower, alarm | `color.danger.primary` | `#FF2D46` |
+| Blue flag | `color.info.primary` | `#2E7BFF` |
+| Session best | `color.best.primary` | `#B14BFF` |
+| White flag, pit limiter | `color.neutral.primary` | `#FFFFFF` |
 
 Purple for session best follows established sim-racing convention, and breaking it in order to
 be distinctive would cost drivers real recognition time.
@@ -65,7 +65,7 @@ be distinctive would cost drivers real recognition time.
 
 | | Token | Value |
 |---|---|---|
-| openDash cyan | `brand.cyan` | `#33D9F2` |
+| openDash cyan | `color.brand.primary` | `#33D9F2` |
 
 Logo, plugin panel, documentation, website. Never on the dash face.
 
@@ -87,10 +87,20 @@ Labels are uppercase, small and dim; they should be findable but never compete w
 Numerals are weight 600 to 700. Two constraints come from the renderer rather than from taste.
 SimHub text items expose no letter-spacing property, so the tracking tokens apply to the plugin
 panel and to documentation only, and label spacing on the dash face is obtained through case
-and size alone. Moreover, SimHub exposes no OpenType features, so whether lap times tick without
-jitter depends on Barlow Condensed having tabular digits by default; the spike checks it, and
-if they turn out to be proportional, values are right-aligned and a tabular alternative is
-considered.
+and size alone.
+
+The second is answered. SimHub exposes no OpenType features and Barlow Condensed's digits are
+proportional, so a ticking value would jitter. Every value is therefore drawn in SimHub's own
+monospace cells, measured from the bundled files to hold the widest ink a value can draw, and
+recorded in `font.cell`. **Only what fits a cell may be drawn in one**, which is why `#`, `%`,
+`&`, `@`, `M`, `W`, `m` and `w` are never part of a value: a car number is drawn bare and its hash
+belongs to the label. That is rule 19 on the canvas.
+
+One more thing the renderer decides rather than taste: the condensed faces ship under the family
+name `openDash Display`. WPF reads the width word out of a family name and files "Barlow
+Condensed" as a *stretch* of Barlow, which a `.djson` has no way to ask back, so every numeral
+came out about a fifth too wide. Same outlines, renamed on the way into a package; the vendored
+files are untouched.
 
 ## Form
 
