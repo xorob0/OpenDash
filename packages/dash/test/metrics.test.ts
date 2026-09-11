@@ -31,12 +31,12 @@ describe('metrics', () => {
 
   test('the gear cell comes from the tokens, with the face\'s special cell', () => {
     expect(GEAR_CELL).toBe(ds.font.cell.gear);
-    expect(gearCells(260)).toEqual({ charWidth: 135, specialCharsWidth: 73, specialChars: '.,:' });
+    expect(gearCells(260)).toEqual({ charWidth: 136, specialCharsWidth: 73, specialChars: '.,:' });
     expect(gearCells(180)).toEqual({ charWidth: 94, specialCharsWidth: 51, specialChars: '.,:' });
     const gear = numeral('x.gear', 'N', 0, 0, 260, { digits: 1, specials: 0 }, { weight: 'Bold', mono: gearCells(260) });
     // The cell plus a slack of ceil(0.05 x 260), since the box is what WPF clips to.
-    expect(gear.rect).toEqual({ left: 0, top: -26, width: 148, height: 313 });
-    expect(gear.monospace?.charWidth).toBe(135);
+    expect(gear.rect).toEqual({ left: 0, top: -26, width: 149, height: 313 });
+    expect(gear.monospace?.charWidth).toBe(136);
     expect(numeral('x.gear', 'N', 0, 0, 260, { digits: 1, specials: 0 }, { weight: 'Bold' }).monospace?.charWidth).toBe(128);
   });
 
@@ -68,6 +68,24 @@ describe('metrics', () => {
         expect({ face, ch, advance: m.advance, fits: m.advance <= GEAR_CELL }).toMatchObject({ fits: true });
         expect({ face, ch, ink: m.xMax, fits: m.xMax <= GEAR_CELL }).toMatchObject({ fits: true });
       }
+    }
+  });
+
+  /**
+   * In pixels, which is what actually clips, and at every size a gear is drawn at plus a sweep
+   * below them. The test above compares em fractions against the em token and so cannot see a
+   * rounding error; that is how a cell rounded to nearest survived a headroom of 0.006 em.
+   */
+  test('the integer cell holds the widest advance at every size, not only the em fraction', async () => {
+    const { familyOf, loadFont, measure } = await import('../../../tools/measure-font/measure.ts');
+    const { fontsForPackage } = await import('../src/dashboard.ts');
+    const bold = fontsForPackage().find((f) => familyOf(loadFont(f)) === ds.font.data && f.includes('Bold'))!;
+    const font = loadFont(bold);
+    const widest = Math.max(...[...'0123456789NR'].map((ch) => measure(font, ch)!.advance));
+    const ink = Math.max(...[...'0123456789NR'].map((ch) => measure(font, ch)!.xMax));
+    for (const fs of [ds.size.gear, ds.size.gearSm, 40, 60, 83, 84, 120, 228, 300]) {
+      const cell = gearCells(fs).charWidth;
+      expect({ fs, cell, holdsAdvance: cell >= widest * fs, holdsInk: cell >= ink * fs }).toMatchObject({ holdsAdvance: true, holdsInk: true });
     }
   });
 
