@@ -5,7 +5,9 @@
 > This document is kept as the record of what the MVP was and of the reasoning behind it. It no
 > longer describes the product: openDash now ships fourteen packages across ten face sizes, two
 > companions and two pit walls, and five of the lines this document lists as out of scope have
-> since been reversed. [scope.md](scope.md) says which, and by what. Do not cut work from this
+> since been reversed. The face it describes -- a hero zone beside a grid of equal slots -- was
+> itself replaced by the zone model in [ADR 0006](decisions/0006-the-zone-face.md).
+> [scope.md](scope.md) says which, and by what. Do not cut work from this
 > document, and do not treat its refusals as current.
 
 **Status:** signed off 2026-09-10, revised the same day after a scope review. The spike gate
