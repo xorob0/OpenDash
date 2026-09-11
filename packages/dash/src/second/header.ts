@@ -163,6 +163,15 @@ export function panel(name: string, spec: PanelSpec, density: Density = 'zone'):
 /** Height of a zone's title bar. */
 export const ZONE_TITLE_HEIGHT = 28;
 
+/**
+ * The title line and the padding a zone frame takes, which follow the density.
+ *
+ * A 28 px title over a 16 px gutter is right on a 769 by 314 zone and is a fifth of a compact
+ * one's height. The frame is chrome: it should cost the page less where the page has less.
+ */
+export const zoneFrameMetrics = (density: Density): { title: number; padX: number; padBottom: number } =>
+  density === 'compact' ? { title: 20, padX: 10, padBottom: 16 } : { title: ZONE_TITLE_HEIGHT, padX: 16, padBottom: 16 };
+
 export interface ZoneSpec {
   frame: Rect;
   title: string;
@@ -174,18 +183,18 @@ export interface ZoneSpec {
 /** A data zone: a title bar with the page name and counter, and the body rect under it. */
 export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone'): { items: Item[]; body: Rect } {
   const d = densityOf(density);
-  const padX = 16;
-  const titleY = spec.frame.top + (ZONE_TITLE_HEIGHT - d.labelSm) / 2;
+  const { title: titleHeight, padX, padBottom } = zoneFrameMetrics(density);
+  const titleY = spec.frame.top + (titleHeight - d.labelSm) / 2;
   const counter = `${spec.page} / ${spec.pages}`;
   const counterWidth = Math.ceil(measureText('BarlowMedium', counter, d.labelSm)) + 2;
   const items: Item[] = [
     label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX - counterWidth, { size: d.labelSm, color: ds.color.text.secondary }),
     label(`${name}.counter`, counter, spec.frame.left + spec.frame.width - padX - counterWidth, titleY, counterWidth, { size: d.labelSm, hAlign: 'right' }),
   ];
-  const bodyTop = spec.frame.top + ZONE_TITLE_HEIGHT;
+  const bodyTop = spec.frame.top + titleHeight;
   return {
     items,
-    body: rect(spec.frame.left + padX, bodyTop + 6, Math.max(0, spec.frame.width - 2 * padX), Math.max(0, spec.frame.height - ZONE_TITLE_HEIGHT - 16)),
+    body: rect(spec.frame.left + padX, bodyTop + 6, Math.max(0, spec.frame.width - 2 * padX), Math.max(0, spec.frame.height - titleHeight - padBottom)),
   };
 }
 

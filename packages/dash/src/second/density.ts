@@ -9,7 +9,7 @@
  */
 import { ds } from '../tokens.ts';
 
-export type Density = 'companion' | 'zone' | 'wide';
+export type Density = 'companion' | 'zone' | 'compact' | 'wide';
 
 export interface DensitySpec {
   /** The one big number of a module: speed, fuel, the delta. */
@@ -93,13 +93,53 @@ const ZONE: DensitySpec = {
   tracePoints: 600,
 };
 
+/**
+ * A zone small enough that the zone ramp does not fit it.
+ *
+ * The nano's zones are 269 by 194 and the 800 by 480's are 249 by 328, which are a different
+ * instrument from a 769 by 314 zone rather than the same one squeezed. A 64 px hero in a 144 px
+ * body leaves room for nothing under it, so the whole ramp steps down and the page keeps its rows.
+ *
+ * The labels stop at 12 px rather than scaling with the rest: below that a label stops being
+ * readable at arm's length on a DDU, and a page whose label cannot be read is a page of unlabelled
+ * numbers. That is the floor the ramp is allowed to reach.
+ */
+const COMPACT: DensitySpec = {
+  ...ZONE,
+  hero: 46,
+  big: 34,
+  mid: 24,
+  small: 18,
+  tiny: 14,
+  label: 12,
+  labelSm: 12,
+  name: 12,
+  gapX: ds.space[4],
+  gapY: 8,
+  rowHeight: 20,
+  headerHeight: 16,
+  cellGap: 6,
+  chipHeight: 15,
+  chipPadding: 4,
+  padX: 10,
+  padY: 4,
+};
+
 export const DENSITIES: Record<Density, DensitySpec> = {
   companion: COMPANION,
   zone: ZONE,
+  compact: COMPACT,
   wide: { ...ZONE, tracePoints: 900 },
 };
 
 export const densityOf = (density: Density): DensitySpec => DENSITIES[density];
 
-/** True for the two small densities, which share every type size and differ only in width. */
+/** True for the small densities, which are the zones and the pit wall's panels. */
 export const isZone = (density: Density): boolean => density !== 'companion';
+
+/**
+ * The density a box of this size wants. Below the thresholds the zone ramp does not fit, which is
+ * a fact about the box rather than about the page in it, so the choice is made once here.
+ */
+export const densityForBox = (box: { width: number; height: number }): Density =>
+  box.width < 320 || box.height < 220 ? 'compact' : 'zone';
