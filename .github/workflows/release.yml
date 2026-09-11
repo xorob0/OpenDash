@@ -1,5 +1,7 @@
 # release.yml: on a tag v*, checks the tag against VERSION, runs the same build steps as ci.yml,
 # then publishes a GitHub release carrying every .simhubdash package and OpenDash-plugin.zip.
+# A tag whose version carries a pre-release suffix (v0.1.0-rc.1) publishes as a pre-release, so a
+# release candidate is never the download a first-time user is offered.
 # Only the final job holds a token that can write to the repository.
 name: Release
 
@@ -132,3 +134,4 @@ jobs:
             build/OpenDash-plugin.zip
           generate_release_notes: true
           fail_on_unmatched_files: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
