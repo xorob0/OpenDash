@@ -241,6 +241,54 @@ namespace OpenDashPlugin
             return fallback;
         }
 
+        /// <summary>Clamps a page number into a catalogue of the given size, or returns fallback.</summary>
+        public static int NormalisePage(int page, int count, int fallback)
+        {
+            return page >= 0 && page < count ? page : fallback;
+        }
+
+        /// <summary>
+        /// The first enabled page at or after the given one, wrapping once. This is where a zone lands
+        /// when the page it was sitting on is turned off: forward rather than back, because a cycle
+        /// runs forward and a driver pressing the button again should carry on rather than repeat.
+        /// A mask with nothing set returns the page unchanged; Normalise() never produces one.
+        /// </summary>
+        public static int FirstEnabledFrom(int page, int mask, int count)
+        {
+            if (count <= 0 || (mask & ((1 << count) - 1)) == 0) return page;
+            var from = page >= 0 && page < count ? page : 0;
+            for (var step = 0; step < count; step++)
+            {
+                var candidate = (from + step) % count;
+                if ((mask & (1 << candidate)) != 0) return candidate;
+            }
+            return from;
+        }
+
+        /// <summary>The zone a quick glance shows, as an index into FaceZoneLetters.</summary>
+        public static int QuickGlanceZone(int value) => value / 100;
+
+        /// <summary>The page a quick glance shows, within that zone's catalogue.</summary>
+        public static int QuickGlancePage(int value) => value % 100;
+
+        /// <summary>A zone and a page packed into the one property a glance is configured with.</summary>
+        public static int QuickGlanceValue(int zoneIndex, int page)
+        {
+            if (zoneIndex < 0 || zoneIndex >= FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
+            return zoneIndex * 100 + page;
+        }
+
+        /// <summary>Returns the glance when both halves are in range, else the default. A page outside
+        /// its zone's catalogue takes the zone with it: half a glance is not a glance.</summary>
+        public static int NormaliseQuickGlance(int value)
+        {
+            if (value < 0) return DefaultQuickGlance;
+            var zoneIndex = QuickGlanceZone(value);
+            if (zoneIndex >= FaceZoneLetters.Length) return DefaultQuickGlance;
+            var page = QuickGlancePage(value);
+            return page < FaceZonePageCounts[zoneIndex] ? value : DefaultQuickGlance;
+        }
+
         /// <summary>Clamps a card number into the catalogue, or returns fallback when it is outside.</summary>
         public static int NormaliseCard(int card, int fallback)
         {

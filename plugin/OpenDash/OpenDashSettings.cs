@@ -31,6 +31,26 @@ namespace OpenDashPlugin
         /// <summary>Address of the web view zone page; empty until the user sets one.</summary>
         public string WebViewUrl { get; set; } = Contract.DefaultWebViewUrl;
 
+        // --- The dash face ---------------------------------------------------------------------
+
+        /// <summary>Page each face zone is showing, index 0 is zone A. The wheel button that cycles a
+        /// zone writes this; so does the panel, because a driver who picks a start page expects the
+        /// face in front of them to follow rather than to wait for the next session.</summary>
+        public int[] FaceZones { get; set; } = Contract.DefaultFaceZones();
+
+        /// <summary>Which pages of each face zone are enabled, as a bit mask, index 0 is zone A. This is
+        /// what decides how long a driver's cycle is, which makes it the most consequential setting here.</summary>
+        public int[] FaceZoneMasks { get; set; } = Contract.DefaultFaceZoneMasks();
+
+        /// <summary>Page each face zone opens on, index 0 is zone A.</summary>
+        public int[] FaceZoneStarts { get; set; } = Contract.DefaultFaceZones();
+
+        /// <summary>Field each end of the bar shows, in Contract.BarSlots order.</summary>
+        public int[] BarFields { get; set; } = Contract.DefaultBarSlots();
+
+        /// <summary>The zone and page a held button shows, encoded as zoneIndex * 100 + page.</summary>
+        public int QuickGlance { get; set; } = Contract.DefaultQuickGlance;
+
         /// <summary>Clamps every value into its contract: unknown modes and card numbers fall back to the defaults,
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
         public void Normalise()
@@ -68,7 +88,153 @@ namespace OpenDashPlugin
 
             WideZone = Contract.NormaliseWideZonePage(WideZone);
             WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
+            NormaliseFace();
         }
+
+        /// <summary>
+        /// Repairs the face settings, which are four parallel arrays and a packed pair. Three rules,
+        /// in this order: a page number outside its zone's catalogue becomes the default, a mask is
+        /// trimmed to the pages that exist and an empty one is refilled, and a page that the mask has
+        /// turned off is snapped forward to the next one that is on.
+        ///
+        /// The last rule is the one that matters in use: turning off the page a zone is sitting on
+        /// would otherwise leave the zone showing something its own cycle can never return to.
+        /// </summary>
+        private void NormaliseFace()
+        {
+            var zones = Contract.DefaultFaceZones();
+            var masks = Contract.DefaultFaceZoneMasks();
+            var starts = Contract.DefaultFaceZones();
+            for (var i = 0; i < zones.Length; i++)
+            {
+                var pages = Contract.FaceZonePageCounts[i];
+                var all = Contract.DefaultZoneMask(i);
+
+                if (FaceZoneMasks != null && i < FaceZoneMasks.Length) masks[i] = FaceZoneMasks[i] & all;
+                if (masks[i] == 0) masks[i] = all;
+
+                if (FaceZoneStarts != null && i < FaceZoneStarts.Length) starts[i] = Contract.NormalisePage(FaceZoneStarts[i], pages, Contract.DefaultFaceZonePages[i]);
+                starts[i] = Contract.FirstEnabledFrom(starts[i], masks[i], pages);
+
+                if (FaceZones != null && i < FaceZones.Length) zones[i] = Contract.NormalisePage(FaceZones[i], pages, starts[i]);
+                zones[i] = Contract.FirstEnabledFrom(zones[i], masks[i], pages);
+            }
+            FaceZones = zones;
+            FaceZoneMasks = masks;
+            FaceZoneStarts = starts;
+
+            var bar = Contract.DefaultBarSlots();
+            if (BarFields != null)
+            {
+                for (var i = 0; i < bar.Length && i < BarFields.Length; i++)
+                {
+                    bar[i] = Contract.NormalisePage(BarFields[i], Contract.BarFieldCount, Contract.DefaultBarFields[i]);
+                }
+            }
+            BarFields = bar;
+
+            QuickGlance = Contract.NormaliseQuickGlance(QuickGlance);
+        }
+
+        /// <summary>Page a face zone is showing, by its letter. Safe to call before Normalise().</summary>
+        public int FaceZone(string letter)
+        {
+            var index = FaceZoneIndex(letter);
+            if (FaceZones == null || index >= FaceZones.Length) return Contract.DefaultFaceZonePages[index];
+            return Contract.NormalisePage(FaceZones[index], Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
+        }
+
+        /// <summary>Page a face zone opens on, by its letter. Safe to call before Normalise().</summary>
+        public int FaceZoneStart(string letter)
+        {
+            var index = FaceZoneIndex(letter);
+            if (FaceZoneStarts == null || index >= FaceZoneStarts.Length) return Contract.DefaultFaceZonePages[index];
+            return Contract.NormalisePage(FaceZoneStarts[index], Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
+        }
+
+        /// <summary>Sets the page a zone opens on, and the page it is showing with it: the panel is in
+        /// front of a running dash, and a start page that only takes effect next time reads as broken.</summary>
+        public void SetFaceZoneStart(string letter, int page)
+        {
+            var index = FaceZoneIndex(letter);
+            EnsureFaceArrays();
+            var clamped = Contract.NormalisePage(page, Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
+            FaceZoneStarts[index] = clamped;
+            FaceZones[index] = clamped;
+            SetFaceZonePageEnabled(letter, clamped, true);
+        }
+
+        /// <summary>The enabled-page mask of a face zone, by its letter.</summary>
+        public int FaceZoneMask(string letter)
+        {
+            var index = FaceZoneIndex(letter);
+            if (FaceZoneMasks == null || index >= FaceZoneMasks.Length) return Contract.DefaultZoneMask(index);
+            var mask = FaceZoneMasks[index] & Contract.DefaultZoneMask(index);
+            return mask == 0 ? Contract.DefaultZoneMask(index) : mask;
+        }
+
+        public bool FaceZonePageEnabled(string letter, int page)
+        {
+            var index = FaceZoneIndex(letter);
+            if (page < 0 || page >= Contract.FaceZonePageCounts[index]) return false;
+            return (FaceZoneMask(letter) & (1 << page)) != 0;
+        }
+
+        /// <summary>
+        /// Turns one page of a zone on or off. Turning off the last enabled page is refused rather than
+        /// obeyed: a zone with an empty cycle has nothing to draw, and the panel would have to invent a
+        /// page to show anyway.
+        /// </summary>
+        public void SetFaceZonePageEnabled(string letter, int page, bool enabled)
+        {
+            var index = FaceZoneIndex(letter);
+            if (page < 0 || page >= Contract.FaceZonePageCounts[index]) throw new ArgumentOutOfRangeException(nameof(page));
+            EnsureFaceArrays();
+            var mask = FaceZoneMask(letter);
+            var next = enabled ? mask | (1 << page) : mask & ~(1 << page);
+            if (next == 0) return;
+            FaceZoneMasks[index] = next;
+            FaceZoneStarts[index] = Contract.FirstEnabledFrom(FaceZoneStarts[index], next, Contract.FaceZonePageCounts[index]);
+            FaceZones[index] = Contract.FirstEnabledFrom(FaceZones[index], next, Contract.FaceZonePageCounts[index]);
+        }
+
+        /// <summary>Field an end of the bar shows, by its slot name. Safe to call before Normalise().</summary>
+        public int BarField(string slot)
+        {
+            var index = Array.IndexOf(Contract.BarSlots, slot);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(slot));
+            if (BarFields == null || index >= BarFields.Length) return Contract.DefaultBarFields[index];
+            return Contract.NormalisePage(BarFields[index], Contract.BarFieldCount, Contract.DefaultBarFields[index]);
+        }
+
+        public void SetBarField(string slot, int field)
+        {
+            var index = Array.IndexOf(Contract.BarSlots, slot);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(slot));
+            if (BarFields == null || BarFields.Length != Contract.BarSlots.Length) Normalise();
+            BarFields[index] = Contract.NormalisePage(field, Contract.BarFieldCount, Contract.DefaultBarFields[index]);
+        }
+
+        private static int FaceZoneIndex(string letter)
+        {
+            var index = Array.IndexOf(Contract.FaceZoneLetters, letter);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
+            return index;
+        }
+
+        private void EnsureFaceArrays()
+        {
+            var zones = Contract.FaceZoneLetters.Length;
+            if (FaceZones == null || FaceZones.Length != zones
+                || FaceZoneMasks == null || FaceZoneMasks.Length != zones
+                || FaceZoneStarts == null || FaceZoneStarts.Length != zones)
+            {
+                Normalise();
+            }
+        }
+
+        /// <summary>Zones showing the same page as another zone, which the panel says and allows.</summary>
+        public IReadOnlyList<FacePageClash> FaceClashes() => FacePageClash.Find(this);
 
         /// <summary>Whether a companion module is enabled, 1-based. Safe to call before Normalise().</summary>
         public bool Module(int module)
@@ -135,7 +301,82 @@ namespace OpenDashPlugin
             Zones = other.Zones == null ? null : (int[])other.Zones.Clone();
             WideZone = other.WideZone;
             WebViewUrl = other.WebViewUrl;
+            FaceZones = other.FaceZones == null ? null : (int[])other.FaceZones.Clone();
+            FaceZoneMasks = other.FaceZoneMasks == null ? null : (int[])other.FaceZoneMasks.Clone();
+            FaceZoneStarts = other.FaceZoneStarts == null ? null : (int[])other.FaceZoneStarts.Clone();
+            BarFields = other.BarFields == null ? null : (int[])other.BarFields.Clone();
+            QuickGlance = other.QuickGlance;
             Normalise();
+        }
+    }
+
+    /// <summary>
+    /// One page that two or more zones are showing at once. The panel says so and does not prevent it,
+    /// because a driver watching the relative in two places is a choice and not a mistake.
+    ///
+    /// Zones are compared by page **id** rather than page number: the four catalogues overlap, so zone
+    /// A's track page and module 13 are one drawing under two numbers, and a comparison by number
+    /// would miss exactly the duplicate a driver would notice.
+    /// </summary>
+    public sealed class FacePageClash
+    {
+        public FacePageClash(string pageId, string pageName, string[] zones)
+        {
+            PageId = pageId;
+            PageName = pageName;
+            Zones = zones;
+        }
+
+        public string PageId { get; }
+
+        public string PageName { get; }
+
+        /// <summary>The zone letters showing it, in letter order.</summary>
+        public string[] Zones { get; }
+
+        /// <summary>"Zone B and zone C both show Relative."</summary>
+        public string Message()
+        {
+            var letters = Zones.Select(z => "zone " + z).ToArray();
+            var list = letters.Length == 2
+                ? letters[0] + " and " + letters[1]
+                : string.Join(", ", letters.Take(letters.Length - 1)) + " and " + letters[letters.Length - 1];
+            var verb = letters.Length == 2 ? " both show " : " all show ";
+            return char.ToUpperInvariant(list[0]) + list.Substring(1) + verb + PageName + ".";
+        }
+
+        public static IReadOnlyList<FacePageClash> Find(OpenDashSettings settings)
+        {
+            var result = new List<FacePageClash>();
+            if (settings == null) return result;
+            var order = new List<string>();
+            var byPage = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            foreach (var letter in Contract.FaceZoneLetters)
+            {
+                var id = FacePages.IdOf(letter, settings.FaceZoneStart(letter));
+                if (id == null) continue;
+                List<string> zones;
+                if (!byPage.TryGetValue(id, out zones))
+                {
+                    zones = new List<string>();
+                    byPage[id] = zones;
+                    order.Add(id);
+                }
+                zones.Add(letter);
+            }
+            foreach (var id in order)
+            {
+                var zones = byPage[id];
+                if (zones.Count < 2) continue;
+                result.Add(new FacePageClash(id, FacePages.NameOf(zones[0], settings.FaceZoneStart(zones[0])), zones.ToArray()));
+            }
+            return result;
+        }
+
+        /// <summary>All messages, one per line; empty when every zone shows something different.</summary>
+        public static string Warning(OpenDashSettings settings)
+        {
+            return string.Join(Environment.NewLine, Find(settings).Select(c => c.Message()));
         }
     }
 
