@@ -10,6 +10,7 @@ import { CELL, LINE_SPACING } from '../src/design/metrics.ts';
 import { buildLayout } from '../src/dashboard.ts';
 import { LAYOUTS } from '../src/layouts/index.ts';
 import { itemsOf } from '../src/walk.ts';
+import { cellOverruns } from './monoGlyphs.ts';
 import type { Dashboard, TextItem } from '../src/generator.ts';
 
 const opts = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -61,7 +62,8 @@ describe('every text fits the box SimHub clips it to', () => {
   }
 
   test('a monospace cell is never narrower than the glyphs it holds', () => {
-    // The characters a value can draw: digits, the separators, and the words the cards use.
+    // The floor: whatever else a value draws, it draws digits and the separators, and every cell
+    // has to hold those at the weight the item is drawn in.
     const glyphs = '0123456789-+/OFF';
     const specials = '.,:';
     for (const layout of LAYOUTS) {
@@ -78,6 +80,20 @@ describe('every text fits the box SimHub clips it to', () => {
           const advance = measureText(face, ch, item.fontSize);
           expect({ item: item.name, ch, advance, cell: mono.specialCharsWidth, fits: advance <= mono.specialCharsWidth }).toMatchObject({ fits: true });
         }
+      }
+    }
+  });
+
+  test('and it holds every glyph the item itself can draw', () => {
+    // The test above is a fixed set, which is exactly why it missed thirty-one `#` on the second
+    // screens: `#` is not in that string and the second screens are not in this loop. This one
+    // asks each item what it draws -- its sample, its widest, and every literal its binding can
+    // reach the screen with -- so a value that gains a character nobody measured fails here.
+    for (const layout of LAYOUTS) {
+      const { main, cards } = buildLayout(layout, opts);
+      for (const item of [...texts(main), ...texts(cards)]) {
+        if (!item.monospace) continue;
+        expect({ layout: layout.folder, item: item.name, overruns: cellOverruns(item) }).toMatchObject({ overruns: [] });
       }
     }
   });
