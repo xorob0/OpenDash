@@ -136,6 +136,54 @@ export const ds = {
       onFlag: hex('purpose.flag.onFlag'),
     },
     pitLimiter: hex('purpose.pitLimiter'),
+    /**
+     * A licence class is an ordered scale, so it is drawn as an ordered weight out of the greys
+     * rather than in iRacing's five colours: every one of those steps is a state colour here, and
+     * a green B licence beside a green delta is the confusion the first brand rule exists to
+     * prevent. R is the lightest mark on the screen and Pro the heaviest, inverted.
+     */
+    licence: {
+      r: { value: hex('purpose.licence.r.value'), weight: num('purpose.licence.r.weight') },
+      d: { value: hex('purpose.licence.d.value'), weight: num('purpose.licence.d.weight') },
+      c: { value: hex('purpose.licence.c.value'), weight: num('purpose.licence.c.weight') },
+      b: { value: hex('purpose.licence.b.value'), weight: num('purpose.licence.b.weight') },
+      a: { value: hex('purpose.licence.a.value'), weight: num('purpose.licence.a.weight') },
+      pro: { value: hex('purpose.licence.pro.value'), weight: num('purpose.licence.pro.weight'), fill: hex('purpose.licence.pro.fill') },
+    },
+    /** A rating is data and stays achromatic; what the race did to it is an event. */
+    rating: {
+      value: hex('purpose.rating.value'),
+      gain: hex('purpose.rating.gain.value'),
+      loss: hex('purpose.rating.loss.value'),
+    },
+    /**
+     * When a fill is allowed. Not under a drawing: a drawing on the face needs no tray, which is
+     * why the tyre and fuel illustrations lost theirs at tokens 0.7.0.
+     */
+    block: {
+      fill: hex('purpose.block.fill.value'),
+      well: hex('purpose.block.well.value'),
+      rule: hex('purpose.block.rule.value'),
+    },
+    /** The drawn objects: outline is the edge at rest, ink carries the reading, dim is structure. */
+    illustration: {
+      outline: hex('purpose.illustration.outline.value'),
+      ink: hex('purpose.illustration.ink.value'),
+      dim: hex('purpose.illustration.dim.value'),
+    },
+    /**
+     * ISO 2575 fixes the pictogram and its colour, so this is the one place on the face where
+     * colour is conventional rather than chosen. An unlit lamp is drawn in `off` rather than
+     * hidden, so a lamp coming on is a change of colour and not a change of layout.
+     */
+    telltale: {
+      info: hex('purpose.telltale.info.value'),
+      good: hex('purpose.telltale.good.value'),
+      caution: hex('purpose.telltale.caution.value'),
+      danger: hex('purpose.telltale.danger.value'),
+      neutral: hex('purpose.telltale.neutral.value'),
+      off: hex('purpose.telltale.off.value'),
+    },
   },
   font: {
     /** Barlow Condensed: every numeral. */
