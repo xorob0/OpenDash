@@ -1,8 +1,9 @@
 /** Text metrics: canvas line boxes to SimHub boxes, monospace cells, and the elements that use them. */
 import { describe, expect, test } from 'bun:test';
-import { canvasBaseline, canvasYForBaseline, cells, GEAR_CELL, gearCells, monoWidth, textBox } from '../src/design/metrics.ts';
+import { CELL, canvasBaseline, canvasYForBaseline, cells, GEAR_CELL, gearCells, monoWidth, SPECIAL_CHARS, textBox } from '../src/design/metrics.ts';
 import { label } from '../src/elements/label.ts';
 import { numeral } from '../src/elements/numeral.ts';
+import { ds } from '../src/tokens.ts';
 
 describe('metrics', () => {
   test('a canvas line box (y, fs) becomes Top = y - 0.1 fs, Height = ceil(1.2 fs) + slack', () => {
@@ -28,15 +29,42 @@ describe('metrics', () => {
     }
   });
 
-  test('the gear cell is 0.52 em, wide enough for Bold "N" (0.514 em), with the face\'s special cell', () => {
-    expect(GEAR_CELL).toBe(0.52);
-    expect(gearCells(260)).toEqual({ charWidth: 135, specialCharsWidth: 73, specialChars: '.,:' });
-    expect(gearCells(180)).toEqual({ charWidth: 94, specialCharsWidth: 51, specialChars: '.,:' });
+  test('the gear cell comes from the tokens, with the face\'s special cell', () => {
+    expect(GEAR_CELL).toBe(ds.font.cell.gear);
+    expect(gearCells(260)).toEqual({ charWidth: 177, specialCharsWidth: 73, specialChars: '.,:' });
+    expect(gearCells(180)).toEqual({ charWidth: 122, specialCharsWidth: 51, specialChars: '.,:' });
     const gear = numeral('x.gear', 'N', 0, 0, 260, { digits: 1, specials: 0 }, { weight: 'Bold', mono: gearCells(260) });
     // The cell plus a slack of ceil(0.05 x 260), since the box is what WPF clips to.
-    expect(gear.rect).toEqual({ left: 0, top: -26, width: 148, height: 313 });
-    expect(gear.monospace?.charWidth).toBe(135);
+    expect(gear.rect).toEqual({ left: 0, top: -26, width: 190, height: 313 });
+    expect(gear.monospace?.charWidth).toBe(177);
     expect(numeral('x.gear', 'N', 0, 0, 260, { digits: 1, specials: 0 }, { weight: 'Bold' }).monospace?.charWidth).toBe(128);
+  });
+
+  test('the digit cells come from the tokens too, rather than a copy of them', () => {
+    expect(CELL.SemiBold).toEqual({ digit: ds.font.cell.semiBold.digit, special: ds.font.cell.semiBold.special });
+    expect(CELL.Bold).toEqual({ digit: ds.font.cell.bold.digit, special: ds.font.cell.bold.special });
+    expect(SPECIAL_CHARS).toBe(ds.font.cell.specialChars);
+  });
+
+  /**
+   * The cell exists so that no glyph the gear can draw is clipped, and what clips is the font the
+   * renderer chooses rather than the one the dashboard names: WPF folds the bundled condensed
+   * faces into the "Barlow" family, so "Barlow Condensed" reaches a wider face (XOR-84). Both
+   * measures are checked against every Barlow in the repository: the advance, since WPF lays a run
+   * out on advances, and the ink, since that is what is drawn.
+   */
+  test('the gear cell holds every glyph of every Barlow the renderer could resolve', async () => {
+    const { loadFont, measure } = await import('../../../tools/measure-font/measure.ts');
+    const faces = ['BarlowCondensed-Bold', 'BarlowCondensed-SemiBold', 'Barlow-Bold', 'Barlow-SemiBold', 'Barlow-Medium'];
+    for (const face of faces) {
+      const font = loadFont(new URL(`../fonts/${face}.ttf`, import.meta.url).pathname);
+      for (const ch of '0123456789NR') {
+        const m = measure(font, ch);
+        if (!m) throw new Error(`${face} has no glyph for ${ch}`);
+        expect({ face, ch, advance: m.advance, fits: m.advance <= GEAR_CELL }).toMatchObject({ fits: true });
+        expect({ face, ch, ink: m.xMax, fits: m.xMax <= GEAR_CELL }).toMatchObject({ fits: true });
+      }
+    }
   });
 
   test('label and numeral produce integer, top-aligned boxes', () => {

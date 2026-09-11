@@ -555,7 +555,7 @@ describe('800 x 286 nano', () => {
     if (gearItem?.kind !== 'text') throw new Error('hero text');
     expect([gearItem.fontSize, gearItem.fontWeight]).toEqual([180, 'Bold']);
     // Gear cell 94 centred in 298: 102 px either side.
-    expect(gearItem.rect).toEqual({ left: 353, top: 57, width: 98, height: 217 });
+    expect(gearItem.rect).toEqual({ left: 339, top: 57, width: 126, height: 217 });
     expect(Math.abs(gearItem.rect.left + (gearItem.monospace?.charWidth ?? 0) / 2 - (251 + 298 / 2))).toBeLessThanOrEqual(0.5);
     // Everything of the hero stays between the header rule and the flag strip.
     expect(contains(rect(0, 55, 800, 219), gearItem.rect)).toBe(true);
@@ -605,7 +605,7 @@ describe('600 x 686 DisplayDash', () => {
     const [gearItem] = gear(rect(0, 65, 600, 300));
     if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
     // 135 centred in 600: 233 px either side (the odd pixel goes left of the cell).
-    expect(gearItem.rect).toEqual({ left: 233, top: 59, width: 139, height: 313 });
+    expect(gearItem.rect).toEqual({ left: 212, top: 59, width: 181, height: 313 });
     // The gear's 1.2 em box overhangs the band by 6 px each side; its cap top and baseline stay inside it.
     const baseline = gearItem.rect.top + WPF_BASELINE * gearItem.fontSize;
     const capTop = baseline - (FONT_METRICS.capHeight / FONT_METRICS.unitsPerEm) * gearItem.fontSize;
@@ -656,7 +656,8 @@ const ROUND_ROWS: RoundRow[] = [
     face: FACE_480,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 240, cy: 240, r: 206 }, segment: { width: 22, height: 14 } },
-      gear: { rect: rect(12, 108, 456, 340) },
+      // The gap between the two slots, and a gear sized to fit it; see 480round.ts.
+      gear: { rect: rect(160, 108, 160, 340), size: 228 },
       pitLimiter: rect(165, 112, 150, 28),
       flags: { kind: 'flagRing', face: FACE_480 },
     },
@@ -833,12 +834,14 @@ describe('the round faces, row by row of the spec table', () => {
 describe('480 round', () => {
   const layout = layout480round;
 
-  test('the gear alone, 260, centred on the face', () => {
-    const [gearItem] = gear(layout.hero.gear.rect);
+  // 228 rather than 260: the cell has to hold whichever Barlow SimHub resolves (XOR-84), and the
+  // 160 px between the slots does not take that at 260.
+  test('the gear alone, 228, centred on the face', () => {
+    const [gearItem] = gear(layout.hero.gear.rect, layout.hero.gear.size);
     if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
-    expect(gearItem.fontSize).toBe(260);
+    expect(gearItem.fontSize).toBe(228);
     expect(gearItem.fontWeight).toBe('Bold');
-    expect(gearItem.rect).toEqual({ left: 173, top: 122, width: 139, height: 313 });
+    expect(gearItem.rect).toEqual({ left: 163, top: 141, width: 157, height: 275 });
     // Centred on the 480 face in both axes, to the half pixel rounding allows.
     expect(Math.abs(gearItem.rect.left + (gearItem.monospace?.charWidth ?? 0) / 2 - 240)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(gearItem.rect.top + gearItem.rect.height / 2 - 278)).toBeLessThanOrEqual(0.5);
@@ -853,7 +856,7 @@ describe('800 round', () => {
     const [gearItem] = gear(rect(240, 260, 320, 280));
     if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
     expect([gearItem.fontSize, gearItem.fontWeight]).toEqual([260, 'Bold']);
-    expect(gearItem.rect).toEqual({ left: 333, top: 244, width: 139, height: 313 });
+    expect(gearItem.rect).toEqual({ left: 312, top: 244, width: 181, height: 313 });
     // The cell, not the box, is centred: 135 in 320 leaves 92.5 either side.
     const cell = gearItem.monospace?.charWidth ?? 0;
     expect(Math.abs(gearItem.rect.left - 240 - (560 - (gearItem.rect.left + cell)))).toBeLessThanOrEqual(1);
