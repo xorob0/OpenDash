@@ -92,8 +92,6 @@ interface StripCell {
   sample: string;
   expr: string;
   pattern: string;
-  /** Cells beyond the fifth are dropped where the width is not there. */
-  optional?: boolean;
 }
 
 /**
@@ -106,9 +104,34 @@ export const STRIP_CELLS: readonly StripCell[] = [
   { id: 'cut', label: 'Cut', sample: '2', expr: raw('dcTractionControl2'), pattern: '0' },
   { id: 'bias', label: 'Bias', sample: '50.5', expr: brakeBias(), pattern: '0.0' },
   { id: 'abs', label: 'ABS', sample: '4', expr: absLevel(), pattern: '0' },
-  { id: 'map', label: 'Map', sample: '1', expr: fuelMixture(), pattern: '0', optional: true },
-  { id: 'diff', label: 'Diff', sample: '4', expr: antiRollRear(), pattern: '0', optional: true },
+  { id: 'map', label: 'Map', sample: '1', expr: fuelMixture(), pattern: '0' },
+  { id: 'diff', label: 'Diff', sample: '4', expr: antiRollRear(), pattern: '0' },
 ];
+
+/**
+ * Which cells a narrow strip keeps, most important first.
+ *
+ * Separate from the drawing order above, which is the canvas's. A driver on a GT3 car moves the
+ * brake bias every corner and has TC and ABS on wheel dials; the mixture changes once a stint; slip,
+ * cut and the differential are settings some cars do not have at all. So the order is what a driver
+ * would keep if they had to choose, not the order they are drawn in.
+ *
+ * There is no "the strip fits or it does not". At 850 by 480 the two ends take almost the whole bar
+ * and the five cells that were never optional were drawn over the right-hand fields -- which is what
+ * the first photograph of that face showed, BIAS sitting on top of POSITION.
+ */
+const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', 'map', 'diff'];
+
+/** The most important cells that fit the width, in the order the canvas draws them. */
+function stripCellsThatFit(width: number, valueFs: number, labelFs: number, gap: number): StripCell[] {
+  for (let count = STRIP_PRIORITY.length; count > 0; count -= 1) {
+    const keep = new Set(STRIP_PRIORITY.slice(0, count));
+    const drawn = STRIP_CELLS.filter((c) => keep.has(c.id));
+    const total = drawn.reduce((sum, c) => sum + stripCellWidth(c, valueFs, labelFs), 0) + gap * (drawn.length - 1);
+    if (total <= width) return drawn;
+  }
+  return [];
+}
 
 /** Width a strip cell takes: its label or its value, whichever is wider. */
 function stripCellWidth(cell: StripCell, valueFs: number, labelFs: number): number {
@@ -199,7 +222,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
   const stripLeft = frame.left + padX + endWidth + d.gapX;
   const stripRight = frame.left + frame.width - padX - endWidth - d.gapX;
   const stripWidth = Math.max(0, stripRight - stripLeft);
-  const cellsToDraw = STRIP_CELLS.filter((c) => !c.optional || stripWidth >= stripRoomFor(STRIP_CELLS.length, valueFs, labelFs, d.gapX));
+  const cellsToDraw = stripCellsThatFit(stripWidth, smallFs, labelFs, d.gapX);
   const widths = cellsToDraw.map((c) => stripCellWidth(c, smallFs, labelFs));
   const total = widths.reduce((a, b) => a + b, 0) + d.gapX * Math.max(0, cellsToDraw.length - 1);
   let x = stripLeft + Math.max(0, (stripWidth - total) / 2);
@@ -224,8 +247,3 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
   return items;
 }
 
-/** Room the full strip needs, which is what decides whether map and diff are drawn. */
-function stripRoomFor(count: number, valueFs: number, labelFs: number, gap: number): number {
-  const widths = STRIP_CELLS.slice(0, count).map((c) => stripCellWidth(c, valueFs, labelFs));
-  return widths.reduce((a, b) => a + b, 0) + gap * Math.max(0, count - 1);
-}
