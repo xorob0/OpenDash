@@ -9,8 +9,8 @@ import { LINE_SPACING } from '../src/design/metrics.ts';
 import {
   MODULE_CATALOGUE,
   MODULE_COUNT,
-  WIDE_ZONE_PAGES,
-  ZONE_PAGES,
+  PIT_WALL_WIDE_ZONE_PAGES,
+  PIT_WALL_ZONE_PAGES,
   dashProperties,
   declaredProperties,
   moduleSettingName,
@@ -189,7 +189,7 @@ describe('the pit wall', () => {
 
   test('a zone dashboard holds every page of its kind, in the order the plugin lists them', () => {
     for (const dashboard of landscape.pkg.dashboards.slice(1)) {
-      const pages = dashboard.name.startsWith('zones-wide') ? WIDE_ZONE_PAGES : ZONE_PAGES;
+      const pages = dashboard.name.startsWith('zones-wide') ? PIT_WALL_WIDE_ZONE_PAGES : PIT_WALL_ZONE_PAGES;
       expect(dashboard.screens.map((s) => s.name)).toEqual(pages.map((p) => p.id));
     }
   });

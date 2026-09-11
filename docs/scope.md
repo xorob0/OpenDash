@@ -143,11 +143,18 @@ everything SimHub already does for DDUs, USB screens, phones and the seventeen s
 overwritten by the next build, and a pull request that contains a hand-edited scene graph cannot
 be reviewed. See [ADR 0002](decisions/0002-djson-generated-from-source.md).
 
-**Computed telemetry of our own, on the dashboard.** A page shows a SimHub property. Anything
-requiring openDash to keep state across laps, such as a fuel calculator, a five-lap average or a
-pit window, waits on [ADR 0009](decisions/0009-does-the-plugin-compute.md) deciding where that
-computation may live, since it cannot live in a scene graph. That record is owed before zones B
-and C ship, because the catalogue draws several such values as ordinary content.
+**Computed telemetry of our own.** The plugin does not compute, and
+[ADR 0009](decisions/0009-does-the-plugin-compute.md) is why the refusal turned out to be cheap to
+keep: SimHub already publishes the fuel family and the delta family, and the rest of what the
+catalogue draws is arithmetic over properties that exist, done in the expression. A five-lap
+average is `PreviousLap_00` to `_04` and a division, not a state machine.
+
+Two things fall outside that and are honestly labelled rather than quietly empty: virtual energy,
+which only Le Mans Ultimate publishes, and strength of field, which SimHub does not expose at all.
+
+The line moves if a derivation is shared widely enough to need a name, or if something genuinely
+needs memory between frames. The first is a JavaScript binding before it is a plugin, because the
+standalone package is the property worth defending.
 
 **Theming and colour customisation.** openDash ships one opinionated look, resolved at build time
 into literal values in the `.djson`. Nothing a user can change reaches a colour, a typeface or a
