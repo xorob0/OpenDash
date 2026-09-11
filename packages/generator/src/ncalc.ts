@@ -79,6 +79,9 @@ export const max = (a: Expr, b: Expr): Expr => `max(${a}, ${b})`;
 export const min = (a: Expr, b: Expr): Expr => `min(${a}, ${b})`;
 export const replace = (value: Expr, from: string, to: string): Expr => `replace(${value}, ${str(from)}, ${str(to)})`;
 export const ucase = (value: Expr): Expr => `ucase(${value})`;
+export const lcase = (value: Expr): Expr => `lcase(${value})`;
+/** First `count` characters, which is how a class chip keeps a long class name inside its box. */
+export const left = (value: Expr, count: number): Expr => `left(${value}, ${num(count)})`;
 
 /** Alternates true/false every `delayMs` while `enabled` is true. `name` must be unique per blinker. */
 export const blink = (name: string, delayMs: number, enabled: Expr): Expr => `blink(${str(name)}, ${delayMs}, ${enabled})`;

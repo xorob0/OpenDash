@@ -1,0 +1,47 @@
+/**
+ * Module 18, Stint: how long you have been out, how much you have done, and what the last stop
+ * cost. Every one of these is a per-car value on your own row rather than a session member, which
+ * is why they all go through the player's leaderboard index.
+ *
+ * The pit window the design sheet draws is left out: a window is a strategy the plugin does not
+ * compute, and a made-up one would be read as advice.
+ */
+import { ncalc } from '../generator.ts';
+import { densityOf } from '../second/density.ts';
+import { stack } from '../second/layout.ts';
+import { CHARS, carName, carNumber, clock, player } from '../second/values.ts';
+import { defineModule, fieldsRow, fld } from './module.ts';
+
+const { fmt, isnull, num, str, concat, driver, timespanToSeconds, game } = ncalc;
+
+export const stint = defineModule('stint', (ctx) => {
+  const d = densityOf(ctx.density);
+  const me = player();
+  const stintLaps = isnull(driver('lapsdonesincelastpitout', me), num(0));
+  const stintSeconds = timespanToSeconds(isnull(driver('timesincelastpitout', me), num(0)));
+  const stops = isnull(driver('pitcount', me), num(0));
+  const lastStop = timespanToSeconds(isnull(driver('pitlastduration', me), num(0)));
+  const completed = isnull(game('CompletedLaps'), num(0));
+  return stack(
+    ctx.frame,
+    [
+      fieldsRow(
+        [
+          fld(ctx, 'stintLaps', 'Stint laps', { sample: '12', bind: fmt(stintLaps, '0'), chars: CHARS.position, fs: d.hero }),
+          fld(ctx, 'stintTime', 'Stint time', { sample: '0:21:40', bind: clock(stintSeconds), chars: CHARS.clock, fs: d.big }),
+          fld(ctx, 'completed', 'Laps completed', { sample: '12', bind: fmt(completed, '0'), chars: CHARS.position, fs: d.big }),
+        ],
+        ctx,
+      ),
+      fieldsRow(
+        [
+          fld(ctx, 'driver', 'Driver', { sample: 'YOU · #12', bind: concat(carName(me), str(' · '), carNumber(me)), chars: CHARS.classPosition, fs: d.mid }),
+          fld(ctx, 'stops', 'Stops', { sample: '1', bind: fmt(stops, '0'), chars: CHARS.position, fs: d.mid }),
+          fld(ctx, 'lastStop', 'Last stop', { sample: '24.3', bind: fmt(lastStop, '0.0'), chars: CHARS.consumption, fs: d.mid, follower: { text: 's' } }),
+        ],
+        ctx,
+      ),
+    ],
+    ctx.density,
+  );
+});
