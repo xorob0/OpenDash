@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit -p packages/generator/tsconfig.json && tsc --noEmit -p packages/dash/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json",
     "check": "bun run typecheck && bun test",
     "package": "bash scripts/package.sh",
-    "vm": "bun scripts/vm.ts"
+    "vm": "bun scripts/vm.ts",
+    "emulator": "bash scripts/emulator.sh",
+    "dev": "bun scripts/dev.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

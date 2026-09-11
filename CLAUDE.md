@@ -50,20 +50,17 @@ before guessing at a property name or a default.
 
 ## Testing on the VM
 
-A Windows VM with SimHub runs beside this repository and is reachable through the `winvm` MCP
-tools; [docs/testing-vm.md](docs/testing-vm.md) explains it and
-[tools/irsdk-emulator](tools/irsdk-emulator/README.md) feeds it scripted iRacing telemetry so
-cards can be seen with real values. Two things to know: the emulator must be started in the
-interactive desktop session, and only one copy may run at a time, since two writers to the
-shared memory make SimHub drop the connection.
+```bash
+bun run dev                      # cold VM to a dash rendering live telemetry, ~2.5 min
+bun run dev 'openDash Pit wall' --scenario notc
+```
 
-The VM's SSH can stop answering while the GUI keeps working, which takes `run_powershell`,
-`run_in_desktop` and the `simhub_*` helpers with it. Everything can still be done over VNC:
-`/opt/winvm/shared` is the Windows desktop's `Shared` folder, so a script left there can be
-double-clicked from Explorer. `shared/opendash/deploy.bat` installs every package in that folder
-into `DashTemplates`, copies the fonts and restarts SimHub. Note that `Z:` exists only in the
-interactive session and the SSH session sees the share as `\\host.lan\Data`, so a script that
-has to work in both should use `$PSScriptRoot`.
+[docs/dev-loop.md](docs/dev-loop.md) is the whole loop on one page and is the place to start. It
+covers `bun run vm` for the VM and SimHub, `bun run emulator` for the telemetry, why opening a
+dashboard has to be clicked, and the four traps that fail silently: session 0 has no desktop,
+SimHub reads its template list once at startup, Bun does not deliver signals to a handler, and
+GDI+ will not write to the share. [docs/testing-vm.md](docs/testing-vm.md) describes the VM itself
+and is what to read when something in it breaks.
 
 To look at a whole package quickly, open it in Dash Studio's editor and drag the Overview
 panel's splitter up: the Overview draws every screen as a live thumbnail, which is the fastest

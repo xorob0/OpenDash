@@ -21,6 +21,23 @@ dotnet build -c Release            # -> bin/Release/net48/IrsdkEmulator.exe (+ s
 `--dump-vars` and `--dump-yaml` can be run on the Linux dev box (`dotnet devcheck/bin/Release/net8.0/IrsdkEmulator.dll ...`).
 Named kernel objects are Windows-only, so the real mode only works on Windows.
 
+## Run it with `bun run emulator`
+
+The runner does the two things below that are easy to get wrong, so prefer it to driving the exe
+by hand:
+
+```bash
+bun run emulator start race --follow   # build, upload, start in the desktop, tail the status line
+bun run emulator start yellow --replace
+bun run emulator stop | status | tail 20
+```
+
+It builds and uploads the exe with its `scenarios/` folder, always launches into the interactive
+desktop, refuses to start while another copy is running, and stops through the stop file so
+SimHub sees a disconnect. Ctrl-C under `--follow` stops the emulator on the VM before returning.
+
+The section below is what the runner does, and is what to read when it breaks.
+
 ## Run on the Windows VM
 
 1. Copy `bin/Release/net48/IrsdkEmulator.exe` **and the `scenarios/` folder** next to each other, e.g. to

@@ -22,8 +22,11 @@ bun run vm claim "what for"       # there is one VM; say who has it
 bun run vm release
 ```
 
-It finds the VM by itself: this machine when `/opt/winvm` is present, otherwise the SSH host in
-`OPENDASH_VM_HOST`, which defaults to the host the project uses. `scripts/vm.ts` is also a library,
+Telemetry is `bun run emulator`, described in
+[tools/irsdk-emulator/README.md](../tools/irsdk-emulator/README.md).
+
+Both find the VM by themselves: this machine when `/opt/winvm` is present, otherwise the SSH host
+in `OPENDASH_VM_HOST`, which defaults to the host the project uses. `scripts/vm.ts` is also a library,
 so a longer script can import `powershell`, `inDesktop`, `install` and the rest rather than
 shelling out to the command.
 
@@ -138,6 +141,10 @@ ssh -L 8006:127.0.0.1:8006 -L 3389:127.0.0.1:3389 -L 8888:127.0.0.1:8888 root@<v
   file inside the guest useless for deciding which of two is newer. SimHub's logs are the case
   that bites: `SimHub.txt` is the one being written and `SimHub.N.txt` are rotations with N
   growing as they age, so `bun run vm logs` chooses on that rather than on a timestamp.
+- **Bun does not deliver signals here.** On Bun 1.3.3 `process.on('SIGINT', ...)` registers a
+  handler that is never called, and registering it suppresses the default action, so a long
+  running Bun script that arms one cannot be stopped with Ctrl-C at all. Anything that has to
+  clean up on an interrupt puts the trap in a shell wrapper, as `scripts/emulator.sh` does.
 - **Pinned SimHub version.** 9.12.6. Do not let the VM auto-update; the format is
   undocumented and a newer SimHub is a different test target. Windows Update is disabled too.
 - **Shared state.** There is one VM. If two agents test at once they will fight over SimHub.
