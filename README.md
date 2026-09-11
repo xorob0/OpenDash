@@ -35,8 +35,9 @@ reads.
 
 Everything is on the [releases page](https://github.com/xorob0/OpenDash/releases), which carries
 `OpenDash-plugin.zip` and one `.simhubdash` per screen. A release whose version ends in a suffix
-such as `-rc.1` is marked as a pre-release, which is what to expect while openDash is alpha. You
-need SimHub 9.12.6 or later on Windows.
+such as `-rc.2` is marked as a pre-release, which is what to expect while openDash is alpha. You
+need SimHub 9.12.6 or later on Windows. [CHANGELOG.md](CHANGELOG.md) says what each release
+changed.
 
 - **Dashboard only.** Double-click the `.simhubdash` for your screen; SimHub imports it. You get
   the default layout and the default modes, and no settings page. Nothing else is needed, so this
