@@ -217,3 +217,72 @@ describe('the parts the face draws itself', () => {
     expect(widgets.every((w) => !w.name.startsWith('bar'))).toBe(true);
   });
 });
+
+/**
+ * The three things the first capture of the 1920 face on the VM caught, which no test had an
+ * opinion about. Each is the same shape of mistake: something measured or written in one place and
+ * drawn in another.
+ */
+describe('what the first photograph of the face showed', () => {
+  const items = faceItems(zoneFace1920x480);
+  const texts = items.filter((i): i is TextItem => i.kind === 'text');
+
+  test('the zone letter comes from the face, because B and C share one dashboard', () => {
+    const b = texts.find((t) => t.name === 'zoneB.letter')!;
+    const c = texts.find((t) => t.name === 'zoneC.letter')!;
+    expect(b.text).toBe('B');
+    expect(c.text).toBe('C');
+    // Zone A and band D carry no header, so they get no letter.
+    expect(texts.some((t) => t.name === 'zoneA.letter' || t.name === 'zoneD.letter')).toBe(false);
+
+    // And no page of the shared dashboard carries a letter of its own: one file cannot say both.
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    for (const screen of shared.screens) {
+      const title = [...walkItems(screen.items)].find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.zone.title'));
+      expect(title).toBeDefined();
+      expect(title!.text).not.toMatch(/^[ABCD] /);
+    }
+  });
+
+  test('each letter sits where its zone will draw its title, not over the page name', () => {
+    for (const zone of ['B', 'C'] as const) {
+      const letter = texts.find((t) => t.name === `zone${zone}.letter`)!;
+      const r = rectOf(zoneFace1920x480, zone);
+      expect(letter.rect.left).toBeGreaterThanOrEqual(r.left);
+      // Inside the zone's own padding, and clear of the page name that follows it.
+      expect(letter.rect.left - r.left).toBeLessThan(24);
+      expect(letter.rect.top).toBeGreaterThanOrEqual(r.top);
+      expect(letter.rect.top).toBeLessThan(r.top + 28);
+    }
+  });
+
+  test('a value centred in a zone is centred in the zone, not in its own glyphs', () => {
+    // `maxWidth` caps a box; it cannot widen one, so hAlign had nothing to centre within and the
+    // speed sat hard against the left edge of a 380 px column.
+    const a = rectOf(zoneFace1920x480, 'A');
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('zoneA', { width: a.width, height: a.height }))!;
+    const page = shared.screens.find((s) => s.name === 'gearSpeedRevs')!;
+    const speed = [...walkItems(page.items)].find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('speed'))!;
+    expect(speed.hAlign).toBe('center');
+    expect(speed.rect.left + speed.rect.width / 2).toBeCloseTo(a.width / 2, 0);
+  });
+
+  test('the ghosted gears are mapped from text, because SimHub publishes the gear as a string', () => {
+    const a = rectOf(zoneFace1920x480, 'A');
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('zoneA', { width: a.width, height: a.height }))!;
+    const page = shared.screens.find((s) => s.name === 'gearSpeedRevs')!;
+    const above = [...walkItems(page.items)].find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('gear.above'))!;
+    const below = [...walkItems(page.items)].find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('gear.below'))!;
+    const bind = (item: TextItem): string => String(item.bindings!.Text!.formula);
+
+    // `[Gear] + 1` is string concatenation: in third gear it evaluated to "31", and a cell one
+    // character wide drew the 3, so the right-hand ghost showed the gear the car was already in.
+    expect(bind(above)).not.toContain('+');
+    expect(bind(below)).not.toContain('+');
+    // Third gear maps to fourth above and second below.
+    expect(bind(above)).toContain("if(([DataCorePlugin.GameData.Gear]) = ('3'), '4'");
+    expect(bind(below)).toContain("if(([DataCorePlugin.GameData.Gear]) = ('3'), '2'");
+    // Neutral and reverse match nothing and draw nothing, and so does the gear below first.
+    expect(bind(below)).not.toContain("= ('1'), '0'");
+  });
+});
