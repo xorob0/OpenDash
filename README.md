@@ -33,14 +33,29 @@ reads.
 
 ## Install
 
-Each release carries one `.simhubdash` per screen size and one `OpenDash-plugin.zip`.
+Everything is on the [releases page](https://github.com/xorob0/OpenDash/releases), which carries
+`OpenDash-plugin.zip` and one `.simhubdash` per screen. A release whose version ends in a suffix
+such as `-rc.1` is marked as a pre-release, which is what to expect while openDash is alpha. You
+need SimHub 9.12.6 or later on Windows.
 
 - **Dashboard only.** Double-click the `.simhubdash` for your screen; SimHub imports it. You get
-  the default layout and the default modes, and no settings page.
-- **Dashboard and plugin.** Unzip `OpenDash-plugin.zip`, copy `OpenDash.dll` into SimHub's
-  install folder, unblock it, start SimHub and accept the new plugin. The plugin installs the
-  dashboard for you and adds an "openDash" page to SimHub's left menu. The full procedure is
-  in [plugin/INSTALL.md](plugin/INSTALL.md).
+  the default layout and the default modes, and no settings page. Nothing else is needed, so this
+  is the shortest way to see openDash on a display.
+- **Dashboard and plugin.** `OpenDash-plugin.zip` is the only file to download, since every
+  dashboard is embedded in it. Close SimHub, unzip the archive and copy `OpenDash.dll` into
+  SimHub's install folder, the one holding `SimHubWPF.exe`, rather than into a subfolder of it.
+  Unblock the file, then start SimHub and accept the new plugin. The plugin extracts all fourteen
+  dashboards and adds an "openDash" page to the left menu. The full procedure, the table of sizes
+  and the troubleshooting list are in [plugin/INSTALL.md](plugin/INSTALL.md).
+
+Copying a file by hand is how SimHub loads any third-party plugin, and unblocking is the step
+that fails silently: Windows marks whatever was downloaded, and .NET then refuses to load the
+plugin, so SimHub either reports a loading error or never mentions the plugin at all. Tick
+"Unblock" at the bottom of the file's Properties, or run the following.
+
+```powershell
+Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"
+```
 
 In both cases openDash is a normal SimHub dashboard afterwards: assign it to a display from
 Dash Studio like any other.
