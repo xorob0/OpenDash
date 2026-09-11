@@ -30,12 +30,24 @@ export const stackHeight = (rows: readonly StackRow[], gap: number): number =>
   rows.reduce((h, r) => h + r.height, 0) + gap * Math.max(0, rows.length - 1);
 
 /**
+ * The tail a row's last line box hangs below the bottom edge it was placed on.
+ *
+ * A row declares the height of its content; WPF draws a line box that runs a little below the
+ * baseline row, and the box is what gets clipped. Two pixels covers it at every size the second
+ * screens and the zones use, and reserving them is what keeps a stack exactly filling its frame
+ * from putting its last row one pixel past the edge -- which is the whole of the overflow the zone
+ * faces found on the narrow sizes.
+ */
+export const ROW_TAIL = 2;
+
+/**
  * The rows that fit `height`, longest prefix first. Modules list their rows in importance order,
  * so a short zone keeps the reading that matters and drops the recap under it.
  */
 export function rowsThatFit(rows: readonly StackRow[], height: number, gap: number): StackRow[] {
   const kept = [...rows];
-  while (kept.length > 1 && stackHeight(kept, gap) > height) kept.pop();
+  const room = height - 2 * ROW_TAIL;
+  while (kept.length > 1 && stackHeight(kept, gap) > room) kept.pop();
   return kept;
 }
 
