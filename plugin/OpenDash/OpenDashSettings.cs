@@ -23,7 +23,7 @@ namespace OpenDashPlugin
         public bool[] Modules { get; set; } = Contract.DefaultModules();
 
         /// <summary>Standard zone page per pit wall zone, index 0 is zone A. Always four long after Normalise().</summary>
-        public int[] Zones { get; set; } = Contract.DefaultZones();
+        public int[] Zones { get; set; } = Contract.PitWallDefaultZones();
 
         /// <summary>Wide zone page of the pit wall tower page.</summary>
         public int WideZone { get; set; } = Contract.DefaultWideZonePage;
@@ -56,12 +56,12 @@ namespace OpenDashPlugin
             }
             Modules = modules;
 
-            var zones = Contract.DefaultZones();
+            var zones = Contract.PitWallDefaultZones();
             if (Zones != null)
             {
                 for (var i = 0; i < zones.Length && i < Zones.Length; i++)
                 {
-                    zones[i] = Contract.NormaliseZonePage(Zones[i], Contract.DefaultZonePages[i]);
+                    zones[i] = Contract.NormaliseZonePage(Zones[i], Contract.PitWallDefaultZonePages[i]);
                 }
             }
             Zones = zones;
@@ -90,18 +90,18 @@ namespace OpenDashPlugin
         /// <summary>Page shown in a pit wall zone, by its letter. Safe to call before Normalise().</summary>
         public int Zone(string letter)
         {
-            var index = Array.IndexOf(Contract.ZoneLetters, letter);
+            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
             if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            if (Zones == null || index >= Zones.Length) return Contract.DefaultZonePages[index];
-            return Contract.NormaliseZonePage(Zones[index], Contract.DefaultZonePages[index]);
+            if (Zones == null || index >= Zones.Length) return Contract.PitWallDefaultZonePages[index];
+            return Contract.NormaliseZonePage(Zones[index], Contract.PitWallDefaultZonePages[index]);
         }
 
         public void SetZone(string letter, int page)
         {
-            var index = Array.IndexOf(Contract.ZoneLetters, letter);
+            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
             if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            if (Zones == null || Zones.Length != Contract.ZoneLetters.Length) Normalise();
-            Zones[index] = Contract.NormaliseZonePage(page, Contract.DefaultZonePages[index]);
+            if (Zones == null || Zones.Length != Contract.PitWallZoneLetters.Length) Normalise();
+            Zones[index] = Contract.NormaliseZonePage(page, Contract.PitWallDefaultZonePages[index]);
         }
 
         /// <summary>Card number shown in a slot, 1-based. Safe to call before Normalise().</summary>

@@ -54,11 +54,11 @@ export function defaultCardForSlot(slot: number): number {
 /** `OpenDash.<name>`, the full SimHub property name. */
 export const propertyName = (name: string): string => `${PROPERTY_PREFIX}.${name}`;
 
-/** The properties the dash face reads: the four modes and the twelve slots. */
+/** The properties the dash face reads: the four modes, the twelve slots and the zones. */
 export function dashProperties(): string[] {
   const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
-  return [...fixed, ...slots].map(propertyName);
+  return [...[...fixed, ...slots].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
@@ -93,6 +93,148 @@ export const setting = {
   /** `isnull([OpenDash.Slot0i], default card number)` for a 1-based slot. */
   slot: (slot: number): Expr => isnull(prop(propertyName(slotSettingName(slot))), num(defaultCardForSlot(slot))),
 };
+
+
+// --- The zone face -------------------------------------------------------------------------
+//
+// Additive. `Slot01` to `Slot12` stay declared and stay tested until the card path is retired in
+// XOR-95, because ten faces still read them and README.md publishes them as properties an LED
+// profile may read.
+//
+// The shape of these is the whole point of the model. A slot is arranged once, with a mouse,
+// before a session; a zone is changed with a thumb in the middle of a lap. So what the contract
+// carries is a page number a button can advance, not an assignment a panel writes.
+
+/** The four zones of a rectangular face. Band D is a zone: it cycles a catalogue like the rest. */
+export const FACE_ZONE_LETTERS = ['A', 'B', 'C', 'D'] as const;
+export type FaceZone = (typeof FACE_ZONE_LETTERS)[number];
+
+/** A page a zone can show. Indexed from 0, because the zone setting is that index. */
+export interface FaceZonePageMeta {
+  number: number;
+  /** The module the page draws, or a zone-A / band-D page id that is not a module. */
+  id: string;
+  name: string;
+}
+
+/**
+ * Zone A's four pages. The one a driver reads by reflex, which is why the zone is a narrow column:
+ * the gear wants height, not width.
+ */
+export const ZONE_A_PAGES: readonly FaceZonePageMeta[] = [
+  { number: 0, id: 'gearSpeedRevs', name: 'Gear, speed, revs' },
+  { number: 1, id: 'gearAlone', name: 'Gear alone' },
+  { number: 2, id: 'speed', name: 'Speed' },
+  { number: 3, id: 'track', name: 'Track' },
+];
+
+/**
+ * Band D's eight pages. Fuel by default, because that is what a driver checks on a straight.
+ *
+ * The catalogue artboard is headed "seven pages" and draws D1 through D8; the drawings are more
+ * specific than the caption, so eight is taken and the disagreement is recorded in
+ * docs/design/zones.md. The car page needs the telltale pictograms and arrives with XOR-97; the
+ * mask is sized for eight from the start so that adding it costs nothing.
+ */
+export const BAND_D_PAGES: readonly FaceZonePageMeta[] = [
+  { number: 0, id: 'fuel', name: 'Fuel' },
+  { number: 1, id: 'energy', name: 'Energy' },
+  { number: 2, id: 'stint', name: 'Stint' },
+  { number: 3, id: 'tyres', name: 'Tyres' },
+  { number: 4, id: 'weather', name: 'Weather' },
+  { number: 5, id: 'sectors', name: 'Sectors' },
+  { number: 6, id: 'relative', name: 'Relative' },
+  { number: 7, id: 'car', name: 'Car' },
+];
+
+/** Zones B and C draw from the full module catalogue, which is no longer companion-only. */
+export const zoneBCPages = (): readonly FaceZonePageMeta[] => MODULE_CATALOGUE.map((m) => ({ number: m.number - 1, id: m.id, name: m.name }));
+
+/** The catalogue a zone draws from. */
+export function pagesForZone(zone: FaceZone): readonly FaceZonePageMeta[] {
+  if (zone === 'A') return ZONE_A_PAGES;
+  if (zone === 'D') return BAND_D_PAGES;
+  return zoneBCPages();
+}
+
+/**
+ * The bar's end fields. Two per end, which is what every face artboard draws; the anatomy caption
+ * saying three and the spec drawing showing one are both superseded, and docs/design/zones.md
+ * records the disagreement.
+ *
+ * Ten rather than the canvas's eleven: strength of field is not published by SimHub in any form,
+ * and ADR 0009 decided that a field which can never have a value is not offered.
+ */
+export const BAR_FIELDS: readonly FaceZonePageMeta[] = [
+  { number: 0, id: 'raceTime', name: 'Race time' },
+  { number: 1, id: 'lap', name: 'Lap' },
+  { number: 2, id: 'timeLeft', name: 'Time left' },
+  { number: 3, id: 'clock', name: 'Clock' },
+  { number: 4, id: 'simulatedTime', name: 'Simulated time' },
+  { number: 5, id: 'position', name: 'Position' },
+  { number: 6, id: 'classPosition', name: 'Class' },
+  { number: 7, id: 'incidents', name: 'Incidents' },
+  { number: 8, id: 'airTemp', name: 'Air temperature' },
+  { number: 9, id: 'trackTemp', name: 'Track temperature' },
+];
+
+/** The bar's four slots, left to right. A portrait face draws only the first of each end. */
+export const BAR_SLOTS = ['Left1', 'Left2', 'Right1', 'Right2'] as const;
+export type BarSlot = (typeof BAR_SLOTS)[number];
+
+/** Race and Lap on the left, Position and Class on the right, as the artboards draw them. */
+export const DEFAULT_BAR_FIELDS: Record<BarSlot, number> = { Left1: 0, Left2: 1, Right1: 5, Right2: 6 };
+
+/**
+ * Which page each zone opens on: the gear, lap times, the relative, and fuel. Those are the four
+ * a driver would put there if asked, which is what a default is for.
+ */
+export const DEFAULT_ZONE_PAGE: Record<FaceZone, number> = { A: 0, B: 0, C: 14, D: 0 };
+
+/**
+ * Which pages are enabled, as a bit mask, which is what sets the length of a zone's cycle. All of
+ * them by default: a driver turns off what they do not want rather than turning on what they do.
+ */
+export const defaultZoneMask = (zone: FaceZone): number => (1 << pagesForZone(zone).length) - 1;
+
+export const zonePageSettingName = (zone: FaceZone): string => `Zone${zone}`;
+export const zoneMaskSettingName = (zone: FaceZone): string => `Zone${zone}Pages`;
+export const zoneStartSettingName = (zone: FaceZone): string => `Zone${zone}Start`;
+export const barFieldSettingName = (slot: BarSlot): string => `Bar${slot}`;
+
+/**
+ * The zone and page a held button shows, as one property rather than a pair per zone: a glance is
+ * one thing a driver configures once, and four more properties for it would be four more rows in
+ * the panel for no more expressiveness. Encoded as `zoneIndex * 100 + page`.
+ */
+export const QUICK_GLANCE_SETTING = 'QuickGlance';
+/** Zone C on the track page, which is what a glance is usually for. */
+export const DEFAULT_QUICK_GLANCE = 2 * 100 + 12;
+
+export const quickGlanceValue = (zone: FaceZone, page: number): number => FACE_ZONE_LETTERS.indexOf(zone) * 100 + page;
+export const quickGlanceZone = (value: number): FaceZone => FACE_ZONE_LETTERS[Math.floor(value / 100)] ?? 'A';
+export const quickGlancePage = (value: number): number => value % 100;
+
+/** Reads of the zone settings, each defaulted so a face works without the plugin. */
+export const zone = {
+  /** `isnull([OpenDash.ZoneB], 0)`: the page a zone is showing. */
+  page: (z: FaceZone): Expr => isnull(prop(propertyName(zonePageSettingName(z))), num(DEFAULT_ZONE_PAGE[z])),
+  /** `isnull([OpenDash.ZoneBPages], 2097151)`: which pages are enabled, as a mask. */
+  mask: (z: FaceZone): Expr => isnull(prop(propertyName(zoneMaskSettingName(z))), num(defaultZoneMask(z))),
+  /** `isnull([OpenDash.ZoneBStart], 0)`: the page the zone opens on. */
+  start: (z: FaceZone): Expr => isnull(prop(propertyName(zoneStartSettingName(z))), num(DEFAULT_ZONE_PAGE[z])),
+  /** `isnull([OpenDash.QuickGlance], 212)`: the zone and page a held button shows. */
+  quickGlance: (): Expr => isnull(prop(propertyName(QUICK_GLANCE_SETTING)), num(DEFAULT_QUICK_GLANCE)),
+  /** `isnull([OpenDash.BarLeft1], 0)`: which field an end of the bar shows. */
+  barField: (slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(slot))), num(DEFAULT_BAR_FIELDS[slot])),
+};
+
+/** Every property the zone face reads. */
+export function zoneProperties(): string[] {
+  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(z), zoneMaskSettingName(z), zoneStartSettingName(z)]);
+  const bar = BAR_SLOTS.map(barFieldSettingName);
+  return [...perZone, ...bar, QUICK_GLANCE_SETTING].map(propertyName);
+}
 
 export interface CardMeta {
   /** The value a slot setting takes. */
