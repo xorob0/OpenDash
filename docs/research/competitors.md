@@ -123,7 +123,7 @@ shared, and a feature change lands in every size at once.
 The risk is symmetrical and should be stated plainly: they have shipped and we have not. Their
 design maturity, sim coverage and community are real and substantial, and our advantage is
 structural, which means it only pays off if the generator works. That is why the MVP has a
-[spike gate](../scope-mvp.md#gate-before-build-starts).
+[spike gate](../scope-mvp.md#gate-before-build-starts), in the closed MVP document.
 
 ## Naming caution
 

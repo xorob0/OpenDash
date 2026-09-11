@@ -1,9 +1,16 @@
 # MVP scope
 
+> **Closed. Superseded by [scope.md](scope.md).**
+>
+> This document is kept as the record of what the MVP was and of the reasoning behind it. It no
+> longer describes the product: openDash now ships fourteen packages across ten face sizes, two
+> companions and two pit walls, and five of the lines this document lists as out of scope have
+> since been reversed. [scope.md](scope.md) says which, and by what. Do not cut work from this
+> document, and do not treat its refusals as current.
+
 **Status:** signed off 2026-09-10, revised the same day after a scope review. The spike gate
 below was passed the same day on the Windows VM, and the MVP was built against this document;
 see the release notes and [architecture.md](architecture.md) for what shipped.
-This document is the contract the tickets are cut from. Changes to it require a new sign-off.
 
 ## Product
 
