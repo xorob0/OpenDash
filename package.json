@@ -16,7 +16,8 @@
     "package": "bash scripts/package.sh",
     "vm": "bun scripts/vm.ts",
     "emulator": "bash scripts/emulator.sh",
-    "dev": "bun scripts/dev.ts"
+    "dev": "bun scripts/dev.ts",
+    "shots": "bun scripts/shots.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
