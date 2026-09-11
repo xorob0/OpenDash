@@ -64,7 +64,7 @@ export function dashProperties(): string[] {
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
   const modules = MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
-  const pitWall = [...ZONE_LETTERS.map(zoneSettingName), WIDE_ZONE_SETTING, WEB_VIEW_SETTING];
+  const pitWall = [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING];
   return [...modules, ...pitWall].map(propertyName);
 }
 
@@ -207,8 +207,14 @@ export function moduleSettingName(number: number): string {
 /**
  * A page a pit wall zone can show. Standard pages fill a 639 px zone; the wide pages fill the
  * 1039 px one. Both lists are indexed from 0, because the zone setting is that index.
+ *
+ * These carry a `PIT_WALL_` prefix because the dash face now has zones of its own, and the two
+ * are deliberately different catalogues. A pit wall zone is chosen with a mouse by somebody who
+ * is not driving, in a 607 by 158 strip, and its list includes a web view that no face would ever
+ * show. A face zone is cycled with a thumb at speed and draws from the full twenty-one. Merging
+ * them would mean either offering a driver a browser page or denying a spotter one.
  */
-export interface ZonePageMeta {
+export interface PitWallZonePageMeta {
   number: number;
   /** The module the page draws, or `web` for the browser page, which is not a companion module. */
   id: string;
@@ -216,7 +222,7 @@ export interface ZonePageMeta {
 }
 
 /** The eleven standard zone pages, in the order the plugin lists them. */
-export const ZONE_PAGES: readonly ZonePageMeta[] = [
+export const PIT_WALL_ZONE_PAGES: readonly PitWallZonePageMeta[] = [
   { number: 0, id: 'fuel', name: 'Fuel' },
   { number: 1, id: 'tyres', name: 'Tyres' },
   { number: 2, id: 'opponents', name: 'Opponents' },
@@ -231,7 +237,7 @@ export const ZONE_PAGES: readonly ZonePageMeta[] = [
 ];
 
 /** The six wide zone pages, for the one zone that spans a column. */
-export const WIDE_ZONE_PAGES: readonly ZonePageMeta[] = [
+export const PIT_WALL_WIDE_ZONE_PAGES: readonly PitWallZonePageMeta[] = [
   { number: 0, id: 'inputs', name: 'Inputs' },
   { number: 1, id: 'web', name: 'Web view' },
   { number: 2, id: 'lapHistory', name: 'Lap history' },
@@ -241,18 +247,18 @@ export const WIDE_ZONE_PAGES: readonly ZonePageMeta[] = [
 ];
 
 /** The four configurable zones of a pit wall page. */
-export const ZONE_LETTERS = ['A', 'B', 'C', 'D'] as const;
-export type ZoneLetter = (typeof ZONE_LETTERS)[number];
+export const PIT_WALL_ZONE_LETTERS = ['A', 'B', 'C', 'D'] as const;
+export type PitWallZoneLetter = (typeof PIT_WALL_ZONE_LETTERS)[number];
 
 /** Default page of each zone: fuel, tyres, relative and opponents, which is what a spotter watches. */
-export const DEFAULT_ZONE_PAGES: Record<ZoneLetter, number> = { A: 0, B: 1, C: 4, D: 2 };
+export const PIT_WALL_DEFAULT_ZONE_PAGES: Record<PitWallZoneLetter, number> = { A: 0, B: 1, C: 4, D: 2 };
 
 /** Default page of the wide zone: the car telemetry trace with the settings grid beside it. */
-export const DEFAULT_WIDE_ZONE_PAGE = 5;
+export const PIT_WALL_DEFAULT_WIDE_ZONE_PAGE = 5;
 
 /** `PitWallZoneA` .. `PitWallZoneD`. */
-export const zoneSettingName = (letter: ZoneLetter): string => `PitWallZone${letter}`;
-export const WIDE_ZONE_SETTING = 'PitWallWide';
+export const pitWallZoneSettingName = (letter: PitWallZoneLetter): string => `PitWallZone${letter}`;
+export const PIT_WALL_WIDE_ZONE_SETTING = 'PitWallWide';
 export const WEB_VIEW_SETTING = 'WebViewUrl';
 
 /** The URL the web view page shows until the user sets one. Empty means "nothing configured". */
@@ -266,9 +272,9 @@ export const secondScreen = {
    */
   moduleEnabled: (number: number): Expr => isnull(prop(propertyName(moduleSettingName(number))), num(moduleAt(number).enabled ? 1 : 0)),
   /** `isnull([OpenDash.PitWallZoneA], 0)`: which page a zone's widget shows. */
-  zonePage: (letter: ZoneLetter): Expr => isnull(prop(propertyName(zoneSettingName(letter))), num(DEFAULT_ZONE_PAGES[letter])),
+  zonePage: (letter: PitWallZoneLetter): Expr => isnull(prop(propertyName(pitWallZoneSettingName(letter))), num(PIT_WALL_DEFAULT_ZONE_PAGES[letter])),
   /** `isnull([OpenDash.PitWallWide], 5)`. */
-  wideZonePage: (): Expr => isnull(prop(propertyName(WIDE_ZONE_SETTING)), num(DEFAULT_WIDE_ZONE_PAGE)),
+  wideZonePage: (): Expr => isnull(prop(propertyName(PIT_WALL_WIDE_ZONE_SETTING)), num(PIT_WALL_DEFAULT_WIDE_ZONE_PAGE)),
   /** `isnull([OpenDash.WebViewUrl], '')`: the address of the web view page. */
   webViewUrl: (): Expr => isnull(prop(propertyName(WEB_VIEW_SETTING)), str(DEFAULT_WEB_VIEW_URL)),
 };
