@@ -19,8 +19,13 @@ import { claim, install, readClaim, release, resolveHost, screenshot, simhubStop
 
 const repoRoot = path.resolve(import.meta.dir, '..');
 
-/** The faces, in the order Dash Studio lists them when filtered by "openDash". */
-const LIST_ORDER = [
+/**
+ * The faces, in the order Dash Studio lists them when filtered by "openDash".
+ *
+ * `openDashboard` clicks a row by its index in that list, so the order is not cosmetic. `shots.ts`
+ * reads the same list rather than keeping a second copy.
+ */
+export const LIST_ORDER = [
   'openDash',
   'openDash 1280x400',
   'openDash 1280x480',

@@ -147,6 +147,9 @@ public class OpenDashWindows {
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int cx, int cy, uint f);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  /// <summary>WM_CLOSE, which a WPF window handles as a click on its close box.</summary>
+  public static void Close(IntPtr h) { PostMessage(h, 0x0010, IntPtr.Zero, IntPtr.Zero); }
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
   public static int[] Rect(IntPtr h) { RECT r; GetWindowRect(h, out r); return new int[] { r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top }; }
@@ -182,6 +185,32 @@ foreach ($h in [OpenDashWindows]::Visible()) {
   $t = [OpenDashWindows]::Title($h)
   if ($t -match ' \\(WPF Renderer\\)$') { $t -replace ' \\(WPF Renderer\\)$', '' }
 }`,
+  );
+  return r.stdout
+    .split('\n')
+    .map((l) => l.replace(/^﻿/, '').trim())
+    .filter((l) => l.length > 0);
+}
+
+/**
+ * Closes every open dash window, and returns the names it closed.
+ *
+ * `bun run shots` walks ten packages on a two-core VM, and a dash window left open keeps rendering
+ * at sixty frames a second. Ten of them open at once is not a tidiness problem, it is why the
+ * eighth capture comes back half-drawn. WM_CLOSE rather than a killed process, because SimHub owns
+ * these windows and would notice.
+ */
+export function closeDashboards(host: Host): string[] {
+  const r = inDesktopScript(
+    host,
+    `${WINDOW_HELPER}
+foreach ($h in [OpenDashWindows]::Visible()) {
+  $t = [OpenDashWindows]::Title($h)
+  if ($t -notmatch ' \\(WPF Renderer\\)$') { continue }
+  [OpenDashWindows]::Close($h)
+  $t -replace ' \\(WPF Renderer\\)$', ''
+}
+Start-Sleep -Milliseconds 900`,
   );
   return r.stdout
     .split('\n')
