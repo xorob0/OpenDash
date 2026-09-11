@@ -35,10 +35,20 @@ export function slotSettingName(slot: number): string {
   return `Slot${String(slot).padStart(2, '0')}`;
 }
 
-/** The default card number of a 1-based slot: cards 0..11 fill slots 1..12 in order. */
+/**
+ * The default card of each slot, slot 1 first. Speed leads, so that even a two-slot face shows
+ * it now that the hero holds the gear alone; the timing block follows, then the car values.
+ * Tyre pressures is the one card no slot shows by default: in iRacing it only changes in the
+ * pit stall, and tyre temperatures already carry that reading.
+ */
+export const DEFAULT_SLOT_CARDS: readonly number[] = [12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+/** The default card number of a 1-based slot. */
 export function defaultCardForSlot(slot: number): number {
   assertSlot(slot);
-  return slot - 1;
+  const card = DEFAULT_SLOT_CARDS[slot - 1];
+  if (card === undefined) throw new RangeError(`no default card for slot ${slot}`);
+  return card;
 }
 
 /** `OpenDash.<name>`, the full SimHub property name. */
@@ -83,7 +93,7 @@ export interface CardMeta {
   displayName: string;
 }
 
-/** The twelve MVP cards in card-number order. The plugin ships the same list in Contract.cs. */
+/** The cards in card-number order. The plugin ships the same list in Contract.cs. */
 export const CARD_CATALOGUE: readonly CardMeta[] = [
   { number: 0, id: 'currentLap', label: 'CURRENT', displayName: 'Current lap' },
   { number: 1, id: 'lastLap', label: 'LAST', displayName: 'Last lap' },
@@ -97,6 +107,7 @@ export const CARD_CATALOGUE: readonly CardMeta[] = [
   { number: 9, id: 'abs', label: 'ABS', displayName: 'ABS' },
   { number: 10, id: 'tyreTemps', label: 'TYRES °C · LAST STOP', displayName: 'Tyre temps' },
   { number: 11, id: 'tyrePressures', label: 'PRESSURES PSI · LAST STOP', displayName: 'Tyre pressures' },
+  { number: 12, id: 'speed', label: 'SPEED', displayName: 'Speed' },
 ];
 
 export function cardMeta(id: string): CardMeta {

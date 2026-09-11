@@ -63,7 +63,7 @@ nothing to save and no restart.
 | Data | Position | Overall, Class |
 | Data | Delta reference | Session best, All-time best |
 | Data | Session progress | Auto, Laps, Time |
-| Layout | Slot 01 to Slot 12 | any of the twelve cards; the picture shows where each slot sits on the 1920 x 480 dash, smaller faces use the first slots (see Sizes) |
+| Layout | Slot 01 to Slot 12 | any of the thirteen cards; the picture shows where each slot sits on the 1920 x 480 dash, smaller faces use the first slots (see Sizes) |
 | Dashboard | Reinstall | extracts every embedded dashboard again; your settings are kept |
 
 The same card may be assigned to several slots. The page says so in amber and does not stop you.

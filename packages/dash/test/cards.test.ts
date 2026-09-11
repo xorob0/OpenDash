@@ -44,8 +44,9 @@ describe('cards', () => {
     const items = CARDS[1]!.build(rect(0, 0, 255, 187), 'x.');
     const [label, value] = items;
     if (label?.kind !== 'text' || value?.kind !== 'text') throw new Error('readout');
-    expect(label.rect).toEqual({ left: 16, top: 51, width: 223, height: 18 });
-    expect(value.rect).toEqual({ left: 16, top: 65, width: 208, height: 77 });
+    expect(label.rect).toEqual({ left: 16, top: 51, width: 223, height: 19 });
+    // 220 px of cells plus the slack that keeps WPF from clipping the last glyph.
+    expect(value.rect).toEqual({ left: 16, top: 65, width: 224, height: 78 });
     expect(value.fontSize).toBe(64);
     const grid = CARDS[10]!.build(rect(0, 0, 255, 187), 'x.');
     const rects = grid.map((i) => ('rect' in i ? [i.rect.left, i.rect.top] : null));
@@ -53,7 +54,7 @@ describe('cards', () => {
     const row = CARDS[4]!.build(rect(0, 0, 255, 187), 'x.');
     const denominator = row[2];
     if (denominator?.kind !== 'text') throw new Error('denominator');
-    expect(denominator.rect).toEqual({ left: 53, top: 83, width: 157, height: 55 });
+    expect(denominator.rect).toEqual({ left: 55, top: 83, width: 153, height: 57 });
     expect(denominator.fontSize).toBe(46);
     expect(denominator.monospace).toBeUndefined();
   });

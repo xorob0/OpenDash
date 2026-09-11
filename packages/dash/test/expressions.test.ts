@@ -40,7 +40,7 @@ describe('ncalc helpers', () => {
 describe('card expressions', () => {
   test('position follower Left is x + digitCount * cell + gap', () => {
     const left = formulaOf(textItem('position', 'denominator'), 'Left');
-    expect(left).toMatch(/^\(16\) \+ \(\(if\(.* >= \(10\), 2, 1\)\) \* \(29\)\) \+ \(8\)$/);
+    expect(left).toMatch(/^\(16\) \+ \(\(if\(.* >= \(10\), 2, 1\)\) \* \(31\)\) \+ \(8\)$/);
     expect(left).toContain('driverclassposition(getplayerleaderboardposition())');
     expect(formulaOf(textItem('position', 'denominator'), 'Text')).toContain("('/ ') + (format(");
   });
@@ -75,7 +75,7 @@ describe('card expressions', () => {
 
   test('fuel unit Left adds one digit cell for the decimal and one special for the point', () => {
     const left = formulaOf(textItem('fuel', 'unit'), 'Left');
-    expect(left).toMatch(/\+ \(1\)\) \* \(29\)\) \+ \(17\) \+ \(8\)$/);
+    expect(left).toMatch(/\+ \(1\)\) \* \(31\)\) \+ \(17\) \+ \(8\)$/);
     expect(formulaOf(textItem('fuel', 'unit'), 'Text')).toBe("if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L')");
   });
 

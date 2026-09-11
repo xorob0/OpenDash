@@ -49,6 +49,7 @@ export function readout(slot: Rect, rung: RungSpec, prefix: string, lbl: LabelSp
   return [
     label(`${prefix}label`, lbl.text, g.x, g.labelY, g.innerWidth, { bind: lbl.bind }),
     numeral(`${prefix}value`, value.sample, g.x, g.valueY, g.valueFs, value.chars, {
+      maxWidth: slot.left + slot.width - g.x,
       bind: value.bind,
       color: value.color,
       colorBind: value.colorBind,

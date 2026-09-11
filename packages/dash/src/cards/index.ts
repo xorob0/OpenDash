@@ -10,6 +10,7 @@ import { fuelLaps } from './fuelLaps.ts';
 import { lastLap } from './lastLap.ts';
 import { position } from './position.ts';
 import { session } from './session.ts';
+import { speed } from './speed.ts';
 import { tc } from './tc.ts';
 import { tyrePressures } from './tyrePressures.ts';
 import { tyreTemps } from './tyreTemps.ts';
@@ -17,7 +18,7 @@ import { tyreTemps } from './tyreTemps.ts';
 export type { Card, CardBuilder } from './card.ts';
 export { defineCard } from './card.ts';
 
-export const CARDS: readonly Card[] = [currentLap, lastLap, bestLap, delta, position, session, fuel, fuelLaps, tc, abs, tyreTemps, tyrePressures];
+export const CARDS: readonly Card[] = [currentLap, lastLap, bestLap, delta, position, session, fuel, fuelLaps, tc, abs, tyreTemps, tyrePressures, speed];
 
 CARDS.forEach((card, i) => {
   if (card.number !== i || CARD_CATALOGUE[i]?.id !== card.id) {

@@ -9,7 +9,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build, BuildError, DEFAULT_OUT_DIR, main, MANIFEST_FILE, parseArgs, readVersion, validateOrThrow, type BuildResult } from '../src/build.ts';
-import { CARD_CATALOGUE } from '../src/contract.ts';
+import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
 import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, listFiles, PACKAGE_EXTENSION, readZip } from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
@@ -171,7 +171,7 @@ describe('widget build on disk', () => {
         expect(sidecar.MetadataVersion).toBe(2);
       }
       expect(readJson(join(folder, `${layout.folder}.djson.metadata`))).toMatchObject({ Title: layout.folder, Description: layout.description, Width: layout.width, Height: layout.height, ScreenCount: 1 });
-      expect(readJson(join(folder, `${CARDS_FILE}.metadata`))).toMatchObject({ Title: `${layout.folder} cards`, Width: layout.slotSize.width, Height: layout.slotSize.height, ScreenCount: 12 });
+      expect(readJson(join(folder, `${CARDS_FILE}.metadata`))).toMatchObject({ Title: `${layout.folder} cards`, Width: layout.slotSize.width, Height: layout.slotSize.height, ScreenCount: CARD_CATALOGUE.length });
     }
     expect(readJson(join(widget.out, 'openDash', 'openDash.djson.metadata'))).toMatchObject({ Title: 'openDash', Description: '1920 x 480, 12 slots', Width: 1920, Height: 480 });
     expect(readJson(join(widget.out, 'openDash 480 round', 'openDash 480 round.djson.metadata'))).toMatchObject({ Description: '2 slots, round', Width: 480, Height: 480 });
@@ -262,11 +262,11 @@ describe('the emitted JSON', () => {
       expect(widgets).toHaveLength(layout.slots.length);
       widgets.forEach((w, i) => {
         expect(w.FileName).toBe(CARDS_FILE);
-        expect(w.InitialScreenIndex).toBe(i);
+        expect(w.InitialScreenIndex).toBe(defaultCardForSlot(i + 1));
         expect(w.AutoSize).toBe(true);
         expect(w.BackgroundColor).toBe('#00FFFFFF');
         const binding = (w.Bindings as JsonItem).InitialScreenIndex as JsonItem;
-        expect((binding.Formula as JsonItem).Expression).toBe(`isnull([OpenDash.Slot${String(i + 1).padStart(2, '0')}], ${i})`);
+        expect((binding.Formula as JsonItem).Expression).toBe(`isnull([OpenDash.Slot${String(i + 1).padStart(2, "0")}], ${defaultCardForSlot(i + 1)})`);
         expect(binding.Mode).toBe(2);
       });
       expect((main.Screens as JsonItem[])[0]!.Name).toBe('Main');

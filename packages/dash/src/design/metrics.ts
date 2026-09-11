@@ -24,9 +24,27 @@ export interface LineBox {
   fs: number;
 }
 
-/** The unrounded SimHub box (top, height) that reproduces a canvas line box. */
+/**
+ * Slack added to a text box, in pixels. SimHub renders text with WPF's `MaxTextWidth` and
+ * `MaxTextHeight` set to the box, and WPF clips whatever does not fit: a box sized to the exact
+ * text is a box whose last glyph loses its final pixels. Every box therefore gets a pixel of
+ * room in each axis on top of rounding up.
+ */
+export const BOX_SLACK = 1;
+
+/** Slack for a text box of font size `fs`: enough for the last glyph, never enough to notice. */
+export const boxSlack = (fs: number): number => Math.max(2, Math.ceil(0.05 * fs));
+
+/**
+ * The SimHub box (top, height) that reproduces a canvas line box. The height is rounded up and
+ * given its pixel of slack, since 1.2 x 46 = 55.2 rounds down to 55 and WPF would then clip the
+ * line it is meant to hold.
+ */
 export function textBox(y: number, fs: number): { top: number; height: number } {
-  return { top: y - (LINE_SPACING - WPF_BASELINE - (1 - CANVAS_BASELINE)) * fs, height: LINE_SPACING * fs };
+  return {
+    top: y - (LINE_SPACING - WPF_BASELINE - (1 - CANVAS_BASELINE)) * fs,
+    height: Math.ceil(LINE_SPACING * fs) + BOX_SLACK,
+  };
 }
 
 /** Where a canvas line box's baseline sits. */
@@ -37,19 +55,26 @@ export const canvasYForBaseline = (baseline: number, fs: number): number => base
 
 export type DataWeight = 'SemiBold' | 'Bold';
 
-/** Monospace cell widths as a fraction of the font size, per face, measured from the TTFs. */
+/**
+ * Monospace cell widths as a fraction of the font size, per face, measured from the TTFs. The
+ * cell holds every glyph a value can draw, not only the digits: "OFF" puts an "O" (0.467 em in
+ * SemiBold, wider than the widest digit "4" at 0.459) through the same cell.
+ */
 export const CELL: Record<DataWeight, { digit: number; special: number }> = {
-  SemiBold: { digit: 0.46, special: 0.26 },
+  SemiBold: { digit: 0.47, special: 0.26 },
   Bold: { digit: 0.49, special: 0.28 },
 };
 
 /** Characters that get the narrow cell. SimHub's default; written explicitly so `-` stays a digit cell. */
 export const SPECIAL_CHARS = '.,:';
 
-/** Integer monospace cells for a face at a font size. */
+/**
+ * Integer monospace cells for a face at a font size. Rounded up, never down: SimHub draws each
+ * character inside its cell, so a cell narrower than the glyph's advance clips the glyph.
+ */
 export function cells(weight: DataWeight, fs: number): Monospace {
   const c = CELL[weight];
-  return { charWidth: Math.round(c.digit * fs), specialCharsWidth: Math.round(c.special * fs), specialChars: SPECIAL_CHARS };
+  return { charWidth: Math.ceil(c.digit * fs), specialCharsWidth: Math.ceil(c.special * fs), specialChars: SPECIAL_CHARS };
 }
 
 /**
@@ -59,12 +84,6 @@ export function cells(weight: DataWeight, fs: number): Monospace {
  * 127 px and "N" (134 px) clips. 0.52 em is 135 px at 260.
  */
 export const GEAR_CELL = 0.52;
-
-/**
- * Advance width of "KM/H" in Barlow Medium, in em, measured from the TTF (K 0.616, M 0.715,
- * / 0.426, H 0.645). "MPH" is 1.953 em, so a box this wide holds either unit.
- */
-export const UNIT_KMH_EM = 2.402;
 
 /** Integer monospace cells for the gear: the letter-wide cell with the Bold face's special cell. */
 export function gearCells(fs: number): Monospace {
