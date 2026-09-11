@@ -110,3 +110,84 @@ export const referencedProperties = (expression: string): string[] => {
   while ((m = re.exec(expression)) !== null) out.push(m[1] ?? "");
   return out;
 };
+
+// --- The opponent family -----------------------------------------------------------------
+//
+// Every per-car value is `driver<name>(leaderboardposition)`, where the argument is a 1-based
+// index into SimHub's leaderboard (sorted by live position). A missing row makes every one of
+// these return null, including `driveravailable`, so a row's expressions are null-guarded and a
+// row's Visible is bound to `driveravailable`. The index helpers below return -1 when there is
+// no such car, and `driverXxx(-1)` is null, so the two compose safely.
+
+/** The `driver<name>(position)` functions openDash uses, as SimHub registers them (lower case). */
+export type DriverFunction =
+  | 'available'
+  | 'isplayer'
+  | 'name'
+  | 'shortname'
+  | 'initials'
+  | 'carclass'
+  | 'carnumber'
+  | 'position'
+  | 'classposition'
+  | 'positiongain'
+  | 'positiongainclass'
+  | 'bestlap'
+  | 'lastlap'
+  | 'currentlap'
+  | 'gaptoleader'
+  | 'gaptoplayer'
+  | 'gaptoleadercombined'
+  | 'relativegaptoplayer'
+  | 'iscarinpit'
+  | 'iscarinpitlane'
+  | 'pitcount'
+  | 'pitlastduration'
+  | 'lapsdonesincelastpitout'
+  | 'timesincelastpitout'
+  | 'iracingirating'
+  | 'fronttyrecompound'
+  | 'reartyrecompound';
+
+/** `driver<name>(position)`; `position` is an expression, so it can be a `repeatindex()` sum. */
+export const driver = (fn: DriverFunction, position: Expr): Expr => `driver${fn}(${position})`;
+
+/** `driversector<which>(position, sector, includePreviousSectors)`, a TimeSpan or null. */
+export const driverSector = (which: 'lastlap' | 'bestlap' | 'currentlap' | 'best', position: Expr, sector: number, includePrevious = false): Expr =>
+  `driversector${which}(${position}, ${num(sector)}, ${includePrevious})`;
+
+/** `getplayerleaderboardposition()`: the player's own 1-based leaderboard index, -1 when unknown. */
+export const playerPosition = (): Expr => 'getplayerleaderboardposition()';
+
+/** `getopponentleaderboardposition_aheadbehind(k)`: 0 is the player, -1 the car ahead on track, 1 the car behind. */
+export const aheadBehind = (k: Expr): Expr => `getopponentleaderboardposition_aheadbehind(${k})`;
+
+/** The same on the player's class only. */
+export const aheadBehindInClass = (k: Expr): Expr => `getopponentleaderboardposition_aheadbehind_playerclassonly(${k})`;
+
+/** `getopponentleaderboardposition_playerclassonly(p)`: the p-th car of the player's class. */
+export const classPosition = (p: Expr): Expr => `getopponentleaderboardposition_playerclassonly(${p})`;
+
+/**
+ * `getbestlapopponentleaderboardposition(0)`: the leaderboard index of the session-best car.
+ * SimHub declares it without a parameter but its delegate takes one, so the dummy 0 is required.
+ */
+export const bestLapPosition = (): Expr => 'getbestlapopponentleaderboardposition(0)';
+
+/** The same within the player's class. */
+export const bestLapPositionInClass = (): Expr => 'getbestlapopponentleaderboardposition_playerclassonly(0)';
+
+/** `getbestsplittime(sector)`: the session's best individual sector time, or null. */
+export const bestSplitTime = (sector: number): Expr => `getbestsplittime(${num(sector)})`;
+
+/**
+ * `repeatindex()`: which copy of a repeated layer an expression is being evaluated for, 1 for
+ * the original row. `depth` addresses an outer repeated layer when layers nest.
+ */
+export const repeatIndex = (depth?: number): Expr => (depth === undefined ? 'repeatindex()' : `repeatindex(${num(depth)})`);
+
+/**
+ * `prop(expr)`: a property whose name is computed, e.g. the lap-history slots
+ * `'PersistantTrackerPlugin.PreviousLap_' + format(repeatindex() - 1, '00')`. NCalc only.
+ */
+export const propByName = (nameExpression: Expr): Expr => `prop(${nameExpression})`;

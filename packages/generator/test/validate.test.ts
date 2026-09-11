@@ -181,13 +181,20 @@ describe('ids and names', () => {
 
 describe('binding targets', () => {
   test('the allowed sets follow the spec', () => {
-    expect(ALLOWED_BINDING_TARGETS.layer).toEqual(['Visible', 'Opacity', 'BlinkEnabled']);
+    expect(ALLOWED_BINDING_TARGETS.layer).toEqual(['Visible', 'Opacity', 'BlinkEnabled', 'Repetitions']);
     expect(ALLOWED_BINDING_TARGETS.widget).toEqual(['Left', 'Top', 'Width', 'Height', 'Visible', 'InitialScreenIndex']);
     expect(ALLOWED_BINDING_TARGETS.rect).not.toContain('Text');
     expect(ALLOWED_BINDING_TARGETS.rect).not.toContain('TextColor');
     expect(ALLOWED_BINDING_TARGETS.rect).not.toContain('FontSize');
     expect(ALLOWED_BINDING_TARGETS.text).toContain('FontSize');
     expect(ALLOWED_BINDING_TARGETS.ellipse).toEqual(['Left', 'Top', 'Width', 'Height', 'Visible', 'BackgroundColor', 'Opacity', 'BlinkEnabled', 'FillColor', 'EllipseColor']);
+    expect(ALLOWED_BINDING_TARGETS.chart).toContain('CurrentValue');
+    expect(ALLOWED_BINDING_TARGETS.linearGauge).toContain('Value');
+    expect(ALLOWED_BINDING_TARGETS.webPage).toContain('StartAddress');
+    // Repetitions is a Layer property; nothing else stamps rows.
+    for (const kind of ['text', 'rect', 'chart', 'linearGauge', 'radar', 'staticMap', 'webPage', 'widget'] as const) {
+      expect(ALLOWED_BINDING_TARGETS[kind]).not.toContain('Repetitions');
+    }
     for (const kind of ['text', 'rect', 'layer', 'widget'] as const) {
       expect(ALLOWED_BINDING_TARGETS[kind]).not.toContain('BorderColor');
       expect(ALLOWED_BINDING_TARGETS[kind]).not.toContain('FillColor');
