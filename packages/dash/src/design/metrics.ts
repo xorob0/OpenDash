@@ -8,6 +8,7 @@
  * Top = y - 0.1 fs, Height = 1.2 fs, VerticalAlignment top.
  */
 import type { Monospace } from '../generator.ts';
+import { ds } from '../tokens.ts';
 
 export const FONT_METRICS = { unitsPerEm: 1000, ascender: 1000, descender: -200, lineGap: 0, capHeight: 700, xHeight: 510 } as const;
 
@@ -56,17 +57,21 @@ export const canvasYForBaseline = (baseline: number, fs: number): number => base
 export type DataWeight = 'SemiBold' | 'Bold';
 
 /**
- * Monospace cell widths as a fraction of the font size, per face, measured from the TTFs. The
- * cell holds every glyph a value can draw, not only the digits: "OFF" puts an "O" (0.467 em in
- * SemiBold, wider than the widest digit "4" at 0.459) through the same cell.
+ * Monospace cell widths as a fraction of the font size, per face, from the tokens. The cell holds
+ * every glyph a value can draw, not only the digits: "OFF" puts an "O" (0.467 em in SemiBold,
+ * wider than the widest digit "4" at 0.459) through the same cell.
+ *
+ * Read rather than repeated. These were copied here once and the gear's cell then drifted from the
+ * token by a sixth, which is how a "6" came to be photographed with its bowl flattened against the
+ * cell edge.
  */
 export const CELL: Record<DataWeight, { digit: number; special: number }> = {
-  SemiBold: { digit: 0.47, special: 0.26 },
-  Bold: { digit: 0.49, special: 0.28 },
+  SemiBold: { ...ds.font.cell.semiBold },
+  Bold: { ...ds.font.cell.bold },
 };
 
 /** Characters that get the narrow cell. SimHub's default; written explicitly so `-` stays a digit cell. */
-export const SPECIAL_CHARS = '.,:';
+export const SPECIAL_CHARS = ds.font.cell.specialChars;
 
 /**
  * Integer monospace cells for a face at a font size. Rounded up, never down: SimHub draws each
@@ -78,12 +83,15 @@ export function cells(weight: DataWeight, fs: number): Monospace {
 }
 
 /**
- * The gear's cell as a fraction of the font size. SimHub reports "N" and "R" as well as digits,
- * and Barlow Condensed Bold "N" advances 0.514 em (measured from the TTF), wider than any digit
- * ("4", the widest, is 0.484), so the gear cannot use the face's digit cell: at 260 px that is
- * 127 px and "N" (134 px) clips. 0.52 em is 135 px at 260.
+ * The gear's cell as a fraction of the font size, from the tokens.
+ *
+ * It is wider than the widest advance in Barlow Condensed Bold, and deliberately so. SimHub does
+ * not draw the gear in Barlow Condensed at all: WPF exposes the bundled files as one family,
+ * "Barlow", with the condensed faces as a stretch of it, so a request for "Barlow Condensed"
+ * reaches a non-condensed face whose glyphs are about a fifth wider. The token holds a cell wide
+ * enough for whichever Barlow the renderer picks; the resolution itself is XOR-84.
  */
-export const GEAR_CELL = 0.52;
+export const GEAR_CELL = ds.font.cell.gear;
 
 /** Integer monospace cells for the gear: the letter-wide cell with the Bold face's special cell. */
 export function gearCells(fs: number): Monospace {
