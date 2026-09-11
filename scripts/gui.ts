@@ -151,6 +151,33 @@ ${keep ? `echo "[debug] kept ${share}, ${out} and ${done}" >&2` : `rm -f ${share
   return read;
 }
 
+/**
+ * Holds a key down, screenshots the whole display while it is held, and releases it.
+ *
+ * All of it in one VNC session, which is the point. **A VNC server releases every held key when the
+ * client disconnects**, so holding a key in one call and photographing in the next photographs a
+ * key that is no longer down -- which is exactly what made the quick glance look broken when it was
+ * working. The capture is the display rather than one window, because `captureDashboard` schedules
+ * a task on the guest and could not run inside this session anyway.
+ *
+ * SimHub's keyboard reader uses RawInput, so this reaches it the way a wheel button would.
+ */
+export function captureWhileHeld(host: Host, key: string, localPath: string, seconds = 2.5): RunResult {
+  const guestPng = `${WINVM_DIR}/shared/held_${Math.round(Date.now())}.png`;
+  const held = vnc(
+    host,
+    `client.keyDown(${JSON.stringify(key)})
+time.sleep(${seconds})
+client.captureScreen(${JSON.stringify(guestPng)})
+time.sleep(0.5)
+client.keyUp(${JSON.stringify(key)})`,
+    Math.round((seconds + 60) * 1000),
+  );
+  if (!held.ok) return held;
+  const fetched = fetchFromShare(host, guestPng, localPath);
+  return fetched.ok ? { ...fetched, stdout: `captured the display while ${key} was held` } : fetched;
+}
+
 /** A window enumerator, shared by the calls below so the P/Invoke block is written once. */
 const WINDOW_HELPER = `
 Add-Type -TypeDefinition @'
