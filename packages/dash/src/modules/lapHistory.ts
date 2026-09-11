@@ -61,7 +61,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
     numeral(`${ctx.prefix}row.delta`, '+0.594', deltaX, top + (rowHeight - fs) / 2, fs, CHARS.delta, {
       bind: fmt(delta, '0.000', true),
       colorBind: deltaColour,
-      maxWidth: deltaWidth + 4,
+      maxWidth: deltaWidth,
     }),
   ];
   const row: LayerItem = { kind: 'layer', name: `${ctx.prefix}row`, children, ...withBindings({ Visible: hasTime(time) }) };

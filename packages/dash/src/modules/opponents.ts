@@ -12,7 +12,7 @@ import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
 import { densityOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
-import { fieldRowFitted } from '../second/field.ts';
+import { fieldRowFitted, fieldsThatFit } from '../second/field.ts';
 import { stack } from '../second/layout.ts';
 import { CHARS, carClass, carLastLap, carName, carNumber, carPosition, carRating, carRelativeGap, neighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -39,7 +39,8 @@ function block(ctx: ModuleContext, id: string, offset: number, heading: string, 
     // The chip sits after the row, but never past the module's right edge: on a narrow page the
     // row already fills the box and the chip tucks against the edge instead of leaving it.
     const chipW = chipWidth(ctx.density);
-    const row = fieldRowFitted([gapField, nameField, numberField], ctx.frame.left, valueBottom, ctx.frame.width - chipW - d.gapX / 2, ctx.density);
+    const room = ctx.frame.width - chipW - d.gapX / 2;
+    const row = fieldRowFitted(fieldsThatFit([gapField, nameField, numberField], room, ctx.density), ctx.frame.left, valueBottom, room, ctx.density);
     const chipX = Math.min(ctx.frame.left + row.width + d.gapX / 2, ctx.frame.left + ctx.frame.width - chipW);
     items.push(...row.items);
     items.push(...chip(`${ctx.prefix}${id}.class`, 'GT3', chipX, valueBottom - d.chipHeight, ctx.density, { bind: chipText(carClass(idx)), width: chipW }));

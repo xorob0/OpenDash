@@ -45,6 +45,14 @@ export function temperatureColour(corner: Corner): string {
   return iff(eq(t, num(0)), str(ds.color.text.dim), iff(lt(t, cold), str(ds.purpose.tyre.cold), iff(gt(t, hot), str(ds.purpose.tyre.hot), str(ds.purpose.tyre.nominal))));
 }
 
+/** Design-time readings per corner, so the editor shows four wheels rather than the same one four times. */
+export const CORNER_SAMPLES: Record<Corner, { temperature: string; pressure: string }> = {
+  FrontLeft: { temperature: '84', pressure: '27.8' },
+  FrontRight: { temperature: '104', pressure: '28.6' },
+  RearLeft: { temperature: '62', pressure: '27.1' },
+  RearRight: { temperature: '88', pressure: '27.9' },
+};
+
 /** One wheel drawn in `frame`. */
 export function wheel(name: string, frame: Rect, corner: Corner, density: Density): Item[] {
   const d = densityOf(density);
@@ -67,12 +75,12 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
       fillBind: iff(lt(wear, num(WEAR_CAUTION)), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
       max: 100,
     }),
-    numeral(`${name}.temp`, '104', x, top, tempFs, CHARS.temperature, {
+    numeral(`${name}.temp`, CORNER_SAMPLES[corner].temperature, x, top, tempFs, CHARS.temperature, {
       bind: iff(eq(temp, num(0)), str('--'), fmt(temp, '0')),
       colorBind: temperatureColour(corner),
       maxWidth: frame.width - (x - frame.left),
     }),
-    numeral(`${name}.pressure`, '28.6', pressureX, canvasYForBaseline(baseline, pressureFs), pressureFs, CHARS.pressure, {
+    numeral(`${name}.pressure`, CORNER_SAMPLES[corner].pressure, pressureX, canvasYForBaseline(baseline, pressureFs), pressureFs, CHARS.pressure, {
       bind: iff(eq(pressure, num(0)), str('--'), fmt(pressure, '0.0')),
       color: ds.color.text.secondary,
       maxWidth: Math.max(0, frame.left + frame.width - pressureX),
