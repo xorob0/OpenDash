@@ -3,11 +3,11 @@
 An open-source sim racing dashboard for [SimHub](https://www.simhubdash.com/), released under
 the MIT licence.
 
-> **Status: alpha.** The MVP is built: a 1920 by 480 dashboard for iRacing with twelve
-> configurable slots, a SimHub plugin that installs it and exposes its settings, and the
-> generator that turns TypeScript and design tokens into the `.simhubdash` package. Everything
-> below has been verified on SimHub 9.12.6. See [docs/scope-mvp.md](docs/scope-mvp.md) for what
-> version 1 is and is not.
+> **Status: alpha.** Fourteen packages are built: ten dash faces from 1920 by 480 down to a
+> 480 px round DDU, two companion screens and two pit wall screens, plus a SimHub plugin that
+> installs them all and exposes their settings. Everything below has been verified on
+> SimHub 9.12.6. See [docs/scope-mvp.md](docs/scope-mvp.md) for what version 1 of the face is,
+> and [docs/second-screens.md](docs/second-screens.md) for the companion and the pit wall.
 
 ## What makes this different
 
@@ -58,6 +58,23 @@ The plugin settings are SimHub properties (`OpenDash.ShiftLights`, `OpenDash.Pos
 other dashboards and LED profiles can read them too. Every change applies to the running
 dashboard immediately.
 
+## The second screens
+
+Two more kinds of screen are built from the same modules and installed by the same plugin.
+
+The **companion** is a phone or tablet beside the wheel showing one module at a time: lap times,
+delta, sectors, speedo, fuel, tyres, pit view, car settings, inputs, session, radar, track,
+leaderboard, relative, opponents, gear, stint and lap history. Twenty-one modules, each with its
+own switch in the plugin, paged with a wheel button through SimHub's own screen navigation.
+
+The **pit wall** is a 1920 by 1080 screen for someone who is not driving: three pages carrying
+the whole field with gaps, intervals, sectors, stints and stops, the driver's own lap next to it,
+and four data zones whose contents are plugin settings. A portrait version covers a screen on its
+side.
+
+Three modules ship off because iRacing publishes none of their data, and they say so rather than
+drawing zeros. [docs/second-screens.md](docs/second-screens.md) lists every such case and why.
+
 ## Build from source
 
 Requirements: [Bun](https://bun.sh) 1.x for the dashboard and the .NET 8 SDK for the plugin.
@@ -87,6 +104,9 @@ design/
 packages/
   generator/           TypeScript library that emits SimHub .djson scene graphs (no openDash knowledge)
   dash/                openDash itself: tokens in code, elements, components, cards, hero, layouts, build
+    src/second/        the shared second-screen parts: fields, chips, gauges, traces, tables
+    src/modules/       the 21 companion modules, which are also the pit wall's zone pages
+    src/screens/       the companion and pit wall packages
 plugin/
   OpenDash/            C# SimHub plugin: installer, properties, settings panel (builds on Linux)
   OpenDash.Tests/      Unit tests for the plugin's pure logic
@@ -95,6 +115,7 @@ tools/
   irsdk-emulator/      Synthetic iRacing telemetry feed for testing dashboards without the sim
 docs/
   scope-mvp.md         What version 1 is, and what it is not
+  second-screens.md    The companion and the pit wall, and what they deliberately do not show
   architecture.md      How source becomes a .simhubdash, and how a setting reaches it
   decisions/           Architecture decision records
   research/            Format notes verified against SimHub 9.12.6, SDK notes, competitor analysis
@@ -106,7 +127,7 @@ docs/
 
 `bun test` covers the generator (serialisation, validation, packaging) and the dashboard
 (tokens, geometry, formulas, the settings contract, snapshots of every card and of the full
-face). `dotnet test` covers the plugin's version comparison, settings and card catalogue. On
+face, and every text of every package measured against the box SimHub clips it to). `dotnet test` covers the plugin's version comparison, settings and card catalogue. On
 top of that the dashboard and the plugin are checked by hand on a Windows VM running SimHub,
 where [tools/irsdk-emulator](tools/irsdk-emulator/README.md) feeds scripted iRacing telemetry
 so that every card can be seen with real values.

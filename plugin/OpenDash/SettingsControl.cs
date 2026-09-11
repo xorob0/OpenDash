@@ -52,7 +52,7 @@ namespace OpenDashPlugin
             DockPanel.SetDock(header, Dock.Top);
             var footer = BuildFooter();
             DockPanel.SetDock(footer, Dock.Bottom);
-            var body = Ui.VStack(0, BuildGeneral(), BuildData(), BuildLayout(), BuildDashboard());
+            var body = Ui.VStack(0, BuildGeneral(), BuildData(), BuildLayout(), BuildCompanion(), BuildPitWall(), BuildDashboard());
             body.Margin = new Thickness(PagePadding, 0, PagePadding, 0);
             body.VerticalAlignment = VerticalAlignment.Top;
             page.Children.Add(header);
@@ -246,6 +246,140 @@ namespace OpenDashPlugin
                 BorderThickness = new Thickness(1, 0, 1, 0),
                 Child = label,
             };
+        }
+
+        // Companion
+
+        /// <summary>The 21 companion modules as toggles in three columns, in page order.</summary>
+        private FrameworkElement BuildCompanion()
+        {
+            var caption = Ui.Caption(
+                "Each module is a page of the companion dashboard. A module that is off is skipped when you page with a wheel button. "
+                + "Energy, Damage and Track rivals are off because iRacing publishes none of their data; switch them on for a sim that does.",
+                846);
+            return Ui.Section("Companion", caption, BuildModuleGrid());
+        }
+
+        private FrameworkElement BuildModuleGrid()
+        {
+            const int columns = 3;
+            var rows = (Modules.Count + columns - 1) / columns;
+            var grid = new Grid { Width = 846, HorizontalAlignment = HorizontalAlignment.Left };
+            for (var c = 0; c < columns; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            for (var r = 0; r < rows; r++) grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            for (var i = 0; i < Modules.Count; i++)
+            {
+                var module = Modules.All[i];
+                var cell = BuildModuleRow(module);
+                Grid.SetColumn(cell, i / rows);
+                Grid.SetRow(cell, i % rows);
+                grid.Children.Add(cell);
+            }
+            return grid;
+        }
+
+        /// <summary>"07 Tyres" and its toggle; the description is the tooltip, so the grid stays readable.</summary>
+        private FrameworkElement BuildModuleRow(Module module)
+        {
+            var name = Ui.Text(module.Number.ToString("00") + "  " + module.Name, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary);
+            name.VerticalAlignment = VerticalAlignment.Center;
+            var toggle = BuildToggle(Settings.Module(module.Number), on =>
+            {
+                Settings.SetModule(module.Number, on);
+                plugin.SaveSettings();
+            });
+            toggle.HorizontalAlignment = HorizontalAlignment.Right;
+            var row = Ui.Row(name, toggle);
+            row.Margin = new Thickness(0, 0, 24, 8);
+            row.ToolTip = module.Description;
+            return row;
+        }
+
+        // Pit wall
+
+        /// <summary>The four zone pages, the wide zone page and the web view address.</summary>
+        private FrameworkElement BuildPitWall()
+        {
+            var caption = Ui.Caption("Each pit wall page carries four data zones and, on the tower page, one wide zone. Choose what each one shows.", 846);
+            var rows = new List<UIElement> { caption };
+            foreach (var letter in Contract.ZoneLetters)
+            {
+                var captured = letter;
+                var select = BuildZoneSelect(ZonePages.Standard, Settings.Zone(captured), index =>
+                {
+                    Settings.SetZone(captured, index);
+                    plugin.SaveSettings();
+                });
+                rows.Add(Ui.Row("Zone " + captured, ZoneDescription(captured), select));
+            }
+            var wide = BuildZoneSelect(ZonePages.Wide, Settings.WideZone, index =>
+            {
+                Settings.WideZone = Contract.NormaliseWideZonePage(index);
+                plugin.SaveSettings();
+            });
+            rows.Add(Ui.Row("Wide zone", "The full-width zone on the tower page.", wide));
+            rows.Add(Ui.Row("Web view address", "The page the Web view zone shows. http or https only; leave empty for none.", BuildWebViewBox()));
+            return Ui.Section("Pit wall", rows.ToArray());
+        }
+
+        /// <summary>Where each zone sits, so the letters mean something before the dashboard is open.</summary>
+        private static string ZoneDescription(string letter)
+        {
+            switch (letter)
+            {
+                case "A": return "Race page, upper right. Telemetry page, top.";
+                case "B": return "Race page, lower right. Telemetry page, middle.";
+                case "C": return "Tower page, lower left. Telemetry page, bottom.";
+                default: return "Tower page, lower right.";
+            }
+        }
+
+        /// <summary>The pages in page-number order, so that SelectedIndex is the page number.</summary>
+        private static ComboBox BuildZoneSelect(IReadOnlyList<ZonePage> pages, int selected, Action<int> changed)
+        {
+            var box = new ComboBox
+            {
+                Width = 220,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+            };
+            foreach (var page in pages) box.Items.Add(page.Name);
+            box.SelectedIndex = selected >= 0 && selected < pages.Count ? selected : 0;
+            box.SelectionChanged += (sender, args) =>
+            {
+                if (box.SelectedIndex < 0) return;
+                changed(box.SelectedIndex);
+            };
+            return box;
+        }
+
+        /// <summary>The web view address. Written when the box loses focus or Enter is pressed, then normalised.</summary>
+        private FrameworkElement BuildWebViewBox()
+        {
+            var box = new TextBox
+            {
+                Width = 320,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Text = Settings.WebViewUrl ?? string.Empty,
+                ToolTip = "An http or https address; anything else is ignored.",
+            };
+            Action commit = () =>
+            {
+                Settings.WebViewUrl = Contract.NormaliseUrl(box.Text);
+                plugin.SaveSettings();
+                if (box.Text != Settings.WebViewUrl) box.Text = Settings.WebViewUrl;
+            };
+            box.LostFocus += (sender, args) => commit();
+            box.KeyDown += (sender, args) =>
+            {
+                if (args.Key == Key.Enter) commit();
+            };
+            return box;
         }
 
         /// <summary>The duplicate warning: triangle icon and caution text, hidden while every card is unique.</summary>
