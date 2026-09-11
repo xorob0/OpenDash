@@ -163,6 +163,12 @@ export interface TextItem extends ItemBase {
   kind: 'text';
   rect: Rect;
   text: string;
+  /**
+   * The widest string the item's `Text` binding can produce, when it has one. Build-time only:
+   * it is never serialised, and it exists so a fit test measures what the item will draw rather
+   * than the design-time sample, which is usually shorter.
+   */
+  widest?: string;
   /** Font family name as the TTF declares it, e.g. "Barlow Condensed". */
   font: string;
   fontWeight: FontWeight;

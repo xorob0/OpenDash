@@ -36,12 +36,19 @@ const faceOf = (item: TextItem): MeasuredFace => {
   return 'BarlowCondensedSemiBold';
 };
 
+/**
+ * What an item will draw. A bound item draws its binding rather than its sample, so where one
+ * declares `widest` that is what has to fit the box.
+ */
+const drawnText = (item: TextItem): string => item.widest ?? item.text;
+
 /** Width of what an item draws: its cells when monospaced, the measured advances otherwise. */
 function drawnWidth(item: TextItem): number {
+  const text = drawnText(item);
   const mono = item.monospace;
-  if (!mono) return measureText(faceOf(item), item.text, item.fontSize);
-  const specials = [...item.text].filter((c) => mono.specialChars?.includes(c) ?? false).length;
-  return (item.text.length - specials) * mono.charWidth + specials * mono.specialCharsWidth;
+  if (!mono) return measureText(faceOf(item), text, item.fontSize);
+  const specials = [...text].filter((c) => mono.specialChars?.includes(c) ?? false).length;
+  return (text.length - specials) * mono.charWidth + specials * mono.specialCharsWidth;
 }
 
 const textsOf = (dashboard: Dashboard): TextItem[] => itemsOf(dashboard).filter((i): i is TextItem => i.kind === 'text');
@@ -68,7 +75,7 @@ describe('the packages are built and valid', () => {
       for (const dashboard of pkg.dashboards) {
         for (const item of textsOf(dashboard)) {
           const width = drawnWidth(item);
-          expect({ dashboard: dashboard.name, item: item.name, text: item.text, width, box: item.rect.width, fits: width <= item.rect.width }).toMatchObject({ fits: true });
+          expect({ dashboard: dashboard.name, item: item.name, text: drawnText(item), width, box: item.rect.width, fits: width <= item.rect.width }).toMatchObject({ fits: true });
           const line = LINE_SPACING * item.fontSize;
           expect({ item: item.name, line, box: item.rect.height, fits: line <= item.rect.height }).toMatchObject({ fits: true });
         }

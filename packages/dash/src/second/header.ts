@@ -6,7 +6,7 @@
  * and lap. The dots under the module are the same information as the counter, in a form the eye
  * reads without focusing.
  */
-import type { Item, Rect } from '../generator.ts';
+import type { HAlign, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
@@ -30,18 +30,31 @@ export const COMPANION_HEADER = { height: 56, padX: 24, gap: 12, groupGap: 20 } 
 export const PAGE_DOT = { size: 6, gap: 6 } as const;
 
 /** A value with a small denominator after it, as the header draws "P4 / 24". */
-function pair(name: string, valueSample: string, valueBind: Expr, denominator: string, denominatorBind: Expr, x: number, y: number, fs: number, density: Density, visibleBind?: Expr): { items: Item[]; width: number } {
+function pair(
+  name: string,
+  valueSample: string,
+  valueBind: Expr,
+  denominator: string,
+  denominatorWidest: string,
+  denominatorBind: Expr,
+  x: number,
+  y: number,
+  fs: number,
+  density: Density,
+  visibleBind?: Expr,
+): { items: Item[]; width: number } {
   const d = densityOf(density);
   const mono = cells('SemiBold', fs);
   const chars = { digits: valueSample.length, specials: 0 };
   const valueWidth = monoWidth(mono, chars);
-  const denominatorWidth = Math.ceil(measureText('BarlowMedium', denominator, d.labelSm));
+  const denominatorWidth = Math.ceil(measureText('BarlowMedium', denominatorWidest, d.labelSm));
   const denominatorX = x + valueWidth + ds.space[2];
   return {
     items: [
       numeral(`${name}.value`, valueSample, x, y, fs, chars, { bind: valueBind, maxWidth: valueWidth + 4 }),
       unit(`${name}.denominator`, denominator, denominatorX, canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
         bind: denominatorBind,
+        widest: denominatorWidest,
         visibleBind,
       }),
     ],
@@ -85,6 +98,7 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     'L12',
     concat(str('L'), fmt(currentLap(), '0')),
     '/ 30',
+    '/ 999',
     concat(str('/ '), fmt(totalLaps(), '0')),
     0,
     valueY,
@@ -92,7 +106,7 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     density,
     gt(totalLaps(), num(0)),
   );
-  const position = pair(`${name}.position`, 'P24', concat(str('P'), fmt(carPosition(player()), '0')), '/ 24', concat(str('/ '), fmt(fieldSize(), '0')), 0, valueY, fs, density);
+  const position = pair(`${name}.position`, 'P24', concat(str('P'), fmt(carPosition(player()), '0')), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), 0, valueY, fs, density);
   const right = frame.left + frame.width - COMPANION_HEADER.padX;
   const lapX = right - lap.width;
   const positionX = lapX - COMPANION_HEADER.groupGap - position.width;
@@ -175,9 +189,17 @@ export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone
   };
 }
 
-/** One part of an inline group: a small label, a value, or a coloured block. */
+/**
+ * One part of an inline group: a small label, a value, or a coloured block.
+ *
+ * A label that is bound has to declare `widest`, the longest string the binding can draw, because
+ * the group measures the box before the binding exists and WPF clips whatever does not fit. The
+ * type requires it so that the declaration cannot be forgotten, which is how "NO FLAG" once came
+ * out as "NO FLA".
+ */
 export type InlinePart =
-  | { kind: 'label'; text: string; bind?: Expr; color?: `#${string}`; visibleBind?: Expr }
+  | { kind: 'label'; text: string; bind?: undefined; widest?: undefined; color?: `#${string}`; hAlign?: HAlign; visibleBind?: Expr }
+  | { kind: 'label'; text: string; bind: Expr; widest: string; color?: `#${string}`; hAlign?: HAlign; visibleBind?: Expr }
   | { kind: 'value'; sample: string; bind?: Expr; chars: { digits: number; specials: number }; color?: `#${string}`; colorBind?: Expr; visibleBind?: Expr }
   | { kind: 'block'; width: number; height: number; color: `#${string}`; colorBind?: Expr; visibleBind?: Expr };
 
@@ -189,7 +211,7 @@ export type InlinePart =
 export function inlineGroup(name: string, parts: readonly InlinePart[], fs: number, density: Density, gap = ds.space[2]): { width: number; draw(x: number, top: number): Item[] } {
   const d = densityOf(density);
   const widths = parts.map((part) => {
-    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', part.text.toUpperCase(), d.labelSm)) + 2;
+    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', (part.widest ?? part.text).toUpperCase(), d.labelSm)) + 2;
     if (part.kind === 'block') return part.width;
     return monoWidth(cells('SemiBold', fs), part.chars) + 4;
   });
@@ -207,7 +229,9 @@ export function inlineGroup(name: string, parts: readonly InlinePart[], fs: numb
             label(`${name}.${i}`, part.text, cursor, canvasYForBaseline(baseline, d.labelSm), w, {
               size: d.labelSm,
               color: part.color,
+              hAlign: part.hAlign,
               bind: part.bind,
+              widest: part.widest,
               visibleBind: part.visibleBind,
             }),
           );

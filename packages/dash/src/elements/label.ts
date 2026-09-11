@@ -17,6 +17,8 @@ export interface LabelOptions {
   hAlign?: HAlign;
   /** Text binding. `text` is then the design-time sample and is not upper-cased. */
   bind?: Expr;
+  /** The widest string `bind` can produce. The box should be measured from it, and the fit tests are. */
+  widest?: string;
   visibleBind?: Expr;
   leftBind?: Expr;
 }
@@ -37,6 +39,7 @@ export function label(name: string, text: string, x: number, y: number, width: n
     hAlign: opts.hAlign ?? 'left',
     vAlign: 'top',
     backgroundColor: TRANSPARENT,
+    ...(opts.widest ? { widest: opts.widest } : {}),
     ...withBindings({ Text: opts.bind, Visible: opts.visibleBind, Left: opts.leftBind }),
   };
 }
