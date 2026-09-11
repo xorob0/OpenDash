@@ -184,7 +184,8 @@ plugin/
 tools/
   irsdk-emulator/        synthetic iRacing telemetry for the test VM
 docs/
-  scope-mvp.md           the MVP contract
+  scope.md               what openDash is, and what is deliberately not built
+  scope-mvp.md           the MVP contract, closed and superseded by scope.md
   architecture.md        this document
   decisions/             architecture decision records
   research/              format notes, SDK notes, competitor analysis, golden samples
