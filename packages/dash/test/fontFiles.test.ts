@@ -24,6 +24,47 @@ const weightOfFile = (file: string): string | undefined => {
   return fontName(font, NAME_ID.typographicSubfamily) ?? fontName(font, NAME_ID.subfamily);
 };
 
+/**
+ * The words WPF reads out of a family name and files as a stretch rather than as part of the
+ * family. `FontStretches` in PresentationCore is where the list comes from; only the ones that can
+ * plausibly appear in a face openDash would ship are here, and "Condensed" is the one that cost us
+ * a release.
+ */
+const WIDTH_WORDS = ['Condensed', 'Narrow', 'Compressed', 'Extended', 'Expanded', 'Wide', 'SemiCondensed', 'UltraCondensed', 'ExtraCondensed'] as const;
+
+describe('no family openDash asks for can be folded again', () => {
+  // This is the guard rather than a description of today's names. The bug was not that the family
+  // was called "Barlow Condensed"; it was that nothing in the repository would have noticed if a
+  // family with a width word in it were asked for again, and a .djson has no way to ask for a
+  // stretch back. Any future face -- a second numeral family, a user's chosen typeface -- passes
+  // through here.
+  test('neither family the tokens name carries a width word', () => {
+    for (const family of [ds.font.data, ds.font.label]) {
+      for (const word of WIDTH_WORDS) {
+        expect({ family, word, folds: new RegExp(`(^|[\\s-])${word}\\b`, 'i').test(family) }).toMatchObject({ folds: false });
+      }
+    }
+  });
+
+  test('every family a shipped file declares is one of them', () => {
+    for (const file of shipped()) {
+      const family = familyOfFile(file);
+      for (const word of WIDTH_WORDS) {
+        expect({ file: path.basename(file), family, word, folds: new RegExp(`(^|[\\s-])${word}\\b`, 'i').test(family ?? '') }).toMatchObject({ folds: false });
+      }
+    }
+  });
+
+  test('the panel asks for nothing a dashboard would not', () => {
+    for (const file of fontsForPanel()) {
+      const family = familyOfFile(file);
+      for (const word of WIDTH_WORDS) {
+        expect({ file: path.basename(file), family, word, folds: new RegExp(`(^|[\\s-])${word}\\b`, 'i').test(family ?? '') }).toMatchObject({ folds: false });
+      }
+    }
+  });
+});
+
 describe('the families a package ships', () => {
   test('every shipped file declares a family the dashboard actually asks for', () => {
     const asked = [ds.font.data, ds.font.label];
