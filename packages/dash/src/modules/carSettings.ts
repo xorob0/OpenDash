@@ -11,7 +11,7 @@ import { defineModule, fieldsRow, fld } from './module.ts';
 import type { FieldSpec } from '../second/field.ts';
 import type { ModuleContext } from './module.ts';
 
-const { fmt, isNull, not, concat, str } = ncalc;
+const { fmt, isNull, not, concat, str, ucase } = ncalc;
 
 /** A setting field that disappears when the sim does not publish the property behind it. */
 const settingField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number): FieldSpec =>
@@ -24,12 +24,16 @@ export const carSettings = defineModule('carSettings', (ctx) => {
     [
       fieldsRow(
         [
-          fld(ctx, 'car', 'Car', {
-            sample: 'GT3 · #12',
-            bind: concat(carModel(), str(' · '), carNumber(player())),
-            chars: CHARS.classPosition,
-            fs: d.mid,
-          }),
+          // The model is a proportional label and the number a monospaced value. As one string it
+          // was `GT3 · #12` in cells cut for digits, where the hash clipped and an M or a W in a
+          // car's name would have done the same.
+          fld(
+            ctx,
+            'car',
+            'Car · GT3',
+            { sample: '12', bind: carNumber(player()), chars: CHARS.carNumber, fs: d.mid },
+            { labelBind: concat(str('CAR · '), ucase(carModel())), labelWidest: 'CAR · WWWWWWWWWW' },
+          ),
         ],
         ctx,
       ),

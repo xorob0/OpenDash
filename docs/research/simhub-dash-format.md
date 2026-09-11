@@ -335,6 +335,42 @@ Still open: whether `Version` gates anything (every sample says 2, and 2 is what
 verification of the plugin-driven slot switch with the real plugin, which follows the plugin
 build.
 
+### NCalc dispatches on the name *and* the argument count (2026-09-11, XOR-83)
+
+`NCalcEngineBase.EvaluateFunction` is a chain of `name == "x" && parameterCount == n` tests. When
+neither a name nor an arity matches, **no delegate is attached and the expression evaluates to
+nothing**. SimHub reports that nowhere: the item simply draws the empty string. There is no log
+line, no red box in the editor, and no way for a dashboard to find out.
+
+That is how `left([Class], 4)` shipped. `left` is a real SimHub function — it is
+`left(value, startIndex, maxLength)`, three arguments, backed by `WoteverCommon`'s
+`StringExtensions.Left` — so a whitelist of names alone would have passed it. Every class and tyre
+chip on both leaderboards drew an empty block from the day the second screens shipped until it was
+found by eye, with the expression well formed, the item present, the box the right size and every
+test green.
+
+The function table is therefore transcribed into
+[`packages/generator/src/ncalcFunctions.ts`](../../packages/generator/src/ncalcFunctions.ts) with
+an arity for each name, and the validator rejects a call the engine would not dispatch. It has
+three sources, all in `SimHub.Plugins.dll`:
+
+| Source | What it holds |
+|---|---|
+| `NCalcEngineBase.EvaluateFunction` | 37 named branches, each with its parameter count |
+| `NCalcEngineMethodsRegistry.AddMethod` | 42 generic methods the chain falls through to |
+| NCalc's own table | `abs`, `round`, `if`, `max`, `min`, `truncate` and the rest of the maths, which SimHub does not intercept |
+
+Three shapes are worth knowing before writing an expression by hand:
+
+- `left` and `right` are `(value, startIndex, maxLength)`. Not `(value, length)`.
+- `getbestlapopponentleaderboardposition` and its class-only twin are declared with no parameter
+  and their delegates take one anyway, so a dummy `0` is required.
+- `driver<name>(position)` and `driversector<name>(position, sector, includePrevious)` are matched
+  by prefix against `OpponentsDataProviders`, so a misspelt suffix is an unknown function with the
+  right arity — which fails silently like everything else here.
+
+When SimHub is upgraded, the table is re-derived by decompiling rather than edited by hand.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)

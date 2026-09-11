@@ -177,7 +177,7 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
     header: '#',
     align: 'left',
     width: (d) => (d.small >= 30 ? 52 : 44),
-    cell: (ctx) => cellValue(ctx, 'num', '#22', carNumber(ctx.idx), CHARS.carNumber, { fs: ctx.d.tiny, color: ds.color.text.label, colorBind: str(ds.color.text.label) }),
+    cell: (ctx) => cellValue(ctx, 'num', '22', carNumber(ctx.idx), CHARS.carNumber, { fs: ctx.d.tiny, color: ds.color.text.label, colorBind: str(ds.color.text.label) }),
   },
   name: { header: 'DRIVER', align: 'left', width: () => 0, cell: cellName },
   class: {

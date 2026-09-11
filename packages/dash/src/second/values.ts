@@ -66,7 +66,7 @@ export const CHARS = {
   sector: { digits: 5, specials: 1 } as Chars,
   /** `24` */
   position: { digits: 2, specials: 0 } as Chars,
-  /** `#123` */
+  /** `123`, bare: the hash belongs to the label. */
   carNumber: { digits: 4, specials: 0 } as Chars,
   /** `0:42:15` */
   clock: { digits: 6, specials: 2 } as Chars,
@@ -141,7 +141,15 @@ export const carAvailable = (idx: Expr): Expr => isnull(driver('available', idx)
 export const carIsPlayer = (idx: Expr): Expr => isnull(driver('isplayer', idx), 'false');
 export const carInPit = (idx: Expr): Expr => isnull(driver('iscarinpitlane', idx), 'false');
 export const carName = (idx: Expr): Expr => isnull(driver('name', idx), str(''));
-export const carNumber = (idx: Expr): Expr => iff(eq(isnull(driver('carnumber', idx), str('')), str('')), str(''), concat(str('#'), driver('carnumber', idx)));
+/**
+ * A car number, drawn bare.
+ *
+ * It used to carry its own `#`, and `#` is one of the glyphs that overruns a monospace cell cut
+ * for digits, so WPF clipped it in all thirty-one places this reaches. The hash is a label now:
+ * a column header on a table, a field label everywhere else. Rule 19 -- only what fits a cell may
+ * be drawn in one -- and a hash never did.
+ */
+export const carNumber = (idx: Expr): Expr => isnull(driver('carnumber', idx), str(''));
 export const carClass = (idx: Expr): Expr => driver('carclass', idx);
 
 /** The position a table shows, overall or in class per the plugin's PositionMode. */
