@@ -17,7 +17,7 @@ import { BAND_D_PAGES, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, type Fac
 import { rect, type Size } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { zoneFrame } from '../second/header.ts';
-import { densityOf } from '../second/density.ts';
+import { densityForBox, densityOf } from '../second/density.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 import { bandCorners, bandPageItems } from './bandPages.ts';
@@ -41,7 +41,7 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
  */
 export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Size, pageCount: number, corners = false): Screen {
   const frame = rect(0, 0, size.width, size.height);
-  const density = 'zone' as const;
+
   let items: Item[];
 
   if (zone === 'A') {
@@ -55,7 +55,8 @@ export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Siz
   } else {
     // The chrome is prefixed `zone.` rather than with the page id, because a module already names
     // its own items after itself: the track page draws `track.title` and so did the header.
-    const { items: chrome, body } = zoneFrame(`${page.id}.zone`, { frame, title: `${zone}  ${page.name}`, page: page.number + 1, pages: pageCount });
+    const density = densityForBox(size);
+    const { items: chrome, body } = zoneFrame(`${page.id}.zone`, { frame, title: `${zone}  ${page.name}`, page: page.number + 1, pages: pageCount }, density);
     items = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body) })];
   }
 
