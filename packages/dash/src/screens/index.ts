@@ -11,6 +11,7 @@ import { DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION, type BuildOptions } from '../da
 import { itemsOf } from '../walk.ts';
 import { COMPANION_SIZES, companionDashboard, type CompanionSize } from './companion.ts';
 import { PIT_WALL_SIZES, pitWallDashboard, type PitWallSize } from './pitwall.ts';
+import { GENERATED_FONTS_DIR, prepareFont } from '../design/fontFiles.ts';
 import { zoneDashboard, zoneDashboardName, type ZoneKind } from './zones.ts';
 
 export type ScreenKind = 'companion' | 'pitwall';
@@ -37,7 +38,7 @@ export const SCREEN_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondens
 
 export function fontsForScreens(): string[] {
   const dir = path.resolve(import.meta.dir, '..', '..', 'fonts');
-  return SCREEN_FONT_FILES.map((f) => path.join(dir, f));
+  return SCREEN_FONT_FILES.map((f) => prepareFont(path.join(dir, f), path.join(dir, GENERATED_FONTS_DIR)));
 }
 
 /** The zone widgets a dashboard placed, keyed by the file they point at. */
