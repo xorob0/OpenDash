@@ -236,6 +236,72 @@ namespace OpenDashPlugin
         /// <summary>Zones showing the same page as another zone, which the panel says and allows.</summary>
         public IReadOnlyList<FacePageClash> FaceClashes() => FacePageClash.Find(this);
 
+        // --- What a wheel button does ----------------------------------------------------------
+
+        /// <summary>
+        /// Puts every zone on the page it opens on. Called once when the plugin starts, because that
+        /// is what "the page the zone opens on" means: a session begins where the driver set it to,
+        /// not where they happened to leave it three races ago.
+        ///
+        /// Cycling therefore does not save. The page a zone is showing is live state, and the only
+        /// restart it has to survive is the dashboard window's -- which it does, because the page
+        /// lives in the plugin and not in the dash.
+        /// </summary>
+        public void OpenOnStartPages()
+        {
+            EnsureFaceArrays();
+            for (var i = 0; i < FaceZones.Length; i++) FaceZones[i] = FaceZoneStarts[i];
+        }
+
+        /// <summary>
+        /// Advances a zone to its next enabled page and returns it. The mask is what sets the length
+        /// of the cycle, so a zone with one page enabled stays where it is rather than flickering.
+        /// </summary>
+        public int CycleFaceZone(string letter)
+        {
+            var index = FaceZoneIndex(letter);
+            EnsureFaceArrays();
+            var count = Contract.FaceZonePageCounts[index];
+            var next = Contract.FirstEnabledFrom((FaceZone(letter) + 1) % count, FaceZoneMask(letter), count);
+            FaceZones[index] = next;
+            return next;
+        }
+
+        /// <summary>Whether a glance is being held; a second press while one is does nothing.</summary>
+        public bool GlanceHeld => glanceZone >= 0;
+
+        private int glanceZone = -1;
+        private int glanceRestore = -1;
+
+        /// <summary>
+        /// Shows the glance page in its zone, remembering what was there.
+        ///
+        /// The page does not have to be one the mask enables. A glance is an explicit thing a driver
+        /// asked for by holding a button, and the mask is about what the cycle steps through; the
+        /// two are different questions, and the track map is exactly the page somebody would want
+        /// held and not cycled to.
+        /// </summary>
+        public void BeginQuickGlance()
+        {
+            if (GlanceHeld) return;
+            EnsureFaceArrays();
+            var glance = Contract.NormaliseQuickGlance(QuickGlance);
+            var zone = Contract.QuickGlanceZone(glance);
+            glanceZone = zone;
+            glanceRestore = FaceZones[zone];
+            FaceZones[zone] = Contract.QuickGlancePage(glance);
+        }
+
+        /// <summary>Puts the zone back where it was. A release with no press does nothing.</summary>
+        public void EndQuickGlance()
+        {
+            if (!GlanceHeld) return;
+            EnsureFaceArrays();
+            FaceZones[glanceZone] = glanceRestore;
+            glanceZone = -1;
+            glanceRestore = -1;
+        }
+
         /// <summary>Whether a companion module is enabled, 1-based. Safe to call before Normalise().</summary>
         public bool Module(int module)
         {

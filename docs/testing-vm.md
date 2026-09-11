@@ -114,6 +114,30 @@ the "new plugin found" activation prompt on the desktop the first time; `screens
 `click` through it, or pre-activate by editing
 `C:\Program Files (x86)\SimHub\PluginsData\PluginsActivation.json`.
 
+## Pressing a wheel button
+
+Five openDash actions are bound to wheel buttons by a driver, and a test has to be able to press
+them. `bun run vm bind` writes SimHub's own input mappings and turns on the keyboard reader, which
+ships disabled:
+
+```bash
+bun run vm bind OpenDash.CycleZoneB F7 OpenDash.HoldQuickGlance F8
+bun run vm unbind          # drop every OpenDash binding again
+```
+
+SimHub is restarted by both, because it reads `PluginsData/PluginManagerSettings.json` at startup.
+A binding survives until it is unbound, so a capture run binds once.
+
+Then press the key: `press(host, 'f7')` for an action that only has a press, and
+`captureWhileHeld(host, 'f8', file)` for one that is held — see the gotcha about VNC releasing
+held keys.
+
+**A held action must be bound with press type `During`.** SimHub calls an action's start on press
+and its end on release only for that type; every other type goes through `TriggerAction`, which
+fires start and end back to back, so the page appears and vanishes in one frame. `bun run vm bind`
+chooses it for any action whose name begins with `Hold`, and the plugin's own panel corrects a
+glance binding made any other way.
+
 ## Manual access (humans)
 
 All ports are bound to `127.0.0.1` on the VPS only; tunnel them:
@@ -147,5 +171,9 @@ ssh -L 8006:127.0.0.1:8006 -L 3389:127.0.0.1:3389 -L 8888:127.0.0.1:8888 root@<v
   clean up on an interrupt puts the trap in a shell wrapper, as `scripts/emulator.sh` does.
 - **Pinned SimHub version.** 9.12.6. Do not let the VM auto-update; the format is
   undocumented and a newer SimHub is a different test target. Windows Update is disabled too.
+- **A VNC client releases every held key when it disconnects.** So a key held in one call and
+  photographed in the next photographs a key that is no longer down. `captureWhileHeld` in
+  `scripts/gui.ts` holds, captures and releases inside one session, and is what proved the quick
+  glance: without it the glance looked broken while working perfectly.
 - **Shared state.** There is one VM. If two agents test at once they will fight over SimHub.
   Check `simhub_status` / `vm_status` before assuming the desktop is yours.

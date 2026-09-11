@@ -254,6 +254,56 @@ Inside the widget, a variable is read as `[variable.Name]` in NCalc. openDash's 
 the same pattern with NCalc expressions and without variables, since the slot property can be
 bound on the `WidgetItem` itself.
 
+`InitialScreenIndex` is not only initial, which is what makes the zone face work. Its setter
+calls `OnInitialScreenIndexChanged`, which assigns `_Data.Dashboard.SelectedScreen =
+GetAvailableScreenAtIndex(InitialScreenIndex)`, so a bound property that changes moves the
+widget to that screen on the next frame.
+
+**`FreezePageChanges` must stay false.** When it is true and the dash is not in design mode,
+loading the widget deletes every screen but the selected one from the dashboard
+(`LinqExtensions.RemoveAll` on `Model.Dashboard.Screens`). A frozen widget cannot be cycled
+afterwards, because the pages are not there any more.
+
+### `AddAction`'s release callback is discarded by the extension method (2026-09-12, XOR-93)
+
+`SimHub.Plugins.IPluginExtensions` is the convenient way to register an action:
+
+```csharp
+public static void AddAction<T>(this T plugin, string actionName,
+    Action<PluginManager, string> actionStart, Action<PluginManager, string> actionEnd = null)
+{
+    PluginManager.Instance.AddAction(actionName, typeof(T), actionStart, actionEnd = null);
+}
+```
+
+Read the last argument: `actionEnd = null` is an **assignment**, not a default. The release
+callback a caller passes is overwritten with null before it is used, and `AddHiddenAction` does
+the same thing. Nothing warns, nothing throws: the action registers, the press fires, the
+release never does.
+
+`PluginManager.AddAction(name, type, start, end)` and `PluginManager.AddAction(name, type,
+start, end, hidden)` keep both callbacks, and so does `AddInputMapping(name, type, pressed,
+released)` — which additionally sets `IsInput = true` and a no-op `PressFallback`, putting the
+entry in SimHub's input list rather than its action list.
+
+So an action that has to do something on release is registered through `PluginManager`
+directly. openDash registers all five that way, the four that need no release included, so
+that nobody has to remember which is which.
+
+**And the binding needs press type `During` (3).** `TriggerInputPress` calls `ActionStart` only
+for mappings whose `PressType == PressType.During`, and `TriggerInputRelease` calls `ActionEnd`
+the same way. Every other press type goes through `TriggerAction`, which calls `ActionStart` and
+then `ActionEnd` back to back — so a page held by a button appears and vanishes in one frame.
+The binding dialog offers `ShortAndLongPress` by default, which is the wrong one.
+
+The full enum, from `SimHub.Plugins.PressType`: `Default 0`, `ShortPress 1`, `LongPress 2`,
+`During 3`, `ShortAndLongPress 4`, `Pressed 5`, `Released 6`, `LongPressNoAutoRepeat 7`.
+
+A binding lives in `PluginsData/PluginManagerSettings.json` as
+`{ "Target": "OpenDash.CycleZoneC", "Trigger": "KeyboardReaderPlugin.F9", "PressType": 4,
+"GameRestriction": { "SupportedGames": [] } }`, read at startup, which is how `bun run vm bind`
+writes one without the dialog.
+
 ### Images and fonts
 
 Modern exports keep image bytes out of the `.djson`. `Images` is a list of descriptors (`Name`,
