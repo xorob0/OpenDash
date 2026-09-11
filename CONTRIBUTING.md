@@ -57,6 +57,21 @@ built. The last of those is a list of refusals rather than a backlog, so a chang
 under one of its lines will be declined however well it is written. Should you believe a line
 ought to move, argue that first, in an issue or a decision record, and the code afterwards.
 
+## When a change is done
+
+[docs/scope.md](docs/scope.md) ends with the definition of done, and it is the one that counts:
+`bun run check` passes, `dotnet test plugin/OpenDash.Tests` passes if the plugin changed, the
+snapshot diff has been **read** rather than merely refreshed, and whatever the change draws has
+been seen on the Windows VM in real SimHub.
+
+The last condition is the one that catches what the tests cannot. WPF clips silently, and a box
+measured from the wrong face or from a sample narrower than the runtime value loses glyphs
+without failing anything. `bun run dev` puts one package on the VM with live telemetry and
+photographs it; `bun run shots` does the same for several at once. If you cannot run SimHub, say
+so in the pull request rather than leaving it unsaid.
+
+The pull request template asks for exactly this and nothing else.
+
 ## Making a change
 
 1. Change the TypeScript (or the C#).
