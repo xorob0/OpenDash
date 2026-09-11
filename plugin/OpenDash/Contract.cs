@@ -78,6 +78,36 @@ namespace OpenDashPlugin
 
         public const string QuickGlance = "QuickGlance";
 
+        /// <summary>
+        /// The actions a driver binds to a wheel button. Named as verbs, because a property is a noun:
+        /// `OpenDash.QuickGlance` is what the glance is set to and `OpenDash.HoldQuickGlance` is the
+        /// button that shows it, and a log naming one should not read like the other.
+        /// </summary>
+        public const string HoldQuickGlanceAction = "HoldQuickGlance";
+
+        /// <summary>Action that advances one zone to its next enabled page: CycleZoneA .. CycleZoneD.</summary>
+        public static string CycleZoneAction(string letter)
+        {
+            RequireFaceZone(letter);
+            return "CycleZone" + letter;
+        }
+
+        /// <summary>
+        /// An action's name as SimHub knows it. `PluginManager.GetName` is `pluginType.Name + "." +
+        /// name`, and the plugin class is `OpenDash`, so it is the same prefix the properties carry.
+        /// </summary>
+        public static string FullActionName(string actionName)
+        {
+            return Prefix + "." + actionName;
+        }
+
+        /// <summary>Every action the plugin registers, in registration order.</summary>
+        public static IEnumerable<string> ActionNames()
+        {
+            foreach (var letter in FaceZoneLetters) yield return CycleZoneAction(letter);
+            yield return HoldQuickGlanceAction;
+        }
+
         /// <summary>Property name of a zone's current page: ZoneA .. ZoneD.</summary>
         public static string ZonePageProperty(string letter)
         {

@@ -4,7 +4,7 @@
  * Everything else in that file is a remote side effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
-import { cleanClixml, psq, resolveHost, shq, type Claim } from './vm.ts';
+import { cleanClixml, inputMapping, PRESS, psq, resolveHost, shq, type Claim } from './vm.ts';
 
 describe('quoting', () => {
   test('a shell argument survives a quote in a path', () => {
@@ -103,5 +103,40 @@ describe('when a claim on the VM has gone stale', () => {
 
   test('an unparseable date is abandoned rather than holding the VM for ever', () => {
     expect(isStale({ who: 'a', since: 'not a date', note: '' }, now)).toBe(true);
+  });
+});
+
+describe('binding a key to a SimHub action', () => {
+  test('the mapping is what SimHub writes when the dialog is used', () => {
+    // Read back from PluginsData/PluginManagerSettings.json after binding zone C by hand, which is
+    // the only way to know the shape: nothing documents it.
+    expect(inputMapping('OpenDash.CycleZoneC', 'F9')).toEqual({
+      Target: 'OpenDash.CycleZoneC',
+      Trigger: 'KeyboardReaderPlugin.F9',
+      PressType: 4,
+      GameRestriction: { SupportedGames: [] },
+    });
+  });
+
+  test('a key is upper-cased, because that is how the keyboard reader names its triggers', () => {
+    expect(inputMapping('OpenDash.HoldQuickGlance', 'f8').Trigger).toBe('KeyboardReaderPlugin.F8');
+  });
+
+  test('an action that is held is bound as During, which is the only type that can hold', () => {
+    // TriggerInputPress calls an action's start only for During mappings; every other type goes
+    // through TriggerAction, which fires start and end back to back. A glance bound any other way
+    // appears and vanishes in the same frame, which is what the first attempt on the VM did.
+    expect(inputMapping('OpenDash.HoldQuickGlance', 'F8').PressType).toBe(PRESS.during);
+    expect(inputMapping('OpenDash.CycleZoneB', 'F7').PressType).toBe(PRESS.shortAndLong);
+    // Even when the caller asks for something else: an action named Hold has a release.
+    expect(inputMapping('OpenDash.HoldQuickGlance', 'F8', PRESS.shortAndLong).PressType).toBe(PRESS.during);
+  });
+
+  test('an action name without a plugin prefix is refused', () => {
+    // SimHub names an action pluginType.Name + "." + action, so a bare name binds nothing and says
+    // nothing about it.
+    expect(() => inputMapping('CycleZoneC', 'F9')).toThrow();
+    expect(() => inputMapping('OpenDash.CycleZoneC', 'F 9')).toThrow();
+    expect(() => inputMapping('OpenDash.CycleZoneC', '')).toThrow();
   });
 });
