@@ -188,8 +188,28 @@ The default is Race and Lap on the left, Position and Class on the right.
 
 Between them is the **car settings strip**: slip, TC, cut, bias, ABS, map, diff. It draws what the
 game exposes and **hides what it does not**, because a strip drawing an empty box for a setting
-iRacing has no property for is worse than a narrower strip. At 850 × 480 and 600 × 686 it drops
-from seven cells to five, losing map and diff.
+iRacing has no property for is worse than a narrower strip.
+
+It also gives up cells where the width is not there. The two ends are laid out from their own edges
+for the widest entry the catalogue holds, so what the strip gets is whatever is left, and on a
+narrow face that is not seven cells:
+
+| face | cells |
+|---|---|
+| 1920 × 480, 1280 × 480, 1280 × 400, 1280 × 720 | all seven |
+| 600 × 686 | slip, TC, bias, ABS — one field per end leaves more room than two |
+| 850 × 480 | TC, bias, ABS |
+| 800 × 480 | TC, bias |
+| 800 × 286 | there is no bar |
+
+**The order it sheds in is not the order it draws in.** A driver on a GT3 car moves the brake bias
+every corner and has TC and ABS on wheel dials; the mixture changes once a stint; slip, cut and the
+differential are settings some cars do not have at all. So what a narrow strip keeps, in order, is
+bias, TC, ABS, slip, cut, map, diff — and what it draws is still the canvas's order.
+
+This is a decision the canvas does not make. It was forced by the first photograph of the 850 × 480
+face, where the five cells that had no shedding rule were drawn straight over the right-hand
+fields: BIAS on POSITION, ABS on the slash of "3 / 24".
 
 The bar is the one region of the face that is not a zone and does not cycle. It is settled by
 definition, and that is what earns it the space.

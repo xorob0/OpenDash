@@ -286,3 +286,43 @@ describe('what the first photograph of the face showed', () => {
     expect(bind(below)).not.toContain("= ('1'), '0'");
   });
 });
+
+/**
+ * The bar is three blocks on one line -- the left end, the car settings strip, the right end -- and
+ * every text-fits check in the suite is satisfied by three blocks drawn on top of one another. At
+ * 850 by 480 they were: BIAS sat on POSITION and ABS on the slash of "3 / 24".
+ */
+describe('the bar keeps its three blocks apart', () => {
+  for (const { face } of BUILT) {
+    const bar = face.zones.bar;
+    if (!bar) continue;
+
+    test(`${face.folder} draws no cell over a field`, () => {
+      const items = faceItems(face).filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('bar.'));
+      const extent = (prefix: string): { left: number; right: number } | null => {
+        const group = items.filter((i) => i.name.startsWith(prefix));
+        if (group.length === 0) return null;
+        return {
+          left: Math.min(...group.map((i) => i.rect.left)),
+          right: Math.max(...group.map((i) => i.rect.left + i.rect.width)),
+        };
+      };
+
+      // Every alternative of one slot is drawn at the same place with its Visible bound, so blocks
+      // are compared rather than items: only one of each slot's ten is ever on screen.
+      const left = extent('bar.Left');
+      const right = extent('bar.Right');
+      const strip = extent('bar.strip');
+      expect(left).not.toBeNull();
+      expect(right).not.toBeNull();
+
+      if (strip) {
+        expect(strip.left).toBeGreaterThanOrEqual(left!.right);
+        expect(strip.right).toBeLessThanOrEqual(right!.left);
+      }
+      expect(left!.right).toBeLessThanOrEqual(right!.left);
+      expect(left!.left).toBeGreaterThanOrEqual(bar.left);
+      expect(right!.right).toBeLessThanOrEqual(bar.left + bar.width);
+    });
+  }
+});
