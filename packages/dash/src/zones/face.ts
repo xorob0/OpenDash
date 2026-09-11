@@ -9,7 +9,7 @@
  * What this file does *not* do is decide any geometry. Every rectangle comes from the layout, which
  * read it off an artboard; see `docs/design/zones.md`.
  */
-import type { Dashboard, DashboardMetadata, Item } from '../generator.ts';
+import type { Dashboard, DashboardMetadata, Item, Rect } from '../generator.ts';
 import { FACE_ZONE_LETTERS, type FaceZone } from '../contract.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
@@ -19,7 +19,10 @@ import { pitLimiter } from '../components/pitLimiter.ts';
 import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
 import { rectOf, type ZoneLayout } from './layout.ts';
-import { zoneDashboardsFor, zoneWidget } from './pages.ts';
+import { label } from '../elements/label.ts';
+import { densityForBox, densityOf } from '../second/density.ts';
+import { zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
+import { zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
 export const FACE_SCREEN_NAME = 'Main';
 
@@ -55,6 +58,7 @@ export function faceItems(layout: ZoneLayout): Item[] {
 
   for (const zone of FACE_ZONE_LETTERS) {
     items.push(zoneWidget(`zone${zone}`, zone, rectOf(layout, zone)));
+    items.push(...zoneLetter(zone, rectOf(layout, zone)));
   }
 
   // A flag takes the band over, because an alert outranks fuel. The same sixty pixels goes to
@@ -66,6 +70,27 @@ export function faceItems(layout: ZoneLayout): Item[] {
   items.push(...pitLimiter(z.pitLimiter, 'pitLimiter'));
 
   return items;
+}
+
+/**
+ * The letter in a zone's header, drawn by the face rather than by the zone.
+ *
+ * Zones B and C are the same rectangle on most faces, so one dashboard file serves both; a letter
+ * inside it would say B in each. The face is the only thing that knows which rect is which, so the
+ * letter is drawn here, over the widget, in the gap the header keeps for it.
+ *
+ * Zones A and D carry no header, so they get no letter.
+ */
+function zoneLetter(zone: FaceZone, r: Rect): Item[] {
+  if (zone === 'A' || zone === 'D') return [];
+  const density = densityForBox({ width: r.width, height: r.height });
+  const { padX } = zoneFrameMetrics(density);
+  return [
+    label(`zone${zone}.letter`, zone, r.left + padX, zoneTitleY(r, density), zoneLetterWidth(density), {
+      size: densityOf(density).labelSm,
+      color: ds.color.text.secondary,
+    }),
+  ];
 }
 
 export interface FaceBuildOptions {

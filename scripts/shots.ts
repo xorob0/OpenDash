@@ -189,7 +189,7 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
         const file = path.join(opts.outDir, shotName(index, packageName, scenario));
         process.stdout.write(`  [${index}/${total}] ${packageName} `);
 
-        const opened = openDashboard(host, { name: packageName, index: LIST_ORDER.indexOf(packageName as (typeof LIST_ORDER)[number]) });
+        const opened = openDashboard(host, { name: packageName });
         if (!opened.ok) {
           console.log('could not be opened');
           taken.push({ packageName, scenario, file, ok: false, why: opened.stderr.split('\n')[0] });

@@ -13,11 +13,12 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Screen, WidgetItem } from '../generator.ts';
 import { withBindings } from '../bind.ts';
-import { BAND_D_PAGES, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, type FaceZone, type FaceZonePageMeta } from '../contract.ts';
+import { BAND_D_PAGES, FACE_ZONE_LETTERS, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, type FaceZone, type FaceZonePageMeta } from '../contract.ts';
+import { measureText } from '../design/advances.ts';
 import { rect, type Size } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
-import { zoneFrame } from '../second/header.ts';
-import { densityForBox, densityOf } from '../second/density.ts';
+import { zoneFrame, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
+import { densityForBox, densityOf, type Density } from '../second/density.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 import { bandCorners, bandPageItems } from './bandPages.ts';
@@ -56,7 +57,10 @@ export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Siz
     // The chrome is prefixed `zone.` rather than with the page id, because a module already names
     // its own items after itself: the track page draws `track.title` and so did the header.
     const density = densityForBox(size);
-    const { items: chrome, body } = zoneFrame(`${page.id}.zone`, { frame, title: `${zone}  ${page.name}`, page: page.number + 1, pages: pageCount }, density);
+    // The letter is not in the title. Zones B and C are the same rectangle on most faces, so they
+    // share one dashboard file; a letter baked in here would draw B in both of them, which is
+    // exactly what the first capture of the 1920 face showed. The face draws it instead.
+    const { items: chrome, body } = zoneFrame(`${page.id}.zone`, { frame, title: page.name, page: page.number + 1, pages: pageCount, indent: zoneLetterWidth(density) }, density);
     items = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body) })];
   }
 
@@ -112,6 +116,15 @@ export function zoneDashboardsFor(zones: readonly { zone: FaceZone; size: Size; 
   }
   return [...seen.values()];
 }
+
+/**
+ * The room a zone's header keeps for its letter, which the face draws.
+ *
+ * The widest of A to D rather than the letter's own width, so that one shared dashboard indents the
+ * same whichever zone it is serving. The gap after it is the canvas's double space.
+ */
+export const zoneLetterWidth = (density: Density): number =>
+  Math.max(...FACE_ZONE_LETTERS.map((l) => Math.ceil(measureText('BarlowMedium', l, densityOf(density).labelSm)))) + 2 + ds.space[2];
 
 /** The height a zone's header takes, which the body starts under. Zone A has none. */
 export const headerHeightOf = (zone: FaceZone): number => (zone === 'A' ? 0 : densityOf('zone').label + 9);
