@@ -3,10 +3,19 @@
 **Status:** current. Supersedes [scope-mvp.md](scope-mvp.md), which is closed and kept as the
 record of what the MVP was.
 
-This document describes openDash as it is today: what it is, what ships, what is deliberately
-not built, and which of the MVP's refusals have since been reversed and by what. It is the
-document a contributor or an agent should read first, and the one that has to be amended when
-the answer to "what is openDash" changes.
+This document describes what openDash is: what it ships, what is deliberately not built, and
+which of the MVP's refusals have since been reversed and by what. It is the document a
+contributor or an agent should read first, and the one that has to be amended when the answer to
+"what is openDash" changes.
+
+> **The face is being rebuilt.** The zone model described below is the settled design
+> ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)) and it is what
+> the next release ships. **0.1.0 shipped the twelve-slot face**, and until the rename in 0.2.0
+> that is what a user has installed. `README.md` and `plugin/INSTALL.md` describe that installed
+> product and stay accurate to it; this document describes the product.
+>
+> The distinction matters because of the rule at the end of the refusals: a line has to move here
+> before the code that crosses it may be written. That is the reason this document changed first.
 
 ## Product
 
