@@ -14,7 +14,13 @@ import type { Dashboard, TextItem } from '../src/generator.ts';
 
 const opts = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 
-const faceOf = (item: TextItem): MeasuredFace => (item.font === 'Barlow' ? 'BarlowMedium' : 'BarlowCondensedSemiBold');
+/** Which measured face an item draws in: the family it names, at the weight it asks for. */
+const faceOf = (item: TextItem): MeasuredFace => {
+  if (item.font === 'Barlow') return 'BarlowMedium';
+  if (item.fontWeight === 'Bold') return 'BarlowCondensedBold';
+  if (item.fontWeight === 'Light') return 'BarlowCondensedLight';
+  return 'BarlowCondensedSemiBold';
+};
 
 /** Width of what the item draws: its cells when monospaced, the measured advances otherwise. */
 function drawnWidth(item: TextItem): number {

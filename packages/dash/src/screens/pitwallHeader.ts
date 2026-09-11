@@ -45,10 +45,10 @@ const flagName = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => 
 
 /** The wordmark, in the two weights the brand uses. Barlow Condensed Light and Bold are bundled. */
 export function wordmark(name: string, x: number, top: number, fs: number): { items: Item[]; width: number } {
-  // The advance table covers SemiBold; Light is narrower and Bold wider, so each half is measured
-  // from SemiBold and given a tenth of slack, which is enough for Bold and invisible for Light.
-  const openWidth = Math.ceil(measureText('BarlowCondensedSemiBold', 'open', fs) * 1.1);
-  const dashWidth = Math.ceil(measureText('BarlowCondensedSemiBold', 'Dash', fs) * 1.1);
+  // Each half is measured in its own weight: "Dash" set in Bold is wider than the same letters in
+  // any other face, and a box measured from the wrong one loses its last letter.
+  const openWidth = Math.ceil(measureText('BarlowCondensedLight', 'open', fs)) + 2;
+  const dashWidth = Math.ceil(measureText('BarlowCondensedBold', 'Dash', fs)) + 2;
   const common = { font: ds.font.data, fontSize: fs, textColor: ds.color.text.primary, hAlign: 'left', vAlign: 'top', backgroundColor: '#00FFFFFF' } as const;
   const boxTop = Math.round(top - 0.1 * fs);
   const height = Math.ceil(1.2 * fs) + 1;

@@ -9,7 +9,7 @@
  * through its monospace cells, so `fieldRow` can lay fields out without a renderer and a test can
  * prove the row fits its module.
  */
-import type { Hex, Item, Monospace } from '../generator.ts';
+import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { SPECIAL_CHARS, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars, type DataWeight } from '../design/metrics.ts';
@@ -244,4 +244,48 @@ export function drawFieldBlock(
     y += h + lineGap;
   });
   return items;
+}
+
+/** The same fields at a smaller size: value sizes scale, labels keep theirs. */
+export const scaleFields = (specs: readonly FieldSpec[], factor: number): FieldSpec[] =>
+  specs.map((spec) => ({ ...spec, value: { ...spec.value, fs: Math.max(12, Math.round(spec.value.fs * factor)) } }));
+
+/** How far a block of fields will shrink before it gives up and draws at the smallest size. */
+export const FIT_LADDER = [1, 0.85, 0.72, 0.6, 0.5] as const;
+
+/**
+ * Fields drawn inside `box`, top-aligned, shrunk until they fit.
+ *
+ * A pit wall panel is a fixed rectangle and the fields in it are whatever the module asked for, so
+ * something has to give when the two disagree. Wrapping alone is not enough: five fields at 46 px
+ * wrap to two lines and two lines do not fit a 104 px panel. So the size steps down until the
+ * wrapped block fits the height it was given, which is what a person would do with the same box.
+ */
+export function fitFields(specs: readonly FieldSpec[], box: Rect, density: Density, opts: { gap?: number; lineGap?: number } = {}): Item[] {
+  const lineGap = opts.lineGap ?? Math.round(densityOf(density).gapY / 2);
+  for (const factor of FIT_LADDER) {
+    const scaled = scaleFields(specs, factor);
+    const lines = wrapFields(scaled, box.width, density, opts.gap);
+    const height = fieldBlockHeight(lines, density, lineGap);
+    if (height <= box.height || factor === FIT_LADDER[FIT_LADDER.length - 1]) {
+      return drawFieldBlock(lines, box.left, box.top + Math.min(height, box.height), box.width, density, { gap: opts.gap, lineGap });
+    }
+  }
+  return [];
+}
+
+/**
+ * The longest prefix of `specs` that fits `width` on one line. Fields are listed in importance
+ * order, so a row that cannot hold everything drops its tail rather than running off the edge.
+ */
+export function fieldsThatFit(specs: readonly FieldSpec[], width: number, density: Density, gap?: number): FieldSpec[] {
+  const kept = [...specs];
+  while (kept.length > 1) {
+    const step = gap ?? densityOf(density).gapX;
+    const total = kept.reduce((sum, spec) => sum + fieldWidth(spec, density), 0) + ds.space[2] * (kept.length - 1);
+    if (total <= width) break;
+    kept.pop();
+    void step;
+  }
+  return kept;
 }

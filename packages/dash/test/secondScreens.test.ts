@@ -21,14 +21,20 @@ import { validatePackage, type Dashboard, type Item, type TextItem } from '../sr
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, zoneDashboardName } from '../src/screens/index.ts';
-import { itemsOf, propertiesIn } from '../src/walk.ts';
+import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { ds } from '../src/tokens.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const PACKAGES = SCREEN_PACKAGES.map((def) => ({ def, pkg: buildScreenPackage(def, OPTS) }));
 const BRAND = /#00E5FF/i;
 
-const faceOf = (item: TextItem): MeasuredFace => (item.font === 'Barlow' ? 'BarlowMedium' : 'BarlowCondensedSemiBold');
+/** Which measured face an item draws in: the family it names, at the weight it asks for. */
+const faceOf = (item: TextItem): MeasuredFace => {
+  if (item.font === 'Barlow') return 'BarlowMedium';
+  if (item.fontWeight === 'Bold') return 'BarlowCondensedBold';
+  if (item.fontWeight === 'Light') return 'BarlowCondensedLight';
+  return 'BarlowCondensedSemiBold';
+};
 
 /** Width of what an item draws: its cells when monospaced, the measured advances otherwise. */
 function drawnWidth(item: TextItem): number {
@@ -236,6 +242,43 @@ describe('the contract', () => {
     expect(text).toContain('OpenDash.PositionMode');
     for (const p of dashProperties().filter((n) => n.includes('.Slot'))) expect(text).not.toContain(p);
   });
+});
+
+describe('every module fits the box it is given', () => {
+  // The boxes a module actually gets: a companion page, a portrait page, the four zone shapes the
+  // pit wall pages carry, and the wide zone. A module that draws outside its box overlaps whatever
+  // the page put next to it, which no snapshot would notice.
+  const BOXES = [
+    { name: 'companion page', frame: { left: 24, top: 72, width: 802, height: 356 }, density: 'companion' as const },
+    { name: 'companion portrait page', frame: { left: 24, top: 72, width: 432, height: 726 }, density: 'companion' as const },
+    { name: 'race zone', frame: { left: 1297, top: 700, width: 607, height: 174 }, density: 'zone' as const },
+    { name: 'tower zone', frame: { left: 897, top: 750, width: 487, height: 328 }, density: 'zone' as const },
+    { name: 'telemetry zone', frame: { left: 1296, top: 92, width: 607, height: 310 }, density: 'zone' as const },
+    { name: 'portrait zone', frame: { left: 16, top: 1060, width: 507, height: 415 }, density: 'zone' as const },
+    { name: 'wide zone', frame: { left: 897, top: 493, width: 1007, height: 227 }, density: 'wide' as const },
+  ];
+
+  for (const box of BOXES) {
+    test(`on a ${box.name}`, () => {
+      for (const module of MODULES) {
+        const items = module.build({ frame: box.frame, density: box.density, prefix: `${module.id}.` });
+        expect({ module: module.id, drew: items.length > 0 }).toMatchObject({ drew: true });
+        for (const item of items.flatMap((i) => [...walkItems([i])])) {
+          if (item.kind === 'layer') continue;
+          const r = item.rect;
+          // A text box is a WPF line box: it reaches a fifth of the font size below the baseline
+          // row it sits on, and that tail is transparent. Everything else must be inside the box.
+          const slack = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 1;
+          const inside =
+            r.left >= box.frame.left - 1 &&
+            r.top >= box.frame.top - 1 &&
+            r.left + r.width <= box.frame.left + box.frame.width + 1 &&
+            r.top + r.height <= box.frame.top + box.frame.height + slack;
+          expect({ module: module.id, item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+        }
+      }
+    });
+  }
 });
 
 describe('what iRacing cannot answer', () => {

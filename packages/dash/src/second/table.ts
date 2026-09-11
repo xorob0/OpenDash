@@ -93,7 +93,9 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
       bind,
       color: (opts.color as `#${string}`) ?? ds.color.text.secondary,
       colorBind: opts.colorBind ?? inkBind(ctx),
-      maxWidth: ctx.width,
+      // The room left from where the cell starts, not the column's whole width: a right-aligned
+      // cell starts partway into its column and its box must still end at the column's edge.
+      maxWidth: ctx.x + ctx.width - x,
     }),
   ];
 }

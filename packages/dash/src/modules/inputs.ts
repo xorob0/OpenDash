@@ -29,24 +29,26 @@ export const inputs = defineModule('inputs', (ctx) => {
   const d = densityOf(ctx.density);
   const barWidth = 16;
   const barGap = 10;
-  const valueFs = d.small;
+  const valueFs = d.tiny;
   const valueHeight = valueFs + d.fieldGap;
-  const barsWidth = PEDALS.length * barWidth + (PEDALS.length - 1) * barGap;
+  // A pedal's column is as wide as the wider of its bar and its number, so three numbers side by
+  // side never run into each other however large the density makes them.
+  const valueWidth = monoWidth(cells('SemiBold', valueFs), CHARS.percent);
+  const columnWidth = Math.max(barWidth, valueWidth);
+  const barsWidth = PEDALS.length * columnWidth + (PEDALS.length - 1) * barGap;
   const plotWidth = Math.max(0, ctx.frame.width - barsWidth - d.gapX);
   const series: Series[] = PEDALS.map((pedal) => ({ name: pedal.name, color: pedal.color, bind: pedal.value(), min: 0, max: 100 }));
   const items = trace(`${ctx.prefix}trace`, rect(ctx.frame.left, ctx.frame.top, plotWidth, ctx.frame.height), series, ctx.density, { legend: true });
   const barsTop = ctx.frame.top;
   const barsHeight = Math.max(0, ctx.frame.height - valueHeight);
   PEDALS.forEach((pedal, i) => {
-    const x = ctx.frame.left + plotWidth + d.gapX + i * (barWidth + barGap);
-    const mono = cells('SemiBold', valueFs);
-    const width = monoWidth(mono, CHARS.percent);
+    const x = ctx.frame.left + plotWidth + d.gapX + i * (columnWidth + barGap);
     items.push(
-      { ...barGauge(`${ctx.prefix}${pedal.id}.bar`, rect(x, barsTop, barWidth, barsHeight), pedal.value(), { fill: pedal.color, max: 100 }) },
-      numeral(`${ctx.prefix}${pedal.id}.value`, '76', Math.round(x + (barWidth - width) / 2), barsTop + barsHeight + d.fieldGap, valueFs, CHARS.percent, {
+      barGauge(`${ctx.prefix}${pedal.id}.bar`, rect(Math.round(x + (columnWidth - barWidth) / 2), barsTop, barWidth, barsHeight), pedal.value(), { fill: pedal.color, max: 100 }),
+      numeral(`${ctx.prefix}${pedal.id}.value`, '76', Math.round(x + (columnWidth - valueWidth) / 2), barsTop + barsHeight + d.fieldGap, valueFs, CHARS.percent, {
         bind: fmt(pedal.value(), '0'),
         color: pedal.color,
-        maxWidth: width + 4,
+        maxWidth: valueWidth,
       }),
     );
   });

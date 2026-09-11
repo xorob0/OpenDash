@@ -8,7 +8,7 @@
  * when a font file changes. Characters absent from the table fall back to `FALLBACK_ADVANCE`.
  */
 
-export type MeasuredFace = 'BarlowMedium' | 'BarlowCondensedSemiBold';
+export type MeasuredFace = 'BarlowMedium' | 'BarlowCondensedSemiBold' | 'BarlowCondensedBold' | 'BarlowCondensedLight';
 
 /** Widest advance of the measured set, used for a character the table does not carry. */
 export const FALLBACK_ADVANCE = 0.75;
@@ -43,7 +43,35 @@ const BarlowCondensedSemiBold: Readonly<Record<string, number>> = {
   'Δ': 0.525,
 };
 
-const FACES: Record<MeasuredFace, Readonly<Record<string, number>>> = { BarlowMedium, BarlowCondensedSemiBold };
+const BarlowCondensedBold: Readonly<Record<string, number>> = {
+  ' ': 0.2, '!': 0.279, '"': 0.346, '#': 0.616, '$': 0.444, '%': 0.766, '&': 0.603, '\'': 0.17, '(': 0.311, ')': 0.311,
+  '*': 0.361, '+': 0.438, ',': 0.211, '-': 0.331, '.': 0.223, '/': 0.415, '0': 0.453, '1': 0.284, '2': 0.438,
+  '3': 0.436, '4': 0.484, '5': 0.439, '6': 0.44, '7': 0.407, '8': 0.44, '9': 0.435, ':': 0.275, ';': 0.232, '<': 0.438,
+  '=': 0.438, '>': 0.438, '?': 0.437, '@': 0.759, 'A': 0.482, 'B': 0.47, 'C': 0.464, 'D': 0.476, 'E': 0.438,
+  'F': 0.421, 'G': 0.467, 'H': 0.48, 'I': 0.23, 'J': 0.452, 'K': 0.491, 'L': 0.426, 'M': 0.548, 'N': 0.514, 'O': 0.473,
+  'P': 0.465, 'Q': 0.461, 'R': 0.471, 'S': 0.444, 'T': 0.468, 'U': 0.479, 'V': 0.488, 'W': 0.689, 'X': 0.475,
+  'Y': 0.474, 'Z': 0.412, '[': 0.345, '\\': 0.415, ']': 0.345, '^': 0.422, '_': 0.421, '`': 0.22, 'a': 0.446,
+  'b': 0.445, 'c': 0.434, 'd': 0.445, 'e': 0.436, 'f': 0.298, 'g': 0.441, 'h': 0.447, 'i': 0.219, 'j': 0.217,
+  'k': 0.449, 'l': 0.209, 'm': 0.675, 'n': 0.447, 'o': 0.442, 'p': 0.448, 'q': 0.448, 'r': 0.324, 's': 0.412,
+  't': 0.291, 'u': 0.447, 'v': 0.436, 'w': 0.613, 'x': 0.439, 'y': 0.423, 'z': 0.373, '{': 0.344, '|': 0.186,
+  '}': 0.344, '~': 0.49, '°': 0.359, '·': 0.225, '−': 0.438, '–': 0.38, 'Δ': 0.54,
+};
+
+const BarlowCondensedLight: Readonly<Record<string, number>> = {
+  ' ': 0.2, '!': 0.244, '"': 0.206, '#': 0.582, '$': 0.409, '%': 0.785, '&': 0.527, '\'': 0.106, '(': 0.199,
+  ')': 0.199, '*': 0.36, '+': 0.443, ',': 0.169, '-': 0.309, '.': 0.181, '/': 0.313, '0': 0.442, '1': 0.249,
+  '2': 0.392, '3': 0.401, '4': 0.397, '5': 0.401, '6': 0.402, '7': 0.355, '8': 0.418, '9': 0.395, ':': 0.194,
+  ';': 0.183, '<': 0.443, '=': 0.443, '>': 0.443, '?': 0.352, '@': 0.763, 'A': 0.391, 'B': 0.443, 'C': 0.441,
+  'D': 0.463, 'E': 0.427, 'F': 0.399, 'G': 0.447, 'H': 0.47, 'I': 0.211, 'J': 0.419, 'K': 0.442, 'L': 0.388,
+  'M': 0.514, 'N': 0.488, 'O': 0.451, 'P': 0.436, 'Q': 0.439, 'R': 0.436, 'S': 0.409, 'T': 0.411, 'U': 0.475,
+  'V': 0.427, 'W': 0.606, 'X': 0.423, 'Y': 0.411, 'Z': 0.391, '[': 0.292, '\\': 0.313, ']': 0.292, '^': 0.39,
+  '_': 0.365, '`': 0.17, 'a': 0.404, 'b': 0.417, 'c': 0.394, 'd': 0.417, 'e': 0.4, 'f': 0.272, 'g': 0.406, 'h': 0.418,
+  'i': 0.205, 'j': 0.195, 'k': 0.394, 'l': 0.174, 'm': 0.641, 'n': 0.418, 'o': 0.407, 'p': 0.423, 'q': 0.423,
+  'r': 0.284, 's': 0.364, 't': 0.261, 'u': 0.418, 'v': 0.364, 'w': 0.539, 'x': 0.359, 'y': 0.353, 'z': 0.357,
+  '{': 0.255, '|': 0.133, '}': 0.255, '~': 0.454, '°': 0.358, '·': 0.189, '−': 0.443, '–': 0.37, 'Δ': 0.488,
+};
+
+const FACES: Record<MeasuredFace, Readonly<Record<string, number>>> = { BarlowMedium, BarlowCondensedSemiBold, BarlowCondensedBold, BarlowCondensedLight };
 
 /** Width in pixels of `text` set in `face` at `fs`, from the measured advances. */
 export function measureText(face: MeasuredFace, text: string, fs: number): number {

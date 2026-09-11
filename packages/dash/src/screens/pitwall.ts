@@ -13,7 +13,7 @@ import { rect } from '../design/geometry.ts';
 import { rule } from '../elements/rule.ts';
 import { label } from '../elements/label.ts';
 import { densityOf } from '../second/density.ts';
-import { drawFieldBlock, wrapFields, type FieldSpec } from '../second/field.ts';
+import { drawFieldBlock, fitFields, type FieldSpec } from '../second/field.ts';
 import { panel } from '../second/header.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
 import { sectorFields } from '../second/sectors.ts';
@@ -63,11 +63,9 @@ const DENSITY = 'zone' as const;
 /** A context for a module drawn inside a pit wall panel. */
 const ctxOf = (frame: Rect, prefix: string): ModuleContext => ({ frame, density: DENSITY, prefix });
 
-/** A block of fields filling a panel body, wrapping when the panel is narrow. */
+/** A block of fields filling a panel body: it wraps when the panel is narrow and shrinks when it is short. */
 function fieldsIn(prefix: string, body: Rect, specs: readonly FieldSpec[]): Item[] {
-  const d = densityOf(DENSITY);
-  const lines = wrapFields(specs, body.width, DENSITY);
-  return drawFieldBlock(lines, body.left, body.top + body.height, body.width, DENSITY, { lineGap: Math.round(d.gapY / 2) });
+  return fitFields(specs, body, DENSITY);
 }
 
 /** The session panel: which race, how long is left, where you are in it. */
@@ -122,7 +120,7 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
   const sectorHeight = Math.max(0, body.top + body.height - sectorTop);
   return [
     ...items,
-    ...drawFieldBlock([[deltaField]], body.left, body.top + topHeight, deltaWidth, DENSITY),
+    ...fitFields([deltaField], rect(body.left, body.top, deltaWidth, topHeight), DENSITY),
     ...centreZeroGauge(`${name}.bar`, rect(body.left + deltaWidth + d.gapX, body.top + topHeight - barHeight - 6, barWidth, barHeight), value, { range: 2 }),
     ...sectorFields(`${name}.sector`, rect(body.left, sectorTop, body.width, sectorHeight), DENSITY, d.small),
   ];
