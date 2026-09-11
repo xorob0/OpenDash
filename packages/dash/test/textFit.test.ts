@@ -22,12 +22,20 @@ const faceOf = (item: TextItem): MeasuredFace => {
   return 'BarlowCondensedSemiBold';
 };
 
+/**
+ * What the item will draw. A bound item draws its binding rather than its sample, so where one
+ * declares `widest` that is what has to fit: a box cut to the sample is how "NO FLAG" came out as
+ * "NO FLA" on the pit wall header.
+ */
+const drawnText = (item: TextItem): string => item.widest ?? item.text;
+
 /** Width of what the item draws: its cells when monospaced, the measured advances otherwise. */
 function drawnWidth(item: TextItem): number {
+  const text = drawnText(item);
   const mono = item.monospace;
-  if (!mono) return measureText(faceOf(item), item.text, item.fontSize);
-  const specials = [...item.text].filter((c) => mono.specialChars?.includes(c) ?? false).length;
-  return (item.text.length - specials) * mono.charWidth + specials * mono.specialCharsWidth;
+  if (!mono) return measureText(faceOf(item), text, item.fontSize);
+  const specials = [...text].filter((c) => mono.specialChars?.includes(c) ?? false).length;
+  return (text.length - specials) * mono.charWidth + specials * mono.specialCharsWidth;
 }
 
 const texts = (dashboard: Dashboard): TextItem[] => [...itemsOf(dashboard)].filter((i): i is TextItem => i.kind === 'text');
@@ -44,7 +52,7 @@ describe('every text fits the box SimHub clips it to', () => {
         expect(items.length).toBeGreaterThan(0);
         for (const item of items) {
           const width = drawnWidth(item);
-          expect({ item: item.name, text: item.text, width, box: item.rect.width, fits: width < item.rect.width }).toMatchObject({ fits: true });
+          expect({ item: item.name, text: drawnText(item), width, box: item.rect.width, fits: width < item.rect.width }).toMatchObject({ fits: true });
           const line = LINE_SPACING * item.fontSize;
           expect({ item: item.name, line, box: item.rect.height, fits: line <= item.rect.height }).toMatchObject({ fits: true });
         }
