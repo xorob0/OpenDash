@@ -53,6 +53,13 @@ function drawnWidth(item: TextItem): number {
 
 const textsOf = (dashboard: Dashboard): TextItem[] => itemsOf(dashboard).filter((i): i is TextItem => i.kind === 'text');
 
+/** Every unordered pair of a list, for the checks that compare items with each other. */
+function* pairs<T>(items: readonly T[]): Generator<[T, T]> {
+  for (let a = 0; a < items.length; a++) {
+    for (let b = a + 1; b < items.length; b++) yield [items[a]!, items[b]!];
+  }
+}
+
 describe('the packages are built and valid', () => {
   test('four packages: two companions and two pit walls', () => {
     expect(SCREEN_PACKAGES.map((d) => d.folder)).toEqual(['openDash Companion', 'openDash Companion portrait', 'openDash Pit wall', 'openDash Pit wall portrait']);
@@ -89,6 +96,27 @@ describe('the packages are built and valid', () => {
           const r = item.rect;
           const inside = r.left >= 0 && r.top >= 0 && r.left + r.width <= dashboard.width && r.top + r.height <= dashboard.height;
           expect({ dashboard: dashboard.name, item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+        }
+      }
+    });
+
+    /**
+     * The fit tests above ask whether each text fits its own box, which a header whose groups have
+     * grown into one another still passes: every label is intact and one is drawn over another.
+     * This asks the other question. Only the header row is checked, because it is the one place
+     * where two runs of text are laid out from opposite edges towards each other, and the wordmark
+     * is exempt since its two halves are deliberately boxed wider than their ink.
+     */
+    test(`${def.folder} draws no two header texts over one another`, () => {
+      for (const dashboard of pkg.dashboards) {
+        for (const screen of dashboard.screens) {
+          const header = itemsOf({ ...dashboard, screens: [screen] })
+            .filter((i): i is TextItem => i.kind === 'text' && /\.header\./.test(i.name) && !/wordmark/.test(i.name));
+          for (const [a, b] of pairs(header)) {
+            const sameRow = Math.abs(a.rect.top - b.rect.top) < Math.max(a.rect.height, b.rect.height) / 2;
+            const overlap = Math.min(a.rect.left + a.rect.width, b.rect.left + b.rect.width) - Math.max(a.rect.left, b.rect.left);
+            expect({ screen: screen.name, a: a.name, b: b.name, overlap, clear: !sameRow || overlap <= 0 }).toMatchObject({ clear: true });
+          }
         }
       }
     });

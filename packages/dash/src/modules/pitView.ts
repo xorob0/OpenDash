@@ -15,7 +15,7 @@ import { label } from '../elements/label.ts';
 import { densityOf } from '../second/density.ts';
 import { levelGauge } from '../second/gauge.ts';
 import { stack } from '../second/layout.ts';
-import { CHARS, NO_VALUE, PIT_SERVICE_BITS, fuelPercent, fuelUnit, inPitSeconds, isInPitLane, lastPitDuration, pitRefuelLitres, pitServiceFlag } from '../second/values.ts';
+import { CHARS, NO_VALUE, PIT_SERVICE_BITS, fuelPercent, fuelUnitShort, inPitSeconds, isInPitLane, lastPitDuration, pitRefuelLitres, pitServiceFlag } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 
@@ -48,7 +48,7 @@ export const pitView = defineModule('pitView', (ctx) => {
             chars: CHARS.fuel,
             fs: d.hero,
             color: ds.purpose.fuel.low,
-            follower: { text: 'L', bind: fuelUnit() },
+            follower: { text: 'L', widest: 'GAL', bind: fuelUnitShort() },
           }),
           fld(ctx, 'pitTime', 'Pit time', {
             sample: '24.3',

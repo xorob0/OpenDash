@@ -35,6 +35,18 @@ box using the advances in `packages/dash/src/design/advances.ts`, which are read
 fonts; keep them passing rather than adjusting them. Measure a run in the weight it is drawn in:
 Barlow Condensed Bold is wider than SemiBold, and a box measured from the wrong face clips.
 
+A bound text is the trap inside the trap. What the item carries is a design-time sample, and what
+it draws is whatever the binding yields, which is almost always longer: a box cut to "GREEN" loses
+the "G" of "NO FLAG", and one cut to "L" loses most of "Gallons". Every bound text therefore
+declares `widest`, the longest string its binding can produce, and is measured by that; the fit
+tests read the same field, so a declaration that is too narrow fails rather than clipping in
+silence. `InlinePart` requires it at the type level. Where the binding can outgrow any reasonable
+box, cut the binding instead, as `chipText` does.
+
+Fitting each text in its own box is still not enough on its own. Two runs laid out from opposite
+edges of a header can each fit and still be drawn over one another, which no fit test can see, so
+`pitWallHeader` fails the build when its stack would reach the wordmark.
+
 The second screens add a second rule of the same kind. A module is a function of a rectangle, so
 it has to fit whatever rectangle it is given: `secondScreens.test.ts` builds every module into
 the seven box shapes the packages use and checks every item against the frame. When a module

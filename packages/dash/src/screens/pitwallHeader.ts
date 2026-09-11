@@ -1,10 +1,15 @@
 /**
  * The pit wall header: what an engineer needs on every page, in one 64 px strip.
  *
- * The right-hand groups are laid out from the right edge in a fixed order, each measured from its
- * own text, so a longer session name or a three-digit incident count never pushes another group
- * off the screen. Track state is not drawn: SimHub has no wetness or rubber value from iRacing,
- * and a "Dry" that is always "Dry" is worse than an empty space.
+ * The right-hand groups are laid out from the right edge in a fixed order, each measured from the
+ * widest thing it can draw rather than from its design-time sample, so the stack never moves as the
+ * session changes and nothing is ever clipped. What that costs is width: the stack is as wide as
+ * its worst case even while it reads "RACE", and on the 1080 px portrait header it did not fit
+ * beside the left block at all. `fitsBeside` is therefore a hard check rather than a comment, and
+ * the compact header drops what a single-page portrait package does not need.
+ *
+ * Track state is not drawn: SimHub has no wetness or rubber value from iRacing, and a "Dry" that is
+ * always "Dry" is worse than an empty space.
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -17,7 +22,7 @@ import { rule } from '../elements/rule.ts';
 import { FLAG_PRIORITY, flagVisible } from '../components/flagStrip.ts';
 import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
-import { CHARS, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionTimeLeft, sessionType, simClock, totalLaps, windKmh } from '../second/values.ts';
+import { CHARS, WIDEST_SESSION_NAME, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionName, sessionTimeLeft, simClock, totalLaps, windKmh } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
 const { concat, str, fmt, iff, gt, num, isnull, isNull, not, ucase } = ncalc;
@@ -40,17 +45,13 @@ const FLAG_LOOK: Record<string, { color: `#${string}`; name: string }> = {
 };
 
 /**
- * The longest name the flag binding can draw. The header is measured before the binding exists,
- * so a box cut to "GREEN" loses the "G" of "NO FLAG" and half of "CHEQUERED".
+ * The longest name the flag binding can draw, derived from the names it draws rather than written
+ * out, so that renaming a flag cannot leave the box measured for the old one. The header is sized
+ * before the binding exists, and a box cut to "GREEN" loses the "G" of "NO FLAG".
  */
-const WIDEST_FLAG_NAME = 'CHEQUERED';
-
-/**
- * The longest session name SimHub reports for iRacing, uppercased. `SessionTypeName` passes
- * iRacing's own `SessionType` through, and "Offline Testing" is the longest of Practice, Lone
- * Qualify, Open Qualify, Warmup, Heat, Consolation and Race.
- */
-const WIDEST_SESSION_NAME = 'OFFLINE TESTING';
+const WIDEST_FLAG_NAME = [...Object.values(FLAG_LOOK).map((f) => f.name.toUpperCase()), 'NO FLAG'].reduce((widest, name) =>
+  name.length > widest.length ? name : widest,
+);
 
 /**
  * iRacing writes `IncidentLimit` as a number or as the word "unlimited", which is what a hosted
@@ -96,7 +97,11 @@ export interface PitWallHeaderSpec {
   /** 1-based page and page count; a portrait dashboard has one page and draws no squares. */
   page: number;
   pages: number;
-  /** A narrow header drops the wind and the sim clock, which is what the portrait page needs. */
+  /**
+   * A narrow header, which is what the portrait page needs. It drops the wind, the sim clock and
+   * the page name: a package with one page does not need to be told which page it is on, and the
+   * width that name occupies is what the right-hand stack needs in order to fit at 1080 px.
+   */
   compact?: boolean;
 }
 
@@ -115,9 +120,11 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   const mark = wordmark(`${name}.wordmark`, frame.left + PIT_WALL_HEADER.padX, top - 2, 28);
   items.push(...mark.items);
   let x = frame.left + PIT_WALL_HEADER.padX + mark.width + PIT_WALL_HEADER.gap;
-  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName.toUpperCase(), d.labelSm)) + 2;
-  items.push(label(`${name}.page`, spec.pageName, x, labelY, pageWidth, { size: d.labelSm, color: ds.color.text.secondary }));
-  x += pageWidth + PIT_WALL_HEADER.gap;
+  if (!spec.compact) {
+    const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName.toUpperCase(), d.labelSm)) + 2;
+    items.push(label(`${name}.page`, spec.pageName, x, labelY, pageWidth, { size: d.labelSm, color: ds.color.text.secondary }));
+    x += pageWidth + PIT_WALL_HEADER.gap;
+  }
   if (spec.pages > 1) {
     for (let i = 0; i < spec.pages; i++) {
       items.push(
@@ -135,10 +142,10 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     {
       id: 'session',
       parts: [
-        // Sized for "OFFLINE TESTING" and drawn from the right, so that the slack a short name
-        // leaves falls to the left, into the empty middle of the header, rather than opening a
+        // Sized for the longest session name and drawn from the right, so that the slack a short
+        // one leaves falls to the left, into the empty middle of the header, rather than opening a
         // hole between the session name and the lap.
-        { kind: 'label', text: 'RACE', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: ucase(sessionType()) },
+        { kind: 'label', text: 'RACE', widest: WIDEST_SESSION_NAME.toUpperCase(), hAlign: 'right', bind: ucase(sessionName()) },
         { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
         { kind: 'label', text: 'OF 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('OF '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
       ],
@@ -185,12 +192,25 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   ];
 
   const shown = spec.compact ? groups.filter((g) => g.id !== 'wind' && g.id !== 'clocks').concat([{ id: 'clock', parts: [{ kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } }, { kind: 'label', text: 'LOCAL' }] }]) : groups;
+  // `x` is now the right edge of everything on the left. The stack is laid out from the right edge
+  // inwards and must stop before it: a group that runs past `x` is drawn over the wordmark, which
+  // is what happened on the portrait header when the bound labels were widened to their worst case.
+  // Failing the build is the only way to catch it, since each item still fits its own box and the
+  // fit tests are therefore blind to the collision.
+  const leftEdge = x;
   let right = frame.left + frame.width - PIT_WALL_HEADER.padX;
   for (const group of [...shown].reverse()) {
     const g = inlineGroup(`${name}.${group.id}`, group.parts, fs, density);
     right -= g.width;
     items.push(...g.draw(right, top));
     right -= PIT_WALL_HEADER.groupGap;
+  }
+  if (right + PIT_WALL_HEADER.groupGap < leftEdge) {
+    const short = Math.ceil(leftEdge - right - PIT_WALL_HEADER.groupGap);
+    throw new Error(
+      `${name}: the right-hand stack starts at ${right + PIT_WALL_HEADER.groupGap} and the left block ends at ${leftEdge}, ` +
+        `so it is ${short}px too wide for a ${frame.width}px header. Drop a group from the compact header or narrow a widest value.`,
+    );
   }
   items.push(rule(`${name}.rule`, frame.left, frame.top + frame.height - 1, frame.width, 1));
   return items;

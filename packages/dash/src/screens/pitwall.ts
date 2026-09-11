@@ -45,7 +45,7 @@ import {
   rpm,
   sessionBestLap,
   sessionTimeLeft,
-  sessionType,
+  sessionName,
   speed,
   steering,
   throttle,
@@ -76,7 +76,7 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
   return [
     ...items,
     ...fieldsIn(name, body, [
-      fld(ctxOf(body, `${name}.`), 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: d.big }),
+      fld(ctxOf(body, `${name}.`), 'type', 'Session', { sample: 'Race', bind: sessionName(), chars: CHARS.word, fs: d.big }),
       fld(ctxOf(body, `${name}.`), 'left', 'Time left', { sample: '0:42:15', bind: iff(isTimedSession(), clock(sessionTimeLeft()), str('-:--:--')), chars: CHARS.clock, fs: d.big }),
       fld(ctxOf(body, `${name}.`), 'lap', 'Lap', {
         sample: '12',

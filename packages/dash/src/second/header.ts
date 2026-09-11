@@ -29,33 +29,39 @@ export const COMPANION_HEADER = { height: 56, padX: 24, gap: 12, groupGap: 20 } 
 /** Page dots: a square per module. */
 export const PAGE_DOT = { size: 6, gap: 6 } as const;
 
-/** A value with a small denominator after it, as the header draws "P4 / 24". */
-function pair(
-  name: string,
-  valueSample: string,
-  valueBind: Expr,
-  denominator: string,
-  denominatorWidest: string,
-  denominatorBind: Expr,
-  x: number,
-  y: number,
-  fs: number,
-  density: Density,
-  visibleBind?: Expr,
-): { items: Item[]; width: number } {
+/**
+ * A value with a small denominator after it, as the header draws "P4 / 24".
+ *
+ * Both halves are sized for their worst case and the two have to agree on what that is: a
+ * denominator measured for three digits beside a numerator that can only draw two says a race may
+ * have 999 laps and that the driver may never be past lap 99.
+ */
+interface PairSpec {
+  name: string;
+  /** Design-time text, and the widest the numerator can draw: its length is the cell budget. */
+  widestValue: string;
+  valueBind: Expr;
+  /** Design-time denominator, and the widest it can draw. */
+  denominator: string;
+  widestDenominator: string;
+  denominatorBind: Expr;
+  visibleBind?: Expr;
+}
+
+function pair(spec: PairSpec, x: number, y: number, fs: number, density: Density): { items: Item[]; width: number } {
   const d = densityOf(density);
   const mono = cells('SemiBold', fs);
-  const chars = { digits: valueSample.length, specials: 0 };
+  const chars = { digits: spec.widestValue.length, specials: 0 };
   const valueWidth = monoWidth(mono, chars);
-  const denominatorWidth = Math.ceil(measureText('BarlowMedium', denominatorWidest, d.labelSm));
+  const denominatorWidth = Math.ceil(measureText('BarlowMedium', spec.widestDenominator, d.labelSm));
   const denominatorX = x + valueWidth + ds.space[2];
   return {
     items: [
-      numeral(`${name}.value`, valueSample, x, y, fs, chars, { bind: valueBind, maxWidth: valueWidth + 4 }),
-      unit(`${name}.denominator`, denominator, denominatorX, canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
-        bind: denominatorBind,
-        widest: denominatorWidest,
-        visibleBind,
+      numeral(`${spec.name}.value`, spec.widestValue, x, y, fs, chars, { bind: spec.valueBind, maxWidth: valueWidth + 4 }),
+      unit(`${spec.name}.denominator`, spec.denominator, denominatorX, canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
+        bind: spec.denominatorBind,
+        widest: spec.widestDenominator,
+        visibleBind: spec.visibleBind,
       }),
     ],
     width: valueWidth + ds.space[2] + denominatorWidth,
@@ -93,20 +99,36 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
   );
 
   // Right group, laid out from the right edge so the two pairs keep their gap whatever they read.
+  // An endurance race runs to three figures of laps; a grid does not run to three figures of cars.
   const lap = pair(
-    `${name}.lap`,
-    'L12',
-    concat(str('L'), fmt(currentLap(), '0')),
-    '/ 30',
-    '/ 999',
-    concat(str('/ '), fmt(totalLaps(), '0')),
+    {
+      name: `${name}.lap`,
+      widestValue: 'L999',
+      valueBind: concat(str('L'), fmt(currentLap(), '0')),
+      denominator: '/ 30',
+      widestDenominator: '/ 999',
+      denominatorBind: concat(str('/ '), fmt(totalLaps(), '0')),
+      visibleBind: gt(totalLaps(), num(0)),
+    },
     0,
     valueY,
     fs,
     density,
-    gt(totalLaps(), num(0)),
   );
-  const position = pair(`${name}.position`, 'P24', concat(str('P'), fmt(carPosition(player()), '0')), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), 0, valueY, fs, density);
+  const position = pair(
+    {
+      name: `${name}.position`,
+      widestValue: 'P99',
+      valueBind: concat(str('P'), fmt(carPosition(player()), '0')),
+      denominator: '/ 24',
+      widestDenominator: '/ 99',
+      denominatorBind: concat(str('/ '), fmt(fieldSize(), '0')),
+    },
+    0,
+    valueY,
+    fs,
+    density,
+  );
   const right = frame.left + frame.width - COMPANION_HEADER.padX;
   const lapX = right - lap.width;
   const positionX = lapX - COMPANION_HEADER.groupGap - position.width;
@@ -211,7 +233,9 @@ export type InlinePart =
 export function inlineGroup(name: string, parts: readonly InlinePart[], fs: number, density: Density, gap = ds.space[2]): { width: number; draw(x: number, top: number): Item[] } {
   const d = densityOf(density);
   const widths = parts.map((part) => {
-    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', (part.widest ?? part.text).toUpperCase(), d.labelSm)) + 2;
+    // An unbound label is drawn upper-cased by `label()`, a bound one is drawn as its binding gives
+    // it, so each is measured in the case it will actually be drawn in.
+    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', part.widest ?? part.text.toUpperCase(), d.labelSm)) + 2;
     if (part.kind === 'block') return part.width;
     return monoWidth(cells('SemiBold', fs), part.chars) + 4;
   });

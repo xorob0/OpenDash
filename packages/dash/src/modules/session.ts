@@ -19,7 +19,7 @@ import {
   player,
   playerClass,
   sessionTimeLeft,
-  sessionType,
+  sessionName,
   totalLaps,
 } from '../second/values.ts';
 import { defineModule, fieldsRow, fld } from './module.ts';
@@ -34,13 +34,13 @@ export const session = defineModule('session', (ctx) => {
     [
       fieldsRow(
         [
-          fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: d.big }),
+          fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionName(), chars: CHARS.word, fs: d.big }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
             bind: fmt(carPosition(player()), '0'),
             chars: CHARS.position,
             fs: d.big,
-            follower: { text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
+            follower: { text: '/ 24', widest: '/ 999', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
           }),
           fld(ctx, 'class', 'Class', {
             sample: 'GT3 · P4',
@@ -58,7 +58,7 @@ export const session = defineModule('session', (ctx) => {
             bind: fmt(currentLap(), '0'),
             chars: CHARS.position,
             fs: d.mid,
-            follower: { text: '/ 30', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
+            follower: { text: '/ 30', widest: '/ 999', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
           }),
           fld(ctx, 'timeLeft', 'Time left', {
             sample: '0:42:15',

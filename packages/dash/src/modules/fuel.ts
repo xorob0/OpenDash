@@ -20,7 +20,7 @@ import {
   fuelThisLap,
   fuelTimeLeft,
   fuelToAdd,
-  fuelUnit,
+  fuelUnitShort,
   NO_VALUE,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -47,7 +47,7 @@ export const fuel = defineModule('fuel', (ctx) => {
             chars: CHARS.fuel,
             fs: d.hero,
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
-            follower: { text: 'L', bind: fuelUnit() },
+            follower: { text: 'L', widest: 'GAL', bind: fuelUnitShort() },
           }),
           fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(fuelTimeLeft()), chars: CHARS.clock, fs: d.mid }),
           fld(ctx, 'toAdd', 'To add', {

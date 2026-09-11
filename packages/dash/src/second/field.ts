@@ -23,6 +23,12 @@ import { densityOf, type Density, type DensitySpec } from './density.ts';
 export interface Follower {
   text: string;
   bind?: Expr;
+  /**
+   * The longest string `bind` can draw, which is what the follower is measured by. Without it a
+   * follower is sized for its sample, and a sample is almost always the short case: "L" against a
+   * binding that can draw "GAL", "/ 24" against one that can draw "/ 128".
+   */
+  widest?: string;
   color?: Hex;
   visibleBind?: Expr;
 }
@@ -61,7 +67,7 @@ export const FOLLOWER_GAP = ds.space[2];
  * label element does that), so it is measured upper-cased too: "s" and "S" are not the same width.
  */
 export function followerWidth(follower: Follower, d: DensitySpec): number {
-  const drawn = follower.bind ? follower.text : follower.text.toUpperCase();
+  const drawn = follower.widest ?? (follower.bind ? follower.text : follower.text.toUpperCase());
   return Math.ceil(measureText('BarlowMedium', drawn, d.labelSm)) + 1;
 }
 
@@ -114,6 +120,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
       label(`${spec.name}.label`, spec.label, x, valueY - d.fieldGap - d.label, width, {
         size: d.label,
         bind: spec.labelBind,
+        widest: spec.labelWidest,
         visibleBind: spec.visibleBind,
       }),
     );
@@ -136,6 +143,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
     items.push(
       unit(`${spec.name}.unit`, follower.text, followerX, y, Math.max(followerWidth(follower, d), x + width - followerX), {
         bind: follower.bind,
+        widest: follower.widest,
         color: follower.color,
         visibleBind: follower.visibleBind ?? spec.visibleBind,
       }),

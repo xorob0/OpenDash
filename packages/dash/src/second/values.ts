@@ -198,6 +198,11 @@ export const speedUnit = (): Expr => isnull(game('SpeedLocalUnit'), str(''));
 export const rpm = (): Expr => isnull(game('Rpms'), num(0));
 export const gearRedline = (): Expr => isnull(game('CarSettings_CurrentGearRedLineRPM'), num(0));
 export const fuelUnit = (): Expr => isnull(game('FuelUnit'), str('L'));
+/**
+ * The fuel unit as a dashboard writes it. `FuelUnit` is the enum name, `Liters` or `Gallons`, so
+ * drawing it raw puts eight characters where a unit belongs; `cards/fuel.ts` maps it the same way.
+ */
+export const fuelUnitShort = (): Expr => iff(eq(game('FuelUnit'), str('Gallons')), str('GAL'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
 export const fuelPercent = (): Expr => isnull(game('FuelPercent'), num(0));
 export const fuelPerLap = (): Expr => isnull(computed('Fuel_LitersPerLap'), num(0));
@@ -226,6 +231,39 @@ export const roadTemperature = (): Expr => isnull(game('RoadTemperature'), num(0
 export const trackName = (): Expr => isnull(game('TrackName'), str(''));
 export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0)), num(1000));
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
+
+/** Characters a session name is drawn in; `PRACTICE` is the longest of the mapped set. */
+export const SESSION_NAME_CHARS = 8;
+/** The widest session name a dashboard draws, which is what a box holding one is measured by. */
+export const WIDEST_SESSION_NAME = 'PRACTICE';
+
+/**
+ * iRacing's session types that do not already read as one word, and the word a dashboard uses.
+ * Everything iRacing can report is here, so the fallback is only ever reached by a session type
+ * that did not exist when this was written.
+ */
+const SESSION_NAME_MAP: readonly (readonly [string, string])[] = [
+  ['Lone Practice', 'Practice'],
+  ['Open Qualify', 'Qualify'],
+  ['Lone Qualify', 'Qualify'],
+  ['Offline Testing', 'Testing'],
+  ['Heat Race', 'Heat'],
+  ['Consolation Race', 'Consol'],
+];
+
+/**
+ * The session, as a dashboard says it.
+ *
+ * `SessionTypeName` passes iRacing's own name through, and iRacing qualifies its names: a solo
+ * qualifying session is "Lone Qualify" and a test session is "Offline Testing". Drawing those raw
+ * puts fifteen characters where a panel expects a word, so each is mapped to the word itself.
+ *
+ * The mapping is written out rather than truncated because SimHub's NCalc has no substring: the
+ * functions it exposes are the ones listed at the top of `packages/generator/src/ncalc.ts`, and a
+ * call to anything else evaluates to nothing at all rather than failing.
+ */
+export const sessionName = (): Expr =>
+  SESSION_NAME_MAP.reduceRight<Expr>((fallback, [from, to]) => iff(eq(sessionType(), str(from)), str(to), fallback), sessionType());
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
 export const playerClass = (): Expr => isnull(game('CarClass'), str(''));
 

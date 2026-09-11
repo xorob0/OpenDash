@@ -20,11 +20,20 @@ import { densityOf, type Density } from './density.ts';
 
 const { left, ucase, iff, str, isnull } = ncalc;
 
-/** Characters a chip shows. "LMP2" and "GTP" fit; a longer class name is cut to this. */
+/** Characters a class chip shows. "LMP2" and "GTP" fit; a longer class name is cut to this. */
 export const CHIP_CHARS = 4;
 
 /** The widest four letters a class name realistically has, which is what a chip is sized by. */
 export const CHIP_WIDEST = 'LMP2';
+
+/**
+ * A tyre compound chip shows one letter, since that is what a compound is: H, M, S, W. The column
+ * is drawn one letter wide, so the binding has to be cut to one as well; "MEDI" in a box built for
+ * "M" is the same clipping fault by another route.
+ */
+export const COMPOUND_CHARS = 1;
+/** "W" is the widest capital a compound uses, and what a compound chip is measured by. */
+export const COMPOUND_WIDEST = 'W';
 
 export interface ChipOptions {
   /** Live text; `text` is then the design-time sample. */
@@ -35,6 +44,11 @@ export interface ChipOptions {
   visibleBind?: Expr;
   /** Override the measured width, e.g. to line a chip up with a table column. */
   width?: number;
+  /**
+   * The widest string `bind` can draw. `chipText` cuts to `CHIP_CHARS`, so that is the default for
+   * a bound chip; a caller that knows its binding is narrower may say so and get a narrower box.
+   */
+  widest?: string;
 }
 
 /** Width a chip takes at a density: padding, four characters, padding. */
@@ -43,8 +57,8 @@ export function chipWidth(density: Density, widest: string = CHIP_WIDEST): numbe
   return Math.ceil(2 * d.chipPadding + measureText('BarlowMedium', widest, d.labelSm));
 }
 
-/** Cuts a class name to what the chip can hold, upper-cased. */
-export const chipText = (expr: Expr): Expr => ucase(left(isnull(expr, str('')), CHIP_CHARS));
+/** Cuts a name to what the chip can hold, upper-cased. */
+export const chipText = (expr: Expr, chars: number = CHIP_CHARS): Expr => ucase(left(isnull(expr, str('')), chars));
 
 /**
  * A chip whose top edge is `top`. The block is the chip's height; the text sits on the canvas
@@ -68,6 +82,7 @@ export function chip(name: string, text: string, x: number, top: number, density
         color: ink,
         hAlign: 'center',
         bind: opts.bind,
+        widest: opts.bind ? (opts.widest ?? CHIP_WIDEST) : undefined,
         visibleBind: opts.visibleBind,
       }),
       ...withBindings({ Text: opts.bind, Visible: opts.visibleBind, TextColor: inkBind }),

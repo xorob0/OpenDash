@@ -21,7 +21,7 @@ import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
-import { chip, chipText, chipWidth } from './chip.ts';
+import { COMPOUND_CHARS, COMPOUND_WIDEST, chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, rowIndex } from './values.ts';
 
@@ -222,7 +222,8 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
     width: (d) => Math.ceil(2 * d.chipPadding + 14),
     cell: (ctx) =>
       chip(`${ctx.name}.tyre`, 'M', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
-        bind: chipText(carCompound(ctx.idx)),
+        bind: chipText(carCompound(ctx.idx), COMPOUND_CHARS),
+        widest: COMPOUND_WIDEST,
         width: Math.ceil(2 * ctx.d.chipPadding + 14),
       }),
   },

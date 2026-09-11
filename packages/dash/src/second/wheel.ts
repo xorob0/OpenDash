@@ -16,6 +16,7 @@ import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { barGauge } from './gauge.ts';
+import { COMPOUND_CHARS, COMPOUND_WIDEST, chipText } from './chip.ts';
 import { densityOf, type Density } from './density.ts';
 import { CHARS, tyreChangeScheduled, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
 
@@ -85,10 +86,14 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
       color: ds.color.text.secondary,
       maxWidth: Math.max(0, frame.left + frame.width - pressureX),
     }),
+    // The compound is cut to one letter, as on the leaderboard's tyre column: a compound is H, M,
+    // S or W, and a binding that can draw a whole word into a box built for "M" is the clipping
+    // fault this file's box measurements exist to prevent.
     label(`${name}.compound`, 'M', x, top + tempFs + d.fieldGap, 40, {
       size: secondFs,
       color: ds.color.text.secondary,
-      bind: ncalc.ucase(isnull(ncalc.driver('fronttyrecompound', ncalc.playerPosition()), str(''))),
+      bind: chipText(isnull(ncalc.driver('fronttyrecompound', ncalc.playerPosition()), str('')), COMPOUND_CHARS),
+      widest: COMPOUND_WIDEST,
     }),
   ];
   // A 6 px square marks a wheel the pit box is set to change: SimHub cannot draw the tick the
