@@ -59,9 +59,14 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
   const temp = tyreTemperature(corner);
   const pressure = tyrePressure(corner);
   const wear = tyreWear(corner);
-  const tempFs = d.big;
   const pressureFs = d.tiny;
   const secondFs = d.labelSm;
+  // The temperature takes the height it is given rather than the height the density prefers. At a
+  // 639 by 202 pit wall zone the cell works out one pixel shorter than the block, and one pixel is
+  // enough for WPF to clip the numeral's line box: the reading a driver acts on loses its top.
+  // Nothing can be shed here -- a corner is two numbers and a bar -- so this is the one place the
+  // value shrinks instead.
+  const tempFs = Math.max(d.tiny, Math.min(d.big, frame.height - d.fieldGap - secondFs));
   const blockHeight = tempFs + d.fieldGap + secondFs;
   const top = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
   const x = frame.left + WEAR_BAR.width + WEAR_BAR.gap;
