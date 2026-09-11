@@ -11,6 +11,7 @@ import { isHex } from './color.ts';
 import { fontKey, fontNamesOf, subfamilyHasWeight, type TtfNames } from './fonts.ts';
 import { dashboardPath, isGuid, screenPath, stableGuid, walkItems } from './ids.ts';
 import { referencedProperties } from './ncalc.ts';
+import { unknownFunctions } from './ncalcFunctions.ts';
 
 export interface ValidateOptions {
   /**
@@ -153,6 +154,18 @@ const checkProperties = (ctx: Context, expression: string, path: string): void =
   }
 };
 
+/**
+ * Every function an expression names has to be one SimHub dispatches, with an argument count it
+ * dispatches on. Both halves matter: `left` is a real SimHub function and `left(x, 4)` still draws
+ * nothing, because the engine matches on name *and* parameter count and attaches no delegate when
+ * either is wrong. Nothing is reported at runtime, so this is the only place it can be caught.
+ */
+const checkFunctions = (ctx: Context, expression: string, path: string): void => {
+  for (const bad of unknownFunctions(expression)) {
+    ctx.c.error(bad.reason === 'unknown' ? 'expression/unknown-function' : 'expression/arity', path, `${bad.message}; SimHub evaluates the whole expression to nothing`);
+  }
+};
+
 const checkBindings = (ctx: Context, item: Item, path: string): void => {
   const { c } = ctx;
   const allowed = ALLOWED_BINDING_TARGETS[item.kind];
@@ -182,6 +195,9 @@ const checkBindings = (ctx: Context, item: Item, path: string): void => {
       }
       if (expression.trim() === '') c.warn('binding/empty-expression', bpath, `${target} is bound to an empty expression`);
       checkProperties(ctx, expression, bpath);
+      if (binding.formula === expression || (typeof binding.formula === 'object' && binding.formula !== null && (binding.formula as { interpreter?: string }).interpreter !== 'js')) {
+        checkFunctions(ctx, expression, bpath);
+      }
     }
   }
 };
