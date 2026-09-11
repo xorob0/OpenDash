@@ -73,6 +73,12 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
   const tempWidth = monoWidth(cells('SemiBold', tempFs), CHARS.temperature);
   const pressureX = x + tempWidth + d.fieldGap * 2;
   const baseline = canvasBaseline(top, tempFs);
+  // Rule 17: shed the secondary reading rather than shrink the primary one. The temperature is
+  // what a driver acts on and the pressure is what they check, and iRacing's pressure is the one
+  // the car left the box with rather than a live figure. At a 274-wide zone the cell is not wide
+  // enough for both, so the pressure goes and the temperature stays the size it was.
+  const pressureWidth = monoWidth(cells('SemiBold', pressureFs), CHARS.pressure);
+  const pressureFits = pressureX + pressureWidth <= frame.left + frame.width;
   const items: Item[] = [
     band(`${name}.wear.track`, rect(frame.left, frame.top, WEAR_BAR.width, frame.height), ds.color.surface.raised),
     barGauge(`${name}.wear`, rect(frame.left, frame.top, WEAR_BAR.width, frame.height), wear, {
@@ -85,17 +91,21 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
       colorBind: temperatureColour(corner),
       maxWidth: frame.width - (x - frame.left),
     }),
-    numeral(`${name}.pressure`, CORNER_SAMPLES[corner].pressure, pressureX, canvasYForBaseline(baseline, pressureFs), pressureFs, CHARS.pressure, {
-      bind: iff(eq(pressure, num(0)), str('--'), fmt(pressure, '0.0')),
-      color: ds.color.text.secondary,
-      maxWidth: Math.max(0, frame.left + frame.width - pressureX),
-    }),
     label(`${name}.compound`, 'M', x, top + tempFs + d.fieldGap, 40, {
       size: secondFs,
       color: ds.color.text.secondary,
       bind: ncalc.ucase(isnull(ncalc.driver('fronttyrecompound', ncalc.playerPosition()), str(''))),
     }),
   ];
+  if (pressureFits) {
+    items.push(
+      numeral(`${name}.pressure`, CORNER_SAMPLES[corner].pressure, pressureX, canvasYForBaseline(baseline, pressureFs), pressureFs, CHARS.pressure, {
+        bind: iff(eq(pressure, num(0)), str('--'), fmt(pressure, '0.0')),
+        color: ds.color.text.secondary,
+        maxWidth: Math.max(0, frame.left + frame.width - pressureX),
+      }),
+    );
+  }
   // A 6 px square marks a wheel the pit box is set to change: SimHub cannot draw the tick the
   // design sheet uses, and a square in the same place reads the same way.
   const markerX = x + 40;

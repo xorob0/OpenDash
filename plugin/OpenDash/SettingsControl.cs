@@ -302,7 +302,7 @@ namespace OpenDashPlugin
         {
             var caption = Ui.Caption("Each pit wall page carries four data zones and, on the tower page, one wide zone. Choose what each one shows.", 846);
             var rows = new List<UIElement> { caption };
-            foreach (var letter in Contract.ZoneLetters)
+            foreach (var letter in Contract.PitWallZoneLetters)
             {
                 var captured = letter;
                 var select = BuildZoneSelect(ZonePages.Standard, Settings.Zone(captured), index =>

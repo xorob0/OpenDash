@@ -137,7 +137,7 @@ namespace OpenDashPlugin
                 var captured = module;
                 this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
             }
-            foreach (var letter in Contract.ZoneLetters)
+            foreach (var letter in Contract.PitWallZoneLetters)
             {
                 var captured = letter;
                 this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
