@@ -30,7 +30,7 @@ import { LIST_ORDER, packageSize } from './dev.ts';
 /** A package name the opener knows how to click. */
 export type PackageName = (typeof LIST_ORDER)[number];
 
-/** The ten dash faces: everything in the list that is not a companion or a pit wall. */
+/** The dash faces: everything in the list that is not a companion or a pit wall. */
 export const FACES: readonly PackageName[] = LIST_ORDER.filter((n) => !n.includes('Companion') && !n.includes('Pit wall'));
 
 export interface ShotsOptions {
