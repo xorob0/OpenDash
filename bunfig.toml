@@ -1,2 +1,3 @@
 [test]
-root = "packages"
+# Both the packages and the scripts under scripts/ carry tests; node_modules is skipped by Bun.
+root = "."
