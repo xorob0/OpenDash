@@ -12,6 +12,7 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
+import type { Expr } from '../bind.ts';
 import { gear as gearComponent, GEAR_CHARS } from '../components/gear.ts';
 import { boxSlack, cells, gearCells, monoWidth } from '../design/metrics.ts';
 import { rect } from '../design/geometry.ts';
@@ -25,7 +26,7 @@ import { pageBuilder } from '../modules/index.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 
-const { game, fmt, isnull, num, str, iff, eq, add, sub } = ncalc;
+const { game, fmt, isnull, num, str, iff, eq } = ncalc;
 
 /** The weight the speed page draws its one big value in, and the weight it is measured in. */
 const SPEED_WEIGHT = 'Bold' as const;
@@ -54,14 +55,14 @@ function gearSpeedRevs(frame: Rect, prefix: string): Item[] {
   items.push(
     numeral(`${prefix}speed`, '187', frame.left, speedTop, speedH, CHARS.speed, {
       bind: fmt(isnull(game('SpeedKmh'), num(0)), '0'),
-      maxWidth: frame.width,
+      width: frame.width,
       hAlign: 'center',
     }),
     unit(`${prefix}speed.unit`, 'KM/H', frame.left, speedTop + speedH + d.fieldGap, frame.width, { hAlign: 'center', bind: game('SpeedLocalUnit') }),
     numeral(`${prefix}revs`, '7,420', frame.left, speedTop + speedH + labelH + d.fieldGap * 2, revsH, CHARS.rpm, {
       bind: fmt(isnull(game('Rpms'), num(0)), '#,##0'),
       color: ds.color.text.secondary,
-      maxWidth: frame.width,
+      width: frame.width,
       hAlign: 'center',
     }),
   );
@@ -79,15 +80,15 @@ function neighbours(frame: Rect, size: number, prefix: string): Item[] {
   const small = Math.round(size * 0.34);
   const mono = gearCells(small);
   const width = monoWidth(mono, GEAR_CHARS);
-  const gearValue = isnull(game('Gear'), num(0));
+  const gear = game('Gear');
   const top = frame.top + (frame.height - small) / 2;
   // The box takes four pixels beyond its cell so WPF clips nothing, so the right neighbour is
   // inset by that much more than the left one.
   const inset = 2;
   const boxSlack = 4;
   const sides = [
-    { id: 'below', x: frame.left + inset, value: sub(gearValue, num(1)), hide: eq(gearValue, num(0)) },
-    { id: 'above', x: frame.left + frame.width - width - inset - boxSlack, value: add(gearValue, num(1)), hide: eq(gearValue, num(0)) },
+    { id: 'below', x: frame.left + inset, step: -1 as const },
+    { id: 'above', x: frame.left + frame.width - width - inset - boxSlack, step: 1 as const },
   ];
   return sides.map((side) =>
     numeral(`${prefix}gear.${side.id}`, side.id === 'below' ? '3' : '5', side.x, top, small, GEAR_CHARS, {
@@ -96,9 +97,33 @@ function neighbours(frame: Rect, size: number, prefix: string): Item[] {
       // and the dim colour is the token for exactly this -- something present but not being read.
       color: ds.color.text.dim,
       maxWidth: width + 4,
-      bind: iff(side.hide, str(''), fmt(side.value, '0')),
+      bind: gearNeighbour(gear, side.step),
     }),
   );
+}
+
+/** The forward gears SimHub can report, as the strings it reports them in. */
+const FORWARD_GEARS = ['1', '2', '3', '4', '5', '6', '7', '8'] as const;
+
+/**
+ * The gear one above or one below, as text mapped from text.
+ *
+ * **SimHub publishes the gear as a string** -- "N", "R", "1" -- so it cannot be added to. NCalc's
+ * `+` has a string overload, so `[Gear] + 1` in third gear evaluates to "31", and a cell one
+ * character wide draws the 3: the right-hand ghost showed the gear the car was already in, which
+ * is what the first capture of the 1920 face caught. `-` has no string overload and coerced, which
+ * is why only one side of the pair was wrong.
+ *
+ * Mapping text to text keeps arithmetic out of it entirely. Neutral and reverse match nothing and
+ * draw nothing, and so does the gear below first -- which is the behaviour the ends of the box
+ * wanted anyway.
+ */
+function gearNeighbour(gear: Expr, step: 1 | -1): Expr {
+  return FORWARD_GEARS.reduce<Expr>((fallback, g) => {
+    const neighbour = Number(g) + step;
+    if (neighbour < 1 || neighbour > FORWARD_GEARS.length + 1) return fallback;
+    return iff(eq(gear, str(g)), str(String(neighbour)), fallback);
+  }, str(''));
 }
 
 /** A2: the gear alone, as large as the column allows. */
@@ -131,14 +156,14 @@ function speedPage(frame: Rect, prefix: string): Item[] {
     numeral(`${prefix}speed`, '187', frame.left, speedTop, size, CHARS.speed, {
       bind: fmt(isnull(game('SpeedKmh'), num(0)), '0'),
       weight: SPEED_WEIGHT,
-      maxWidth: frame.width,
+      width: frame.width,
       hAlign: 'center',
     }),
     unit(`${prefix}speed.unit`, 'KM/H', frame.left, speedTop + size + d.fieldGap, frame.width, { hAlign: 'center', bind: game('SpeedLocalUnit') }),
     numeral(`${prefix}gear`, '4', frame.left, speedTop + size + labelH + d.gapY, gearH, GEAR_CHARS, {
       mono: gearCells(gearH),
       bind: game('Gear'),
-      maxWidth: frame.width,
+      width: frame.width,
       hAlign: 'center',
     }),
     label(`${prefix}gear.label`, 'GEAR', frame.left, speedTop + size + labelH + d.gapY + gearH + d.fieldGap, frame.width, { size: labelH, hAlign: 'center' }),

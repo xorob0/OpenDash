@@ -25,6 +25,15 @@ export interface NumeralOptions {
   hAlign?: HAlign;
   /** Widest the box may be, typically the card's inner width; the slack is capped by it. */
   maxWidth?: number;
+  /**
+   * The box's exact width, for a value centred or right-aligned in a column it does not fill.
+   *
+   * `maxWidth` is a cap and cannot do this: it leaves the box at the width of the cells, so
+   * `hAlign: 'center'` centres the value inside its own glyphs and the column's centre is never
+   * involved. Zone A's speed sat hard against the left edge of a 380 px column for exactly that
+   * reason.
+   */
+  width?: number;
   /** Text binding. `sample` is the design-time text. */
   bind?: Expr;
   visibleBind?: Expr;
@@ -39,7 +48,8 @@ export function numeral(name: string, sample: string, x: number, y: number, fs: 
   const budget = monoWidth(mono, chars);
   const wanted = budget + boxSlack(fs);
   // Floored, so that a box whose left rounds up still ends inside the room it was given.
-  const width = opts.maxWidth === undefined ? wanted : Math.max(budget, Math.min(wanted, Math.floor(opts.maxWidth)));
+  const capped = opts.maxWidth === undefined ? wanted : Math.max(budget, Math.min(wanted, Math.floor(opts.maxWidth)));
+  const width = opts.width === undefined ? capped : Math.max(budget, Math.floor(opts.width));
   return {
     kind: 'text',
     name,
