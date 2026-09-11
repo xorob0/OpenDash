@@ -12,7 +12,9 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Input;
+using SimHub.Plugins;
 using SimHub.Plugins.Styles;
+using SimHub.Plugins.UI;
 
 namespace OpenDashPlugin
 {
@@ -619,8 +621,7 @@ namespace OpenDashPlugin
 
         // Buttons
 
-        /// <summary>The quick glance: one zone and one page a held button shows. The four cycling bindings
-        /// join it here in XOR-93, which is where SimHub's own action list is wired up.</summary>
+        /// <summary>A button per zone to cycle it, and one held for a glance.</summary>
         private FrameworkElement BuildButtons()
         {
             var caption = Ui.Caption("Hold to show one page, release to return. Usually the relative or the map.");
@@ -659,7 +660,60 @@ namespace OpenDashPlugin
             var text = Ui.VStack(4, Ui.Body("Quick glance"), caption);
             text.MaxWidth = 460;
             text.HorizontalAlignment = HorizontalAlignment.Left;
-            return Ui.Section("Buttons", Ui.Row(text, Ui.HStack(8, zoneBox, pageHost)));
+
+            var rows = new List<UIElement>
+            {
+                Ui.Row(
+                    "Next page",
+                    "Bind a wheel button per zone. A driver cycles a zone without taking a hand off the wheel, "
+                        + "which is the whole point of zones.",
+                    BuildZoneBindings()),
+                Ui.Row(text, Ui.HStack(8, zoneBox, pageHost)),
+                BuildGlanceBinding(),
+            };
+            return Ui.Section("Buttons", rows.ToArray());
+        }
+
+        /// <summary>One binder per zone, stacked, each naming the zone it cycles.</summary>
+        private FrameworkElement BuildZoneBindings()
+        {
+            var binders = Contract.FaceZoneLetters
+                .Select(letter => BuildBinder(Contract.CycleZoneAction(letter), "Zone " + letter))
+                .ToArray();
+            var stack = Ui.VStack(6, binders);
+            stack.HorizontalAlignment = HorizontalAlignment.Right;
+            return stack;
+        }
+
+        private FrameworkElement BuildGlanceBinding()
+        {
+            return Ui.Row(Ui.Label("Glance button"), BuildBinder(Contract.HoldQuickGlanceAction, "Quick glance", hold: true));
+        }
+
+        /// <summary>
+        /// SimHub's own control for binding an input to an action, so a wheel button is bound here
+        /// rather than by sending the driver to Controls and events to find the name.
+        ///
+        /// It is a SimHub UserControl and SimHub is not always there -- the panel is constructed in
+        /// tests and could be constructed by a host that does not carry the style -- so a failure
+        /// falls back to naming the action, which is exactly what somebody binding it by hand needs.
+        /// </summary>
+        private static FrameworkElement BuildBinder(string action, string friendlyName, bool hold = false)
+        {
+            try
+            {
+                var editor = new ControlsEditor { ActionName = Contract.FullActionName(action), FriendlyName = friendlyName, MinWidth = 260 };
+                editor.HorizontalAlignment = HorizontalAlignment.Right;
+                if (hold) HoldWhilePressed(editor);
+                return editor;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("ControlsEditor is unavailable; naming the action instead: " + ex.Message);
+                var text = Ui.Text(friendlyName + " — bind " + Contract.FullActionName(action) + " in Controls and events", Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
+                text.HorizontalAlignment = HorizontalAlignment.Right;
+                return text;
+            }
         }
 
         // Companion
@@ -794,6 +848,32 @@ namespace OpenDashPlugin
                 if (args.Key == Key.Enter) commit();
             };
             return box;
+        }
+
+        /// <summary>
+        /// Forces a glance binding to the one press type that can hold anything.
+        ///
+        /// SimHub only calls an action's start on press and its end on release when the mapping's
+        /// press type is `During`; every other type goes through TriggerAction, which fires start and
+        /// end back to back. The binding dialog offers ShortAndLongPress by default, so a driver who
+        /// binds the glance the obvious way gets a page that appears and vanishes in one frame.
+        ///
+        /// The glance is only meaningful as a hold, so any binding to it is corrected rather than
+        /// second-guessed. The dialog writes into Model.Triggers; this watches that collection.
+        /// </summary>
+        private static void HoldWhilePressed(ControlsEditor editor)
+        {
+            var model = editor.Model;
+            if (model == null) return;
+            Action apply = () =>
+            {
+                foreach (var mapping in model.Triggers)
+                {
+                    if (mapping != null && mapping.PressType != PressType.During) mapping.PressType = PressType.During;
+                }
+            };
+            model.Triggers.CollectionChanged += (sender, args) => apply();
+            apply();
         }
 
         /// <summary>The duplicate warning: triangle icon and caution text, hidden while every card is unique.</summary>
