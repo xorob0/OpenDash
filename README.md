@@ -6,8 +6,8 @@ the MIT licence.
 > **Status: alpha.** Fourteen packages are built: ten dash faces from 1920 by 480 down to a
 > 480 px round DDU, two companion screens and two pit wall screens, plus a SimHub plugin that
 > installs them all and exposes their settings. Everything below has been verified on
-> SimHub 9.12.6. See [docs/scope-mvp.md](docs/scope-mvp.md) for what version 1 of the face is,
-> and [docs/second-screens.md](docs/second-screens.md) for the companion and the pit wall.
+> SimHub 9.12.6. See [docs/scope.md](docs/scope.md) for what openDash is and what it refuses to
+> be, and [docs/second-screens.md](docs/second-screens.md) for the companion and the pit wall.
 
 ## What makes this different
 
@@ -47,11 +47,12 @@ Dash Studio like any other.
 
 ## The dashboard
 
-The face is a fixed hero zone and twelve equal slots. The hero holds what a driver reads by
-reflex: the gear, a fifteen segment rev bar with SimHub's per-car shift lights, the
-flag strip and the pit limiter. Every other field is a card, and any card can be placed in any
-slot from the plugin: speed, current, last and best lap, delta, position, session progress,
-fuel, fuel laps, TC, ABS, tyre temperatures and tyre pressures.
+The face is a fixed hero zone and a grid of equal slots, twelve of them at 1920 by 480 and
+fewer on a smaller screen. The hero holds what a driver reads by reflex: the gear, a fifteen
+segment rev bar with SimHub's per-car shift lights, the flag strip and the pit limiter. Every
+other field is a card, and any card can be placed in any slot from the plugin: speed, current,
+last and best lap, delta, position, session progress, fuel, fuel laps, TC, ABS, tyre
+temperatures and tyre pressures.
 
 The plugin settings are SimHub properties (`OpenDash.ShiftLights`, `OpenDash.PositionMode`,
 `OpenDash.DeltaReference`, `OpenDash.SessionProgress`, `OpenDash.Slot01` to `Slot12`), so
@@ -114,7 +115,8 @@ plugin/
 tools/
   irsdk-emulator/      Synthetic iRacing telemetry feed for testing dashboards without the sim
 docs/
-  scope-mvp.md         What version 1 is, and what it is not
+  scope.md             What openDash is, what ships, and what is deliberately not built
+  scope-mvp.md         The MVP contract, closed and superseded by scope.md
   second-screens.md    The companion and the pit wall, and what they deliberately do not show
   architecture.md      How source becomes a .simhubdash, and how a setting reaches it
   decisions/           Architecture decision records

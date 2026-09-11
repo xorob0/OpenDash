@@ -50,6 +50,13 @@ dotnet build plugin/OpenDash -c Release
 - `plugin/OpenDash` is the C# plugin. `Contract.cs` mirrors `contract.ts` and a test keeps the
   two card catalogues identical.
 
+## Before you start
+
+[docs/scope.md](docs/scope.md) says what openDash is, what ships, and what is deliberately not
+built. The last of those is a list of refusals rather than a backlog, so a change that falls
+under one of its lines will be declined however well it is written. Should you believe a line
+ought to move, argue that first, in an issue or a decision record, and the code afterwards.
+
 ## Making a change
 
 1. Change the TypeScript (or the C#).
