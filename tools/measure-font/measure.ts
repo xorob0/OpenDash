@@ -42,6 +42,7 @@ interface Font {
   glyfLength: number;
   advances: number[];
   cmap: Map<number, number>;
+  nameOffset: number;
   data: DataView;
 }
 
@@ -83,7 +84,17 @@ export function parseFont(bytes: Uint8Array): Font {
     advances.push(data.getUint16(hmtx + index * 4));
   }
 
-  return { unitsPerEm, numGlyphs, loca, glyfOffset: need('glyf').offset, glyfLength: need('glyf').length, advances, cmap: parseCmap(data, need('cmap').offset), data };
+  return {
+    unitsPerEm,
+    numGlyphs,
+    loca,
+    glyfOffset: need('glyf').offset,
+    glyfLength: need('glyf').length,
+    advances,
+    cmap: parseCmap(data, need('cmap').offset),
+    nameOffset: need('name').offset,
+    data,
+  };
 }
 
 /** Character code to glyph id, from the first format 4 or format 12 subtable offered. */
@@ -168,6 +179,36 @@ export function measure(font: Font, char: string): GlyphMetrics | undefined {
 export function loadFont(path: string): Font {
   return parseFont(new Uint8Array(readFileSync(path)));
 }
+
+/** Name table ids worth asking for. 1 and 2 are the legacy pair, 16 and 17 the typographic one. */
+export const NAME_ID = { family: 1, subfamily: 2, full: 4, postscript: 6, typographicFamily: 16, typographicSubfamily: 17 } as const;
+
+/**
+ * A string from the name table, reading the Windows (platform 3) records, which are UTF-16BE.
+ *
+ * Which family a renderer uses is not a formality: WPF groups faces by the typographic family when
+ * one is given and by the legacy family otherwise, which is how "Barlow Condensed" came to be
+ * drawn as Barlow.
+ */
+export function fontName(font: Font, nameId: number): string | undefined {
+  const { data } = font;
+  const table = font.nameOffset;
+  const count = data.getUint16(table + 2);
+  const storage = table + data.getUint16(table + 4);
+  for (let i = 0; i < count; i++) {
+    const record = table + 6 + i * 12;
+    if (data.getUint16(record) !== 3 || data.getUint16(record + 6) !== nameId) continue;
+    const length = data.getUint16(record + 8);
+    const at = storage + data.getUint16(record + 10);
+    let out = '';
+    for (let c = 0; c < length; c += 2) out += String.fromCharCode(data.getUint16(at + c));
+    return out;
+  }
+  return undefined;
+}
+
+/** The family a renderer will file this face under: the typographic one when it has one. */
+export const familyOf = (font: Font): string | undefined => fontName(font, NAME_ID.typographicFamily) ?? fontName(font, NAME_ID.family);
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
