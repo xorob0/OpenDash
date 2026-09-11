@@ -67,7 +67,7 @@ namespace OpenDashPlugin
             return block;
         }
 
-        /// <summary>.num on the canvas: Barlow Condensed SemiBold.</summary>
+        /// <summary>.num on the canvas: openDash Display SemiBold, which is Barlow Condensed.</summary>
         public static TextBlock Numeral(string text, double size, string hex)
         {
             return Text(text, size, FontWeights.SemiBold, hex, PanelFonts.Data);

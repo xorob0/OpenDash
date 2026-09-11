@@ -5,8 +5,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bun run build
-rm -f plugin/OpenDash/Resources/*.simhubdash
+rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/fonts
 cp build/*.simhubdash plugin/OpenDash/Resources/
+cp -R build/fonts plugin/OpenDash/Resources/fonts
 dotnet build plugin/OpenDash -c Release --no-incremental
 bash plugin/scripts/package-plugin.sh
 echo "packaged: $(ls build/*.simhubdash | tr '\n' ' ') build/OpenDash-plugin.zip"

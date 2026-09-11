@@ -8,10 +8,11 @@
  * slots, rung, file }` in `<out>/manifest.json`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { declaredProperties, PROPERTY_PREFIX } from './contract.ts';
 import { buildPackage, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
+import { fontsForPanel } from './design/fontFiles.ts';
 import type { Rung } from './design/rung.ts';
 import {
   formatIssues,
@@ -35,6 +36,8 @@ export const DEFAULT_OUT_DIR = path.join(REPO_ROOT, 'build');
 /** The one version string of the project. */
 export const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
 export const MANIFEST_FILE = 'manifest.json';
+/** Where the build leaves the fonts the plugin embeds, relative to the output directory. */
+export const PANEL_FONTS_DIR = 'fonts';
 /** Environment fallback for `--strategy`, as the spec's `SLOT_STRATEGY=inline` build flag. */
 export const STRATEGY_ENV = 'SLOT_STRATEGY';
 
@@ -255,6 +258,18 @@ export function build(opts: BuildOptions = {}): BuildResult {
       file: `${pkg.folderName}${PACKAGE_EXTENSION}`,
     });
   }
+  // The plugin's settings panel draws in the same renamed family and embeds its own copies, and
+  // its build runs on a machine that has never run this one. So the fonts a release needs are left
+  // beside the packages, where the plugin build (and CI, which hands one job's output to the next)
+  // picks them up; see plugin/OpenDash/OpenDash.csproj.
+  const fontsOut = path.join(out, PANEL_FONTS_DIR);
+  mkdirSync(fontsOut, { recursive: true });
+  for (const font of fontsForPanel()) {
+    const target = path.join(fontsOut, path.basename(font));
+    copyFileSync(font, target);
+    log(`wrote ${relative(target)}`);
+  }
+
   const manifestPath = path.join(out, MANIFEST_FILE);
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   log(`wrote ${relative(manifestPath)}`);

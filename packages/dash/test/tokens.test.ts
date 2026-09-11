@@ -19,7 +19,7 @@ describe('tokens', () => {
     expect(() => resolveToken('color.surface')).toThrow(/group/);
     expect(tokenExists('color.surface.base')).toBe(true);
     expect(tokenExists('color.surface.nope')).toBe(false);
-    expect(tokenNode('font.family.data')).toMatchObject({ value: 'Barlow Condensed' });
+    expect(tokenNode('font.family.data')).toMatchObject({ value: 'openDash Display' });
   });
 
   test('every ds path exists in tokens.json', () => {
@@ -43,7 +43,9 @@ describe('tokens', () => {
   });
 
   test('exposes what the spec names', () => {
-    expect(ds.font.data).toBe('Barlow Condensed');
+    // The data family is Barlow Condensed under a name with no width word in it, so that WPF files
+    // it as its own family rather than as a stretch of Barlow. See design/fontFiles.ts.
+    expect(ds.font.data).toBe('openDash Display');
     expect(ds.font.label).toBe('Barlow');
     expect(ds.size).toEqual({ gear: 260, gearSm: 180, hero: 116, lapTime: 64, value: 46, valueSm: 34, label: 15, labelSm: 13 });
     expect(ds.space).toEqual({ 1: 4, 2: 8, 3: 12, 4: 16, 5: 24, 6: 32, 7: 48, 8: 64 });

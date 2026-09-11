@@ -54,6 +54,7 @@ jobs:
           path: |
             build/*.simhubdash
             build/manifest.json
+            build/fonts/*.ttf
           if-no-files-found: error
 
   plugin:
