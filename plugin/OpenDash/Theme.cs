@@ -34,7 +34,7 @@ namespace OpenDashPlugin
         public const string StatusNotInstalled = "#33383F"; // purpose.status.notInstalled
 
         // Type
-        public const string FontData = "Barlow Condensed"; // font.family.data
+        public const string FontData = "openDash Display"; // font.family.data
         public const string FontLabel = "Barlow"; // font.family.label
         public const double SizeWordmark = 28; // font.size.ui.wordmark
         public const double SizeTitle = 16; // font.size.ui.title

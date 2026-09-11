@@ -11,7 +11,7 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { gearCells, monoWidth } from '../design/metrics.ts';
+import { GEAR_CELL, gearCells, monoWidth } from '../design/metrics.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
 
@@ -33,6 +33,15 @@ export const GEAR_SIZES = {
 export function gear(frame: Rect, size: number = GEAR_SIZES.standard, prefix = 'hero'): Item[] {
   const mono = gearCells(size);
   const width = monoWidth(mono, GEAR_CHARS);
+  // A frame too narrow for the cell has only bad answers: narrowing the cell clips the glyph, and
+  // keeping it draws over whatever the frame was protecting. Neither is something to do quietly,
+  // so a layout that cannot give the gear its cell has to say what it wants instead.
+  if (width + GEAR_BOX_SLACK > frame.width) {
+    throw new Error(
+      `${prefix}.gear: a ${size} px gear needs ${width + GEAR_BOX_SLACK} px and the frame gives ${frame.width}. ` +
+        `Either give it more room or set a size of at most ${Math.floor((frame.width - GEAR_BOX_SLACK) / GEAR_CELL)}.`,
+    );
+  }
   const left = frame.left + (frame.width - width) / 2;
   const top = frame.top + (frame.height - size) / 2;
   // The box takes a few pixels beyond the cell so that WPF never clips the glyph, and no more:

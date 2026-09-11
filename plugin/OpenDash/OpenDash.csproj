@@ -65,14 +65,14 @@
     <EmbeddedResource Include="Resources/*.simhubdash" />
   </ItemGroup>
 
-  <!-- Barlow faces for the settings panel, extracted to a private folder at runtime (PanelFonts.cs).
-       Shared with the dash package; redistributed under the SIL OFL 1.1 (fonts/OFL.txt). -->
+  <!-- The faces the settings panel draws in, extracted to a private folder at runtime (PanelFonts.cs).
+       They come from the dash build rather than from fonts/ directly: the condensed ones are renamed on the
+       way out of it, because WPF folds a family whose name carries a width word into the unadorned one and
+       the panel would otherwise draw in Barlow. The dash build writes them to build/fonts and CI copies
+       them into Resources/fonts beside the packages, which is the same route the .simhubdash files take.
+       Redistributed under the SIL OFL 1.1 (fonts/OFL.txt). -->
   <ItemGroup>
-    <EmbeddedResource Include="../../packages/dash/fonts/Barlow-Regular.ttf" Link="Fonts/Barlow-Regular.ttf" LogicalName="OpenDash.Fonts.Barlow-Regular.ttf" />
-    <EmbeddedResource Include="../../packages/dash/fonts/Barlow-Medium.ttf" Link="Fonts/Barlow-Medium.ttf" LogicalName="OpenDash.Fonts.Barlow-Medium.ttf" />
-    <EmbeddedResource Include="../../packages/dash/fonts/BarlowCondensed-Light.ttf" Link="Fonts/BarlowCondensed-Light.ttf" LogicalName="OpenDash.Fonts.BarlowCondensed-Light.ttf" />
-    <EmbeddedResource Include="../../packages/dash/fonts/BarlowCondensed-SemiBold.ttf" Link="Fonts/BarlowCondensed-SemiBold.ttf" LogicalName="OpenDash.Fonts.BarlowCondensed-SemiBold.ttf" />
-    <EmbeddedResource Include="../../packages/dash/fonts/BarlowCondensed-Bold.ttf" Link="Fonts/BarlowCondensed-Bold.ttf" LogicalName="OpenDash.Fonts.BarlowCondensed-Bold.ttf" />
+    <EmbeddedResource Include="Resources/fonts/*.ttf" Link="Fonts/%(Filename)%(Extension)" LogicalName="OpenDash.Fonts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../packages/dash/fonts/OFL.txt" Link="Fonts/OFL.txt" LogicalName="OpenDash.Fonts.OFL.txt" />
   </ItemGroup>
 </Project>

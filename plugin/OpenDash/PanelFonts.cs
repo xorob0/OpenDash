@@ -1,4 +1,4 @@
-// PanelFonts.cs: Barlow and Barlow Condensed for the settings panel. The TTFs are embedded in the assembly
+// PanelFonts.cs: Barlow and openDash Display (Barlow Condensed renamed) for the settings panel. The TTFs are embedded in the assembly
 // (the project has no WPF resource pipeline, so pack:// URIs are unavailable); they are written once to
 // %LocalAppData%\openDash\Fonts and loaded from there through a directory-based FontFamily. Any failure
 // falls back to Segoe UI, which is SimHub's own UI font, and is logged once.
@@ -13,13 +13,16 @@ namespace OpenDashPlugin
         private const string ResourcePrefix = "OpenDash.Fonts.";
         private const string FallbackFamily = "Segoe UI";
 
+        // The condensed faces are openDash's own build of Barlow Condensed, renamed so that WPF files them
+        // as a family of their own instead of folding them into Barlow as a stretch; the panel asks for the
+        // same family the dash face does. See packages/dash/src/design/fontFiles.ts.
         private static readonly string[] Files =
         {
             "Barlow-Regular.ttf",
             "Barlow-Medium.ttf",
-            "BarlowCondensed-Light.ttf",
-            "BarlowCondensed-SemiBold.ttf",
-            "BarlowCondensed-Bold.ttf",
+            "openDashDisplay-Light.ttf",
+            "openDashDisplay-SemiBold.ttf",
+            "openDashDisplay-Bold.ttf",
             "OFL.txt",
         };
 
@@ -34,7 +37,7 @@ namespace OpenDashPlugin
             get { Ensure(); return label; }
         }
 
-        /// <summary>Barlow Condensed: the wordmark and numerals.</summary>
+        /// <summary>openDash Display, which is Barlow Condensed: the wordmark and numerals.</summary>
         public static FontFamily Data
         {
             get { Ensure(); return data; }

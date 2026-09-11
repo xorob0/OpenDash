@@ -7,10 +7,22 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { build, BuildError, DEFAULT_OUT_DIR, main, MANIFEST_FILE, parseArgs, readVersion, validateOrThrow, type BuildResult } from '../src/build.ts';
+import { basename, join } from 'node:path';
+import {
+  build,
+  BuildError,
+  DEFAULT_OUT_DIR,
+  main,
+  MANIFEST_FILE,
+  PANEL_FONTS_DIR,
+  parseArgs,
+  readVersion,
+  validateOrThrow,
+  type BuildResult,
+} from '../src/build.ts';
 import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
+import { fontsForPanel, needsRename, renameFamily, renamedFileName } from '../src/design/fontFiles.ts';
 import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, listFiles, PACKAGE_EXTENSION, readZip } from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
@@ -40,7 +52,7 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-const FONT_FILES = [`${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/BarlowCondensed-Bold.ttf`, `${FONTS_DIR}/BarlowCondensed-SemiBold.ttf`];
+const FONT_FILES = [`${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/openDashDisplay-Bold.ttf`, `${FONTS_DIR}/openDashDisplay-SemiBold.ttf`];
 
 const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -101,7 +113,10 @@ describe('widget build on disk', () => {
     }
     expect(listFiles(join(widget.out, 'openDash'))).toEqual(EXPECTED_FILES);
     expect(existsSync(join(widget.out, MANIFEST_FILE))).toBe(true);
-    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, ...FOLDERS, ...FOLDERS.map(zipName)].sort());
+    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, ...FOLDERS, ...FOLDERS.map(zipName)].sort());
+    // The panel's fonts sit beside the packages rather than in one, because the plugin embeds them
+    // and its build never runs this one; see plugin/OpenDash/OpenDash.csproj.
+    expect(readdirSync(join(widget.out, PANEL_FONTS_DIR)).sort()).toEqual(fontsForPanel().map((f) => basename(f)).sort());
   });
 
   test('folder names with spaces are written and zipped as they are', () => {
@@ -153,12 +168,19 @@ describe('widget build on disk', () => {
     }
   });
 
-  test('the bundled fonts are the three face fonts, byte-identical to fonts/, in every package', () => {
+  /**
+   * The two condensed faces are not byte-identical to `fonts/` any more, because a package ships
+   * them under a family WPF will not fold into Barlow. What has to hold is that the difference is
+   * exactly the rename and nothing else, which is checked by doing the rename here and comparing.
+   */
+  test('the bundled fonts are the three face fonts as fonts/ holds them, renamed, in every package', () => {
     for (const folder of FOLDERS) {
       const fontsDir = join(widget.out, folder, FONTS_DIR);
-      expect(readdirSync(fontsDir).sort()).toEqual([...FACE_FONT_FILES].sort());
+      expect(readdirSync(fontsDir).sort()).toEqual(FACE_FONT_FILES.map(renamedFileName).sort());
       for (const f of FACE_FONT_FILES) {
-        expect(Buffer.compare(readFileSync(join(fontsDir, f)), readFileSync(join(import.meta.dir, '..', 'fonts', f)))).toBe(0);
+        const source = new Uint8Array(readFileSync(join(import.meta.dir, '..', 'fonts', f)));
+        expect(renameFamily(source) > 0).toBe(needsRename(f));
+        expect(Buffer.compare(readFileSync(join(fontsDir, renamedFileName(f))), Buffer.from(source))).toBe(0);
       }
     }
   });
@@ -316,11 +338,13 @@ describe('reproducibility', () => {
 
 describe('second screens on disk', () => {
   // The pit wall wordmark sets "open" in Barlow Condensed Light, which the face does not use.
-  const SECOND_FONTS = ['Barlow-Medium.ttf', 'BarlowCondensed-Bold.ttf', 'BarlowCondensed-Light.ttf', 'BarlowCondensed-SemiBold.ttf'].map((f) => `_SHFonts/${f}`);
+  const SECOND_FONTS = ['Barlow-Medium.ttf', 'openDashDisplay-Bold.ttf', 'openDashDisplay-Light.ttf', 'openDashDisplay-SemiBold.ttf'].map((f) => `_SHFonts/${f}`);
 
   test('writes a folder and a zip per companion and pit wall', () => {
     expect(second.packages.map((p) => p.pkg.folderName)).toEqual(SCREEN_PACKAGES.map((s) => s.folder));
-    expect(readdirSync(second.out).sort()).toEqual([MANIFEST_FILE, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort());
+    expect(readdirSync(second.out).sort()).toEqual(
+      [MANIFEST_FILE, PANEL_FONTS_DIR, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
+    );
   });
 
   test('each package carries its main dashboard, its zone dashboards and the four fonts', () => {

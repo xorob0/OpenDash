@@ -6,6 +6,7 @@
 import path from 'node:path';
 import type { Dashboard, DashboardMetadata, DashPackage } from './generator.ts';
 import { hero } from './hero/hero.ts';
+import { GENERATED_FONTS_DIR, prepareFont } from './design/fontFiles.ts';
 import type { Layout } from './layouts/layout.ts';
 import { rule } from './elements/rule.ts';
 import { CARDS_DASHBOARD_NAME, cardScreens, DEFAULT_STRATEGY, inlineSlotItems, widgetSlotItems, type SlotStrategy } from './slots.ts';
@@ -75,10 +76,13 @@ export function buildLayout(layout: Layout, opts: BuildOptions): BuiltLayout {
 /** The TTFs the face uses; the others in fonts/ stay for the plugin and future surfaces. */
 export const FACE_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'Barlow-Medium.ttf'] as const;
 
-/** Absolute paths of the fonts to copy into `_SHFonts/`. */
+/**
+ * Absolute paths of the fonts to copy into `_SHFonts/`, renamed on the way so that SimHub resolves
+ * the condensed family at all; `design/fontFiles.ts` explains why that is necessary.
+ */
 export function fontsForPackage(): string[] {
   const dir = path.resolve(import.meta.dir, '..', 'fonts');
-  return FACE_FONT_FILES.map((f) => path.join(dir, f));
+  return FACE_FONT_FILES.map((f) => prepareFont(path.join(dir, f), path.join(dir, GENERATED_FONTS_DIR)));
 }
 
 /** The package for a layout: folder, dashboards (cards.djson only with the widget strategy) and fonts. */

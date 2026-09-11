@@ -656,7 +656,8 @@ const ROUND_ROWS: RoundRow[] = [
     face: FACE_480,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 240, cy: 240, r: 206 }, segment: { width: 22, height: 14 } },
-      gear: { rect: rect(12, 108, 456, 340) },
+      // The gap between the two slots, which takes the spec's 260 gear without a size of its own.
+      gear: { rect: rect(160, 108, 160, 340) },
       pitLimiter: rect(165, 112, 150, 28),
       flags: { kind: 'flagRing', face: FACE_480 },
     },
@@ -833,8 +834,10 @@ describe('the round faces, row by row of the spec table', () => {
 describe('480 round', () => {
   const layout = layout480round;
 
+  // The full 260 of the spec, in the 160 px between the two slots: a 260 gear needs 139 px of cell
+  // and fits. It was cut to 228 while the cell had to hold whichever Barlow WPF resolved (XOR-84).
   test('the gear alone, 260, centred on the face', () => {
-    const [gearItem] = gear(layout.hero.gear.rect);
+    const [gearItem] = gear(layout.hero.gear.rect, layout.hero.gear.size);
     if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
     expect(gearItem.fontSize).toBe(260);
     expect(gearItem.fontWeight).toBe('Bold');
