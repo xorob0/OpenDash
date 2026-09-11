@@ -22,6 +22,7 @@ import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, zoneDashboardName } from '../src/screens/index.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
+import { cellOverruns } from './monoGlyphs.ts';
 import { ds } from '../src/tokens.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -249,6 +250,28 @@ describe('the contract', () => {
     expect(text).toContain('OpenDash.PositionMode');
     for (const p of dashProperties().filter((n) => n.includes('.Slot'))) expect(text).not.toContain(p);
   });
+});
+
+describe('a monospaced value only draws glyphs that fit its cell', () => {
+  // Rule 19. `metrics.ts` has said since the cells were cut that "the cell holds every glyph a
+  // value can draw, not only the digits", and nothing enforced it over these packages: the glyph
+  // check in textFit.test.ts covers the faces only, and against a fixed glyph set that `#` was
+  // never in. Thirty-one items drew one anyway, in cells cut for digits, and WPF clipped every
+  // one. The set here is the item's own text, so a value that gains a character nobody measured
+  // fails here rather than on somebody's screen.
+  for (const { def, pkg } of PACKAGES) {
+    test(def.folder, () => {
+      let monospaced = 0;
+      for (const dashboard of pkg.dashboards) {
+        for (const item of textsOf(dashboard)) {
+          if (!item.monospace) continue;
+          monospaced += 1;
+          expect({ item: item.name, overruns: cellOverruns(item) }).toMatchObject({ overruns: [] });
+        }
+      }
+      expect(monospaced).toBeGreaterThan(0);
+    });
+  }
 });
 
 describe('every module fits the box it is given', () => {
