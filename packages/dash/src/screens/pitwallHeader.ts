@@ -39,6 +39,28 @@ const FLAG_LOOK: Record<string, { color: `#${string}`; name: string }> = {
   Flag_Green: { color: ds.purpose.flag.green, name: 'Green' },
 };
 
+/**
+ * The longest name the flag binding can draw. The header is measured before the binding exists,
+ * so a box cut to "GREEN" loses the "G" of "NO FLAG" and half of "CHEQUERED".
+ */
+const WIDEST_FLAG_NAME = 'CHEQUERED';
+
+/**
+ * The longest session name SimHub reports for iRacing, uppercased. `SessionTypeName` passes
+ * iRacing's own `SessionType` through, and "Offline Testing" is the longest of Practice, Lone
+ * Qualify, Open Qualify, Warmup, Heat, Consolation and Race.
+ */
+const WIDEST_SESSION_NAME = 'OFFLINE TESTING';
+
+/**
+ * iRacing writes `IncidentLimit` as a number or as the word "unlimited", which is what a hosted
+ * session with no limit reports and what the header has to have room for.
+ */
+const WIDEST_INCIDENT_LIMIT = '/ unlimited';
+
+/** A lap total wider than three digits is not a race anyone drives. */
+const WIDEST_LAP_TOTAL = 'OF 999';
+
 /** The flag colour and name as one expression each, in priority order, defaulting to no flag. */
 const flagColour = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => iff(flagVisible(flag), str(FLAG_LOOK[flag]?.color ?? ds.color.text.dim), fallback), str(ds.color.text.dim));
 const flagName = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => iff(flagVisible(flag), str((FLAG_LOOK[flag]?.name ?? '').toUpperCase()), fallback), str('NO FLAG'));
@@ -113,9 +135,12 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     {
       id: 'session',
       parts: [
-        { kind: 'label', text: 'RACE', bind: ucase(sessionType()) },
+        // Sized for "OFFLINE TESTING" and drawn from the right, so that the slack a short name
+        // leaves falls to the left, into the empty middle of the header, rather than opening a
+        // hole between the session name and the lap.
+        { kind: 'label', text: 'RACE', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: ucase(sessionType()) },
         { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
-        { kind: 'label', text: 'OF 30', bind: concat(str('OF '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
+        { kind: 'label', text: 'OF 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('OF '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
       ],
     },
     {
@@ -129,7 +154,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       id: 'flag',
       parts: [
         { kind: 'block', width: FLAG_BLOCK.width, height: FLAG_BLOCK.height, color: ds.color.text.dim, colorBind: flagColour() },
-        { kind: 'label', text: 'GREEN', bind: flagName(), color: ds.color.text.primary },
+        { kind: 'label', text: 'GREEN', widest: WIDEST_FLAG_NAME, bind: flagName(), color: ds.color.text.primary },
       ],
     },
     {
@@ -137,7 +162,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       parts: [
         { kind: 'label', text: 'INC' },
         { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.fuel.low },
-        { kind: 'label', text: '/ 17', bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit },
+        { kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit },
       ],
     },
     {
