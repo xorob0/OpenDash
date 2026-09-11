@@ -251,6 +251,10 @@ treated as corrupt), Voltage > 0 and no EngineStalled bit (ignition/engine on), 
   TC/ABS level 0, dash should show "--"), `CarSetup` TC/ABS entries blank, timed race (`SessionLaps: unlimited`,
   `SessionTime: 1800.0000 sec`, SessionLapsTotal/Remain 32767, 1130 s remaining).
 
+Four further scenarios exist to be photographed rather than watched — `green`, `yellow`, `pit` and `quali` — and
+pin everything the dash reads so that a capture taken at any moment shows the same state.
+[`scenarios/README.md`](scenarios/README.md) says what each one holds still and why.
+
 ## Self-test
 
 `IrsdkEmulator.exe --selfcheck [scenario]` (exit 0 == pass): checks `Marshal.SizeOf` of SimHub's struct
