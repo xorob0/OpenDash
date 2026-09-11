@@ -36,8 +36,15 @@ export const LIST_ORDER = [
   'openDash 800x286',
   'openDash 800x480',
   'openDash 850x480',
-  // The zone face, built beside the card faces for review until it takes the name openDash.
+  // The zone faces, built beside the card faces for review until they take the name openDash.
+  'openDash zones 1280x400',
+  'openDash zones 1280x480',
+  'openDash zones 1280x720',
   'openDash zones 1920x480',
+  'openDash zones 600x686',
+  'openDash zones 800x286',
+  'openDash zones 800x480',
+  'openDash zones 850x480',
   'openDash Companion',
   'openDash Companion portrait',
   'openDash Pit wall',
@@ -169,12 +176,11 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
       console.error('the VNC tooling is not on the VM host, so the dash cannot be opened from here');
       return 1;
     }
-    const index = LIST_ORDER.indexOf(opts.packageName as (typeof LIST_ORDER)[number]);
-    if (index < 0) {
+    if (!LIST_ORDER.includes(opts.packageName as (typeof LIST_ORDER)[number])) {
       console.error(`unknown package "${opts.packageName}"; one of ${LIST_ORDER.join(', ')}`);
       return 1;
     }
-    const opened = openDashboard(host, { name: opts.packageName, index });
+    const opened = openDashboard(host, { name: opts.packageName });
     if (!opened.ok) {
       console.error(opened.stderr);
       return 1;
