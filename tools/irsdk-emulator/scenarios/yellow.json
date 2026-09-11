@@ -1,0 +1,38 @@
+{
+  // A yellow-flag lap on low fuel, for screenshots of the alert states: the flag band, the fuel
+  // card under a lap of fuel, a hot right front and a cold left front. Everything that matters is
+  // pinned, so the state is the same whenever the capture happens.
+  "extends": "race.json",
+  "name": "Yellow flag, low fuel, uneven tyre temperatures",
+  "variables": [
+    {"name": "SessionFlags", "value": "yellow|yellowWaving|caution", "pin": true},
+    {"name": "FuelLevel", "value": 2.1, "pin": true},
+    {"name": "FuelLevelPct", "value": 0.021, "pin": true},
+    {"name": "PlayerCarPosition", "value": 6, "pin": true},
+    {"name": "PlayerCarClassPosition", "value": 4, "pin": true},
+    {"name": "SessionTimeRemain", "value": 640.0},
+    {"name": "SessionLapsRemain", "value": 7},
+    {"name": "SessionLapsRemainEx", "value": 7},
+    {"name": "Lap", "value": 23},
+    {"name": "LapCompleted", "value": 22},
+    {"name": "RaceLaps", "value": 23},
+    {"name": "LapLastLapTime", "value": 101.884},
+    {"name": "LapBestLapTime", "value": 97.905},
+    // A hot right front and a cold left front, so the tyre card shows all three of its colours.
+    {"name": "RFtempCL", "value": 109.4, "pin": true}, {"name": "RFtempCM", "value": 112.7, "pin": true}, {"name": "RFtempCR", "value": 114.1, "pin": true},
+    {"name": "LFtempCL", "value": 53.8, "pin": true}, {"name": "LFtempCM", "value": 52.2, "pin": true}, {"name": "LFtempCR", "value": 51.5, "pin": true},
+    {"name": "LRtempCM", "value": 88.4, "pin": true}, {"name": "RRtempCM", "value": 94.6, "pin": true},
+    // Worn tyres: the wear bars drop under the caution threshold on the right.
+    {"name": "RFwearM", "value": 0.61, "pin": true}, {"name": "RRwearM", "value": 0.63, "pin": true},
+    {"name": "LFwearM", "value": 0.82, "pin": true}, {"name": "LRwearM", "value": 0.79, "pin": true},
+    {"name": "dcTractionControl", "value": 7, "pin": true},
+    {"name": "dcABS", "value": 4, "pin": true},
+    {"name": "dcBrakeBias", "value": 56.5, "pin": true},
+    {"name": "CarLeftRight", "value": 2, "pin": true}
+  ],
+  "timeline": [
+    {"at": 0, "log": "hold the yellow: the flag cycle would move it", "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "log": "the fuel burn would refill the pinned level", "driver": {"type": "fuelBurn", "enabled": false}},
+    {"at": 2, "log": "two cars in the pits", "driver": {"type": "field", "pitCars": [4, 17]}}
+  ]
+}
