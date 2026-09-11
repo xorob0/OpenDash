@@ -295,6 +295,26 @@ installed without the plugin shows each zone's start page and simply cannot cycl
 complete product by [ADR 0003](../decisions/0003-plugin-settings-through-properties.md)'s letter,
 and it is the first feature for which the plugin buys something material.
 
+### What the panel draws
+
+`Plugin.dc.html` draws the Zones section as a plan of the face at 844 px wide: the rev bar strip,
+the bar with an end control at each side, zones B, A and C across the body at 246, 316 and 280, and
+band D along the foot. Every part is at the size the artboard gives it, because "zone C" means
+nothing until you see where zone C is.
+
+Three things the artboard does not settle, and what the panel does about each:
+
+| | |
+|---|---|
+| **The mask has no control drawn.** | It is the setting that decides how long a driver's cycle is, so it cannot simply be missing. The panel puts a second drop in each zone cell, reading "21 of 21 pages", opening a checkbox per page. Owed on the canvas. |
+| **An end of the bar is drawn as one control** reading "Race · lap", and an end carries two fields. | The control stays one box and opens a panel with a picker for each, rather than splitting into two boxes the artboard does not have. |
+| **Nothing says what happens to a zone sitting on a page that is then turned off.** | It snaps *forward* to the next enabled page, wrapping once — forward because a cycle runs forward, so the next press of the button carries on rather than repeats. Turning off a zone's last enabled page is refused: a zone with an empty cycle has nothing to draw. |
+
+Two zones showing the same page is reported and allowed, which the canvas is explicit about. The
+comparison is by page **id** and not page number, because the four catalogues overlap: zone A's
+track page and module 13 are one drawing under two numbers, and a comparison by number would miss
+exactly the duplicate a driver would notice.
+
 ---
 
 ## 8. What a zone does when its page changes
