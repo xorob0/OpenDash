@@ -13,18 +13,22 @@
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { gear as gearComponent, GEAR_CHARS } from '../components/gear.ts';
-import { gearCells, monoWidth } from '../design/metrics.ts';
+import { boxSlack, cells, gearCells, monoWidth } from '../design/metrics.ts';
 import { rect } from '../design/geometry.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
+import { LINE_SPACING } from '../design/metrics.ts';
 import { CHARS } from '../second/values.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 
 const { game, fmt, isnull, num, str, iff, eq, add, sub } = ncalc;
+
+/** The weight the speed page draws its one big value in, and the weight it is measured in. */
+const SPEED_WEIGHT = 'Bold' as const;
 
 /** The largest gear that fits a box, bounded by the line box rather than by the box itself. */
 export const gearSizeIn = (frame: Rect): number => {
@@ -105,14 +109,28 @@ function gearAlone(frame: Rect, prefix: string): Item[] {
 /** A3: the speed as the largest value, with the gear demoted to a small readout beside its label. */
 function speedPage(frame: Rect, prefix: string): Item[] {
   const d = densityOf('zone');
-  const size = Math.max(72, Math.min(ds.size.gear, Math.floor(frame.height * 0.5)));
   const labelH = d.labelSm;
   const gearH = d.big;
-  const speedTop = frame.top + Math.max(0, (frame.height - size - labelH - gearH - labelH - d.gapY - d.fieldGap * 2) / 2);
+  // Bounded by the width and by what has to sit under it, not by the height alone. Speed is three
+  // digits in cells the tokens size, and choosing from the height alone put a 384 px value in a
+  // 340 px column -- which WPF clips to two digits and a half -- and a block taller than a 194 px
+  // zone, which started seven pixels above the canvas.
+  const below = labelH + d.gapY + gearH + d.fieldGap + labelH;
+  const byHeight = Math.floor((frame.height - below - d.fieldGap) / LINE_SPACING);
+  // Solved by trying rather than by algebra: a cell is rounded up per character and the box takes
+  // a slack beyond the cells, so a size derived from the em fraction alone lands a few pixels over.
+  //
+  // Measured in SPEED_WEIGHT, which is the weight it is drawn in. Bold cells are wider than
+  // SemiBold ones -- 114 px against 109 at size 231 -- and measuring the wrong face is how a box
+  // comes out two pixels short and WPF takes the edge off the last digit.
+  let size = Math.max(24, Math.min(ds.size.gear, byHeight));
+  while (size > 24 && monoWidth(cells(SPEED_WEIGHT, size), CHARS.speed) + boxSlack(size) > frame.width) size -= 1;
+  const blockHeight = size + d.fieldGap + labelH + d.gapY + gearH + d.fieldGap + labelH;
+  const speedTop = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
   return [
     numeral(`${prefix}speed`, '187', frame.left, speedTop, size, CHARS.speed, {
       bind: fmt(isnull(game('SpeedKmh'), num(0)), '0'),
-      weight: 'Bold',
+      weight: SPEED_WEIGHT,
       maxWidth: frame.width,
       hAlign: 'center',
     }),

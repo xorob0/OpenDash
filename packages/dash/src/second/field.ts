@@ -12,7 +12,7 @@
 import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { SPECIAL_CHARS, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars, type DataWeight } from '../design/metrics.ts';
+import { SPECIAL_CHARS, canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
@@ -89,10 +89,22 @@ export function fieldWidth(spec: FieldSpec, density: Density): number {
   return Math.ceil(Math.max(labelW, valueWidth(spec, d)));
 }
 
-/** Height a field needs above its bottom edge: the label line, the gap and the value line. */
+/**
+ * Height a field needs above its bottom edge: the label line, the gap, the value line, and the
+ * tail the value's line box hangs below it.
+ *
+ * That tail is the part this used to omit. A WPF line box runs about a fifth of the font size
+ * below the baseline row it sits on, so a row declaring `label + gap + fs` really draws a tenth of
+ * `fs` further down than it said. On a companion page nobody noticed, because the box is 336 px
+ * tall and the slack absorbs it. On a 237 by 160 zone of the nano it is what put a lap time
+ * twenty-two pixels past the bottom edge.
+ */
 export function fieldHeight(spec: FieldSpec, density: Density): number {
   const d = densityOf(density);
-  return (spec.label === '' && spec.labelBind === undefined ? 0 : d.label + d.fieldGap) + spec.value.fs;
+  const labelPart = spec.label === '' && spec.labelBind === undefined ? 0 : d.label + d.fieldGap;
+  const box = textBox(0, spec.value.fs);
+  const belowTheLine = Math.max(0, box.top + box.height - spec.value.fs);
+  return labelPart + spec.value.fs + belowTheLine;
 }
 
 /** Tallest of a set of fields, which is the height of the row they sit in. */
@@ -135,6 +147,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
     const y = canvasYForBaseline(canvasBaseline(valueY, spec.value.fs), d.labelSm);
     items.push(
       unit(`${spec.name}.unit`, follower.text, followerX, y, Math.max(followerWidth(follower, d), x + width - followerX), {
+        size: d.labelSm,
         bind: follower.bind,
         color: follower.color,
         visibleBind: follower.visibleBind ?? spec.visibleBind,
