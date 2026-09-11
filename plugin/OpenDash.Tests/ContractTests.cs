@@ -56,15 +56,64 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void Property_names_are_the_sixteen_of_the_contract()
+        public void Property_names_cover_the_dash_the_companion_and_the_pit_wall()
         {
             var names = Contract.PropertyNames().ToList();
-            Assert.Equal(16, names.Count);
+            // Four settings, twelve slots, twenty-one companion modules, four zones, the wide zone and the URL.
+            Assert.Equal(4 + 12 + 21 + 4 + 2, names.Count);
+            Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
             Assert.Equal("Slot12", Contract.SlotProperty(12));
-            Assert.Equal(Enumerable.Range(1, 12).Select(Contract.SlotProperty), names.Skip(4));
+            Assert.Equal(Enumerable.Range(1, 12).Select(Contract.SlotProperty), names.Skip(4).Take(12));
+            Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
+            Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
+            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(16).Take(21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(37));
             Assert.Equal("OpenDash", Contract.Prefix);
+        }
+
+        [Fact]
+        public void Module_catalogue_has_twenty_one_pages_three_of_them_off()
+        {
+            Assert.Equal(21, Modules.Count);
+            Assert.Equal(21, Modules.All.Count);
+            Assert.Equal(Enumerable.Range(1, 21), Modules.All.Select(m => m.Number));
+            Assert.Equal(21, Modules.All.Select(m => m.Id).Distinct().Count());
+            Assert.All(Modules.All, m => Assert.False(string.IsNullOrWhiteSpace(m.Description)));
+            // The three iRacing cannot fill: virtual energy, damage and segment rivals.
+            Assert.Equal(new[] { "energy", "damage", "trackRivals" }, Modules.All.Where(m => !m.Enabled).Select(m => m.Id));
+            Assert.Equal("Gear", Modules.DisplayName(17));
+            Assert.Equal("Module 22", Modules.DisplayName(22));
+            Assert.Null(Modules.ByNumber(0));
+        }
+
+        [Fact]
+        public void Zone_pages_and_their_defaults_match_the_contract()
+        {
+            Assert.Equal(11, ZonePages.Standard.Count);
+            Assert.Equal(6, ZonePages.Wide.Count);
+            Assert.Equal(Enumerable.Range(0, 11), ZonePages.Standard.Select(p => p.Number));
+            Assert.Equal(Enumerable.Range(0, 6), ZonePages.Wide.Select(p => p.Number));
+            Assert.Equal(new[] { "A", "B", "C", "D" }, Contract.ZoneLetters);
+            Assert.Equal(new[] { 0, 1, 4, 2 }, Contract.DefaultZones());
+            Assert.Equal("Fuel", ZonePages.StandardName(Contract.DefaultZonePage("A")));
+            Assert.Equal("Relative", ZonePages.StandardName(Contract.DefaultZonePage("C")));
+            Assert.Equal("Car telemetry", ZonePages.WideName(Contract.DefaultWideZonePage));
+            Assert.Equal(3, Contract.NormaliseZonePage(3, 0));
+            Assert.Equal(0, Contract.NormaliseZonePage(11, 0));
+            Assert.Equal(5, Contract.NormaliseWideZonePage(6));
+        }
+
+        [Fact]
+        public void A_web_view_address_is_kept_only_when_it_is_an_http_url()
+        {
+            Assert.Equal("https://garage61.net", Contract.NormaliseUrl("  https://garage61.net  "));
+            Assert.Equal("http://localhost:8080/timing", Contract.NormaliseUrl("http://localhost:8080/timing"));
+            Assert.Equal("", Contract.NormaliseUrl("file:///C:/secrets.txt"));
+            Assert.Equal("", Contract.NormaliseUrl("javascript:alert(1)"));
+            Assert.Equal("", Contract.NormaliseUrl("not a url"));
+            Assert.Equal("", Contract.NormaliseUrl(null));
         }
 
         [Fact]
@@ -108,6 +157,41 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("PositionMode: '" + Contract.DefaultPositionMode + "'", source);
             Assert.Contains("DeltaReference: '" + Contract.DefaultDeltaReference + "'", source);
             Assert.Contains("SessionProgress: '" + Contract.DefaultSessionProgress + "'", source);
+        }
+
+        /// <summary>The module catalogue and the zone pages are the other half of the second-screen contract.</summary>
+        [Fact]
+        public void Modules_and_zone_pages_agree_with_contract_ts_when_present()
+        {
+            var path = RepoPaths.ContractTs();
+            if (!File.Exists(path)) return;
+            var source = File.ReadAllText(path);
+
+            var rows = Regex.Matches(source,
+                @"\{\s*number:\s*(?<number>\d+),\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*description:\s*'(?<description>[^']*)',\s*enabled:\s*(?<enabled>true|false)\s*\}");
+            Assert.Equal(Modules.All.Count, rows.Count);
+            for (var i = 0; i < rows.Count; i++)
+            {
+                var module = Modules.All[i];
+                Assert.Equal(module.Number, int.Parse(rows[i].Groups["number"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(module.Id, rows[i].Groups["id"].Value);
+                Assert.Equal(module.Name, rows[i].Groups["name"].Value);
+                Assert.Equal(module.Description, rows[i].Groups["description"].Value);
+                Assert.Equal(module.Enabled, bool.Parse(rows[i].Groups["enabled"].Value));
+            }
+
+            Assert.Equal(ZonePages.Standard.Select(p => p.Id), PageIdsOf(source, "export const ZONE_PAGES"));
+            Assert.Equal(ZonePages.Wide.Select(p => p.Id), PageIdsOf(source, "export const WIDE_ZONE_PAGES"));
+            Assert.Contains("DEFAULT_WIDE_ZONE_PAGE = " + Contract.DefaultWideZonePage, source);
+            Assert.Contains("{ A: 0, B: 1, C: 4, D: 2 }", source);
+        }
+
+        /// <summary>The `id` fields of the page list that follows the given declaration.</summary>
+        private static string[] PageIdsOf(string source, string declaration)
+        {
+            var match = Regex.Match(source, Regex.Escape(declaration) + @"[^=]*=\s*\[(?<items>[^\]]*)\]");
+            Assert.True(match.Success, declaration + " not found in contract.ts");
+            return Regex.Matches(match.Groups["items"].Value, @"id:\s*'([^']*)'").Cast<Match>().Select(m => m.Groups[1].Value).ToArray();
         }
 
         /// <summary>The single-quoted strings of the array literal that follows the given declaration.</summary>

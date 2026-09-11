@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Include="../OpenDash/Contract.cs" Link="Plugin/Contract.cs" />
     <Compile Include="../OpenDash/Cards.cs" Link="Plugin/Cards.cs" />
+    <Compile Include="../OpenDash/Modules.cs" Link="Plugin/Modules.cs" />
     <Compile Include="../OpenDash/OpenDashSettings.cs" Link="Plugin/OpenDashSettings.cs" />
     <Compile Include="../OpenDash/Versioning.cs" Link="Plugin/Versioning.cs" />
     <Compile Include="../OpenDash/Installation.cs" Link="Plugin/Installation.cs" />

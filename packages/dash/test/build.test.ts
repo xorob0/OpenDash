@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts';
-import { CARD_CATALOGUE, declaredProperties, defaultCardForSlot } from '../src/contract.ts';
+import { CARD_CATALOGUE, dashProperties, declaredProperties, defaultCardForSlot, secondScreenProperties } from '../src/contract.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { CARDS_FILE } from '../src/slots.ts';
@@ -84,8 +84,11 @@ describe('contract', () => {
       expect(used.length).toBeGreaterThan(0);
       for (const p of used) expect({ p, declared: declared.has(p) }).toEqual({ p, declared: true });
     }
+    // The face reads its own half of the contract, all of it: the four modes and the twelve
+    // slots. The module switches and the zone pages belong to the second screens.
     const all = new Set([...propertiesIn(main), ...propertiesIn(cards)].filter((p) => p.startsWith('OpenDash.')));
-    expect([...all].sort()).toEqual([...declared].sort());
+    expect([...all].sort()).toEqual([...dashProperties()].sort());
+    for (const p of secondScreenProperties()) expect(all.has(p)).toBe(false);
   });
 
   test('no brand colour reaches the face', () => {
