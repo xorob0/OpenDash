@@ -178,17 +178,28 @@ export interface ZoneSpec {
   /** "3 / 11": which page of how many. */
   page: number;
   pages: number;
+  /**
+   * Space kept clear before the title, for a zone letter somebody else draws. Zones B and C are the
+   * same rectangle on most faces and so share one dashboard file, which means the letter cannot be
+   * baked into it: the face draws it, and this is the room it needs.
+   */
+  indent?: number;
 }
+
+/** The y a zone frame puts its title on, which the face needs to line the letter up with it. */
+export const zoneTitleY = (frame: Rect, density: Density = 'zone'): number =>
+  frame.top + (zoneFrameMetrics(density).title - densityOf(density).labelSm) / 2;
 
 /** A data zone: a title bar with the page name and counter, and the body rect under it. */
 export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone'): { items: Item[]; body: Rect } {
   const d = densityOf(density);
   const { title: titleHeight, padX, padBottom } = zoneFrameMetrics(density);
-  const titleY = spec.frame.top + (titleHeight - d.labelSm) / 2;
+  const titleY = zoneTitleY(spec.frame, density);
+  const indent = spec.indent ?? 0;
   const counter = `${spec.page} / ${spec.pages}`;
   const counterWidth = Math.ceil(measureText('BarlowMedium', counter, d.labelSm)) + 2;
   const items: Item[] = [
-    label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX - counterWidth, { size: d.labelSm, color: ds.color.text.secondary }),
+    label(`${name}.title`, spec.title, spec.frame.left + padX + indent, titleY, spec.frame.width - 2 * padX - indent - counterWidth, { size: d.labelSm, color: ds.color.text.secondary }),
     label(`${name}.counter`, counter, spec.frame.left + spec.frame.width - padX - counterWidth, titleY, counterWidth, { size: d.labelSm, hAlign: 'right' }),
   ];
   const bodyTop = spec.frame.top + titleHeight;
