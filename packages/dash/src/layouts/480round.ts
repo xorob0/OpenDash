@@ -8,7 +8,6 @@
 import { rect } from '../design/geometry.ts';
 import { ds } from '../tokens.ts';
 import type { Layout } from './layout.ts';
-import { GEAR_SIZES } from '../components/gear.ts';
 import { roundLayout } from './round.ts';
 
 const SIZE = 480;
@@ -19,7 +18,7 @@ export const layout480round: Layout = roundLayout({
   revArc: { r: 206, segment: { width: 22, height: 14 } },
   // The gap between the two slots, not the whole disc, so that the gear component can tell
   // whether its cell fits instead of overhanging a slot.
-  gear: { rect: rect(148, 96, 160, 340), size: GEAR_SIZES.round480 },
+  gear: { rect: rect(148, 96, 160, 340) },
   pitLimiter: rect(153, 100, 150, ds.indicator.pitLimiter.heightSm),
   slotSize: { width: 140, height: 108 },
   slotOrigins: [

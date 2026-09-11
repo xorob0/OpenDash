@@ -23,16 +23,10 @@ export const GEAR_CHARS = { digits: 1, specials: 0 } as const;
 /** Pixels the gear's box takes beyond its cell, so that WPF clips nothing. */
 export const GEAR_BOX_SLACK = 4;
 
-/**
- * Gear font sizes: 260 everywhere, 180 on faces too short for it (the nano), and 228 on the 480
- * round, whose two slots leave only 160 px between them. 228 is the largest that fits a cell
- * there; it is smaller than the other faces only because the cell has to hold a non-condensed
- * Barlow (XOR-84), and it goes back to 260 when that is fixed.
- */
+/** Gear font sizes: 260 everywhere, 180 on faces too short for it (the nano). */
 export const GEAR_SIZES = {
   standard: ds.size.gear,
   nano: ds.size.gearSm,
-  round480: 228,
 } as const;
 
 /** The gear centred in `frame`, horizontally on its cell width and vertically on its font size. */
