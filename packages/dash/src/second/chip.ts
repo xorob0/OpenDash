@@ -6,6 +6,11 @@
  * The player's own class is inverted (light block, dark text), which is also how a PIT marker is
  * drawn. The text is cut to four characters by NCalc rather than by the renderer, so a long class
  * name shortens instead of being clipped mid-letter.
+ *
+ * That cut was written `left(value, 4)` and SimHub's `left` takes three arguments, so it matched
+ * nothing, evaluated to nothing, and every chip on both leaderboards drew an empty block from the
+ * day the second screens shipped. The expression was well formed, the item was present, the box
+ * was the right size and every test passed. `ncalcFunctions.ts` checks the argument count now.
  */
 import type { Hex, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
