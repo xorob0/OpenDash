@@ -226,6 +226,35 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("DEFAULT_QUICK_GLANCE = " + (Contract.DefaultQuickGlance / 100) + " * 100 + " + (Contract.DefaultQuickGlance % 100), source);
         }
 
+        /// <summary>The page names the panel lists, against the names the face draws. Ids alone are not
+        /// enough here: the panel is the only place a driver ever reads these, so a name that drifts is a
+        /// dropdown that does not say what the zone will show.</summary>
+        [Fact]
+        public void Face_page_catalogues_agree_with_contract_ts_when_present()
+        {
+            var path = RepoPaths.ContractTs();
+            if (!File.Exists(path)) return;
+            var source = File.ReadAllText(path);
+
+            Assert.Equal(PageIdsOf(source, "export const ZONE_A_PAGES"), FacePages.ZoneA.Select(p => p.Id));
+            Assert.Equal(PageNamesOf(source, "export const ZONE_A_PAGES"), FacePages.ZoneA.Select(p => p.Name));
+            Assert.Equal(PageIdsOf(source, "export const BAND_D_PAGES"), FacePages.BandD.Select(p => p.Id));
+            Assert.Equal(PageNamesOf(source, "export const BAND_D_PAGES"), FacePages.BandD.Select(p => p.Name));
+            Assert.Equal(PageIdsOf(source, "export const BAR_FIELDS"), FacePages.BarFields.Select(p => p.Id));
+            Assert.Equal(PageNamesOf(source, "export const BAR_FIELDS"), FacePages.BarFields.Select(p => p.Name));
+
+            // Each catalogue numbers itself from zero, because a zone setting is an index into it.
+            for (var i = 0; i < Contract.FaceZoneLetters.Length; i++)
+            {
+                var pages = FacePages.For(Contract.FaceZoneLetters[i]);
+                Assert.Equal(Contract.FaceZonePageCounts[i], pages.Count);
+                for (var page = 0; page < pages.Count; page++) Assert.Equal(page, pages[page].Number);
+            }
+            // Zones B and C are the module catalogue less one, which is what makes module 15 page 14.
+            Assert.Equal("relative", FacePages.IdOf("C", Contract.DefaultFaceZonePages[2]));
+            Assert.Equal(Contract.BarFieldCount, FacePages.BarFields.Count);
+        }
+
         [Fact]
         public void Zone_defaults_are_every_page_enabled()
         {
@@ -260,6 +289,14 @@ namespace OpenDashPlugin.Tests
             var match = Regex.Match(source, Regex.Escape(declaration) + @"[^=]*=\s*\[(?<items>[^\]]*)\]");
             Assert.True(match.Success, declaration + " not found in contract.ts");
             return Regex.Matches(match.Groups["items"].Value, @"id:\s*'([^']*)'").Cast<Match>().Select(m => m.Groups[1].Value).ToArray();
+        }
+
+        /// <summary>The `name` fields of the page list that follows the given declaration.</summary>
+        private static string[] PageNamesOf(string source, string declaration)
+        {
+            var match = Regex.Match(source, Regex.Escape(declaration) + @"[^=]*=\s*\[(?<items>[^\]]*)\]");
+            Assert.True(match.Success, declaration + " not found in contract.ts");
+            return Regex.Matches(match.Groups["items"].Value, @"name:\s*'([^']*)'").Cast<Match>().Select(m => m.Groups[1].Value).ToArray();
         }
 
         /// <summary>The single-quoted strings of the array literal that follows the given declaration.</summary>
