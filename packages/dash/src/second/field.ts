@@ -254,21 +254,58 @@ export const scaleFields = (specs: readonly FieldSpec[], factor: number): FieldS
 export const FIT_LADDER = [1, 0.85, 0.72, 0.6, 0.5] as const;
 
 /**
- * Fields drawn inside `box`, top-aligned, shrunk until they fit.
+ * The longest prefix of `specs` whose wrapped block fits `box`, at full size.
+ *
+ * Fields are listed in importance order, so dropping from the tail drops the least important
+ * thing. This is the first response to a box that is too small, not the last.
+ */
+export function rowsThatFit(specs: readonly FieldSpec[], box: Rect, density: Density, opts: { gap?: number; lineGap?: number } = {}): FieldSpec[] {
+  const lineGap = opts.lineGap ?? Math.round(densityOf(density).gapY / 2);
+  const kept = [...specs];
+  while (kept.length > 1) {
+    const lines = wrapFields(kept, box.width, density, opts.gap);
+    if (fieldBlockHeight(lines, density, lineGap) <= box.height) break;
+    kept.pop();
+  }
+  return kept;
+}
+
+/**
+ * Fields drawn inside `box`, top-aligned.
  *
  * A pit wall panel is a fixed rectangle and the fields in it are whatever the module asked for, so
- * something has to give when the two disagree. Wrapping alone is not enough: five fields at 46 px
- * wrap to two lines and two lines do not fit a 104 px panel. So the size steps down until the
- * wrapped block fits the height it was given, which is what a person would do with the same box.
+ * something has to give when the two disagree. **What gives is the least important field, not the
+ * size of the most important one.** That is rule 17: a page sheds its secondary rows before it
+ * shrinks its numerals, and nothing is ever scaled down.
+ *
+ * This used to go the other way round. `FIT_LADDER` was the first response, so a box one pixel too
+ * short shrank every value in it — including the one the page exists to show — while keeping a
+ * field nobody would miss. A driver reading a delta at half size because a stint count would not
+ * fit underneath it is the exact failure the rule is about.
+ *
+ * The ladder survives as the floor. A single field that does not fit its box on its own cannot be
+ * shed, because then the page draws nothing; that one shrinks.
  */
 export function fitFields(specs: readonly FieldSpec[], box: Rect, density: Density, opts: { gap?: number; lineGap?: number } = {}): Item[] {
   const lineGap = opts.lineGap ?? Math.round(densityOf(density).gapY / 2);
-  for (const factor of FIT_LADDER) {
-    const scaled = scaleFields(specs, factor);
+  const draw = (kept: readonly FieldSpec[], factor: number): Item[] => {
+    const scaled = factor === 1 ? [...kept] : scaleFields(kept, factor);
     const lines = wrapFields(scaled, box.width, density, opts.gap);
     const height = fieldBlockHeight(lines, density, lineGap);
-    if (height <= box.height || factor === FIT_LADDER[FIT_LADDER.length - 1]) {
-      return drawFieldBlock(lines, box.left, box.top + Math.min(height, box.height), box.width, density, { gap: opts.gap, lineGap });
+    return drawFieldBlock(lines, box.left, box.top + Math.min(height, box.height), box.width, density, { gap: opts.gap, lineGap });
+  };
+
+  // Shed first, at full size.
+  const kept = rowsThatFit(specs, box, density, opts);
+  const lines = wrapFields(kept, box.width, density, opts.gap);
+  if (fieldBlockHeight(lines, density, lineGap) <= box.height) return draw(kept, 1);
+
+  // One field left and it still does not fit: shrink it, because shedding it leaves nothing.
+  for (const factor of FIT_LADDER) {
+    const scaled = scaleFields(kept, factor);
+    const scaledLines = wrapFields(scaled, box.width, density, opts.gap);
+    if (fieldBlockHeight(scaledLines, density, lineGap) <= box.height || factor === FIT_LADDER[FIT_LADDER.length - 1]) {
+      return draw(kept, factor);
     }
   }
   return [];
