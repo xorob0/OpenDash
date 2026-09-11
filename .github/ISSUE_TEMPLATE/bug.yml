@@ -1,0 +1,65 @@
+name: Something is drawn wrong
+description: A value, a layout or a colour is not what it should be on screen.
+labels: ['Bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Four things decide the answer to almost every one of these, and they are the four fields
+        below. Without them the first reply is always the same four questions.
+
+        If a value is blank rather than wrong, say so explicitly: SimHub draws an empty string
+        when an expression fails to evaluate and reports nothing, so "the class chip is empty" and
+        "the class chip is wrong" have completely different causes.
+
+  - type: input
+    id: package
+    attributes:
+      label: Which package, and what size is the screen
+      description: The folder name as SimHub lists it, and the resolution you run it at.
+      placeholder: openDash 850x480, on a 5 inch 850 by 480 USB screen
+    validations:
+      required: true
+
+  - type: input
+    id: simhub
+    attributes:
+      label: SimHub version
+      description: Help, About. openDash is verified against 9.12.6.
+      placeholder: 9.12.6
+    validations:
+      required: true
+
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Is the openDash plugin installed
+      description: >
+        A package without the plugin shows the defaults for every setting, which is supported and
+        is a different situation from a package with it.
+      options:
+        - 'Yes, the plugin is installed and the openDash page is in the left menu'
+        - 'No, I installed only the .simhubdash'
+        - 'I do not know'
+    validations:
+      required: true
+
+  - type: input
+    id: sim
+    attributes:
+      label: Which sim, and what was happening
+      description: >
+        openDash is verified on iRacing. Other sims very probably work and none is advertised as
+        supported. Say what the session was doing, because most of what the dash draws only
+        appears in some of them.
+      placeholder: iRacing, race session, in the pit stall with service selected
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you saw, and what you expected
+      description: A photograph of the screen is worth more than any description of it.
+    validations:
+      required: true
