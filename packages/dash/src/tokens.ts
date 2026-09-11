@@ -142,6 +142,15 @@ export const ds = {
     data: text('font.family.data'),
     /** Barlow: labels and units. */
     label: text('font.family.label'),
+    /** Monospace cell widths, as a fraction of the font size. */
+    cell: {
+      semiBold: { digit: num('font.cell.semiBold.digit'), special: num('font.cell.semiBold.special') },
+      bold: { digit: num('font.cell.bold.digit'), special: num('font.cell.bold.special') },
+      /** The gear's cell, which is a letter wide because SimHub reports "N" and "R" too. */
+      gear: num('font.cell.gear'),
+      /** Characters that get the narrow cell. */
+      specialChars: text('font.cell.specialChars'),
+    },
   },
   size: {
     gear: num('font.size.gear'),
