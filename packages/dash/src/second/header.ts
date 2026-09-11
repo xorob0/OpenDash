@@ -1,0 +1,235 @@
+/**
+ * The companion's header and its page dots, and the pit wall's panel and zone frames.
+ *
+ * The companion shows one module at a time, so the header is what stays: which module this is,
+ * where it sits in the cycle, and the two things a driver should never have to page for, position
+ * and lap. The dots under the module are the same information as the counter, in a form the eye
+ * reads without focusing.
+ */
+import type { Item, Rect } from '../generator.ts';
+import { ncalc } from '../generator.ts';
+import type { Expr } from '../bind.ts';
+import { measureText } from '../design/advances.ts';
+import { withBindings } from '../bind.ts';
+import { rect } from '../design/geometry.ts';
+import { canvasBaseline, canvasYForBaseline, cells, monoWidth } from '../design/metrics.ts';
+import { band } from '../elements/band.ts';
+import { label } from '../elements/label.ts';
+import { numeral } from '../elements/numeral.ts';
+import { rule } from '../elements/rule.ts';
+import { unit } from '../elements/unit.ts';
+import { ds } from '../tokens.ts';
+import { densityOf, type Density } from './density.ts';
+import { CHARS, carPosition, currentLap, fieldSize, player, totalLaps } from './values.ts';
+
+const { concat, str, fmt, iff, gt, num } = ncalc;
+
+/** Height of the companion header, and the padding either side of it. */
+export const COMPANION_HEADER = { height: 56, padX: 24, gap: 12, groupGap: 20 } as const;
+/** Page dots: a square per module. */
+export const PAGE_DOT = { size: 6, gap: 6 } as const;
+
+/** A value with a small denominator after it, as the header draws "P4 / 24". */
+function pair(name: string, valueSample: string, valueBind: Expr, denominator: string, denominatorBind: Expr, x: number, y: number, fs: number, density: Density, visibleBind?: Expr): { items: Item[]; width: number } {
+  const d = densityOf(density);
+  const mono = cells('SemiBold', fs);
+  const chars = { digits: valueSample.length, specials: 0 };
+  const valueWidth = monoWidth(mono, chars);
+  const denominatorWidth = Math.ceil(measureText('BarlowMedium', denominator, d.labelSm));
+  const denominatorX = x + valueWidth + ds.space[2];
+  return {
+    items: [
+      numeral(`${name}.value`, valueSample, x, y, fs, chars, { bind: valueBind, maxWidth: valueWidth + 4 }),
+      unit(`${name}.denominator`, denominator, denominatorX, canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
+        bind: denominatorBind,
+        visibleBind,
+      }),
+    ],
+    width: valueWidth + ds.space[2] + denominatorWidth,
+  };
+}
+
+export interface CompanionHeaderSpec {
+  frame: Rect;
+  /** Module name, drawn as it is written. */
+  moduleName: string;
+  /** 1-based page number and how many pages there are. */
+  page: number;
+  pages: number;
+}
+
+/**
+ * The header: module name and page counter on the left, position and lap on the right, a rule
+ * along the bottom edge. Both right-hand values are static in layout and bound in content, so the
+ * header is identical on all 21 pages bar its name and number.
+ */
+export function companionHeader(name: string, spec: CompanionHeaderSpec, density: Density = 'companion'): Item[] {
+  const d = densityOf(density);
+  const frame = spec.frame;
+  const fs = d.tiny;
+  const textY = frame.top + (frame.height - d.label) / 2;
+  const valueY = canvasYForBaseline(canvasBaseline(textY, d.label), fs);
+  const items: Item[] = [];
+  const nameWidth = Math.ceil(measureText('BarlowMedium', spec.moduleName.toUpperCase(), d.label));
+  items.push(label(`${name}.module`, spec.moduleName, frame.left + COMPANION_HEADER.padX, textY, nameWidth + 2, { size: d.label, color: ds.color.text.primary }));
+  const counter = `${spec.page} / ${spec.pages}`;
+  items.push(
+    label(`${name}.counter`, counter, frame.left + COMPANION_HEADER.padX + nameWidth + COMPANION_HEADER.gap, textY, Math.ceil(measureText('BarlowMedium', counter, d.label)) + 2, {
+      size: d.label,
+    }),
+  );
+
+  // Right group, laid out from the right edge so the two pairs keep their gap whatever they read.
+  const lap = pair(
+    `${name}.lap`,
+    'L12',
+    concat(str('L'), fmt(currentLap(), '0')),
+    '/ 30',
+    concat(str('/ '), fmt(totalLaps(), '0')),
+    0,
+    valueY,
+    fs,
+    density,
+    gt(totalLaps(), num(0)),
+  );
+  const position = pair(`${name}.position`, 'P24', concat(str('P'), fmt(carPosition(player()), '0')), '/ 24', concat(str('/ '), fmt(fieldSize(), '0')), 0, valueY, fs, density);
+  const right = frame.left + frame.width - COMPANION_HEADER.padX;
+  const lapX = right - lap.width;
+  const positionX = lapX - COMPANION_HEADER.groupGap - position.width;
+  items.push(...shift(position.items, positionX), ...shift(lap.items, lapX));
+  items.push(rule(`${name}.rule`, frame.left, frame.top + frame.height - 1, frame.width, 1));
+  return items;
+}
+
+/** Moves items right by `dx`; the pair helper lays out from zero and the header places the group. */
+const shift = (items: Item[], dx: number): Item[] =>
+  items.map((item) => (item.kind === 'layer' ? item : { ...item, rect: { ...item.rect, left: item.rect.left + dx } }));
+
+/** The dot row: one square per module, the current one lit. */
+export function pageDots(name: string, frame: Rect, count: number, active: number): Item[] {
+  const width = count * PAGE_DOT.size + (count - 1) * PAGE_DOT.gap;
+  const x = Math.round(frame.left + (frame.width - width) / 2);
+  const y = Math.round(frame.top + (frame.height - PAGE_DOT.size) / 2);
+  return Array.from({ length: count }, (_, i) =>
+    band(
+      `${name}.dot${String(i + 1).padStart(2, '0')}`,
+      rect(x + i * (PAGE_DOT.size + PAGE_DOT.gap), y, PAGE_DOT.size, PAGE_DOT.size),
+      i + 1 === active ? ds.color.text.primary : ds.color.text.dim,
+    ),
+  );
+}
+
+export interface PanelSpec {
+  frame: Rect;
+  title: string;
+  /** Padding inside the panel. */
+  padX?: number;
+  padY?: number;
+}
+
+/** Height a panel's title row takes, gap included. */
+export const PANEL_TITLE_HEIGHT = ds.size.labelSm + ds.space[2];
+
+/** A pit wall panel: a title in small caps and the body rect under it. */
+export function panel(name: string, spec: PanelSpec, density: Density = 'zone'): { items: Item[]; body: Rect } {
+  const d = densityOf(density);
+  const padX = spec.padX ?? 20;
+  const padY = spec.padY ?? 14;
+  const titleY = spec.frame.top + padY;
+  const items: Item[] = [
+    label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX, { size: d.labelSm, color: ds.color.text.secondary }),
+  ];
+  const bodyTop = titleY + d.labelSm + ds.space[2];
+  return {
+    items,
+    body: rect(spec.frame.left + padX, bodyTop, Math.max(0, spec.frame.width - 2 * padX), Math.max(0, spec.frame.top + spec.frame.height - padY - bodyTop)),
+  };
+}
+
+/** Height of a zone's title bar. */
+export const ZONE_TITLE_HEIGHT = 28;
+
+export interface ZoneSpec {
+  frame: Rect;
+  title: string;
+  /** "3 / 11": which page of how many. */
+  page: number;
+  pages: number;
+}
+
+/** A data zone: a title bar with the page name and counter, and the body rect under it. */
+export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone'): { items: Item[]; body: Rect } {
+  const d = densityOf(density);
+  const padX = 16;
+  const titleY = spec.frame.top + (ZONE_TITLE_HEIGHT - d.labelSm) / 2;
+  const counter = `${spec.page} / ${spec.pages}`;
+  const counterWidth = Math.ceil(measureText('BarlowMedium', counter, d.labelSm)) + 2;
+  const items: Item[] = [
+    label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX - counterWidth, { size: d.labelSm, color: ds.color.text.secondary }),
+    label(`${name}.counter`, counter, spec.frame.left + spec.frame.width - padX - counterWidth, titleY, counterWidth, { size: d.labelSm, hAlign: 'right' }),
+  ];
+  const bodyTop = spec.frame.top + ZONE_TITLE_HEIGHT;
+  return {
+    items,
+    body: rect(spec.frame.left + padX, bodyTop + 6, Math.max(0, spec.frame.width - 2 * padX), Math.max(0, spec.frame.height - ZONE_TITLE_HEIGHT - 16)),
+  };
+}
+
+/** One part of an inline group: a small label, a value, or a coloured block. */
+export type InlinePart =
+  | { kind: 'label'; text: string; bind?: Expr; color?: `#${string}`; visibleBind?: Expr }
+  | { kind: 'value'; sample: string; bind?: Expr; chars: { digits: number; specials: number }; color?: `#${string}`; colorBind?: Expr; visibleBind?: Expr }
+  | { kind: 'block'; width: number; height: number; color: `#${string}`; colorBind?: Expr; visibleBind?: Expr };
+
+/**
+ * A run of labels, values and blocks on one baseline, as the pit wall header draws "Left 0:42:15"
+ * or a flag colour beside its name. The group measures itself so a caller can lay several of them
+ * out from the right edge of a header.
+ */
+export function inlineGroup(name: string, parts: readonly InlinePart[], fs: number, density: Density, gap = ds.space[2]): { width: number; draw(x: number, top: number): Item[] } {
+  const d = densityOf(density);
+  const widths = parts.map((part) => {
+    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', part.text.toUpperCase(), d.labelSm)) + 2;
+    if (part.kind === 'block') return part.width;
+    return monoWidth(cells('SemiBold', fs), part.chars) + 4;
+  });
+  const width = widths.reduce((sum, w) => sum + w, 0) + gap * Math.max(0, parts.length - 1);
+  return {
+    width,
+    draw(x: number, top: number): Item[] {
+      const items: Item[] = [];
+      const baseline = canvasBaseline(top, fs);
+      let cursor = x;
+      parts.forEach((part, i) => {
+        const w = widths[i] ?? 0;
+        if (part.kind === 'label') {
+          items.push(
+            label(`${name}.${i}`, part.text, cursor, canvasYForBaseline(baseline, d.labelSm), w, {
+              size: d.labelSm,
+              color: part.color,
+              bind: part.bind,
+              visibleBind: part.visibleBind,
+            }),
+          );
+        } else if (part.kind === 'block') {
+          items.push({
+            ...band(`${name}.${i}`, rect(cursor, Math.round(top + (fs - part.height) / 2), part.width, part.height), part.color),
+            ...withBindings({ BackgroundColor: part.colorBind, Visible: part.visibleBind }),
+          });
+        } else {
+          items.push(
+            numeral(`${name}.${i}`, part.sample, cursor, top, fs, part.chars, {
+              bind: part.bind,
+              color: part.color,
+              colorBind: part.colorBind,
+              visibleBind: part.visibleBind,
+              maxWidth: w,
+            }),
+          );
+        }
+        cursor += w + gap;
+      });
+      return items;
+    },
+  };
+}

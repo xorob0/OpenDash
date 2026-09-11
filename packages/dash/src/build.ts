@@ -25,6 +25,7 @@ import {
   type ZippedPackage,
 } from './generator.ts';
 import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
+import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './screens/index.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
 /** The repository root: this file lives in packages/dash/src. */
@@ -134,14 +135,19 @@ export function validateOrThrow(pkg: DashPackage): ValidationIssue[] {
   return result.warnings;
 }
 
+/** What a package is: the dash face, or one of the two second screens. */
+export type PackageKind = 'dash' | 'companion' | 'pitwall';
+
 export interface ManifestEntry {
   /** Package folder and main dashboard name; may contain spaces ("openDash 850x480"). */
   folder: string;
+  kind: PackageKind;
   width: number;
   height: number;
+  /** Slots the face has; a second screen has none. */
   slots: number;
-  /** The card rung of the layout's slots. */
-  rung: Rung;
+  /** The card rung of the layout's slots; absent on a second screen, which has no cards. */
+  rung?: Rung;
   /** The .simhubdash, relative to the output directory. */
   file: string;
 }
@@ -161,12 +167,18 @@ export interface BuildOptions {
   simHubVersion?: string;
   /** Default: every layout in src/layouts. */
   layouts?: readonly Layout[];
+  /** Default: every second screen in src/screens. Pass an empty list to build the faces alone. */
+  screens?: readonly ScreenPackageDef[];
   /** Progress and warnings, one line at a time. Default: console.log. */
   log?: (line: string) => void;
 }
 
 export interface BuiltPackage {
-  layout: Layout;
+  /** The layout a face was built from; absent for a second screen. */
+  layout?: Layout;
+  /** The definition a second screen was built from; absent for a face. */
+  screen?: ScreenPackageDef;
+  kind: PackageKind;
   pkg: DashPackage;
   warnings: ValidationIssue[];
   written: WrittenPackage;
@@ -199,35 +211,47 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const version = opts.version ?? readVersion();
   const simHubVersion = opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION;
   const layouts = opts.layouts ?? LAYOUTS;
+  const screens = opts.screens ?? SCREEN_PACKAGES;
   const log = opts.log ?? ((line: string): void => console.log(line));
-  if (layouts.length === 0) throw new BuildError('there is no layout to build');
+  if (layouts.length === 0 && screens.length === 0) throw new BuildError('there is no layout to build');
 
   const folders = new Set<string>();
-  const staged: { layout: Layout; pkg: DashPackage; warnings: ValidationIssue[] }[] = [];
+  const staged: { layout?: Layout; screen?: ScreenPackageDef; kind: PackageKind; pkg: DashPackage; warnings: ValidationIssue[] }[] = [];
+  const claim = (folder: string): void => {
+    if (folders.has(folder)) throw new BuildError(`two packages use the folder ${JSON.stringify(folder)}`);
+    folders.add(folder);
+  };
   for (const layout of layouts) {
-    if (folders.has(layout.folder)) throw new BuildError(`two layouts use the folder ${JSON.stringify(layout.folder)}`);
-    folders.add(layout.folder);
+    claim(layout.folder);
     const pkg = buildPackage(layout, { version, simHubVersion, strategy });
     const warnings = validateOrThrow(pkg);
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
-    staged.push({ layout, pkg, warnings });
+    staged.push({ layout, kind: 'dash', pkg, warnings });
+  }
+  for (const screen of screens) {
+    claim(screen.folder);
+    const pkg = buildScreenPackage(screen, { version, simHubVersion });
+    const warnings = validateOrThrow(pkg);
+    for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
+    staged.push({ screen, kind: screen.kind, pkg, warnings });
   }
 
   mkdirSync(out, { recursive: true });
   const packages: BuiltPackage[] = [];
   const manifest: Manifest = { version, simHubVersion, packages: [] };
-  for (const { layout, pkg, warnings } of staged) {
+  for (const { layout, screen, kind, pkg, warnings } of staged) {
     const written = writePackage(pkg, out);
     for (const file of written.files) log(`wrote ${relative(file)}`);
     const zipped = zipPackage(out, pkg.folderName);
     log(`wrote ${relative(zipped.path)} (${zipped.entries.length} entries, ${zipped.bytes.byteLength} bytes)`);
-    packages.push({ layout, pkg, warnings, written, zipped });
+    packages.push({ layout, screen, kind, pkg, warnings, written, zipped });
     manifest.packages.push({
       folder: pkg.folderName,
-      width: layout.width,
-      height: layout.height,
-      slots: layout.slots.length,
-      rung: rungOf(layout),
+      kind,
+      width: layout?.width ?? screen?.width ?? 0,
+      height: layout?.height ?? screen?.height ?? 0,
+      slots: layout ? layout.slots.length : 0,
+      ...(layout ? { rung: rungOf(layout) } : {}),
       file: `${pkg.folderName}${PACKAGE_EXTENSION}`,
     });
   }
