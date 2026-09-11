@@ -42,9 +42,17 @@ describe('reading the arguments', () => {
 });
 
 describe('which packages a bare run walks', () => {
-  test('the ten faces, and neither second screen', () => {
-    expect(FACES).toHaveLength(10);
+  test('every face, and neither second screen', () => {
+    // Ten card faces and the zone faces built beside them. The count moves as the zone work lands
+    // and moves back when the card path is retired, so it is checked against the list rather than
+    // written down.
+    expect(FACES).toEqual(LIST_ORDER.filter((n) => !n.includes('Companion') && !n.includes('Pit wall')));
+    expect(FACES.length).toBeGreaterThanOrEqual(10);
     expect(FACES.some((f) => f.includes('Companion') || f.includes('Pit wall'))).toBe(false);
+  });
+
+  test('the zone face is among them, so a capture of it costs nothing extra', () => {
+    expect(FACES).toContain('openDash zones 1920x480');
   });
 
   test('every one of them is a package the opener knows how to click', () => {
