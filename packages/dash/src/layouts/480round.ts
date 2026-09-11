@@ -16,7 +16,7 @@ export const layout480round: Layout = roundLayout({
   folder: 'openDash 480 round',
   size: SIZE,
   revArc: { r: 206, segment: { width: 22, height: 14 } },
-  gearSpeed: { kind: 'gearSpeedStack', rect: rect(0, 96, innerDiameter(SIZE), 340) },
+  gear: { rect: rect(0, 96, innerDiameter(SIZE), 340) },
   pitLimiter: rect(153, 100, 150, ds.indicator.pitLimiter.heightSm),
   slotSize: { width: 140, height: 108 },
   slotOrigins: [

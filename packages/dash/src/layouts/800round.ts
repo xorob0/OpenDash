@@ -20,7 +20,7 @@ export const layout800round: Layout = roundLayout({
   folder: 'openDash 800 round',
   size: SIZE,
   revArc: { r: 352, segment: { width: 30, height: 18 } },
-  gearSpeed: { kind: 'gearSpeedRow', rect: rect(228, 248, 320, 280) },
+  gear: { rect: rect(228, 248, 320, 280) },
   pitLimiter: rect(288, 164, 200, ds.indicator.pitLimiter.height),
   slotSize: { width: 180, height: 110 },
   slotOrigins: [

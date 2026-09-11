@@ -3,7 +3,9 @@
  * (the label says which), blue below 60 C, red above 100 C, `--` when there is no reading.
  */
 import { ncalc } from '../generator.ts';
+import { cardFrame } from '../components/frame.ts';
 import { grid2x2, type CellSpec } from '../components/grid2x2.ts';
+import { fitLabelForm } from '../elements/label.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
 import { TEMP_CHARS } from './chars.ts';
@@ -37,12 +39,22 @@ function cell(corner: (typeof TYRE_CORNERS)[number], sample: string): CellSpec {
   };
 }
 
-export const tyreTemps = defineCard('tyreTemps', (slot, rung, prefix, meta) =>
-  grid2x2(
+/** The unit in the label; "°F" is the widest, so it is what the forms are measured by. */
+const labelUnit = perUnit(str('°F'), str('K'), str('°C'));
+
+/** Longest first: the stop note goes when the card is too narrow to hold it. */
+const labelForms = (label: string) => [
+  { sample: label, widest: 'TYRES °F · LAST STOP', bind: concat(str('TYRES '), labelUnit, str(' · LAST STOP')) },
+  { sample: 'TYRES °C', widest: 'TYRES °F', bind: concat(str('TYRES '), labelUnit) },
+];
+
+export const tyreTemps = defineCard('tyreTemps', (slot, rung, prefix, meta) => {
+  const form = fitLabelForm(labelForms(meta.label), cardFrame(slot, rung).innerWidth);
+  return grid2x2(
     slot,
     rung,
     prefix,
-    { text: meta.label, bind: concat(str('TYRES '), perUnit(str('°F'), str('K'), str('°C')), str(' · LAST STOP')) },
+    { text: form.sample, bind: form.bind },
     [cell('FrontLeft', '84'), cell('FrontRight', '104'), cell('RearLeft', '62'), cell('RearRight', '88')],
-  ),
-);
+  );
+});

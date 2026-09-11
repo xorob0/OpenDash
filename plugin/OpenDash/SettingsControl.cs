@@ -206,7 +206,7 @@ namespace OpenDashPlugin
             return new Border { Background = Ui.Brush(Theme.SurfaceBase), Padding = new Thickness(6), Child = dock };
         }
 
-        /// <summary>The twelve cards in card-number order, so that SelectedIndex is the card number.</summary>
+        /// <summary>Every card in card-number order, so that SelectedIndex is the card number.</summary>
         private ComboBox BuildSlotSelect(int slot)
         {
             var box = new ComboBox

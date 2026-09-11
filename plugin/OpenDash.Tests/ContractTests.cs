@@ -10,13 +10,13 @@ namespace OpenDashPlugin.Tests
     public class ContractTests
     {
         [Fact]
-        public void Catalogue_has_twelve_cards_numbered_in_order()
+        public void Catalogue_has_thirteen_cards_numbered_in_order()
         {
-            Assert.Equal(12, Cards.Count);
-            Assert.Equal(12, Cards.All.Count);
-            Assert.Equal(Enumerable.Range(0, 12), Cards.All.Select(card => card.Number));
-            Assert.Equal(12, Cards.All.Select(card => card.Id).Distinct().Count());
-            Assert.Equal(12, Cards.All.Select(card => card.DisplayName).Distinct().Count());
+            Assert.Equal(13, Cards.Count);
+            Assert.Equal(13, Cards.All.Count);
+            Assert.Equal(Enumerable.Range(0, 13), Cards.All.Select(card => card.Number));
+            Assert.Equal(13, Cards.All.Select(card => card.Id).Distinct().Count());
+            Assert.Equal(13, Cards.All.Select(card => card.DisplayName).Distinct().Count());
             Assert.All(Cards.All, card => Assert.False(string.IsNullOrWhiteSpace(card.Label)));
         }
 
@@ -26,7 +26,7 @@ namespace OpenDashPlugin.Tests
             var expected = new[]
             {
                 "currentLap", "lastLap", "bestLap", "delta", "position", "session",
-                "fuel", "fuelLaps", "tc", "abs", "tyreTemps", "tyrePressures",
+                "fuel", "fuelLaps", "tc", "abs", "tyreTemps", "tyrePressures", "speed",
             };
             Assert.Equal(expected, Cards.All.Select(card => card.Id));
         }
@@ -35,21 +35,24 @@ namespace OpenDashPlugin.Tests
         public void Card_lookup_is_bounded()
         {
             Assert.True(Cards.IsValidNumber(0));
-            Assert.True(Cards.IsValidNumber(11));
-            Assert.False(Cards.IsValidNumber(12));
+            Assert.True(Cards.IsValidNumber(12));
+            Assert.False(Cards.IsValidNumber(13));
             Assert.False(Cards.IsValidNumber(-1));
-            Assert.Null(Cards.ByNumber(12));
+            Assert.Null(Cards.ByNumber(13));
             Assert.Equal("Fuel laps", Cards.DisplayName(7));
             Assert.Equal("Card 40", Cards.DisplayName(40));
         }
 
         [Fact]
-        public void Default_slots_show_cards_in_order()
+        public void Default_slots_lead_with_speed_then_the_timing_block()
         {
             Assert.Equal(12, Contract.SlotCount);
-            Assert.Equal(Enumerable.Range(0, 12).ToArray(), Contract.DefaultSlots());
-            Assert.Equal(0, Contract.DefaultCard(1));
-            Assert.Equal(11, Contract.DefaultCard(12));
+            Assert.Equal(new[] { 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, Contract.DefaultSlots());
+            // Speed first, so a two-slot round face still shows it beside the gear.
+            Assert.Equal(12, Contract.DefaultCard(1));
+            Assert.Equal(10, Contract.DefaultCard(12));
+            // Tyre pressures is the one card no slot shows by default.
+            Assert.DoesNotContain(11, Contract.DefaultSlots());
         }
 
         [Fact]

@@ -24,6 +24,10 @@ export const FUEL_INT_DIGITS = 3;
 export const FUEL_LAPS_CHARS: Chars = { digits: 4, specials: 1 };
 /** `OFF`, `--`, `12` */
 export const ASSIST_CHARS: Chars = { digits: 3, specials: 0 };
+/** `299` in any unit. */
+export const SPEED_CHARS: Chars = { digits: 3, specials: 0 };
+/** Digits the speed unit follows. */
+export const SPEED_DIGITS = 3;
 /** `104` in any unit (373 K). */
 export const TEMP_CHARS: Chars = { digits: 3, specials: 0 };
 /** `186.2` kPa; psi and bar are shorter. */

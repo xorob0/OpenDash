@@ -15,7 +15,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("overall", settings.PositionMode);
             Assert.Equal("session", settings.DeltaReference);
             Assert.Equal("auto", settings.SessionProgress);
-            Assert.Equal(Enumerable.Range(0, 12).ToArray(), settings.Slots);
+            Assert.Equal(Contract.DefaultSlots(), settings.Slots);
         }
 
         [Fact]
@@ -23,7 +23,8 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings { Slots = new[] { 99, -1, 5 } };
             settings.Normalise();
-            Assert.Equal(new[] { 0, 1, 5, 3, 4, 5, 6, 7, 8, 9, 10, 11 }, settings.Slots);
+            // Out of range falls back to the slot's default; 5 is kept.
+            Assert.Equal(new[] { 12, 0, 5, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, settings.Slots);
         }
 
         [Fact]
@@ -67,12 +68,12 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings { Slots = new[] { 4 } };
             Assert.Equal(4, settings.Slot(1));
-            Assert.Equal(1, settings.Slot(2));
-            Assert.Equal(11, settings.Slot(12));
+            Assert.Equal(0, settings.Slot(2));
+            Assert.Equal(10, settings.Slot(12));
             settings.SetSlot(12, 7);
             Assert.Equal(7, settings.Slot(12));
             settings.SetSlot(3, 42);
-            Assert.Equal(2, settings.Slot(3));
+            Assert.Equal(1, settings.Slot(3));
             Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetSlot(13, 0));
         }
 
@@ -80,7 +81,7 @@ namespace OpenDashPlugin.Tests
         public void Duplicates_are_reported_as_on_the_canvas()
         {
             var slots = Contract.DefaultSlots();
-            slots[8] = 7; // slot 9 shows Fuel laps, like slot 8
+            slots[7] = 7; // slot 8 shows Fuel laps, like slot 9
             var duplicates = DuplicateAssignment.Find(slots);
             var single = Assert.Single(duplicates);
             Assert.Equal(7, single.Card);
@@ -93,7 +94,7 @@ namespace OpenDashPlugin.Tests
         public void Duplicates_list_three_or_more_slots_with_commas()
         {
             var slots = Contract.DefaultSlots();
-            slots[3] = 0; // slot 4 no longer shows Delta
+            slots[4] = 11; // slot 5 no longer shows Delta
             slots[0] = 3;
             slots[1] = 3;
             slots[11] = 3;

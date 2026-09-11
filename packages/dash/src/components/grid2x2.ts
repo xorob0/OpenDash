@@ -1,10 +1,9 @@
 /**
  * grid2x2: a label over two rows of two numerals at the grid rung size, in car orientation
  * (front left, front right / rear left, rear right). Rows 4 apart, columns 16 apart, columns
- * splitting the inner width equally; the block is centred vertically. A cell's box is exactly
- * its character budget, so the budget must fit the column (`gridColumnWidth`): SimHub does not
- * clip left-aligned text, and a wider value would draw over its neighbour. The layout tests
- * check every grid card of every layout for it.
+ * splitting the inner width equally; the block is centred vertically. A cell's character budget
+ * must fit its column (`gridColumnWidth`), and the box takes the rest of the column so that the
+ * last glyph is never clipped. The layout tests check every grid card of every layout for it.
  */
 import type { Hex, Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
@@ -46,7 +45,14 @@ export function grid2x2(slot: Rect, rung: RungSpec, prefix: string, lbl: LabelSp
   cellSpecs.forEach((cell, i) => {
     const x = xs[i % 2] ?? f.x;
     const y = ys[i < 2 ? 0 : 1];
-    items.push(numeral(`${prefix}${CORNERS[i] ?? String(i)}`, cell.sample, x, y, fs, cell.chars, { bind: cell.bind, color: cell.color, colorBind: cell.colorBind }));
+    items.push(
+      numeral(`${prefix}${CORNERS[i] ?? String(i)}`, cell.sample, x, y, fs, cell.chars, {
+        maxWidth: i % 2 === 0 ? colWidth + COLUMN_GAP : slot.left + slot.width - x,
+        bind: cell.bind,
+        color: cell.color,
+        colorBind: cell.colorBind,
+      }),
+    );
   });
   return items;
 }

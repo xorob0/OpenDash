@@ -1,11 +1,16 @@
 /**
  * numeral: a value in Barlow Condensed SemiBold (Bold for the gear), text.primary unless told
- * otherwise, drawn in monospace cells so that a ticking value never jitters. The box is exactly
- * `chars` cells wide, which is what lets a follower be positioned from a digit count.
+ * otherwise, drawn in monospace cells so that a ticking value never jitters.
+ *
+ * The character budget `chars` is what a follower is positioned from, but the box is drawn a
+ * little wider than the budget: SimHub gives WPF the box as `MaxTextWidth` and WPF clips what
+ * does not fit, so a box sized to the exact text loses the last glyph's final pixels. The slack
+ * is invisible (the box is transparent and the text is left aligned) and never moves a
+ * follower, which is positioned from the cells.
  */
 import type { HAlign, Hex, Monospace, TextItem } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
-import { cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { boxSlack, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { roundRect } from '../design/geometry.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
@@ -18,6 +23,8 @@ export interface NumeralOptions {
   /** TextColor binding. */
   colorBind?: Expr;
   hAlign?: HAlign;
+  /** Widest the box may be, typically the card's inner width; the slack is capped by it. */
+  maxWidth?: number;
   /** Text binding. `sample` is the design-time text. */
   bind?: Expr;
   visibleBind?: Expr;
@@ -29,10 +36,14 @@ export function numeral(name: string, sample: string, x: number, y: number, fs: 
   const weight = opts.weight ?? 'SemiBold';
   const mono = opts.mono ?? cells(weight, fs);
   const box = textBox(y, fs);
+  const budget = monoWidth(mono, chars);
+  const wanted = budget + boxSlack(fs);
+  // Floored, so that a box whose left rounds up still ends inside the room it was given.
+  const width = opts.maxWidth === undefined ? wanted : Math.max(budget, Math.min(wanted, Math.floor(opts.maxWidth)));
   return {
     kind: 'text',
     name,
-    rect: roundRect({ left: x, top: box.top, width: monoWidth(mono, chars), height: box.height }),
+    rect: roundRect({ left: x, top: box.top, width, height: box.height }),
     text: sample,
     font: ds.font.data,
     fontWeight: weight,

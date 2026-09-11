@@ -1,6 +1,6 @@
 /** Slot geometry of the 1920 x 480 layout and the rect helpers behind it. */
 import { describe, expect, test } from 'bun:test';
-import { gearSpeedRow } from '../src/components/gearSpeed.ts';
+import { gear } from '../src/components/gear.ts';
 import { contains, grid, gridRules, inset, overlaps, rect, right, snapEdges } from '../src/design/geometry.ts';
 import { gearCells } from '../src/design/metrics.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
@@ -31,7 +31,7 @@ describe('1920x480 slots', () => {
   test('slots stay clear of the hero column, the header and the flag strip', () => {
     const { hero } = layout1920x480;
     for (const s of layout1920x480.slots) {
-      expect(overlaps(s, hero.gearSpeed.rect)).toBe(false);
+      expect(overlaps(s, hero.gear.rect)).toBe(false);
       if (hero.flags.kind !== 'flagStrip') throw new Error('1920x480 has a flag strip');
       expect(overlaps(s, hero.flags.rect)).toBe(false);
       expect(s.top).toBeGreaterThanOrEqual(65);
@@ -56,7 +56,7 @@ describe('1920x480 slots', () => {
   test('hero geometry matches the canvas', () => {
     const { hero } = layout1920x480;
     expect(hero.rev).toEqual({ kind: 'revBar', left: 24, top: 12, width: 1872, height: 40, gap: 8 });
-    expect(hero.gearSpeed).toEqual({ kind: 'gearSpeedRow', rect: { left: 769, top: 65, width: 382, height: 375 } });
+    expect(hero.gear).toEqual({ rect: { left: 769, top: 65, width: 382, height: 375 } });
     expect(hero.pitLimiter).toEqual({ left: 824, top: 75, width: 272, height: 36 });
     expect(hero.flags).toEqual({ kind: 'flagStrip', rect: { left: 0, top: 440, width: 1920, height: 40 } });
     expect(layout1920x480.shape).toBe('rect');
@@ -66,21 +66,21 @@ describe('1920x480 slots', () => {
     expect(LAYOUTS).toContain(layout1920x480);
   });
 
-  test('gear and speed block is centred in the hero column, the gear in a cell that holds "N"', () => {
-    const column = layout1920x480.hero.gearSpeed.rect;
-    const [gear, speed, speedUnit] = gearSpeedRow(column);
-    if (gear?.kind !== 'text' || speed?.kind !== 'text' || speedUnit?.kind !== 'text') throw new Error('gearSpeed returns three text items');
+  test('the gear is centred alone in the hero column, in a cell that holds "N"', () => {
+    const column = layout1920x480.hero.gear.rect;
+    const items = gear(column);
+    expect(items).toHaveLength(1);
+    const [gearItem] = items;
+    if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
     // Barlow Condensed Bold "N" advances 0.514 em = 133.6 px at 260; the face's digit cell (127) clips it.
-    expect(gear.rect).toEqual({ left: 801, top: 97, width: 135, height: 312 });
-    expect(gear.monospace).toEqual(gearCells(260));
-    expect(gear.rect.width).toBeGreaterThanOrEqual(Math.ceil(0.514 * 260));
-    expect(speed.rect).toEqual({ left: 960, top: 173, width: 159, height: 139 });
-    expect(speedUnit.rect).toEqual({ left: 960, top: 306, width: 159, height: 16 });
-    // 135 + 24 + 159 = 318 in a 382 column: 32 px either side.
-    expect(speed.rect.left - right(gear.rect)).toBe(24);
-    expect(gear.rect.left - column.left).toBe(32);
-    expect(right(column) - right(speed.rect)).toBe(32);
-    for (const item of [gear, speed, speedUnit]) expect(contains(column, item.rect)).toBe(true);
+    expect(gearItem.monospace?.charWidth ?? 0).toBeGreaterThanOrEqual(Math.ceil(0.514 * 260));
+    expect(gearItem.monospace).toEqual(gearCells(260));
+    // The glyph cell, not the box, is what is centred: the box carries transparent slack to its right.
+    const cell = gearItem.monospace?.charWidth ?? 0;
+    const leftAir = gearItem.rect.left - column.left;
+    const rightAir = right(column) - (gearItem.rect.left + cell);
+    expect(Math.abs(leftAir - rightAir)).toBeLessThanOrEqual(1);
+    expect(contains(column, gearItem.rect)).toBe(true);
   });
 });
 

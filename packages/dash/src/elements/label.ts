@@ -5,6 +5,7 @@
  */
 import type { HAlign, Hex, TextItem } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
+import { measureText } from '../design/advances.ts';
 import { textBox } from '../design/metrics.ts';
 import { roundRect } from '../design/geometry.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
@@ -38,4 +39,26 @@ export function label(name: string, text: string, x: number, y: number, width: n
     backgroundColor: TRANSPARENT,
     ...withBindings({ Text: opts.bind, Visible: opts.visibleBind, Left: opts.leftBind }),
   };
+}
+
+/**
+ * One way of writing a label: the design-time `sample`, the `widest` string the binding can
+ * produce (the longest unit, say), and the binding itself.
+ */
+export interface LabelForm {
+  sample: string;
+  /** The longest text the form can render; what it is measured by. */
+  widest: string;
+  bind?: Expr;
+}
+
+/**
+ * The first form whose widest rendering fits `width`, else the shortest form. SimHub clips a
+ * label that does not fit its box, so a card that cannot show "TYRES °C · LAST STOP" shows
+ * "TYRES °C" rather than half of "STOP".
+ */
+export function fitLabelForm(forms: readonly LabelForm[], width: number, fs: number = ds.size.label): LabelForm {
+  const last = forms[forms.length - 1];
+  if (!last) throw new Error('fitLabelForm: no forms');
+  return forms.find((f) => measureText('BarlowMedium', f.widest, fs) <= width) ?? last;
 }

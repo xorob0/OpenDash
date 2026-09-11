@@ -50,10 +50,11 @@ itself, which is the artifact that matters for contributors.
 
 ### Anatomy
 
-The face is divided into a fixed hero zone and twelve equal slots. The hero zone holds the
-elements a driver reads by reflex: gear, speed, the RPM bar with its shift lights, the flag
-strip and the pit limiter indicator. Every other field is a card, and any card can be placed in
-any slot from the plugin. The geometry of the slots, that is to say where they sit relative to
+The face is divided into a fixed hero zone and twelve equal slots. The hero zone holds one
+readout, the gear, together with the indicators that belong to no card: the RPM bar with its
+shift lights, the flag strip and the pit limiter. A module shows one thing, which is why speed
+sits in a slot like every other value rather than beside the gear. Every field other than the
+gear is a card, and any card can be placed in any slot from the plugin. The geometry of the slots, that is to say where they sit relative to
 the hero zone and how large a card is, belongs to the design work in progress and is not fixed
 by this document. What this document fixes is the count, twelve, and the rule that all slots
 share one size so that every card fits every slot.
@@ -66,15 +67,14 @@ layout declares, and each layout reads the first N of them.
 
 | Element | SimHub source | Behaviour |
 |---|---|---|
-| Gear | `Gear` | Largest element on the face. |
-| Speed | `SpeedLocal`, `SpeedLocalUnit` | Rounded integer; the unit follows the SimHub preference. |
+| Gear | `Gear` | Largest element on the face, and the only readout of the hero zone. |
 | RPM bar | `CarSettings_CurrentDisplayedRPMPercent` | Fill width proportional to the displayed RPM percentage. |
 | Shift lights | `CarSettings_RPMShiftLight1`, `CarSettings_RPMShiftLight2`, `CarSettings_CurrentGearRedLineRPM`, `CarSettings_RPMRedLineReached` | Three colour bands on the bar (`state.good`, `state.caution`, `state.danger`), blinking at redline. Governed by the `ShiftLights` setting, so that owners of DDUs with physical LEDs can turn them off. Thresholds are SimHub's own per-car values, which users already tune in SimHub's Car Settings page. |
 | Flag strip | `Flag_Black`, `Flag_Checkered`, `Flag_Yellow`, `Flag_Blue`, `Flag_White`, `Flag_Green` | One flag at a time, in that priority order, using the flag tokens. |
 | Pit limiter | `PitLimiterOn` | `state.neutral` indicator, blinking. |
 
 Property names are given in the short NCalc form of SimHub's `DataCorePlugin.GameData`
-properties. Those listed for gear, speed, RPM percentage, flags and the pit limiter are
+properties. Those listed for gear, RPM percentage, flags and the pit limiter are
 confirmed in existing dashboards; the shift light thresholds are confirmed by the spike.
 
 ### Cards
@@ -93,9 +93,13 @@ confirmed in existing dashboards; the shift light thresholds are confirmed by th
 | 9 | ABS | ABS level | `ABSLevel` | Integer; `OFF` at zero, `--` when the car has none |
 | 10 | Tyre temps | Four temperatures | `TyreTemperatureFrontLeft` and the three other corners | 2 by 2 grid, integer; the unit follows SimHub |
 | 11 | Tyre pressures | Four pressures | `TyrePressureFrontLeft` and the three other corners | 2 by 2 grid, one decimal; the unit follows SimHub |
+| 12 | Speed | Speed | `SpeedLocal`, `SpeedLocalUnit` | Rounded integer; the unit follows SimHub |
 
-The card number is the value a slot setting takes. The default assignment places cards 0 to 5
-in slots 1 to 6 and cards 6 to 11 in slots 7 to 12, in that order.
+The card number is the value a slot setting takes. The default assignment is speed, then the
+timing block, then the car values: slots 1 to 12 show cards 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 and
+10. Speed leads so that even a two-slot round face shows it beside the gear. Tyre pressures is
+the one card no slot shows by default, because iRacing only refreshes it in the pit stall and
+the tyre temperature card already carries that reading.
 
 Two caveats concern iRacing specifically. Tyre temperatures and pressures are not live, because
 iRacing only refreshes them while the car is in its pit stall; the two tyre cards therefore show
@@ -141,7 +145,7 @@ can be tested on both sides.
 | Position mode | `OpenDash.PositionMode` | `overall`, `class` | `overall` |
 | Delta reference | `OpenDash.DeltaReference` | `session`, `alltime` | `session` |
 | Session progress | `OpenDash.SessionProgress` | `auto`, `laps`, `time` | `auto` |
-| Slot assignment | `OpenDash.Slot01` to `OpenDash.Slot12` | a card number from 0 to 11 | the default assignment above |
+| Slot assignment | `OpenDash.Slot01` to `OpenDash.Slot12` | a card number from 0 to 12 | the default assignment above |
 
 `auto` shows laps when the session declares a lap count and time otherwise. The same card may
 be assigned to several slots; the panel shows a warning when that happens and does not prevent

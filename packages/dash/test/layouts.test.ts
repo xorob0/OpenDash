@@ -14,10 +14,10 @@ import { CARDS } from '../src/cards/index.ts';
 import { PRESSURE_TIERS, pressureTier, pressureTierFor } from '../src/cards/tyrePressures.ts';
 import { CHEQUER_COUNT, CHEQUER_SIZE, CHEQUER_STEP } from '../src/components/flagRing.ts';
 import { FLAG_STRIP_STYLES } from '../src/components/flagStrip.ts';
-import { GEAR_SPEED_SIZES, gearSpeedBand, gearSpeedRow, gearSpeedStack } from '../src/components/gearSpeed.ts';
+import { GEAR_SIZES, gear } from '../src/components/gear.ts';
 import { gridColumnWidth } from '../src/components/grid2x2.ts';
 import { revArcAngle } from '../src/components/revArc.ts';
-import { declaredProperties, slotSettingName } from '../src/contract.ts';
+import { declaredProperties, defaultCardForSlot, slotSettingName } from '../src/contract.ts';
 import { buildLayout, buildPackage } from '../src/dashboard.ts';
 import { centre, contains, distance, overlaps, rect, type Rect } from '../src/design/geometry.ts';
 import { FONT_METRICS, WPF_BASELINE } from '../src/design/metrics.ts';
@@ -150,8 +150,8 @@ describe('every layout', () => {
           if (w.kind !== 'widget') return;
           expect(w.name).toBe(slotSettingName(i + 1));
           expect(w.rect).toEqual(layout.slots[i]!);
-          expect(w.initialScreenIndex).toBe(i);
-          expect(w.bindings?.InitialScreenIndex).toEqual({ mode: 'formula', formula: `isnull([OpenDash.Slot${pad2(i + 1)}], ${i})` });
+          expect(w.initialScreenIndex).toBe(defaultCardForSlot(i + 1));
+          expect(w.bindings?.InitialScreenIndex).toEqual({ mode: 'formula', formula: `isnull([OpenDash.Slot${pad2(i + 1)}], ${defaultCardForSlot(i + 1)})` });
         });
         const pkg = buildPackage(layout, opts);
         expect(pkg.folderName).toBe(layout.folder);
@@ -175,24 +175,32 @@ describe('every layout', () => {
         uniqueNamesPerScreen(cards);
       });
 
-      test('the grid cards keep every cell in its column: no box wider than the column, none overlapping, all inside the padding', () => {
+      test('the grid cards keep every value in its column: text inside the column, boxes inside the slot, no overdraw', () => {
         const origin = rect(0, 0, layout.slotSize.width, layout.slotSize.height);
         const rung = cardRung(layout);
         const colWidth = gridColumnWidth(origin, rung);
-        const innerRight = layout.slotSize.width - rung.padding.x;
+        /** Width of the text an item actually draws, in its own monospace cells. */
+        const textWidth = (it: DrawableItem): number => {
+          if (it.kind !== 'text' || !it.monospace) throw new Error(`${it.name} is not a monospaced value`);
+          const specials = [...it.text].filter((c) => it.monospace!.specialChars?.includes(c) ?? false).length;
+          return (it.text.length - specials) * it.monospace.charWidth + specials * it.monospace.specialCharsWidth;
+        };
         for (const id of ['tyreTemps', 'tyrePressures']) {
           const screen = cards.screens.find((s) => s.name === id);
           if (!screen) throw new Error(`${id} has no screen`);
           const cells = screen.items.filter((i): i is DrawableItem => hasRect(i) && i.kind === 'text' && !i.name.endsWith('.label'));
           expect(cells.map((c) => c.name)).toEqual(['fl', 'fr', 'rl', 'rr'].map((corner) => `${id}.${corner}`));
           for (const c of cells) {
-            expect({ card: id, cell: c.name, width: c.rect.width, colWidth, fits: c.rect.width <= colWidth }).toMatchObject({ fits: true });
-            expect({ card: id, cell: c.name, right: c.rect.left + c.rect.width, innerRight, inside: c.rect.left + c.rect.width <= innerRight }).toMatchObject({ inside: true });
+            // The glyphs fit the column; the box may take the gap and the padding, since WPF clips to it.
+            expect({ card: id, cell: c.name, text: textWidth(c), colWidth, fits: textWidth(c) <= colWidth }).toMatchObject({ fits: true });
+            expect({ card: id, cell: c.name, right: c.rect.left + c.rect.width, inside: c.rect.left + c.rect.width <= layout.slotSize.width }).toMatchObject({ inside: true });
+            // Room to spare in the box, so the last glyph is never clipped.
+            expect({ card: id, cell: c.name, slack: c.rect.width - textWidth(c), hasSlack: c.rect.width > textWidth(c) }).toMatchObject({ hasSlack: true });
           }
-          // Same-row neighbours are apart (the rows' 1.2 em boxes overlap vertically by design, as on the canvas).
+          // A row's left value never reaches its right neighbour.
           const rows: [DrawableItem, DrawableItem][] = [[cells[0]!, cells[1]!], [cells[2]!, cells[3]!]];
           for (const [l, r] of rows) {
-            const gap = r.rect.left - (l.rect.left + l.rect.width);
+            const gap = r.rect.left - (l.rect.left + textWidth(l));
             expect({ card: id, left: l.name, right: r.name, gap, apart: gap >= 0 }).toMatchObject({ apart: true });
           }
         }
@@ -273,7 +281,7 @@ const RECT_ROWS: RectRow[] = [
     slotsBottom: 440,
     hero: {
       rev: { kind: 'revBar', left: 16, top: 12, width: 1248, height: 40, gap: 6 },
-      gearSpeed: { kind: 'gearSpeedRow', rect: rect(449, 65, 382, 375) },
+      gear: { rect: rect(449, 65, 382, 375) },
       pitLimiter: rect(504, 75, 272, 36),
       flags: strip(440, 1280, 40),
     },
@@ -296,7 +304,7 @@ const RECT_ROWS: RectRow[] = [
     slotsBottom: 368,
     hero: {
       rev: { kind: 'revBar', left: 16, top: 10, width: 1248, height: 32, gap: 6 },
-      gearSpeed: { kind: 'gearSpeedRow', rect: rect(449, 55, 382, 313) },
+      gear: { rect: rect(449, 55, 382, 313) },
       pitLimiter: rect(504, 65, 272, 28),
       flags: strip(368, 1280, 32),
     },
@@ -320,7 +328,7 @@ const RECT_ROWS: RectRow[] = [
     slotsBottom: 439,
     hero: {
       rev: { kind: 'revBar', left: 16, top: 12, width: 818, height: 40, gap: 4 },
-      gearSpeed: { kind: 'gearSpeedRow', rect: rect(234, 65, 382, 375) },
+      gear: { rect: rect(234, 65, 382, 375) },
       pitLimiter: rect(289, 75, 272, 36),
       flags: strip(440, 850, 40),
     },
@@ -343,7 +351,7 @@ const RECT_ROWS: RectRow[] = [
     slotsBottom: 439,
     hero: {
       rev: { kind: 'revBar', left: 16, top: 12, width: 768, height: 40, gap: 4 },
-      gearSpeed: { kind: 'gearSpeedRow', rect: rect(209, 65, 382, 375) },
+      gear: { rect: rect(209, 65, 382, 375) },
       pitLimiter: rect(264, 75, 272, 36),
       flags: strip(440, 800, 40),
     },
@@ -367,7 +375,7 @@ const RECT_ROWS: RectRow[] = [
     slotsBottom: 679,
     hero: {
       rev: { kind: 'revBar', left: 24, top: 12, width: 1232, height: 40, gap: 6 },
-      gearSpeed: { kind: 'gearSpeedRow', rect: rect(449, 65, 382, 615) },
+      gear: { rect: rect(449, 65, 382, 615) },
       pitLimiter: rect(504, 75, 272, 36),
       flags: strip(680, 1280, 40),
     },
@@ -392,7 +400,7 @@ const RECT_ROWS: RectRow[] = [
     slotsBottom: 274,
     hero: {
       rev: { kind: 'revBar', left: 16, top: 10, width: 768, height: 32, gap: 4 },
-      gearSpeed: { kind: 'gearSpeedRow', rect: rect(251, 55, 298, 219), sizes: { gear: 180, speed: 64, gap: 20 } },
+      gear: { rect: rect(251, 55, 298, 219), size: 180 },
       pitLimiter: rect(274, 65, 252, 28),
       flags: strip(274, 800, 12, FLAG_STRIP_STYLES.nano),
     },
@@ -414,7 +422,7 @@ const RECT_ROWS: RectRow[] = [
     slotsBottom: 645,
     hero: {
       rev: { kind: 'revBar', left: 16, top: 12, width: 568, height: 40, gap: 4 },
-      gearSpeed: { kind: 'gearSpeedBand', rect: rect(0, 65, 600, 300) },
+      gear: { rect: rect(0, 65, 600, 300) },
       pitLimiter: rect(164, 73, 272, 36),
       flags: strip(646, 600, 40),
     },
@@ -451,7 +459,7 @@ describe('the rectangular sizes, row by row of the spec table', () => {
         expect(layout.background).toBe('#0A0B0D');
       });
 
-      test('hero geometry: rev bar, gear and speed frame, pit limiter, flag strip', () => {
+      test('hero geometry: rev bar, gear frame, pit limiter, flag strip', () => {
         expect(layout.hero).toEqual(row.hero);
       });
 
@@ -541,23 +549,17 @@ describe('800 x 286 nano', () => {
   const { main } = buildLayout(layout, opts);
   const items = main.screens[0]!.items;
 
-  test('the hero is the small gear and speed pair: 180 / 64 with a 20 gap, centred in the 298 column', () => {
-    expect(layout.hero.gearSpeed).toEqual({ kind: 'gearSpeedRow', rect: rect(251, 55, 298, 219), sizes: GEAR_SPEED_SIZES.nano });
-    const gear = items.find((i) => i.name === 'hero.gear');
-    const speed = items.find((i) => i.name === 'hero.speed');
-    const unit = items.find((i) => i.name === 'hero.speedUnit');
-    if (gear?.kind !== 'text' || speed?.kind !== 'text' || unit?.kind !== 'text') throw new Error('hero text');
-    expect([gear.fontSize, gear.fontWeight]).toEqual([180, 'Bold']);
-    expect(speed.fontSize).toBe(64);
-    expect(unit.fontSize).toBe(13);
-    // Gear cell 94 + 20 + speed 3 x 29 = 201 in 298: 48.5 px either side, rounded.
-    expect(gear.rect).toEqual({ left: 300, top: 57, width: 94, height: 216 });
-    expect(speed.rect).toEqual({ left: 414, top: 117, width: 87, height: 77 });
-    expect(unit.rect.left).toBe(414);
-    expect(speed.rect.left - (gear.rect.left + gear.rect.width)).toBe(20);
-    expect(Math.abs(gear.rect.left + (speed.rect.left + speed.rect.width - gear.rect.left) / 2 - (251 + 298 / 2))).toBeLessThanOrEqual(0.5);
+  test('the hero is the small gear alone: 180, centred in the 298 column', () => {
+    expect(layout.hero.gear).toEqual({ rect: rect(251, 55, 298, 219), size: GEAR_SIZES.nano });
+    const gearItem = items.find((i) => i.name === 'hero.gear');
+    if (gearItem?.kind !== 'text') throw new Error('hero text');
+    expect([gearItem.fontSize, gearItem.fontWeight]).toEqual([180, 'Bold']);
+    // Gear cell 94 centred in 298: 102 px either side.
+    expect(gearItem.rect).toEqual({ left: 353, top: 57, width: 98, height: 217 });
+    expect(Math.abs(gearItem.rect.left + (gearItem.monospace?.charWidth ?? 0) / 2 - (251 + 298 / 2))).toBeLessThanOrEqual(0.5);
     // Everything of the hero stays between the header rule and the flag strip.
-    for (const it of [gear, speed, unit]) expect(contains(rect(0, 55, 800, 219), it.rect)).toBe(true);
+    expect(contains(rect(0, 55, 800, 219), gearItem.rect)).toBe(true);
+    expect(items.map((i) => i.name).filter((n) => n.startsWith('hero.'))).toEqual(['hero.gear']);
   });
 
   test('the 12 px flag strip has no labels, a 2 px black outline and 6 px checks', () => {
@@ -598,21 +600,18 @@ describe('600 x 686 DisplayDash', () => {
   const { main } = buildLayout(layout, opts);
   const items = main.screens[0]!.items;
 
-  test('the hero is the gear and speed row in a full-width 300 px band above the grid', () => {
-    expect(layout.hero.gearSpeed).toEqual({ kind: 'gearSpeedBand', rect: rect(0, 65, 600, 300) });
-    const [gear, speed, unit] = gearSpeedBand(rect(0, 65, 600, 300));
-    if (gear?.kind !== 'text' || speed?.kind !== 'text' || unit?.kind !== 'text') throw new Error('gearSpeedBand returns three text items');
-    // 135 + 24 + 159 = 318 centred in 600: 141 px either side.
-    expect(gear.rect).toEqual({ left: 141, top: 59, width: 135, height: 312 });
-    expect(speed.rect).toEqual({ left: 300, top: 136, width: 159, height: 139 });
-    expect(unit.rect).toEqual({ left: 300, top: 268, width: 159, height: 16 });
-    expect(600 - (speed.rect.left + speed.rect.width)).toBe(gear.rect.left);
+  test('the hero is the gear alone in a full-width 300 px band above the grid', () => {
+    expect(layout.hero.gear).toEqual({ rect: rect(0, 65, 600, 300) });
+    const [gearItem] = gear(rect(0, 65, 600, 300));
+    if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
+    // 135 centred in 600: 233 px either side (the odd pixel goes left of the cell).
+    expect(gearItem.rect).toEqual({ left: 233, top: 59, width: 139, height: 313 });
     // The gear's 1.2 em box overhangs the band by 6 px each side; its cap top and baseline stay inside it.
-    const baseline = gear.rect.top + WPF_BASELINE * gear.fontSize;
-    const capTop = baseline - (FONT_METRICS.capHeight / FONT_METRICS.unitsPerEm) * gear.fontSize;
+    const baseline = gearItem.rect.top + WPF_BASELINE * gearItem.fontSize;
+    const capTop = baseline - (FONT_METRICS.capHeight / FONT_METRICS.unitsPerEm) * gearItem.fontSize;
     expect(capTop).toBeGreaterThanOrEqual(65);
     expect(baseline).toBeLessThanOrEqual(365);
-    expect(items.map((i) => i.name).filter((n) => n.startsWith('hero.'))).toEqual(['hero.gear', 'hero.speed', 'hero.speedUnit']);
+    expect(items.map((i) => i.name).filter((n) => n.startsWith('hero.'))).toEqual(['hero.gear']);
   });
 
   test('the pit limiter is centred in the band, 8 px below its top, over the gear', () => {
@@ -657,7 +656,7 @@ const ROUND_ROWS: RoundRow[] = [
     face: FACE_480,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 240, cy: 240, r: 206 }, segment: { width: 22, height: 14 } },
-      gearSpeed: { kind: 'gearSpeedStack', rect: rect(12, 108, 456, 340) },
+      gear: { rect: rect(12, 108, 456, 340) },
       pitLimiter: rect(165, 112, 150, 28),
       flags: { kind: 'flagRing', face: FACE_480 },
     },
@@ -672,7 +671,7 @@ const ROUND_ROWS: RoundRow[] = [
     face: FACE_800,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 400, cy: 400, r: 352 }, segment: { width: 30, height: 18 } },
-      gearSpeed: { kind: 'gearSpeedRow', rect: rect(240, 260, 320, 280) },
+      gear: { rect: rect(240, 260, 320, 280) },
       pitLimiter: rect(300, 176, 200, 36),
       flags: { kind: 'flagRing', face: FACE_800 },
     },
@@ -681,7 +680,7 @@ const ROUND_ROWS: RoundRow[] = [
 ];
 
 /** The items of a round face's hero, in the order the main screen draws them (the ring last, so it is the outermost element). */
-const ROUND_HERO_NAMES = ['revArc.shiftLights', 'revArc.rpmBar', 'hero.gear', 'hero.speed', 'hero.speedUnit', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green'];
+const ROUND_HERO_NAMES = ['revArc.shiftLights', 'revArc.rpmBar', 'hero.gear', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green'];
 
 describe('the round faces, row by row of the spec table', () => {
   test('the table covers every round layout, each once', () => {
@@ -712,7 +711,7 @@ describe('the round faces, row by row of the spec table', () => {
         expect(layout.background).toBe('#0A0B0D');
       });
 
-      test('carries the round hero: rev arc layers, the gear and speed, the pit limiter and six flag rings, then the slots', () => {
+      test('carries the round hero: rev arc layers, the gear, the pit limiter and six flag rings, then the slots', () => {
         expect(items.map((i) => i.name)).toEqual([...ROUND_HERO_NAMES, ...layout.slots.map((_, i) => slotSettingName(i + 1))]);
         expect(hero(layout.hero).map((i) => i.name)).toEqual(ROUND_HERO_NAMES);
       });
@@ -797,7 +796,7 @@ describe('the round faces, row by row of the spec table', () => {
           const halfDiagonal = Math.hypot(s.rect.width, s.rect.height) / 2;
           expect(distance(centre(s.rect), centrePoint) + halfDiagonal).toBeLessThanOrEqual(inner);
         }
-        for (const name of ['hero.gear', 'hero.speed', 'hero.speedUnit', 'pitLimiter.band']) {
+        for (const name of ['hero.gear', 'pitLimiter.band']) {
           const item = [...walkItems(items)].find((i) => i.name === name);
           if (!item || !hasRect(item)) throw new Error(`${name} has no rect`);
           for (const c of corners(item.rect)) expect({ name, corner: c, inside: distance(c, centrePoint) <= inner }).toMatchObject({ inside: true });
@@ -812,7 +811,7 @@ describe('the round faces, row by row of the spec table', () => {
         const checks = layerNamed(items, 'flag.chequered').children.filter(hasRect);
         expect(segments).toHaveLength(30);
         expect(checks).toHaveLength(CHEQUER_COUNT);
-        const heroBoxes = ['hero.gear', 'hero.speed', 'hero.speedUnit', 'pitLimiter.band'].map((name) => {
+        const heroBoxes = ['hero.gear', 'pitLimiter.band'].map((name) => {
           const item = [...walkItems(items)].find((i) => i.name === name);
           if (!item || !hasRect(item)) throw new Error(`${name} has no rect`);
           return { name, rect: item.rect };
@@ -834,51 +833,30 @@ describe('the round faces, row by row of the spec table', () => {
 describe('480 round', () => {
   const layout = layout480round;
 
-  test('the stack: gear 260 centred, then speed 64 and its unit on one baseline 4 px below, centred in the frame', () => {
-    const [gear, speed, unit] = gearSpeedStack(layout.hero.gearSpeed.rect);
-    if (gear?.kind !== 'text' || speed?.kind !== 'text' || unit?.kind !== 'text') throw new Error('gearSpeedStack returns three text items');
-    expect(gear.fontSize).toBe(260);
-    expect(gear.fontWeight).toBe('Bold');
-    expect(gear.rect).toEqual({ left: 173, top: 88, width: 135, height: 312 });
-    expect(speed.fontSize).toBe(64);
-    expect(speed.rect).toEqual({ left: 177, top: 372, width: 87, height: 77 });
-    expect(unit.fontSize).toBe(13);
-    expect(unit.rect).toEqual({ left: 272, top: 423, width: 32, height: 16 });
-    // The gear is centred on the face and so is the row of speed + 8 + unit, to the half pixel rounding allows.
-    expect(Math.abs(gear.rect.left + gear.rect.width / 2 - 240)).toBeLessThanOrEqual(0.5);
-    expect(Math.abs((speed.rect.left + unit.rect.left + unit.rect.width) / 2 - 240)).toBeLessThanOrEqual(0.5);
-    expect(unit.rect.left - (speed.rect.left + speed.rect.width)).toBe(8);
-    // Canvas: the 328 px stack starts 6 px below the frame top of 108; the gear line box is 114.
-    expect(gear.rect.top).toBe(114 - 26);
+  test('the gear alone, 260, centred on the face', () => {
+    const [gearItem] = gear(layout.hero.gear.rect);
+    if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
+    expect(gearItem.fontSize).toBe(260);
+    expect(gearItem.fontWeight).toBe('Bold');
+    expect(gearItem.rect).toEqual({ left: 173, top: 122, width: 139, height: 313 });
+    // Centred on the 480 face in both axes, to the half pixel rounding allows.
+    expect(Math.abs(gearItem.rect.left + (gearItem.monospace?.charWidth ?? 0) / 2 - 240)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(gearItem.rect.top + gearItem.rect.height / 2 - 278)).toBeLessThanOrEqual(0.5);
   });
 });
 
 describe('800 round', () => {
   const layout = layout800round;
 
-  test('the hero is the standard gear and speed row, 135 + 24 + 159 centred in the 320 x 280 column, its glyphs inside the column', () => {
-    expect(layout.hero.gearSpeed).toEqual({ kind: 'gearSpeedRow', rect: rect(240, 260, 320, 280) });
-    const [gear, speed, unit] = gearSpeedRow(rect(240, 260, 320, 280));
-    if (gear?.kind !== 'text' || speed?.kind !== 'text' || unit?.kind !== 'text') throw new Error('gearSpeedRow returns three text items');
-    expect([gear.fontSize, gear.fontWeight]).toEqual([260, 'Bold']);
-    expect(speed.fontSize).toBe(116);
-    expect(unit.fontSize).toBe(13);
-    // 318 in 320: one pixel either side.
-    expect(gear.rect).toEqual({ left: 241, top: 244, width: 135, height: 312 });
-    expect(speed.rect).toEqual({ left: 400, top: 321, width: 159, height: 139 });
-    expect(unit.rect).toEqual({ left: 400, top: 453, width: 159, height: 16 });
-    expect(speed.rect.left - (gear.rect.left + gear.rect.width)).toBe(24);
-    expect(gear.rect.left - 240).toBe(560 - (speed.rect.left + speed.rect.width));
-    // The gear's 1.2 em box overhangs the 280 px column by 16 px each side; its cap top and baseline
-    // stay inside it, and the box ends above the bottom slots at y 562.
-    const baseline = gear.rect.top + WPF_BASELINE * gear.fontSize;
-    const capTop = baseline - (FONT_METRICS.capHeight / FONT_METRICS.unitsPerEm) * gear.fontSize;
-    expect(capTop).toBeGreaterThanOrEqual(260);
-    expect(baseline).toBeLessThanOrEqual(540);
-    expect(gear.rect.top + gear.rect.height).toBeLessThan(562);
-    // The speed block (116 + 6 + 13) is centred in the column: canvas line boxes 332.5 and 454.5.
-    expect(speed.rect.top + 0.1 * 116).toBeCloseTo(332.5, 0);
-    expect(unit.rect.top + 0.1 * 13).toBeCloseTo(454.5, 0);
+  test('the hero is the gear alone, centred in the 320 x 280 column, its glyphs inside the column', () => {
+    expect(layout.hero.gear).toEqual({ rect: rect(240, 260, 320, 280) });
+    const [gearItem] = gear(rect(240, 260, 320, 280));
+    if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
+    expect([gearItem.fontSize, gearItem.fontWeight]).toEqual([260, 'Bold']);
+    expect(gearItem.rect).toEqual({ left: 333, top: 244, width: 139, height: 313 });
+    // The cell, not the box, is centred: 135 in 320 leaves 92.5 either side.
+    const cell = gearItem.monospace?.charWidth ?? 0;
+    expect(Math.abs(gearItem.rect.left - 240 - (560 - (gearItem.rect.left + cell)))).toBeLessThanOrEqual(1);
   });
 
   test('the pit limiter is the standard 36 px block, 200 wide, centred over the gear and 48 px above the column', () => {
@@ -898,7 +876,7 @@ describe('800 round', () => {
     // Left and right columns are mirror images about the face centre, and so is the bottom row.
     expect(800 - (r1.left + r1.width)).toBe(l1.left);
     expect(800 - (b2.left + b2.width)).toBe(b1.left);
-    const column = layout.hero.gearSpeed.rect;
+    const column = layout.hero.gear.rect;
     for (const s of layout.slots) expect(overlaps(column, s)).toBe(false);
   });
 });
@@ -938,16 +916,22 @@ describe('tyre pressure precision per face', () => {
     expect(tierOf(layout800round)).toEqual({ integerFrom: 100, chars: { digits: 3, specials: 1 } });
     const fl = frontLeft(layout800round);
     expect(fl.bindings?.Text?.formula).toBe(`if((${P}) = (0), '--', if((${P}) < (100), format(${P}, '0.0'), format(${P}, '0')))`);
-    if (fl.kind === 'text') expect(fl.text).toBe('27.8');
-    expect(fl.rect.width).toBe(3 * 16 + 9);
+    if (fl.kind !== 'text') throw new Error('tyrePressures.fl is a text item');
+    expect(fl.text).toBe('27.8');
+    // Three digit cells and a point of budget, in a box with slack so the last glyph is not clipped.
+    expect(fl.monospace).toMatchObject({ charWidth: 16, specialCharsWidth: 9 });
+    expect(fl.rect.width).toBeGreaterThan(3 * 16 + 9);
+    expect(3 * 16 + 9).toBeLessThanOrEqual(gridColumnWidth(origin(layout800round), cardRung(layout800round)));
   });
 
   test('the 480 round, 50 px columns at 34, shows psi and kPa as integers and bar with its decimal', () => {
     expect(tierOf(layout480round)).toEqual({ integerFrom: 10, chars: { digits: 3, specials: 0 } });
     const fl = frontLeft(layout480round);
     expect(fl.bindings?.Text?.formula).toBe(`if((${P}) = (0), '--', if((${P}) < (10), format(${P}, '0.0'), format(${P}, '0')))`);
-    if (fl.kind === 'text') expect(fl.text).toBe('28');
-    expect(fl.rect.width).toBe(3 * 16);
-    expect(fl.rect.width).toBeLessThanOrEqual(gridColumnWidth(origin(layout480round), cardRung(layout480round)));
+    if (fl.kind !== 'text') throw new Error('tyrePressures.fl is a text item');
+    expect(fl.text).toBe('28');
+    expect(fl.monospace).toMatchObject({ charWidth: 16 });
+    expect(fl.rect.width).toBeGreaterThan(3 * 16);
+    expect(3 * 16).toBeLessThanOrEqual(gridColumnWidth(origin(layout480round), cardRung(layout480round)));
   });
 });

@@ -34,7 +34,7 @@ namespace OpenDashPlugin
 
     public static class Cards
     {
-        public const int Count = 12;
+        public const int Count = 13;
 
         public static readonly IReadOnlyList<Card> All = new[]
         {
@@ -50,6 +50,7 @@ namespace OpenDashPlugin
             new Card(9, "abs", "ABS", "ABS", "ABS level."),
             new Card(10, "tyreTemps", "TYRES °C · LAST STOP", "Tyre temps", "Four tyre temperatures from the last stop."),
             new Card(11, "tyrePressures", "PRESSURES PSI · LAST STOP", "Tyre pressures", "Four tyre pressures from the last stop."),
+            new Card(12, "speed", "SPEED", "Speed", "Speed, in the SimHub unit."),
         };
 
         public static bool IsValidNumber(int number) => number >= 0 && number < All.Count;

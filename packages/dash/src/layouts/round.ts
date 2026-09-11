@@ -9,7 +9,7 @@
 import type { Hex, Rect } from '../generator.ts';
 import { rect, translate, type Circle, type Size } from '../design/geometry.ts';
 import type { Padding } from '../design/rung.ts';
-import type { GearSpeedVariant } from '../hero/hero.ts';
+import type { GearVariant } from '../hero/hero.ts';
 import { ds } from '../tokens.ts';
 import { layoutDescription, type Layout } from './layout.ts';
 
@@ -23,7 +23,7 @@ export interface RoundSpec {
   /** Radius of the circle the rev segments are centred on, and their size before rotation. */
   revArc: { r: number; segment: Size };
   /** The gear and speed arrangement, its rect relative to the inner disc. */
-  gearSpeed: GearSpeedVariant;
+  gear: GearVariant;
   /** Pit limiter block, relative to the inner disc. */
   pitLimiter: Rect;
   slotSize: Size;
@@ -55,7 +55,7 @@ export function roundLayout(spec: RoundSpec): Layout {
     slots,
     hero: {
       rev: { kind: 'revArc', circle: { cx: face.cx, cy: face.cy, r: spec.revArc.r }, segment: { ...spec.revArc.segment } },
-      gearSpeed: { ...spec.gearSpeed, rect: inner(spec.gearSpeed.rect) },
+      gear: { ...spec.gear, rect: inner(spec.gear.rect) },
       pitLimiter: inner(spec.pitLimiter),
       flags: { kind: 'flagRing', face },
     },

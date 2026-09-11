@@ -43,7 +43,7 @@ export const layout600x686: Layout = {
   slots,
   hero: {
     rev: { kind: 'revBar', left: REV_BAR_MARGIN, top: (HEADER_HEIGHT - ds.shiftLights.height) / 2, width: WIDTH - 2 * REV_BAR_MARGIN, height: ds.shiftLights.height, gap: ds.space[1] },
-    gearSpeed: { kind: 'gearSpeedBand', rect: rect(0, HERO_TOP, WIDTH, HERO_HEIGHT) },
+    gear: { rect: rect(0, HERO_TOP, WIDTH, HERO_HEIGHT) },
     pitLimiter: rect((WIDTH - PIT_LIMITER.width) / 2, HERO_TOP + PIT_LIMITER.topInset, PIT_LIMITER.width, PIT_LIMITER.height),
     flags: { kind: 'flagStrip', rect: rect(0, HEIGHT - FLAG_HEIGHT, WIDTH, FLAG_HEIGHT) },
   },

@@ -7,7 +7,7 @@
  * 109 and a rule fill the 219 px body exactly.
  */
 import { FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
-import { GEAR_SPEED_SIZES } from '../components/gearSpeed.ts';
+import { GEAR_SIZES } from '../components/gear.ts';
 import { rungSpec } from '../design/rung.ts';
 import { ds } from '../tokens.ts';
 import { flankedLayout } from './flanked.ts';
@@ -37,6 +37,6 @@ export const layout800x286: Layout = flankedLayout({
   grid: { cell: { ...SLOT }, cols: 1, rows: 2, left: 0 },
   heroWidth: HERO_WIDTH,
   pitLimiter: { width: 252, height: ds.indicator.pitLimiter.heightSm, topInset: 10 },
-  gearSpeedSizes: GEAR_SPEED_SIZES.nano,
+  gearSize: GEAR_SIZES.nano,
   cardPadding: rungSpec('S').padding,
 });

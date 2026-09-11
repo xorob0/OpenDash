@@ -7,6 +7,7 @@ import {
   cardMeta,
   declaredProperties,
   defaultCardForSlot,
+  DEFAULT_SLOT_CARDS,
   DEFAULTS,
   DELTA_REFERENCES,
   POSITION_MODES,
@@ -19,12 +20,12 @@ import {
 import { CARDS } from '../src/cards/index.ts';
 
 describe('card catalogue', () => {
-  test('has 12 entries numbered 0..11 in order with unique ids', () => {
-    expect(CARD_CATALOGUE).toHaveLength(12);
+  test('has 13 entries numbered 0..12 in order with unique ids', () => {
+    expect(CARD_CATALOGUE).toHaveLength(13);
     CARD_CATALOGUE.forEach((c, i) => expect(c.number).toBe(i));
-    expect(new Set(CARD_CATALOGUE.map((c) => c.id)).size).toBe(12);
+    expect(new Set(CARD_CATALOGUE.map((c) => c.id)).size).toBe(13);
     expect(CARD_CATALOGUE.map((c) => c.id)).toEqual([
-      'currentLap', 'lastLap', 'bestLap', 'delta', 'position', 'session', 'fuel', 'fuelLaps', 'tc', 'abs', 'tyreTemps', 'tyrePressures',
+      'currentLap', 'lastLap', 'bestLap', 'delta', 'position', 'session', 'fuel', 'fuelLaps', 'tc', 'abs', 'tyreTemps', 'tyrePressures', 'speed',
     ]);
   });
 
@@ -47,8 +48,12 @@ describe('settings', () => {
   test('slot names and defaults', () => {
     expect(slotSettingName(1)).toBe('Slot01');
     expect(slotSettingName(12)).toBe('Slot12');
-    expect(defaultCardForSlot(1)).toBe(0);
-    expect(defaultCardForSlot(12)).toBe(11);
+    // Speed leads so that even a two-slot round face shows it beside the gear.
+    expect(defaultCardForSlot(1)).toBe(12);
+    expect(defaultCardForSlot(12)).toBe(10);
+    expect(DEFAULT_SLOT_CARDS).toEqual([12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    // Tyre pressures is the one card no slot shows by default.
+    expect(DEFAULT_SLOT_CARDS).not.toContain(11);
     expect(() => slotSettingName(0)).toThrow(RangeError);
     expect(() => slotSettingName(13)).toThrow(RangeError);
   });
@@ -58,8 +63,8 @@ describe('settings', () => {
     expect(setting.positionMode()).toBe("isnull([OpenDash.PositionMode], 'overall')");
     expect(setting.deltaReference()).toBe("isnull([OpenDash.DeltaReference], 'session')");
     expect(setting.sessionProgress()).toBe("isnull([OpenDash.SessionProgress], 'auto')");
-    expect(setting.slot(1)).toBe('isnull([OpenDash.Slot01], 0)');
-    expect(setting.slot(7)).toBe('isnull([OpenDash.Slot07], 6)');
+    expect(setting.slot(1)).toBe('isnull([OpenDash.Slot01], 12)');
+    expect(setting.slot(7)).toBe('isnull([OpenDash.Slot07], 5)');
   });
 });
 

@@ -5,7 +5,7 @@
 ```
 design/tokens.json ───────────────┐
 packages/dash/src/cards/*.ts ─────┤  one module per card: readouts, labels, colour rules
-packages/dash/src/hero/*.ts ──────┤  gear, speed, RPM bar, flags, pit limiter
+packages/dash/src/hero/*.ts ──────┤  gear, RPM bar, flags, pit limiter
 packages/dash/src/layouts/*.ts ───┤  slot geometry and slot count for one BaseWidth x BaseHeight
 packages/dash/fonts/*.ttf ────────┤
                                   v

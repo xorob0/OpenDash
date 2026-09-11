@@ -9,7 +9,9 @@
 import type { Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
+import { cardFrame } from '../components/frame.ts';
 import { grid2x2, gridColumnWidth, type CellSpec } from '../components/grid2x2.ts';
+import { fitLabelForm } from '../elements/label.ts';
 import { cells, monoWidth, type Chars } from '../design/metrics.ts';
 import type { RungSpec } from '../design/rung.ts';
 import { ds } from '../tokens.ts';
@@ -62,13 +64,24 @@ function cell(corner: (typeof TYRE_CORNERS)[number], sample: number, tier: Press
   };
 }
 
+/** The unit in the label; "KPA" is the widest of Psi, Kpa and Bar. */
+const labelUnit = ucase(isnull(game('TyrePressureUnit'), str('Psi')));
+
+/** Longest first: the stop note, then the unit, go as the card narrows. */
+const labelForms = (label: string) => [
+  { sample: label, widest: 'PRESSURES KPA · LAST STOP', bind: concat(str('PRESSURES '), labelUnit, str(' · LAST STOP')) },
+  { sample: 'PRESSURES PSI', widest: 'PRESSURES KPA', bind: concat(str('PRESSURES '), labelUnit) },
+  { sample: 'PSI', widest: 'KPA', bind: labelUnit },
+];
+
 export const tyrePressures = defineCard('tyrePressures', (slot, rung, prefix, meta) => {
   const tier = pressureTierFor(slot, rung);
+  const form = fitLabelForm(labelForms(meta.label), cardFrame(slot, rung).innerWidth);
   return grid2x2(
     slot,
     rung,
     prefix,
-    { text: meta.label, bind: concat(str('PRESSURES '), ucase(isnull(game('TyrePressureUnit'), str('Psi'))), str(' · LAST STOP')) },
+    { text: form.sample, bind: form.bind },
     [cell('FrontLeft', 27.8, tier), cell('FrontRight', 28.6, tier), cell('RearLeft', 27.1, tier), cell('RearRight', 27.9, tier)],
   );
 });

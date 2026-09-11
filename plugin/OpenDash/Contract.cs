@@ -36,11 +36,20 @@ namespace OpenDashPlugin
             return "Slot" + slot.ToString("00");
         }
 
-        /// <summary>Default card of a slot, 1-based: slot 1 shows card 0, slot 12 shows card 11.</summary>
+        /// <summary>
+        /// Default card of each slot, slot 1 first. Speed leads, so that even a two-slot face shows it
+        /// now that the hero holds the gear alone; the timing block follows, then the car values. Tyre
+        /// pressures is the one card no slot shows by default: in iRacing it only changes in the pit
+        /// stall, and tyre temperatures already carry that reading. Mirrors DEFAULT_SLOT_CARDS in
+        /// packages/dash/src/contract.ts.
+        /// </summary>
+        public static readonly IReadOnlyList<int> DefaultSlotCards = new[] { 12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+        /// <summary>Default card of a slot, 1-based.</summary>
         public static int DefaultCard(int slot)
         {
             if (slot < 1 || slot > SlotCount) throw new ArgumentOutOfRangeException(nameof(slot));
-            return slot - 1;
+            return DefaultSlotCards[slot - 1];
         }
 
         public static int[] DefaultSlots()

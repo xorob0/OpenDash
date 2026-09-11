@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts';
-import { CARD_CATALOGUE, declaredProperties } from '../src/contract.ts';
+import { CARD_CATALOGUE, declaredProperties, defaultCardForSlot } from '../src/contract.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { CARDS_FILE } from '../src/slots.ts';
@@ -40,8 +40,8 @@ describe('main dashboard', () => {
       expect(w.name).toBe(`Slot${String(i + 1).padStart(2, '0')}`);
       expect(w.fileName).toBe(CARDS_FILE);
       expect(w.rect).toEqual(layout1920x480.slots[i]!);
-      expect(w.initialScreenIndex).toBe(i);
-      expect(w.bindings?.InitialScreenIndex).toEqual({ mode: 'formula', formula: `isnull([OpenDash.Slot${String(i + 1).padStart(2, '0')}], ${i})` });
+      expect(w.initialScreenIndex).toBe(defaultCardForSlot(i + 1));
+      expect(w.bindings?.InitialScreenIndex).toEqual({ mode: 'formula', formula: `isnull([OpenDash.Slot${String(i + 1).padStart(2, '0')}], ${defaultCardForSlot(i + 1)})` });
     });
   });
 
@@ -51,9 +51,10 @@ describe('main dashboard', () => {
     uniqueNamesPerScreen(main);
   });
 
-  test('carries the hero: two rev bar layers, gear, speed, six flags, the pit limiter', () => {
+  test('carries the hero: two rev bar layers, the gear alone, six flags, the pit limiter', () => {
     const names = main.screens[0]!.items.map((i) => i.name);
-    for (const n of ['revBar.shiftLights', 'revBar.rpmBar', 'hero.gear', 'hero.speed', 'hero.speedUnit', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']) {
+    expect(names.filter((n) => n.startsWith('hero.'))).toEqual(['hero.gear']);
+    for (const n of ['revBar.shiftLights', 'revBar.rpmBar', 'hero.gear', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']) {
       expect(names).toContain(n);
     }
   });
@@ -100,11 +101,11 @@ describe('inline strategy', () => {
     expect(layers).toHaveLength(12);
     layers.forEach((slotLayer, i) => {
       if (slotLayer.kind !== 'layer') return;
-      expect(slotLayer.children).toHaveLength(12);
+      expect(slotLayer.children).toHaveLength(CARD_CATALOGUE.length);
       slotLayer.children.forEach((cardLayer, n) => {
         if (cardLayer.kind !== 'layer') throw new Error('card layer');
         expect(cardLayer.name).toBe(`${slotLayer.name}.${CARD_CATALOGUE[n]!.id}`);
-        expect(cardLayer.bindings?.Visible).toEqual({ mode: 'formula', formula: `(isnull([OpenDash.Slot${String(i + 1).padStart(2, '0')}], ${i})) = (${n})` });
+        expect(cardLayer.bindings?.Visible).toEqual({ mode: 'formula', formula: `(isnull([OpenDash.Slot${String(i + 1).padStart(2, '0')}], ${defaultCardForSlot(i + 1)})) = (${n})` });
         for (const item of walkItems(cardLayer.children)) if ('rect' in item) expect(contains(layout1920x480.slots[i]!, item.rect)).toBe(true);
       });
     });

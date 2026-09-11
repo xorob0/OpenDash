@@ -33,10 +33,10 @@ reads.
 
 ## Install
 
-Two files leave each release: `openDash.simhubdash` and `OpenDash-plugin.zip`.
+Each release carries one `.simhubdash` per screen size and one `OpenDash-plugin.zip`.
 
-- **Dashboard only.** Double-click `openDash.simhubdash`; SimHub imports it. You get the
-  default layout and the default modes, and no settings page.
+- **Dashboard only.** Double-click the `.simhubdash` for your screen; SimHub imports it. You get
+  the default layout and the default modes, and no settings page.
 - **Dashboard and plugin.** Unzip `OpenDash-plugin.zip`, copy `OpenDash.dll` into SimHub's
   install folder, unblock it, start SimHub and accept the new plugin. The plugin installs the
   dashboard for you and adds an "openDash" page to SimHub's left menu. The full procedure is
@@ -48,10 +48,10 @@ Dash Studio like any other.
 ## The dashboard
 
 The face is a fixed hero zone and twelve equal slots. The hero holds what a driver reads by
-reflex: the gear, the speed, a fifteen segment rev bar with SimHub's per-car shift lights, the
+reflex: the gear, a fifteen segment rev bar with SimHub's per-car shift lights, the
 flag strip and the pit limiter. Every other field is a card, and any card can be placed in any
-slot from the plugin: current, last and best lap, delta, position, session progress, fuel,
-fuel laps, TC, ABS, tyre temperatures and tyre pressures.
+slot from the plugin: speed, current, last and best lap, delta, position, session progress,
+fuel, fuel laps, TC, ABS, tyre temperatures and tyre pressures.
 
 The plugin settings are SimHub properties (`OpenDash.ShiftLights`, `OpenDash.PositionMode`,
 `OpenDash.DeltaReference`, `OpenDash.SessionProgress`, `OpenDash.Slot01` to `Slot12`), so
