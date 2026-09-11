@@ -6,6 +6,29 @@ from any Claude Code session on this machine through the **`winvm` MCP server**.
 
 How it was built and how to fix it when it breaks: [testing-vm-setup.md](testing-vm-setup.md).
 
+## The script
+
+Everything below is available as `bun run vm`, which is the supported way in and the one that is
+checked by being run:
+
+```bash
+bun run vm status                 # container, guest SSH and VNC
+bun run vm up                     # start it; `wait` blocks until the guest answers
+bun run vm install 'openDash'     # expand built packages into DashTemplates, restart SimHub
+bun run vm plugin                 # package, install OpenDash.dll, restart SimHub
+bun run vm logs 80                # tail the log SimHub is writing now
+bun run vm shot build/vm.png      # screenshot the display through QEMU's VNC
+bun run vm claim "what for"       # there is one VM; say who has it
+bun run vm release
+```
+
+It finds the VM by itself: this machine when `/opt/winvm` is present, otherwise the SSH host in
+`OPENDASH_VM_HOST`, which defaults to the host the project uses. `scripts/vm.ts` is also a library,
+so a longer script can import `powershell`, `inDesktop`, `install` and the rest rather than
+shelling out to the command.
+
+The prose below explains what the script does and is what to read when it breaks.
+
 ## TL;DR for an agent
 
 1. Call `vm_status`. If `ssh_reachable` is false, call `vm_start` then `vm_wait_ready`.
@@ -25,7 +48,7 @@ The MCP server is registered user-wide (`~/.claude.json`) **and** in this repo's
 | | |
 |---|---|
 | OS | Windows 10 Pro (unactivated, en-US), user `Docker` (local admin) |
-| Size | 2 vCPU, 4 GB RAM (ballooned back to host when idle), 40 GB sparse disk, 1280×800 display |
+| Size | 2 vCPU, 4 GB RAM (ballooned back to host when idle), 40 GB sparse disk, 3840×2160 display |
 | SimHub | 9.12.6, `C:\Program Files (x86)\SimHub\`, free (unlicensed) edition |
 | SimHub state | first-run wizard dismissed, defaults kept (km/h, °C, psi, litres). No sim installed. |
 | Extras | OpenSSH server, SimHub "web dash server" on guest port 8888 |
@@ -111,7 +134,10 @@ ssh -L 8006:127.0.0.1:8006 -L 3389:127.0.0.1:3389 -L 8888:127.0.0.1:8888 root@<v
 - **Don't author in DashStudio.** Anything edited there is overwritten by the next build
   (see [architecture.md](architecture.md)). Use it to inspect.
 - **Guest clock is not UTC** and drifts after suspend; do not compare guest and host
-  timestamps.
+  timestamps. It also drifts backwards across a restart, which makes the modification time of a
+  file inside the guest useless for deciding which of two is newer. SimHub's logs are the case
+  that bites: `SimHub.txt` is the one being written and `SimHub.N.txt` are rotations with N
+  growing as they age, so `bun run vm logs` chooses on that rather than on a timestamp.
 - **Pinned SimHub version.** 9.12.6. Do not let the VM auto-update; the format is
   undocumented and a newer SimHub is a different test target. Windows Update is disabled too.
 - **Shared state.** There is one VM. If two agents test at once they will fight over SimHub.

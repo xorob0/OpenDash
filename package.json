@@ -11,9 +11,10 @@
   "scripts": {
     "build": "bun packages/dash/src/build.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit -p packages/generator/tsconfig.json && tsc --noEmit -p packages/dash/tsconfig.json",
+    "typecheck": "tsc --noEmit -p packages/generator/tsconfig.json && tsc --noEmit -p packages/dash/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json",
     "check": "bun run typecheck && bun test",
-    "package": "bash scripts/package.sh"
+    "package": "bash scripts/package.sh",
+    "vm": "bun scripts/vm.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
