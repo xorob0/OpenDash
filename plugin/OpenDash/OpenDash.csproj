@@ -75,4 +75,13 @@
     <EmbeddedResource Include="Resources/fonts/*.ttf" Link="Fonts/%(Filename)%(Extension)" LogicalName="OpenDash.Fonts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../packages/dash/fonts/OFL.txt" Link="Fonts/OFL.txt" LogicalName="OpenDash.Fonts.OFL.txt" />
   </ItemGroup>
+
+  <!-- A glob that matches nothing embeds nothing, the build still succeeds, and the panel then falls back to
+       Segoe UI behind one warning in SimHub's log, which is a release-looking DLL whose panel is quietly
+       unstyled. The packages are allowed to be absent, since a plugin without them still loads and says so;
+       the fonts are not, because nothing downstream can tell that they were meant to be there. -->
+  <Target Name="RequirePanelFonts" BeforeTargets="BeforeBuild">
+    <Error Condition="'@(EmbeddedResource->WithMetadataValue('Extension', '.ttf'))' == ''"
+           Text="No fonts in plugin/OpenDash/Resources/fonts. They are build output of packages/dash: run `bun run build` and `cp -R build/fonts plugin/OpenDash/Resources/fonts`, or use `bun run package`, which does both." />
+  </Target>
 </Project>

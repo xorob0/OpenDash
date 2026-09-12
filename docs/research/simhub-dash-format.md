@@ -343,8 +343,17 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
 - `Width`, `BackgroundColor`, `Visible`, `Text`, `BlinkEnabled` and `InitialScreenIndex`
   bindings all evaluate at runtime. A `WidgetItem` whose `InitialScreenIndex` is bound switches
   screen live, so slots do not need the "every card in every slot" fallback.
-- Barlow and Barlow Condensed resolve by family name with `FontWeight` `Medium`, `SemiBold` and
-  `Bold`. Their digits are proportional and SimHub cannot request `tnum`, so numerals use
+- A face resolves by family name with `FontWeight` `Medium`, `SemiBold` and `Bold`, and this entry
+  used to say that Barlow and Barlow Condensed both did. They do not, and a release shipped on the
+  strength of it. WPF reads the width word out of a family name and files the condensed faces under
+  "Barlow" as a stretch, so `Font: "Barlow Condensed"` reached a face about a fifth wider than the
+  design, on the dash face, on the second screens and in the plugin's own settings panel. A `.djson`
+  carries `Font` and `FontWeight` and nothing for stretch, and `usWidthClass` does not override the
+  name, which was tried on the VM. What openDash ships is therefore Barlow Condensed with its family
+  renamed to one carrying no width word, "openDash Display", so that WPF has nothing to fold; see
+  `packages/dash/src/design/fontFiles.ts` and XOR-108. The lesson generalises beyond this font: no
+  family openDash asks for may contain Condensed, Narrow, Compressed, Extended, Expanded or Wide.
+  Their digits are proportional and SimHub cannot request `tnum`, so numerals use
   `UseMonospacedText` with `CharWidth` and `SpecialCharsWidth` cells, which SimHub offers for
   exactly this purpose.
 - `Layer` children carry absolute coordinates; a layer's own `Left`, `Top`, `Width`, `Height` and
