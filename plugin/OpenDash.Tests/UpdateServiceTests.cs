@@ -262,6 +262,45 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("not in this release", outcome.Line);
         }
 
+        /// <summary>
+        /// Work that is rewriting DashTemplates must be waitable, because a thread-pool thread is a background
+        /// thread the CLR terminates at process exit without unwinding: abandoning an install between the delete of
+        /// a dashboard folder and the move that replaces it leaves the folder gone.
+        /// </summary>
+        [Fact]
+        public void An_install_in_flight_is_waited_for_and_a_check_is_not()
+        {
+            Assert.False(UpdateService.Busy);
+            Assert.True(UpdateService.WaitForIdle(TimeSpan.Zero));
+
+            var release = new System.Threading.ManualResetEventSlim();
+            var started = new System.Threading.ManualResetEventSlim();
+            UpdateService.InBackground(() => { started.Set(); release.Wait(TimeSpan.FromSeconds(10)); }, null, mustFinish: true);
+
+            Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
+            Assert.True(UpdateService.Busy);
+            // Shutdown would block here rather than killing the thread mid-install.
+            Assert.False(UpdateService.WaitForIdle(TimeSpan.FromMilliseconds(50)));
+
+            release.Set();
+            Assert.True(UpdateService.WaitForIdle(TimeSpan.FromSeconds(10)));
+            Assert.False(UpdateService.Busy);
+        }
+
+        [Fact]
+        public void A_check_is_never_waited_for_because_abandoning_a_read_costs_nothing()
+        {
+            var release = new System.Threading.ManualResetEventSlim();
+            var started = new System.Threading.ManualResetEventSlim();
+            UpdateService.InBackground(() => { started.Set(); release.Wait(TimeSpan.FromSeconds(10)); });
+
+            Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
+            // A socket that never answers must not hold SimHub's shutdown for its whole timeout.
+            Assert.False(UpdateService.Busy);
+            Assert.True(UpdateService.WaitForIdle(TimeSpan.Zero));
+            release.Set();
+        }
+
         [Fact]
         public void Background_work_that_throws_does_not_take_the_process_with_it()
         {

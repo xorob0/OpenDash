@@ -77,6 +77,37 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
         }
 
+        /// <summary>
+        /// A staging folder is a complete extracted dashboard sitting in DashTemplates. Install removes its own in a
+        /// finally, and that finally does not run when the process exits, so every update abandoned by a SimHub that
+        /// closed mid-install left one behind and nothing ever removed it.
+        /// </summary>
+        [Fact]
+        public void Staging_folders_an_interrupted_install_left_behind_are_removed()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0"), root, null);
+            var templates = Path.Combine(root, "DashTemplates");
+
+            var orphan = Path.Combine(templates, PackageExtractor.StagingPrefix + "deadbeef");
+            Directory.CreateDirectory(Path.Combine(orphan, "openDash"));
+            File.WriteAllText(Path.Combine(orphan, "openDash", "openDash.djson"), "{}");
+            Directory.CreateDirectory(Path.Combine(templates, PackageExtractor.StagingPrefix + "cafe"));
+
+            Assert.Equal(2, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.Empty(Directory.GetDirectories(templates, PackageExtractor.StagingPrefix + "*"));
+
+            // The dashboards themselves are not staging folders and are left alone.
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+        }
+
+        [Fact]
+        public void Removing_staging_folders_is_safe_when_there_are_none_and_when_there_is_no_root()
+        {
+            Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(Path.Combine(root, "absent"), null));
+            Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(null, null));
+        }
+
         [Fact]
         public void Restore_puts_back_the_copy_Install_set_aside()
         {

@@ -159,16 +159,36 @@ namespace OpenDashPlugin
         private static string FolderOf(UpdatePlan plan, string assetName) =>
             plan.Items.FirstOrDefault(i => i.Asset != null && i.Asset.Name == assetName)?.FolderName;
 
+        private static readonly object WorkGate = new object();
+        private static readonly System.Threading.ManualResetEventSlim Idle = new System.Threading.ManualResetEventSlim(true);
+        private static int mustFinishCount;
+
         /// <summary>
-        /// Runs work off the caller's thread and hands the result back, swallowing everything.
+        /// Runs work off the caller's thread, swallowing everything.
         /// </summary>
+        /// <param name="mustFinish">
+        /// True for work that is rewriting DashTemplates. A thread-pool thread is a background thread, so the CLR
+        /// terminates it at process exit without unwinding and no finally runs: abandoning an install between the
+        /// delete and the move leaves a dashboard folder that is simply gone, and abandoning it at all leaves the
+        /// staging folder behind. Such work is counted, and WaitForIdle gives it a bounded chance to finish.
+        /// False for a check, which is a read and may be abandoned freely.
+        /// </param>
         /// <remarks>
         /// Nothing may run on the synchronous path of Init, and nothing may block on the thread SimHub calls it on.
         /// An unobserved exception on a thread-pool thread terminates the process on .NET Framework, so SimHub would
         /// vanish without a dialog; hence the catch that looks like it catches too much and does not.
         /// </remarks>
-        public static void InBackground(Action work, IInstallLog log = null)
+        public static void InBackground(Action work, IInstallLog log = null, bool mustFinish = false)
         {
+            if (mustFinish)
+            {
+                lock (WorkGate)
+                {
+                    if (mustFinishCount++ == 0) Idle.Reset();
+                }
+            }
+            // Counted before the work is queued, so Busy is true the moment the caller returns rather than once
+            // the pool gets round to it.
             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
@@ -179,7 +199,34 @@ namespace OpenDashPlugin
                 {
                     (log ?? NullInstallLog.Instance).Error("An update check failed in the background: " + ex);
                 }
+                finally
+                {
+                    if (mustFinish)
+                    {
+                        lock (WorkGate)
+                        {
+                            if (--mustFinishCount == 0) Idle.Set();
+                        }
+                    }
+                }
             });
+        }
+
+        /// <summary>
+        /// Waits for work that is rewriting DashTemplates, and reports whether it finished.
+        /// </summary>
+        /// <remarks>
+        /// Called from the plugin's End, which SimHub runs on shutdown. Waiting there is the opposite of the usual
+        /// advice and is right here: the alternative is the process exiting between a DeleteDirectory and the
+        /// Directory.Move that replaces what it deleted. A check is never waited for, since abandoning a read costs
+        /// nothing and a socket that never answers would hold SimHub's shutdown for its whole timeout.
+        /// </remarks>
+        public static bool WaitForIdle(TimeSpan timeout) => Idle.Wait(timeout);
+
+        /// <summary>True while an install is in flight, which is what the panel refuses to start a second one on.</summary>
+        public static bool Busy
+        {
+            get { lock (WorkGate) { return mustFinishCount > 0; } }
         }
     }
 }

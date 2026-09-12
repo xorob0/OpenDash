@@ -89,7 +89,7 @@ namespace OpenDashPlugin
             log = log ?? NullInstallLog.Instance;
             var templates = Path.Combine(simHubRoot, DashTemplates);
             Directory.CreateDirectory(templates);
-            var staging = Path.Combine(templates, "_openDash_staging_" + Guid.NewGuid().ToString("N"));
+            var staging = Path.Combine(templates, StagingPrefix + Guid.NewGuid().ToString("N"));
             try
             {
                 string folderName;
@@ -153,6 +153,41 @@ namespace OpenDashPlugin
         /// The folder being restored over is not backed up in its turn. A restore is the undo, and an undo that
         /// leaves its own thing to undo is a worse answer than one that does not.
         /// </remarks>
+        /// <summary>Prefix of the folder an install extracts into before moving it into place.</summary>
+        public const string StagingPrefix = "_openDash_staging_";
+
+        /// <summary>
+        /// Removes staging folders an earlier install did not clean up, and reports how many.
+        /// </summary>
+        /// <remarks>
+        /// Install extracts into DashTemplates/_openDash_staging_&lt;guid&gt; and removes it in a finally. That finally
+        /// does not run when the process exits, because a thread-pool thread is a background thread the CLR
+        /// terminates without unwinding, so every update abandoned by a SimHub that closed mid-install leaves a
+        /// complete extracted dashboard behind. They accumulate, they are invisible, and nothing else would ever
+        /// remove them. A folder with this prefix is openDash's own working space and is never a user's dashboard.
+        /// </remarks>
+        public static int RemoveOrphanedStaging(string simHubRoot, IInstallLog log)
+        {
+            log = log ?? NullInstallLog.Instance;
+            var templates = Path.Combine(simHubRoot ?? string.Empty, DashTemplates);
+            if (!Directory.Exists(templates)) return 0;
+            var removed = 0;
+            foreach (var folder in Directory.GetDirectories(templates, StagingPrefix + "*"))
+            {
+                try
+                {
+                    Directory.Delete(folder, true);
+                    removed++;
+                    log.Info("Removed a staging folder an interrupted install left behind: " + Path.GetFileName(folder));
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("Could not remove " + folder + ": " + ex.Message);
+                }
+            }
+            return removed;
+        }
+
         /// <summary>
         /// Every copy of this folder that could be put back, newest first: the copies kept when somebody's edited
         /// work was replaced, and then the ordinary one-deep backup.
