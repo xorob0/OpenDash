@@ -51,6 +51,16 @@ namespace OpenDashPlugin
         /// <summary>The zone and page a held button shows, encoded as zoneIndex * 100 + page.</summary>
         public int QuickGlance { get; set; } = Contract.DefaultQuickGlance;
 
+        /// <summary>Whether openDash may ask GitHub what the newest release is. Plugin-local rather than an
+        /// [OpenDash.*] property: a dashboard cannot react to it, so ADR 0003's reason for making a setting a
+        /// property does not apply. It is read before a request is constructed, so off means nothing is
+        /// fetched at all rather than fetched and discarded. On by default; see ADR 0012.</summary>
+        public bool CheckForUpdates { get; set; } = true;
+
+        /// <summary>When the last answer came back, as UTC ticks, so that a check is not repeated within the
+        /// interval ADR 0012 sets. Zero means never. Persisted so the interval survives a restart.</summary>
+        public long LastUpdateCheckTicks { get; set; }
+
         /// <summary>Clamps every value into its contract: unknown modes and card numbers fall back to the defaults,
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
         public void Normalise()
