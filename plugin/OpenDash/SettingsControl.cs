@@ -1050,6 +1050,11 @@ namespace OpenDashPlugin
         private void Check(bool manual)
         {
             if (!Settings.CheckForUpdates && !manual) return;
+            // Whether a request will be made is decided here rather than on the background thread, because saying
+            // "Checking for updates…" and then not checking left the panel on that sentence for as long as it was
+            // open, and hid an offer it had already found.
+            if (!UpdateCheck.ShouldCheck(Settings.CheckForUpdates, Settings.LastUpdateCheckTicks, DateTime.UtcNow, manual)) return;
+
             checkButton.IsEnabled = false;
             updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
             RefreshUpdateLine();
@@ -1061,6 +1066,11 @@ namespace OpenDashPlugin
                 var answer = Updates.Check(installed, Settings.CheckForUpdates, ref ticks, DateTime.UtcNow, manual);
                 Dispatcher.Invoke(() =>
                 {
+                    if (answer == null)
+                    {
+                        // The service declined after all. Whatever was showing before is still the truth.
+                        updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.Installer.InstalledVersion };
+                    }
                     if (answer != null)
                     {
                         updateStatus = answer;
