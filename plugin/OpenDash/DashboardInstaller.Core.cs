@@ -140,6 +140,10 @@ namespace OpenDashPlugin
 
         public string SimHubRoot { get; }
 
+        /// <summary>The record this installer keeps, so that an installer built over downloaded packages keeps the
+        /// same one rather than starting a second, disagreeing memory of what openDash wrote.</summary>
+        public IFolderRecord Record => record;
+
         /// <summary>The worst status across the packages (Failed over NotInstalled over UpdateAvailable over UpToDate).</summary>
         public InstallStatus Status { get; private set; } = InstallStatus.NotInstalled;
 
