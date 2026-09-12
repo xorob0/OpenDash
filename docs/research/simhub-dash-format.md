@@ -342,7 +342,9 @@ An `ImageItem` references a descriptor by name through `Image`:
 
 `AutoSize` with `AutoSizeScale` sizes the item from the image rather than from `Width` and
 `Height`; openDash wants the opposite, a fixed box, so it writes `AutoSize` false and sets both.
-`Opacity` is a percentage here rather than the 0 to 1 the other items use.
+Verified on the VM on 2026-09-12: one 240 x 180 source drawn by three items into 480 x 180,
+240 x 240 and 96 x 72 fills each rect, so the image is stretched to the box rather than letterboxed
+inside it. `Opacity` is a percentage, as it is on every other item.
 
 Fonts are referenced by family name in `Font`, with `FontWeight` taking WPF weight names such
 as `Normal`, `SemiBold`, `Bold` and `Black`, and the files are shipped in `_SHFonts/`. Blumlaut

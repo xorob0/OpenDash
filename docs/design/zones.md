@@ -179,10 +179,14 @@ proportional label and a monospaced value, not one string.
 Settled values, which a driver reads between corners rather than at speed.
 
 **Each end carries two fields**, dropping to one per end at 600 × 686. A field is chosen from a
-catalogue of eleven:
+catalogue of ten:
 
 race time · lap and total · time left · clock · simulated time · position · class position ·
-incidents · strength of field · air temperature · track temperature
+incidents · air temperature · track temperature
+
+Strength of field was the eleventh and is not built, because SimHub publishes it in no form at all
+and openDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
+named here only so that a reader of an older draft knows where it went.
 
 The default is Race and Lap on the left, Position and Class on the right.
 
