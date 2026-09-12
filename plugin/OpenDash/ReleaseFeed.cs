@@ -41,7 +41,7 @@ namespace OpenDashPlugin
         public bool PreRelease { get; set; }
         public bool Draft { get; set; }
 
-        /// <summary>The release body, which is GitHub's generated summary rather than CHANGELOG.md.</summary>
+        /// <summary>The release body, which is the release's section of CHANGELOG.md.</summary>
         public string Notes { get; set; }
 
         public string Url { get; set; }
