@@ -306,11 +306,25 @@ namespace OpenDashPlugin
                 + "and between them the car settings your sim publishes — slip, TC, cut, bias, ABS, map and diff. "
                 + "A setting the sim has no value for takes its cell with it rather than leaving an empty box.",
                 846);
+            // The warning row is built before RebuildFace fills the hosts, because RebuildFace refreshes
+            // it: doing it the other way round dereferenced a control that did not exist yet, and the
+            // whole panel came up as "openDash settings could not be displayed".
+            var picker = BuildFacePicker();
+            var warning = BuildFaceWarning();
             RebuildFace();
-            return Ui.Section("Zones", caption, BuildFacePicker(), faceHost, strip, BuildFaceWarning());
+            return Ui.Section("Zones", caption, picker, faceHost, strip, warning);
         }
 
-        /// <summary>Which face the zones below belong to.</summary>
+        /// <summary>
+        /// Which face the zones below belong to.
+        /// </summary>
+        /// <remarks>
+        /// The picture underneath keeps the reference face's proportions whichever face is chosen,
+        /// because its geometry is read off the 1920 x 480 artboard and every face has its own. What
+        /// changes is which face's settings the controls read and write, which is the part that was
+        /// wrong. Drawing each face to its own shape, and hiding the bar on the nano that has none,
+        /// belongs to the panel rebuild in XOR-125.
+        /// </remarks>
         private FrameworkElement BuildFacePicker()
         {
             var box = new ComboBox
@@ -677,6 +691,9 @@ namespace OpenDashPlugin
         private void RefreshFaceWarning()
         {
             var message = FacePageClash.Warning(Settings.Face(face));
+            // Called while the panel is still being assembled as well as after it, so a row that does
+            // not exist yet is nothing to refresh rather than a crash.
+            if (faceWarningText == null || faceWarningRow == null) return;
             faceWarningText.Text = message;
             faceWarningRow.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         }
