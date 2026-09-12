@@ -10,7 +10,7 @@
  */
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { declaredProperties, PROPERTY_PREFIX } from './contract.ts';
+import { declaredProperties, facePropertyNames, FACE_SIZES, PROPERTY_PREFIX } from './contract.ts';
 import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
 import { buildZoneFace, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
 import { fontsForPackage } from './dashboard.ts';
@@ -132,8 +132,12 @@ export function readVersion(file: string = VERSION_FILE): string {
 }
 
 /** Validates against the contract's declared properties; throws a BuildError on errors, returns the warnings. */
-export function validateOrThrow(pkg: DashPackage): ValidationIssue[] {
-  const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
+export function validateOrThrow(pkg: DashPackage, face?: { width: number; height: number }): ValidationIssue[] {
+  // A face may read its own group and the settings every package shares, and no other face's. Every
+  // group is declared, so being declared proves nothing here; without this a package could read the
+  // screen beside it and only a rig with two screens would ever show it.
+  const foreignProperties = face ? FACE_SIZES.filter((f) => f.width !== face.width || f.height !== face.height).flatMap(facePropertyNames) : undefined;
+  const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX, foreignProperties });
   if (!result.ok) {
     const n = result.errors.length;
     throw new BuildError(`package ${pkg.folderName} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
@@ -246,7 +250,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
     claim(face.folder);
     const built = buildZoneFace(face, { version, simHubVersion, author: DEFAULT_AUTHOR });
     const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
-    const warnings = validateOrThrow(pkg);
+    const warnings = validateOrThrow(pkg, { width: face.width, height: face.height });
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ zoneFace: face, kind: 'dash', pkg, warnings });
   }
