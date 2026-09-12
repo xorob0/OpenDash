@@ -37,6 +37,48 @@ namespace OpenDashPlugin.Tests
         private string Templates(string folder) => Path.Combine(root, "DashTemplates", folder);
 
         [Fact]
+        public void Restore_puts_back_the_copy_Install_set_aside()
+        {
+            var first = PackageExtractor.Install(Package("openDash 480 round", "0.1.0", ("openDash 480 round/extra.txt", "one")), root, null);
+            Assert.Null(first.BackupPath);
+
+            var second = PackageExtractor.Install(Package("openDash 480 round", "0.2.0"), root, null);
+            Assert.NotNull(second.BackupPath);
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash 480 round"));
+            Assert.False(File.Exists(Path.Combine(Templates("openDash 480 round"), "extra.txt")));
+
+            Assert.True(PackageExtractor.Restore(root, "openDash 480 round", null));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash 480 round"));
+            Assert.Equal("one", File.ReadAllText(Path.Combine(Templates("openDash 480 round"), "extra.txt")));
+        }
+
+        [Fact]
+        public void Restore_reports_when_there_is_nothing_to_put_back()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0"), root, null);
+            var log = new ListLog();
+            Assert.False(PackageExtractor.Restore(root, "openDash", log));
+            // Still installed: a restore with no backup changes nothing rather than removing the folder.
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Contains(log.Lines, line => line.StartsWith("warn: No previous copy of openDash"));
+        }
+
+        [Fact]
+        public void Restore_leaves_the_installed_copy_alone_when_the_backup_is_not_a_package()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0"), root, null);
+            PackageExtractor.Install(Package("openDash", "0.2.0"), root, null);
+            var backup = Path.Combine(root, "DashTemplates", "openDash" + PackageExtractor.BackupSuffix);
+            File.Delete(backup);
+            using (var zip = ZipFile.Open(backup, ZipArchiveMode.Create))
+            {
+                Add(zip, "not-a-dashboard.txt", "nothing useful");
+            }
+            Assert.Throws<InvalidDataException>(() => PackageExtractor.Restore(root, "openDash", null));
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+        }
+
+        [Fact]
         public void ReadPackageVersion_reads_folder_and_version_without_extracting()
         {
             using (var package = Package("openDash", "0.2.0"))
