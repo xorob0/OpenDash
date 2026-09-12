@@ -300,6 +300,13 @@ outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so 
 pixels goes to whichever has the better claim. The band draws as a filled bar with a 3 px border
 in the flag's colour and the flag's name in dark text.
 
+The black flag is the one exception, and it is drawn light on dark rather than dark on light. Its
+token, `purpose.flag.black`, is `#F5F7FA`, which is the ink and not the ground: a band filled with
+it would be indistinguishable from the white flag at `#FFFFFF`. So the black flag fills with
+`surface.base`, keeps the border, and writes its name in `purpose.flag.black`. The canvas captions
+it "outlined", which it no longer is, because a transparent flag left the page underneath fully
+readable and a flag takes the band over.
+
 ---
 
 ## 7. The settings the contract fixes
