@@ -24,6 +24,12 @@ const repoRoot = path.resolve(import.meta.dir, '..');
  *
  * `openDashboard` clicks a row by its index in that list, so the order is not cosmetic. `shots.ts`
  * reads the same list rather than keeping a second copy.
+ *
+ * Since XOR-118 the zone faces carry the shipped names and the card faces are the ones saying
+ * "slots". That makes the bare `openDash` a prefix of every other entry, so filtering the list by it
+ * matches all of them and the opener takes the first row; it is first here because it is first
+ * there, and that is checked on the VM rather than assumed, since this order is read off Dash
+ * Studio and is not a sort this repository performs.
  */
 export const LIST_ORDER = [
   'openDash',
@@ -36,15 +42,15 @@ export const LIST_ORDER = [
   'openDash 800x286',
   'openDash 800x480',
   'openDash 850x480',
-  // The zone faces, built beside the card faces for review until they take the name openDash.
-  'openDash zones 1280x400',
-  'openDash zones 1280x480',
-  'openDash zones 1280x720',
-  'openDash zones 1920x480',
-  'openDash zones 600x686',
-  'openDash zones 800x286',
-  'openDash zones 800x480',
-  'openDash zones 850x480',
+  // The card faces, built beside the zone faces for comparison until XOR-95 deletes them.
+  'openDash slots 1280x400',
+  'openDash slots 1280x480',
+  'openDash slots 1280x720',
+  'openDash slots 1920x480',
+  'openDash slots 600x686',
+  'openDash slots 800x286',
+  'openDash slots 800x480',
+  'openDash slots 850x480',
   'openDash Companion',
   'openDash Companion portrait',
   'openDash Pit wall',

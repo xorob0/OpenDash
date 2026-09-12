@@ -92,7 +92,7 @@ const leftOf = (item: Item): string => String(item.bindings?.Left?.formula);
 const exprOf = (id: string): string => STRIP_CELLS.find((c) => c.id === id)!.expr;
 
 describe('the strip closes over what the game does not publish', () => {
-  const FOLDER = 'openDash zones 1920x480';
+  const FOLDER = 'openDash';
   const values = stripValues(FOLDER);
   const ids = values.map(cellIdOf);
   /** Where each cell sits when every setting is published. */
@@ -158,7 +158,7 @@ describe('the strip closes over what the game does not publish', () => {
 
   test('a narrow face closes its shorter strip the same way', () => {
     // 850 by 480 keeps three cells, so the arithmetic is a different one and worth its own case.
-    const narrow = stripValues('openDash zones 850x480');
+    const narrow = stripValues('openDash 850x480');
     expect(narrow.length).toBeGreaterThan(0);
     expect(narrow.length).toBeLessThan(values.length);
     const full = narrow.map((v) => evaluate(leftOf(v), []));
