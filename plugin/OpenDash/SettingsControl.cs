@@ -275,6 +275,19 @@ namespace OpenDashPlugin
         /// <summary>Zone B, zone A and zone C, as the artboard divides the 844.</summary>
         private static readonly double[] FaceBodyWidths = { 246, 316, 280 };
 
+        /// <summary>
+        /// The face this section is configuring.
+        ///
+        /// Every face has its own zones, its own bar and its own glance, so the panel has to say which
+        /// one it is showing and let a driver with two screens reach the second. The reference face is
+        /// where it opens, because that is the one nearly every rig has.
+        /// </summary>
+        private Contract.FaceSize face = Contract.ReferenceFace;
+
+        /// <summary>The face plan and the wheel bindings, both rebuilt when the chosen face changes.</summary>
+        private readonly ContentControl faceHost = new ContentControl();
+        private readonly ContentControl bindingHost = new ContentControl();
+
         private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
         private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
         private readonly Dictionary<string, List<CheckBox>> zoneMaskBoxes = new Dictionary<string, List<CheckBox>>();
@@ -293,7 +306,51 @@ namespace OpenDashPlugin
                 + "and between them the car settings your sim publishes — slip, TC, cut, bias, ABS, map and diff. "
                 + "A setting the sim has no value for takes its cell with it rather than leaving an empty box.",
                 846);
-            return Ui.Section("Zones", caption, BuildFacePicture(), strip, BuildFaceWarning());
+            RebuildFace();
+            return Ui.Section("Zones", caption, BuildFacePicker(), faceHost, strip, BuildFaceWarning());
+        }
+
+        /// <summary>Which face the zones below belong to.</summary>
+        private FrameworkElement BuildFacePicker()
+        {
+            var box = new ComboBox
+            {
+                Width = 160,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            };
+            foreach (var size in Contract.FaceSizes) box.Items.Add(size.ToString());
+            box.SelectedIndex = 0;
+            box.SelectionChanged += (sender, args) =>
+            {
+                if (box.SelectedIndex < 0) return;
+                face = Contract.FaceSizes[box.SelectedIndex];
+                RebuildFace();
+            };
+            return Ui.Row(
+                "Screen",
+                "Each screen keeps its own zones, bar and glance, so a face on the wheel and one beside it "
+                    + "are set up apart rather than moving together.",
+                box);
+        }
+
+        /// <summary>
+        /// Draws the plan and the bindings for whichever face is chosen.
+        ///
+        /// The caches are cleared first: they are keyed by zone letter, so a control left in them from
+        /// the previous face would be refreshed instead of the one on screen.
+        /// </summary>
+        private void RebuildFace()
+        {
+            zoneSelects.Clear();
+            zoneMaskButtons.Clear();
+            zoneMaskBoxes.Clear();
+            barEndButtons.Clear();
+            faceHost.Content = BuildFacePicture();
+            bindingHost.Content = BuildZoneBindings();
+            RefreshFaceWarning();
         }
 
         private FrameworkElement BuildFacePicture()
@@ -363,9 +420,9 @@ namespace OpenDashPlugin
             foreach (var slot in new[] { firstSlot, secondSlot })
             {
                 var captured = slot;
-                var select = BuildPageSelect(FacePages.BarFields, Settings.BarField(captured), 200, index =>
+                var select = BuildPageSelect(FacePages.BarFields, Settings.BarField(face, captured), 200, index =>
                 {
-                    Settings.SetBarField(captured, index);
+                    Settings.SetBarField(face, captured, index);
                     plugin.SaveSettings();
                     Ui.SetDropText(button, BarEndCaption(firstSlot, secondSlot));
                 });
@@ -378,7 +435,7 @@ namespace OpenDashPlugin
 
         private string BarEndCaption(string firstSlot, string secondSlot)
         {
-            return FacePages.EndLabel(FacePages.FieldName(Settings.BarField(firstSlot)), FacePages.FieldName(Settings.BarField(secondSlot)));
+            return FacePages.EndLabel(FacePages.FieldName(Settings.BarField(face, firstSlot)), FacePages.FieldName(Settings.BarField(face, secondSlot)));
         }
 
         /// <summary>Zones B, A and C across the body, in the order the face draws them.</summary>
@@ -439,9 +496,9 @@ namespace OpenDashPlugin
         private ComboBox BuildZoneSelectFor(string letter, double width)
         {
             var pages = FacePages.For(letter);
-            var select = BuildPageSelect(pages, Settings.FaceZoneStart(letter), width, index =>
+            var select = BuildPageSelect(pages, Settings.FaceZoneStart(face, letter), width, index =>
             {
-                Settings.SetFaceZoneStart(letter, index);
+                Settings.SetFaceZoneStart(face, letter, index);
                 plugin.SaveSettings();
                 RefreshZone(letter);
                 RefreshFaceWarning();
@@ -490,7 +547,7 @@ namespace OpenDashPlugin
             var on = 0;
             for (var page = 0; page < pages; page++)
             {
-                if (Settings.FaceZonePageEnabled(letter, page)) on++;
+                if (Settings.FaceZonePageEnabled(face, letter, page)) on++;
             }
             return on + " of " + pages + " pages";
         }
@@ -517,7 +574,7 @@ namespace OpenDashPlugin
                     FontSize = Theme.SizeLabel,
                     FontFamily = PanelFonts.Label,
                     Foreground = Ui.Brush(Theme.TextPrimary),
-                    IsChecked = Settings.FaceZonePageEnabled(letter, page),
+                    IsChecked = Settings.FaceZonePageEnabled(face, letter, page),
                     Margin = new Thickness(0, 0, 20, 6),
                     MinWidth = 120,
                 };
@@ -552,7 +609,7 @@ namespace OpenDashPlugin
 
         private void SetPage(string letter, int page, bool enabled)
         {
-            Settings.SetFaceZonePageEnabled(letter, page, enabled);
+            Settings.SetFaceZonePageEnabled(face, letter, page, enabled);
             plugin.SaveSettings();
             RefreshZone(letter);
             RefreshFaceWarning();
@@ -565,14 +622,14 @@ namespace OpenDashPlugin
             var pages = FacePages.For(letter);
             if (enabled)
             {
-                for (var i = 0; i < pages.Count; i++) Settings.SetFaceZonePageEnabled(letter, pages[i].Number, true);
+                for (var i = 0; i < pages.Count; i++) Settings.SetFaceZonePageEnabled(face, letter, pages[i].Number, true);
             }
             else
             {
-                var keep = Settings.FaceZoneStart(letter);
+                var keep = Settings.FaceZoneStart(face, letter);
                 for (var i = 0; i < pages.Count; i++)
                 {
-                    if (pages[i].Number != keep) Settings.SetFaceZonePageEnabled(letter, pages[i].Number, false);
+                    if (pages[i].Number != keep) Settings.SetFaceZonePageEnabled(face, letter, pages[i].Number, false);
                 }
             }
             plugin.SaveSettings();
@@ -587,7 +644,7 @@ namespace OpenDashPlugin
             ComboBox select;
             if (zoneSelects.TryGetValue(letter, out select))
             {
-                var start = Settings.FaceZoneStart(letter);
+                var start = Settings.FaceZoneStart(face, letter);
                 if (select.SelectedIndex != start) select.SelectedIndex = start;
             }
             ToggleButton button;
@@ -598,7 +655,7 @@ namespace OpenDashPlugin
                 var pages = FacePages.For(letter);
                 for (var i = 0; i < boxes.Count && i < pages.Count; i++)
                 {
-                    var enabled = Settings.FaceZonePageEnabled(letter, pages[i].Number);
+                    var enabled = Settings.FaceZonePageEnabled(face, letter, pages[i].Number);
                     if (boxes[i].IsChecked != enabled) boxes[i].IsChecked = enabled;
                 }
             }
@@ -619,7 +676,7 @@ namespace OpenDashPlugin
 
         private void RefreshFaceWarning()
         {
-            var message = FacePageClash.Warning(Settings);
+            var message = FacePageClash.Warning(Settings.Face(face));
             faceWarningText.Text = message;
             faceWarningRow.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         }
@@ -638,25 +695,25 @@ namespace OpenDashPlugin
                 VerticalContentAlignment = VerticalAlignment.Center,
             };
             foreach (var letter in Contract.FaceZoneLetters) zoneBox.Items.Add("Zone " + letter);
-            zoneBox.SelectedIndex = Contract.QuickGlanceZone(Settings.QuickGlance);
+            zoneBox.SelectedIndex = Contract.QuickGlanceZone(Settings.QuickGlanceOf(face));
 
             var pageHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             Action fillPages = () =>
             {
                 var letter = Contract.FaceZoneLetters[Math.Max(0, zoneBox.SelectedIndex)];
-                var page = Contract.QuickGlanceZone(Settings.QuickGlance) == zoneBox.SelectedIndex
-                    ? Contract.QuickGlancePage(Settings.QuickGlance)
+                var page = Contract.QuickGlanceZone(Settings.QuickGlanceOf(face)) == zoneBox.SelectedIndex
+                    ? Contract.QuickGlancePage(Settings.QuickGlanceOf(face))
                     : 0;
                 pageHost.Child = BuildPageSelect(FacePages.For(letter), page, 200, index =>
                 {
-                    Settings.QuickGlance = Contract.NormaliseQuickGlance(Contract.QuickGlanceValue(zoneBox.SelectedIndex, index));
+                    Settings.SetQuickGlance(face, Contract.QuickGlanceValue(zoneBox.SelectedIndex, index));
                     plugin.SaveSettings();
                 });
             };
             zoneBox.SelectionChanged += (sender, args) =>
             {
                 if (zoneBox.SelectedIndex < 0) return;
-                Settings.QuickGlance = Contract.NormaliseQuickGlance(Contract.QuickGlanceValue(zoneBox.SelectedIndex, 0));
+                Settings.SetQuickGlance(face, Contract.QuickGlanceValue(zoneBox.SelectedIndex, 0));
                 plugin.SaveSettings();
                 fillPages();
             };
@@ -672,7 +729,7 @@ namespace OpenDashPlugin
                     "Next page",
                     "Bind a wheel button per zone. A driver cycles a zone without taking a hand off the wheel, "
                         + "which is the whole point of zones.",
-                    BuildZoneBindings()),
+                    bindingHost),
                 Ui.Row(text, Ui.HStack(8, zoneBox, pageHost)),
                 BuildGlanceBinding(),
             };
@@ -683,7 +740,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildZoneBindings()
         {
             var binders = Contract.FaceZoneLetters
-                .Select(letter => BuildBinder(Contract.CycleZoneAction(letter), "Zone " + letter))
+                .Select(letter => BuildBinder(Contract.CycleZoneAction(face, letter), "Zone " + letter))
                 .ToArray();
             var stack = Ui.VStack(6, binders);
             stack.HorizontalAlignment = HorizontalAlignment.Right;
@@ -692,7 +749,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildGlanceBinding()
         {
-            return Ui.Row(Ui.Label("Glance button"), BuildBinder(Contract.HoldQuickGlanceAction, "Quick glance", hold: true));
+            return Ui.Row(Ui.Label("Glance button"), BuildBinder(Contract.HoldQuickGlanceActionFor(face), "Quick glance", hold: true));
         }
 
         /// <summary>

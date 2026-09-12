@@ -165,19 +165,26 @@ namespace OpenDashPlugin
                 var captured = slot;
                 this.AttachDelegate(Contract.SlotProperty(captured), () => Settings.Slot(captured));
             }
-            foreach (var letter in Contract.FaceZoneLetters)
+            // One group per face that ships, so that a rig with two screens configures them apart. A
+            // property for a face nobody has installed costs one integer and is never read, which is
+            // cheaper than a face that cannot be configured until SimHub is restarted.
+            foreach (var face in Contract.FaceSizes)
             {
-                var captured = letter;
-                this.AttachDelegate(Contract.ZonePageProperty(captured), () => Settings.FaceZone(captured));
-                this.AttachDelegate(Contract.ZoneMaskProperty(captured), () => Settings.FaceZoneMask(captured));
-                this.AttachDelegate(Contract.ZoneStartProperty(captured), () => Settings.FaceZoneStart(captured));
+                var capturedFace = face;
+                foreach (var letter in Contract.FaceZoneLetters)
+                {
+                    var captured = letter;
+                    this.AttachDelegate(Contract.ZonePageProperty(capturedFace, captured), () => Settings.FaceZone(capturedFace, captured));
+                    this.AttachDelegate(Contract.ZoneMaskProperty(capturedFace, captured), () => Settings.FaceZoneMask(capturedFace, captured));
+                    this.AttachDelegate(Contract.ZoneStartProperty(capturedFace, captured), () => Settings.FaceZoneStart(capturedFace, captured));
+                }
+                foreach (var slot in Contract.BarSlots)
+                {
+                    var captured = slot;
+                    this.AttachDelegate(Contract.BarFieldProperty(capturedFace, captured), () => Settings.BarField(capturedFace, captured));
+                }
+                this.AttachDelegate(Contract.QuickGlanceProperty(capturedFace), () => Settings.QuickGlanceOf(capturedFace));
             }
-            foreach (var slot in Contract.BarSlots)
-            {
-                var captured = slot;
-                this.AttachDelegate(Contract.BarFieldProperty(captured), () => Settings.BarField(captured));
-            }
-            this.AttachDelegate(Contract.QuickGlance, () => Settings.QuickGlance);
             for (var module = 1; module <= Modules.Count; module++)
             {
                 var captured = module;
@@ -207,16 +214,20 @@ namespace OpenDashPlugin
         /// </summary>
         private void AttachActions(PluginManager pluginManager)
         {
-            foreach (var letter in Contract.FaceZoneLetters)
+            foreach (var face in Contract.FaceSizes)
             {
-                var captured = letter;
-                pluginManager.AddAction(Contract.CycleZoneAction(captured), typeof(OpenDash), (manager, name) => Settings.CycleFaceZone(captured), null);
+                var capturedFace = face;
+                foreach (var letter in Contract.FaceZoneLetters)
+                {
+                    var captured = letter;
+                    pluginManager.AddAction(Contract.CycleZoneAction(capturedFace, captured), typeof(OpenDash), (manager, name) => Settings.CycleFaceZone(capturedFace, captured), null);
+                }
+                pluginManager.AddAction(
+                    Contract.HoldQuickGlanceActionFor(capturedFace),
+                    typeof(OpenDash),
+                    (manager, name) => Settings.Face(capturedFace).BeginQuickGlance(),
+                    (manager, name) => Settings.Face(capturedFace).EndQuickGlance());
             }
-            pluginManager.AddAction(
-                Contract.HoldQuickGlanceAction,
-                typeof(OpenDash),
-                (manager, name) => Settings.BeginQuickGlance(),
-                (manager, name) => Settings.EndQuickGlance());
         }
     }
 }

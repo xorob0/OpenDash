@@ -51,6 +51,68 @@ namespace OpenDashPlugin
         // model -- a slot is arranged once with a mouse, a zone is changed with a thumb mid-lap, so
         // what the contract carries is a page number a button can advance.
 
+        /// <summary>One face size that ships, and therefore one group of settings.</summary>
+        public struct FaceSize
+        {
+            public FaceSize(int width, int height) { Width = width; Height = height; }
+            public int Width { get; }
+            public int Height { get; }
+            public override string ToString() { return Width + " x " + Height; }
+        }
+
+        /// <summary>
+        /// Every face size that ships. Mirrors FACE_SIZES in packages/dash/src/contract.ts, which
+        /// ContractTests reads back, so the two cannot drift.
+        /// </summary>
+        public static readonly IReadOnlyList<FaceSize> FaceSizes = new[]
+        {
+            new FaceSize(1920, 480),
+            new FaceSize(1280, 480),
+            new FaceSize(1280, 400),
+            new FaceSize(850, 480),
+            new FaceSize(800, 480),
+            new FaceSize(1280, 720),
+            new FaceSize(800, 286),
+            new FaceSize(600, 686),
+        };
+
+        /// <summary>The face a rig is most likely to have, and where a pre-face setting is migrated to.</summary>
+        public static FaceSize ReferenceFace { get { return FaceSizes[0]; } }
+
+        /// <summary>
+        /// The prefix a face's settings carry, for instance "Face1920x480".
+        /// </summary>
+        /// <remarks>
+        /// Concatenated rather than separated by a dot, because SimHub already puts one dot in front of
+        /// every property name and whether its parser accepts a second inside the name is unverified.
+        /// Every face carries one so that a rig of two faces is configured apart rather than sharing one
+        /// set of zones, which is the same idiom the pit wall's PitWall prefix already uses.
+        /// </remarks>
+        public static string FacePrefix(FaceSize face)
+        {
+            return "Face" + face.Width + "x" + face.Height;
+        }
+
+        /// <summary>The face a prefix names. Throws when nothing ships at that size.</summary>
+        public static FaceSize FaceForPrefix(string prefix)
+        {
+            foreach (var face in FaceSizes)
+            {
+                if (string.Equals(FacePrefix(face), prefix, StringComparison.Ordinal)) return face;
+            }
+            throw new ArgumentOutOfRangeException("prefix", prefix, "no face ships at that size");
+        }
+
+        /// <summary>Whether a prefix names a face that ships, for reading a settings file written by another version.</summary>
+        public static bool IsKnownFacePrefix(string prefix)
+        {
+            foreach (var face in FaceSizes)
+            {
+                if (string.Equals(FacePrefix(face), prefix, StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
         public static readonly string[] FaceZoneLetters = { "A", "B", "C", "D" };
 
@@ -76,7 +138,11 @@ namespace OpenDashPlugin
         /// zoneIndex * 100 + page, so a glance is one property rather than a pair per zone.</summary>
         public const int DefaultQuickGlance = 2 * 100 + 12;
 
-        public const string QuickGlance = "QuickGlance";
+        /// <summary>Property name of a face's quick glance: Face1920x480QuickGlance.</summary>
+        public static string QuickGlanceProperty(FaceSize face)
+        {
+            return FacePrefix(face) + "QuickGlance";
+        }
 
         /// <summary>
         /// The actions a driver binds to a wheel button. Named as verbs, because a property is a noun:
@@ -85,11 +151,17 @@ namespace OpenDashPlugin
         /// </summary>
         public const string HoldQuickGlanceAction = "HoldQuickGlance";
 
-        /// <summary>Action that advances one zone to its next enabled page: CycleZoneA .. CycleZoneD.</summary>
-        public static string CycleZoneAction(string letter)
+        /// <summary>Action that advances one zone of one face: Face1920x480CycleZoneA.</summary>
+        public static string CycleZoneAction(FaceSize face, string letter)
         {
             RequireFaceZone(letter);
-            return "CycleZone" + letter;
+            return FacePrefix(face) + "CycleZone" + letter;
+        }
+
+        /// <summary>Action that holds the glance on one face: Face1920x480HoldQuickGlance.</summary>
+        public static string HoldQuickGlanceActionFor(FaceSize face)
+        {
+            return FacePrefix(face) + HoldQuickGlanceAction;
         }
 
         /// <summary>
@@ -101,39 +173,62 @@ namespace OpenDashPlugin
             return Prefix + "." + actionName;
         }
 
-        /// <summary>Every action the plugin registers, in registration order.</summary>
+        /// <summary>
+        /// Every action the plugin registers, in registration order: five per face that ships.
+        /// </summary>
+        /// <remarks>
+        /// Per face and not five in total, because two faces on one rig have to cycle apart, which is
+        /// the same reason their properties are prefixed. The cost is that SimHub's binding list holds
+        /// five entries for every face rather than five altogether, and a driver with one screen will
+        /// see the four they do not have. Registering only what is installed was the alternative and
+        /// was not taken: which face a folder is would have to be parsed out of its name, and a face
+        /// installed later would have no actions until SimHub was restarted.
+        /// </remarks>
         public static IEnumerable<string> ActionNames()
         {
-            foreach (var letter in FaceZoneLetters) yield return CycleZoneAction(letter);
-            yield return HoldQuickGlanceAction;
+            foreach (var face in FaceSizes)
+            {
+                foreach (var letter in FaceZoneLetters) yield return CycleZoneAction(face, letter);
+                yield return HoldQuickGlanceActionFor(face);
+            }
         }
 
-        /// <summary>Property name of a zone's current page: ZoneA .. ZoneD.</summary>
-        public static string ZonePageProperty(string letter)
+        /// <summary>Property name of a zone's current page: Face1920x480ZoneA .. Face600x686ZoneD.</summary>
+        public static string ZonePageProperty(FaceSize face, string letter)
         {
             RequireFaceZone(letter);
-            return "Zone" + letter;
+            return FacePrefix(face) + "Zone" + letter;
         }
 
-        /// <summary>Property name of a zone's enabled-page mask: ZoneAPages .. ZoneDPages.</summary>
-        public static string ZoneMaskProperty(string letter)
+        /// <summary>Property name of a zone's enabled-page mask: Face1920x480ZoneAPages.</summary>
+        public static string ZoneMaskProperty(FaceSize face, string letter)
         {
             RequireFaceZone(letter);
-            return "Zone" + letter + "Pages";
+            return FacePrefix(face) + "Zone" + letter + "Pages";
         }
 
-        /// <summary>Property name of a zone's start page: ZoneAStart .. ZoneDStart.</summary>
-        public static string ZoneStartProperty(string letter)
+        /// <summary>Property name of a zone's start page: Face1920x480ZoneAStart.</summary>
+        public static string ZoneStartProperty(FaceSize face, string letter)
         {
             RequireFaceZone(letter);
-            return "Zone" + letter + "Start";
+            return FacePrefix(face) + "Zone" + letter + "Start";
         }
 
-        /// <summary>Property name of a bar end field: BarLeft1 .. BarRight2.</summary>
-        public static string BarFieldProperty(string slot)
+        /// <summary>Property name of a bar end field: Face1920x480BarLeft1.</summary>
+        public static string BarFieldProperty(FaceSize face, string slot)
         {
             if (Array.IndexOf(BarSlots, slot) < 0) throw new ArgumentOutOfRangeException(nameof(slot));
-            return "Bar" + slot;
+            return FacePrefix(face) + "Bar" + slot;
+        }
+
+        /// <summary>Every property one face owns, in attachment order.</summary>
+        public static IEnumerable<string> FacePropertyNames(FaceSize face)
+        {
+            foreach (var letter in FaceZoneLetters) yield return ZonePageProperty(face, letter);
+            foreach (var letter in FaceZoneLetters) yield return ZoneMaskProperty(face, letter);
+            foreach (var letter in FaceZoneLetters) yield return ZoneStartProperty(face, letter);
+            foreach (var slot in BarSlots) yield return BarFieldProperty(face, slot);
+            yield return QuickGlanceProperty(face);
         }
 
         private static void RequireFaceZone(string letter)
@@ -248,11 +343,10 @@ namespace OpenDashPlugin
             yield return DeltaReference;
             yield return SessionProgress;
             for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
-            foreach (var letter in FaceZoneLetters) yield return ZonePageProperty(letter);
-            foreach (var letter in FaceZoneLetters) yield return ZoneMaskProperty(letter);
-            foreach (var letter in FaceZoneLetters) yield return ZoneStartProperty(letter);
-            foreach (var slot in BarSlots) yield return BarFieldProperty(slot);
-            yield return QuickGlance;
+            foreach (var face in FaceSizes)
+            {
+                foreach (var name in FacePropertyNames(face)) yield return name;
+            }
             for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(module);
             foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
             yield return PitWallWide;
