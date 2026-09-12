@@ -25,7 +25,15 @@ namespace OpenDashPlugin
         /// dashboard on the next frame; the panel writes it and calls SaveSettings().</summary>
         public OpenDashSettings Settings { get; private set; } = new OpenDashSettings();
 
-        public DashboardInstaller Installer { get; } = new DashboardInstaller();
+        private DashboardInstaller installer;
+
+        /// <summary>
+        /// Built on first use rather than eagerly, because the record of what openDash wrote into each folder lives
+        /// in the settings and the settings are read in Init. The lambda reads Settings each time, so the record
+        /// follows the object the panel replaces when a user changes something.
+        /// </summary>
+        public DashboardInstaller Installer =>
+            installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
 
         public string LeftMenuTitle => "openDash";
 
@@ -68,6 +76,8 @@ namespace OpenDashPlugin
             AttachProperties();
             AttachActions(pluginManager);
             Log.Info("Dashboard status: " + Installer.Status);
+            // The installer records what it wrote into each folder but never saves; this is the safe moment.
+            SaveSettings();
         }
 
         public void End(PluginManager pluginManager)

@@ -55,6 +55,28 @@ namespace OpenDashPlugin
         }
     }
 
+    /// <summary>
+    /// What openDash wrote into a dashboard folder, remembered between runs so that a folder somebody has since
+    /// edited can be told from one that is still ours. It is implemented over the plugin's settings; the installer
+    /// keeps no state itself and knows nothing about where this is kept.
+    /// </summary>
+    public interface IFolderRecord
+    {
+        /// <summary>The fingerprint recorded when the folder was last written, or null when there is none.</summary>
+        string Get(string folderName);
+
+        /// <summary>Remembers the fingerprint of a folder openDash has just written.</summary>
+        void Set(string folderName, string fingerprint);
+    }
+
+    /// <summary>Remembers nothing, so every installed folder reads as one we cannot vouch for.</summary>
+    public sealed class NoFolderRecord : IFolderRecord
+    {
+        public static readonly NoFolderRecord Instance = new NoFolderRecord();
+        public string Get(string folderName) => null;
+        public void Set(string folderName, string fingerprint) { }
+    }
+
     /// <summary>What the installer found out about one package on its last run.</summary>
     public sealed class PackageStatus
     {
@@ -78,6 +100,16 @@ namespace OpenDashPlugin
         /// <summary>The failure, null when the package was read (and installed, when asked) without error.</summary>
         public string Error { get; set; }
 
+        /// <summary>True when the folder on disk is not the one openDash wrote, so replacing it would destroy
+        /// somebody's work. Biased towards true: no record and an unreadable folder both count.</summary>
+        public bool Edited { get; set; }
+
+        /// <summary>True when this package was left alone because it was edited rather than because it was current.</summary>
+        public bool HeldBack { get; set; }
+
+        /// <summary>Where the copy of what was there went, when this run replaced something. Null otherwise.</summary>
+        public string KeptCopy { get; set; }
+
         /// <summary>"openDash 1280x480: Up to date", with the error appended when there is one.</summary>
         public string Describe()
         {
@@ -98,16 +130,22 @@ namespace OpenDashPlugin
 
         private readonly IInstallLog log;
         private readonly IPackageSource packages;
+        private readonly IFolderRecord record;
 
-        public DashboardInstaller(string simHubRoot, IInstallLog log, IPackageSource packages)
+        public DashboardInstaller(string simHubRoot, IInstallLog log, IPackageSource packages, IFolderRecord record = null)
         {
             if (packages == null) throw new ArgumentNullException(nameof(packages));
             SimHubRoot = simHubRoot;
             this.log = log ?? NullInstallLog.Instance;
             this.packages = packages;
+            this.record = record ?? NoFolderRecord.Instance;
         }
 
         public string SimHubRoot { get; }
+
+        /// <summary>The record this installer keeps, so that an installer built over downloaded packages keeps the
+        /// same one rather than starting a second, disagreeing memory of what openDash wrote.</summary>
+        public IFolderRecord Record => record;
 
         /// <summary>The worst status across the packages (Failed over NotInstalled over UpdateAvailable over UpToDate).</summary>
         public InstallStatus Status { get; private set; } = InstallStatus.NotInstalled;
@@ -173,12 +211,20 @@ namespace OpenDashPlugin
 
         /// <summary>Installs every embedded package that is missing or older than the embedded copy.
         /// With force, reinstalls all of them. Never throws: failures end up in Status, LastError and Packages.</summary>
-        public void EnsureInstalled(bool force)
+        /// <summary>
+        /// Installs what needs installing.
+        /// </summary>
+        /// <param name="force">Install every package whether or not it is current, which is what Reinstall means.</param>
+        /// <param name="replaceEdited">
+        /// Replace a folder that has changed since openDash wrote it. False everywhere except where a person has been
+        /// shown what it means and said yes, because such a folder holds work that deleting it destroys.
+        /// </param>
+        public void EnsureInstalled(bool force, bool replaceEdited = false)
         {
-            Run(force, install: true);
+            Run(force, install: true, replaceEdited: replaceEdited);
         }
 
-        private void Run(bool force, bool install)
+        private void Run(bool force, bool install, bool replaceEdited = false)
         {
             LastError = null;
             var names = packages.Names;
@@ -189,7 +235,7 @@ namespace OpenDashPlugin
                 return;
             }
 
-            var results = names.Select(name => Process(name, force, install)).ToList();
+            var results = names.Select(name => Process(name, force, install, replaceEdited)).ToList();
             Packages = results;
             Status = results.Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
             LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null);
@@ -204,7 +250,7 @@ namespace OpenDashPlugin
 
         /// <summary>Reads one package, decides, and installs it when asked and needed. Never throws: a failure becomes
         /// the entry's Error and Failed status, and the other packages are still processed.</summary>
-        private PackageStatus Process(string name, bool force, bool install)
+        private PackageStatus Process(string name, bool force, bool install, bool replaceEdited)
         {
             var entry = new PackageStatus { Name = name };
             try
@@ -221,16 +267,46 @@ namespace OpenDashPlugin
                 log.Info("Package " + folder + ": embedded " + (entry.EmbeddedVersion ?? "(none)")
                     + ", installed " + (entry.InstalledVersion ?? "(none)") + ", " + entry.Status);
 
+                var installedFolder = PackageExtractor.InstalledFolder(SimHubRoot, folder);
+                var remembered = record.Get(folder);
+                // Three cases, and only the third is somebody's work. Not installed: nothing to lose. Installed with
+                // nothing remembered: openDash has never looked at this folder, which is every folder the first time
+                // this runs, so it is adopted rather than held back. Installed and different from what was recorded:
+                // it changed after openDash wrote it, and that is the case worth stopping for.
+                entry.Edited = entry.InstalledVersion != null
+                    && !string.IsNullOrWhiteSpace(remembered)
+                    && !FolderFingerprint.LooksUntouched(installedFolder, remembered);
+
                 if (install && (force || Versioning.NeedsInstall(entry.Status)))
                 {
+                    // Replacing a folder deletes it, so an edited one is left alone and reported rather than
+                    // overwritten. `replaceEdited` is how a person says they have seen the warning and meant it.
+                    if (entry.Edited && !replaceEdited)
+                    {
+                        entry.HeldBack = true;
+                        log.Warn(folder + " has changed since openDash wrote it, so it was left alone. "
+                            + "Reinstall it deliberately to replace what is there.");
+                        return entry;
+                    }
+                    var replacingAuthoredWork = entry.Edited;
                     using (var package = packages.Open(name))
                     {
-                        var result = PackageExtractor.Install(package, SimHubRoot, log);
+                        var result = PackageExtractor.Install(package, SimHubRoot, log, replacingAuthoredWork);
                         log.Info("Fonts copied: " + result.FontsCopied);
+                        entry.KeptCopy = result.BackupPath;
                     }
                     entry.Extracted = true;
                     entry.InstalledVersion = ReadInstalled(folder);
                     entry.Status = Versioning.Decide(entry.InstalledVersion, entry.EmbeddedVersion);
+                    record.Set(folder, FolderFingerprint.Of(installedFolder));
+                    entry.Edited = false;
+                }
+                else if (entry.InstalledVersion != null && string.IsNullOrWhiteSpace(remembered))
+                {
+                    // Adopting what is already there. An edit made before openDash started looking cannot be seen,
+                    // and pretending otherwise would mean asking every user about every folder exactly once, for
+                    // nothing. From here on the folder is watched.
+                    record.Set(folder, FolderFingerprint.Of(installedFolder));
                 }
             }
             catch (Exception ex)

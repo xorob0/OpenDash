@@ -1,5 +1,6 @@
 // TestSupport.cs: what the installer and extractor tests share: synthetic .simhubdash zips built in memory, a package
-// source over such zips, and a log that records its lines.
+// source over such zips, a folder record in memory, and a log that records its lines.
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -63,6 +64,14 @@ namespace OpenDashPlugin.Tests
         {
             return new MemoryStream(bytes[name], false);
         }
+    }
+
+    /// <summary>A folder record in memory, standing in for the one the plugin keeps in its settings.</summary>
+    internal sealed class MemoryFolderRecord : IFolderRecord
+    {
+        public Dictionary<string, string> Entries { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public string Get(string folderName) => Entries.TryGetValue(folderName ?? string.Empty, out var value) ? value : null;
+        public void Set(string folderName, string fingerprint) => Entries[folderName ?? string.Empty] = fingerprint;
     }
 
     internal sealed class ListLog : IInstallLog

@@ -36,6 +36,47 @@ namespace OpenDashPlugin.Tests
 
         private string Templates(string folder) => Path.Combine(root, "DashTemplates", folder);
 
+        /// <summary>
+        /// The promise made when somebody consents to replacing their own work is that a copy is kept. A copy the
+        /// next routine install reclaims is not kept, so an edited folder's copy goes somewhere no install claims.
+        /// </summary>
+        [Fact]
+        public void A_copy_of_somebody_elses_work_outlives_the_next_install()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0", ("openDash/mine.djson", "my work")), root, null);
+            PackageExtractor.Install(Package("openDash", "0.2.0"), root, null, holdsAuthoredWork: true);
+
+            var kept = PackageExtractor.KeptCopies(root, "openDash");
+            Assert.NotEmpty(kept);
+            Assert.Contains(PackageExtractor.EditedSuffix, kept[0]);
+
+            // The ordinary upgrade that follows reclaims only the ordinary backup.
+            PackageExtractor.Install(Package("openDash", "0.3.0"), root, null);
+            Assert.Contains(PackageExtractor.KeptCopies(root, "openDash"), path => path.Contains(PackageExtractor.EditedSuffix));
+
+            Assert.True(PackageExtractor.Restore(root, "openDash", null, kept[0]));
+            Assert.Equal("my work", File.ReadAllText(Path.Combine(Templates("openDash"), "mine.djson")));
+        }
+
+        /// <summary>
+        /// The one case a backup exists for, a disk that is full or a file that is locked, used to be the one case
+        /// where it silently did nothing and the dashboard was deleted anyway.
+        /// </summary>
+        [Fact]
+        public void A_copy_that_cannot_be_taken_stops_the_install_rather_than_proceeding()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0"), root, null);
+            var backup = Path.Combine(root, "DashTemplates", "openDash" + PackageExtractor.BackupSuffix);
+
+            // A directory where the zip must go: creating the file fails, as a full disk or a lock would.
+            Directory.CreateDirectory(backup);
+            Directory.CreateDirectory(Path.Combine(backup, "in the way"));
+
+            Assert.Throws<IOException>(() => PackageExtractor.Install(Package("openDash", "0.2.0"), root, null));
+            // The installed dashboard is still there and still the old one, which is the point.
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+        }
+
         [Fact]
         public void Restore_puts_back_the_copy_Install_set_aside()
         {
