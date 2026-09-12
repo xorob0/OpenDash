@@ -10,7 +10,7 @@
  * read it off an artboard; see `docs/design/zones.md`.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect } from '../generator.ts';
-import { FACE_ZONE_LETTERS, type FaceSize, type FaceZone } from '../contract.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, type FaceSize, type FaceZone } from '../contract.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
@@ -26,8 +26,18 @@ import { zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
 export const FACE_SCREEN_NAME = 'Main';
 
-/** The face a layout is, which is what names its settings. */
-export const sizeOf = (layout: ZoneLayout): FaceSize => ({ width: layout.width, height: layout.height });
+/**
+ * The contract's entry for a layout, which is what names its settings.
+ *
+ * Looked up rather than constructed: the contract is the list the plugin mirrors, so a layout it
+ * does not name has no properties and that is a build error rather than a face with a prefix
+ * nobody attached.
+ */
+export const sizeOf = (layout: ZoneLayout): FaceSize => {
+  const face = FACE_SIZES.find((f) => f.width === layout.width && f.height === layout.height);
+  if (!face) throw new Error(`${layout.folder} is ${layout.width} by ${layout.height}, which FACE_SIZES does not name`);
+  return face;
+};
 
 /** The zones a face embeds, each with the size its dashboard is drawn for. */
 export const zonesOf = (layout: ZoneLayout): { zone: FaceZone; size: { width: number; height: number }; corners: boolean }[] =>

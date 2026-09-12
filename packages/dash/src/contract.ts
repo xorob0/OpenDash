@@ -112,21 +112,41 @@ export const setting = {
  * face the contract does not name has no properties, whatever the build emits. `zones/index.ts`
  * reads it back, so the two cannot disagree.
  */
-export const FACE_SIZES: readonly { width: number; height: number }[] = [
-  { width: 1920, height: 480 },
-  { width: 1280, height: 480 },
-  { width: 1280, height: 400 },
-  { width: 850, height: 480 },
-  { width: 800, height: 480 },
-  { width: 1280, height: 720 },
-  { width: 800, height: 286 },
-  { width: 600, height: 686 },
+export const FACE_SIZES: readonly FaceSize[] = [
+  { width: 1920, height: 480, body: 'row', parts: [769, 380, 769], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 1280, height: 480, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 1280, height: 400, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 850, height: 480, body: 'row', parts: [274, 300, 274], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 800, height: 480, body: 'row', parts: [249, 300, 249], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 1280, height: 720, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 800, height: 286, body: 'row', parts: [269, 260, 269], hasBar: false, barFieldsPerEnd: 2 },
+  { width: 600, height: 686, body: 'column', parts: [234, 160, 150], hasBar: true, barFieldsPerEnd: 1 },
 ];
 
+/**
+ * A face, and the little of its shape that anything outside the build needs.
+ *
+ * The plugin draws a plan of the face in its panel, and a plan drawn to one face's proportions for
+ * every face is how the 800 x 286 came to be offered bar fields for a bar it does not have. What is
+ * carried here is therefore only what a plan needs, and `zoneFace.test.ts` checks it against the
+ * real layouts so the two cannot drift.
+ */
 export interface FaceSize {
   width: number;
   height: number;
+  /** `row` lays zone B, zone A and zone C side by side; `column` stacks A over B over C. */
+  body: 'row' | 'column';
+  /** Relative sizes of the three body zones, in the order that body draws them. */
+  parts: readonly [number, number, number];
+  /** False on the nano at 800 x 286, where the height for a bar is not there. */
+  hasBar: boolean;
+  /** Two per end on a wide face, one in portrait. */
+  barFieldsPerEnd: 1 | 2;
 }
+
+/** The zone letters of a face's body, in the order that body draws them. */
+export const bodyOrder = (face: FaceSize): readonly [FaceZone, FaceZone, FaceZone] =>
+  face.body === 'column' ? ['A', 'B', 'C'] : ['B', 'A', 'C'];
 
 /**
  * The prefix a face's settings carry, for instance `Face1920x480`.

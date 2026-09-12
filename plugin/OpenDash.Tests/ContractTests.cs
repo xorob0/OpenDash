@@ -331,15 +331,30 @@ namespace OpenDashPlugin.Tests
             var path = RepoPaths.ContractTs();
             if (!File.Exists(path)) return; // the dash package is built separately; nothing to compare yet
             var source = File.ReadAllText(path);
-            var match = Regex.Match(source, @"FACE_SIZES[^=]*=\s*\[(?<items>[^\]]*)\]");
+            // Captured to the closing "];" on its own line rather than to the first "]", because each
+            // entry now carries a parts array of its own.
+            var match = Regex.Match(source, @"FACE_SIZES[^=]*=\s*\[(?<items>.*?)\r?\n\];", RegexOptions.Singleline);
             Assert.True(match.Success, "FACE_SIZES not found in contract.ts");
-            var sizes = Regex.Matches(match.Groups["items"].Value, @"width:\s*(?<w>\d+),\s*height:\s*(?<h>\d+)");
+            var sizes = Regex.Matches(
+                match.Groups["items"].Value,
+                @"width:\s*(?<w>\d+),\s*height:\s*(?<h>\d+),\s*body:\s*'(?<body>row|column)',\s*parts:\s*\[(?<parts>[^\]]*)\],\s*hasBar:\s*(?<bar>true|false),\s*barFieldsPerEnd:\s*(?<per>\d+)");
             Assert.Equal(Contract.FaceSizes.Count, sizes.Count);
             for (var i = 0; i < sizes.Count; i++)
             {
-                Assert.Equal(Contract.FaceSizes[i].Width, int.Parse(sizes[i].Groups["w"].Value));
-                Assert.Equal(Contract.FaceSizes[i].Height, int.Parse(sizes[i].Groups["h"].Value));
+                var face = Contract.FaceSizes[i];
+                Assert.Equal(face.Width, int.Parse(sizes[i].Groups["w"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.Height, int.Parse(sizes[i].Groups["h"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.Body == Contract.FaceBody.Column ? "column" : "row", sizes[i].Groups["body"].Value);
+                Assert.Equal(face.HasBar, sizes[i].Groups["bar"].Value == "true");
+                Assert.Equal(face.BarFieldsPerEnd, int.Parse(sizes[i].Groups["per"].Value, CultureInfo.InvariantCulture));
+                var parts = sizes[i].Groups["parts"].Value.Split(',').Select(v => int.Parse(v.Trim(), CultureInfo.InvariantCulture)).ToArray();
+                Assert.Equal(face.Parts, parts);
             }
+            // The nano is the one face with no bar, and the portrait the one with a stacked body and a
+            // single field per end. Stated here because both are what the panel has to draw differently.
+            Assert.Single(Contract.FaceSizes.Where(f => !f.HasBar));
+            Assert.Single(Contract.FaceSizes.Where(f => f.Body == Contract.FaceBody.Column));
+            Assert.Single(Contract.FaceSizes.Where(f => f.BarFieldsPerEnd == 1));
         }
 
         [Fact]

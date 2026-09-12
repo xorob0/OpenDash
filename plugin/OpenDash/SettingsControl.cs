@@ -272,8 +272,6 @@ namespace OpenDashPlugin
         private const double FaceBodyHeight = 138;
         private const double FaceBandHeight = 26;
         private const double FaceCellPadding = 6;
-        /// <summary>Zone B, zone A and zone C, as the artboard divides the 844.</summary>
-        private static readonly double[] FaceBodyWidths = { 246, 316, 280 };
 
         /// <summary>
         /// The face this section is configuring.
@@ -301,29 +299,24 @@ namespace OpenDashPlugin
                 "Each zone opens on the page chosen here and cycles through the ones left enabled. "
                 + "The same page may sit in two zones; the panel says so and does not prevent it.",
                 846);
-            var strip = Ui.Caption(
-                "The bar does not cycle: it carries what does not change during a lap. Two fields at each end, "
-                + "and between them the car settings your sim publishes — slip, TC, cut, bias, ABS, map and diff. "
-                + "A setting the sim has no value for takes its cell with it rather than leaving an empty box.",
-                846);
+            stripCaption = Ui.Caption("", 846);
             // The warning row is built before RebuildFace fills the hosts, because RebuildFace refreshes
             // it: doing it the other way round dereferenced a control that did not exist yet, and the
             // whole panel came up as "openDash settings could not be displayed".
             var picker = BuildFacePicker();
             var warning = BuildFaceWarning();
             RebuildFace();
-            return Ui.Section("Zones", caption, picker, faceHost, strip, warning);
+            return Ui.Section("Zones", caption, picker, faceHost, stripCaption, warning);
         }
 
         /// <summary>
         /// Which face the zones below belong to.
         /// </summary>
         /// <remarks>
-        /// The picture underneath keeps the reference face's proportions whichever face is chosen,
-        /// because its geometry is read off the 1920 x 480 artboard and every face has its own. What
-        /// changes is which face's settings the controls read and write, which is the part that was
-        /// wrong. Drawing each face to its own shape, and hiding the bar on the nano that has none,
-        /// belongs to the panel rebuild in XOR-125.
+        /// Choosing one rebuilds the plan beneath as well as the controls, so the picture is the face
+        /// that is being configured: the portrait reads as a column, and the nano at 800 x 286 shows
+        /// no bar because it has none. The shape comes from the contract, which carries just enough
+        /// of it for a plan, since the plugin cannot read a layout file.
         /// </remarks>
         private FrameworkElement BuildFacePicker()
         {
@@ -363,21 +356,50 @@ namespace OpenDashPlugin
             zoneMaskBoxes.Clear();
             barEndButtons.Clear();
             faceHost.Content = BuildFacePicture();
+            RefreshStripCaption();
             bindingHost.Content = BuildZoneBindings();
             RefreshFaceWarning();
         }
 
+        private TextBlock stripCaption;
+
+        /// <summary>What the bar is, said for the face on screen rather than for every face at once.</summary>
+        private void RefreshStripCaption()
+        {
+            if (stripCaption == null) return;
+            stripCaption.Text = face.HasBar
+                ? "The bar does not cycle: it carries what does not change during a lap. "
+                    + (face.BarFieldsPerEnd == 1 ? "One field at each end, " : "Two fields at each end, ")
+                    + "and between them the car settings your sim publishes \u2014 slip, TC, cut, bias, ABS, map and diff. "
+                    + "A setting the sim has no value for takes its cell with it rather than leaving an empty box."
+                : "This screen has no bar: at " + face + " the height is not there, so the body and band D have it instead.";
+        }
+
+        /// <summary>
+        /// A plan of the chosen face: the rev bar, the bar if it has one, the body and band D.
+        ///
+        /// Drawn to that face's own proportions rather than to the reference face's, so the portrait
+        /// reads as a column and the nano at 800 x 286 shows no bar, because it has none and offering
+        /// its four bar fields was offering settings that do nothing.
+        /// </summary>
         private FrameworkElement BuildFacePicture()
         {
             var grid = new Grid { Width = FaceWidth, Background = Ui.Brush(Theme.Rule), HorizontalAlignment = HorizontalAlignment.Left };
-            foreach (var height in new[] { FaceRevBarHeight, 1, FaceBarHeight, 1, FaceBodyHeight, 1, FaceBandHeight })
+            var rows = new List<double> { FaceRevBarHeight, 1 };
+            if (face.HasBar) rows.AddRange(new double[] { FaceBarHeight, 1 });
+            rows.AddRange(new double[] { BodyHeightFor(face), 1, FaceBandHeight });
+            foreach (var height in rows) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(height) });
+
+            var row = 0;
+            AddAt(grid, BuildRevBarStrip(), row);
+            row += 2;
+            if (face.HasBar)
             {
-                grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(height) });
+                AddAt(grid, BuildBarStrip(), row);
+                row += 2;
             }
-            AddAt(grid, BuildRevBarStrip(), 0);
-            AddAt(grid, BuildBarStrip(), 2);
-            AddAt(grid, BuildFaceBody(), 4);
-            AddAt(grid, BuildBandStrip(), 6);
+            AddAt(grid, BuildFaceBody(), row);
+            AddAt(grid, BuildBandStrip(), row + 2);
             return new Border
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
@@ -385,6 +407,23 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Child = grid,
             };
+        }
+
+        /// <summary>
+        /// How tall to draw the body.
+        ///
+        /// A stacked body needs room for three cells rather than one, so it is given the sum of its
+        /// parts scaled to the plan's width; a row keeps the artboard's height, which is what the
+        /// numbers above were read off.
+        /// </summary>
+        private static double BodyHeightFor(Contract.FaceSize f)
+        {
+            if (f.Body != Contract.FaceBody.Column) return FaceBodyHeight;
+            var total = 0;
+            foreach (var part in f.Parts) total += part;
+            // The plan is FaceWidth wide whatever the face is, so the body keeps the face's own ratio
+            // of body height to width.
+            return Math.Max(FaceBodyHeight, Math.Round(FaceWidth * ((double)total / f.Width) / 2));
         }
 
         private static void AddAt(Grid grid, UIElement child, int row)
@@ -408,8 +447,10 @@ namespace OpenDashPlugin
         /// <summary>The bar: an end at each side and the car settings strip between them.</summary>
         private FrameworkElement BuildBarStrip()
         {
-            var left = BuildBarEnd("Left1", "Left2", 120);
-            var right = BuildBarEnd("Right1", "Right2", 130);
+            // One field per end in portrait, two on a wide face, which is what the artboards draw.
+            var single = face.BarFieldsPerEnd == 1;
+            var left = BuildBarEnd("Left1", single ? null : "Left2", 120);
+            var right = BuildBarEnd("Right1", single ? null : "Right2", 130);
             var middle = Ui.Label("Car settings");
             middle.HorizontalAlignment = HorizontalAlignment.Center;
             var dock = new DockPanel { LastChildFill = true, Margin = new Thickness(8, 0, 8, 0) };
@@ -428,10 +469,11 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildBarEnd(string firstSlot, string secondSlot, double width)
         {
-            var button = Ui.DropButton(width, BarEndCaption(firstSlot, secondSlot), "The two fields this end of the bar shows");
+            var button = Ui.DropButton(width, BarEndCaption(firstSlot, secondSlot), secondSlot == null ? "The field this end of the bar shows" : "The two fields this end of the bar shows");
             barEndButtons[firstSlot] = button;
             var rows = new List<UIElement>();
-            foreach (var slot in new[] { firstSlot, secondSlot })
+            var slots = secondSlot == null ? new[] { firstSlot } : new[] { firstSlot, secondSlot };
+            foreach (var slot in slots)
             {
                 var captured = slot;
                 var select = BuildPageSelect(FacePages.BarFields, Settings.BarField(face, captured), 200, index =>
@@ -440,7 +482,7 @@ namespace OpenDashPlugin
                     plugin.SaveSettings();
                     Ui.SetDropText(button, BarEndCaption(firstSlot, secondSlot));
                 });
-                rows.Add(Ui.Row(Ui.Label(slot == firstSlot ? "First" : "Second"), select));
+                rows.Add(Ui.Row(Ui.Label(secondSlot == null ? "Field" : slot == firstSlot ? "First" : "Second"), select));
             }
             var panel = Ui.VStack(8, rows.ToArray());
             panel.Width = 260;
@@ -449,23 +491,46 @@ namespace OpenDashPlugin
 
         private string BarEndCaption(string firstSlot, string secondSlot)
         {
-            return FacePages.EndLabel(FacePages.FieldName(Settings.BarField(face, firstSlot)), FacePages.FieldName(Settings.BarField(face, secondSlot)));
+            var first = FacePages.FieldName(Settings.BarField(face, firstSlot));
+            return secondSlot == null ? first : FacePages.EndLabel(first, FacePages.FieldName(Settings.BarField(face, secondSlot)));
         }
 
-        /// <summary>Zones B, A and C across the body, in the order the face draws them.</summary>
+        /// <summary>
+        /// The three body zones, in the order and along the axis this face draws them: B, A and C
+        /// across a wide face, A over B over C in portrait.
+        /// </summary>
         private FrameworkElement BuildFaceBody()
         {
             var grid = new Grid { Background = Ui.Brush(Theme.Rule) };
-            var letters = new[] { "B", "A", "C" };
+            var letters = face.BodyOrder;
+            var stacked = face.Body == Contract.FaceBody.Column;
+            // The parts are the face's real pixels; the plan is 844 wide, so they are shared out in
+            // proportion rather than used as they are.
+            var total = 0;
+            foreach (var part in face.Parts) total += part;
+            var span = stacked ? BodyHeightFor(face) : FaceWidth;
+            var sizes = new double[letters.Length];
+            for (var i = 0; i < letters.Length; i++) sizes[i] = Math.Round((span - 2) * face.Parts[i] / (double)total);
+
             for (var i = 0; i < letters.Length; i++)
             {
-                if (i > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(FaceBodyWidths[i]) });
+                if (stacked)
+                {
+                    if (i > 0) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1) });
+                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(sizes[i]) });
+                }
+                else
+                {
+                    if (i > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(sizes[i]) });
+                }
             }
             for (var i = 0; i < letters.Length; i++)
             {
-                var cell = BuildZoneCell(letters[i], FaceBodyWidths[i]);
-                Grid.SetColumn(cell, i * 2);
+                // A stacked cell is as wide as the plan; a cell in a row is as wide as its share.
+                var cell = BuildZoneCell(letters[i], stacked ? FaceWidth : sizes[i]);
+                if (stacked) Grid.SetRow(cell, i * 2);
+                else Grid.SetColumn(cell, i * 2);
                 grid.Children.Add(cell);
             }
             return grid;

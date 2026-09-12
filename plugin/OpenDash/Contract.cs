@@ -51,12 +51,55 @@ namespace OpenDashPlugin
         // model -- a slot is arranged once with a mouse, a zone is changed with a thumb mid-lap, so
         // what the contract carries is a page number a button can advance.
 
-        /// <summary>One face size that ships, and therefore one group of settings.</summary>
+        /// <summary>How a face lays its three body zones out.</summary>
+        public enum FaceBody
+        {
+            /// <summary>Zone B, zone A and zone C side by side.</summary>
+            Row,
+            /// <summary>Zone A over zone B over zone C.</summary>
+            Column,
+        }
+
+        /// <summary>
+        /// One face size that ships, and the little of its shape the panel needs to draw a plan of it.
+        /// </summary>
+        /// <remarks>
+        /// Mirrors FACE_SIZES in packages/dash/src/contract.ts. The shape is carried because the panel
+        /// draws a plan of the face and cannot read a layout file: a plan drawn to one face's
+        /// proportions for every face is how the nano at 800 x 286 came to be offered bar fields for a
+        /// bar it has not got.
+        /// </remarks>
         public struct FaceSize
         {
-            public FaceSize(int width, int height) { Width = width; Height = height; }
+            public FaceSize(int width, int height, FaceBody body, int[] parts, bool hasBar, int barFieldsPerEnd)
+            {
+                Width = width;
+                Height = height;
+                Body = body;
+                Parts = parts;
+                HasBar = hasBar;
+                BarFieldsPerEnd = barFieldsPerEnd;
+            }
+
             public int Width { get; }
             public int Height { get; }
+            public FaceBody Body { get; }
+
+            /// <summary>Relative sizes of the three body zones, in the order that body draws them.</summary>
+            public int[] Parts { get; }
+
+            /// <summary>False on the nano at 800 x 286, where the height for a bar is not there.</summary>
+            public bool HasBar { get; }
+
+            /// <summary>Two per end on a wide face, one in portrait.</summary>
+            public int BarFieldsPerEnd { get; }
+
+            /// <summary>The zone letters of the body, in the order it draws them.</summary>
+            public string[] BodyOrder
+            {
+                get { return Body == FaceBody.Column ? new[] { "A", "B", "C" } : new[] { "B", "A", "C" }; }
+            }
+
             public override string ToString() { return Width + " x " + Height; }
         }
 
@@ -66,14 +109,14 @@ namespace OpenDashPlugin
         /// </summary>
         public static readonly IReadOnlyList<FaceSize> FaceSizes = new[]
         {
-            new FaceSize(1920, 480),
-            new FaceSize(1280, 480),
-            new FaceSize(1280, 400),
-            new FaceSize(850, 480),
-            new FaceSize(800, 480),
-            new FaceSize(1280, 720),
-            new FaceSize(800, 286),
-            new FaceSize(600, 686),
+            new FaceSize(1920, 480, FaceBody.Row, new[] { 769, 380, 769 }, true, 2),
+            new FaceSize(1280, 480, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
+            new FaceSize(1280, 400, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
+            new FaceSize(850, 480, FaceBody.Row, new[] { 274, 300, 274 }, true, 2),
+            new FaceSize(800, 480, FaceBody.Row, new[] { 249, 300, 249 }, true, 2),
+            new FaceSize(1280, 720, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
+            new FaceSize(800, 286, FaceBody.Row, new[] { 269, 260, 269 }, false, 2),
+            new FaceSize(600, 686, FaceBody.Column, new[] { 234, 160, 150 }, true, 1),
         };
 
         /// <summary>The face a rig is most likely to have, and where a pre-face setting is migrated to.</summary>

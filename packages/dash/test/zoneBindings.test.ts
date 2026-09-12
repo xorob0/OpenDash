@@ -23,7 +23,7 @@ import { fontsForPackage } from '../src/dashboard.ts';
 import { buildScreenPackage, SCREEN_PACKAGES } from '../src/screens/index.ts';
 import { validatePackage, type DashPackage, type WidgetItem } from '../src/generator.ts';
 import { walkItems } from '../src/walk.ts';
-import { ZONE_FACES, buildZoneFace } from '../src/zones/index.ts';
+import { ZONE_FACES, buildZoneFace, sizeOf } from '../src/zones/index.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const VALIDATE = { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX };
@@ -125,7 +125,7 @@ describe('the guards bite', () => {
     const built = buildZoneFace(face, OPTS);
     const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
     const widget = widgetsOf(pkg)[0]!;
-    const other = ZONE_FACES[3]!;
+    const other = sizeOf(ZONE_FACES[3]!);
     widget.bindings = { ...widget.bindings, InitialScreenIndex: { mode: 'formula', formula: `isnull([${PROPERTY_PREFIX}.${facePrefix(other)}ZoneA], 0)` } };
 
     const own = { width: face.width, height: face.height };

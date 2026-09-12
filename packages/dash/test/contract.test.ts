@@ -86,7 +86,7 @@ describe('settings', () => {
     // The prefix is concatenated and carries no dot of its own, because SimHub puts one in front
     // of every name and whether its parser accepts a second inside the name is unverified.
     for (const face of FACE_SIZES) expect(facePrefix(face)).toMatch(/^Face\d+x\d+$/);
-    expect(faceForPrefix('Face1920x480')).toEqual({ width: 1920, height: 480 });
+    expect(faceForPrefix('Face1920x480')).toMatchObject({ width: 1920, height: 480 });
     expect(faceForPrefix('Face1x1')).toBeUndefined();
   });
 
