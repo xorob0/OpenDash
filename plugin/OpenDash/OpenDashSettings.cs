@@ -6,6 +6,38 @@ using System.Linq;
 
 namespace OpenDashPlugin
 {
+    /// <summary>The folder record, over the settings, which is where it is persisted.</summary>
+    public sealed class SettingsFolderRecord : IFolderRecord
+    {
+        private readonly Func<OpenDashSettings> settings;
+        private readonly Action save;
+
+        /// <param name="settings">Read each time, since the panel replaces the object when the user changes one.</param>
+        /// <param name="save">Called after a change, so that a record survives a SimHub that is killed rather than closed.</param>
+        public SettingsFolderRecord(Func<OpenDashSettings> settings, Action save = null)
+        {
+            this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            this.save = save;
+        }
+
+        public string Get(string folderName)
+        {
+            var map = settings()?.FolderFingerprints;
+            if (map == null || string.IsNullOrEmpty(folderName)) return null;
+            return map.TryGetValue(folderName, out var value) ? value : null;
+        }
+
+        public void Set(string folderName, string fingerprint)
+        {
+            var current = settings();
+            if (current == null || string.IsNullOrEmpty(folderName)) return;
+            if (current.FolderFingerprints == null) current.FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (fingerprint == null) current.FolderFingerprints.Remove(folderName);
+            else current.FolderFingerprints[folderName] = fingerprint;
+            save?.Invoke();
+        }
+    }
+
     public class OpenDashSettings
     {
         public bool ShiftLights { get; set; } = Contract.DefaultShiftLights;
@@ -60,6 +92,12 @@ namespace OpenDashPlugin
         /// <summary>When the last answer came back, as UTC ticks, so that a check is not repeated within the
         /// interval ADR 0012 sets. Zero means never. Persisted so the interval survives a restart.</summary>
         public long LastUpdateCheckTicks { get; set; }
+
+        /// <summary>Fingerprint of each dashboard folder as openDash last wrote it, keyed by folder name. An entry
+        /// that no longer matches what is on disk is somebody's Dash Studio work; see FolderFingerprint. Kept here
+        /// rather than beside the dashboard so that nothing openDash writes into DashTemplates can confuse SimHub's
+        /// own scanner.</summary>
+        public Dictionary<string, string> FolderFingerprints { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Clamps every value into its contract: unknown modes and card numbers fall back to the defaults,
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
