@@ -114,20 +114,22 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("sha256:def", record.Get("openDash"));
         }
 
-        /// <summary>The record that actually ships, rather than the one the other tests substitute.</summary>
+        /// <summary>
+        /// The record that actually ships, rather than the one the other tests substitute. It records and does not
+        /// save: applying an update reaches it from a thread-pool thread, where serialising the settings would race
+        /// the settings page on the UI thread.
+        /// </summary>
         [Fact]
-        public void The_record_the_plugin_uses_reads_and_writes_the_settings_and_saves()
+        public void The_record_the_plugin_uses_reads_and_writes_the_settings_without_saving()
         {
             var settings = new OpenDashSettings();
-            var saves = 0;
-            var record = new SettingsFolderRecord(() => settings, () => saves++);
+            var record = new SettingsFolderRecord(() => settings);
 
             Assert.Null(record.Get("openDash"));
             record.Set("openDash", "sha256:abc");
 
             Assert.Equal("sha256:abc", record.Get("openDash"));
             Assert.Equal("sha256:abc", settings.FolderFingerprints["openDash"]);
-            Assert.Equal(1, saves);
 
             // Folder names come from a zip and from a filesystem, so the lookup does not depend on their case.
             Assert.Equal("sha256:abc", record.Get("OPENDASH"));

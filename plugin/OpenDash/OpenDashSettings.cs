@@ -6,28 +6,58 @@ using System.Linq;
 
 namespace OpenDashPlugin
 {
-    /// <summary>The folder record, over the settings, which is where it is persisted.</summary>
+    /// <summary>
+    /// The folder record, over the settings, which is where it is persisted.
+    /// </summary>
+    /// <remarks>
+    /// It records but never saves. Applying an update reaches this from a thread-pool thread, and saving there would
+    /// run Normalise and serialise the whole settings object while the settings page mutates the same object on the
+    /// UI thread: two writers to one file, an enumeration racing an insertion, and arrays replaced under SimHub's own
+    /// data thread. Whoever owns the moment saves instead, on a thread where that is safe. The cost of a SimHub that
+    /// is killed before that happens is a forgotten fingerprint, and a forgotten fingerprint asks rather than
+    /// destroys, which is the direction to fail in.
+    /// </remarks>
     public sealed class SettingsFolderRecord : IFolderRecord
     {
         private readonly Func<OpenDashSettings> settings;
-        private readonly Action save;
 
         /// <param name="settings">Read each time, since the panel replaces the object when the user changes one.</param>
-        /// <param name="save">Called after a change, so that a record survives a SimHub that is killed rather than closed.</param>
-        public SettingsFolderRecord(Func<OpenDashSettings> settings, Action save = null)
+        public SettingsFolderRecord(Func<OpenDashSettings> settings)
         {
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            this.save = save;
         }
+
+        /// <summary>
+        /// Guards the dictionary and the save.
+        /// </summary>
+        /// <remarks>
+        /// Applying an update reaches this from a thread-pool thread while the settings page is live on the UI
+        /// thread, and Dictionary is not safe for concurrent writers: the classic symptom on .NET Framework is a
+        /// later lookup spinning for ever, which a user sees as SimHub hung with nothing in the log. The lock also
+        /// keeps a save from serialising the dictionary while another thread is inserting into it.
+        /// </remarks>
+        private readonly object gate = new object();
 
         public string Get(string folderName)
         {
-            var map = settings()?.FolderFingerprints;
-            if (map == null || string.IsNullOrEmpty(folderName)) return null;
-            return map.TryGetValue(folderName, out var value) ? value : null;
+            if (string.IsNullOrEmpty(folderName)) return null;
+            lock (gate)
+            {
+                var map = settings()?.FolderFingerprints;
+                if (map == null) return null;
+                return map.TryGetValue(folderName, out var value) ? value : null;
+            }
         }
 
         public void Set(string folderName, string fingerprint)
+        {
+            lock (gate)
+            {
+                SetLocked(folderName, fingerprint);
+            }
+        }
+
+        private void SetLocked(string folderName, string fingerprint)
         {
             var current = settings();
             if (current == null || string.IsNullOrEmpty(folderName)) return;
@@ -37,7 +67,6 @@ namespace OpenDashPlugin
             // adoption branch would then have recorded whatever was on disk as openDash's own work.
             if (string.IsNullOrWhiteSpace(fingerprint)) return;
             current.FolderFingerprints[folderName] = fingerprint;
-            save?.Invoke();
         }
     }
 

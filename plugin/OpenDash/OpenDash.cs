@@ -33,7 +33,7 @@ namespace OpenDashPlugin
         /// follows the object the panel replaces when a user changes something.
         /// </summary>
         public DashboardInstaller Installer =>
-            installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings, SaveSettings)));
+            installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
 
         public string LeftMenuTitle => "openDash";
 
@@ -76,6 +76,8 @@ namespace OpenDashPlugin
             AttachProperties();
             AttachActions(pluginManager);
             Log.Info("Dashboard status: " + Installer.Status);
+            // The installer records what it wrote into each folder but never saves; this is the safe moment.
+            SaveSettings();
         }
 
         public void End(PluginManager pluginManager)
