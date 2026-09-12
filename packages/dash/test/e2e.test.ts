@@ -522,3 +522,44 @@ describe('command line', () => {
     expect(() => readVersion(join(root, 'missing'))).toThrow(/cannot read/);
   });
 });
+
+/**
+ * What the plugin embeds, it installs, so a package embedded by mistake appears in the dashboard
+ * list of a user who asked for nothing. The zone faces are built for review and must not be among
+ * them until they take the shipped names (XOR-118).
+ *
+ * This is checked here rather than left to the packaging script, because that is exactly how it
+ * went wrong: the rule lived only in `scripts/package.sh`, CI never runs that script, and a release
+ * would have embedded all twenty-two (XOR-123). The rule now lives in the csproj beside the glob
+ * that embeds, and this reads it there.
+ */
+describe('what a released plugin embeds', () => {
+  const csproj = readFileSync(join(import.meta.dir, '..', '..', '..', 'plugin', 'OpenDash', 'OpenDash.csproj'), 'utf8');
+  const attrs = /<EmbeddedResource\s+Include="Resources\/\*\.simhubdash"([^>]*)\/>/.exec(csproj)?.[1] ?? '';
+  const exclusion = /Exclude="([^"]+)"/.exec(attrs)?.[1] ?? '';
+
+  /** A package folder matches an MSBuild glob of the `openDash zones *` shape. */
+  const excludedBy = (pattern: string, folder: string): boolean =>
+    new RegExp(`^${pattern.replace('Resources/', '').replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`).test(`${folder}.simhubdash`);
+
+  test('the packages glob carries an exclusion', () => {
+    expect(attrs).not.toBe('');
+    expect(exclusion).not.toBe('');
+  });
+
+  test('every zone face is excluded, and nothing else is', () => {
+    expect(ZONE_FOLDERS.length).toBeGreaterThan(0);
+    for (const folder of ZONE_FOLDERS) expect([folder, excludedBy(exclusion, folder)]).toEqual([folder, true]);
+    for (const layout of LAYOUTS) expect([layout.folder, excludedBy(exclusion, layout.folder)]).toEqual([layout.folder, false]);
+    for (const screen of SCREEN_PACKAGES) expect([screen.folder, excludedBy(exclusion, screen.folder)]).toEqual([screen.folder, false]);
+  });
+
+  test('the packaging script copies everything and leaves the choice to the csproj', () => {
+    // Both build paths have to apply one rule. CI hands the whole dash artefact over and never runs
+    // this script, so a filter here that the csproj did not repeat would hold locally and not in a
+    // release, which is the shape of the bug this replaced.
+    const script = readFileSync(join(import.meta.dir, '..', '..', '..', 'scripts', 'package.sh'), 'utf8');
+    expect(script).toContain('cp build/*.simhubdash plugin/OpenDash/Resources/');
+    expect(script).not.toMatch(/^\s*case .*openDash zones/m);
+  });
+});
