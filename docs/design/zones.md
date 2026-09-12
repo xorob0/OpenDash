@@ -179,10 +179,14 @@ proportional label and a monospaced value, not one string.
 Settled values, which a driver reads between corners rather than at speed.
 
 **Each end carries two fields**, dropping to one per end at 600 × 686. A field is chosen from a
-catalogue of eleven:
+catalogue of ten:
 
 race time · lap and total · time left · clock · simulated time · position · class position ·
-incidents · strength of field · air temperature · track temperature
+incidents · air temperature · track temperature
+
+Strength of field was the eleventh and is not built, because SimHub publishes it in no form at all
+and openDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
+named here only so that a reader of an older draft knows where it went.
 
 The default is Race and Lap on the left, Position and Class on the right.
 
@@ -285,13 +289,23 @@ track state on the left; DRS, push to pass, spotter lamps and both clocks on the
 drawn at 1920 × 480, 1280 × 480, 1280 × 400 and 1280 × 720, and absent at 850 × 480, 800 × 286 and
 600 × 686. The threshold is those drawings, not a round number.
 
-**The field count follows the width** — seven at 1920, five at 850 — with nothing spread to fill.
-The rank is packed and centred while the corners take the ends.
+**A page sheds its last field before the rank overflows**, with nothing spread to fill. The rank is
+packed and centred in what the corners leave, never in the whole band. No shipped page reaches that
+limit: the widest catalogue entry holds five fields, and five fit at 600 × 56, which is the
+narrowest band. The shedding rule is therefore a guarantee about a page that grows, not a
+description of one that exists.
 
 **A flag takes the band over.** While a flag is out, the flag has the band, because an alert
 outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so the same sixty
 pixels goes to whichever has the better claim. The band draws as a filled bar with a 3 px border
 in the flag's colour and the flag's name in dark text.
+
+The black flag is the one exception, and it is drawn light on dark rather than dark on light. Its
+token, `purpose.flag.black`, is `#F5F7FA`, which is the ink and not the ground: a band filled with
+it would be indistinguishable from the white flag at `#FFFFFF`. So the black flag fills with
+`surface.base`, keeps the border, and writes its name in `purpose.flag.black`. The canvas captions
+it "outlined", which it no longer is, because a transparent flag left the page underneath fully
+readable and a flag takes the band over.
 
 ---
 

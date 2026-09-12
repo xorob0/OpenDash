@@ -576,7 +576,9 @@ describe('800 x 286 nano', () => {
     const black = layerNamed(items, 'flag.black').children[0];
     if (black?.kind !== 'rect') throw new Error('black band');
     expect(black.border).toEqual({ color: '#F5F7FA', top: 2, bottom: 2, left: 2, right: 2 });
-    expect(black.backgroundColor).toBe('#00FFFFFF');
+    // Opaque, and the darkest ground there is: a flag takes the strip over, and the black flag was
+    // the one that did not, leaving whatever it covered readable underneath it.
+    expect(black.backgroundColor).toBe('#0A0B0D');
     // 800 / 6 = 133.3 columns, so the last check (column 133, row 1) is clipped to 2 px.
     const checks = layerNamed(items, 'flag.chequered').children.slice(1).filter(hasRect);
     expect(checks).toHaveLength(2 * Math.ceil(800 / 6 / 2));

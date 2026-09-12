@@ -13,7 +13,7 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Screen, WidgetItem } from '../generator.ts';
 import { withBindings } from '../bind.ts';
-import { BAND_D_PAGES, FACE_ZONE_LETTERS, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, type FaceZone, type FaceZonePageMeta } from '../contract.ts';
+import { BAND_D_PAGES, FACE_ZONE_LETTERS, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, type FaceSize, type FaceZone, type FaceZonePageMeta } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, type Size } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
@@ -52,7 +52,7 @@ export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Siz
     // A band draws no header either. It is one rank across the whole width, the corner blocks say
     // what is at each end, and a title line would take a third of the height to say "fuel" above a
     // field already labelled FUEL.
-    items = [...bandPageItems(page.id, frame, `${page.id}.`), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])];
+    items = [...bandPageItems(page.id, frame, `${page.id}.`, corners), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])];
   } else {
     // The chrome is prefixed `zone.` rather than with the page id, because a module already names
     // its own items after itself: the track page draws `track.title` and so did the header.
@@ -91,7 +91,7 @@ export function zoneDashboard(zone: FaceZone, size: Size, metadata: DashboardMet
  * `autoSize` is false: the dashboard is drawn for this rectangle, so scaling it would scale the
  * type with it, which is the thing the shape model exists to avoid.
  */
-export function zoneWidget(name: string, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }): WidgetItem {
+export function zoneWidget(name: string, face: FaceSize, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }): WidgetItem {
   const size = { width: frame.width, height: frame.height };
   const pages = pagesForZone(zone);
   const start = pages.findIndex((p) => p.number === 0);
@@ -102,7 +102,7 @@ export function zoneWidget(name: string, zone: FaceZone, frame: { left: number; 
     fileName: `${zoneDashboardName(kindOf(zone), size)}.djson`,
     initialScreenIndex: Math.max(0, start),
     autoSize: true,
-    ...withBindings({ InitialScreenIndex: zoneSetting.page(zone) }),
+    ...withBindings({ InitialScreenIndex: zoneSetting.page(face, zone) }),
   };
 }
 
