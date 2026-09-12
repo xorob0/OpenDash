@@ -55,6 +55,7 @@ jobs:
             build/*.simhubdash
             build/manifest.json
             build/fonts/*.ttf
+            build/fonts/OFL.txt
           if-no-files-found: error
 
   plugin:
@@ -133,6 +134,7 @@ jobs:
           files: |
             build/*.simhubdash
             build/OpenDash-plugin.zip
+            build/fonts/OFL.txt
           generate_release_notes: true
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref_name, '-') }}

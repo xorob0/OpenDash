@@ -56,6 +56,9 @@ export const ALLOWED_BINDING_TARGETS: Record<Item['kind'], readonly BindingTarge
   radar: [...DRAWABLE_TARGETS, 'Scale'],
   staticMap: DRAWABLE_TARGETS,
   webPage: [...DRAWABLE_TARGETS, 'StartAddress'],
+  // `Image` is bindable in SimHub and is deliberately not offered until something needs it: a
+  // telltale set draws one item per lamp with `Visible` bound, which is the same picture.
+  image: DRAWABLE_TARGETS,
 };
 
 /** Targets a colour gradient (Mode 4) can drive. */
@@ -339,6 +342,14 @@ const checkItem = (ctx: Context, item: Item, path: string, id: string, dashboard
     }
   }
 
+  if (item.kind === 'image') {
+    // A name that is not in the dashboard's own Images list draws nothing at all, and SimHub
+    // reports nothing when it happens, so it has to be an error here rather than a blank box
+    // somebody notices on the rig.
+    const declared = (dashboard.images ?? []).some((image) => image.name === item.image);
+    if (!declared) c.error('image/missing', `${path}#image`, `${JSON.stringify(item.image)} is not an image of ${dashboard.name}.djson`);
+  }
+
   if (item.kind === 'widget') {
     const key = item.fileName.toLowerCase();
     const target = ctx.files.get(key);
@@ -379,6 +390,36 @@ const checkScreen = (ctx: Context, screen: Screen, dashboard: Dashboard): void =
   });
 };
 
+/**
+ * A dashboard's image declarations. The name is what an item references and what the
+ * `.ressources` entry is called, so two images of the same name would silently become one entry
+ * and one of the two items would draw the other's artwork.
+ */
+const checkImages = (ctx: Context, dashboard: Dashboard, path: string): void => {
+  const { c } = ctx;
+  const images = dashboard.images;
+  if (images === undefined) return;
+  if (!Array.isArray(images)) {
+    c.error('image/not-a-list', `${path}#images`, 'images must be a list');
+    return;
+  }
+  const names = new Set<string>();
+  for (const image of images) {
+    const at = `${path}#images.${image?.name ?? '?'}`;
+    if (!image || typeof image.name !== 'string' || image.name.trim() === '') {
+      c.error('image/name-empty', at, 'an image has no name');
+      continue;
+    }
+    if (names.has(image.name)) c.error('name/duplicate', at, `image name ${JSON.stringify(image.name)} is used twice`);
+    names.add(image.name);
+    if (!image.extension.startsWith('.')) c.error('image/extension', at, `extension ${JSON.stringify(image.extension)} does not begin with a dot`);
+    for (const k of ['width', 'height', 'length'] as const) {
+      if (checkNumber(c, at, k, image[k]) && image[k] <= 0) c.error('image/size', `${at}.${k}`, `${k} must be positive`);
+    }
+    if (!/^[0-9a-f]{32}$/.test(image.md5)) c.error('image/md5', `${at}.md5`, 'md5 is not 32 lowercase hex characters');
+  }
+};
+
 const checkDashboard = (ctx: Context, dashboard: Dashboard): void => {
   const { c } = ctx;
   const path = dashboardPath(ctx.pkg.folderName, dashboard.name);
@@ -397,6 +438,7 @@ const checkDashboard = (ctx: Context, dashboard: Dashboard): void => {
       c.error('metadata/preview-index', `${path}#metadata.mainPreviewIndex`, `screen ${preview} does not exist`);
     }
   }
+  checkImages(ctx, dashboard, path);
   if (!Array.isArray(dashboard.screens) || dashboard.screens.length === 0) {
     c.error('dashboard/no-screens', path, 'dashboard has no screens');
     return;

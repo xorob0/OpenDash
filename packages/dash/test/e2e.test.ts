@@ -23,6 +23,7 @@ import {
 import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
 import { fontsForPanel, needsRename, renameFamily, renamedFileName } from '../src/design/fontFiles.ts';
+import { FONT_LICENCE } from '../src/design/notices.ts';
 import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, listFiles, PACKAGE_EXTENSION, readZip } from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
@@ -57,9 +58,13 @@ const FONT_FILES = [`${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/openDashDisp
 
 const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
-/** The files of a package folder as listFiles orders them (sorted by code unit). */
+/**
+ * The files of a package folder as listFiles orders them (sorted by code unit). `OFL.txt` is in
+ * every one of them because every one of them ships the Barlow faces, and the licence has to
+ * travel with what it licenses; see packages/dash/src/design/notices.ts.
+ */
 const expectedFiles = (folder: string, cards = true): string[] =>
-  [...FONT_FILES, ...(cards ? [CARDS_FILE, `${CARDS_FILE}.metadata`] : []), `${folder}.djson`, `${folder}.djson.metadata`].sort(byCodeUnit);
+  [...FONT_FILES, FONT_LICENCE.name, ...(cards ? [CARDS_FILE, `${CARDS_FILE}.metadata`] : []), `${folder}.djson`, `${folder}.djson.metadata`].sort(byCodeUnit);
 
 const EXPECTED_FILES = expectedFiles('openDash');
 const FOLDERS = LAYOUTS.map((l) => l.folder);
@@ -120,7 +125,7 @@ describe('widget build on disk', () => {
     expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
     // The panel's fonts sit beside the packages rather than in one, because the plugin embeds them
     // and its build never runs this one; see plugin/OpenDash/OpenDash.csproj.
-    expect(readdirSync(join(widget.out, PANEL_FONTS_DIR)).sort()).toEqual(fontsForPanel().map((f) => basename(f)).sort());
+    expect(readdirSync(join(widget.out, PANEL_FONTS_DIR)).sort()).toEqual([...fontsForPanel().map((f) => basename(f)), FONT_LICENCE.name].sort());
   });
 
   test('folder names with spaces are written and zipped as they are', () => {
@@ -192,6 +197,7 @@ describe('widget build on disk', () => {
       // rectangle and catalogue, which the package itself is the list of.
       const expected = [
         ...FONT_FILES,
+        FONT_LICENCE.name,
         ...p.pkg.dashboards.flatMap((d) => [`${d.name}.djson`, `${d.name}.djson.metadata`]),
       ]
         .sort(byCodeUnit)
