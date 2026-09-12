@@ -5,8 +5,62 @@ The release workflow refuses a tag that does not match it. A version carrying a 
 `-rc.2` publishes as a pre-release, so a candidate is never the download a first-time user is
 offered.
 
-Each release carries `OpenDash-plugin.zip`, which embeds every dashboard, and one `.simhubdash`
-per screen for anyone who wants the dashboard without the plugin.
+Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashboards that are ready
+to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
+including any that the plugin does not install.
+
+## 0.1.0-rc.3 (2026-09-12)
+
+The candidate that fixes the font. Every numeral openDash draws has been drawn in the wrong face
+since the first build, and on this one it is right, so the whole dashboard looks narrower and
+better spaced than it did on rc.2. Alongside that, the plugin panel is rebuilt around the face
+rather than around a list, a wheel button can be bound without leaving the page, and eight zone
+faces are published for review.
+
+Nothing a user has set is lost. The slot settings from rc.1 and rc.2 are still read, the zone
+settings are added beside them, and the plugin reinstalls the dashboards over an rc.2 copy as it
+did before.
+
+### Fixed
+
+- **The dashboard was never drawn in Barlow Condensed.** WPF reads the width word out of a family
+  name and files the condensed faces under "Barlow" as a stretch, so a request for
+  "Barlow Condensed" reached a face about a fifth wider than the design, on the dash face, on both
+  second screens and in the plugin's own settings panel. openDash now ships that face under a name
+  carrying no width word, so nothing is folded. Every value is the width the layouts were measured
+  for, and the gear on the 480 round face is back to the 260 the design asks for after having been
+  cut to 228 to survive the wrong font.
+- At 850 px wide the car settings strip was drawn over the bar's right-hand fields.
+- A driver column sized to fit the name "Toma" was being called wide enough for a name.
+- Zone C drew zone B's letter, the speed was centred within its own glyphs rather than its column,
+  and the upper ghost gear was a "3" where it should not have been.
+
+### Added
+
+- **Every rectangular face is the same five parts**: a rev bar, a bar of settled values, three
+  zones across the body and a band along the foot. Each zone holds one page at a time out of its
+  own catalogue, so a face is configured by choosing pages rather than by filling twelve slots.
+  Eight of these are published here as `openDash zones <size>.simhubdash` for anyone who wants to
+  look at one. They are **not** installed by the plugin and do not replace anything: the face you
+  have stays the face you have until they take the shipped names.
+- **A wheel button can be bound from the panel.** Five actions: one that advances each zone to its
+  next enabled page, and one held for a glance, which shows a chosen page while the button is down
+  and returns to the previous one when it is released.
+- The settings panel draws a plan of the face, with each zone in its place, rather than a list of
+  zone names.
+
+### Changed
+
+- The panel's Dashboard section, its fonts and its wordmark are drawn in the corrected face, as the
+  dashboards are.
+- `docs/decisions/0012-update-checks.md` records what an update check would send and how it is
+  switched off, and `docs/scope.md` moves the refusal it supersedes. Nothing fetches anything yet;
+  the record is the gate the code has to pass through.
+
+### Known
+
+- The eight zone faces are for review. A plugin that installed one would put a half-finished face
+  into a dashboard list nobody asked to change, so the plugin embeds the fourteen card faces only.
 
 ## 0.1.0-rc.2 (2026-09-11)
 
