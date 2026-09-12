@@ -26,7 +26,16 @@ const MENU = { x: 100, dashStudio: 248 } as const;
 /** Where things in the centred content column sit, as a fraction of the screen width. */
 const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
 /** The first dashboard row, and the step between rows, in pixels of a 100% DPI guest. */
-const LIST = { firstRow: 617, rowHeight: 84, quickRunOffset: 86 } as const;
+const LIST = { firstRow: 336, rowHeight: 84, quickRunOffset: 86 } as const;
+/**
+ * SimHub 9.12.6 offers prebuilt track layouts at the top of the Dash Studio page, and the offer
+ * pushes the dashboard list sixty-one pixels down. It is dismissed before anything is measured from
+ * the list; clicking where "No thanks" would be costs nothing when the offer is not there, because
+ * what is underneath it is the page's own background.
+ */
+const TRACK_LAYOUT_OFFER = { x: 0.695, y: 182 } as const;
+/** How long a row is hovered before it is clicked: its Start button appears on hover, not on click. */
+const HOVER_SECONDS = 2;
 
 /** Runs a snippet against the guest's VNC through the Python environment the host already has. */
 function vnc(host: Host, body: string, timeoutMs = 90_000): RunResult {
@@ -49,8 +58,14 @@ PY`,
   );
 }
 
-export const click = (host: Host, x: number, y: number): RunResult =>
-  vnc(host, `client.mouseMove(${Math.round(x)}, ${Math.round(y)})\nclient.mousePress(1)`);
+/**
+ * Moves the pointer and presses. `dwellSeconds` keeps the pointer there first, for the controls
+ * that reveal themselves on hover -- a dashboard row's Start button, a menu item's highlight -- and
+ * it has to happen inside this one VNC session: a move in one connection and a press in the next
+ * arrives with the hover already forgotten.
+ */
+export const click = (host: Host, x: number, y: number, dwellSeconds = 0): RunResult =>
+  vnc(host, `client.mouseMove(${Math.round(x)}, ${Math.round(y)})\ntime.sleep(${dwellSeconds})\nclient.mousePress(1)`);
 
 /**
  * Types a string a key at a time. vncdotool's proxy has no `type`, and its key names are words for
@@ -136,6 +151,33 @@ ${keep ? `echo "[debug] kept ${share}, ${out} and ${done}" >&2` : `rm -f ${share
   return read;
 }
 
+/**
+ * Holds a key down, screenshots the whole display while it is held, and releases it.
+ *
+ * All of it in one VNC session, which is the point. **A VNC server releases every held key when the
+ * client disconnects**, so holding a key in one call and photographing in the next photographs a
+ * key that is no longer down -- which is exactly what made the quick glance look broken when it was
+ * working. The capture is the display rather than one window, because `captureDashboard` schedules
+ * a task on the guest and could not run inside this session anyway.
+ *
+ * SimHub's keyboard reader uses RawInput, so this reaches it the way a wheel button would.
+ */
+export function captureWhileHeld(host: Host, key: string, localPath: string, seconds = 2.5): RunResult {
+  const guestPng = `${WINVM_DIR}/shared/held_${Math.round(Date.now())}.png`;
+  const held = vnc(
+    host,
+    `client.keyDown(${JSON.stringify(key)})
+time.sleep(${seconds})
+client.captureScreen(${JSON.stringify(guestPng)})
+time.sleep(0.5)
+client.keyUp(${JSON.stringify(key)})`,
+    Math.round((seconds + 60) * 1000),
+  );
+  if (!held.ok) return held;
+  const fetched = fetchFromShare(host, guestPng, localPath);
+  return fetched.ok ? { ...fetched, stdout: `captured the display while ${key} was held` } : fetched;
+}
+
 /** A window enumerator, shared by the calls below so the P/Invoke block is written once. */
 const WINDOW_HELPER = `
 Add-Type -TypeDefinition @'
@@ -147,6 +189,9 @@ public class OpenDashWindows {
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int cx, int cy, uint f);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  /// <summary>WM_CLOSE, which a WPF window handles as a click on its close box.</summary>
+  public static void Close(IntPtr h) { PostMessage(h, 0x0010, IntPtr.Zero, IntPtr.Zero); }
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
   public static int[] Rect(IntPtr h) { RECT r; GetWindowRect(h, out r); return new int[] { r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top }; }
@@ -182,6 +227,32 @@ foreach ($h in [OpenDashWindows]::Visible()) {
   $t = [OpenDashWindows]::Title($h)
   if ($t -match ' \\(WPF Renderer\\)$') { $t -replace ' \\(WPF Renderer\\)$', '' }
 }`,
+  );
+  return r.stdout
+    .split('\n')
+    .map((l) => l.replace(/^﻿/, '').trim())
+    .filter((l) => l.length > 0);
+}
+
+/**
+ * Closes every open dash window, and returns the names it closed.
+ *
+ * `bun run shots` walks ten packages on a two-core VM, and a dash window left open keeps rendering
+ * at sixty frames a second. Ten of them open at once is not a tidiness problem, it is why the
+ * eighth capture comes back half-drawn. WM_CLOSE rather than a killed process, because SimHub owns
+ * these windows and would notice.
+ */
+export function closeDashboards(host: Host): string[] {
+  const r = inDesktopScript(
+    host,
+    `${WINDOW_HELPER}
+foreach ($h in [OpenDashWindows]::Visible()) {
+  $t = [OpenDashWindows]::Title($h)
+  if ($t -notmatch ' \\(WPF Renderer\\)$') { continue }
+  [OpenDashWindows]::Close($h)
+  $t -replace ' \\(WPF Renderer\\)$', ''
+}
+Start-Sleep -Milliseconds 900`,
   );
   return r.stdout
     .split('\n')
@@ -269,19 +340,24 @@ foreach ($h in [OpenDashWindows]::Visible()) {
 export interface OpenOptions {
   /** The package's folder name, as it appears in Dash Studio's list. */
   name: string;
-  /** Index of the package in the list filtered by `filter`, counting from zero. */
-  index: number;
+  /**
+   * Row of the package in the list filtered by `filter`, counting from zero. Typing a package's
+   * full name narrows the list to it, so this is 0 for every package but the one called plainly
+   * "openDash", whose name is a prefix of every other and which SimHub lists first anyway.
+   */
+  index?: number;
   /** What to type into the search box; defaults to the name. */
   filter?: string;
 }
 
 /**
- * Opens a dashboard in a window: Dash Studio, filter the list, hover the row so its Start button
- * appears, click it, then Windowed from the Quick run menu.
+ * Opens a dashboard in a window: Dash Studio, dismiss the track-layout offer, filter the list,
+ * hover the row so its Start button appears, click it, then Windowed from the Quick run menu.
  *
- * The row has to be clicked twice. The first click lands on a row that is not hovered and only
- * reveals the Start button; the second is the one that presses it. That is SimHub's behaviour, not
- * a race, and sleeping longer does not remove it.
+ * Both clicks need a dwell in front of them. The Start button is revealed by the hover and not by
+ * the click, and the Quick run menu highlights its item on hover before it will take a press; a
+ * click sent to a coordinate the pointer has only just reached lands on neither. That is SimHub's
+ * behaviour rather than a race, and it is why this hovers for two seconds twice.
  */
 export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   const already = openDashboards(host);
@@ -292,25 +368,26 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
 
   const searchX = Math.round(size.width * CONTENT.searchX);
   const rowX = Math.round(size.width * CONTENT.rowX);
-  const rowY = LIST.firstRow + opts.index * LIST.rowHeight;
+  const rowY = LIST.firstRow + (opts.index ?? 0) * LIST.rowHeight;
 
   for (const attempt of [1, 2]) {
     maximiseSimHub(host);
     sleep(2);
     click(host, MENU.x, MENU.dashStudio);
     sleep(4);
-    click(host, searchX, LIST.firstRow - 346);
+    click(host, Math.round(size.width * TRACK_LAYOUT_OFFER.x), TRACK_LAYOUT_OFFER.y);
+    sleep(2);
+    click(host, searchX, LIST.firstRow - 123);
     sleep(1);
     press(host, 'ctrl-a');
     sleep(1);
     type(host, opts.filter ?? opts.name);
     sleep(3);
-    click(host, rowX, rowY);
-    sleep(2);
-    click(host, rowX, rowY);
+    // Hover, then press: the Start button is inside the row and appears only under the pointer.
+    click(host, rowX, rowY, HOVER_SECONDS);
     sleep(3);
-    click(host, rowX - 3, rowY + LIST.quickRunOffset);
-    sleep(12);
+    click(host, rowX + 49, rowY + LIST.quickRunOffset, HOVER_SECONDS);
+    sleep(14);
     if (openDashboards(host).includes(opts.name)) {
       return { ok: true, code: 0, stdout: `opened ${opts.name}${attempt > 1 ? ` (on attempt ${attempt})` : ''}`, stderr: '' };
     }

@@ -382,6 +382,116 @@ PY`,
   return { ok: r.status === 0, code: r.status ?? -1, stdout: localPath, stderr: (r.stderr ?? '').trim() };
 }
 
+// --------------------------------------------------------------------------------- wheel buttons
+
+/**
+ * SimHub's own record of "this input runs that action", in PluginManagerSettings.json.
+ *
+ * Binding one by hand is four clicks in a modal and a key press, which is not a thing a test can
+ * do twice. The file is plain JSON and SimHub reads it at startup, so a binding can be written
+ * while SimHub is stopped and is live when it comes back.
+ */
+export const SIMHUB_SETTINGS = `${SIMHUB_DIR}\\PluginsData\\PluginManagerSettings.json`;
+const SIMHUB_ACTIVATION = `${SIMHUB_DIR}\\PluginsData\\PluginsActivation.json`;
+/** The input plugin that turns a key press into a SimHub trigger. Off in a fresh install. */
+const KEYBOARD_PLUGIN = 'SimHub.Plugins.InputPlugins.KeyboardReaderPlugin';
+
+/**
+ * SimHub's press types, of which two matter here.
+ *
+ * `ShortAndLongPress` is what the binding dialog picks by default and is right for an action that
+ * only has a press. `During` is the only one that can hold anything: `TriggerInputPress` calls an
+ * action's start **only** for mappings whose press type is `During`, and every other type goes
+ * through `TriggerAction`, which fires start and end back to back. A glance bound any other way
+ * appears and vanishes in the same frame.
+ */
+export const PRESS = { shortAndLong: 4, during: 3 } as const;
+
+/** One mapping as SimHub stores it: what a script has to write to bind a key to an action. */
+export interface InputMapping {
+  Target: string;
+  Trigger: string;
+  PressType: number;
+  GameRestriction: { SupportedGames: string[] };
+}
+
+/**
+ * The mapping record for an action and a key. `action` is the name SimHub knows, which is the
+ * plugin class and the action (`OpenDash.CycleZoneC`); the trigger is the keyboard reader's own
+ * naming, which is the key in capitals.
+ */
+export function inputMapping(action: string, key: string, pressType: number = PRESS.shortAndLong): InputMapping {
+  if (!/^[A-Za-z][\w.]*\.[\w]+$/.test(action)) throw new Error(`not a SimHub action name: ${action}`);
+  if (!/^[A-Za-z0-9]{1,10}$/.test(key)) throw new Error(`not a key: ${key}`);
+  return {
+    Target: action,
+    Trigger: `KeyboardReaderPlugin.${key.toUpperCase()}`,
+    // An action with a release has to be During, and an action named Hold has a release.
+    PressType: /(^|\.)Hold/.test(action) ? PRESS.during : pressType,
+    GameRestriction: { SupportedGames: [] },
+  };
+}
+
+/**
+ * Binds keys to actions and restarts SimHub so it reads them.
+ *
+ * Every existing mapping for the same targets is replaced rather than added to, so running this
+ * twice leaves one binding per action rather than two. The keyboard input plugin is switched on
+ * with it: it ships off, and a binding to a key it is not reading does nothing at all.
+ */
+export function bindActions(host: Host, pairs: readonly { action: string; key: string; pressType?: number }[]): RunResult {
+  if (pairs.length === 0) return { ok: false, code: 1, stdout: '', stderr: 'nothing to bind' };
+  const mappings = pairs.map((p) => inputMapping(p.action, p.key, p.pressType));
+  const targets = mappings.map((m) => m.Target);
+
+  simhubStop(host);
+  const written = powershell(
+    host,
+    `$ErrorActionPreference = 'Stop'
+$settings = ${psq(SIMHUB_SETTINGS)}
+$activation = ${psq(SIMHUB_ACTIVATION)}
+$adding = ${psq(JSON.stringify(mappings))} | ConvertFrom-Json
+$targets = ${psq(JSON.stringify(targets))} | ConvertFrom-Json
+
+$j = Get-Content $settings -Raw | ConvertFrom-Json
+$kept = @($j.InputActionMapping | Where-Object { $targets -notcontains $_.Target })
+$j.InputActionMapping = @($kept + $adding)
+$j | ConvertTo-Json -Depth 12 | Set-Content $settings -Encoding UTF8
+
+# The keyboard reader ships disabled, and a binding to a key nothing reads is silently inert.
+$a = Get-Content $activation -Raw | ConvertFrom-Json
+$entry = $a | Where-Object { $_.ClassName -eq ${psq(KEYBOARD_PLUGIN)} }
+if ($entry) { $entry.IsEnabled = $true }
+else { $a += [pscustomobject]@{ ClassName = ${psq(KEYBOARD_PLUGIN)}; IsEnabled = $true; ShowInMainMenu = $false; ShowInMainMenuPosition = 0 } }
+$a | ConvertTo-Json -Depth 6 | Set-Content $activation -Encoding UTF8
+'bound'`,
+    120,
+  );
+  if (!written.ok) return written;
+  const started = simhubStart(host);
+  if (!started.ok) return started;
+  return { ...written, stdout: mappings.map((m) => `${m.Target} <- ${m.Trigger.split('.')[1]}${m.PressType === PRESS.during ? ' (held)' : ''}`).join('\n') };
+}
+
+/** Removes every mapping whose target belongs to a plugin, and restarts SimHub. */
+export function unbindActions(host: Host, pluginName: string): RunResult {
+  simhubStop(host);
+  const cleared = powershell(
+    host,
+    `$ErrorActionPreference = 'Stop'
+$settings = ${psq(SIMHUB_SETTINGS)}
+$j = Get-Content $settings -Raw | ConvertFrom-Json
+$before = @($j.InputActionMapping).Count
+$j.InputActionMapping = @($j.InputActionMapping | Where-Object { -not $_.Target.StartsWith(${psq(`${pluginName}.`)}) })
+$j | ConvertTo-Json -Depth 12 | Set-Content $settings -Encoding UTF8
+"removed $($before - @($j.InputActionMapping).Count)"`,
+    120,
+  );
+  if (!cleared.ok) return cleared;
+  const started = simhubStart(host);
+  return started.ok ? cleared : started;
+}
+
 // --------------------------------------------------------------------------------- the lock
 
 export interface Claim {
@@ -454,6 +564,10 @@ const USAGE = `vm: drive the Windows test VM and its SimHub.
   bun run vm logs [n]               tail SimHub's log
   bun run vm shot [file]            screenshot the VM display (default: build/vm.png)
 
+  bun run vm bind <action> <key>    bind a key to a SimHub action, restart SimHub
+                                    e.g. 'OpenDash.CycleZoneC F9'; repeatable as action,key pairs
+  bun run vm unbind [plugin]        drop every binding of a plugin (default OpenDash)
+
   bun run vm claim [note]           take the VM (there is one, and two sessions will fight)
   bun run vm release                give it back
   bun run vm who                    who holds it
@@ -498,6 +612,17 @@ export async function main(argv: readonly string[]): Promise<void> {
       const out = rest[0] ?? path.join(repoRoot, 'build/vm.png');
       return report(screenshot(host, out));
     }
+    case 'bind': {
+      const pairs: { action: string; key: string }[] = [];
+      for (let i = 0; i + 1 < rest.length; i += 2) pairs.push({ action: rest[i]!, key: rest[i + 1]! });
+      if (pairs.length === 0) {
+        console.error('usage: bun run vm bind <action> <key> [<action> <key>...]');
+        process.exit(2);
+      }
+      return report(bindActions(host, pairs));
+    }
+    case 'unbind':
+      return report(unbindActions(host, rest[0] ?? 'OpenDash'));
     case 'claim':
       return report(claim(host, rest.join(' ')));
     case 'release':

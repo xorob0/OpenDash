@@ -10,6 +10,7 @@ namespace OpenDashPlugin
         public const string SurfaceBase = "#0A0B0D"; // color.surface.base
         public const string SurfaceZone = "#14161A"; // color.surface.zone
         public const string SurfaceRaised = "#1C1F24"; // color.surface.raised
+        public const string SurfaceInset = "#060708"; // color.surface.inset
 
         // Text
         public const string TextPrimary = "#F5F7FA"; // color.text.primary

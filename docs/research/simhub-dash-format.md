@@ -254,6 +254,56 @@ Inside the widget, a variable is read as `[variable.Name]` in NCalc. openDash's 
 the same pattern with NCalc expressions and without variables, since the slot property can be
 bound on the `WidgetItem` itself.
 
+`InitialScreenIndex` is not only initial, which is what makes the zone face work. Its setter
+calls `OnInitialScreenIndexChanged`, which assigns `_Data.Dashboard.SelectedScreen =
+GetAvailableScreenAtIndex(InitialScreenIndex)`, so a bound property that changes moves the
+widget to that screen on the next frame.
+
+**`FreezePageChanges` must stay false.** When it is true and the dash is not in design mode,
+loading the widget deletes every screen but the selected one from the dashboard
+(`LinqExtensions.RemoveAll` on `Model.Dashboard.Screens`). A frozen widget cannot be cycled
+afterwards, because the pages are not there any more.
+
+### `AddAction`'s release callback is discarded by the extension method (2026-09-12, XOR-93)
+
+`SimHub.Plugins.IPluginExtensions` is the convenient way to register an action:
+
+```csharp
+public static void AddAction<T>(this T plugin, string actionName,
+    Action<PluginManager, string> actionStart, Action<PluginManager, string> actionEnd = null)
+{
+    PluginManager.Instance.AddAction(actionName, typeof(T), actionStart, actionEnd = null);
+}
+```
+
+Read the last argument: `actionEnd = null` is an **assignment**, not a default. The release
+callback a caller passes is overwritten with null before it is used, and `AddHiddenAction` does
+the same thing. Nothing warns, nothing throws: the action registers, the press fires, the
+release never does.
+
+`PluginManager.AddAction(name, type, start, end)` and `PluginManager.AddAction(name, type,
+start, end, hidden)` keep both callbacks, and so does `AddInputMapping(name, type, pressed,
+released)` — which additionally sets `IsInput = true` and a no-op `PressFallback`, putting the
+entry in SimHub's input list rather than its action list.
+
+So an action that has to do something on release is registered through `PluginManager`
+directly. openDash registers all five that way, the four that need no release included, so
+that nobody has to remember which is which.
+
+**And the binding needs press type `During` (3).** `TriggerInputPress` calls `ActionStart` only
+for mappings whose `PressType == PressType.During`, and `TriggerInputRelease` calls `ActionEnd`
+the same way. Every other press type goes through `TriggerAction`, which calls `ActionStart` and
+then `ActionEnd` back to back — so a page held by a button appears and vanishes in one frame.
+The binding dialog offers `ShortAndLongPress` by default, which is the wrong one.
+
+The full enum, from `SimHub.Plugins.PressType`: `Default 0`, `ShortPress 1`, `LongPress 2`,
+`During 3`, `ShortAndLongPress 4`, `Pressed 5`, `Released 6`, `LongPressNoAutoRepeat 7`.
+
+A binding lives in `PluginsData/PluginManagerSettings.json` as
+`{ "Target": "OpenDash.CycleZoneC", "Trigger": "KeyboardReaderPlugin.F9", "PressType": 4,
+"GameRestriction": { "SupportedGames": [] } }`, read at startup, which is how `bun run vm bind`
+writes one without the dialog.
+
 ### Images and fonts
 
 Modern exports keep image bytes out of the `.djson`. `Images` is a list of descriptors (`Name`,
@@ -334,6 +384,42 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
 Still open: whether `Version` gates anything (every sample says 2, and 2 is what we write), and
 verification of the plugin-driven slot switch with the real plugin, which follows the plugin
 build.
+
+### NCalc dispatches on the name *and* the argument count (2026-09-11, XOR-83)
+
+`NCalcEngineBase.EvaluateFunction` is a chain of `name == "x" && parameterCount == n` tests. When
+neither a name nor an arity matches, **no delegate is attached and the expression evaluates to
+nothing**. SimHub reports that nowhere: the item simply draws the empty string. There is no log
+line, no red box in the editor, and no way for a dashboard to find out.
+
+That is how `left([Class], 4)` shipped. `left` is a real SimHub function — it is
+`left(value, startIndex, maxLength)`, three arguments, backed by `WoteverCommon`'s
+`StringExtensions.Left` — so a whitelist of names alone would have passed it. Every class and tyre
+chip on both leaderboards drew an empty block from the day the second screens shipped until it was
+found by eye, with the expression well formed, the item present, the box the right size and every
+test green.
+
+The function table is therefore transcribed into
+[`packages/generator/src/ncalcFunctions.ts`](../../packages/generator/src/ncalcFunctions.ts) with
+an arity for each name, and the validator rejects a call the engine would not dispatch. It has
+three sources, all in `SimHub.Plugins.dll`:
+
+| Source | What it holds |
+|---|---|
+| `NCalcEngineBase.EvaluateFunction` | 37 named branches, each with its parameter count |
+| `NCalcEngineMethodsRegistry.AddMethod` | 42 generic methods the chain falls through to |
+| NCalc's own table | `abs`, `round`, `if`, `max`, `min`, `truncate` and the rest of the maths, which SimHub does not intercept |
+
+Three shapes are worth knowing before writing an expression by hand:
+
+- `left` and `right` are `(value, startIndex, maxLength)`. Not `(value, length)`.
+- `getbestlapopponentleaderboardposition` and its class-only twin are declared with no parameter
+  and their delegates take one anyway, so a dummy `0` is required.
+- `driver<name>(position)` and `driversector<name>(position, sector, includePrevious)` are matched
+  by prefix against `OpponentsDataProviders`, so a misspelt suffix is an unknown function with the
+  right arity — which fails silently like everything else here.
+
+When SimHub is upgraded, the table is re-derived by decompiling rather than edited by hand.
 
 ## Sources
 

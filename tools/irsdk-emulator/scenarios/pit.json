@@ -1,0 +1,50 @@
+{
+  // A pit stop in progress: the car is in its stall with the limiter on and the service order set
+  // to four tyres, fuel and a tear-off. This is the state the pit view module and the pit limiter
+  // block on the hero are for, and it is the one a race state never shows.
+  "extends": "race.json",
+  "name": "In the pit stall, four tyres, fuel and a tear-off",
+  "variables": [
+    {"name": "SessionFlags", "value": "green", "pin": true},
+    {"name": "OnPitRoad", "value": true, "pin": true},
+    {"name": "PlayerCarInPitStall", "value": true, "pin": true},
+    {"name": "PlayerTrackSurface", "value": 1, "pin": true},
+    {"name": "PitstopActive", "value": true, "pin": true},
+    {"name": "EngineWarnings", "value": 16, "pin": true},
+    {"name": "Speed", "value": 0.0, "pin": true},
+    {"name": "RPM", "value": 1350.0, "pin": true},
+    {"name": "Gear", "value": 0, "pin": true},
+    {"name": "Throttle", "value": 0.0, "pin": true},
+    {"name": "Brake", "value": 0.0, "pin": true},
+    {"name": "Clutch", "value": 0.0, "pin": true},
+    {"name": "SteeringWheelAngle", "value": 0.0, "pin": true},
+    {"name": "FuelLevel", "value": 8.6, "pin": true},
+    {"name": "FuelLevelPct", "value": 0.086, "pin": true},
+    // Pit service: left front, right front, left rear, right rear, fuel and tear-off.
+    {"name": "PitSvFlags", "value": 63, "pin": true},
+    {"name": "PitSvFuel", "value": 46.5, "pin": true},
+    {"name": "dpLFTireChange", "value": 1, "pin": true},
+    {"name": "dpRFTireChange", "value": 1, "pin": true},
+    {"name": "dpLRTireChange", "value": 1, "pin": true},
+    {"name": "dpRRTireChange", "value": 1, "pin": true},
+    {"name": "dpWindshieldTearoff", "value": 1, "pin": true},
+    {"name": "dpFuelFill", "value": 1, "pin": true},
+    {"name": "PitRepairLeft", "value": 0.0, "pin": true},
+    {"name": "Lap", "value": 18},
+    {"name": "LapCompleted", "value": 17},
+    {"name": "RaceLaps", "value": 18},
+    {"name": "LapDistPct", "value": 0.003, "pin": true},
+    {"name": "PlayerCarPosition", "value": 9, "pin": true},
+    {"name": "PlayerCarClassPosition", "value": 5, "pin": true},
+    {"name": "SessionTimeRemain", "value": 1010.0}
+  ],
+  "timeline": [
+    {"at": 0, "log": "the car is stationary: stop the rev sweep and the gear model", "driver": {"type": "rpmSweep", "enabled": false}},
+    {"at": 0, "driver": {"type": "gearFromRpm", "enabled": false}},
+    {"at": 0, "driver": {"type": "lapTimer", "enabled": false}},
+    {"at": 0, "driver": {"type": "fuelBurn", "enabled": false}},
+    {"at": 0, "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 1, "log": "three more cars in the pit lane, for the PIT chips in the table", "driver": {"type": "field", "pitCars": [4, 9, 17]}}
+  ]
+}

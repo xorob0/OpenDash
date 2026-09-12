@@ -1,4 +1,5 @@
 // ContractTests.cs: the card catalogue and the property names, and their agreement with contract.ts when present.
+using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -59,17 +60,29 @@ namespace OpenDashPlugin.Tests
         public void Property_names_cover_the_dash_the_companion_and_the_pit_wall()
         {
             var names = Contract.PropertyNames().ToList();
-            // Four settings, twelve slots, twenty-one companion modules, four zones, the wide zone and the URL.
-            Assert.Equal(4 + 12 + 21 + 4 + 2, names.Count);
+            // Four settings, twelve slots, the zone face (four pages, four masks, four starts, four
+            // bar fields and the glance), twenty-one companion modules, four pit wall zones, the
+            // wide zone and the URL.
+            const int zoneFace = 4 + 4 + 4 + 4 + 1;
+            Assert.Equal(4 + 12 + zoneFace + 21 + 4 + 2, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
             Assert.Equal("Slot12", Contract.SlotProperty(12));
             Assert.Equal(Enumerable.Range(1, 12).Select(Contract.SlotProperty), names.Skip(4).Take(12));
+
+            // The zone face, declared beside the slots rather than instead of them: ten faces still
+            // read Slot01 to Slot12, and README publishes them as properties an LED profile may read.
+            Assert.Equal(new[] { "ZoneA", "ZoneB", "ZoneC", "ZoneD" }, names.Skip(16).Take(4));
+            Assert.Equal(new[] { "ZoneAPages", "ZoneBPages", "ZoneCPages", "ZoneDPages" }, names.Skip(20).Take(4));
+            Assert.Equal(new[] { "ZoneAStart", "ZoneBStart", "ZoneCStart", "ZoneDStart" }, names.Skip(24).Take(4));
+            Assert.Equal(new[] { "BarLeft1", "BarLeft2", "BarRight1", "BarRight2" }, names.Skip(28).Take(4));
+            Assert.Equal("QuickGlance", names[32]);
+
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
-            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(16).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(37));
+            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(33).Take(21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(54));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 
@@ -95,8 +108,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(6, ZonePages.Wide.Count);
             Assert.Equal(Enumerable.Range(0, 11), ZonePages.Standard.Select(p => p.Number));
             Assert.Equal(Enumerable.Range(0, 6), ZonePages.Wide.Select(p => p.Number));
-            Assert.Equal(new[] { "A", "B", "C", "D" }, Contract.ZoneLetters);
-            Assert.Equal(new[] { 0, 1, 4, 2 }, Contract.DefaultZones());
+            Assert.Equal(new[] { "A", "B", "C", "D" }, Contract.PitWallZoneLetters);
+            Assert.Equal(new[] { 0, 1, 4, 2 }, Contract.PitWallDefaultZones());
             Assert.Equal("Fuel", ZonePages.StandardName(Contract.DefaultZonePage("A")));
             Assert.Equal("Relative", ZonePages.StandardName(Contract.DefaultZonePage("C")));
             Assert.Equal("Car telemetry", ZonePages.WideName(Contract.DefaultWideZonePage));
@@ -180,10 +193,94 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(module.Enabled, bool.Parse(rows[i].Groups["enabled"].Value));
             }
 
-            Assert.Equal(ZonePages.Standard.Select(p => p.Id), PageIdsOf(source, "export const ZONE_PAGES"));
-            Assert.Equal(ZonePages.Wide.Select(p => p.Id), PageIdsOf(source, "export const WIDE_ZONE_PAGES"));
-            Assert.Contains("DEFAULT_WIDE_ZONE_PAGE = " + Contract.DefaultWideZonePage, source);
+            Assert.Equal(ZonePages.Standard.Select(p => p.Id), PageIdsOf(source, "export const PIT_WALL_ZONE_PAGES"));
+            Assert.Equal(ZonePages.Wide.Select(p => p.Id), PageIdsOf(source, "export const PIT_WALL_WIDE_ZONE_PAGES"));
+            Assert.Contains("PIT_WALL_DEFAULT_WIDE_ZONE_PAGE = " + Contract.DefaultWideZonePage, source);
             Assert.Contains("{ A: 0, B: 1, C: 4, D: 2 }", source);
+        }
+
+        /// <summary>The zone face's half of the contract, checked against contract.ts the same way the
+        /// cards are: the two files are one contract and neither is allowed to move alone.</summary>
+        [Fact]
+        public void Zone_face_agrees_with_contract_ts_when_present()
+        {
+            var path = RepoPaths.ContractTs();
+            if (!File.Exists(path)) return; // the dash package is built separately; nothing to compare yet
+            var source = File.ReadAllText(path);
+
+            Assert.Equal(Contract.FaceZoneLetters, ListOf(source, "export const FACE_ZONE_LETTERS"));
+            Assert.Equal(Contract.BarSlots, ListOf(source, "export const BAR_SLOTS"));
+
+            // The page counts decide the mask width, so a catalogue that grows on one side and not
+            // the other would silently shorten a driver's cycle.
+            Assert.Equal(4, PageIdsOf(source, "export const ZONE_A_PAGES").Length);
+            Assert.Equal(8, PageIdsOf(source, "export const BAND_D_PAGES").Length);
+            Assert.Equal(Contract.BarFieldCount, PageIdsOf(source, "export const BAR_FIELDS").Length);
+            Assert.Equal(Contract.FaceZonePageCounts[0], PageIdsOf(source, "export const ZONE_A_PAGES").Length);
+            Assert.Equal(Contract.FaceZonePageCounts[3], PageIdsOf(source, "export const BAND_D_PAGES").Length);
+            Assert.Equal(Modules.Count, Contract.FaceZonePageCounts[1]);
+            Assert.Equal(Modules.Count, Contract.FaceZonePageCounts[2]);
+
+            Assert.Contains("DEFAULT_ZONE_PAGE: Record<FaceZone, number> = { A: 0, B: 0, C: 14, D: 0 }", source);
+            Assert.Contains("DEFAULT_BAR_FIELDS: Record<BarSlot, number> = { Left1: 0, Left2: 1, Right1: 5, Right2: 6 }", source);
+            Assert.Contains("DEFAULT_QUICK_GLANCE = " + (Contract.DefaultQuickGlance / 100) + " * 100 + " + (Contract.DefaultQuickGlance % 100), source);
+        }
+
+        /// <summary>The page names the panel lists, against the names the face draws. Ids alone are not
+        /// enough here: the panel is the only place a driver ever reads these, so a name that drifts is a
+        /// dropdown that does not say what the zone will show.</summary>
+        [Fact]
+        public void Face_page_catalogues_agree_with_contract_ts_when_present()
+        {
+            var path = RepoPaths.ContractTs();
+            if (!File.Exists(path)) return;
+            var source = File.ReadAllText(path);
+
+            Assert.Equal(PageIdsOf(source, "export const ZONE_A_PAGES"), FacePages.ZoneA.Select(p => p.Id));
+            Assert.Equal(PageNamesOf(source, "export const ZONE_A_PAGES"), FacePages.ZoneA.Select(p => p.Name));
+            Assert.Equal(PageIdsOf(source, "export const BAND_D_PAGES"), FacePages.BandD.Select(p => p.Id));
+            Assert.Equal(PageNamesOf(source, "export const BAND_D_PAGES"), FacePages.BandD.Select(p => p.Name));
+            Assert.Equal(PageIdsOf(source, "export const BAR_FIELDS"), FacePages.BarFields.Select(p => p.Id));
+            Assert.Equal(PageNamesOf(source, "export const BAR_FIELDS"), FacePages.BarFields.Select(p => p.Name));
+
+            // Each catalogue numbers itself from zero, because a zone setting is an index into it.
+            for (var i = 0; i < Contract.FaceZoneLetters.Length; i++)
+            {
+                var pages = FacePages.For(Contract.FaceZoneLetters[i]);
+                Assert.Equal(Contract.FaceZonePageCounts[i], pages.Count);
+                for (var page = 0; page < pages.Count; page++) Assert.Equal(page, pages[page].Number);
+            }
+            // Zones B and C are the module catalogue less one, which is what makes module 15 page 14.
+            Assert.Equal("relative", FacePages.IdOf("C", Contract.DefaultFaceZonePages[2]));
+            Assert.Equal(Contract.BarFieldCount, FacePages.BarFields.Count);
+        }
+
+        [Fact]
+        public void Zone_defaults_are_every_page_enabled()
+        {
+            // A driver turns off what they do not want rather than turning on what they do, so every
+            // bit of the mask is set and the cycle starts at its longest.
+            for (var i = 0; i < Contract.FaceZoneLetters.Length; i++)
+            {
+                var mask = Contract.DefaultZoneMask(i);
+                var pages = Contract.FaceZonePageCounts[i];
+                Assert.Equal((1 << pages) - 1, mask);
+                for (var page = 0; page < pages; page++) Assert.True((mask & (1 << page)) != 0);
+                Assert.Equal(0, mask >> pages);
+            }
+            Assert.Equal(new[] { 0, 0, 14, 0 }, Contract.DefaultFaceZones());
+            Assert.Equal(new[] { 0, 1, 5, 6 }, Contract.DefaultBarSlots());
+        }
+
+        [Fact]
+        public void Zone_property_names_refuse_a_letter_that_is_not_a_zone()
+        {
+            Assert.Equal("ZoneB", Contract.ZonePageProperty("B"));
+            Assert.Equal("ZoneBPages", Contract.ZoneMaskProperty("B"));
+            Assert.Equal("ZoneBStart", Contract.ZoneStartProperty("B"));
+            Assert.Equal("BarRight2", Contract.BarFieldProperty("Right2"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty("E"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty("Middle"));
         }
 
         /// <summary>The `id` fields of the page list that follows the given declaration.</summary>
@@ -192,6 +289,14 @@ namespace OpenDashPlugin.Tests
             var match = Regex.Match(source, Regex.Escape(declaration) + @"[^=]*=\s*\[(?<items>[^\]]*)\]");
             Assert.True(match.Success, declaration + " not found in contract.ts");
             return Regex.Matches(match.Groups["items"].Value, @"id:\s*'([^']*)'").Cast<Match>().Select(m => m.Groups[1].Value).ToArray();
+        }
+
+        /// <summary>The `name` fields of the page list that follows the given declaration.</summary>
+        private static string[] PageNamesOf(string source, string declaration)
+        {
+            var match = Regex.Match(source, Regex.Escape(declaration) + @"[^=]*=\s*\[(?<items>[^\]]*)\]");
+            Assert.True(match.Success, declaration + " not found in contract.ts");
+            return Regex.Matches(match.Groups["items"].Value, @"name:\s*'([^']*)'").Cast<Match>().Select(m => m.Groups[1].Value).ToArray();
         }
 
         /// <summary>The single-quoted strings of the array literal that follows the given declaration.</summary>

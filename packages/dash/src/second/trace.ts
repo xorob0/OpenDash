@@ -60,16 +60,25 @@ const chartOf = (name: string, frame: Rect, series: Series, opts: TraceOptions):
   ...withBindings({ CurrentValue: series.bind }),
 });
 
-/** The legend for a set of series, drawn on the line box at `y`. */
-export function legend(name: string, series: readonly Series[], x: number, y: number, density: Density): Item[] {
+/**
+ * The legend for a set of series, drawn on the line box at `y`.
+ *
+ * `maxWidth` bounds it: a legend is labelled colours and a colour without its label is a guess, so
+ * where three will not fit the last one is dropped rather than drawn past the edge. That is rule
+ * 17 applied to chrome -- shed, do not shrink -- and it is what a 249 px zone needs, where THROTTLE
+ * BRAKE CLUTCH runs six pixels over.
+ */
+export function legend(name: string, series: readonly Series[], x: number, y: number, density: Density, maxWidth?: number): Item[] {
   const d = densityOf(density);
   const items: Item[] = [];
   let cursor = x;
   for (const s of series) {
     const width = Math.ceil(measureText('BarlowMedium', s.name.toUpperCase(), d.labelSm));
+    const takes = SWATCH.width + SWATCH_GAP + width;
+    if (maxWidth !== undefined && cursor - x + takes > maxWidth) break;
     items.push(band(`${name}.${s.name}.swatch`, rect(cursor, Math.round(y + d.labelSm / 2), SWATCH.width, SWATCH.height), s.color));
     items.push(label(`${name}.${s.name}.legend`, s.name, cursor + SWATCH.width + SWATCH_GAP, y, width, { size: d.labelSm, color: ds.color.text.secondary }));
-    cursor += SWATCH.width + SWATCH_GAP + width + LEGEND_GAP;
+    cursor += takes + LEGEND_GAP;
   }
   return items;
 }
@@ -98,6 +107,6 @@ export function trace(name: string, frame: Rect, series: readonly Series[], dens
   }
   const points = opts.points ?? d.tracePoints;
   for (const s of series) items.push(chartOf(`${name}.${s.name}`, plot, s, { ...opts, points }));
-  if (showLegend) items.push(...legend(name, series, plot.left, frame.top + frame.height - LEGEND_HEIGHT, density));
+  if (showLegend) items.push(...legend(name, series, plot.left, frame.top + frame.height - LEGEND_HEIGHT, density, plot.width));
   return items;
 }

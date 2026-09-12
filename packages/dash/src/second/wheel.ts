@@ -59,15 +59,26 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
   const temp = tyreTemperature(corner);
   const pressure = tyrePressure(corner);
   const wear = tyreWear(corner);
-  const tempFs = d.big;
   const pressureFs = d.tiny;
   const secondFs = d.labelSm;
+  // The temperature takes the height it is given rather than the height the density prefers. At a
+  // 639 by 202 pit wall zone the cell works out one pixel shorter than the block, and one pixel is
+  // enough for WPF to clip the numeral's line box: the reading a driver acts on loses its top.
+  // Nothing can be shed here -- a corner is two numbers and a bar -- so this is the one place the
+  // value shrinks instead.
+  const tempFs = Math.max(d.tiny, Math.min(d.big, frame.height - d.fieldGap - secondFs));
   const blockHeight = tempFs + d.fieldGap + secondFs;
   const top = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
   const x = frame.left + WEAR_BAR.width + WEAR_BAR.gap;
   const tempWidth = monoWidth(cells('SemiBold', tempFs), CHARS.temperature);
   const pressureX = x + tempWidth + d.fieldGap * 2;
   const baseline = canvasBaseline(top, tempFs);
+  // Rule 17: shed the secondary reading rather than shrink the primary one. The temperature is
+  // what a driver acts on and the pressure is what they check, and iRacing's pressure is the one
+  // the car left the box with rather than a live figure. At a 274-wide zone the cell is not wide
+  // enough for both, so the pressure goes and the temperature stays the size it was.
+  const pressureWidth = monoWidth(cells('SemiBold', pressureFs), CHARS.pressure);
+  const pressureFits = pressureX + pressureWidth <= frame.left + frame.width;
   const items: Item[] = [
     band(`${name}.wear.track`, rect(frame.left, frame.top, WEAR_BAR.width, frame.height), ds.color.surface.raised),
     barGauge(`${name}.wear`, rect(frame.left, frame.top, WEAR_BAR.width, frame.height), wear, {
@@ -80,17 +91,21 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
       colorBind: temperatureColour(corner),
       maxWidth: frame.width - (x - frame.left),
     }),
-    numeral(`${name}.pressure`, CORNER_SAMPLES[corner].pressure, pressureX, canvasYForBaseline(baseline, pressureFs), pressureFs, CHARS.pressure, {
-      bind: iff(eq(pressure, num(0)), str('--'), fmt(pressure, '0.0')),
-      color: ds.color.text.secondary,
-      maxWidth: Math.max(0, frame.left + frame.width - pressureX),
-    }),
     label(`${name}.compound`, 'M', x, top + tempFs + d.fieldGap, 40, {
       size: secondFs,
       color: ds.color.text.secondary,
       bind: ncalc.ucase(isnull(ncalc.driver('fronttyrecompound', ncalc.playerPosition()), str(''))),
     }),
   ];
+  if (pressureFits) {
+    items.push(
+      numeral(`${name}.pressure`, CORNER_SAMPLES[corner].pressure, pressureX, canvasYForBaseline(baseline, pressureFs), pressureFs, CHARS.pressure, {
+        bind: iff(eq(pressure, num(0)), str('--'), fmt(pressure, '0.0')),
+        color: ds.color.text.secondary,
+        maxWidth: Math.max(0, frame.left + frame.width - pressureX),
+      }),
+    );
+  }
   // A 6 px square marks a wheel the pit box is set to change: SimHub cannot draw the tick the
   // design sheet uses, and a square in the same place reads the same way.
   const markerX = x + 40;

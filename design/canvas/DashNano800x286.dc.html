@@ -21,34 +21,34 @@
     .seg { flex: 1 1 0; border-radius: 2px; }
   </style>
 </helmet>
-<!-- 800 x 286 . nano . 4 slots, gear steps to gearSm 180 and speed to 64 -->
+<!-- 800 x 286 . nano . no settings bar: the height is not there, so the band carries the one changeable zone -->
 <div style="position: relative; width: 800px; height: 286px; background: #0A0B0D; overflow: hidden;">
 
-  <div style="position: absolute; left: 16px; top: 10px; width: 768px; height: 32px; display: flex; gap: 4px;">
+  <div style="position: absolute; left: 6px; top: 1px; width: 788px; height: 30px; background: #060708;"></div>
+  <div style="position: absolute; left: 12px; top: 5px; width: 776px; height: 22px; display: flex; gap: 4px;">
     <sc-for list="{{segments}}" as="seg" hint-placeholder-count="15">
-      <div class="seg" style="height: 32px; background: {{seg.color}};"></div>
+      <div class="seg" style="height: 22px; background: {{seg.color}};"></div>
     </sc-for>
   </div>
-  <div style="position: absolute; left: 0; top: 54px; width: 800px; height: 1px; background: #1C1F24;"></div>
-
-  <div style="position: absolute; left: 0; top: 55px; width: 800px; height: 219px; display: flex; justify-content: center;">
-    <div style="width: 250px; height: 219px; flex: none; display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 1px; background: #1C1F24;"><div class="slotbox" style="width: 250px; height: 109px; background: #0A0B0D;"><div class="card" style="padding: 6px 12px;"><div class="lbl">Current</div><div class="num" style="font-size: 46px;">1:42.3</div></div></div><div class="slotbox" style="width: 250px; height: 109px; background: #0A0B0D;"><div class="card" style="padding: 6px 12px;"><div class="lbl">Last</div><div class="num" style="font-size: 46px;">1:42.905</div></div></div></div>
-    <div style="width: 1px; height: 219px; background: #1C1F24; flex: none;"></div>
-    <div style="width: 298px; height: 219px; flex: none; display: flex; align-items: center; justify-content: center; gap: 20px; box-sizing: border-box;">
-      <div class="num" style="font-size: 180px; font-weight: 700;">4</div>
-      <div style="display: flex; flex-direction: column; gap: 6px;"><div class="num" style="font-size: 64px;">187</div><div class="lbl-sm">km/h</div></div>
-    </div>
-    <div style="width: 1px; height: 219px; background: #1C1F24; flex: none;"></div>
-    <div style="width: 250px; height: 219px; flex: none; display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 1px; background: #1C1F24;"><div class="slotbox" style="width: 250px; height: 109px; background: #0A0B0D;"><div class="card" style="padding: 6px 12px;"><div class="lbl">Best</div><div class="num" style="font-size: 46px;">1:41.877</div></div></div><div class="slotbox" style="width: 250px; height: 109px; background: #0A0B0D;"><div class="card" style="padding: 6px 12px;"><div class="lbl">Delta</div><div class="num" style="font-size: 46px; color: #00D96A;">−0.21</div></div></div></div>
-  </div>
-
+  <div style="position: absolute; left: 0; top: 32px; width: 800px; height: 1px; background: #1C1F24;"></div>
+<div style="position: absolute; left: 0px; top: 33px; width: 269px; height: 194px; box-sizing: border-box; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; overflow: hidden;"><div style="height: 22px; display: flex; align-items: baseline; gap: 8px; flex: none;"><div class="lbl" style="color: #5A6069;">B</div><div class="lbl">Delta</div></div><div style="flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden;"><div style="display: flex; flex-direction: column; gap: 14px; "><div style="display: flex; flex-direction: column; gap: 2px; "><div class="num" style="font-size: 46px; color: #00D96A;">−0.21</div><div class="lbl">vs session best</div></div><div style="position: relative; width: 237px; height: 10px; background: #1C1F24;"><div style="position: absolute; left: 0%; top: -4px; width: 1px; height: 18px; background: #33383F;"></div><div style="position: absolute; left: 25%; top: -4px; width: 1px; height: 18px; background: #33383F;"></div><div style="position: absolute; left: 75%; top: -4px; width: 1px; height: 18px; background: #33383F;"></div><div style="position: absolute; left: 100%; top: -4px; width: 1px; height: 18px; background: #33383F;"></div><div style="position: absolute; left: 44%; width: 5%; top: 0; height: 10px; background: #00D96A;"></div><div style="position: absolute; left: 50%; top: -6px; width: 2px; height: 22px; background: #F5F7FA;"></div></div></div></div></div>  <div style="position: absolute; left: 269px; top: 33px; width: 1px; height: 194px; background: #1C1F24;"></div>
+<div style="position: absolute; left: 270px; top: 33px; width: 260px; height: 194px; overflow: hidden;"><div style="height: 194px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><div style="display: flex; align-items: center; justify-content: center; gap: 8px;"><div class="num" style="font-size: 50px; color: #33383F; font-weight: 600;">3</div><div class="num" style="font-size: 120px; font-weight: 700;">4</div><div class="num" style="font-size: 50px; color: #33383F; font-weight: 600;">5</div></div><div style="display: flex; align-items: baseline; justify-content: center; gap: 8px;"><div class="num" style="font-size: 36px;">187</div><div class="lbl-sm">km/h</div></div></div></div>
+    <div style="position: absolute; left: 530px; top: 33px; width: 1px; height: 194px; background: #1C1F24;"></div>
+<div style="position: absolute; left: 531px; top: 33px; width: 269px; height: 194px; box-sizing: border-box; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; overflow: hidden;"><div style="height: 22px; display: flex; align-items: baseline; gap: 8px; flex: none;"><div class="lbl" style="color: #5A6069;">C</div><div class="lbl">Fuel</div></div><div style="flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden;"><div style="display: flex; flex-direction: column; gap: 8px; "><div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; "><div style="display: flex; flex-direction: column; gap: 5px;"><div style="height: 13px; display: flex; align-items: center;"><div class="lbl">Fuel</div></div><div style="height: 34px; display: flex; align-items: center;"><div class="row" style="align-items: baseline; gap: 6px;"><div class="num" style="font-size: 34px;">38.4</div><div class="lbl-sm">L</div></div></div></div><div style="display: flex; flex-direction: column; gap: 5px;"><div style="height: 13px; display: flex; align-items: center;"><div class="lbl">Fuel time</div></div><div style="height: 34px; display: flex; align-items: center;"><div class="num" style="font-size: 34px;">0:31:40</div></div></div></div></div></div></div>  <div style="position: absolute; left: 0; top: 227px; width: 800px; height: 1px; background: #1C1F24;"></div>
+  <div style="position: absolute; left: 0; top: 228px; width: 800px; height: 58px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 16px; background: #060708;"><div class="lbl" style="color: #5A6069; flex: none;">D</div><div style="display: flex; align-items: center; gap: 22px; width: 100%; height: 50px;"><div style="flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 26px;"><div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start; "><div class="lbl" style="height: 13px; display: flex; align-items: center;">Fuel</div><div style="height: 34px; display: flex; align-items: center;"><div class="row" style="gap: 5px; align-items: baseline;"><div class="num" style="font-size: 34px;">15.12</div><div class="lbl-sm">L</div></div></div></div><div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start; "><div class="lbl" style="height: 13px; display: flex; align-items: center;">Fuel time</div><div style="height: 34px; display: flex; align-items: center;"><div class="num" style="font-size: 34px;">08:46</div></div></div><div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start; "><div class="lbl" style="height: 13px; display: flex; align-items: center;">Est. laps</div><div style="height: 34px; display: flex; align-items: center;"><div class="num" style="font-size: 34px;">13.1</div></div></div><div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start; "><div class="lbl" style="height: 13px; display: flex; align-items: center;">Refuel</div><div style="height: 34px; display: flex; align-items: center;"><div class="num" style="font-size: 34px; color: #FFB300;">32.67</div></div></div></div></div></div>
   <sc-if value="{{pitLimiter}}" hint-placeholder-val="{{false}}">
-    <div style="position: absolute; left: 274px; top: 65px; width: 252px; height: 28px; background: #FFFFFF; display: flex; align-items: center; justify-content: center;">
+    <div style="position: absolute; left: 294px; top: 39px; width: 212px; height: 30px; background: #FFFFFF; display: flex; align-items: center; justify-content: center;">
       <div class="lbl" style="color: #0A0B0D;">Pit limiter</div>
     </div>
   </sc-if>
 
-  <div style="position: absolute; left: 0; top: 274px; width: 800px; height: 12px; background: {{flagBg}}; border: 2px solid {{flagBorder}}; box-sizing: border-box;"></div>
+  <div style="position: absolute; left: 0; top: 228px; width: 800px; height: 58px; background: {{flagBg}}; border: 3px solid {{flagBorder}}; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+    <sc-if value="{{isYellow}}" hint-placeholder-val="{{false}}"><div class="lbl" style="color: #0A0B0D;">Yellow flag</div></sc-if>
+    <sc-if value="{{isBlue}}" hint-placeholder-val="{{false}}"><div class="lbl" style="color: #0A0B0D;">Blue flag</div></sc-if>
+    <sc-if value="{{isWhite}}" hint-placeholder-val="{{false}}"><div class="lbl" style="color: #0A0B0D;">White flag</div></sc-if>
+    <sc-if value="{{isGreen}}" hint-placeholder-val="{{false}}"><div class="lbl" style="color: #0A0B0D;">Green flag</div></sc-if>
+    <sc-if value="{{isBlack}}" hint-placeholder-val="{{false}}"><div class="lbl" style="color: #F5F7FA;">Black flag</div></sc-if>
+  </div>
 </div>
 </x-dc>
 <script data-dc-script data-props='{"litSegments":{"editor":"range","default":9,"min":0,"max":15,"step":1,"section":"Rev bar"},"flag":{"editor":"enum","default":"none","options":["none","black","chequer","yellow","blue","white","green"],"section":"Indicators"},"pitLimiter":{"editor":"boolean","default":false,"section":"Indicators"},"$preview":{"width":800,"height":286}}'>
@@ -59,7 +59,7 @@ class Component extends DCLogic {
     const stageColor = (i) => (i < 5 ? '#00D96A' : i < 10 ? '#FFB300' : '#FF2D46');
     const segments = Array.from({ length: 15 }, (_, i) => ({ color: i < lit ? stageColor(i) : '#33383F', angle: -84 + i * 12 }));
     const fills = { none: 'transparent', yellow: '#FFD400', blue: '#2E7BFF', white: '#FFFFFF', green: '#00D96A',
-      chequer: 'repeating-conic-gradient(#F5F7FA 0 25%, #0A0B0D 0 50%) 0 0 / 12px 12px' };
+      chequer: 'repeating-conic-gradient(#F5F7FA 0 25%, #0A0B0D 0 50%) 0 0 / 58px 58px' };
     const flag = this.props.flag ?? 'none';
     // the black flag is an outlined band, since a black fill would vanish on this face
     const isBlack = flag === 'black';
