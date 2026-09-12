@@ -22,6 +22,8 @@
     <Compile Include="../OpenDash/DashboardInstaller.Core.cs" Link="Plugin/DashboardInstaller.Core.cs" />
     <Compile Include="../OpenDash/Theme.cs" Link="Plugin/Theme.cs" />
     <Compile Include="../OpenDash/ReleaseFeed.cs" Link="Plugin/ReleaseFeed.cs" />
+    <Compile Include="../OpenDash/UpdateCheck.cs" Link="Plugin/UpdateCheck.cs" />
+    <Compile Include="../OpenDash/UpdateWording.cs" Link="Plugin/UpdateWording.cs" />
   </ItemGroup>
 
   <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;
