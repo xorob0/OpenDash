@@ -908,6 +908,7 @@ namespace OpenDashPlugin
         private UpdateStatus updateStatus = new UpdateStatus();
         private UpdateService updateService;
         private bool confirmingEdited;
+        private bool applying;
 
         private UpdateService Updates =>
             updateService ?? (updateService = new UpdateService(new ReleaseClient(OpenDash.Version), new SimHubInstallLog()));
@@ -1024,6 +1025,10 @@ namespace OpenDashPlugin
             var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
             if (release == null) return;
 
+            // A second click before the first has been answered used to fall straight through the confirmation,
+            // because the confirming branch returned without disabling anything.
+            if (applying) return;
+
             var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
             if (edited.Count > 0 && !confirmingEdited)
             {
@@ -1039,7 +1044,10 @@ namespace OpenDashPlugin
             }
 
             var replaceEdited = confirmingEdited;
+            applying = true;
             updateButton.IsEnabled = false;
+            reinstallButton.IsEnabled = false;
+            checkButton.IsEnabled = false;
             updateLine.Text = "Downloading " + updateStatus.LatestVersion + "…";
             updateLine.Visibility = Visibility.Visible;
 
@@ -1048,9 +1056,15 @@ namespace OpenDashPlugin
                 var outcome = Updates.Apply(plugin.Installer, release, replaceEdited);
                 Dispatcher.Invoke(() =>
                 {
+                    applying = false;
                     confirmingEdited = false;
                     updateButton.Content = "Update";
                     updateButton.IsEnabled = true;
+                    reinstallButton.IsEnabled = true;
+                    checkButton.IsEnabled = true;
+                    // The record is written in memory by the installer and saved here, on the UI thread, which is
+                    // the moment it is safe to serialise the settings.
+                    plugin.SaveSettings();
                     plugin.Installer.Refresh();
                     if (outcome.Ok && outcome.Updated.Count > 0)
                     {
@@ -1094,6 +1108,9 @@ namespace OpenDashPlugin
 
         private void Reinstall()
         {
+            // Two installers over the same DashTemplates folders is the one combination that can delete a folder
+            // one of them is extracting into, so whichever starts first holds the field.
+            if (applying) return;
             reinstallButton.IsEnabled = false;
             try
             {
