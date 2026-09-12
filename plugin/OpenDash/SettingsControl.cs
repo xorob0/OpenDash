@@ -1,5 +1,7 @@
 // SettingsControl.cs: the openDash page in SimHub's left menu, built in code from design/canvas/Plugin.dc.html:
-// header (mark, wordmark, plugin version), then General, Data, Layout and Dashboard sections, then the footer.
+// header (mark, wordmark, plugin version), then General, Data, Zones, Buttons, Layout, Companion, Pit wall
+// and Dashboard sections, then the footer. Zones is the picture of the face; Layout is the twelve-slot
+// picture it replaces, which stays while both models ship and leaves with the cards in XOR-95.
 // Every change writes the settings object and saves it at once; the attached properties read the same object.
 using System;
 using System.Collections.Generic;
@@ -8,8 +10,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Media;
 using System.Windows.Input;
+using SimHub.Plugins;
 using SimHub.Plugins.Styles;
+using SimHub.Plugins.UI;
 
 namespace OpenDashPlugin
 {
@@ -40,6 +45,7 @@ namespace OpenDashPlugin
             SnapsToDevicePixels = true;
             Content = BuildPage();
             RefreshWarning();
+            RefreshFaceWarning();
             RefreshStatus();
         }
 
@@ -52,7 +58,7 @@ namespace OpenDashPlugin
             DockPanel.SetDock(header, Dock.Top);
             var footer = BuildFooter();
             DockPanel.SetDock(footer, Dock.Bottom);
-            var body = Ui.VStack(0, BuildGeneral(), BuildData(), BuildLayout(), BuildCompanion(), BuildPitWall(), BuildDashboard());
+            var body = Ui.VStack(0, BuildGeneral(), BuildData(), BuildZones(), BuildButtons(), BuildLayout(), BuildCompanion(), BuildPitWall(), BuildDashboard());
             body.Margin = new Thickness(PagePadding, 0, PagePadding, 0);
             body.VerticalAlignment = VerticalAlignment.Top;
             page.Children.Add(header);
@@ -248,6 +254,468 @@ namespace OpenDashPlugin
             };
         }
 
+        // Zones
+        //
+        // The picture from design/canvas/Plugin.dc.html: the rev bar, the bar, zones B, A and C across
+        // the body and band D at the foot, at the sizes the artboard gives them (844 wide, rules at one
+        // pixel). It is a plan of the face rather than a list, because "zone C" means nothing until you
+        // see where zone C is.
+
+        private const double FaceWidth = 844;
+        private const double FaceRevBarHeight = 19;
+        private const double FaceBarHeight = 24;
+        private const double FaceBodyHeight = 138;
+        private const double FaceBandHeight = 26;
+        private const double FaceCellPadding = 6;
+        /// <summary>Zone B, zone A and zone C, as the artboard divides the 844.</summary>
+        private static readonly double[] FaceBodyWidths = { 246, 316, 280 };
+
+        private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
+        private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
+        private readonly Dictionary<string, List<CheckBox>> zoneMaskBoxes = new Dictionary<string, List<CheckBox>>();
+        private readonly Dictionary<string, ToggleButton> barEndButtons = new Dictionary<string, ToggleButton>();
+        private TextBlock faceWarningText;
+        private FrameworkElement faceWarningRow;
+
+        private FrameworkElement BuildZones()
+        {
+            var caption = Ui.Caption(
+                "Each zone opens on the page chosen here and cycles through the ones left enabled. "
+                + "The same page may sit in two zones; the panel says so and does not prevent it.",
+                846);
+            var strip = Ui.Caption(
+                "The bar does not cycle: it carries what does not change during a lap. Two fields at each end, "
+                + "and between them the car settings your sim publishes — slip, TC, cut, bias, ABS, map and diff. "
+                + "A setting the sim has no value for takes its cell with it rather than leaving an empty box.",
+                846);
+            return Ui.Section("Zones", caption, BuildFacePicture(), strip, BuildFaceWarning());
+        }
+
+        private FrameworkElement BuildFacePicture()
+        {
+            var grid = new Grid { Width = FaceWidth, Background = Ui.Brush(Theme.Rule), HorizontalAlignment = HorizontalAlignment.Left };
+            foreach (var height in new[] { FaceRevBarHeight, 1, FaceBarHeight, 1, FaceBodyHeight, 1, FaceBandHeight })
+            {
+                grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(height) });
+            }
+            AddAt(grid, BuildRevBarStrip(), 0);
+            AddAt(grid, BuildBarStrip(), 2);
+            AddAt(grid, BuildFaceBody(), 4);
+            AddAt(grid, BuildBandStrip(), 6);
+            return new Border
+            {
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Child = grid,
+            };
+        }
+
+        private static void AddAt(Grid grid, UIElement child, int row)
+        {
+            Grid.SetRow(child, row);
+            grid.Children.Add(child);
+        }
+
+        /// <summary>The rev bar, which is the one part of the face that is not configurable here: whether it
+        /// draws at all is the General section's toggle, and what it draws is the car's own shift points.</summary>
+        private static FrameworkElement BuildRevBarStrip()
+        {
+            return new Border
+            {
+                Background = Ui.Brush(Theme.SurfaceInset),
+                Padding = new Thickness(8, 0, 8, 0),
+                Child = Ui.Label("Rev bar"),
+            };
+        }
+
+        /// <summary>The bar: an end at each side and the car settings strip between them.</summary>
+        private FrameworkElement BuildBarStrip()
+        {
+            var left = BuildBarEnd("Left1", "Left2", 120);
+            var right = BuildBarEnd("Right1", "Right2", 130);
+            var middle = Ui.Label("Car settings");
+            middle.HorizontalAlignment = HorizontalAlignment.Center;
+            var dock = new DockPanel { LastChildFill = true, Margin = new Thickness(8, 0, 8, 0) };
+            DockPanel.SetDock(left, Dock.Left);
+            DockPanel.SetDock(right, Dock.Right);
+            dock.Children.Add(left);
+            dock.Children.Add(right);
+            dock.Children.Add(middle);
+            return new Border { Background = Ui.Brush(Theme.SurfaceInset), Child = dock };
+        }
+
+        /// <summary>
+        /// One end of the bar. The canvas draws a single control reading "Race · lap", and an end really
+        /// carries two fields, so the control opens a panel with a picker for each rather than splitting
+        /// into two boxes the artboard does not have.
+        /// </summary>
+        private FrameworkElement BuildBarEnd(string firstSlot, string secondSlot, double width)
+        {
+            var button = Ui.DropButton(width, BarEndCaption(firstSlot, secondSlot), "The two fields this end of the bar shows");
+            barEndButtons[firstSlot] = button;
+            var rows = new List<UIElement>();
+            foreach (var slot in new[] { firstSlot, secondSlot })
+            {
+                var captured = slot;
+                var select = BuildPageSelect(FacePages.BarFields, Settings.BarField(captured), 200, index =>
+                {
+                    Settings.SetBarField(captured, index);
+                    plugin.SaveSettings();
+                    Ui.SetDropText(button, BarEndCaption(firstSlot, secondSlot));
+                });
+                rows.Add(Ui.Row(Ui.Label(slot == firstSlot ? "First" : "Second"), select));
+            }
+            var panel = Ui.VStack(8, rows.ToArray());
+            panel.Width = 260;
+            return Ui.Drop(button, panel);
+        }
+
+        private string BarEndCaption(string firstSlot, string secondSlot)
+        {
+            return FacePages.EndLabel(FacePages.FieldName(Settings.BarField(firstSlot)), FacePages.FieldName(Settings.BarField(secondSlot)));
+        }
+
+        /// <summary>Zones B, A and C across the body, in the order the face draws them.</summary>
+        private FrameworkElement BuildFaceBody()
+        {
+            var grid = new Grid { Background = Ui.Brush(Theme.Rule) };
+            var letters = new[] { "B", "A", "C" };
+            for (var i = 0; i < letters.Length; i++)
+            {
+                if (i > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(FaceBodyWidths[i]) });
+            }
+            for (var i = 0; i < letters.Length; i++)
+            {
+                var cell = BuildZoneCell(letters[i], FaceBodyWidths[i]);
+                Grid.SetColumn(cell, i * 2);
+                grid.Children.Add(cell);
+            }
+            return grid;
+        }
+
+        /// <summary>"ZONE B" at the top, the enabled pages and the start page at the bottom.</summary>
+        private FrameworkElement BuildZoneCell(string letter, double width)
+        {
+            var inner = width - 2 * FaceCellPadding;
+            var dock = new DockPanel { LastChildFill = false };
+            var label = Ui.Label("Zone " + letter);
+            DockPanel.SetDock(label, Dock.Top);
+            dock.Children.Add(label);
+
+            var select = BuildZoneSelectFor(letter, inner);
+            DockPanel.SetDock(select, Dock.Bottom);
+            dock.Children.Add(select);
+
+            var mask = BuildMaskDrop(letter, inner);
+            mask.Margin = new Thickness(0, 0, 0, 6);
+            DockPanel.SetDock(mask, Dock.Bottom);
+            dock.Children.Add(mask);
+
+            return new Border
+            {
+                Background = Ui.Brush(Theme.SurfaceBase),
+                Padding = new Thickness(FaceCellPadding),
+                Child = dock,
+            };
+        }
+
+        /// <summary>Band D, across the foot: the same two controls as a body zone, laid along the row.</summary>
+        private FrameworkElement BuildBandStrip()
+        {
+            var row = Ui.HStack(8, Ui.Label("Zone D"), BuildZoneSelectFor("D", 150), BuildMaskDrop("D", 150));
+            row.Margin = new Thickness(8, 0, 8, 0);
+            return new Border { Background = Ui.Brush(Theme.SurfaceInset), Child = row };
+        }
+
+        /// <summary>The page a zone opens on. Writing it moves the live face too, so the dash on the desk
+        /// follows the panel rather than waiting for the next session.</summary>
+        private ComboBox BuildZoneSelectFor(string letter, double width)
+        {
+            var pages = FacePages.For(letter);
+            var select = BuildPageSelect(pages, Settings.FaceZoneStart(letter), width, index =>
+            {
+                Settings.SetFaceZoneStart(letter, index);
+                plugin.SaveSettings();
+                RefreshZone(letter);
+                RefreshFaceWarning();
+            });
+            select.ToolTip = "The page zone " + letter + " opens on";
+            zoneSelects[letter] = select;
+            return select;
+        }
+
+        /// <summary>A page picker in page-number order, so that SelectedIndex is the page number.</summary>
+        private static ComboBox BuildPageSelect(IReadOnlyList<ZonePage> pages, int selected, double width, Action<int> changed)
+        {
+            var box = new ComboBox
+            {
+                Width = width,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            };
+            foreach (var page in pages) box.Items.Add(page.Name);
+            box.SelectedIndex = selected >= 0 && selected < pages.Count ? selected : 0;
+            box.SelectionChanged += (sender, args) =>
+            {
+                if (box.SelectedIndex < 0) return;
+                changed(box.SelectedIndex);
+            };
+            return box;
+        }
+
+        /// <summary>
+        /// The enabled pages of a zone. This is the control that decides how long a driver's cycle is,
+        /// which makes it the most consequential thing on the panel; the canvas does not draw it, and
+        /// docs/design/zones.md records that it is owed there.
+        /// </summary>
+        private FrameworkElement BuildMaskDrop(string letter, double width)
+        {
+            var button = Ui.DropButton(width, MaskCaption(letter), "Which pages zone " + letter + " cycles through");
+            zoneMaskButtons[letter] = button;
+            return Ui.Drop(button, BuildMaskPanel(letter));
+        }
+
+        private string MaskCaption(string letter)
+        {
+            var pages = FacePages.For(letter).Count;
+            var on = 0;
+            for (var page = 0; page < pages; page++)
+            {
+                if (Settings.FaceZonePageEnabled(letter, page)) on++;
+            }
+            return on + " of " + pages + " pages";
+        }
+
+        /// <summary>A checkbox per page, seven to a column, with All and None above them.</summary>
+        private FrameworkElement BuildMaskPanel(string letter)
+        {
+            const int perColumn = 7;
+            var pages = FacePages.For(letter);
+            var boxes = new List<CheckBox>();
+            zoneMaskBoxes[letter] = boxes;
+
+            var grid = new Grid();
+            var columns = (pages.Count + perColumn - 1) / perColumn;
+            var rows = Math.Min(pages.Count, perColumn);
+            for (var c = 0; c < columns; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            for (var r = 0; r < rows; r++) grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            for (var i = 0; i < pages.Count; i++)
+            {
+                var page = pages[i].Number;
+                var box = new CheckBox
+                {
+                    Content = pages[i].Name,
+                    FontSize = Theme.SizeLabel,
+                    FontFamily = PanelFonts.Label,
+                    Foreground = Ui.Brush(Theme.TextPrimary),
+                    IsChecked = Settings.FaceZonePageEnabled(letter, page),
+                    Margin = new Thickness(0, 0, 20, 6),
+                    MinWidth = 120,
+                };
+                box.Checked += (sender, args) => SetPage(letter, page, true);
+                box.Unchecked += (sender, args) => SetPage(letter, page, false);
+                boxes.Add(box);
+                Grid.SetColumn(box, i / perColumn);
+                Grid.SetRow(box, i % perColumn);
+                grid.Children.Add(box);
+            }
+
+            var all = BuildMaskLink("All", () => SetEveryPage(letter, true));
+            var none = BuildMaskLink("None", () => SetEveryPage(letter, false));
+            var header = Ui.Row(Ui.Label("Pages zone " + letter + " cycles"), Ui.HStack(12, all, none));
+            header.Margin = new Thickness(0, 0, 0, 10);
+            return Ui.VStack(0, header, grid);
+        }
+
+        private static Button BuildMaskLink(string text, Action clicked)
+        {
+            var button = new Button
+            {
+                Content = Ui.Text(text, Theme.SizeLabel, FontWeights.Medium, Theme.Accent),
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+                Cursor = Cursors.Hand,
+            };
+            button.Click += (sender, args) => clicked();
+            return button;
+        }
+
+        private void SetPage(string letter, int page, bool enabled)
+        {
+            Settings.SetFaceZonePageEnabled(letter, page, enabled);
+            plugin.SaveSettings();
+            RefreshZone(letter);
+            RefreshFaceWarning();
+        }
+
+        /// <summary>None leaves the page the zone is on enabled, because a zone with an empty cycle has
+        /// nothing to draw; the settings object refuses it and the checkbox follows what it decided.</summary>
+        private void SetEveryPage(string letter, bool enabled)
+        {
+            var pages = FacePages.For(letter);
+            if (enabled)
+            {
+                for (var i = 0; i < pages.Count; i++) Settings.SetFaceZonePageEnabled(letter, pages[i].Number, true);
+            }
+            else
+            {
+                var keep = Settings.FaceZoneStart(letter);
+                for (var i = 0; i < pages.Count; i++)
+                {
+                    if (pages[i].Number != keep) Settings.SetFaceZonePageEnabled(letter, pages[i].Number, false);
+                }
+            }
+            plugin.SaveSettings();
+            RefreshZone(letter);
+            RefreshFaceWarning();
+        }
+
+        /// <summary>Puts the controls of one zone back in step with the settings, which may have moved on
+        /// their own: turning off the page a zone sits on snaps it forward to the next enabled one.</summary>
+        private void RefreshZone(string letter)
+        {
+            ComboBox select;
+            if (zoneSelects.TryGetValue(letter, out select))
+            {
+                var start = Settings.FaceZoneStart(letter);
+                if (select.SelectedIndex != start) select.SelectedIndex = start;
+            }
+            ToggleButton button;
+            if (zoneMaskButtons.TryGetValue(letter, out button)) Ui.SetDropText(button, MaskCaption(letter));
+            List<CheckBox> boxes;
+            if (zoneMaskBoxes.TryGetValue(letter, out boxes))
+            {
+                var pages = FacePages.For(letter);
+                for (var i = 0; i < boxes.Count && i < pages.Count; i++)
+                {
+                    var enabled = Settings.FaceZonePageEnabled(letter, pages[i].Number);
+                    if (boxes[i].IsChecked != enabled) boxes[i].IsChecked = enabled;
+                }
+            }
+        }
+
+        /// <summary>"Zone B and zone C both show Relative." Says so and allows it, as the canvas asks.</summary>
+        private FrameworkElement BuildFaceWarning()
+        {
+            faceWarningText = Ui.Text("", Theme.SizeSmall, FontWeights.Normal, Theme.Caution);
+            faceWarningText.TextWrapping = TextWrapping.Wrap;
+            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution);
+            icon.VerticalAlignment = VerticalAlignment.Top;
+            icon.Margin = new Thickness(0, 1, 0, 0);
+            faceWarningRow = Ui.HStack(10, icon, faceWarningText);
+            faceWarningRow.Visibility = Visibility.Collapsed;
+            return faceWarningRow;
+        }
+
+        private void RefreshFaceWarning()
+        {
+            var message = FacePageClash.Warning(Settings);
+            faceWarningText.Text = message;
+            faceWarningRow.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        // Buttons
+
+        /// <summary>A button per zone to cycle it, and one held for a glance.</summary>
+        private FrameworkElement BuildButtons()
+        {
+            var caption = Ui.Caption("Hold to show one page, release to return. Usually the relative or the map.");
+            var zoneBox = new ComboBox
+            {
+                Width = 110,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+            };
+            foreach (var letter in Contract.FaceZoneLetters) zoneBox.Items.Add("Zone " + letter);
+            zoneBox.SelectedIndex = Contract.QuickGlanceZone(Settings.QuickGlance);
+
+            var pageHost = new Border { VerticalAlignment = VerticalAlignment.Center };
+            Action fillPages = () =>
+            {
+                var letter = Contract.FaceZoneLetters[Math.Max(0, zoneBox.SelectedIndex)];
+                var page = Contract.QuickGlanceZone(Settings.QuickGlance) == zoneBox.SelectedIndex
+                    ? Contract.QuickGlancePage(Settings.QuickGlance)
+                    : 0;
+                pageHost.Child = BuildPageSelect(FacePages.For(letter), page, 200, index =>
+                {
+                    Settings.QuickGlance = Contract.NormaliseQuickGlance(Contract.QuickGlanceValue(zoneBox.SelectedIndex, index));
+                    plugin.SaveSettings();
+                });
+            };
+            zoneBox.SelectionChanged += (sender, args) =>
+            {
+                if (zoneBox.SelectedIndex < 0) return;
+                Settings.QuickGlance = Contract.NormaliseQuickGlance(Contract.QuickGlanceValue(zoneBox.SelectedIndex, 0));
+                plugin.SaveSettings();
+                fillPages();
+            };
+            fillPages();
+
+            var text = Ui.VStack(4, Ui.Body("Quick glance"), caption);
+            text.MaxWidth = 460;
+            text.HorizontalAlignment = HorizontalAlignment.Left;
+
+            var rows = new List<UIElement>
+            {
+                Ui.Row(
+                    "Next page",
+                    "Bind a wheel button per zone. A driver cycles a zone without taking a hand off the wheel, "
+                        + "which is the whole point of zones.",
+                    BuildZoneBindings()),
+                Ui.Row(text, Ui.HStack(8, zoneBox, pageHost)),
+                BuildGlanceBinding(),
+            };
+            return Ui.Section("Buttons", rows.ToArray());
+        }
+
+        /// <summary>One binder per zone, stacked, each naming the zone it cycles.</summary>
+        private FrameworkElement BuildZoneBindings()
+        {
+            var binders = Contract.FaceZoneLetters
+                .Select(letter => BuildBinder(Contract.CycleZoneAction(letter), "Zone " + letter))
+                .ToArray();
+            var stack = Ui.VStack(6, binders);
+            stack.HorizontalAlignment = HorizontalAlignment.Right;
+            return stack;
+        }
+
+        private FrameworkElement BuildGlanceBinding()
+        {
+            return Ui.Row(Ui.Label("Glance button"), BuildBinder(Contract.HoldQuickGlanceAction, "Quick glance", hold: true));
+        }
+
+        /// <summary>
+        /// SimHub's own control for binding an input to an action, so a wheel button is bound here
+        /// rather than by sending the driver to Controls and events to find the name.
+        ///
+        /// It is a SimHub UserControl and SimHub is not always there -- the panel is constructed in
+        /// tests and could be constructed by a host that does not carry the style -- so a failure
+        /// falls back to naming the action, which is exactly what somebody binding it by hand needs.
+        /// </summary>
+        private static FrameworkElement BuildBinder(string action, string friendlyName, bool hold = false)
+        {
+            try
+            {
+                var editor = new ControlsEditor { ActionName = Contract.FullActionName(action), FriendlyName = friendlyName, MinWidth = 260 };
+                editor.HorizontalAlignment = HorizontalAlignment.Right;
+                if (hold) HoldWhilePressed(editor);
+                return editor;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("ControlsEditor is unavailable; naming the action instead: " + ex.Message);
+                var text = Ui.Text(friendlyName + " — bind " + Contract.FullActionName(action) + " in Controls and events", Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
+                text.HorizontalAlignment = HorizontalAlignment.Right;
+                return text;
+            }
+        }
+
         // Companion
 
         /// <summary>The 21 companion modules as toggles in three columns, in page order.</summary>
@@ -302,7 +770,7 @@ namespace OpenDashPlugin
         {
             var caption = Ui.Caption("Each pit wall page carries four data zones and, on the tower page, one wide zone. Choose what each one shows.", 846);
             var rows = new List<UIElement> { caption };
-            foreach (var letter in Contract.ZoneLetters)
+            foreach (var letter in Contract.PitWallZoneLetters)
             {
                 var captured = letter;
                 var select = BuildZoneSelect(ZonePages.Standard, Settings.Zone(captured), index =>
@@ -380,6 +848,32 @@ namespace OpenDashPlugin
                 if (args.Key == Key.Enter) commit();
             };
             return box;
+        }
+
+        /// <summary>
+        /// Forces a glance binding to the one press type that can hold anything.
+        ///
+        /// SimHub only calls an action's start on press and its end on release when the mapping's
+        /// press type is `During`; every other type goes through TriggerAction, which fires start and
+        /// end back to back. The binding dialog offers ShortAndLongPress by default, so a driver who
+        /// binds the glance the obvious way gets a page that appears and vanishes in one frame.
+        ///
+        /// The glance is only meaningful as a hold, so any binding to it is corrected rather than
+        /// second-guessed. The dialog writes into Model.Triggers; this watches that collection.
+        /// </summary>
+        private static void HoldWhilePressed(ControlsEditor editor)
+        {
+            var model = editor.Model;
+            if (model == null) return;
+            Action apply = () =>
+            {
+                foreach (var mapping in model.Triggers)
+                {
+                    if (mapping != null && mapping.PressType != PressType.During) mapping.PressType = PressType.During;
+                }
+            };
+            model.Triggers.CollectionChanged += (sender, args) => apply();
+            apply();
         }
 
         /// <summary>The duplicate warning: triangle icon and caution text, hidden while every card is unique.</summary>

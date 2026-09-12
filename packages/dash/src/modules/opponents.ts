@@ -34,7 +34,8 @@ function block(ctx: ModuleContext, id: string, offset: number, heading: string, 
       labelWidest: `${heading.toUpperCase()} · P99`,
     });
     const nameField = fld(ctx, `${id}.name`, '', { sample: 'TSA', bind: carName(idx), chars: { digits: 10, specials: 0 }, fs: d.small });
-    const numberField = fld(ctx, `${id}.num`, '', { sample: '#41', bind: carNumber(idx), chars: CHARS.carNumber, fs: d.small, color: ds.color.text.label });
+    // The hash is the label, because a value is laid in cells cut for digits and `#` overruns one.
+    const numberField = fld(ctx, `${id}.num`, '#', { sample: '41', bind: carNumber(idx), chars: CHARS.carNumber, fs: d.small, color: ds.color.text.label });
     const valueBottom = bottom - detailHeight - d.fieldGap * 2;
     // The chip sits after the row, but never past the module's right edge: on a narrow page the
     // row already fills the box and the chip tucks against the edge instead of leaving it.

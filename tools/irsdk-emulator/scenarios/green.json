@@ -1,0 +1,15 @@
+{
+  // The race scenario with the flag held green from the first tick, so a screenshot taken at any
+  // moment shows the same state. race.json cycles the flags for the first two minutes, which is
+  // useful for watching the flag band and useless for a capture.
+  "extends": "race.json",
+  "name": "Green flag race lap, P3 of 24",
+  "variables": [
+    {"name": "SessionFlags", "value": "green", "pin": true}
+  ],
+  "timeline": [
+    {"at": 0, "log": "hold green from the start", "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "log": "no limiter on track", "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 20, "log": "TC 3 -> 5", "set": {"dcTractionControl": 5}, "yaml": {"TcSetting": "5 (TC)"}}
+  ]
+}

@@ -55,6 +55,8 @@ namespace OpenDashPlugin
         {
             Log.Info("openDash plugin " + Version + " starting");
             LoadSettings();
+            // Every zone starts on the page it is set to open on, which is what that setting means.
+            Settings.OpenOnStartPages();
             try
             {
                 Installer.EnsureInstalled(false);
@@ -64,6 +66,7 @@ namespace OpenDashPlugin
                 Log.Error("Dashboard installation failed", ex);
             }
             AttachProperties();
+            AttachActions(pluginManager);
             Log.Info("Dashboard status: " + Installer.Status);
         }
 
@@ -132,18 +135,58 @@ namespace OpenDashPlugin
                 var captured = slot;
                 this.AttachDelegate(Contract.SlotProperty(captured), () => Settings.Slot(captured));
             }
+            foreach (var letter in Contract.FaceZoneLetters)
+            {
+                var captured = letter;
+                this.AttachDelegate(Contract.ZonePageProperty(captured), () => Settings.FaceZone(captured));
+                this.AttachDelegate(Contract.ZoneMaskProperty(captured), () => Settings.FaceZoneMask(captured));
+                this.AttachDelegate(Contract.ZoneStartProperty(captured), () => Settings.FaceZoneStart(captured));
+            }
+            foreach (var slot in Contract.BarSlots)
+            {
+                var captured = slot;
+                this.AttachDelegate(Contract.BarFieldProperty(captured), () => Settings.BarField(captured));
+            }
+            this.AttachDelegate(Contract.QuickGlance, () => Settings.QuickGlance);
             for (var module = 1; module <= Modules.Count; module++)
             {
                 var captured = module;
                 this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
             }
-            foreach (var letter in Contract.ZoneLetters)
+            foreach (var letter in Contract.PitWallZoneLetters)
             {
                 var captured = letter;
                 this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
             }
             this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
             this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
+        }
+
+        /// <summary>
+        /// The five actions a driver binds to a wheel button: one per zone, and one held for a glance.
+        ///
+        /// Registered through the PluginManager rather than through `this.AddAction`, and that is not
+        /// a style choice. The extension method assigns null over the release callback before passing
+        /// it on -- `AddAction(actionName, typeof(T), actionStart, actionEnd = null)`, an assignment
+        /// and not a default -- so an action registered that way can never be released. It is written
+        /// down in docs/research/simhub-dash-format.md. All five go through the manager, the four that
+        /// need no release included, so that nobody has to remember which is which.
+        ///
+        /// An action only changes the live page. It does not save: the page a zone is showing is live
+        /// state, and Init puts every zone back on the page it opens on.
+        /// </summary>
+        private void AttachActions(PluginManager pluginManager)
+        {
+            foreach (var letter in Contract.FaceZoneLetters)
+            {
+                var captured = letter;
+                pluginManager.AddAction(Contract.CycleZoneAction(captured), typeof(OpenDash), (manager, name) => Settings.CycleFaceZone(captured), null);
+            }
+            pluginManager.AddAction(
+                Contract.HoldQuickGlanceAction,
+                typeof(OpenDash),
+                (manager, name) => Settings.BeginQuickGlance(),
+                (manager, name) => Settings.EndQuickGlance());
         }
     }
 }
