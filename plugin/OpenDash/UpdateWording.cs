@@ -21,6 +21,17 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string Reopen = "Close the dashboard and start it again to see it. SimHub does not need restarting.";
 
+        /// <summary>
+        /// What the update-check setting says about itself, which is the user-facing form of ADR 0012's promise.
+        /// </summary>
+        /// <remarks>
+        /// Taken verbatim from design/canvas/Plugin.dc.html, where the author wrote it. The canvas is the design
+        /// source and is not edited from code, so when the two disagree this is what moves. It is here rather than
+        /// in the panel because it is copy, and because the whole of what openDash discloses ought to be readable
+        /// in one sentence beside the switch that turns it off.
+        /// </remarks>
+        public const string CheckCaption = "Asks GitHub for the newest release once a day. Nothing else leaves your machine.";
+
         /// <summary>The one line the Dashboard section shows, or null when it shows nothing.</summary>
         public static string Line(UpdateStatus status)
         {
