@@ -127,6 +127,57 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>Puts back the copy Install set aside, and reports whether there was one to put back.</summary>
+        /// <remarks>
+        /// Install writes <folder>_backup.zip before it replaces a folder, and until this existed nothing read it,
+        /// so "the previous package survives" was true and "it can be put back" was not. The backup stores entries
+        /// relative to the folder rather than under it, which is what ZipFile.CreateFromDirectory writes and the
+        /// opposite of a .simhubdash, so it extracts straight into the target.
+        ///
+        /// The folder being restored over is not backed up in its turn. A restore is the undo, and an undo that
+        /// leaves its own thing to undo is a worse answer than one that does not.
+        /// </remarks>
+        public static bool Restore(string simHubRoot, string folderName, IInstallLog log)
+        {
+            log = log ?? NullInstallLog.Instance;
+            var templates = Path.Combine(simHubRoot, DashTemplates);
+            var backupPath = Path.Combine(templates, folderName + BackupSuffix);
+            if (!File.Exists(backupPath))
+            {
+                log.Warn("No previous copy of " + folderName + " was kept, so there is nothing to put back.");
+                return false;
+            }
+
+            var target = Path.Combine(templates, folderName);
+            var staging = Path.Combine(templates, "_openDash_restore_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                using (var zip = ZipFile.OpenRead(backupPath))
+                {
+                    ExtractSafely(zip, staging);
+                }
+                if (!File.Exists(Path.Combine(staging, folderName + DashExtension)))
+                {
+                    throw new InvalidDataException("The kept copy of " + folderName + " has no " + folderName + DashExtension + ".");
+                }
+                if (Directory.Exists(target)) DeleteDirectory(target);
+                Directory.Move(staging, target);
+                log.Info("Put back the previous copy of " + folderName + " from " + backupPath);
+                return true;
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(staging)) Directory.Delete(staging, true);
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("Could not remove the staging folder " + staging + ": " + ex.Message);
+                }
+            }
+        }
+
         private static string ReadVersionFile(string path)
         {
             if (!File.Exists(path)) return null;
