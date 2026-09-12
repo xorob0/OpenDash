@@ -55,6 +55,17 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("SimHub does not need restarting", UpdateWording.Reopen);
         }
 
+        /// <summary>
+        /// The sentence beside the switch. It is the author's, from design/canvas/Plugin.dc.html, and it is the
+        /// only place a user is told in full what leaves their machine, so it says both halves: what is asked for,
+        /// and that nothing else goes.
+        /// </summary>
+        [Fact]
+        public void The_setting_says_in_one_sentence_what_leaves_the_machine()
+        {
+            Assert.Equal("Asks GitHub for the newest release once a day. Nothing else leaves your machine.", UpdateWording.CheckCaption);
+        }
+
         [Fact]
         public void The_notes_drop_the_heading_and_show_the_first_real_line()
         {
