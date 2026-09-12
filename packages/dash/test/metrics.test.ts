@@ -51,8 +51,8 @@ describe('metrics', () => {
    * renderer chooses rather than the one the dashboard names. That used to be a different font:
    * WPF folded the bundled condensed faces into the "Barlow" family, so "Barlow Condensed" reached
    * a wider face, and the cell was widened to 0.68 em to survive whichever Barlow was picked. The
-   * bundled family is renamed now, so the renderer can only resolve a face the package ships, and
-   * the cell is measured against those. Both measures are checked: the advance, since WPF lays a
+   * bundled family is renamed now, so the renderer can only resolve a face the package ships (that
+   * no shipped family can be folded again is fontFiles.test), and the cell is measured against those. Both measures are checked: the advance, since WPF lays a
    * run out on advances, and the ink, since that is what is drawn.
    */
   test('the gear cell holds every glyph of every face the package ships for it', async () => {
@@ -89,17 +89,6 @@ describe('metrics', () => {
     }
   });
 
-  /**
-   * And the reason the cell may now be measured against two faces rather than five: no package
-   * ships a face under a family whose name carries a width word, so nothing WPF resolves is a
-   * stretch of something else. This is the invariant XOR-108 bought; the rest is in fontFiles.test.
-   */
-  test('nothing the face ships is filed under a family WPF would fold', async () => {
-    const { familyOf, loadFont } = await import('../../../tools/measure-font/measure.ts');
-    const { fontsForPackage } = await import('../src/dashboard.ts');
-    const widths = /\b(Condensed|Narrow|Compressed|Expanded|Extended|Wide|Semi ?Condensed|Ultra ?Condensed)\b/i;
-    for (const file of fontsForPackage()) expect([file, widths.test(familyOf(loadFont(file)) ?? '')]).toEqual([file, false]);
-  });
 
   test('label and numeral produce integer, top-aligned boxes', () => {
     const l = label('x.label', 'current', 16, 52, 223);
