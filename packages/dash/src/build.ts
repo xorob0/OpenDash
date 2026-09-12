@@ -15,6 +15,7 @@ import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboar
 import { buildZoneFace, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
 import { fontsForPackage } from './dashboard.ts';
 import { fontsForPanel } from './design/fontFiles.ts';
+import { noticesForPackage, PANEL_NOTICES } from './design/notices.ts';
 import type { Rung } from './design/rung.ts';
 import {
   formatIssues,
@@ -261,6 +262,9 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const packages: BuiltPackage[] = [];
   const manifest: Manifest = { version, simHubVersion, packages: [] };
   for (const { layout, zoneFace, screen, kind, pkg, warnings } of staged) {
+    // Derived here rather than by each builder, so that a package cannot be assembled anywhere in
+    // this file without the licences for what it carries.
+    pkg.notices = noticesForPackage(pkg);
     const written = writePackage(pkg, out);
     for (const file of written.files) log(`wrote ${relative(file)}`);
     const zipped = zipPackage(out, pkg.folderName);
@@ -285,6 +289,11 @@ export function build(opts: BuildOptions = {}): BuildResult {
   for (const font of fontsForPanel()) {
     const target = path.join(fontsOut, path.basename(font));
     copyFileSync(font, target);
+    log(`wrote ${relative(target)}`);
+  }
+  for (const notice of PANEL_NOTICES) {
+    const target = path.join(fontsOut, notice.name);
+    copyFileSync(notice.path, target);
     log(`wrote ${relative(target)}`);
   }
 
