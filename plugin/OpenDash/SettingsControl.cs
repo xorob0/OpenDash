@@ -47,6 +47,11 @@ namespace OpenDashPlugin
             RefreshWarning();
             RefreshFaceWarning();
             RefreshStatus();
+            RefreshUpdateLine();
+            RefreshRestoreButton();
+            // Opening the page is the earliest a check may run: never on the startup path, and never at all unless
+            // the setting says so. A background check that finds nothing shows nothing, so most visits say nothing.
+            Check(manual: false);
         }
 
         // Page
@@ -898,6 +903,18 @@ namespace OpenDashPlugin
 
         // Dashboard
 
+        private TextBlock updateLine;
+        private Button updateButton;
+        private Button restoreButton;
+        private Button checkButton;
+        private UpdateStatus updateStatus = new UpdateStatus();
+        private UpdateService updateService;
+        private bool confirmingEdited;
+        private bool applying;
+
+        private UpdateService Updates =>
+            updateService ?? (updateService = new UpdateService(new ReleaseClient(OpenDash.Version), new SimHubInstallLog()));
+
         private FrameworkElement BuildDashboard()
         {
             dashboardTitle = Ui.Body("openDash");
@@ -906,10 +923,229 @@ namespace OpenDashPlugin
             text.MaxWidth = 460;
             text.HorizontalAlignment = HorizontalAlignment.Left;
 
+            updateLine = Ui.Caption(string.Empty);
+            updateLine.Visibility = Visibility.Collapsed;
+            text.Children.Add(updateLine);
+
             statusHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             reinstallButton = BuildReinstallButton();
-            var right = Ui.HStack(24, statusHost, reinstallButton);
-            return Ui.Section("Dashboard", Ui.Row(text, right));
+            updateButton = BuildUpdateButton();
+            restoreButton = BuildRestoreButton();
+            var right = Ui.HStack(24, statusHost, restoreButton, updateButton, reinstallButton);
+
+            return Ui.Section("Dashboard", Ui.Row(text, right), BuildCheckRow());
+        }
+
+        /// <summary>The switch, its one sentence, and a button for somebody who would rather ask now.</summary>
+        private FrameworkElement BuildCheckRow()
+        {
+            var toggle = BuildToggle(Settings.CheckForUpdates, on =>
+            {
+                Settings.CheckForUpdates = on;
+                plugin.SaveSettings();
+                if (!on)
+                {
+                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.Installer.InstalledVersion };
+                }
+                RefreshUpdateLine();
+            });
+
+            checkButton = BuildSecondaryButton("Check now", "Ask GitHub for the newest release now, without waiting for the daily check.");
+            checkButton.Click += (sender, args) => Check(manual: true);
+
+            var right = Ui.HStack(24, checkButton, toggle);
+            return Ui.Row(Ui.VStack(4, Ui.Body("Check for updates"), Ui.Caption(UpdateWording.CheckCaption)), right);
+        }
+
+        private Button BuildUpdateButton()
+        {
+            var button = BuildSecondaryButton("Update", "Download the newest release and replace the dashboards installed here.");
+            button.Visibility = Visibility.Collapsed;
+            button.Click += (sender, args) => ApplyUpdate();
+            return button;
+        }
+
+        /// <summary>
+        /// Puts back the copy kept when a dashboard somebody edited was replaced.
+        /// </summary>
+        /// <remarks>
+        /// The confirmation before replacing an edited dashboard promises that a copy is kept and can be put back.
+        /// Until this existed nothing in the plugin could put one back, so the promise was true only for somebody
+        /// willing to unzip a file by hand.
+        /// </remarks>
+        private Button BuildRestoreButton()
+        {
+            var button = BuildSecondaryButton("Put mine back", "Restore the dashboards that were replaced when you last chose to update over your own edits.");
+            button.Visibility = Visibility.Collapsed;
+            button.Click += (sender, args) => RestoreKept();
+            return button;
+        }
+
+        private void RestoreKept()
+        {
+            if (applying) return;
+            var root = plugin.Installer.SimHubRoot;
+            var restored = new List<string>();
+            foreach (var folder in plugin.Installer.Packages.Select(p => p.FolderName).Where(f => f != null).Distinct())
+            {
+                var kept = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
+                if (kept == null) continue;
+                try
+                {
+                    if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), kept)) restored.Add(folder);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Putting back " + folder + " failed", ex);
+                }
+            }
+            plugin.Installer.Refresh();
+            plugin.SaveSettings();
+            RefreshStatus();
+            updateLine.Text = restored.Count == 0
+                ? "There was nothing of yours to put back."
+                : "Put back " + (restored.Count == 1 ? "1 dashboard" : restored.Count + " dashboards") + ". " + UpdateWording.Reopen;
+            updateLine.Visibility = Visibility.Visible;
+            RefreshRestoreButton();
+        }
+
+        /// <summary>The button appears only when there is something of the user's to put back.</summary>
+        private void RefreshRestoreButton()
+        {
+            if (restoreButton == null) return;
+            var root = plugin.Installer.SimHubRoot;
+            var any = plugin.Installer.Packages
+                .Select(p => p.FolderName)
+                .Where(f => f != null)
+                .Distinct()
+                .Any(f => PackageExtractor.KeptCopies(root, f).Any(path => path.Contains(PackageExtractor.EditedSuffix)));
+            restoreButton.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static Button BuildSecondaryButton(string content, string tooltip)
+        {
+            Button button;
+            try
+            {
+                button = new SHButtonPrimary();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("SHButtonPrimary is unavailable; using a plain button: " + ex.Message);
+                button = new Button();
+            }
+            button.Content = content;
+            button.MinWidth = 96;
+            button.ToolTip = tooltip;
+            return button;
+        }
+
+        /// <summary>
+        /// Asks, off the UI thread, and shows whatever came back.
+        /// </summary>
+        /// <remarks>
+        /// Nothing here blocks: a socket that never answers would otherwise freeze the settings page, and on the
+        /// thread SimHub calls Init on it would freeze SimHub's start.
+        /// </remarks>
+        private void Check(bool manual)
+        {
+            if (!Settings.CheckForUpdates && !manual) return;
+            checkButton.IsEnabled = false;
+            updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
+            RefreshUpdateLine();
+
+            var installed = UpdateCheck.ComparableInstalled(plugin.Installer.InstalledVersion, OpenDash.Version);
+            UpdateService.InBackground(() =>
+            {
+                var ticks = Settings.LastUpdateCheckTicks;
+                var answer = Updates.Check(installed, Settings.CheckForUpdates, ref ticks, DateTime.UtcNow, manual);
+                Dispatcher.Invoke(() =>
+                {
+                    if (answer != null)
+                    {
+                        updateStatus = answer;
+                        if (ticks != Settings.LastUpdateCheckTicks)
+                        {
+                            Settings.LastUpdateCheckTicks = ticks;
+                            plugin.SaveSettings();
+                        }
+                    }
+                    checkButton.IsEnabled = true;
+                    confirmingEdited = false;
+                    RefreshUpdateLine();
+                });
+            }, new SimHubInstallLog());
+        }
+
+        /// <summary>
+        /// Applies the release the last check found, asking once before replacing a dashboard somebody has edited.
+        /// </summary>
+        private void ApplyUpdate()
+        {
+            var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
+            if (release == null) return;
+
+            // A second click before the first has been answered used to fall straight through the confirmation,
+            // because the confirming branch returned without disabling anything.
+            if (applying) return;
+
+            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            if (edited.Count > 0 && !confirmingEdited)
+            {
+                // One click to be told, a second to mean it. A dialog would be the SimHub way and a modal in a
+                // settings page is worse than a button that changes what it says.
+                confirmingEdited = true;
+                updateButton.Content = "Replace anyway";
+                updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
+                    + " changed since openDash wrote them: " + string.Join(", ", edited)
+                    + ". Updating replaces what is there. A copy of yours is kept beside it in DashTemplates, "
+                    + "and \"Put mine back\" restores it.";
+                updateLine.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var replaceEdited = confirmingEdited;
+            applying = true;
+            updateButton.IsEnabled = false;
+            reinstallButton.IsEnabled = false;
+            checkButton.IsEnabled = false;
+            updateLine.Text = "Downloading " + updateStatus.LatestVersion + "…";
+            updateLine.Visibility = Visibility.Visible;
+
+            UpdateService.InBackground(() =>
+            {
+                var outcome = Updates.Apply(plugin.Installer, release, replaceEdited);
+                Dispatcher.Invoke(() =>
+                {
+                    applying = false;
+                    confirmingEdited = false;
+                    updateButton.Content = "Update";
+                    updateButton.IsEnabled = true;
+                    reinstallButton.IsEnabled = true;
+                    checkButton.IsEnabled = true;
+                    // The record is written in memory by the installer and saved here, on the UI thread, which is
+                    // the moment it is safe to serialise the settings.
+                    plugin.SaveSettings();
+                    plugin.Installer.Refresh();
+                    RefreshRestoreButton();
+                    if (outcome.Ok && outcome.Updated.Count > 0)
+                    {
+                        updateStatus = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = plugin.Installer.InstalledVersion, Manual = true };
+                    }
+                    RefreshStatus();
+                    updateLine.Text = outcome.Line;
+                    updateLine.Visibility = Visibility.Visible;
+                });
+            }, new SimHubInstallLog());
+        }
+
+        private void RefreshUpdateLine()
+        {
+            if (updateLine == null) return;
+            var line = updateStatus.Line;
+            updateLine.Text = line ?? string.Empty;
+            updateLine.Visibility = updateStatus.IsVisible && line != null ? Visibility.Visible : Visibility.Collapsed;
+            updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
         }
 
         /// <summary>SimHub's primary button (SHButtonPrimary); a plain button when the type cannot be created.</summary>
@@ -934,6 +1170,9 @@ namespace OpenDashPlugin
 
         private void Reinstall()
         {
+            // Two installers over the same DashTemplates folders is the one combination that can delete a folder
+            // one of them is extracting into, so whichever starts first holds the field.
+            if (applying) return;
             reinstallButton.IsEnabled = false;
             try
             {

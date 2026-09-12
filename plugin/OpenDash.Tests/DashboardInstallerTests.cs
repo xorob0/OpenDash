@@ -39,9 +39,92 @@ namespace OpenDashPlugin.Tests
                 .Add(WideName, SyntheticPackage.Zip("openDash", version));
         }
 
-        private DashboardInstaller Installer(IPackageSource packages, IInstallLog log = null)
+        private DashboardInstaller Installer(IPackageSource packages, IInstallLog log = null, IFolderRecord record = null)
         {
-            return new DashboardInstaller(root, log, packages);
+            return new DashboardInstaller(root, log, packages, record);
+        }
+
+        // Somebody's Dash Studio work, and whether an install destroys it
+
+        /// <summary>
+        /// The first run after this shipped must not hold everything back. No record means openDash has never looked
+        /// at the folder, not that it was edited, so the folder is adopted and watched from then on.
+        /// </summary>
+        [Fact]
+        public void A_folder_with_nothing_remembered_is_adopted_rather_than_held_back()
+        {
+            var record = new MemoryFolderRecord();
+            PackageExtractor.Install(SyntheticPackage.Zip("openDash", "0.1.0"), root, null);
+            Assert.Empty(record.Entries);
+
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), record: record);
+            installer.EnsureInstalled(false);
+
+            var entry = installer.Packages.Single();
+            Assert.False(entry.Edited);
+            Assert.False(entry.HeldBack);
+            Assert.True(entry.Extracted);
+            Assert.Equal("0.2.0", entry.InstalledVersion);
+            Assert.NotNull(record.Get("openDash"));
+        }
+
+        [Fact]
+        public void A_folder_that_is_current_is_still_adopted_so_the_next_run_can_tell()
+        {
+            var record = new MemoryFolderRecord();
+            PackageExtractor.Install(SyntheticPackage.Zip("openDash", "0.2.0"), root, null);
+
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), record: record);
+            installer.EnsureInstalled(false);
+
+            Assert.False(installer.Packages.Single().Extracted);
+            Assert.NotNull(record.Get("openDash"));
+        }
+
+        [Fact]
+        public void A_folder_edited_after_openDash_wrote_it_is_left_alone_and_said_so()
+        {
+            var record = new MemoryFolderRecord();
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.1.0")), record: record);
+            installer.EnsureInstalled(false);
+            Assert.NotNull(record.Get("openDash"));
+
+            // What Dash Studio does: it rewrites the dashboard in place.
+            var djson = Path.Combine(root, "DashTemplates", "openDash", "openDash.djson");
+            File.WriteAllText(djson, "{\"Version\":2,\"mine\":true}");
+
+            var log = new ListLog();
+            var newer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), log, record);
+            newer.EnsureInstalled(false);
+
+            var entry = newer.Packages.Single();
+            Assert.True(entry.Edited);
+            Assert.True(entry.HeldBack);
+            Assert.False(entry.Extracted);
+            Assert.Equal("0.1.0", entry.InstalledVersion);
+            Assert.Equal("{\"Version\":2,\"mine\":true}", File.ReadAllText(djson));
+            Assert.Contains(log.Lines, line => line.Contains("has changed since openDash wrote it"));
+        }
+
+        [Fact]
+        public void An_edited_folder_is_replaced_when_a_person_says_so()
+        {
+            var record = new MemoryFolderRecord();
+            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.1.0")), record: record).EnsureInstalled(false);
+            var djson = Path.Combine(root, "DashTemplates", "openDash", "openDash.djson");
+            File.WriteAllText(djson, "{\"Version\":2,\"mine\":true}");
+
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), record: record);
+            installer.EnsureInstalled(false, replaceEdited: true);
+
+            var entry = installer.Packages.Single();
+            Assert.True(entry.Extracted);
+            Assert.False(entry.HeldBack);
+            Assert.False(entry.Edited);
+            Assert.Equal("0.2.0", entry.InstalledVersion);
+            // And what was there is recoverable, because Install kept it.
+            Assert.True(PackageExtractor.Restore(root, "openDash", null));
+            Assert.Equal("{\"Version\":2,\"mine\":true}", File.ReadAllText(djson));
         }
 
         // The install run
