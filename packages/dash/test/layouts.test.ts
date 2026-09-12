@@ -604,8 +604,8 @@ describe('600 x 686 DisplayDash', () => {
     expect(layout.hero.gear).toEqual({ rect: rect(0, 65, 600, 300) });
     const [gearItem] = gear(rect(0, 65, 600, 300));
     if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
-    // 135 centred in 600: 233 px either side (the odd pixel goes left of the cell).
-    expect(gearItem.rect).toEqual({ left: 233, top: 59, width: 139, height: 313 });
+    // 136 centred in 600: 232 px either side.
+    expect(gearItem.rect).toEqual({ left: 232, top: 59, width: 140, height: 313 });
     // The gear's 1.2 em box overhangs the band by 6 px each side; its cap top and baseline stay inside it.
     const baseline = gearItem.rect.top + WPF_BASELINE * gearItem.fontSize;
     const capTop = baseline - (FONT_METRICS.capHeight / FONT_METRICS.unitsPerEm) * gearItem.fontSize;
@@ -834,17 +834,34 @@ describe('the round faces, row by row of the spec table', () => {
 describe('480 round', () => {
   const layout = layout480round;
 
-  // The full 260 of the spec, in the 160 px between the two slots: a 260 gear needs 139 px of cell
+  // The full 260 of the spec, in the 160 px between the two slots: a 260 gear needs 140 px of box
   // and fits. It was cut to 228 while the cell had to hold whichever Barlow WPF resolved (XOR-84).
   test('the gear alone, 260, centred on the face', () => {
     const [gearItem] = gear(layout.hero.gear.rect, layout.hero.gear.size);
     if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
     expect(gearItem.fontSize).toBe(260);
     expect(gearItem.fontWeight).toBe('Bold');
-    expect(gearItem.rect).toEqual({ left: 173, top: 122, width: 139, height: 313 });
+    expect(gearItem.rect).toEqual({ left: 172, top: 122, width: 140, height: 313 });
     // Centred on the 480 face in both axes, to the half pixel rounding allows.
     expect(Math.abs(gearItem.rect.left + (gearItem.monospace?.charWidth ?? 0) / 2 - 240)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(gearItem.rect.top + gearItem.rect.height / 2 - 278)).toBeLessThanOrEqual(0.5);
+  });
+
+  /**
+   * At 260 the gear's box overlaps the pit limiter band by 18 px, where at 228 it cleared it. That
+   * is allowed and it is not an accident: a text box has no background, and what must not touch the
+   * band is the ink. So the invariant is about the cap top rather than about the boxes, and it is
+   * written down here because the round-face table checks each hero box against the slots and never
+   * against the other hero boxes, which is why nothing noticed the overlap appear.
+   */
+  test('the gear glyph clears the pit limiter band, though its box does not', () => {
+    const [gearItem] = gear(layout.hero.gear.rect, layout.hero.gear.size);
+    if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
+    const band = layout.hero.pitLimiter;
+    expect(overlaps(gearItem.rect, band)).toBe(true);
+    const baseline = gearItem.rect.top + WPF_BASELINE * gearItem.fontSize;
+    const capTop = baseline - (FONT_METRICS.capHeight / FONT_METRICS.unitsPerEm) * gearItem.fontSize;
+    expect(capTop).toBeGreaterThan(band.top + band.height);
   });
 });
 
@@ -856,8 +873,8 @@ describe('800 round', () => {
     const [gearItem] = gear(rect(240, 260, 320, 280));
     if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
     expect([gearItem.fontSize, gearItem.fontWeight]).toEqual([260, 'Bold']);
-    expect(gearItem.rect).toEqual({ left: 333, top: 244, width: 139, height: 313 });
-    // The cell, not the box, is centred: 135 in 320 leaves 92.5 either side.
+    expect(gearItem.rect).toEqual({ left: 332, top: 244, width: 140, height: 313 });
+    // The cell, not the box, is centred: 136 in 320 leaves 92 either side.
     const cell = gearItem.monospace?.charWidth ?? 0;
     expect(Math.abs(gearItem.rect.left - 240 - (560 - (gearItem.rect.left + cell)))).toBeLessThanOrEqual(1);
   });
