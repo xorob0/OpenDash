@@ -9,6 +9,53 @@ Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashbo
 to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
 including any that the plugin does not install.
 
+## 0.2.0-rc.1 (2026-09-12)
+
+The candidate that makes the zone face the face. If you have openDash installed, updating replaces
+what you have with a different dashboard rather than a newer version of the same one, and that is
+the whole point of this release: the twelve-slot face becomes four zones you cycle with a wheel
+button. Drive it before it becomes the only one.
+
+**Your existing dashboard is copied before it is replaced.** Each folder is zipped to
+`DashTemplates/<name>_backup.zip` first, so anything you had edited in Dash Studio is recoverable.
+That copy is reclaimed by the next install of the same folder, so move it somewhere else if you
+want to keep it. The twelve-slot faces are still published as `openDash slots <size>.simhubdash` on
+this release, and installing one by hand gives you the old face back under a name of its own.
+
+### Changed
+
+- The zone faces take the shipped names. `openDash zones 1920x480` is now `openDash`, and its seven
+  siblings follow; the twelve-slot faces they replace are renamed `openDash slots <size>` and are
+  built and published but no longer installed by the plugin. The two round faces are untouched: they
+  have no zone equivalent yet, so they stay as they are and keep their names.
+- Every screen keeps its own zones, bar and glance. A rig with a face on the wheel and another
+  beside it used to configure them together, so cycling zone C on one moved zone C on the other.
+  Each face now has its own settings, named for its size, and its own wheel actions. Settings from
+  rc.3 are carried over to the 1920 x 480 face.
+- The plugin's settings page says which screen it is configuring and draws that screen: the portrait
+  face reads as a column, and the 800 x 286 no longer offers fields for a bar it does not have.
+- Release notes are this file rather than a list of pull request titles.
+
+### Added
+
+- The generator can draw an image, which is what the telltales and the nationality flags will need.
+- The car settings strip closes over a setting your car does not have, instead of leaving a hole
+  where it would have been.
+- The black flag covers band D, as the other five flags do. It used to be an outline you could read
+  the page through.
+
+### Fixed
+
+- Every package now carries `OFL.txt`, the licence for the Barlow faces it ships. Earlier releases
+  shipped the fonts without it, which the licence does not permit.
+- On the 1280 faces, page D6 drew its last field over the DRS lamp.
+
+### Known
+
+- The round faces are still the twelve-slot design, because what a round face does with zones is not
+  decided.
+- `plugin/INSTALL.md` still describes the twelve-slot face and has not caught up with this release.
+
 ## 0.1.0-rc.3 (2026-09-12)
 
 The candidate that fixes the font. Every numeral openDash draws has been drawn in the wrong face
