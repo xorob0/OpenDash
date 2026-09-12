@@ -47,6 +47,10 @@ namespace OpenDashPlugin
             RefreshWarning();
             RefreshFaceWarning();
             RefreshStatus();
+            RefreshUpdateLine();
+            // Opening the page is the earliest a check may run: never on the startup path, and never at all unless
+            // the setting says so. A background check that finds nothing shows nothing, so most visits say nothing.
+            Check(manual: false);
         }
 
         // Page
@@ -898,6 +902,16 @@ namespace OpenDashPlugin
 
         // Dashboard
 
+        private TextBlock updateLine;
+        private Button updateButton;
+        private Button checkButton;
+        private UpdateStatus updateStatus = new UpdateStatus();
+        private UpdateService updateService;
+        private bool confirmingEdited;
+
+        private UpdateService Updates =>
+            updateService ?? (updateService = new UpdateService(new ReleaseClient(OpenDash.Version), new SimHubInstallLog()));
+
         private FrameworkElement BuildDashboard()
         {
             dashboardTitle = Ui.Body("openDash");
@@ -906,10 +920,156 @@ namespace OpenDashPlugin
             text.MaxWidth = 460;
             text.HorizontalAlignment = HorizontalAlignment.Left;
 
+            updateLine = Ui.Caption(string.Empty);
+            updateLine.Visibility = Visibility.Collapsed;
+            text.Children.Add(updateLine);
+
             statusHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             reinstallButton = BuildReinstallButton();
-            var right = Ui.HStack(24, statusHost, reinstallButton);
-            return Ui.Section("Dashboard", Ui.Row(text, right));
+            updateButton = BuildUpdateButton();
+            var right = Ui.HStack(24, statusHost, updateButton, reinstallButton);
+
+            return Ui.Section("Dashboard", Ui.Row(text, right), BuildCheckRow());
+        }
+
+        /// <summary>The switch, its one sentence, and a button for somebody who would rather ask now.</summary>
+        private FrameworkElement BuildCheckRow()
+        {
+            var toggle = BuildToggle(Settings.CheckForUpdates, on =>
+            {
+                Settings.CheckForUpdates = on;
+                plugin.SaveSettings();
+                if (!on)
+                {
+                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.Installer.InstalledVersion };
+                }
+                RefreshUpdateLine();
+            });
+
+            checkButton = BuildSecondaryButton("Check now", "Ask GitHub for the newest release now, without waiting for the daily check.");
+            checkButton.Click += (sender, args) => Check(manual: true);
+
+            var right = Ui.HStack(24, checkButton, toggle);
+            return Ui.Row(Ui.VStack(4, Ui.Body("Check for updates"), Ui.Caption(UpdateWording.CheckCaption)), right);
+        }
+
+        private Button BuildUpdateButton()
+        {
+            var button = BuildSecondaryButton("Update", "Download the newest release and replace the dashboards installed here.");
+            button.Visibility = Visibility.Collapsed;
+            button.Click += (sender, args) => ApplyUpdate();
+            return button;
+        }
+
+        private static Button BuildSecondaryButton(string content, string tooltip)
+        {
+            Button button;
+            try
+            {
+                button = new SHButtonPrimary();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("SHButtonPrimary is unavailable; using a plain button: " + ex.Message);
+                button = new Button();
+            }
+            button.Content = content;
+            button.MinWidth = 96;
+            button.ToolTip = tooltip;
+            return button;
+        }
+
+        /// <summary>
+        /// Asks, off the UI thread, and shows whatever came back.
+        /// </summary>
+        /// <remarks>
+        /// Nothing here blocks: a socket that never answers would otherwise freeze the settings page, and on the
+        /// thread SimHub calls Init on it would freeze SimHub's start.
+        /// </remarks>
+        private void Check(bool manual)
+        {
+            if (!Settings.CheckForUpdates && !manual) return;
+            checkButton.IsEnabled = false;
+            updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
+            RefreshUpdateLine();
+
+            var installed = UpdateCheck.ComparableInstalled(plugin.Installer.InstalledVersion, OpenDash.Version);
+            UpdateService.InBackground(() =>
+            {
+                var ticks = Settings.LastUpdateCheckTicks;
+                var answer = Updates.Check(installed, Settings.CheckForUpdates, ref ticks, DateTime.UtcNow, manual);
+                Dispatcher.Invoke(() =>
+                {
+                    if (answer != null)
+                    {
+                        updateStatus = answer;
+                        if (ticks != Settings.LastUpdateCheckTicks)
+                        {
+                            Settings.LastUpdateCheckTicks = ticks;
+                            plugin.SaveSettings();
+                        }
+                    }
+                    checkButton.IsEnabled = true;
+                    confirmingEdited = false;
+                    RefreshUpdateLine();
+                });
+            }, new SimHubInstallLog());
+        }
+
+        /// <summary>
+        /// Applies the release the last check found, asking once before replacing a dashboard somebody has edited.
+        /// </summary>
+        private void ApplyUpdate()
+        {
+            var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
+            if (release == null) return;
+
+            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            if (edited.Count > 0 && !confirmingEdited)
+            {
+                // One click to be told, a second to mean it. A dialog would be the SimHub way and a modal in a
+                // settings page is worse than a button that changes what it says.
+                confirmingEdited = true;
+                updateButton.Content = "Replace anyway";
+                updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
+                    + " changed since openDash wrote them: " + string.Join(", ", edited)
+                    + ". Updating replaces what is there. The previous copy is kept and can be put back.";
+                updateLine.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var replaceEdited = confirmingEdited;
+            updateButton.IsEnabled = false;
+            updateLine.Text = "Downloading " + updateStatus.LatestVersion + "…";
+            updateLine.Visibility = Visibility.Visible;
+
+            UpdateService.InBackground(() =>
+            {
+                var outcome = Updates.Apply(plugin.Installer, release, replaceEdited);
+                Dispatcher.Invoke(() =>
+                {
+                    confirmingEdited = false;
+                    updateButton.Content = "Update";
+                    updateButton.IsEnabled = true;
+                    plugin.Installer.Refresh();
+                    if (outcome.Ok && outcome.Updated.Count > 0)
+                    {
+                        updateStatus = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = plugin.Installer.InstalledVersion, Manual = true };
+                    }
+                    RefreshStatus();
+                    updateLine.Text = outcome.Line;
+                    updateLine.Visibility = Visibility.Visible;
+                });
+            }, new SimHubInstallLog());
+        }
+
+        private void RefreshUpdateLine()
+        {
+            if (updateLine == null) return;
+            var line = updateStatus.Line;
+            updateLine.Text = line ?? string.Empty;
+            updateLine.Visibility = updateStatus.IsVisible && line != null ? Visibility.Visible : Visibility.Collapsed;
+            updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
         }
 
         /// <summary>SimHub's primary button (SHButtonPrimary); a plain button when the type cannot be created.</summary>
