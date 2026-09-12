@@ -7,14 +7,14 @@
  * be a second opinion about the design rather than a check on the code.
  */
 import { describe, expect, test } from 'bun:test';
-import { BAND_D_PAGES, FACE_ZONE_LETTERS, MODULE_COUNT, ZONE_A_PAGES, facePrefix, pagesForZone, zoneProperties } from '../src/contract.ts';
+import { BAND_D_PAGES, FACE_SIZES, FACE_ZONE_LETTERS, MODULE_COUNT, ZONE_A_PAGES, bodyOrder, facePrefix, pagesForZone, zoneProperties } from '../src/contract.ts';
 import { validatePackage, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
-import { ZONE_FACES, buildZoneFace, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
+import { ZONE_FACES, buildZoneFace, sizeOf, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -85,7 +85,7 @@ describe('every zone cycles its own catalogue', () => {
       const widget = widgets.find((w) => w.name === `zone${zone}`)!;
       const formula = widget.bindings?.InitialScreenIndex?.formula;
       expect({ zone, bound: formula !== undefined }).toMatchObject({ bound: true });
-      expect(String(formula)).toContain(`${PROPERTY_PREFIX}.${facePrefix(reference.face)}Zone${zone}`);
+      expect(String(formula)).toContain(`${PROPERTY_PREFIX}.${facePrefix(sizeOf(reference.face))}Zone${zone}`);
     }
   });
 
@@ -107,6 +107,47 @@ describe('every zone cycles its own catalogue', () => {
   });
 });
 
+/**
+ * The contract carries a little of each face's shape, because the plugin draws a plan of the face in
+ * its panel and cannot read a layout file. A plan drawn to one face's proportions for every face is
+ * how the nano at 800 x 286 came to be offered bar fields for a bar it does not have, so the two
+ * descriptions have to agree.
+ */
+describe('the contract describes the shape each face really has', () => {
+  test('every layout is named by FACE_SIZES, and named once', () => {
+    expect(FACE_SIZES).toHaveLength(ZONE_FACES.length);
+    const named = FACE_SIZES.map((f) => `${f.width}x${f.height}`);
+    expect(new Set(named).size).toBe(named.length);
+    for (const layout of ZONE_FACES) expect(named).toContain(`${layout.width}x${layout.height}`);
+  });
+
+  for (const layout of ZONE_FACES) {
+    test(`${layout.folder} is described as it is drawn`, () => {
+      const face = sizeOf(layout);
+      const z = layout.zones;
+      expect({ folder: layout.folder, hasBar: face.hasBar }).toMatchObject({ hasBar: z.bar !== undefined });
+      expect({ folder: layout.folder, per: face.barFieldsPerEnd }).toMatchObject({ per: layout.barFieldsPerEnd });
+
+      // A body whose three zones share a left edge is stacked; one that does not is a row.
+      const stacked = z.zoneA.left === z.zoneB.left && z.zoneB.left === z.zoneC.left;
+      expect({ folder: layout.folder, body: face.body }).toMatchObject({ body: stacked ? 'column' : 'row' });
+
+      // The parts are the sizes along whichever axis the body runs, in drawing order.
+      const order = bodyOrder(face).map((letter) => (letter === 'A' ? z.zoneA : letter === 'B' ? z.zoneB : z.zoneC));
+      const drawn = order.map((r) => (stacked ? r.height : r.width));
+      expect({ folder: layout.folder, parts: [...face.parts] }).toMatchObject({ parts: drawn });
+    });
+  }
+
+  test('and the drawing order is the one the design settled on', () => {
+    // B, A, C across a wide face, because zone A holds the gear and the gear is read by reflex; A
+    // over B over C in portrait, for the same reason with the axis turned.
+    expect(bodyOrder(sizeOf(zoneFace1920x480))).toEqual(['B', 'A', 'C']);
+    const portrait = ZONE_FACES.find((f) => f.width === 600)!;
+    expect(bodyOrder(sizeOf(portrait))).toEqual(['A', 'B', 'C']);
+  });
+});
+
 describe('the face reads what it declares and nothing else', () => {
   test('every package validates with no error and no warning', () => {
     for (const { face, built } of BUILT) {
@@ -121,11 +162,11 @@ describe('the face reads what it declares and nothing else', () => {
     const used = new Set(
       [reference.built.main, ...reference.built.zones].flatMap((d) => propertiesIn(d)).filter((p) => p.startsWith(`${PROPERTY_PREFIX}.`)),
     );
-    for (const zone of FACE_ZONE_LETTERS) expect(used).toContain(`${PROPERTY_PREFIX}.${facePrefix(reference.face)}Zone${zone}`);
-    for (const p of zoneProperties().filter((n) => n.includes(`${facePrefix(reference.face)}Bar`))) expect(used).toContain(p);
+    for (const zone of FACE_ZONE_LETTERS) expect(used).toContain(`${PROPERTY_PREFIX}.${facePrefix(sizeOf(reference.face))}Zone${zone}`);
+    for (const p of zoneProperties().filter((n) => n.includes(`${facePrefix(sizeOf(reference.face))}Bar`))) expect(used).toContain(p);
     // And nothing belonging to another face, which is the point of the prefix: this package must
     // not move when somebody configures the 850 beside it.
-    const others = zoneProperties().filter((n) => !n.includes(facePrefix(reference.face)));
+    const others = zoneProperties().filter((n) => !n.includes(facePrefix(sizeOf(reference.face))));
     expect([...used].filter((p) => others.includes(p))).toEqual([]);
     // And no slot, because a zone is not a slot.
     expect([...used].some((p) => p.includes('.Slot'))).toBe(false);
