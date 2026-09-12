@@ -24,6 +24,9 @@ namespace OpenDashPlugin
         /// <summary>Folders the release does not publish.</summary>
         public IReadOnlyList<string> NotCarried { get; set; } = new string[0];
 
+        /// <summary>Folders that were meant to be replaced and could not be.</summary>
+        public IReadOnlyList<string> Failed { get; set; } = new string[0];
+
         public string Reason { get; set; }
 
         /// <summary>What to tell the user afterwards, including the reopen sentence when anything changed.</summary>
@@ -31,11 +34,17 @@ namespace OpenDashPlugin
         {
             get
             {
-                if (!Ok) return "The update did not finish: " + (Reason ?? "no reason given") + ".";
+                if (!Ok)
+                {
+                    var failure = "The update did not finish: " + (Reason ?? "no reason given") + ".";
+                    // What did land still has to be said, or a person cannot tell what state they are in.
+                    return Updated.Count == 0 ? failure : failure + " " + Updated.Count + " of them were replaced before it stopped. " + UpdateWording.Reopen;
+                }
                 if (Updated.Count == 0 && HeldBack.Count > 0) return "Nothing was replaced, because every dashboard has been edited since openDash wrote it.";
                 if (Updated.Count == 0) return "There was nothing to replace.";
                 var line = Updated.Count == 1 ? "Updated 1 dashboard. " : "Updated " + Updated.Count + " dashboards. ";
                 if (HeldBack.Count > 0) line += (HeldBack.Count == 1 ? "1 was left alone because it has been edited. " : HeldBack.Count + " were left alone because they have been edited. ");
+                if (NotCarried.Count > 0) line += (NotCarried.Count == 1 ? "1 is not in this release and was not touched. " : NotCarried.Count + " are not in this release and were not touched. ");
                 return line + UpdateWording.Reopen;
             }
         }
@@ -126,15 +135,29 @@ namespace OpenDashPlugin
             var target = new DashboardInstaller(installer.SimHubRoot, log, downloaded, installer.Record);
             target.EnsureInstalled(force: true, replaceEdited: replaceEdited);
 
+            // A package that failed to install is a failure, whatever the others did. Reporting Ok because the run
+            // finished, and putting the reason in a field the wording ignored, told a user their dashboards were
+            // updated when one of them had not been.
+            // A package that could not even be read has no folder name, so the name it was fetched under stands in:
+            // telling somebody that "" could not be installed is no better than telling them nothing.
+            var failed = target.Packages
+                .Where(p => p.Status == InstallStatus.Failed)
+                .Select(p => p.FolderName ?? FolderOf(plan, p.Name) ?? p.Name)
+                .ToList();
             return new UpdateOutcome
             {
-                Ok = true,
+                Ok = failed.Count == 0,
                 Updated = target.Packages.Where(p => p.Extracted).Select(p => p.FolderName).ToList(),
                 HeldBack = target.Packages.Where(p => p.HeldBack).Select(p => p.FolderName).ToList(),
+                Failed = failed,
                 NotCarried = plan.NotCarried,
-                Reason = target.LastError,
+                Reason = failed.Count == 0 ? null : (target.LastError ?? string.Join(", ", failed) + " could not be installed"),
             };
         }
+
+        /// <summary>The folder an asset was fetched for, when the package itself could not be read.</summary>
+        private static string FolderOf(UpdatePlan plan, string assetName) =>
+            plan.Items.FirstOrDefault(i => i.Asset != null && i.Asset.Name == assetName)?.FolderName;
 
         /// <summary>
         /// Runs work off the caller's thread and hands the result back, swallowing everything.

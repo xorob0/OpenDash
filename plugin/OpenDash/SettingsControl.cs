@@ -48,6 +48,7 @@ namespace OpenDashPlugin
             RefreshFaceWarning();
             RefreshStatus();
             RefreshUpdateLine();
+            RefreshRestoreButton();
             // Opening the page is the earliest a check may run: never on the startup path, and never at all unless
             // the setting says so. A background check that finds nothing shows nothing, so most visits say nothing.
             Check(manual: false);
@@ -904,6 +905,7 @@ namespace OpenDashPlugin
 
         private TextBlock updateLine;
         private Button updateButton;
+        private Button restoreButton;
         private Button checkButton;
         private UpdateStatus updateStatus = new UpdateStatus();
         private UpdateService updateService;
@@ -928,7 +930,8 @@ namespace OpenDashPlugin
             statusHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             reinstallButton = BuildReinstallButton();
             updateButton = BuildUpdateButton();
-            var right = Ui.HStack(24, statusHost, updateButton, reinstallButton);
+            restoreButton = BuildRestoreButton();
+            var right = Ui.HStack(24, statusHost, restoreButton, updateButton, reinstallButton);
 
             return Ui.Section("Dashboard", Ui.Row(text, right), BuildCheckRow());
         }
@@ -960,6 +963,63 @@ namespace OpenDashPlugin
             button.Visibility = Visibility.Collapsed;
             button.Click += (sender, args) => ApplyUpdate();
             return button;
+        }
+
+        /// <summary>
+        /// Puts back the copy kept when a dashboard somebody edited was replaced.
+        /// </summary>
+        /// <remarks>
+        /// The confirmation before replacing an edited dashboard promises that a copy is kept and can be put back.
+        /// Until this existed nothing in the plugin could put one back, so the promise was true only for somebody
+        /// willing to unzip a file by hand.
+        /// </remarks>
+        private Button BuildRestoreButton()
+        {
+            var button = BuildSecondaryButton("Put mine back", "Restore the dashboards that were replaced when you last chose to update over your own edits.");
+            button.Visibility = Visibility.Collapsed;
+            button.Click += (sender, args) => RestoreKept();
+            return button;
+        }
+
+        private void RestoreKept()
+        {
+            if (applying) return;
+            var root = plugin.Installer.SimHubRoot;
+            var restored = new List<string>();
+            foreach (var folder in plugin.Installer.Packages.Select(p => p.FolderName).Where(f => f != null).Distinct())
+            {
+                var kept = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
+                if (kept == null) continue;
+                try
+                {
+                    if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), kept)) restored.Add(folder);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Putting back " + folder + " failed", ex);
+                }
+            }
+            plugin.Installer.Refresh();
+            plugin.SaveSettings();
+            RefreshStatus();
+            updateLine.Text = restored.Count == 0
+                ? "There was nothing of yours to put back."
+                : "Put back " + (restored.Count == 1 ? "1 dashboard" : restored.Count + " dashboards") + ". " + UpdateWording.Reopen;
+            updateLine.Visibility = Visibility.Visible;
+            RefreshRestoreButton();
+        }
+
+        /// <summary>The button appears only when there is something of the user's to put back.</summary>
+        private void RefreshRestoreButton()
+        {
+            if (restoreButton == null) return;
+            var root = plugin.Installer.SimHubRoot;
+            var any = plugin.Installer.Packages
+                .Select(p => p.FolderName)
+                .Where(f => f != null)
+                .Distinct()
+                .Any(f => PackageExtractor.KeptCopies(root, f).Any(path => path.Contains(PackageExtractor.EditedSuffix)));
+            restoreButton.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private static Button BuildSecondaryButton(string content, string tooltip)
@@ -1038,7 +1098,8 @@ namespace OpenDashPlugin
                 updateButton.Content = "Replace anyway";
                 updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
                     + " changed since openDash wrote them: " + string.Join(", ", edited)
-                    + ". Updating replaces what is there. The previous copy is kept and can be put back.";
+                    + ". Updating replaces what is there. A copy of yours is kept beside it in DashTemplates, "
+                    + "and \"Put mine back\" restores it.";
                 updateLine.Visibility = Visibility.Visible;
                 return;
             }
@@ -1066,6 +1127,7 @@ namespace OpenDashPlugin
                     // the moment it is safe to serialise the settings.
                     plugin.SaveSettings();
                     plugin.Installer.Refresh();
+                    RefreshRestoreButton();
                     if (outcome.Ok && outcome.Updated.Count > 0)
                     {
                         updateStatus = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = plugin.Installer.InstalledVersion, Manual = true };

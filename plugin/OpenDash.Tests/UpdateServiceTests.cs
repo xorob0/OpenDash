@@ -214,6 +214,54 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("every dashboard has been edited", outcome.Line);
         }
 
+        /// <summary>
+        /// A run that finished is not a run that worked. Reporting Ok because nothing threw, with the reason in a
+        /// field the wording ignored, told a user their dashboards were updated when one of them had not been.
+        /// </summary>
+        [Fact]
+        public void A_package_that_could_not_be_installed_makes_the_whole_update_a_failure()
+        {
+            var record = new MemoryFolderRecord();
+            var installer = Installed("openDash", "0.1.0", record);
+
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
+            // Bytes that are not a package at all: the install of this one fails while the run completes.
+            fetcher.Assets["https://example.invalid/openDash"] = Encoding.UTF8.GetBytes("not a zip");
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.False(outcome.Ok);
+            Assert.Equal(new[] { "openDash" }, outcome.Failed);
+            Assert.Empty(outcome.Updated);
+            Assert.Contains("did not finish", outcome.Line);
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+        }
+
+        [Fact]
+        public void A_dashboard_the_release_does_not_carry_is_mentioned_rather_than_computed_and_dropped()
+        {
+            // Two packages the plugin carries, of which the release publishes one. The build makes twenty-two and
+            // v0.1.0-rc.2 published fourteen, so this is the ordinary case rather than a contrived one.
+            var source = new DownloadedPackageSource()
+                .Add("openDash.simhubdash", SyntheticPackage.Zip("openDash", "0.1.0").ToArray())
+                .Add("openDash zones 1920x480.simhubdash", SyntheticPackage.Zip("openDash zones 1920x480", "0.1.0").ToArray());
+            var installer = new DashboardInstaller(root, null, source, new MemoryFolderRecord());
+            installer.EnsureInstalled(false);
+
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
+            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+            Assert.True(outcome.Ok);
+            Assert.Contains("not in this release", outcome.Line);
+        }
+
         [Fact]
         public void Background_work_that_throws_does_not_take_the_process_with_it()
         {
