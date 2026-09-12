@@ -36,9 +36,11 @@ the reason below.
 `build/OpenDash-plugin.zip` are. The manifest, the fonts and the bare DLL are workflow artefacts
 that no consumer can fetch, so the release itself is the only feed there is.
 
-**The release body is GitHub's generated summary, not the changelog.** `generate_release_notes:
-true` means the body is a list of commits and pull requests whose shape this repository does not
-control, and `CHANGELOG.md` never reaches it.
+**The release body is the changelog.** It was GitHub's generated summary, a list of commits and
+pull requests whose shape this repository does not control; XOR-25 replaced it with the section of
+`CHANGELOG.md` for the tag, and the workflow refuses a tag that has no such section. A release cut
+before that change still carries the generated summary, so a consumer must not assume either
+shape.
 
 **Asset names contain spaces**, for instance `openDash Pit wall portrait.simhubdash`, and GitHub
 rewrites them on upload. A consumer must match on what the API reports rather than on the name on
@@ -154,9 +156,10 @@ openDash now has a network path, and with it a class of failure it did not have:
 proxy that intercepts TLS, a corporate network that blocks GitHub. Each has to fail quietly, and
 quiet failure is harder to write and easier to get wrong than a loud one.
 
-The changelog a user is shown is GitHub's generated summary rather than the curated `CHANGELOG.md`,
-because that is what the release body holds today. It is honest but it is not good, and making the
-release body the changelog is a change to `release.yml` that belongs with XOR-25.
+The changelog a user is shown was GitHub's generated summary rather than the curated
+`CHANGELOG.md`, because that was what the release body held. XOR-25 has since made the release body
+the changelog's own section for the tag, so what the panel summarises is now written for a driver;
+releases cut before that change still carry the generated summary.
 
 `scope.md` loses one of its four standing refusals, which leaves three.
 

@@ -2362,7 +2362,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 1920,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#00FFFFFF",
+        "BackgroundColor": "#FF0A0B0D",
         "BorderStyle": {
           "BorderColor": "#FFF5F7FA",
           "BorderTop": 3,
@@ -5310,7 +5310,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 1920,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#00FFFFFF",
+              "BackgroundColor": "#FF0A0B0D",
               "BorderStyle": {
                 "BorderColor": "#FFF5F7FA",
                 "BorderTop": 3,
@@ -10402,7 +10402,7 @@ exports[`package snapshots openDash 1280x480/openDash 1280x480.djson 1`] = `
               "Width": 1280,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#00FFFFFF",
+              "BackgroundColor": "#FF0A0B0D",
               "BorderStyle": {
                 "BorderColor": "#FFF5F7FA",
                 "BorderTop": 3,
@@ -14898,7 +14898,7 @@ exports[`package snapshots openDash 1280x400/openDash 1280x400.djson 1`] = `
               "Width": 1280,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#00FFFFFF",
+              "BackgroundColor": "#FF0A0B0D",
               "BorderStyle": {
                 "BorderColor": "#FFF5F7FA",
                 "BorderTop": 3,
@@ -19634,7 +19634,7 @@ exports[`package snapshots openDash 850x480/openDash 850x480.djson 1`] = `
               "Width": 850,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#00FFFFFF",
+              "BackgroundColor": "#FF0A0B0D",
               "BorderStyle": {
                 "BorderColor": "#FFF5F7FA",
                 "BorderTop": 3,
@@ -23757,7 +23757,7 @@ exports[`package snapshots openDash 800x480/openDash 800x480.djson 1`] = `
               "Width": 800,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#00FFFFFF",
+              "BackgroundColor": "#FF0A0B0D",
               "BorderStyle": {
                 "BorderColor": "#FFF5F7FA",
                 "BorderTop": 3,
@@ -27865,7 +27865,7 @@ exports[`package snapshots openDash 1280x720/openDash 1280x720.djson 1`] = `
               "Width": 1280,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#00FFFFFF",
+              "BackgroundColor": "#FF0A0B0D",
               "BorderStyle": {
                 "BorderColor": "#FFF5F7FA",
                 "BorderTop": 3,
@@ -32447,7 +32447,7 @@ exports[`package snapshots openDash 800x286/openDash 800x286.djson 1`] = `
               "Width": 800,
               "Height": 12,
               "Visible": true,
-              "BackgroundColor": "#00FFFFFF",
+              "BackgroundColor": "#FF0A0B0D",
               "BorderStyle": {
                 "BorderColor": "#FFF5F7FA",
                 "BorderTop": 2,
@@ -37727,7 +37727,7 @@ exports[`package snapshots openDash 600x686/openDash 600x686.djson 1`] = `
               "Width": 600,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#00FFFFFF",
+              "BackgroundColor": "#FF0A0B0D",
               "BorderStyle": {
                 "BorderColor": "#FFF5F7FA",
                 "BorderTop": 3,

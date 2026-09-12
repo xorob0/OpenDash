@@ -15,6 +15,7 @@
     <Compile Include="../OpenDash/Cards.cs" Link="Plugin/Cards.cs" />
     <Compile Include="../OpenDash/Modules.cs" Link="Plugin/Modules.cs" />
     <Compile Include="../OpenDash/FacePages.cs" Link="Plugin/FacePages.cs" />
+    <Compile Include="../OpenDash/FaceSettings.cs" Link="Plugin/FaceSettings.cs" />
     <Compile Include="../OpenDash/OpenDashSettings.cs" Link="Plugin/OpenDashSettings.cs" />
     <Compile Include="../OpenDash/Versioning.cs" Link="Plugin/Versioning.cs" />
     <Compile Include="../OpenDash/Installation.cs" Link="Plugin/Installation.cs" />

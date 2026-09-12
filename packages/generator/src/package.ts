@@ -8,12 +8,15 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { unzipSync, zipSync, type ZipOptions } from 'fflate';
-import type { DashPackage } from './model.ts';
+import type { Dashboard, DashPackage } from './model.ts';
+import { md5Hex } from './images.ts';
 import { serializeDashboard, serializeMetadata } from './serialize.ts';
 
 export const FONTS_DIR = '_SHFonts';
 export const PACKAGE_EXTENSION = '.simhubdash';
 export const METADATA_EXTENSION = '.djson.metadata';
+/** SimHub's own spelling, missing an `s`. It is the file name on disk and cannot be corrected. */
+export const RESOURCES_EXTENSION = '.djson.ressources';
 
 /**
  * Timestamp stamped on every zip entry. Zip stores local date/time fields, so a Date built
@@ -47,6 +50,11 @@ export const writePackage = (pkg: DashPackage, outDir: string, opts: WritePackag
     const base = join(folder, `${dashboard.name}.djson`);
     write(base, serializeDashboard(dashboard, { packageName: pkg.folderName }));
     write(`${base}.metadata`, serializeMetadata(dashboard));
+    if (dashboard.images?.length) {
+      const sidecar = `${base}.ressources`;
+      writeFileSync(sidecar, resourcesZip(dashboard));
+      files.push(sidecar);
+    }
   }
   if (pkg.fonts.length > 0) {
     const fontsDir = join(folder, FONTS_DIR);
@@ -61,7 +69,36 @@ export const writePackage = (pkg: DashPackage, outDir: string, opts: WritePackag
       files.push(target);
     }
   }
+  for (const notice of pkg.notices ?? []) {
+    const target = join(folder, notice.name);
+    copyFileSync(notice.path, target);
+    files.push(target);
+  }
   return { folder, files };
+};
+
+/**
+ * The `<name>.djson.ressources` bytes: one entry per image at the zip's root, named
+ * `<Name><Extension>`, which is how SimHub's own dashboards store them.
+ *
+ * Reproducible on the same terms as the package zip, since this one ends up inside it: entries
+ * sorted by name and every entry carrying the fixed timestamp.
+ */
+export const resourcesZip = (dashboard: Dashboard, opts: ZipPackageOptions = {}): Uint8Array => {
+  const entryOptions: ZipOptions = { mtime: opts.mtime ?? ZIP_MTIME, level: opts.level ?? 6 };
+  const entries: Record<string, [Uint8Array, ZipOptions]> = {};
+  for (const image of [...(dashboard.images ?? [])].sort((a, b) => byCodeUnit(a.name, b.name))) {
+    const bytes = new Uint8Array(readFileSync(image.path));
+    // The descriptor in the .djson states this length and this MD5. Writing bytes that disagree
+    // with what was measured would ship a dashboard whose images SimHub refuses, and the source
+    // file changing between describeImage and here is exactly how that happens. The MD5 is what
+    // is compared, because two different pictures of the same size are not unusual at all.
+    if (bytes.length !== image.length || md5Hex(bytes) !== image.md5) {
+      throw new Error(`${image.name}${image.extension} does not match its descriptor; it changed after it was described`);
+    }
+    entries[`${image.name}${image.extension}`] = [bytes, entryOptions];
+  }
+  return zipSync(entries, { os: 0 });
 };
 
 const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);

@@ -13,8 +13,10 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
+
+type Expr = string;
 import { withBindings } from '../bind.ts';
-import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot } from '../contract.ts';
+import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot, type FaceSize } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
 import { cells, monoWidth } from '../design/metrics.ts';
@@ -44,7 +46,7 @@ import {
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { fmt, isnull, num, str, iff, eq, game, concat, raw } = ncalc;
+const { fmt, isnull, num, str, iff, eq, game, concat, raw, add, sub, div } = ncalc;
 
 /** One field of the bar's catalogue: a label, a value and how wide the value can get. */
 interface BarFieldSpec {
@@ -122,6 +124,13 @@ export const STRIP_CELLS: readonly StripCell[] = [
  */
 const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', 'map', 'diff'];
 
+/** Whether the sim publishes this setting at all. A cell it does not publish is not drawn. */
+const present = (cell: StripCell): Expr => ncalc.not(ncalc.isNull(cell.expr));
+
+/** The left edge that centres `width` inside the strip, where `width` is itself an expression. */
+const centred = (stripLeft: number, stripWidth: number, width: Expr): Expr =>
+  add(num(stripLeft), div(sub(num(stripWidth), width), num(2)));
+
 /** The most important cells that fit the width, in the order the canvas draws them. */
 function stripCellsThatFit(width: number, valueFs: number, labelFs: number, gap: number): StripCell[] {
   for (let count = STRIP_PRIORITY.length; count > 0; count -= 1) {
@@ -151,6 +160,8 @@ function fieldWidth(spec: BarFieldSpec, valueFs: number, labelFs: number, smallF
 export interface BarOptions {
   /** Two fields per end on a wide face, one in portrait. */
   fieldsPerEnd: 1 | 2;
+  /** The face this bar is drawn on, which is what its settings are named after. */
+  face: FaceSize;
 }
 
 /**
@@ -194,7 +205,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         ? frame.left + padX + withinEnd * (widest + d.gapX)
         : frame.left + frame.width - padX - endWidth + withinEnd * (widest + d.gapX);
     for (const spec of BAR_FIELD_SPECS) {
-      const visible = eq(zoneSetting.barField(slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
+      const visible = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
       const name = `${prefix}${slot}.${spec.id}`;
       items.push({
         ...label(`${name}.label`, spec.label.toUpperCase(), x, top, widest, { size: labelFs }),
@@ -225,20 +236,35 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
   const cellsToDraw = stripCellsThatFit(stripWidth, smallFs, labelFs, d.gapX);
   const widths = cellsToDraw.map((c) => stripCellWidth(c, smallFs, labelFs));
   const total = widths.reduce((a, b) => a + b, 0) + d.gapX * Math.max(0, cellsToDraw.length - 1);
+  // The static left of each cell is the layout with every cell present, which is what the binding
+  // below evaluates to in that case. It is not decoration: the geometry tests measure it, and a
+  // scene graph whose items all sit at one x would be wrong the moment a binding were not read.
   let x = stripLeft + Math.max(0, (stripWidth - total) / 2);
+  // What each cell occupies when it is there, and nothing when it is not. The strip closes over an
+  // absent cell rather than leaving a hole where it would have been, so `Left` is an expression
+  // over the cells to its left rather than a number fixed at build time. iRacing omits
+  // dcTractionControl and dcABS on a car without the controls, which is two holes of about fifty
+  // pixels in the middle of the bar, and the `quali` scenario exists to show exactly that.
+  const occupied = (i: number): Expr => iff(present(cellsToDraw[i]!), num((widths[i] ?? 0) + d.gapX), num(0));
+  // Every drawn cell, with the trailing gap of the last one taken off again.
+  const drawnWidth = sub(add(...cellsToDraw.map((_, i) => occupied(i))), num(d.gapX));
   cellsToDraw.forEach((cell, i) => {
     const w = widths[i] ?? 0;
     const name = `${prefix}strip.${cell.id}`;
-    // A setting the sim does not publish takes the cell with it, rather than leaving an empty box.
-    const present = ncalc.not(ncalc.isNull(cell.expr));
+    const here = present(cell);
+    // Re-centred on what is actually drawn, then shifted by whatever precedes it. A strip of one
+    // cell sits in the middle of the gap between the ends, exactly as a strip of seven does.
+    const left = i === 0
+      ? centred(stripLeft, stripWidth, drawnWidth)
+      : add(centred(stripLeft, stripWidth, drawnWidth), ...Array.from({ length: i }, (_, j) => occupied(j)));
     items.push(
-      { ...label(`${name}.label`, cell.label.toUpperCase(), x, top, w, { size: labelFs }), ...withBindings({ Visible: present }) },
+      { ...label(`${name}.label`, cell.label.toUpperCase(), x, top, w, { size: labelFs }), ...withBindings({ Visible: here, Left: left }) },
       {
         ...numeral(`${name}.value`, cell.sample, x, valueTop + (valueFs - smallFs), smallFs, { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 }, {
           color: ds.color.text.secondary,
           maxWidth: w + 4,
         }),
-        ...withBindings({ Visible: present, Text: iff(present, fmt(cell.expr, cell.pattern), str('')) }),
+        ...withBindings({ Visible: here, Left: left, Text: iff(here, fmt(cell.expr, cell.pattern), str('')) }),
       },
     );
     x += w + d.gapX;
