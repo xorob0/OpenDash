@@ -1146,7 +1146,7 @@ namespace OpenDashPlugin
                     updateLine.Text = outcome.Line;
                     updateLine.Visibility = Visibility.Visible;
                 });
-            }, new SimHubInstallLog());
+            }, new SimHubInstallLog(), mustFinish: true);
         }
 
         private void RefreshUpdateLine()

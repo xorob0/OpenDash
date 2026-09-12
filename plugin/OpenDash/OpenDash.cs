@@ -67,6 +67,9 @@ namespace OpenDashPlugin
             Settings.OpenOnStartPages();
             try
             {
+                // Before installing, not after: a staging folder left by an interrupted update is a complete
+                // extracted dashboard sitting in DashTemplates, and they accumulate one per abandoned update.
+                PackageExtractor.RemoveOrphanedStaging(Installer.SimHubRoot, new SimHubInstallLog());
                 Installer.EnsureInstalled(false);
             }
             catch (Exception ex)
@@ -80,8 +83,25 @@ namespace OpenDashPlugin
             SaveSettings();
         }
 
+        /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
+        /// <remarks>
+        /// Long enough for fourteen packages, short enough that a user closing SimHub does not think it has hung.
+        /// The alternative to waiting is the process exiting between the delete of a dashboard folder and the move
+        /// that replaces it.
+        /// </remarks>
+        public static readonly TimeSpan ShutdownGrace = TimeSpan.FromSeconds(20);
+
         public void End(PluginManager pluginManager)
         {
+            if (UpdateService.Busy)
+            {
+                Log.Info("An update is still installing; waiting for it before SimHub closes.");
+                if (!UpdateService.WaitForIdle(ShutdownGrace))
+                {
+                    Log.Warn("The update was still installing after " + ShutdownGrace.TotalSeconds
+                        + " seconds and SimHub is closing anyway; a dashboard may be left as openDash found it.");
+                }
+            }
             SaveSettings();
         }
 
