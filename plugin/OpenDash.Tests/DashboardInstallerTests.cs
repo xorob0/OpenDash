@@ -106,6 +106,25 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(log.Lines, line => line.Contains("has changed since openDash wrote it"));
         }
 
+        /// <summary>
+        /// A folder that was refused is not up to date. Reporting it as such is how Reinstall came to look as
+        /// though it had worked while doing nothing at all.
+        /// </summary>
+        [Fact]
+        public void A_folder_left_alone_says_so_rather_than_reporting_up_to_date()
+        {
+            var record = new MemoryFolderRecord();
+            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.1.0")), record: record).EnsureInstalled(false);
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "openDash", "openDash.djson"), "{\"mine\":true}");
+
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), record: record);
+            installer.EnsureInstalled(false);
+
+            var described = installer.Packages.Single().Describe();
+            Assert.Contains("you have edited this one", described);
+            Assert.DoesNotContain("Up to date (", described.Replace("you have edited this one, so it was left alone", ""));
+        }
+
         [Fact]
         public void An_edited_folder_is_replaced_when_a_person_says_so()
         {

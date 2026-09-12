@@ -911,6 +911,7 @@ namespace OpenDashPlugin
         private UpdateService updateService;
         private bool confirmingEdited;
         private bool applying;
+        private bool confirmingReinstall;
 
         private UpdateService Updates =>
             updateService ?? (updateService = new UpdateService(new ReleaseClient(OpenDash.Version), new SimHubInstallLog()));
@@ -1050,6 +1051,11 @@ namespace OpenDashPlugin
         private void Check(bool manual)
         {
             if (!Settings.CheckForUpdates && !manual) return;
+            // Whether a request will be made is decided here rather than on the background thread, because saying
+            // "Checking for updates…" and then not checking left the panel on that sentence for as long as it was
+            // open, and hid an offer it had already found.
+            if (!UpdateCheck.ShouldCheck(Settings.CheckForUpdates, Settings.LastUpdateCheckTicks, DateTime.UtcNow, manual)) return;
+
             checkButton.IsEnabled = false;
             updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
             RefreshUpdateLine();
@@ -1061,6 +1067,11 @@ namespace OpenDashPlugin
                 var answer = Updates.Check(installed, Settings.CheckForUpdates, ref ticks, DateTime.UtcNow, manual);
                 Dispatcher.Invoke(() =>
                 {
+                    if (answer == null)
+                    {
+                        // The service declined after all. Whatever was showing before is still the truth.
+                        updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.Installer.InstalledVersion };
+                    }
                     if (answer != null)
                     {
                         updateStatus = answer;
@@ -1136,7 +1147,7 @@ namespace OpenDashPlugin
                     updateLine.Text = outcome.Line;
                     updateLine.Visibility = Visibility.Visible;
                 });
-            }, new SimHubInstallLog());
+            }, new SimHubInstallLog(), mustFinish: true);
         }
 
         private void RefreshUpdateLine()
@@ -1168,24 +1179,60 @@ namespace OpenDashPlugin
             return button;
         }
 
+        /// <summary>
+        /// Writes every embedded dashboard again, asking once before replacing one somebody has edited.
+        /// </summary>
+        /// <remarks>
+        /// It used to leave an edited folder alone and report "Up to date", which made the button appear to have
+        /// worked while nothing happened. Worse, the only path that could replace an edited folder was the Update
+        /// button's second click, and that button appears only while a newer release exists, so a person who had
+        /// edited a dashboard had no way at all to get openDash's own version back.
+        /// </remarks>
         private void Reinstall()
         {
             // Two installers over the same DashTemplates folders is the one combination that can delete a folder
             // one of them is extracting into, so whichever starts first holds the field.
             if (applying) return;
+
+            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            if (edited.Count > 0 && !confirmingReinstall)
+            {
+                confirmingReinstall = true;
+                reinstallButton.Content = "Replace anyway";
+                updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
+                    + " changed since openDash wrote them: " + string.Join(", ", edited)
+                    + ". Reinstalling replaces what is there. A copy of yours is kept beside it in DashTemplates, "
+                    + "and \"Put mine back\" restores it.";
+                updateLine.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var replaceEdited = confirmingReinstall;
             reinstallButton.IsEnabled = false;
             try
             {
-                plugin.Installer.EnsureInstalled(true);
+                plugin.Installer.EnsureInstalled(true, replaceEdited);
+                var replaced = plugin.Installer.Packages.Count(p => p.Extracted);
+                var held = plugin.Installer.Packages.Count(p => p.HeldBack);
+                updateLine.Text = held > 0
+                    ? "Reinstalled " + replaced + ". " + held + " left alone because you have edited them."
+                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.Reopen;
+                updateLine.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
             {
                 Log.Error("Reinstall failed", ex);
+                updateLine.Text = "The reinstall did not finish: " + ex.Message;
+                updateLine.Visibility = Visibility.Visible;
             }
             finally
             {
+                confirmingReinstall = false;
+                reinstallButton.Content = "Reinstall";
                 reinstallButton.IsEnabled = true;
+                plugin.SaveSettings();
                 RefreshStatus();
+                RefreshRestoreButton();
             }
         }
 
