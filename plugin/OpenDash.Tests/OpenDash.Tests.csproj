@@ -21,12 +21,14 @@
     <Compile Include="../OpenDash/PackageExtractor.cs" Link="Plugin/PackageExtractor.cs" />
     <Compile Include="../OpenDash/DashboardInstaller.Core.cs" Link="Plugin/DashboardInstaller.Core.cs" />
     <Compile Include="../OpenDash/Theme.cs" Link="Plugin/Theme.cs" />
+    <Compile Include="../OpenDash/ReleaseFeed.cs" Link="Plugin/ReleaseFeed.cs" />
   </ItemGroup>
 
   <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;
        DashboardInstallerTests pins the manifest name MSBuild gives it. -->
   <ItemGroup>
     <EmbeddedResource Include="Fixtures/resource name with spaces.txt" />
+    <EmbeddedResource Include="Fixtures/github-releases.json" />
   </ItemGroup>
 
   <ItemGroup>
