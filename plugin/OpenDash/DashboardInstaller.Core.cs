@@ -114,6 +114,9 @@ namespace OpenDashPlugin
         public string Describe()
         {
             var line = (FolderName ?? Name) + ": " + Status.Label();
+            // A folder that was refused is not up to date, and saying so was how Reinstall came to report success
+            // for a dashboard it had deliberately not touched.
+            if (HeldBack) line += " (you have edited this one, so it was left alone)";
             return Error == null ? line : line + " (" + Error + ")";
         }
     }
@@ -285,7 +288,7 @@ namespace OpenDashPlugin
                     {
                         entry.HeldBack = true;
                         log.Warn(folder + " has changed since openDash wrote it, so it was left alone. "
-                            + "Reinstall it deliberately to replace what is there.");
+                            + "Press Reinstall a second time to replace it; the copy you have is kept.");
                         return entry;
                     }
                     var replacingAuthoredWork = entry.Edited;
