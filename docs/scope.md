@@ -169,9 +169,12 @@ screen with idle content is a real gap and is XOR-62; it is a refusal today rath
 
 **Licensing, activation or accounts.** openDash is MIT and there is nothing to unlock.
 
-**Telemetry about the user.** Nothing leaves the user's machine. The update check contemplated
-by XOR-29 and XOR-31 is an exception that has to be argued for in its own decision record,
-stating exactly what is sent, and it has to be possible to switch off.
+**Telemetry about the user.** Nothing about the user leaves their machine: no identifier, no
+installation id, no usage counting, no error reporting. The one exception is the update check, and
+it is argued for in [ADR 0012](decisions/0012-update-checks.md), which states in full what is sent.
+What is sent is an anonymous request to GitHub asking what the newest release is, carrying the
+user's IP address, which reaches GitHub and not us, and a `User-Agent` naming the product. It can
+be switched off, and switching it off means nothing is fetched at all.
 
 **Copying Lovely's visual design.** Lovely's licence forbids reuse of its UI design. openDash's
 design is independently derived: do not copy its layouts, and do not use its screenshots in any
@@ -183,7 +186,7 @@ audited.
 
 ## What the MVP refused and what reversed it
 
-The MVP scope listed nine things as explicitly out of scope. Five of them have since been built,
+The MVP scope listed nine things as explicitly out of scope. Six of them have since been reversed,
 and each reversal is recorded here so that a reader of the old document is not misled.
 
 | The MVP refused | Reversed by | What is true now |
@@ -193,14 +196,14 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Round DDUs | XOR-6 | 480 and 800 round faces ship |
 | Phone and tablet layouts | XOR-8 | Two companion packages ship |
 | Page navigation | XOR-8, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
+| Network update checks | XOR-29, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
 
-Four of the nine still stand. Each is restated above with the record that would have to move it:
+Three of the nine still stand. Each is restated above with the record that would have to move it:
 
 | Still refused | What would have to happen first |
 |---|---|
 | Theming and colour customisation | ADR 0011, and this line moving with it. The Personalisation project is unmergeable until it does |
 | Idle and pit screens | XOR-62 and XOR-53, behind the same record |
-| Network update checks | ADR 0012, stating exactly what is sent and how it is switched off |
 | Computed telemetry of our own | ADR 0009, owed before zones B and C |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
