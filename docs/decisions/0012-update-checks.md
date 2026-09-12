@@ -51,6 +51,23 @@ is compared ordinally rather than numerically, so `0.2.0-rc10` is reported as ol
 `0.2.0-rc2`. Pre-release tags must therefore be cut in the dotted form `rc.10`, or that comparison
 fixed, before an eleventh candidate exists.
 
+**The repository has to be public, and now is.** This was measured rather than assumed, after an
+anonymous request returned 404 while an authenticated one returned the releases: `xorob0/OpenDash`
+was private. A shipped plugin can never carry a credential, so the check is inert against a private
+repository, and so is the README's instruction to download from the releases page. The repository
+was made public on 2026-09-12, and the whole path was then confirmed anonymously: the list endpoint
+answers in about a third of a second with roughly 55 KB for two releases, and an asset downloads in
+full.
+
+**Two details of the release assets that an implementation will otherwise get wrong.** GitHub
+rewrites every space in an asset name to a period on upload, so `openDash Pit wall
+portrait.simhubdash` is published as `openDash.Pit.wall.portrait.simhubdash`. Mapping a package
+folder to its asset is therefore a forward substitution and is unambiguous; reversing it is not, so
+the lookup only ever goes forwards. The folder name *inside* the zip keeps its spaces, so what the
+installer reads out of the package is unaffected. Moreover `browser_download_url` answers 302 to a
+signed URL on another host that expires within the hour, which means an asset has to be fetched
+promptly after the listing that named it rather than from a URL kept between runs.
+
 **net48 inside SimHub constrains how the request may be made.** `api.github.com` answers 403 to a
 request with no `User-Agent`, and none of the available clients sends one by default.
 `ServicePointManager.SecurityProtocol` is process-wide and shared with SimHub and every other

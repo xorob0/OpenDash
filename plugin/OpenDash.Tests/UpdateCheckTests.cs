@@ -1,0 +1,165 @@
+// UpdateCheckTests.cs: the decisions an update check makes. Each of these is a commitment ADR 0012 makes in prose,
+// so each is pinned here: the setting is read before anything is built, a candidate is offered only to someone
+// already running one, and an answer that could not be read never reports "up to date".
+using System;
+using System.Collections.Generic;
+using Xunit;
+
+namespace OpenDashPlugin.Tests
+{
+    public class UpdateCheckTests
+    {
+        private static readonly DateTime Now = new DateTime(2026, 9, 12, 12, 0, 0, DateTimeKind.Utc);
+
+        private static ReleaseInfo Release(string tag, bool preRelease = false, bool draft = false) =>
+            new ReleaseInfo { Tag = tag, PreRelease = preRelease, Draft = draft, Notes = "## What's Changed\n* something by @someone", Url = "https://example.invalid/" + tag };
+
+        // ShouldCheck
+
+        [Fact]
+        public void The_setting_is_read_before_anything_is_built()
+        {
+            // Off means nothing is fetched at all, which is the commitment. Even a button press yields false,
+            // because the panel does not offer the button when the setting is off.
+            Assert.False(UpdateCheck.ShouldCheck(false, 0, Now, manual: false));
+            Assert.False(UpdateCheck.ShouldCheck(false, 0, Now, manual: true));
+        }
+
+        [Fact]
+        public void A_first_run_checks_and_a_second_within_the_day_does_not()
+        {
+            Assert.True(UpdateCheck.ShouldCheck(true, 0, Now, manual: false));
+
+            var anHourAgo = Now.AddHours(-1).Ticks;
+            Assert.False(UpdateCheck.ShouldCheck(true, anHourAgo, Now, manual: false));
+
+            var yesterday = Now.AddHours(-24).Ticks;
+            Assert.True(UpdateCheck.ShouldCheck(true, yesterday, Now, manual: false));
+        }
+
+        [Fact]
+        public void A_person_who_presses_the_button_is_not_made_to_wait_a_day()
+        {
+            Assert.True(UpdateCheck.ShouldCheck(true, Now.AddMinutes(-1).Ticks, Now, manual: true));
+        }
+
+        [Fact]
+        public void A_clock_that_went_backwards_does_not_silence_the_check_for_ever()
+        {
+            // Without this, a machine whose clock was wrong once never checks again.
+            var future = Now.AddYears(5).Ticks;
+            Assert.True(UpdateCheck.ShouldCheck(true, future, Now, manual: false));
+        }
+
+        // ComparableInstalled
+
+        [Fact]
+        public void An_unreadable_installed_version_falls_back_rather_than_posing_as_stable()
+        {
+            // "(unknown version)" parses as 0.0.0 with no pre-release part, so left alone it looks like a stable
+            // release and its owner would never be offered a candidate.
+            Assert.Equal("0.1.0-rc.2", UpdateCheck.ComparableInstalled(Versioning.UnknownVersion, "0.1.0-rc.2"));
+            Assert.Equal("0.1.0-rc.2", UpdateCheck.ComparableInstalled(null, "0.1.0-rc.2"));
+            Assert.Equal("0.2.0", UpdateCheck.ComparableInstalled("0.2.0", "0.1.0-rc.2"));
+            Assert.Null(UpdateCheck.ComparableInstalled(null, null));
+        }
+
+        // IsPreRelease
+
+        [Theory]
+        [InlineData("0.1.0-rc.2", true)]
+        [InlineData("v0.1.0-rc.1", true)]
+        [InlineData("0.1.0", false)]
+        [InlineData("v1.0.0", false)]
+        [InlineData("0.1.0-", false)] // an empty suffix is the release, which is what VersionCompare does too
+        [InlineData("", false)]
+        [InlineData(null, false)]
+        public void A_pre_release_is_the_dash_and_nothing_else(string version, bool expected)
+        {
+            Assert.Equal(expected, UpdateCheck.IsPreRelease(version));
+        }
+
+        // ReleaseFor
+
+        [Fact]
+        public void A_user_on_a_stable_version_is_not_offered_a_candidate()
+        {
+            var releases = new[] { Release("v0.2.0-rc.1", preRelease: true), Release("v0.1.0") };
+            Assert.Null(UpdateCheck.ReleaseFor(releases, "0.1.0"));
+        }
+
+        [Fact]
+        public void A_user_already_on_a_candidate_is_offered_the_next_one()
+        {
+            var releases = new[] { Release("v0.2.0-rc.1", preRelease: true), Release("v0.1.0-rc.2", preRelease: true) };
+            Assert.Equal("v0.2.0-rc.1", UpdateCheck.ReleaseFor(releases, "0.1.0-rc.1").Tag);
+        }
+
+        [Fact]
+        public void A_stable_release_is_offered_to_everyone()
+        {
+            var releases = new[] { Release("v0.2.0"), Release("v0.1.0-rc.2", preRelease: true) };
+            Assert.Equal("v0.2.0", UpdateCheck.ReleaseFor(releases, "0.1.0-rc.2").Tag);
+            Assert.Equal("v0.2.0", UpdateCheck.ReleaseFor(releases, "0.1.0").Tag);
+        }
+
+        [Fact]
+        public void A_draft_is_never_offered_and_neither_is_something_older()
+        {
+            Assert.Null(UpdateCheck.ReleaseFor(new[] { Release("v0.9.0", draft: true) }, "0.1.0"));
+            Assert.Null(UpdateCheck.ReleaseFor(new[] { Release("v0.1.0") }, "0.2.0"));
+            Assert.Null(UpdateCheck.ReleaseFor(new[] { Release("v0.1.0") }, "0.1.0"));
+        }
+
+        [Fact]
+        public void The_newest_offer_wins_whatever_order_the_feed_is_in()
+        {
+            var releases = new[] { Release("v0.2.0"), Release("v0.4.0"), Release("v0.3.0") };
+            Assert.Equal("v0.4.0", UpdateCheck.ReleaseFor(releases, "0.1.0").Tag);
+        }
+
+        // Conclude
+
+        [Fact]
+        public void An_answer_that_could_not_be_read_is_never_up_to_date()
+        {
+            // The one quiet wrong outcome this feature can produce. ReleaseFeed.TryParse turns GitHub's own error
+            // body into no releases, so "nothing came back" must not read as "nothing newer exists".
+            foreach (var empty in new IReadOnlyList<ReleaseInfo>[] { null, new ReleaseInfo[0] })
+            {
+                var status = UpdateCheck.Conclude("0.1.0", empty, manual: true);
+                Assert.Equal(UpdateState.Unreachable, status.State);
+                Assert.Equal("0.1.0", status.InstalledVersion);
+            }
+        }
+
+        [Fact]
+        public void Nothing_newer_is_up_to_date_and_something_newer_is_an_offer()
+        {
+            var current = UpdateCheck.Conclude("0.2.0", new[] { Release("v0.2.0") }, manual: true);
+            Assert.Equal(UpdateState.UpToDate, current.State);
+            Assert.Null(current.LatestVersion);
+
+            var offer = UpdateCheck.Conclude("0.1.0", new[] { Release("v0.2.0") }, manual: false);
+            Assert.Equal(UpdateState.UpdateAvailable, offer.State);
+            Assert.Equal("0.2.0", offer.LatestVersion);
+            Assert.Equal("https://example.invalid/v0.2.0", offer.Url);
+        }
+
+        // What the panel shows
+
+        [Fact]
+        public void A_background_check_that_finds_nothing_says_nothing()
+        {
+            Assert.False(UpdateCheck.Conclude("0.2.0", new[] { Release("v0.2.0") }, manual: false).IsVisible);
+            Assert.False(UpdateCheck.Conclude("0.2.0", null, manual: false).IsVisible);
+
+            // A person who asked is answered, whatever the answer is.
+            Assert.True(UpdateCheck.Conclude("0.2.0", new[] { Release("v0.2.0") }, manual: true).IsVisible);
+            Assert.True(UpdateCheck.Conclude("0.2.0", null, manual: true).IsVisible);
+
+            // An offer is always worth showing, asked for or not.
+            Assert.True(UpdateCheck.Conclude("0.1.0", new[] { Release("v0.2.0") }, manual: false).IsVisible);
+        }
+    }
+}

@@ -26,6 +26,8 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <!-- DataContractJsonSerializer, for reading the release listing; see ReleaseFeed.cs. -->
+    <Reference Include="System.Runtime.Serialization" />
   </ItemGroup>
 
   <!-- SimHub reference assemblies, committed under plugin/lib. Private=false: SimHub ships them. -->
