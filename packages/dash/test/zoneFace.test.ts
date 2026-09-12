@@ -288,6 +288,44 @@ describe('what the first photograph of the face showed', () => {
 });
 
 /**
+ * Band D is the same three blocks as the bar, on every face that draws its corners: the left
+ * corner, the page rank, the right corner. The bar got this test when BIAS was found sitting on
+ * POSITION; the band never did, and page D6 Sectors was six pixels into the DRS lamp at 1280.
+ */
+describe('band D keeps its rank clear of its corners', () => {
+  for (const { face, built } of BUILT) {
+    if (!face.bandCorners) continue;
+    const band = face.zones.band;
+    const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
+
+    for (const screen of dashboard.screens) {
+      test(`${face.folder} draws no field of ${screen.name} over a corner block`, () => {
+        const items = [...walkItems(screen.items)].filter((i): i is TextItem => i.kind === 'text');
+        const extent = (of: (name: string) => boolean): { left: number; right: number } | null => {
+          const group = items.filter((i) => of(i.name));
+          if (group.length === 0) return null;
+          return { left: Math.min(...group.map((i) => i.rect.left)), right: Math.max(...group.map((i) => i.rect.left + i.rect.width)) };
+        };
+        // A corner item is named "<page>.corner.<field>"; everything else on the screen is the rank.
+        const corner = (name: string): boolean => name.includes('.corner.');
+        const leftNames = ['incidents', 'trackState'];
+        const left = extent((n) => corner(n) && leftNames.some((f) => n.includes(`.corner.${f}`)));
+        const right = extent((n) => corner(n) && !leftNames.some((f) => n.includes(`.corner.${f}`)));
+        const rank = extent((n) => !corner(n));
+
+        expect({ screen: screen.name, left: left !== null, right: right !== null }).toMatchObject({ left: true, right: true });
+        if (rank) {
+          expect({ screen: screen.name, clearOfLeft: rank.left >= left!.right }).toMatchObject({ clearOfLeft: true });
+          expect({ screen: screen.name, clearOfRight: rank.right <= right!.left }).toMatchObject({ clearOfRight: true });
+          expect(rank.left).toBeGreaterThanOrEqual(0);
+          expect(rank.right).toBeLessThanOrEqual(band.width);
+        }
+      });
+    }
+  }
+});
+
+/**
  * The bar is three blocks on one line -- the left end, the car settings strip, the right end -- and
  * every text-fits check in the suite is satisfied by three blocks drawn on top of one another. At
  * 850 by 480 they were: BIAS sat on POSITION and ABS on the slash of "3 / 24".

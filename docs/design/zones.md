@@ -285,8 +285,11 @@ track state on the left; DRS, push to pass, spotter lamps and both clocks on the
 drawn at 1920 × 480, 1280 × 480, 1280 × 400 and 1280 × 720, and absent at 850 × 480, 800 × 286 and
 600 × 686. The threshold is those drawings, not a round number.
 
-**The field count follows the width** — seven at 1920, five at 850 — with nothing spread to fill.
-The rank is packed and centred while the corners take the ends.
+**A page sheds its last field before the rank overflows**, with nothing spread to fill. The rank is
+packed and centred in what the corners leave, never in the whole band. No shipped page reaches that
+limit: the widest catalogue entry holds five fields, and five fit at 600 × 56, which is the
+narrowest band. The shedding rule is therefore a guarantee about a page that grows, not a
+description of one that exists.
 
 **A flag takes the band over.** While a flag is out, the flag has the band, because an alert
 outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so the same sixty
