@@ -306,12 +306,43 @@ writes one without the dialog.
 
 ### Images and fonts
 
-Modern exports keep image bytes out of the `.djson`. `Images` is a list of descriptors (`Name`,
-`Extension`, `Width`, `Height`, `Length`, `MD5`) and the bytes live in the `.ressources` zip,
-one file per image. The older ETS2 sample inlined them as base64, where they were 87.6 percent
-of the file. The MVP design uses no images at all, so the generator writes an empty `Images`
-list and no `.ressources` file; whether SimHub imports a package without that sidecar is item 7
-of the spike.
+Modern exports keep image bytes out of the `.djson`. The older ETS2 sample inlined them as base64,
+where they were 87.6 percent of the file, and nothing SimHub ships today does that.
+
+Read off `DashTemplates/AIM MXS`, which SimHub itself installs, on 2026-09-12. Eighteen of the
+dashboards SimHub ships carry a non-empty `Images` list and every one of them has a `.ressources`
+sidecar beside it.
+
+A descriptor carries eight fields, two more than were recorded here before:
+
+```json
+{"Name":"Aim_MXS_Strada_Car_Dash_Display_with_Icons_1024x1024","Extension":".png",
+ "Modified":false,"Optimized":false,"Width":811,"Height":807,
+ "Length":194362,"MD5":"fa70de0750a27598b4ccdb3230a8d44f"}
+```
+
+`Length` is the uncompressed byte count and `MD5` is of those same bytes. `Width` and `Height` are
+the image's own pixels, not the box it is drawn in.
+
+The sidecar is an ordinary zip with one entry per image at its root, named `<Name><Extension>`:
+
+```
+AIM MXS.djson.ressources    Aim_MXS_Strada_Car_Dash_Display_with_Icons_1024x1024.png
+```
+
+An `ImageItem` references a descriptor by name through `Image`:
+
+```json
+{"$type":"SimHub.Plugins.OutputPlugins.GraphicalDash.Models.ImageItem, SimHub.Plugins",
+ "Image":"Aim_MXS_Strada_Car_Dash_Display_with_Icons_1024x1024",
+ "AutoSize":true,"AutoSizeScale":2.5,"BackgroundColor":"#00FFFFFF",
+ "Left":-360.0,"Top":-580.0,"Width":2027.5,"Height":2017.5,
+ "Opacity":20.0,"Visible":false,"IsFreezed":true,"Name":"ImageItem0"}
+```
+
+`AutoSize` with `AutoSizeScale` sizes the item from the image rather than from `Width` and
+`Height`; openDash wants the opposite, a fixed box, so it writes `AutoSize` false and sets both.
+`Opacity` is a percentage here rather than the 0 to 1 the other items use.
 
 Fonts are referenced by family name in `Font`, with `FontWeight` taking WPF weight names such
 as `Normal`, `SemiBold`, `Bold` and `Black`, and the files are shipped in `_SHFonts/`. Blumlaut
