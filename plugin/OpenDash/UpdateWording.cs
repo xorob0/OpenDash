@@ -57,9 +57,11 @@ namespace OpenDashPlugin
 
         /// <summary>The release notes, cut to something that fits beside a button.</summary>
         /// <remarks>
-        /// The body is GitHub's generated summary rather than CHANGELOG.md, so it opens with a heading and a list
-        /// of pull requests. The heading is dropped and the first real line is shown; the whole of it is a click
-        /// away on the release page, which is what the link is for.
+        /// The body is the release's section of CHANGELOG.md (XOR-25), which opens with a sentence of prose and
+        /// then groups its changes under headings. A leading heading is dropped and the first real line is shown,
+        /// which is that opening sentence; the whole of it is a click away on the release page, which is what the
+        /// link is for. A release cut before that change carries GitHub's generated summary instead, and the same
+        /// rule turns it into the first pull request title, which is why the heading skip stays.
         /// </remarks>
         public static string Summarise(string notes, int maxLength = 140)
         {
