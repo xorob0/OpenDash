@@ -42,8 +42,9 @@ changed.
 - **Dashboard only.** Double-click the `.simhubdash` for your screen; SimHub imports it. You get
   the default layout and the default modes, and no settings page. Nothing else is needed, so this
   is the shortest way to see openDash on a display.
-- **Dashboard and plugin.** `OpenDash-plugin.zip` is the only file to download, since every
-  dashboard is embedded in it. Close SimHub, unzip the archive and copy `OpenDash.dll` into
+- **Dashboard and plugin.** `OpenDash-plugin.zip` is the only file to download, since the fourteen
+  dashboards it installs are embedded in it. Close SimHub, unzip the archive and copy `OpenDash.dll`
+  into
   SimHub's install folder, the one holding `SimHubWPF.exe`, rather than into a subfolder of it.
   Unblock the file, then start SimHub and accept the new plugin. The plugin extracts all fourteen
   dashboards and adds an "openDash" page to the left menu. The full procedure, the table of sizes
