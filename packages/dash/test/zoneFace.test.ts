@@ -7,7 +7,7 @@
  * be a second opinion about the design rather than a check on the code.
  */
 import { describe, expect, test } from 'bun:test';
-import { BAND_D_PAGES, FACE_ZONE_LETTERS, MODULE_COUNT, ZONE_A_PAGES, pagesForZone, zoneProperties } from '../src/contract.ts';
+import { BAND_D_PAGES, FACE_ZONE_LETTERS, MODULE_COUNT, ZONE_A_PAGES, facePrefix, pagesForZone, zoneProperties } from '../src/contract.ts';
 import { validatePackage, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
@@ -85,7 +85,7 @@ describe('every zone cycles its own catalogue', () => {
       const widget = widgets.find((w) => w.name === `zone${zone}`)!;
       const formula = widget.bindings?.InitialScreenIndex?.formula;
       expect({ zone, bound: formula !== undefined }).toMatchObject({ bound: true });
-      expect(String(formula)).toContain(`${PROPERTY_PREFIX}.Zone${zone}`);
+      expect(String(formula)).toContain(`${PROPERTY_PREFIX}.${facePrefix(reference.face)}Zone${zone}`);
     }
   });
 
@@ -121,8 +121,12 @@ describe('the face reads what it declares and nothing else', () => {
     const used = new Set(
       [reference.built.main, ...reference.built.zones].flatMap((d) => propertiesIn(d)).filter((p) => p.startsWith(`${PROPERTY_PREFIX}.`)),
     );
-    for (const zone of FACE_ZONE_LETTERS) expect(used).toContain(`${PROPERTY_PREFIX}.Zone${zone}`);
-    for (const p of zoneProperties().filter((n) => n.includes('.Bar'))) expect(used).toContain(p);
+    for (const zone of FACE_ZONE_LETTERS) expect(used).toContain(`${PROPERTY_PREFIX}.${facePrefix(reference.face)}Zone${zone}`);
+    for (const p of zoneProperties().filter((n) => n.includes(`${facePrefix(reference.face)}Bar`))) expect(used).toContain(p);
+    // And nothing belonging to another face, which is the point of the prefix: this package must
+    // not move when somebody configures the 850 beside it.
+    const others = zoneProperties().filter((n) => !n.includes(facePrefix(reference.face)));
+    expect([...used].filter((p) => others.includes(p))).toEqual([]);
     // And no slot, because a zone is not a slot.
     expect([...used].some((p) => p.includes('.Slot'))).toBe(false);
   });

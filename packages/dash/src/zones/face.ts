@@ -10,7 +10,7 @@
  * read it off an artboard; see `docs/design/zones.md`.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect } from '../generator.ts';
-import { FACE_ZONE_LETTERS, type FaceZone } from '../contract.ts';
+import { FACE_ZONE_LETTERS, type FaceSize, type FaceZone } from '../contract.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
@@ -25,6 +25,9 @@ import { zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
 import { zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
 export const FACE_SCREEN_NAME = 'Main';
+
+/** The face a layout is, which is what names its settings. */
+export const sizeOf = (layout: ZoneLayout): FaceSize => ({ width: layout.width, height: layout.height });
 
 /** The zones a face embeds, each with the size its dashboard is drawn for. */
 export const zonesOf = (layout: ZoneLayout): { zone: FaceZone; size: { width: number; height: number }; corners: boolean }[] =>
@@ -44,7 +47,7 @@ export function faceItems(layout: ZoneLayout): Item[] {
 
   if (z.bar) {
     items.push(band('bar.ground', z.bar, ds.purpose.block.well));
-    items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd }));
+    items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd, face: sizeOf(layout) }));
   }
 
   // One pixel between the zones, because a rule is the whole boundary where a block would be too
@@ -57,7 +60,7 @@ export function faceItems(layout: ZoneLayout): Item[] {
   }
 
   for (const zone of FACE_ZONE_LETTERS) {
-    items.push(zoneWidget(`zone${zone}`, zone, rectOf(layout, zone)));
+    items.push(zoneWidget(`zone${zone}`, sizeOf(layout), zone, rectOf(layout, zone)));
     items.push(...zoneLetter(zone, rectOf(layout, zone)));
   }
 
