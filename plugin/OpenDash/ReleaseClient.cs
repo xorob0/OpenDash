@@ -24,7 +24,14 @@ namespace OpenDashPlugin
         public static FetchResult Failed(string reason) => new FetchResult { Ok = false, Reason = reason };
     }
 
-    public sealed class ReleaseClient
+    /// <summary>Fetching, behind an interface so that what decides can be tested without a socket.</summary>
+    public interface IReleaseSource
+    {
+        FetchResult GetString(string url);
+        FetchResult GetBytes(string url);
+    }
+
+    public sealed class ReleaseClient : IReleaseSource
     {
         /// <summary>Bounded so that a socket that never answers cannot hold a background thread indefinitely.</summary>
         public const int TimeoutMilliseconds = 15000;
