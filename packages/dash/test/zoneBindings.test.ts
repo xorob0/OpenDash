@@ -18,7 +18,7 @@
  * plugin action rather than something a dashboard reads.
  */
 import { describe, expect, test } from 'bun:test';
-import { FACE_ZONE_LETTERS, PROPERTY_PREFIX, declaredProperties, pagesForZone } from '../src/contract.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, PROPERTY_PREFIX, declaredProperties, facePrefix, facePropertyNames, pagesForZone } from '../src/contract.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { buildScreenPackage, SCREEN_PACKAGES } from '../src/screens/index.ts';
 import { validatePackage, type DashPackage, type WidgetItem } from '../src/generator.ts';
@@ -116,6 +116,34 @@ describe('the guards bite', () => {
     const screen = pkg.dashboards[0]!.screens[0]!;
     screen.enabledExpression = "left([DataCorePlugin.GameData.CarModel], 4) = 'x'";
     expect(errorCodes(pkg)).toContain('expression/arity');
+  });
+
+  test('a face reading the screen beside it fails the build, though the name is declared', () => {
+    // The one a declared-property check cannot catch: every face's group is declared, so reading a
+    // neighbour's validates cleanly and then moves when somebody configures the other screen.
+    const face = ZONE_FACES[0]!;
+    const built = buildZoneFace(face, OPTS);
+    const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+    const widget = widgetsOf(pkg)[0]!;
+    const other = ZONE_FACES[3]!;
+    widget.bindings = { ...widget.bindings, InitialScreenIndex: { mode: 'formula', formula: `isnull([${PROPERTY_PREFIX}.${facePrefix(other)}ZoneA], 0)` } };
+
+    const own = { width: face.width, height: face.height };
+    const foreign = FACE_SIZES.filter((f) => f.width !== own.width || f.height !== own.height).flatMap(facePropertyNames);
+    const codes = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreign }).errors.map((e) => e.code);
+    expect(codes).toContain('property/another-screens');
+    // And it is not merely undeclared: the name exists, which is what makes the rule necessary.
+    expect(codes).not.toContain('property/undeclared');
+  });
+
+  test('every built package reads only its own screen', () => {
+    for (const face of ZONE_FACES) {
+      const built = buildZoneFace(face, OPTS);
+      const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+      const foreign = FACE_SIZES.filter((f) => f.width !== face.width || f.height !== face.height).flatMap(facePropertyNames);
+      const result = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreign });
+      expect({ folder: face.folder, errors: result.errors }).toMatchObject({ errors: [] });
+    }
   });
 
   test('and none of those codes appears in a package nobody broke', () => {

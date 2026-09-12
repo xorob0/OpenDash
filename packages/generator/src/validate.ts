@@ -21,6 +21,15 @@ export interface ValidateOptions {
   declaredProperties: string[];
   /** Property prefix, e.g. `OpenDash`. */
   propertyPrefix: string;
+  /**
+   * Declared properties this package may not read, with or without the prefix.
+   *
+   * A screen owns its settings, so a face must read its own group and no other's. Being declared is
+   * not enough: every face's properties are declared, and a package reading a neighbour's would
+   * validate cleanly and then move when somebody configured the screen beside it. There is no way
+   * to notice that except by looking at two dashboards at once on a rig that has two.
+   */
+  foreignProperties?: string[];
 }
 
 export interface ValidationIssue {
@@ -145,14 +154,16 @@ const checkId = (ctx: Context, id: string, explicit: boolean, path: string): voi
 
 const checkProperties = (ctx: Context, expression: string, path: string): void => {
   const prefix = `${ctx.opts.propertyPrefix}.`;
-  const declared = new Set(
-    ctx.opts.declaredProperties.map((p) => (p.startsWith(prefix) ? p.slice(prefix.length) : p)),
-  );
+  const bare = (p: string): string => (p.startsWith(prefix) ? p.slice(prefix.length) : p);
+  const declared = new Set(ctx.opts.declaredProperties.map(bare));
+  const foreign = new Set((ctx.opts.foreignProperties ?? []).map(bare));
   for (const ref of propertyReferences(expression)) {
     if (!ref.startsWith(prefix)) continue;
     const name = ref.slice(prefix.length);
     if (!declared.has(name)) {
       ctx.c.error('property/undeclared', path, `[${ref}] is not a declared ${ctx.opts.propertyPrefix} property`);
+    } else if (foreign.has(name)) {
+      ctx.c.error('property/another-screens', path, `[${ref}] belongs to another screen; this package may only read its own`);
     }
   }
 };
