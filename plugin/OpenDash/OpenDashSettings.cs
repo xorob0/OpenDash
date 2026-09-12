@@ -32,8 +32,11 @@ namespace OpenDashPlugin
             var current = settings();
             if (current == null || string.IsNullOrEmpty(folderName)) return;
             if (current.FolderFingerprints == null) current.FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (fingerprint == null) current.FolderFingerprints.Remove(folderName);
-            else current.FolderFingerprints[folderName] = fingerprint;
+            // A fingerprint that could not be computed is not a reason to forget the one we had. Erasing it turned
+            // "cannot vouch for this folder" into "this folder is not ours", which is the opposite bias, and the
+            // adoption branch would then have recorded whatever was on disk as openDash's own work.
+            if (string.IsNullOrWhiteSpace(fingerprint)) return;
+            current.FolderFingerprints[folderName] = fingerprint;
             save?.Invoke();
         }
     }

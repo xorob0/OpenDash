@@ -107,6 +107,9 @@ namespace OpenDashPlugin
         /// <summary>True when this package was left alone because it was edited rather than because it was current.</summary>
         public bool HeldBack { get; set; }
 
+        /// <summary>Where the copy of what was there went, when this run replaced something. Null otherwise.</summary>
+        public string KeptCopy { get; set; }
+
         /// <summary>"openDash 1280x480: Up to date", with the error appended when there is one.</summary>
         public string Describe()
         {
@@ -285,10 +288,12 @@ namespace OpenDashPlugin
                             + "Reinstall it deliberately to replace what is there.");
                         return entry;
                     }
+                    var replacingAuthoredWork = entry.Edited;
                     using (var package = packages.Open(name))
                     {
-                        var result = PackageExtractor.Install(package, SimHubRoot, log);
+                        var result = PackageExtractor.Install(package, SimHubRoot, log, replacingAuthoredWork);
                         log.Info("Fonts copied: " + result.FontsCopied);
+                        entry.KeptCopy = result.BackupPath;
                     }
                     entry.Extracted = true;
                     entry.InstalledVersion = ReadInstalled(folder);

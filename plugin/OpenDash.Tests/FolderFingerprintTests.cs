@@ -92,6 +92,50 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(recorded, FolderFingerprint.Of(Path.Combine(elsewhere, "openDash")));
         }
 
+        /// <summary>
+        /// A fingerprint that could not be computed must not erase the one we had. Erasing turned "cannot vouch for
+        /// this folder" into "this folder is not ours", and the adoption branch would then have recorded whatever was
+        /// on disk, including somebody's edit, as openDash's own work.
+        /// </summary>
+        [Fact]
+        public void A_fingerprint_that_could_not_be_computed_does_not_erase_the_one_we_had()
+        {
+            var settings = new OpenDashSettings();
+            var record = new SettingsFolderRecord(() => settings);
+            record.Set("openDash", "sha256:abc");
+
+            record.Set("openDash", null);
+            Assert.Equal("sha256:abc", record.Get("openDash"));
+
+            record.Set("openDash", "   ");
+            Assert.Equal("sha256:abc", record.Get("openDash"));
+
+            record.Set("openDash", "sha256:def");
+            Assert.Equal("sha256:def", record.Get("openDash"));
+        }
+
+        /// <summary>The record that actually ships, rather than the one the other tests substitute.</summary>
+        [Fact]
+        public void The_record_the_plugin_uses_reads_and_writes_the_settings_and_saves()
+        {
+            var settings = new OpenDashSettings();
+            var saves = 0;
+            var record = new SettingsFolderRecord(() => settings, () => saves++);
+
+            Assert.Null(record.Get("openDash"));
+            record.Set("openDash", "sha256:abc");
+
+            Assert.Equal("sha256:abc", record.Get("openDash"));
+            Assert.Equal("sha256:abc", settings.FolderFingerprints["openDash"]);
+            Assert.Equal(1, saves);
+
+            // Folder names come from a zip and from a filesystem, so the lookup does not depend on their case.
+            Assert.Equal("sha256:abc", record.Get("OPENDASH"));
+            Assert.Null(record.Get(null));
+            record.Set(null, "sha256:x");
+            Assert.Single(settings.FolderFingerprints);
+        }
+
         [Fact]
         public void What_cannot_be_proved_untouched_is_treated_as_touched()
         {
