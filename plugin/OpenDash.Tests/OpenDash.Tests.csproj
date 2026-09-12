@@ -26,6 +26,7 @@
     <Compile Include="../OpenDash/UpdateWording.cs" Link="Plugin/UpdateWording.cs" />
     <Compile Include="../OpenDash/ReleaseClient.cs" Link="Plugin/ReleaseClient.cs" />
     <Compile Include="../OpenDash/FolderFingerprint.cs" Link="Plugin/FolderFingerprint.cs" />
+    <Compile Include="../OpenDash/UpdatePlan.cs" Link="Plugin/UpdatePlan.cs" />
   </ItemGroup>
 
   <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;
