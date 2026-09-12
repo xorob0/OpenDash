@@ -6,6 +6,7 @@
  * Pit time counts up while the car is in the lane and shows the last stop's duration otherwise, so
  * the field is useful both during a stop and after it.
  */
+import type { Item } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withBindings } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
@@ -37,6 +38,28 @@ export const pitView = defineModule('pitView', (ctx) => {
   const toggleHeight = Math.max(marker, d.labelSm);
   const gaugeHeight = d.bar;
   const refuel = pitRefuelLitres();
+
+  /** Each toggle with the width its label really takes, so the wrap below can be measured. */
+  const measured = TOGGLES.map((t) => ({ ...t, textWidth: Math.ceil(measureText('BarlowMedium', t.text, d.labelSm)) + 2 }));
+  /** The toggles wrapped to the frame, in the order the black box lists them. */
+  const toggleRows: (typeof measured)[] = [];
+  {
+    let row: typeof measured = [];
+    let used = 0;
+    for (const toggle of measured) {
+      const w = 16 + toggle.textWidth;
+      const needed = row.length === 0 ? w : used + d.gapX / 2 + w;
+      if (row.length > 0 && needed > ctx.frame.width) {
+        toggleRows.push(row);
+        row = [toggle];
+        used = w;
+      } else {
+        row.push(toggle);
+        used = needed;
+      }
+    }
+    if (row.length > 0) toggleRows.push(row);
+  }
   return stack(
     ctx.frame,
     [
@@ -60,26 +83,34 @@ export const pitView = defineModule('pitView', (ctx) => {
         ],
         ctx,
       ),
-      blockRow(toggleHeight, (bottom) => {
-        const top = bottom - toggleHeight;
-        const items = [];
-        let x = ctx.frame.left;
-        for (const toggle of TOGGLES) {
-          const on = pitServiceFlag(toggle.bit);
-          const textWidth = Math.ceil(measureText('BarlowMedium', toggle.text, d.labelSm)) + 2;
-          items.push(
-            {
-              ...band(`${ctx.prefix}${toggle.id}.on`, rect(x, top + (toggleHeight - marker) / 2, marker, marker), ds.color.text.primary),
-              ...withBindings({ Visible: on }),
-            },
-            {
-              ...band(`${ctx.prefix}${toggle.id}.off`, rect(x, top + toggleHeight / 2 - 1, 12, 2), ds.color.text.dim),
-              ...withBindings({ Visible: not(on) }),
-            },
-            label(`${ctx.prefix}${toggle.id}.label`, toggle.text, x + 16, top + (toggleHeight - d.labelSm) / 2, textWidth, { size: d.labelSm }),
-          );
-          x += 16 + textWidth + d.gapX / 2;
-        }
+      // The six toggles wrap rather than running off the right edge. They used to be laid out on
+      // one line whatever the width, which is fine at 600 and puts TEAR-OFF 8 px past the edge at
+      // 360 -- where WPF clips it to "TEAR-OF" and the row reads as a rendering fault. The wrap is
+      // in importance order, so a box too short for two lines loses the tear-off and keeps the
+      // corners, which is the right way round.
+      blockRow(toggleRows.length * toggleHeight + Math.max(0, toggleRows.length - 1) * d.fieldGap, (bottom) => {
+        const blockHeight = toggleRows.length * toggleHeight + Math.max(0, toggleRows.length - 1) * d.fieldGap;
+        const top = bottom - blockHeight;
+        const items: Item[] = [];
+        toggleRows.forEach((row, rowIndex) => {
+          const rowTop = top + rowIndex * (toggleHeight + d.fieldGap);
+          let x = ctx.frame.left;
+          for (const toggle of row) {
+            const on = pitServiceFlag(toggle.bit);
+            items.push(
+              {
+                ...band(`${ctx.prefix}${toggle.id}.on`, rect(x, rowTop + (toggleHeight - marker) / 2, marker, marker), ds.color.text.primary),
+                ...withBindings({ Visible: on }),
+              },
+              {
+                ...band(`${ctx.prefix}${toggle.id}.off`, rect(x, rowTop + toggleHeight / 2 - 1, 12, 2), ds.color.text.dim),
+                ...withBindings({ Visible: not(on) }),
+              },
+              label(`${ctx.prefix}${toggle.id}.label`, toggle.text, x + 16, rowTop + (toggleHeight - d.labelSm) / 2, toggle.textWidth, { size: d.labelSm }),
+            );
+            x += 16 + toggle.textWidth + d.gapX / 2;
+          }
+        });
         return items;
       }),
       blockRow(gaugeHeight, (bottom) => [

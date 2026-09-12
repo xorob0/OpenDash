@@ -9,19 +9,25 @@ import { LINE_SPACING } from '../src/design/metrics.ts';
 import {
   MODULE_CATALOGUE,
   MODULE_COUNT,
-  WIDE_ZONE_PAGES,
-  ZONE_PAGES,
+  PIT_WALL_WIDE_ZONE_PAGES,
+  PIT_WALL_ZONE_PAGES,
   dashProperties,
   declaredProperties,
   moduleSettingName,
   secondScreen,
   secondScreenProperties,
 } from '../src/contract.ts';
-import { validatePackage, type Dashboard, type Item, type TextItem } from '../src/generator.ts';
+import { validatePackage, type Dashboard, type Item, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
-import { SCREEN_PACKAGES, buildScreenPackage, zoneDashboardName } from '../src/screens/index.ts';
+import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
+import { zoneFrame } from '../src/second/header.ts';
+import { contentRect } from '../src/second/layout.ts';
+import { rect } from '../src/design/geometry.ts';
+import type { Density } from '../src/second/density.ts';
+import type { Rect } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
+import { cellOverruns } from './monoGlyphs.ts';
 import { ds } from '../src/tokens.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -183,7 +189,7 @@ describe('the pit wall', () => {
 
   test('a zone dashboard holds every page of its kind, in the order the plugin lists them', () => {
     for (const dashboard of landscape.pkg.dashboards.slice(1)) {
-      const pages = dashboard.name.startsWith('zones-wide') ? WIDE_ZONE_PAGES : ZONE_PAGES;
+      const pages = dashboard.name.startsWith('zones-wide') ? PIT_WALL_WIDE_ZONE_PAGES : PIT_WALL_ZONE_PAGES;
       expect(dashboard.screens.map((s) => s.name)).toEqual(pages.map((p) => p.id));
     }
   });
@@ -251,19 +257,71 @@ describe('the contract', () => {
   });
 });
 
+describe('a monospaced value only draws glyphs that fit its cell', () => {
+  // Rule 19. `metrics.ts` has said since the cells were cut that "the cell holds every glyph a
+  // value can draw, not only the digits", and nothing enforced it over these packages: the glyph
+  // check in textFit.test.ts covers the faces only, and against a fixed glyph set that `#` was
+  // never in. Thirty-one items drew one anyway, in cells cut for digits, and WPF clipped every
+  // one. The set here is the item's own text, so a value that gains a character nobody measured
+  // fails here rather than on somebody's screen.
+  for (const { def, pkg } of PACKAGES) {
+    test(def.folder, () => {
+      let monospaced = 0;
+      for (const dashboard of pkg.dashboards) {
+        for (const item of textsOf(dashboard)) {
+          if (!item.monospace) continue;
+          monospaced += 1;
+          expect({ item: item.name, overruns: cellOverruns(item) }).toMatchObject({ overruns: [] });
+        }
+      }
+      expect(monospaced).toBeGreaterThan(0);
+    });
+  }
+});
+
+/**
+ * The boxes a module is actually given, derived from the geometry that gives them.
+ *
+ * They used to be written down here as literals, and every one of them had drifted: the companion
+ * page was tested at 802 by 356 and built at 802 by 336, the race zone at 607 by 174 against 607
+ * by 158, the telemetry zone at 607 by 310 against 608 by 294. Every literal was *taller* than the
+ * real box, so the guarantee read stronger than it was — a module could pass and still overflow
+ * what the build hands it. Nothing overflowed, which is why nobody noticed, and the shape model is
+ * about to ask modules to fill their height.
+ */
+export function moduleBoxes(): { name: string; frame: Rect; density: Density }[] {
+  const boxes: { name: string; frame: Rect; density: Density }[] = [];
+  for (const size of COMPANION_SIZES) {
+    boxes.push({ name: `${size.folder} page`, frame: contentRect(companionGeometry(size).module, 'companion'), density: 'companion' });
+  }
+  // One box per distinct zone rectangle the pit wall packages embed, taken from the widgets they
+  // actually place and put through the same frame the zone screen draws.
+  const seen = new Set<string>();
+  for (const { def, pkg } of PACKAGES) {
+    if (def.kind !== 'pitwall') continue;
+    for (const widget of itemsOf(pkg.dashboards[0]!).filter((i): i is WidgetItem => i.kind === 'widget')) {
+      const size = { width: widget.rect.width, height: widget.rect.height };
+      const wide = widget.fileName.startsWith('zones-wide');
+      const key = `${wide ? 'wide' : 'zone'}-${size.width}x${size.height}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', page: 1, pages: 9 });
+      boxes.push({ name: `${def.folder} ${key}`, frame: body, density: wide ? 'wide' : 'zone' });
+    }
+  }
+  return boxes;
+}
+
 describe('every module fits the box it is given', () => {
-  // The boxes a module actually gets: a companion page, a portrait page, the four zone shapes the
-  // pit wall pages carry, and the wide zone. A module that draws outside its box overlaps whatever
-  // the page put next to it, which no snapshot would notice.
-  const BOXES = [
-    { name: 'companion page', frame: { left: 24, top: 72, width: 802, height: 356 }, density: 'companion' as const },
-    { name: 'companion portrait page', frame: { left: 24, top: 72, width: 432, height: 726 }, density: 'companion' as const },
-    { name: 'race zone', frame: { left: 1297, top: 700, width: 607, height: 174 }, density: 'zone' as const },
-    { name: 'tower zone', frame: { left: 897, top: 750, width: 487, height: 328 }, density: 'zone' as const },
-    { name: 'telemetry zone', frame: { left: 1296, top: 92, width: 607, height: 310 }, density: 'zone' as const },
-    { name: 'portrait zone', frame: { left: 16, top: 1060, width: 507, height: 415 }, density: 'zone' as const },
-    { name: 'wide zone', frame: { left: 897, top: 493, width: 1007, height: 227 }, density: 'wide' as const },
-  ];
+  const BOXES = moduleBoxes();
+
+  test('the boxes come from the geometry, not from a list somebody kept up to date', () => {
+    // Seven of them: two companion pages and the five distinct zone rectangles the pit walls use.
+    expect(BOXES.length).toBeGreaterThanOrEqual(6);
+    for (const box of BOXES) {
+      expect({ name: box.name, w: box.frame.width > 0, h: box.frame.height > 0 }).toMatchObject({ w: true, h: true });
+    }
+  });
 
   for (const box of BOXES) {
     test(`on a ${box.name}`, () => {
@@ -273,14 +331,19 @@ describe('every module fits the box it is given', () => {
         for (const item of items.flatMap((i) => [...walkItems([i])])) {
           if (item.kind === 'layer') continue;
           const r = item.rect;
-          // A text box is a WPF line box: it reaches a fifth of the font size below the baseline
-          // row it sits on, and that tail is transparent. Everything else must be inside the box.
-          const slack = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 1;
+          // A text box is a WPF line box and it is taller than its ink at both ends. `textBox`
+          // puts its top a tenth of the font size above the line it is given, so the baseline
+          // lands where the layout asked for it, and the box runs about a fifth of the size below
+          // that baseline. Both tails are transparent, so both are slack -- and granting it only
+          // at the bottom is why these boxes were quietly written 16 px taller than the real ones
+          // instead of being derived.
+          const below = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 1;
+          const above = item.kind === 'text' ? Math.ceil(0.1 * item.fontSize) + 2 : 1;
           const inside =
             r.left >= box.frame.left - 1 &&
-            r.top >= box.frame.top - 1 &&
+            r.top >= box.frame.top - above &&
             r.left + r.width <= box.frame.left + box.frame.width + 1 &&
-            r.top + r.height <= box.frame.top + box.frame.height + slack;
+            r.top + r.height <= box.frame.top + box.frame.height + below;
           expect({ module: module.id, item: item.name, rect: r, inside }).toMatchObject({ inside: true });
         }
       }

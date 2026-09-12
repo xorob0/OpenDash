@@ -22,8 +22,11 @@ bun run vm claim "what for"       # there is one VM; say who has it
 bun run vm release
 ```
 
-It finds the VM by itself: this machine when `/opt/winvm` is present, otherwise the SSH host in
-`OPENDASH_VM_HOST`, which defaults to the host the project uses. `scripts/vm.ts` is also a library,
+Telemetry is `bun run emulator`, described in
+[tools/irsdk-emulator/README.md](../tools/irsdk-emulator/README.md).
+
+Both find the VM by themselves: this machine when `/opt/winvm` is present, otherwise the SSH host
+in `OPENDASH_VM_HOST`, which defaults to the host the project uses. `scripts/vm.ts` is also a library,
 so a longer script can import `powershell`, `inDesktop`, `install` and the rest rather than
 shelling out to the command.
 
@@ -111,6 +114,30 @@ the "new plugin found" activation prompt on the desktop the first time; `screens
 `click` through it, or pre-activate by editing
 `C:\Program Files (x86)\SimHub\PluginsData\PluginsActivation.json`.
 
+## Pressing a wheel button
+
+Five openDash actions are bound to wheel buttons by a driver, and a test has to be able to press
+them. `bun run vm bind` writes SimHub's own input mappings and turns on the keyboard reader, which
+ships disabled:
+
+```bash
+bun run vm bind OpenDash.CycleZoneB F7 OpenDash.HoldQuickGlance F8
+bun run vm unbind          # drop every OpenDash binding again
+```
+
+SimHub is restarted by both, because it reads `PluginsData/PluginManagerSettings.json` at startup.
+A binding survives until it is unbound, so a capture run binds once.
+
+Then press the key: `press(host, 'f7')` for an action that only has a press, and
+`captureWhileHeld(host, 'f8', file)` for one that is held — see the gotcha about VNC releasing
+held keys.
+
+**A held action must be bound with press type `During`.** SimHub calls an action's start on press
+and its end on release only for that type; every other type goes through `TriggerAction`, which
+fires start and end back to back, so the page appears and vanishes in one frame. `bun run vm bind`
+chooses it for any action whose name begins with `Hold`, and the plugin's own panel corrects a
+glance binding made any other way.
+
 ## Manual access (humans)
 
 All ports are bound to `127.0.0.1` on the VPS only; tunnel them:
@@ -138,7 +165,15 @@ ssh -L 8006:127.0.0.1:8006 -L 3389:127.0.0.1:3389 -L 8888:127.0.0.1:8888 root@<v
   file inside the guest useless for deciding which of two is newer. SimHub's logs are the case
   that bites: `SimHub.txt` is the one being written and `SimHub.N.txt` are rotations with N
   growing as they age, so `bun run vm logs` chooses on that rather than on a timestamp.
+- **Bun does not deliver signals here.** On Bun 1.3.3 `process.on('SIGINT', ...)` registers a
+  handler that is never called, and registering it suppresses the default action, so a long
+  running Bun script that arms one cannot be stopped with Ctrl-C at all. Anything that has to
+  clean up on an interrupt puts the trap in a shell wrapper, as `scripts/emulator.sh` does.
 - **Pinned SimHub version.** 9.12.6. Do not let the VM auto-update; the format is
   undocumented and a newer SimHub is a different test target. Windows Update is disabled too.
+- **A VNC client releases every held key when it disconnects.** So a key held in one call and
+  photographed in the next photographs a key that is no longer down. `captureWhileHeld` in
+  `scripts/gui.ts` holds, captures and releases inside one session, and is what proved the quick
+  glance: without it the glance looked broken while working perfectly.
 - **Shared state.** There is one VM. If two agents test at once they will fight over SimHub.
   Check `simhub_status` / `vm_status` before assuming the desktop is yours.

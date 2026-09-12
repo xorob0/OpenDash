@@ -1,288 +1,305 @@
 {
-  "pages": [
-    {
-      "id": "page-1",
-      "name": "System"
-    },
-    {
-      "id": "page-2",
-      "name": "DDU sizes"
-    },
-    {
-      "id": "page-3",
-      "name": "Second screens"
+    "pages": [
+        {
+            "id": "page-1",
+            "name": "System"
+        },
+        {
+            "id": "page-2",
+            "name": "DDU sizes"
+        },
+        {
+            "id": "page-3",
+            "name": "Second screens"
+        }
+    ],
+    "artboards": [
+        {
+            "file": "Main.dc.html",
+            "x": 0,
+            "y": 0,
+            "w": 1920,
+            "h": 9760,
+            "title": "Foundations",
+            "page": "page-1"
+        },
+        {
+            "file": "DashComponents.dc.html",
+            "x": 2040,
+            "y": 0,
+            "w": 1920,
+            "h": 5680,
+            "title": "Hero and cards",
+            "page": "page-1"
+        },
+        {
+            "file": "ZoneCatalogue.dc.html",
+            "x": 2040,
+            "y": 5760,
+            "w": 1920,
+            "h": 14640,
+            "title": "Zones and their catalogues",
+            "page": "page-1"
+        },
+        {
+            "file": "CardsPostMvp.dc.html",
+            "x": 4080,
+            "y": 0,
+            "w": 1920,
+            "h": 1760,
+            "title": "Cards after the MVP",
+            "page": "page-1"
+        },
+        {
+            "file": "PagesAndAlerts.dc.html",
+            "x": 4080,
+            "y": 1880,
+            "w": 1920,
+            "h": 4580,
+            "title": "Screens, alerts, notifications",
+            "page": "page-1"
+        },
+        {
+            "file": "Panels.dc.html",
+            "x": 4080,
+            "y": 6580,
+            "w": 1920,
+            "h": 3260,
+            "title": "Second-screen panels",
+            "page": "page-1"
+        },
+        {
+            "file": "PluginComponents.dc.html",
+            "x": 6120,
+            "y": 0,
+            "w": 1920,
+            "h": 1660,
+            "title": "Plugin components",
+            "page": "page-1"
+        },
+        {
+            "file": "Plugin.dc.html",
+            "x": 6120,
+            "y": 1780,
+            "w": 960,
+            "h": 1180,
+            "title": "Plugin panel \u00b7 inside SimHub",
+            "page": "page-1"
+        },
+        {
+            "file": "Dash.dc.html",
+            "x": 0,
+            "y": 0,
+            "w": 1920,
+            "h": 480,
+            "title": "Dash \u00b7 1920 \u00d7 480 \u00b7 MVP \u00b7 12 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "Dash1280x480.dc.html",
+            "x": 0,
+            "y": 620,
+            "w": 1280,
+            "h": 480,
+            "title": "Dash \u00b7 1280 \u00d7 480 \u00b7 10in \u00b7 8 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "Dash1280x400.dc.html",
+            "x": 1360,
+            "y": 620,
+            "w": 1280,
+            "h": 400,
+            "title": "Dash \u00b7 1280 \u00d7 400 \u00b7 7.8in \u00b7 8 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "Dash850x480.dc.html",
+            "x": 0,
+            "y": 1240,
+            "w": 850,
+            "h": 480,
+            "title": "Dash \u00b7 850 \u00d7 480 \u00b7 5in \u00b7 6 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "Dash1280x720.dc.html",
+            "x": 930,
+            "y": 1240,
+            "w": 1280,
+            "h": 720,
+            "title": "Dash \u00b7 1280 \u00d7 720 \u00b7 wheel screens \u00b7 12 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "DashNano800x286.dc.html",
+            "x": 0,
+            "y": 2100,
+            "w": 800,
+            "h": 286,
+            "title": "Dash \u00b7 800 \u00d7 286 \u00b7 nano \u00b7 4 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "DashDisplayDash600x686.dc.html",
+            "x": 880,
+            "y": 2100,
+            "w": 600,
+            "h": 686,
+            "title": "Dash \u00b7 600 \u00d7 686 \u00b7 DisplayDash \u00b7 6 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "DashRound480.dc.html",
+            "x": 1560,
+            "y": 2100,
+            "w": 480,
+            "h": 480,
+            "title": "Dash \u00b7 480 round \u00b7 2 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "DashRound800.dc.html",
+            "x": 2120,
+            "y": 2100,
+            "w": 800,
+            "h": 800,
+            "title": "Dash \u00b7 800 round \u00b7 6 slots",
+            "page": "page-2"
+        },
+        {
+            "file": "Companion850x480.dc.html",
+            "x": 0,
+            "y": 0,
+            "w": 850,
+            "h": 480,
+            "title": "Companion \u00b7 850 \u00d7 480 \u00b7 one module",
+            "page": "page-3"
+        },
+        {
+            "file": "Companion480x850.dc.html",
+            "x": 930,
+            "y": 0,
+            "w": 480,
+            "h": 850,
+            "title": "Companion \u00b7 480 \u00d7 850 portrait",
+            "page": "page-3"
+        },
+        {
+            "file": "PitWall1920x1080.dc.html",
+            "x": 0,
+            "y": 970,
+            "w": 1920,
+            "h": 1080,
+            "title": "Pit wall \u00b7 1920 \u00d7 1080 \u00b7 race",
+            "page": "page-3"
+        },
+        {
+            "file": "PitWallTower1920x1080.dc.html",
+            "x": 2040,
+            "y": 970,
+            "w": 1920,
+            "h": 1080,
+            "title": "Pit wall \u00b7 1920 \u00d7 1080 \u00b7 tower",
+            "page": "page-3"
+        },
+        {
+            "file": "PitWallTelemetry1920x1080.dc.html",
+            "x": 0,
+            "y": 2190,
+            "w": 1920,
+            "h": 1080,
+            "title": "Pit wall \u00b7 1920 \u00d7 1080 \u00b7 telemetry",
+            "page": "page-3"
+        },
+        {
+            "file": "PitWall1080x1920.dc.html",
+            "x": 2040,
+            "y": 2190,
+            "w": 1080,
+            "h": 1920,
+            "title": "Pit wall \u00b7 1080 \u00d7 1920 portrait",
+            "page": "page-3"
+        },
+        {
+            "file": "CompanionModules.dc.html",
+            "x": 4080,
+            "y": 0,
+            "w": 1920,
+            "h": 6390,
+            "title": "Companion modules",
+            "page": "page-3"
+        },
+        {
+            "file": "PitWallZones.dc.html",
+            "x": 6120,
+            "y": 0,
+            "w": 1920,
+            "h": 4160,
+            "title": "Pit wall data zones",
+            "page": "page-3"
+        }
+    ],
+    "annotations": [
+        {
+            "id": "tokens-0-9-0",
+            "page": "page-1",
+            "x": 0,
+            "y": 9880,
+            "w": 380,
+            "text": "tokens.json is at 0.9.0. The colour layers came at 0.3.0, the marks and drawn objects at 0.4.0, the zone model at 0.6.0, the centred band at 0.7.0, the telltales at 0.8.0, and 0.9.0 adds the shape model: a page is laid out for the shape of its zone rather than its width. docs/design/zones.md lists every zone, every page and every setting."
+        },
+        {
+            "id": "dash-layout-is-illustrative",
+            "page": "page-2",
+            "x": 2040,
+            "y": 0,
+            "w": 320,
+            "text": "Every rectangular face is the same five parts: the rev bar in its well, the bar of settled values, zones B, A and C across the body, and band D with the flag taking it over while one is out. Zone A is a narrow column holding the gear, the speed and the revs, not a third of the screen holding one digit. There is no row of page dots: the zone letter and the page name say what is showing."
+        },
+        {
+            "id": "reflow-rules",
+            "page": "page-2",
+            "x": 2040,
+            "y": 300,
+            "w": 320,
+            "text": "A zone has a shape, not just a width. Zone C is 769 by 280 at 1920 and takes one rank; it is 469 by 520 at 1280 by 720 and stacks its values, sized to the height; it is 274 by 294 at 850 and keeps only the reading it exists for. The catalogue artboard draws all twenty-one pages at all four shapes."
+        },
+        {
+            "id": "tyre-band-blue",
+            "page": "page-2",
+            "x": 2960,
+            "y": 620,
+            "w": 320,
+            "text": "Open decision: cold tyres use info.primary, which is also the blue flag. Position and scale keep them apart, but it is the single overlap in the palette. Thresholds [T_COLD] and [T_HOT] are still to be validated in iRacing, where tyre data only refreshes in the pit stall."
+        },
+        {
+            "id": "pitwall-pages",
+            "page": "page-3",
+            "x": 1500,
+            "y": 0,
+            "w": 340,
+            "text": "Pit wall: three pages on the monitor. Race: the full leaderboard by class beside session, lap delta with sectors, lap data, the track panel and two data zones. Tower: a compact leaderboard beside the track panel and three zones. Telemetry: five stacked single-axis traces beside three zones. The portrait board carries the leaderboard with session, lap data and four zones. Every zone shows one of eleven pages, the wide zone one of six, assigned from the plugin."
+        },
+        {
+            "id": "companion-modules",
+            "page": "page-3",
+            "x": 1500,
+            "y": 380,
+            "w": 340,
+            "text": "A companion shows exactly one module at a time behind a header that keeps position and lap in view, and cycles through the modules the plugin has enabled. Lap times, for example, is last lap, session best and your best with laps and the estimate. Twenty-one modules are drawn on the sheet to the right; the pit wall zones are the same modules at smaller sizes."
+        },
+        {
+            "id": "detail-pass",
+            "page": "page-1",
+            "x": 0,
+            "y": 10160,
+            "w": 380,
+            "text": "Also in this pass: nationality flags, the licence badge and iRating in every driver list; drawn objects for the tyre, the brake disc, the fuel tank, the car and the steering; and backgrounds, a fill where values are read as one instrument and the recessed well the rev bar always deserved. Colour is still achromatic by default: a nominal tyre is white, not green."
+        }
+    ],
+    "launch": {
+        "view": "canvas",
+        "page": "page-3"
     }
-  ],
-  "artboards": [
-    {
-      "file": "Main.dc.html",
-      "x": 0,
-      "y": 0,
-      "w": 1920,
-      "h": 6100,
-      "title": "Foundations",
-      "page": "page-1"
-    },
-    {
-      "file": "DashComponents.dc.html",
-      "x": 2040,
-      "y": 0,
-      "w": 1920,
-      "h": 4660,
-      "title": "Hero and cards",
-      "page": "page-1"
-    },
-    {
-      "file": "CardsPostMvp.dc.html",
-      "x": 2040,
-      "y": 4800,
-      "w": 1920,
-      "h": 1740,
-      "title": "Cards after the MVP",
-      "page": "page-1"
-    },
-    {
-      "file": "PagesAndAlerts.dc.html",
-      "x": 4080,
-      "y": 0,
-      "w": 1920,
-      "h": 4560,
-      "title": "Screens, alerts, notifications",
-      "page": "page-1"
-    },
-    {
-      "file": "Panels.dc.html",
-      "x": 4080,
-      "y": 4700,
-      "w": 1920,
-      "h": 2900,
-      "title": "Second-screen panels",
-      "page": "page-1"
-    },
-    {
-      "file": "PluginComponents.dc.html",
-      "x": 6120,
-      "y": 0,
-      "w": 1920,
-      "h": 1560,
-      "title": "Plugin components",
-      "page": "page-1"
-    },
-    {
-      "file": "Plugin.dc.html",
-      "x": 6120,
-      "y": 1700,
-      "w": 960,
-      "h": 900,
-      "title": "Plugin panel · inside SimHub",
-      "page": "page-1"
-    },
-    {
-      "file": "Dash.dc.html",
-      "x": 0,
-      "y": 0,
-      "w": 1920,
-      "h": 480,
-      "title": "Dash · 1920 × 480 · MVP · 12 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "Dash1280x480.dc.html",
-      "x": 0,
-      "y": 620,
-      "w": 1280,
-      "h": 480,
-      "title": "Dash · 1280 × 480 · 10in · 8 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "Dash1280x400.dc.html",
-      "x": 1360,
-      "y": 620,
-      "w": 1280,
-      "h": 400,
-      "title": "Dash · 1280 × 400 · 7.8in · 8 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "Dash850x480.dc.html",
-      "x": 0,
-      "y": 1240,
-      "w": 850,
-      "h": 480,
-      "title": "Dash · 850 × 480 · 5in · 6 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "Dash1280x720.dc.html",
-      "x": 930,
-      "y": 1240,
-      "w": 1280,
-      "h": 720,
-      "title": "Dash · 1280 × 720 · wheel screens · 12 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "DashNano800x286.dc.html",
-      "x": 0,
-      "y": 2100,
-      "w": 800,
-      "h": 286,
-      "title": "Dash · 800 × 286 · nano · 4 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "DashDisplayDash600x686.dc.html",
-      "x": 880,
-      "y": 2100,
-      "w": 600,
-      "h": 686,
-      "title": "Dash · 600 × 686 · DisplayDash · 6 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "DashRound480.dc.html",
-      "x": 1560,
-      "y": 2100,
-      "w": 480,
-      "h": 480,
-      "title": "Dash · 480 round · 2 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "DashRound800.dc.html",
-      "x": 2120,
-      "y": 2100,
-      "w": 800,
-      "h": 800,
-      "title": "Dash · 800 round · 6 slots",
-      "page": "page-2"
-    },
-    {
-      "file": "Companion850x480.dc.html",
-      "x": 0,
-      "y": 0,
-      "w": 850,
-      "h": 480,
-      "title": "Companion · 850 × 480 · one module",
-      "page": "page-3"
-    },
-    {
-      "file": "Companion480x850.dc.html",
-      "x": 930,
-      "y": 0,
-      "w": 480,
-      "h": 850,
-      "title": "Companion · 480 × 850 portrait",
-      "page": "page-3"
-    },
-    {
-      "file": "PitWall1920x1080.dc.html",
-      "x": 0,
-      "y": 970,
-      "w": 1920,
-      "h": 1080,
-      "title": "Pit wall · 1920 × 1080 · race",
-      "page": "page-3"
-    },
-    {
-      "file": "PitWallTower1920x1080.dc.html",
-      "x": 2040,
-      "y": 970,
-      "w": 1920,
-      "h": 1080,
-      "title": "Pit wall · 1920 × 1080 · tower",
-      "page": "page-3"
-    },
-    {
-      "file": "PitWallTelemetry1920x1080.dc.html",
-      "x": 0,
-      "y": 2190,
-      "w": 1920,
-      "h": 1080,
-      "title": "Pit wall · 1920 × 1080 · telemetry",
-      "page": "page-3"
-    },
-    {
-      "file": "PitWall1080x1920.dc.html",
-      "x": 2040,
-      "y": 2190,
-      "w": 1080,
-      "h": 1920,
-      "title": "Pit wall · 1080 × 1920 portrait",
-      "page": "page-3"
-    },
-    {
-      "file": "CompanionModules.dc.html",
-      "x": 4080,
-      "y": 0,
-      "w": 1920,
-      "h": 6360,
-      "title": "Companion modules",
-      "page": "page-3"
-    },
-    {
-      "file": "PitWallZones.dc.html",
-      "x": 6120,
-      "y": 0,
-      "w": 1920,
-      "h": 4120,
-      "title": "Pit wall data zones",
-      "page": "page-3"
-    }
-  ],
-  "annotations": [
-    {
-      "id": "tokens-0-3-0",
-      "page": "page-1",
-      "x": 0,
-      "y": 6220,
-      "w": 380,
-      "text": "tokens.json is at 0.3.0: a palette layer (100, 200, 300 per hue), a semantic layer (each meaning with primary, secondary, tint) and a purpose layer (delta.slower, lap.sessionBest, flag.blue, alert.penalty, class.chip). Every value that existed before resolves to the same hex; the 100 tints and 300 shades are new and worth a look, section 02."
-    },
-    {
-      "id": "dash-layout-is-illustrative",
-      "page": "page-2",
-      "x": 2040,
-      "y": 0,
-      "w": 320,
-      "text": "Every dash board is the hero module plus N equal slots at the default card assignment from scope-mvp.md. The size fixes the slots, the plugin picks the cards. The levers above each frame step the rev bar, raise a flag (the black flag is the outlined one) and switch the pit limiter."
-    },
-    {
-      "id": "reflow-rules",
-      "page": "page-2",
-      "x": 2040,
-      "y": 300,
-      "w": 320,
-      "text": "Nothing is squeezed: a smaller screen shows fewer cards and a wider one more. Slots: 12 at 1920 by 480 and 1280 by 720, 8 at 1280 wide, 6 at 850 and on the DisplayDash and the 800 round, 4 on the nano, 2 on the 480 round. A card picks its rung (L 64, M 46, S 34) from the slot it lands in. The gear keeps 260 everywhere but the nano."
-    },
-    {
-      "id": "tyre-band-blue",
-      "page": "page-2",
-      "x": 2960,
-      "y": 620,
-      "w": 320,
-      "text": "Open decision: cold tyres use info.primary, which is also the blue flag. Position and scale keep them apart, but it is the single overlap in the palette. Thresholds [T_COLD] and [T_HOT] are still to be validated in iRacing, where tyre data only refreshes in the pit stall."
-    },
-    {
-      "id": "pitwall-pages",
-      "page": "page-3",
-      "x": 1500,
-      "y": 0,
-      "w": 340,
-      "text": "Pit wall: three pages on the monitor. Race: the full leaderboard by class beside session, lap delta with sectors, lap data, the track panel and two data zones. Tower: a compact leaderboard beside the track panel and three zones. Telemetry: five stacked single-axis traces beside three zones. The portrait board carries the leaderboard with session, lap data and four zones. Every zone shows one of eleven pages, the wide zone one of six, assigned from the plugin."
-    },
-    {
-      "id": "companion-modules",
-      "page": "page-3",
-      "x": 1500,
-      "y": 380,
-      "w": 340,
-      "text": "A companion shows exactly one module at a time behind a header that keeps position and lap in view, and cycles through the modules the plugin has enabled. Lap times, for example, is last lap, session best and your best with laps and the estimate. Twenty-one modules are drawn on the sheet to the right; the pit wall zones are the same modules at smaller sizes."
-    }
-  ],
-  "launch": {
-    "view": "canvas",
-    "page": "page-3"
-  }
 }

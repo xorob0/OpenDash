@@ -2,7 +2,8 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts';
-import { CARD_CATALOGUE, dashProperties, declaredProperties, defaultCardForSlot, secondScreenProperties } from '../src/contract.ts';
+import { CARD_CATALOGUE, dashProperties,
+  zoneProperties, declaredProperties, defaultCardForSlot, secondScreenProperties } from '../src/contract.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { CARDS_FILE } from '../src/slots.ts';
@@ -84,11 +85,14 @@ describe('contract', () => {
       expect(used.length).toBeGreaterThan(0);
       for (const p of used) expect({ p, declared: declared.has(p) }).toEqual({ p, declared: true });
     }
-    // The face reads its own half of the contract, all of it: the four modes and the twelve
-    // slots. The module switches and the zone pages belong to the second screens.
+    // The card face reads the four modes and the twelve slots, and nothing else. The zone
+    // properties are declared beside them and are read by the zone face, which arrives in XOR-85;
+    // the module switches and the pit wall's zone pages belong to the second screens.
     const all = new Set([...propertiesIn(main), ...propertiesIn(cards)].filter((p) => p.startsWith('OpenDash.')));
-    expect([...all].sort()).toEqual([...dashProperties()].sort());
+    const zoneProps = new Set(zoneProperties());
+    expect([...all].sort()).toEqual([...dashProperties()].filter((p) => !zoneProps.has(p)).sort());
     for (const p of secondScreenProperties()) expect(all.has(p)).toBe(false);
+    for (const p of zoneProps) expect(all.has(p)).toBe(false);
   });
 
   test('no brand colour reaches the face', () => {
@@ -119,8 +123,10 @@ describe('inline strategy', () => {
 
 describe('package', () => {
   test('bundles only the three face fonts, all present on disk', () => {
+    // Two of the three are the vendored condensed files renamed: the family a .djson asks for is
+    // openDash Display, and a file called BarlowCondensed-Bold.ttf no longer carries that name.
     const fonts = fontsForPackage();
-    expect(fonts.map((f) => f.split('/').pop())).toEqual(['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'Barlow-Medium.ttf']);
+    expect(fonts.map((f) => f.split('/').pop())).toEqual(['openDashDisplay-SemiBold.ttf', 'openDashDisplay-Bold.ttf', 'Barlow-Medium.ttf']);
     for (const f of fonts) expect({ f, exists: existsSync(f) }).toEqual({ f, exists: true });
     const pkg = buildPackage(layout1920x480, opts);
     expect(pkg.folderName).toBe('openDash');

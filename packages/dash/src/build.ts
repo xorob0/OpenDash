@@ -8,10 +8,13 @@
  * slots, rung, file }` in `<out>/manifest.json`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { declaredProperties, PROPERTY_PREFIX } from './contract.ts';
-import { buildPackage, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
+import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
+import { buildZoneFace, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
+import { fontsForPackage } from './dashboard.ts';
+import { fontsForPanel } from './design/fontFiles.ts';
 import type { Rung } from './design/rung.ts';
 import {
   formatIssues,
@@ -35,6 +38,8 @@ export const DEFAULT_OUT_DIR = path.join(REPO_ROOT, 'build');
 /** The one version string of the project. */
 export const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
 export const MANIFEST_FILE = 'manifest.json';
+/** Where the build leaves the fonts the plugin embeds, relative to the output directory. */
+export const PANEL_FONTS_DIR = 'fonts';
 /** Environment fallback for `--strategy`, as the spec's `SLOT_STRATEGY=inline` build flag. */
 export const STRATEGY_ENV = 'SLOT_STRATEGY';
 
@@ -144,9 +149,12 @@ export interface ManifestEntry {
   kind: PackageKind;
   width: number;
   height: number;
-  /** Slots the face has; a second screen has none. */
+  /**
+   * Slots the face has. A second screen has none, and neither does a zone face: a zone is not a
+   * slot, and reporting one as twelve would tell the plugin to draw twelve dropdowns for it.
+   */
   slots: number;
-  /** The card rung of the layout's slots; absent on a second screen, which has no cards. */
+  /** The card rung of the layout's slots; absent on anything without cards. */
   rung?: Rung;
   /** The .simhubdash, relative to the output directory. */
   file: string;
@@ -167,6 +175,8 @@ export interface BuildOptions {
   simHubVersion?: string;
   /** Default: every layout in src/layouts. */
   layouts?: readonly Layout[];
+  /** Default: every zone face in src/zones. Pass an empty list to build the card faces alone. */
+  zoneFaces?: readonly ZoneLayout[];
   /** Default: every second screen in src/screens. Pass an empty list to build the faces alone. */
   screens?: readonly ScreenPackageDef[];
   /** Progress and warnings, one line at a time. Default: console.log. */
@@ -174,8 +184,10 @@ export interface BuildOptions {
 }
 
 export interface BuiltPackage {
-  /** The layout a face was built from; absent for a second screen. */
+  /** The layout a card face was built from; absent for anything else. */
   layout?: Layout;
+  /** The layout a zone face was built from; absent for anything else. */
+  zoneFace?: ZoneLayout;
   /** The definition a second screen was built from; absent for a face. */
   screen?: ScreenPackageDef;
   kind: PackageKind;
@@ -211,12 +223,13 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const version = opts.version ?? readVersion();
   const simHubVersion = opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION;
   const layouts = opts.layouts ?? LAYOUTS;
+  const zoneFaces = opts.zoneFaces ?? ZONE_FACES;
   const screens = opts.screens ?? SCREEN_PACKAGES;
   const log = opts.log ?? ((line: string): void => console.log(line));
   if (layouts.length === 0 && screens.length === 0) throw new BuildError('there is no layout to build');
 
   const folders = new Set<string>();
-  const staged: { layout?: Layout; screen?: ScreenPackageDef; kind: PackageKind; pkg: DashPackage; warnings: ValidationIssue[] }[] = [];
+  const staged: { layout?: Layout; zoneFace?: ZoneLayout; screen?: ScreenPackageDef; kind: PackageKind; pkg: DashPackage; warnings: ValidationIssue[] }[] = [];
   const claim = (folder: string): void => {
     if (folders.has(folder)) throw new BuildError(`two packages use the folder ${JSON.stringify(folder)}`);
     folders.add(folder);
@@ -227,6 +240,14 @@ export function build(opts: BuildOptions = {}): BuildResult {
     const warnings = validateOrThrow(pkg);
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ layout, kind: 'dash', pkg, warnings });
+  }
+  for (const face of zoneFaces) {
+    claim(face.folder);
+    const built = buildZoneFace(face, { version, simHubVersion, author: DEFAULT_AUTHOR });
+    const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+    const warnings = validateOrThrow(pkg);
+    for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
+    staged.push({ zoneFace: face, kind: 'dash', pkg, warnings });
   }
   for (const screen of screens) {
     claim(screen.folder);
@@ -239,22 +260,34 @@ export function build(opts: BuildOptions = {}): BuildResult {
   mkdirSync(out, { recursive: true });
   const packages: BuiltPackage[] = [];
   const manifest: Manifest = { version, simHubVersion, packages: [] };
-  for (const { layout, screen, kind, pkg, warnings } of staged) {
+  for (const { layout, zoneFace, screen, kind, pkg, warnings } of staged) {
     const written = writePackage(pkg, out);
     for (const file of written.files) log(`wrote ${relative(file)}`);
     const zipped = zipPackage(out, pkg.folderName);
     log(`wrote ${relative(zipped.path)} (${zipped.entries.length} entries, ${zipped.bytes.byteLength} bytes)`);
-    packages.push({ layout, screen, kind, pkg, warnings, written, zipped });
+    packages.push({ layout, zoneFace, screen, kind, pkg, warnings, written, zipped });
     manifest.packages.push({
       folder: pkg.folderName,
       kind,
-      width: layout?.width ?? screen?.width ?? 0,
-      height: layout?.height ?? screen?.height ?? 0,
+      width: layout?.width ?? zoneFace?.width ?? screen?.width ?? 0,
+      height: layout?.height ?? zoneFace?.height ?? screen?.height ?? 0,
       slots: layout ? layout.slots.length : 0,
       ...(layout ? { rung: rungOf(layout) } : {}),
       file: `${pkg.folderName}${PACKAGE_EXTENSION}`,
     });
   }
+  // The plugin's settings panel draws in the same renamed family and embeds its own copies, and
+  // its build runs on a machine that has never run this one. So the fonts a release needs are left
+  // beside the packages, where the plugin build (and CI, which hands one job's output to the next)
+  // picks them up; see plugin/OpenDash/OpenDash.csproj.
+  const fontsOut = path.join(out, PANEL_FONTS_DIR);
+  mkdirSync(fontsOut, { recursive: true });
+  for (const font of fontsForPanel()) {
+    const target = path.join(fontsOut, path.basename(font));
+    copyFileSync(font, target);
+    log(`wrote ${relative(target)}`);
+  }
+
   const manifestPath = path.join(out, MANIFEST_FILE);
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   log(`wrote ${relative(manifestPath)}`);

@@ -177,5 +177,298 @@ namespace OpenDashPlugin.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => copy.SetModule(22, true));
             Assert.Throws<ArgumentOutOfRangeException>(() => copy.SetZone("E", 0));
         }
+
+        // --- The dash face ---------------------------------------------------------------------
+
+        [Fact]
+        public void Face_defaults_are_the_gear_lap_times_the_relative_and_fuel()
+        {
+            var settings = new OpenDashSettings();
+            Assert.Equal(new[] { 0, 0, 14, 0 }, settings.FaceZones);
+            Assert.Equal(new[] { 0, 1, 5, 6 }, settings.BarFields);
+            Assert.Equal(Contract.DefaultFaceZoneMasks(), settings.FaceZoneMasks);
+            Assert.Equal("Gear, speed, revs", FacePages.NameOf("A", settings.FaceZoneStart("A")));
+            Assert.Equal("Lap times", FacePages.NameOf("B", settings.FaceZoneStart("B")));
+            Assert.Equal("Relative", FacePages.NameOf("C", settings.FaceZoneStart("C")));
+            Assert.Equal("Fuel", FacePages.NameOf("D", settings.FaceZoneStart("D")));
+        }
+
+        [Fact]
+        public void Normalise_clamps_a_page_to_its_own_zone_catalogue()
+        {
+            // Zone A has four pages and zone D eight, so a module number from zones B and C is outside both.
+            var settings = new OpenDashSettings { FaceZoneStarts = new[] { 17, 20, -3, 9 }, FaceZones = new[] { 17, 20, -3, 9 } };
+            settings.Normalise();
+            Assert.Equal(new[] { 0, 20, 14, 0 }, settings.FaceZoneStarts);
+            // The page a zone is showing is repaired on its own: the wheel button moves it away from the
+            // start page on purpose, and that has to survive a save.
+            Assert.Equal(new[] { 0, 20, 14, 0 }, settings.FaceZones);
+        }
+
+        [Fact]
+        public void Normalise_trims_a_mask_to_the_pages_that_exist_and_refills_an_empty_one()
+        {
+            var settings = new OpenDashSettings { FaceZoneMasks = new[] { 0xFF, 0, -1, 1 << 9 } };
+            settings.Normalise();
+            // Zone A keeps its four bits, the empty zone B is refilled, zone C is trimmed to twenty-one,
+            // and zone D's mask names only a page it does not have, so it is empty and refilled too.
+            Assert.Equal(0xF, settings.FaceZoneMasks[0]);
+            Assert.Equal(Contract.DefaultZoneMask(1), settings.FaceZoneMasks[1]);
+            Assert.Equal(Contract.DefaultZoneMask(2), settings.FaceZoneMasks[2]);
+            Assert.Equal(Contract.DefaultZoneMask(3), settings.FaceZoneMasks[3]);
+        }
+
+        [Fact]
+        public void A_page_the_mask_turns_off_snaps_forward_to_the_next_one_that_is_on()
+        {
+            var settings = new OpenDashSettings();
+            settings.SetFaceZoneStart("A", 0);
+            settings.SetFaceZonePageEnabled("A", 0, false);
+            // Zone A opened on page 0; with it off the cycle runs forward to page 1 rather than back.
+            Assert.Equal(1, settings.FaceZoneStart("A"));
+            Assert.Equal(1, settings.FaceZone("A"));
+            Assert.False(settings.FaceZonePageEnabled("A", 0));
+        }
+
+        [Fact]
+        public void Snapping_forward_wraps_when_the_pages_after_it_are_off_too()
+        {
+            var settings = new OpenDashSettings();
+            settings.SetFaceZoneStart("A", 1);
+            settings.SetFaceZonePageEnabled("A", 2, false);
+            settings.SetFaceZonePageEnabled("A", 3, false);
+            settings.SetFaceZonePageEnabled("A", 1, false);
+            Assert.Equal(0, settings.FaceZoneStart("A"));
+        }
+
+        [Fact]
+        public void Turning_off_the_last_enabled_page_is_refused()
+        {
+            var settings = new OpenDashSettings();
+            for (var page = 1; page < 4; page++) settings.SetFaceZonePageEnabled("A", page, false);
+            settings.SetFaceZonePageEnabled("A", 0, false);
+            // A zone with an empty cycle has nothing to draw, so the last page stays on.
+            Assert.True(settings.FaceZonePageEnabled("A", 0));
+            Assert.Equal(1, settings.FaceZoneMask("A"));
+        }
+
+        [Fact]
+        public void Choosing_a_start_page_turns_that_page_on()
+        {
+            var settings = new OpenDashSettings();
+            settings.SetFaceZonePageEnabled("D", 3, false);
+            settings.SetFaceZoneStart("D", 3);
+            // Picking a page in the panel is a clearer statement than the checkbox that turned it off.
+            Assert.True(settings.FaceZonePageEnabled("D", 3));
+            Assert.Equal(3, settings.FaceZoneStart("D"));
+        }
+
+        [Fact]
+        public void Bar_fields_fall_back_per_slot()
+        {
+            var settings = new OpenDashSettings { BarFields = new[] { 99, 3 } };
+            settings.Normalise();
+            Assert.Equal(new[] { 0, 3, 5, 6 }, settings.BarFields);
+            Assert.Equal("Race time", FacePages.FieldName(settings.BarField("Left1")));
+            Assert.Equal("Clock", FacePages.FieldName(settings.BarField("Left2")));
+        }
+
+        [Fact]
+        public void Quick_glance_keeps_a_zone_and_page_that_exist_and_drops_the_rest()
+        {
+            Assert.Equal(212, Contract.NormaliseQuickGlance(212));
+            Assert.Equal(0, Contract.NormaliseQuickGlance(0));
+            // Zone A has four pages, so page 12 of zone A is not a glance.
+            Assert.Equal(Contract.DefaultQuickGlance, Contract.NormaliseQuickGlance(12));
+            // There is no fifth zone.
+            Assert.Equal(Contract.DefaultQuickGlance, Contract.NormaliseQuickGlance(400));
+            Assert.Equal(Contract.DefaultQuickGlance, Contract.NormaliseQuickGlance(-1));
+            Assert.Equal(2, Contract.QuickGlanceZone(212));
+            Assert.Equal(12, Contract.QuickGlancePage(212));
+            Assert.Equal(212, Contract.QuickGlanceValue(2, 12));
+        }
+
+        [Fact]
+        public void Two_zones_on_the_same_page_are_reported_and_allowed()
+        {
+            var settings = new OpenDashSettings();
+            settings.SetFaceZoneStart("B", 14);
+            var clashes = settings.FaceClashes();
+            Assert.Single(clashes);
+            Assert.Equal("relative", clashes[0].PageId);
+            Assert.Equal(new[] { "B", "C" }, clashes[0].Zones);
+            Assert.Equal("Zone B and zone C both show Relative.", clashes[0].Message());
+            // Reported, not prevented: both zones keep the page.
+            Assert.Equal(14, settings.FaceZoneStart("B"));
+            Assert.Equal(14, settings.FaceZoneStart("C"));
+        }
+
+        [Fact]
+        public void A_clash_across_two_catalogues_counts_because_it_is_the_same_drawing()
+        {
+            // Zone A's page 3 and module 13 are both the track map, under two different numbers.
+            var settings = new OpenDashSettings();
+            settings.SetFaceZoneStart("A", 3);
+            settings.SetFaceZoneStart("B", 12);
+            Assert.Equal("Zone A and zone B both show Track.", FacePageClash.Warning(settings));
+        }
+
+        [Fact]
+        public void Three_zones_on_one_page_read_as_a_list()
+        {
+            // Module 5 and band D's first page are both fuel, so this is three zones on one drawing.
+            var settings = new OpenDashSettings();
+            settings.SetFaceZoneStart("B", 4);
+            settings.SetFaceZoneStart("C", 4);
+            settings.SetFaceZoneStart("D", 0);
+            var clashes = settings.FaceClashes();
+            Assert.Single(clashes);
+            Assert.Equal(new[] { "B", "C", "D" }, clashes[0].Zones);
+            Assert.Equal("Zone B, zone C and zone D all show Fuel.", clashes[0].Message());
+        }
+
+        [Fact]
+        public void A_face_with_nothing_in_common_warns_about_nothing()
+        {
+            Assert.Equal(string.Empty, FacePageClash.Warning(new OpenDashSettings()));
+        }
+
+        [Fact]
+        public void CopyFrom_carries_the_face()
+        {
+            var source = new OpenDashSettings();
+            source.SetFaceZoneStart("B", 6);
+            source.SetFaceZonePageEnabled("B", 0, false);
+            source.SetBarField("Right2", 9);
+            source.QuickGlance = Contract.QuickGlanceValue(3, 5);
+
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(source);
+            Assert.Equal(6, copy.FaceZoneStart("B"));
+            Assert.False(copy.FaceZonePageEnabled("B", 0));
+            Assert.Equal(9, copy.BarField("Right2"));
+            Assert.Equal(Contract.QuickGlanceValue(3, 5), copy.QuickGlance);
+            // A clone, not a share: writing the copy must not reach back into the source.
+            copy.SetBarField("Right2", 2);
+            Assert.Equal(9, source.BarField("Right2"));
+        }
+
+        [Fact]
+        public void Face_accessors_refuse_a_letter_that_is_not_a_zone()
+        {
+            var settings = new OpenDashSettings();
+            Assert.Throws<ArgumentOutOfRangeException>(() => settings.FaceZone("E"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetFaceZoneStart("E", 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => settings.BarField("Middle"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetFaceZonePageEnabled("A", 4, true));
+        }
+
+        // --- What a wheel button does ----------------------------------------------------------
+
+        [Fact]
+        public void Cycling_steps_through_the_enabled_pages_and_wraps()
+        {
+            var settings = new OpenDashSettings();
+            settings.OpenOnStartPages();
+            Assert.Equal(0, settings.FaceZone("A"));
+            Assert.Equal(1, settings.CycleFaceZone("A"));
+            Assert.Equal(2, settings.CycleFaceZone("A"));
+            Assert.Equal(3, settings.CycleFaceZone("A"));
+            Assert.Equal(0, settings.CycleFaceZone("A"));
+        }
+
+        [Fact]
+        public void Cycling_skips_the_pages_the_mask_turns_off()
+        {
+            // The mask is what sets the length of the cycle, which is the whole point of the panel's
+            // most consequential control.
+            var settings = new OpenDashSettings();
+            settings.SetFaceZonePageEnabled("A", 1, false);
+            settings.SetFaceZonePageEnabled("A", 2, false);
+            settings.OpenOnStartPages();
+            Assert.Equal(3, settings.CycleFaceZone("A"));
+            Assert.Equal(0, settings.CycleFaceZone("A"));
+        }
+
+        [Fact]
+        public void A_zone_with_one_page_left_stays_where_it_is()
+        {
+            var settings = new OpenDashSettings();
+            for (var page = 1; page < 4; page++) settings.SetFaceZonePageEnabled("A", page, false);
+            settings.OpenOnStartPages();
+            Assert.Equal(0, settings.CycleFaceZone("A"));
+            Assert.Equal(0, settings.CycleFaceZone("A"));
+        }
+
+        [Fact]
+        public void A_zone_opens_on_the_page_it_is_set_to_open_on()
+        {
+            var settings = new OpenDashSettings();
+            settings.SetFaceZoneStart("B", 6);
+            settings.CycleFaceZone("B");
+            settings.CycleFaceZone("B");
+            Assert.Equal(8, settings.FaceZone("B"));
+            // Which is what Init does, so a session begins where the driver set it rather than where
+            // they happened to leave it.
+            settings.OpenOnStartPages();
+            Assert.Equal(6, settings.FaceZone("B"));
+        }
+
+        [Fact]
+        public void A_held_glance_shows_its_page_and_a_release_puts_the_zone_back()
+        {
+            var settings = new OpenDashSettings();
+            settings.OpenOnStartPages();
+            settings.CycleFaceZone("C");
+            var before = settings.FaceZone("C");
+
+            settings.BeginQuickGlance();
+            Assert.True(settings.GlanceHeld);
+            Assert.Equal(Contract.QuickGlancePage(Contract.DefaultQuickGlance), settings.FaceZone("C"));
+
+            settings.EndQuickGlance();
+            Assert.False(settings.GlanceHeld);
+            Assert.Equal(before, settings.FaceZone("C"));
+        }
+
+        [Fact]
+        public void A_glance_shows_a_page_the_mask_has_turned_off()
+        {
+            // A glance is an explicit thing a driver asked for by holding a button; the mask is about
+            // what the cycle steps through. The track map is exactly the page somebody would want
+            // held and never cycled to.
+            var settings = new OpenDashSettings();
+            settings.SetFaceZonePageEnabled("C", 12, false);
+            settings.OpenOnStartPages();
+            settings.BeginQuickGlance();
+            Assert.Equal(12, settings.FaceZone("C"));
+            settings.EndQuickGlance();
+            Assert.False(settings.FaceZonePageEnabled("C", 12));
+        }
+
+        [Fact]
+        public void A_second_press_while_a_glance_is_held_does_not_lose_the_page_underneath()
+        {
+            var settings = new OpenDashSettings();
+            settings.OpenOnStartPages();
+            var before = settings.FaceZone("C");
+            settings.BeginQuickGlance();
+            settings.BeginQuickGlance();
+            settings.EndQuickGlance();
+            Assert.Equal(before, settings.FaceZone("C"));
+            // And a release with no press does nothing at all.
+            settings.EndQuickGlance();
+            Assert.Equal(before, settings.FaceZone("C"));
+        }
+
+        [Fact]
+        public void The_five_actions_are_named_as_verbs()
+        {
+            Assert.Equal(new[] { "CycleZoneA", "CycleZoneB", "CycleZoneC", "CycleZoneD", "HoldQuickGlance" }, Contract.ActionNames().ToArray());
+            // The action and the property it reads must not share a name: one is what the glance is
+            // set to, the other is the button that shows it.
+            Assert.DoesNotContain(Contract.HoldQuickGlanceAction, Contract.PropertyNames());
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.CycleZoneAction("E"));
+        }
     }
 }

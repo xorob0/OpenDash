@@ -85,11 +85,11 @@ export function cells(weight: DataWeight, fs: number): Monospace {
 /**
  * The gear's cell as a fraction of the font size, from the tokens.
  *
- * It is wider than the widest advance in Barlow Condensed Bold, and deliberately so. SimHub does
- * not draw the gear in Barlow Condensed at all: WPF exposes the bundled files as one family,
- * "Barlow", with the condensed faces as a stretch of it, so a request for "Barlow Condensed"
- * reaches a non-condensed face whose glyphs are about a fifth wider. The token holds a cell wide
- * enough for whichever Barlow the renderer picks; the resolution itself is XOR-84.
+ * Wider than the digit cell, since the gear also draws N and R and the N is the widest of the set.
+ * It was briefly far wider than that: WPF exposed the bundled files as one family, "Barlow", with
+ * the condensed faces as a stretch of it, so a request for "Barlow Condensed" reached a face about
+ * a fifth wider and the cell had to hold whichever Barlow the renderer picked. The bundled family
+ * is now renamed, so the cell is the condensed face's own again.
  */
 export const GEAR_CELL = ds.font.cell.gear;
 

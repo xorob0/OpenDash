@@ -10,6 +10,7 @@ namespace OpenDashPlugin
         public const string SurfaceBase = "#0A0B0D"; // color.surface.base
         public const string SurfaceZone = "#14161A"; // color.surface.zone
         public const string SurfaceRaised = "#1C1F24"; // color.surface.raised
+        public const string SurfaceInset = "#060708"; // color.surface.inset
 
         // Text
         public const string TextPrimary = "#F5F7FA"; // color.text.primary
@@ -34,7 +35,7 @@ namespace OpenDashPlugin
         public const string StatusNotInstalled = "#33383F"; // purpose.status.notInstalled
 
         // Type
-        public const string FontData = "Barlow Condensed"; // font.family.data
+        public const string FontData = "openDash Display"; // font.family.data
         public const string FontLabel = "Barlow"; // font.family.label
         public const double SizeWordmark = 28; // font.size.ui.wordmark
         public const double SizeTitle = 16; // font.size.ui.title

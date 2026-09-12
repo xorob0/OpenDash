@@ -1,0 +1,31 @@
+{
+  // A timed qualifying run in a car with no in-car traction control or ABS: the assist cards show
+  // their no-data state and the session card counts time rather than laps.
+  "extends": "notc.json",
+  "name": "Timed qualifying, car without TC or ABS controls",
+  "yaml": {
+    "RaceSessionLaps": "unlimited",
+    "RaceSessionTime": "900.0000 sec",
+    "TcSetting": "",
+    "AbsSetting": ""
+  },
+  "variables": [
+    {"name": "SessionFlags", "value": "green", "pin": true},
+    {"name": "SessionTimeTotal", "value": 900.0},
+    {"name": "SessionTimeRemain", "value": 412.0},
+    {"name": "SessionTime", "value": 488.0},
+    {"name": "PlayerCarPosition", "value": 1, "pin": true},
+    {"name": "PlayerCarClassPosition", "value": 1, "pin": true},
+    {"name": "Lap", "value": 5},
+    {"name": "LapCompleted", "value": 4},
+    {"name": "RaceLaps", "value": 5},
+    {"name": "LapBestLapTime", "value": 96.284},
+    {"name": "LapLastLapTime", "value": 96.284},
+    {"name": "FuelLevel", "value": 21.7, "pin": true},
+    {"name": "FuelLevelPct", "value": 0.217, "pin": true}
+  ],
+  "timeline": [
+    {"at": 0, "log": "hold green through the run", "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "driver": {"type": "fuelBurn", "enabled": false}}
+  ]
+}

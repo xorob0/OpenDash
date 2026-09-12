@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
@@ -16,6 +19,8 @@ namespace OpenDashPlugin
         public const string WarningIcon = "M8 2l6.5 11.5h-13zM8 6.5v3.5M8 11.5v.5";
         public const string ExternalLinkIcon = "M6.5 3.5H3.5v9h9V9.5M9 3h4v4M13 3l-6 6";
         public const string RefreshIcon = "M13 8a5 5 0 0 1-8.7 3.4M3 8a5 5 0 0 1 8.7-3.4M11.5 2v3h-3M4.5 14v-3h3";
+        /// <summary>The chevron a drop-down carries, as the canvas draws it.</summary>
+        public const string ChevronIcon = "M4 6l4 4 4-4";
 
         private static readonly Dictionary<string, SolidColorBrush> Brushes = new Dictionary<string, SolidColorBrush>();
 
@@ -67,7 +72,7 @@ namespace OpenDashPlugin
             return block;
         }
 
-        /// <summary>.num on the canvas: Barlow Condensed SemiBold.</summary>
+        /// <summary>.num on the canvas: openDash Display SemiBold, which is Barlow Condensed.</summary>
         public static TextBlock Numeral(string text, double size, string hex)
         {
             return Text(text, size, FontWeights.SemiBold, hex, PanelFonts.Data);
@@ -201,6 +206,114 @@ namespace OpenDashPlugin
                 Stretch = Stretch.None,
                 VerticalAlignment = VerticalAlignment.Center,
             };
+        }
+
+        // Drop-downs
+
+        /// <summary>
+        /// The field-styled box the canvas draws for every choice on the panel: zone fill, a one pixel
+        /// border, the text on the left and a chevron on the right. A ComboBox is the control for a
+        /// choice from a list; this is for the two choices a list cannot carry -- twenty-one checkboxes,
+        /// and the pair of fields at one end of the bar -- which open a panel instead.
+        /// </summary>
+        public static ToggleButton DropButton(double width, string text, string tooltip = null)
+        {
+            var caption = Text(text, Theme.SizeLabel, FontWeights.Normal, Theme.TextPrimary);
+            caption.TextTrimming = TextTrimming.CharacterEllipsis;
+            caption.TextWrapping = TextWrapping.NoWrap;
+            var chevron = Icon(ChevronIcon, Theme.TextSecondary);
+            chevron.HorizontalAlignment = HorizontalAlignment.Right;
+            var row = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(chevron, Dock.Right);
+            row.Children.Add(chevron);
+            row.Children.Add(caption);
+
+            var button = new ToggleButton
+            {
+                Width = width,
+                Height = Theme.ControlHeightSm,
+                Padding = new Thickness(10, 0, 8, 0),
+                Background = Brush(Theme.Field),
+                BorderBrush = Brush(Theme.Border),
+                BorderThickness = new Thickness(1),
+                Foreground = Brush(Theme.TextPrimary),
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Content = row,
+                Cursor = Cursors.Hand,
+                ToolTip = tooltip,
+            };
+            // SimHub's ToggleButton style is a switch, so the drop button keeps the plain one and paints
+            // itself; asking for the styled template here would draw a slider where a box belongs.
+            button.Template = DropButtonTemplate();
+            button.Tag = caption;
+            return button;
+        }
+
+        /// <summary>Rewrites the caption of a drop button built above.</summary>
+        public static void SetDropText(ToggleButton button, string text)
+        {
+            var caption = button.Tag as TextBlock;
+            if (caption != null) caption.Text = text;
+        }
+
+        /// <summary>A border around the content and nothing else: no chrome, no checked state, because the
+        /// button's own brushes are the canvas's field and the popup below it is the affordance.</summary>
+        private static ControlTemplate DropButtonTemplate()
+        {
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+            border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+            border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
+            border.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            border.AppendChild(presenter);
+            return new ControlTemplate(typeof(ToggleButton)) { VisualTree = border };
+        }
+
+        /// <summary>The panel a drop button opens: raised surface, a border, 12 px of padding, and it
+        /// closes when the mouse goes elsewhere.</summary>
+        public static Popup Flyout(ToggleButton owner, UIElement content)
+        {
+            var popup = new Popup
+            {
+                PlacementTarget = owner,
+                Placement = PlacementMode.Bottom,
+                StaysOpen = false,
+                AllowsTransparency = true,
+                Child = new Border
+                {
+                    Background = Brush(Theme.SurfaceRaised),
+                    BorderBrush = Brush(Theme.Border),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(12),
+                    Margin = new Thickness(0, 2, 0, 0),
+                    Child = content,
+                },
+            };
+            owner.Checked += (sender, args) => popup.IsOpen = true;
+            owner.Unchecked += (sender, args) => popup.IsOpen = false;
+            popup.Closed += (sender, args) => owner.IsChecked = false;
+            // StaysOpen false closes the popup on a click elsewhere and not on Escape, and a panel
+            // of twenty-one checkboxes is exactly the thing somebody presses Escape to put away.
+            popup.KeyDown += (sender, args) =>
+            {
+                if (args.Key != Key.Escape) return;
+                popup.IsOpen = false;
+                args.Handled = true;
+            };
+            return popup;
+        }
+
+        /// <summary>A drop button and the flyout it opens, in one element that can go in a layout.</summary>
+        public static FrameworkElement Drop(ToggleButton button, UIElement content)
+        {
+            var host = new Grid { Width = button.Width, Height = button.Height, HorizontalAlignment = HorizontalAlignment.Left };
+            host.Children.Add(button);
+            host.Children.Add(Flyout(button, content));
+            return host;
         }
 
         // SimHub integration

@@ -21,6 +21,23 @@ dotnet build -c Release            # -> bin/Release/net48/IrsdkEmulator.exe (+ s
 `--dump-vars` and `--dump-yaml` can be run on the Linux dev box (`dotnet devcheck/bin/Release/net8.0/IrsdkEmulator.dll ...`).
 Named kernel objects are Windows-only, so the real mode only works on Windows.
 
+## Run it with `bun run emulator`
+
+The runner does the two things below that are easy to get wrong, so prefer it to driving the exe
+by hand:
+
+```bash
+bun run emulator start race --follow   # build, upload, start in the desktop, tail the status line
+bun run emulator start yellow --replace
+bun run emulator stop | status | tail 20
+```
+
+It builds and uploads the exe with its `scenarios/` folder, always launches into the interactive
+desktop, refuses to start while another copy is running, and stops through the stop file so
+SimHub sees a disconnect. Ctrl-C under `--follow` stops the emulator on the VM before returning.
+
+The section below is what the runner does, and is what to read when it breaks.
+
 ## Run on the Windows VM
 
 1. Copy `bin/Release/net48/IrsdkEmulator.exe` **and the `scenarios/` folder** next to each other, e.g. to
@@ -233,6 +250,10 @@ treated as corrupt), Voltage > 0 and no EngineStalled bit (ignition/engine on), 
 * `notc.json`: extends `race.json`; `dcTractionControl`/`dcABS` removed from the variable list (SimHub then reports
   TC/ABS level 0, dash should show "--"), `CarSetup` TC/ABS entries blank, timed race (`SessionLaps: unlimited`,
   `SessionTime: 1800.0000 sec`, SessionLapsTotal/Remain 32767, 1130 s remaining).
+
+Four further scenarios exist to be photographed rather than watched — `green`, `yellow`, `pit` and `quali` — and
+pin everything the dash reads so that a capture taken at any moment shows the same state.
+[`scenarios/README.md`](scenarios/README.md) says what each one holds still and why.
 
 ## Self-test
 
