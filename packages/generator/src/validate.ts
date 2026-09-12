@@ -376,7 +376,14 @@ const checkScreen = (ctx: Context, screen: Screen, dashboard: Dashboard): void =
   if (typeof screen.name !== 'string' || screen.name.trim() === '') c.error('name/empty', path, 'screen name is empty');
   checkId(ctx, screen.id ?? stableGuid(path), screen.id !== undefined, path);
   checkColor(c, path, 'backgroundColor', screen.backgroundColor, false);
-  if (screen.enabledExpression) checkProperties(ctx, screen.enabledExpression, `${path}#enabledExpression`);
+  if (screen.enabledExpression) {
+    // Both checks, not only the property one. A screen's enable expression is the one expression
+    // that costs the whole screen when it is wrong: SimHub evaluates an expression naming a
+    // function it does not dispatch to nothing, which reads as false, so the screen simply never
+    // appears and nothing anywhere says why. Every companion screen carries one of these.
+    checkProperties(ctx, screen.enabledExpression, `${path}#enabledExpression`);
+    checkFunctions(ctx, screen.enabledExpression, `${path}#enabledExpression`);
+  }
   if (!Array.isArray(screen.items) || screen.items.length === 0) {
     c.error('screen/no-items', path, 'screen has no items');
     return;

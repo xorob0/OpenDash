@@ -117,6 +117,6 @@ describe('the groups the zone face draws', () => {
   });
 
   test('the token file records which version of the design it is', () => {
-    expect(tokenNode('$meta')).toMatchObject({ version: '0.9.2' });
+    expect(tokenNode('$meta')).toMatchObject({ version: '0.10.0' });
   });
 });
