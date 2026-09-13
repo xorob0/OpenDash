@@ -1,5 +1,7 @@
 # ci.yml: builds and tests the dashboard package (Bun) and the SimHub plugin (.NET) on every push
 # and pull request. The plugin job embeds the dash job's .simhubdash output, so it runs second.
+# A third job compares the built packages against the base and keeps one comment saying which of
+# them a reviewer should look at; it depends on neither of the others and runs beside them.
 # Spec: docs section 12. Keep the build steps in sync with release.yml.
 name: CI
 
@@ -7,7 +9,8 @@ on:
   push:
   pull_request:
 
-# Read-only token everywhere; nothing in CI writes to the repository.
+# Read-only by default. The affected job raises its own, because it keeps a comment; nothing in CI
+# writes to the repository itself.
 permissions:
   contents: read
 
@@ -94,3 +97,69 @@ jobs:
             build/OpenDash-plugin.zip
             plugin/OpenDash/bin/Release/net48/OpenDash.dll
           if-no-files-found: error
+
+  affected:
+    name: Affected packages
+    runs-on: ubuntu-latest
+    # Only a pull request has a base to compare against and a comment to keep.
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # The whole history: the comparison builds the commit this branch forked from, and a shallow
+      # clone does not contain it.
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      # fflate is borrowed by the base build rather than installed a second time; see
+      # linkDependencies in scripts/affected.ts.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Compare the branch against its base
+        run: bun run affected --base "$BASE" > affected.md
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+
+      # Always readable from the run itself, which is what a pull request from a fork gets: the
+      # pull_request token is read-only there, so the comment below cannot be written.
+      - name: Write the report to the run summary
+        run: cat affected.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep one comment on the pull request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('affected.md', 'utf8').trim();
+            // Must match COMMENT_MARKER in scripts/affected.ts, which is where it is defined.
+            const marker = '<!-- opendash:affected -->';
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const mine = comments.find((c) => c.user?.type === 'Bot' && (c.body ?? '').includes(marker));
+
+            try {
+              if (body === '') {
+                // No package output moved. A comment left from an earlier push would now be a lie,
+                // so it goes rather than being updated to say nothing.
+                if (mine) await github.rest.issues.deleteComment({ ...context.repo, comment_id: mine.id });
+                core.info('no package output moved; nothing posted');
+                return;
+              }
+              if (mine) await github.rest.issues.updateComment({ ...context.repo, comment_id: mine.id, body });
+              else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+            } catch (error) {
+              // A fork's token cannot write. The run summary already carries the report, so this is
+              // reported and not failed.
+              core.warning(`could not keep the comment: ${error.message}`);
+            }
