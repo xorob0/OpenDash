@@ -52,7 +52,7 @@ namespace OpenDashPlugin
     public static class UpdateCheck
     {
         /// <summary>
-        /// The list endpoint, not releases/latest.
+        /// The first page of the list endpoint, not releases/latest.
         /// </summary>
         /// <remarks>
         /// releases/latest answers 404 while every release carries a hyphen in its tag, because release.yml marks
@@ -60,8 +60,33 @@ namespace OpenDashPlugin
         /// cut it will begin to answer, and moving to it will look like an obvious simplification; it would still
         /// be wrong for every user then running a candidate, who would be told nothing exists. ReleaseFor is what
         /// decides which release a given user may be offered, and it needs the list to do it.
+        ///
+        /// The listing is newest first by creation date whatever the kind of each release, so one page is a window
+        /// that a run of candidates can fill on its own, pushing the newest stable release out of sight. A user on
+        /// a stable version has every candidate discarded and would then be told they have the newest release while
+        /// a newer one exists, which is why pages are read rather than one page: see ReleasesPage and MaxPages. A
+        /// hundred per page would only move that cliff further out, and it would cost about three megabytes on each
+        /// check, since one release of this repository is roughly thirty kilobytes of JSON.
         /// </remarks>
-        public const string ReleasesUrl = "https://api.github.com/repos/xorob0/OpenDash/releases?per_page=10";
+        public static readonly string ReleasesUrl = "https://api.github.com/repos/xorob0/OpenDash/releases?per_page=" + PageSize;
+
+        /// <summary>How many releases one page of the listing holds.</summary>
+        public const int PageSize = 10;
+
+        /// <summary>
+        /// How many pages one check may read.
+        /// </summary>
+        /// <remarks>
+        /// A bound is what keeps a rig that is merely up to date from walking the whole history of the repository
+        /// every day, and fifty consecutive candidates is well past what this project could cut between two stable
+        /// releases. Reaching it without an answer is reported as unreachable rather than as up to date, since a
+        /// question the pages did not settle is precisely the quiet wrong answer this feature must never give.
+        /// </remarks>
+        public const int MaxPages = 5;
+
+        /// <summary>The listing one page at a time. Page one is ReleasesUrl itself, which is the page GitHub
+        /// answers with when none is asked for.</summary>
+        public static string ReleasesPage(int page) => page <= 1 ? ReleasesUrl : ReleasesUrl + "&page=" + page;
 
         /// <summary>Where the panel's link goes, for a person who would rather read it themselves.</summary>
         public const string ReleasesPageUrl = "https://github.com/xorob0/OpenDash/releases";
@@ -110,14 +135,33 @@ namespace OpenDashPlugin
         public static ReleaseInfo ReleaseFor(IEnumerable<ReleaseInfo> releases, string installedVersion)
         {
             if (releases == null) return null;
-            var onPreRelease = IsPreRelease(installedVersion);
             return releases
-                .Where(r => r != null && !r.Draft)
-                .Where(r => onPreRelease || !r.PreRelease)
+                .Where(r => MayBeOffered(r, installedVersion))
                 .Where(r => Versioning.VersionCompare(r.Version, installedVersion) > 0)
                 .OrderByDescending(r => r.Version, Comparer<string>.Create(Versioning.VersionCompare))
                 .FirstOrDefault();
         }
+
+        /// <summary>Whether a release is of a kind this user may be offered at all, whatever its version.</summary>
+        public static bool MayBeOffered(ReleaseInfo release, string installedVersion)
+        {
+            if (release == null || release.Draft) return false;
+            return !release.PreRelease || IsPreRelease(installedVersion);
+        }
+
+        /// <summary>
+        /// Whether the pages read so far settle the question, or one more has to be asked for.
+        /// </summary>
+        /// <remarks>
+        /// The kind is what a page can hide, rather than the version: a page holding nothing but candidates says
+        /// nothing whatsoever to a user on a stable version, whereas one holding a single stable release answers
+        /// them either way, since the listing is newest first and no release below that one was cut later. A user
+        /// already on a candidate is answered by any release at all, so for them the first page always settles it.
+        /// What remains unsettled by this, and was equally unsettled before pages were read, is a stable release
+        /// cut after a higher-numbered one, which the listing orders by date and not by version.
+        /// </remarks>
+        public static bool Settles(IEnumerable<ReleaseInfo> releases, string installedVersion) =>
+            releases != null && releases.Any(r => MayBeOffered(r, installedVersion));
 
         /// <summary>True when a version carries a pre-release suffix, which is the dash and nothing else.</summary>
         public static bool IsPreRelease(string version)
