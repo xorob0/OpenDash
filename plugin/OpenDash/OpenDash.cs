@@ -10,8 +10,8 @@ using SimHub.Plugins;
 
 namespace OpenDashPlugin
 {
-    [PluginName("openDash")]
-    [PluginAuthor("openDash contributors")]
+    [PluginName("OpenDash")]
+    [PluginAuthor("OpenDash contributors")]
     public class OpenDash : IPlugin, IWPFSettingsV2
     {
         /// <summary>SimHub stores the settings as PluginsData/Common/OpenDash.GeneralSettings.json.</summary>
@@ -25,9 +25,17 @@ namespace OpenDashPlugin
         /// dashboard on the next frame; the panel writes it and calls SaveSettings().</summary>
         public OpenDashSettings Settings { get; private set; } = new OpenDashSettings();
 
-        public DashboardInstaller Installer { get; } = new DashboardInstaller();
+        private DashboardInstaller installer;
 
-        public string LeftMenuTitle => "openDash";
+        /// <summary>
+        /// Built on first use rather than eagerly, because the record of what OpenDash wrote into each folder lives
+        /// in the settings and the settings are read in Init. The lambda reads Settings each time, so the record
+        /// follows the object the panel replaces when a user changes something.
+        /// </summary>
+        public DashboardInstaller Installer =>
+            installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
+
+        public string LeftMenuTitle => "OpenDash";
 
         public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create(this));
 
@@ -53,12 +61,15 @@ namespace OpenDashPlugin
 
         public void Init(PluginManager pluginManager)
         {
-            Log.Info("openDash plugin " + Version + " starting");
+            Log.Info("OpenDash plugin " + Version + " starting");
             LoadSettings();
             // Every zone starts on the page it is set to open on, which is what that setting means.
             Settings.OpenOnStartPages();
             try
             {
+                // Before installing, not after: a staging folder left by an interrupted update is a complete
+                // extracted dashboard sitting in DashTemplates, and they accumulate one per abandoned update.
+                PackageExtractor.RemoveOrphanedStaging(Installer.SimHubRoot, new SimHubInstallLog());
                 Installer.EnsureInstalled(false);
             }
             catch (Exception ex)
@@ -68,10 +79,29 @@ namespace OpenDashPlugin
             AttachProperties();
             AttachActions(pluginManager);
             Log.Info("Dashboard status: " + Installer.Status);
+            // The installer records what it wrote into each folder but never saves; this is the safe moment.
+            SaveSettings();
         }
+
+        /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
+        /// <remarks>
+        /// Long enough for fourteen packages, short enough that a user closing SimHub does not think it has hung.
+        /// The alternative to waiting is the process exiting between the delete of a dashboard folder and the move
+        /// that replaces it.
+        /// </remarks>
+        public static readonly TimeSpan ShutdownGrace = TimeSpan.FromSeconds(20);
 
         public void End(PluginManager pluginManager)
         {
+            if (UpdateService.Busy)
+            {
+                Log.Info("An update is still installing; waiting for it before SimHub closes.");
+                if (!UpdateService.WaitForIdle(ShutdownGrace))
+                {
+                    Log.Warn("The update was still installing after " + ShutdownGrace.TotalSeconds
+                        + " seconds and SimHub is closing anyway; a dashboard may be left as OpenDash found it.");
+                }
+            }
             SaveSettings();
         }
 
@@ -88,7 +118,7 @@ namespace OpenDashPlugin
                 {
                     Content = new TextBlock
                     {
-                        Text = "openDash settings could not be displayed: " + ex.Message,
+                        Text = "OpenDash settings could not be displayed: " + ex.Message,
                         TextWrapping = System.Windows.TextWrapping.Wrap,
                         Margin = new System.Windows.Thickness(24),
                     },
@@ -123,7 +153,20 @@ namespace OpenDashPlugin
             Settings.Normalise();
         }
 
-        /// <summary>One delegate per setting. SimHub names them <class name>.<name>, hence OpenDash.ShiftLights.</summary>
+        /// <summary>
+        /// One delegate per setting. SimHub names them <class name>.<name>, hence OpenDash.ShiftLights.
+        /// </summary>
+        /// <remarks>
+        /// The shared settings first, then one group per screen the rig has, in the order
+        /// OpenDashSettings.DeclaredProperties() lists them: a rig and not the catalogue, because eight
+        /// faces of seventeen properties is a hundred and thirty-six names for a rig of two screens.
+        ///
+        /// A screen added while SimHub is running therefore has no properties until it is restarted.
+        /// That is not a new limitation: SimHub reads its dashboard list once at startup too, so the
+        /// screen a user has just added is not one they can open in this session either. Until then its
+        /// bindings fall back to the defaults they carry, which is what a package does with no plugin at
+        /// all.
+        /// </remarks>
         private void AttachProperties()
         {
             this.AttachDelegate(Contract.ShiftLights, () => Settings.ShiftLights);
@@ -135,31 +178,41 @@ namespace OpenDashPlugin
                 var captured = slot;
                 this.AttachDelegate(Contract.SlotProperty(captured), () => Settings.Slot(captured));
             }
-            foreach (var letter in Contract.FaceZoneLetters)
+            foreach (var face in Settings.RigFaces())
             {
-                var captured = letter;
-                this.AttachDelegate(Contract.ZonePageProperty(captured), () => Settings.FaceZone(captured));
-                this.AttachDelegate(Contract.ZoneMaskProperty(captured), () => Settings.FaceZoneMask(captured));
-                this.AttachDelegate(Contract.ZoneStartProperty(captured), () => Settings.FaceZoneStart(captured));
+                var capturedFace = face;
+                foreach (var letter in Contract.FaceZoneLetters)
+                {
+                    var captured = letter;
+                    this.AttachDelegate(Contract.ZonePageProperty(capturedFace, captured), () => Settings.FaceZone(capturedFace, captured));
+                    this.AttachDelegate(Contract.ZoneMaskProperty(capturedFace, captured), () => Settings.FaceZoneMask(capturedFace, captured));
+                    this.AttachDelegate(Contract.ZoneStartProperty(capturedFace, captured), () => Settings.FaceZoneStart(capturedFace, captured));
+                }
+                foreach (var slot in Contract.BarSlots)
+                {
+                    var captured = slot;
+                    this.AttachDelegate(Contract.BarFieldProperty(capturedFace, captured), () => Settings.BarField(capturedFace, captured));
+                }
+                this.AttachDelegate(Contract.QuickGlanceProperty(capturedFace), () => Settings.QuickGlanceOf(capturedFace));
             }
-            foreach (var slot in Contract.BarSlots)
+            if (Settings.HasScreen(Contract.CompanionPrefix))
             {
-                var captured = slot;
-                this.AttachDelegate(Contract.BarFieldProperty(captured), () => Settings.BarField(captured));
+                for (var module = 1; module <= Modules.Count; module++)
+                {
+                    var captured = module;
+                    this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+                }
             }
-            this.AttachDelegate(Contract.QuickGlance, () => Settings.QuickGlance);
-            for (var module = 1; module <= Modules.Count; module++)
+            if (Settings.HasScreen(Contract.PitWallPrefix))
             {
-                var captured = module;
-                this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+                foreach (var letter in Contract.PitWallZoneLetters)
+                {
+                    var captured = letter;
+                    this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
+                }
+                this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
+                this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
             }
-            foreach (var letter in Contract.PitWallZoneLetters)
-            {
-                var captured = letter;
-                this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
-            }
-            this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
-            this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
         }
 
         /// <summary>
@@ -177,16 +230,20 @@ namespace OpenDashPlugin
         /// </summary>
         private void AttachActions(PluginManager pluginManager)
         {
-            foreach (var letter in Contract.FaceZoneLetters)
+            foreach (var face in Contract.FaceSizes)
             {
-                var captured = letter;
-                pluginManager.AddAction(Contract.CycleZoneAction(captured), typeof(OpenDash), (manager, name) => Settings.CycleFaceZone(captured), null);
+                var capturedFace = face;
+                foreach (var letter in Contract.FaceZoneLetters)
+                {
+                    var captured = letter;
+                    pluginManager.AddAction(Contract.CycleZoneAction(capturedFace, captured), typeof(OpenDash), (manager, name) => Settings.CycleFaceZone(capturedFace, captured), null);
+                }
+                pluginManager.AddAction(
+                    Contract.HoldQuickGlanceActionFor(capturedFace),
+                    typeof(OpenDash),
+                    (manager, name) => Settings.Face(capturedFace).BeginQuickGlance(),
+                    (manager, name) => Settings.Face(capturedFace).EndQuickGlance());
             }
-            pluginManager.AddAction(
-                Contract.HoldQuickGlanceAction,
-                typeof(OpenDash),
-                (manager, name) => Settings.BeginQuickGlance(),
-                (manager, name) => Settings.EndQuickGlance());
         }
     }
 }

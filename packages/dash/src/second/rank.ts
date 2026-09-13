@@ -6,9 +6,9 @@
  * is the mechanism, and it has two halves that pull in opposite directions.
  *
  * **A field the sim does not publish is removed, and the rank closes over the hole.** Band D says
- * it plainly: the field count follows the width, nothing is spread to fill, the rank is packed and
- * centred. A strip drawing an empty box for a setting iRacing has no property for is worse than a
- * narrower strip.
+ * it plainly: nothing is spread to fill, the rank is packed and centred in what the corners leave.
+ * A strip drawing an empty box for a setting iRacing has no property for is worse than a narrower
+ * strip.
  *
  * **A telltale that is unlit keeps its place and is drawn dim.** A lamp coming on should be a
  * change of colour and not of layout: one that vanished and returned would move every lamp beside

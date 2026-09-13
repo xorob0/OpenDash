@@ -176,18 +176,33 @@ namespace OpenDashPlugin
             return new Rectangle { Width = 6, Height = 6, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Center };
         }
 
-        /// <summary>The segment mark beside the wordmark: 28 x 8, radius 2, brand accent.</summary>
-        public static Rectangle Mark()
+        /// <summary>
+        /// The mark: the rev bar, which is the one shape OpenDash owns, as five segments lit left to right.
+        /// </summary>
+        /// <remarks>
+        /// The geometry is MarkShape.Bars, which mirrors media/logo.svg; MarkTests checks the two against each
+        /// other. WPF cannot render an SVG and Markdown cannot render a Canvas, so the shape is written twice and
+        /// the test is what stops the copies drifting. Change the SVG first and the constants second.
+        /// </remarks>
+        public static FrameworkElement Mark(double size = 24)
         {
-            return new Rectangle
+            var scale = size / MarkShape.Box;
+            var canvas = new Canvas { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
+            foreach (var bar in MarkShape.Bars)
             {
-                Width = 28,
-                Height = 8,
-                RadiusX = Theme.Radius,
-                RadiusY = Theme.Radius,
-                Fill = Brush(Theme.Accent),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
+                var rect = new Rectangle
+                {
+                    Width = bar[2] * scale,
+                    Height = bar[3] * scale,
+                    RadiusX = bar[2] * scale / 2,
+                    RadiusY = bar[2] * scale / 2,
+                    Fill = Brush(Theme.Accent),
+                };
+                Canvas.SetLeft(rect, bar[0] * scale);
+                Canvas.SetTop(rect, bar[1] * scale);
+                canvas.Children.Add(rect);
+            }
+            return canvas;
         }
 
         /// <summary>A stroked icon from the canvas's SVG path data, drawn at its 16 px native size.</summary>

@@ -54,7 +54,7 @@ public class Plugin : IPlugin, IDataPlugin, IWPFSettingsV2
 The project references SimHub's own assemblies from the install directory through a
 `SIMHUB_INSTALL_PATH` property: `SimHub.Plugins.dll`, `GameReaderCommon.dll`,
 `SimHub.Logging.dll`, `log4net.dll`, `MahApps.Metro.dll` and `InputManagerCS.dll`, in addition
-to the WPF assemblies of the framework. openDash commits those files under `plugin/lib/` so
+to the WPF assemblies of the framework. OpenDash commits those files under `plugin/lib/` so
 that GitHub's Windows runner can build without a SimHub install, as many plugin repositories
 do; if SimHub's author objects, the references switch back to an install path.
 
@@ -84,7 +84,7 @@ SimHub ships its own styles (`SHButtonPrimary`, `SHToggleButton`, section titles
 every frame at 60 Hz and must not allocate or loop; a plugin that does not need telemetry can
 omit `IDataPlugin` altogether. `End()` runs at shutdown and is where settings are saved.
 
-## The openDash plugin
+## The OpenDash plugin
 
 One class, `OpenDash`, implementing `IPlugin` and `IWPFSettingsV2`. It does not implement
 `IDataPlugin`, and if it ever needs `DataUpdate()` that is a sign scope has crept.
@@ -119,7 +119,7 @@ and stint estimates, is where a plugin genuinely earns a `DataUpdate()`, and it 
 Lovely ships a plugin DLL plus installer with a Dashboard Manager that browses, installs and
 updates its dashes from inside SimHub. Daniel Newman Racing goes further: its dashboards refuse
 to display anything until the plugin is detected, and every option of every dashboard and LED
-profile is a plugin property. openDash's plugin is the first step on the same path, with the
+profile is a plugin property. OpenDash's plugin is the first step on the same path, with the
 difference that the dashboard remains usable without it.
 
 ## Sources
