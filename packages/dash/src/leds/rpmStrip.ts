@@ -24,6 +24,7 @@ import { mirrorAvailable } from '../shift.ts';
 import { OVER_REV_BLINK_MS, ladderColors, ladderOrder, overRev, rungFlashes, rungLit, stepLit, type Ladder } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
+import { ALL_EFFECTS, effectContainer, type LedEffect } from './effects.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
 
 const { and, eq, gt, not, num, or, str } = ncalc;
@@ -198,6 +199,35 @@ const sides = (shape: StripShape): leds.LedContainer[] => {
   ];
 };
 
+/**
+ * The effect catalogue placed on a shape.
+ *
+ * Composition order is the ranking: SimHub merges a container over the ones before it, so an
+ * effect later in the list wins a tie. That is how a flag beats a spotter and a spotter beats the
+ * rev ladder, without a priority field anywhere.
+ *
+ * A `sides` effect on a shape with no sides — a brow, a bare run — has nowhere to go. It is
+ * dropped rather than moved onto the centre, because a brow that flashes its rev LEDs for ABS is
+ * saying the wrong thing with the right light.
+ */
+const effects = (shape: StripShape): leds.LedContainer[] => {
+  const runs = (effect: LedEffect): { start: number; count: number }[] => {
+    if (effect.placement === 'all') return [{ start: 1, count: stripLength(shape) }];
+    const left = shape.left > 0 ? [{ start: 1, count: shape.left }] : [];
+    const right = shape.right > 0 ? [{ start: rightStart(shape), count: shape.right }] : [];
+    return effect.placement === 'left' ? left : effect.placement === 'right' ? right : [...left, ...right];
+  };
+  return ALL_EFFECTS().flatMap((effect) => {
+    const placed = runs(effect);
+    if (placed.length === 0) return [];
+    const containers = placed.map(({ start, count }) => effectContainer(effect, start, count));
+    // An exclusive effect blanks what is under it, which is what a conditional group is for.
+    return effect.exclusive
+      ? [{ kind: 'conditionalGroup' as const, description: effect.label, trigger: { expression: effect.when }, clearBackgroundWhenActive: true, children: containers }]
+      : containers;
+  });
+};
+
 /** What a strip profile is called, in SimHub's profile list. Keeps the slashes: `openDash 4/14/4`. */
 export const rpmStripProfileName = (shape: StripShape): string => `openDash ${shape.label}`;
 
@@ -211,6 +241,8 @@ export const rpmStripFileName = (shape: StripShape): string => `openDash ${shape
 const treeFor = (shape: StripShape): leds.LedContainer[] => [
   { kind: 'group', description: 'centre', startPosition: centreStart(shape), children: centreFunctions(shape.centre) },
   ...sides(shape),
+  // After the rev ladder and the brake sides, so that it composes over them.
+  ...effects(shape),
   // The 3/10/3's two further runs of nine repeat the centre, so a device with three strips says the
   // same thing on all three rather than leaving two of them dark.
   ...(shape.extraRuns
