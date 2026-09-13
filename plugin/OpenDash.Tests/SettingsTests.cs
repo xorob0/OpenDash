@@ -634,6 +634,150 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { Contract.PitWallPrefix }, settings.Screens);
         }
 
+        // --- The lights ------------------------------------------------------------------------
+        //
+        // A settings file is whatever came back from disk: written by an older build, hand-edited, or
+        // truncated. Normalise() is the only thing between that and a profile reading it, so the tests
+        // here are all about what a bad file turns into.
+
+        [Fact]
+        public void Normalise_repairs_per_matrix_arrays_that_came_back_short()
+        {
+            var settings = new OpenDashSettings
+            {
+                FlagBoxRest = new[] { "dark" },
+                FlagBoxFlags = new[] { false },
+                FlagBoxSide = new[] { "left" },
+            };
+            settings.Normalise();
+
+            // What the file named is kept; what it did not name falls back to the default for that
+            // matrix rather than to the default for matrix 1.
+            Assert.Equal(4, settings.FlagBoxRest.Length);
+            Assert.Equal("dark", settings.MatrixRest(1));
+            Assert.Equal("dark", settings.MatrixRest(4));
+            Assert.False(settings.MatrixFlags(1));
+            Assert.False(settings.MatrixFlags(2));
+            Assert.Equal("left", settings.MatrixSide(1));
+            Assert.Equal("both", settings.MatrixSide(2));
+        }
+
+        [Fact]
+        public void Normalise_replaces_a_per_matrix_value_that_is_not_one_of_the_choices()
+        {
+            // A hand-edited file, or one written by a build that had a choice this one dropped.
+            var settings = new OpenDashSettings
+            {
+                FlagBoxRest = new[] { "sideways", "gear", null, "dark" },
+                FlagBoxSide = new[] { "up", "right", "both", null },
+            };
+            settings.Normalise();
+
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.Equal("gear", settings.MatrixRest(2));
+            Assert.Equal("dark", settings.MatrixRest(3));
+            Assert.Equal("both", settings.MatrixSide(1));
+            Assert.Equal("right", settings.MatrixSide(2));
+            Assert.Equal("both", settings.MatrixSide(4));
+        }
+
+        [Fact]
+        public void Normalise_survives_per_matrix_arrays_that_are_null_or_too_long()
+        {
+            var settings = new OpenDashSettings
+            {
+                FlagBoxRest = null,
+                FlagBoxSpotter = new[] { true, true, true, true, true, true },
+            };
+            settings.Normalise();
+
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.Equal("dark", settings.MatrixRest(2));
+            Assert.Equal(4, settings.FlagBoxSpotter.Length);
+            Assert.True(settings.MatrixSpotter(4));
+        }
+
+        [Fact]
+        public void A_matrix_outside_one_to_four_reads_as_its_default_rather_than_throwing()
+        {
+            // Nothing should ask, but a profile is a file and the panel is a UI; neither is worth
+            // crashing SimHub's settings page over.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            Assert.Equal("both", settings.MatrixSide(0));
+            Assert.Equal("both", settings.MatrixSide(9));
+            Assert.False(settings.MatrixFlags(9));
+        }
+
+        [Fact]
+        public void Normalise_clamps_the_brightnesses_and_repairs_the_thresholds()
+        {
+            var settings = new OpenDashSettings
+            {
+                LightsBrightness = 250,
+                LightsNightBrightness = -4,
+                FlagBoxLowFuelLaps = -1,
+                FlagBoxOilTemp = -20,
+            };
+            settings.Normalise();
+
+            Assert.Equal(100, settings.LightsBrightness);
+            Assert.Equal(0, settings.LightsNightBrightness);
+            Assert.Equal(Contract.DefaultFlagBoxLowFuelLaps, settings.FlagBoxLowFuelLaps);
+            // Zero, not a Celsius number: zero means "not set" and lets the profile pick the default
+            // for whichever unit SimHub is in.
+            Assert.Equal(0, settings.FlagBoxOilTemp);
+        }
+
+        [Fact]
+        public void The_defaults_are_a_working_single_box_setup()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.True(settings.MatrixFlags(1));
+            Assert.True(settings.MatrixSpotter(1));
+            Assert.True(settings.MatrixWarnings(1));
+            foreach (var matrix in new[] { 2, 3, 4 })
+            {
+                Assert.Equal("dark", settings.MatrixRest(matrix));
+                Assert.False(settings.MatrixFlags(matrix));
+                Assert.False(settings.MatrixSpotter(matrix));
+                Assert.False(settings.MatrixWarnings(matrix));
+            }
+            Assert.Equal(100, settings.LightsBrightness);
+            Assert.True(settings.LightsNightBrightness < settings.LightsBrightness);
+            Assert.False(settings.LightsNightMode);
+            Assert.False(settings.FlagBoxCriticalOnly);
+            Assert.True(settings.FlagBoxGear);
+        }
+
+        [Fact]
+        public void A_settings_file_written_before_the_lights_existed_comes_back_with_them_defaulted()
+        {
+            // Every rc.1 user's file is one of these. It must not come back with a dark matrix 1.
+            var json = "{\"ShiftLights\":false,\"PositionMode\":\"class\"}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            Assert.False(settings.ShiftLights);
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.True(settings.MatrixFlags(1));
+            Assert.Equal(100, settings.LightsBrightness);
+        }
+
+        [Fact]
+        public void The_lights_are_declared_whatever_the_rig_is()
+        {
+            // Unlike a screen the rig has not got. There is nothing to detect -- openDash does not
+            // install the profile (ADR 0013) -- and it is a fixed handful of names.
+            var settings = new OpenDashSettings { Screens = new List<string>() };
+            settings.Normalise();
+            var declared = settings.DeclaredProperties().ToList();
+            foreach (var name in Contract.LightsPropertyNames()) Assert.Contains(name, declared);
+        }
+
         [Fact]
         public void The_declared_properties_grow_and_shrink_with_the_rig()
         {
