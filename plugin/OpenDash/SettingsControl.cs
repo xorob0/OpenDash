@@ -1232,12 +1232,21 @@ namespace OpenDashPlugin
         /// </summary>
         private void ApplyUpdate()
         {
-            var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
-            if (release == null) return;
-
             // A second click before the first has been answered used to fall straight through the confirmation,
             // because the confirming branch returned without disabling anything.
             if (applying) return;
+
+            var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
+            if (release == null)
+            {
+                // Nothing to act on, so the line says so and the button is put back where the status says it
+                // belongs, which is how a button left over from an earlier state disappears on the press that
+                // found it stale rather than staying to be pressed again.
+                RefreshUpdateLine();
+                updateLine.Text = UpdateWording.NothingToApply;
+                updateLine.Visibility = Visibility.Visible;
+                return;
+            }
 
             var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
             if (edited.Count > 0 && !confirmingEdited)
@@ -1283,6 +1292,10 @@ namespace OpenDashPlugin
                         updateStatus = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = plugin.Installer.InstalledVersion, Manual = true };
                     }
                     RefreshStatus();
+                    // The button's visibility is computed nowhere but here, so a status that has just stopped
+                    // offering an update has to be redrawn or the button outlives the release it was offering.
+                    // It runs before the outcome sentence is written because it writes the line as well.
+                    RefreshUpdateLine();
                     updateLine.Text = outcome.Line;
                     updateLine.Visibility = Visibility.Visible;
                 });

@@ -66,6 +66,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Asks GitHub for the newest release once a day. Nothing else leaves your machine.", UpdateWording.CheckCaption);
         }
 
+        /// <summary>
+        /// What a press with nothing behind it says. The sentence has to name the button that would fetch an
+        /// answer, since the whole complaint it settles is that the press left the user with nothing to do next.
+        /// </summary>
+        [Fact]
+        public void A_press_with_no_release_behind_it_names_the_button_that_would_find_one()
+        {
+            Assert.Contains("no release to install", UpdateWording.NothingToApply);
+            Assert.Contains("Check now", UpdateWording.NothingToApply);
+        }
+
         [Fact]
         public void The_notes_drop_the_heading_and_show_the_first_real_line()
         {
