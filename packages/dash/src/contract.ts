@@ -500,9 +500,71 @@ export const secondScreen = {
 // by the corner the data cable enters, and a second place to set them would be a second place to
 // disagree. The guide documents them instead.
 
-/** SimHub composes at most four matrix contents, so a box setting exists once per matrix. */
+/**
+ * SimHub composes at most four matrix contents, so a box setting exists once per matrix. People do
+ * own more than one box — two in the corners of a monitor stand, one showing flags and one showing
+ * the gear, is a setup somebody will build on day one — and XOR-124 settled that a screen owns its
+ * settings as one group. A device is the same shape of thing, so it gets the same treatment.
+ *
+ * Rotation and serpentine wiring are deliberately **not** here. They are SimHub device settings
+ * decided by the corner the data cable enters, and duplicating them would produce two places that
+ * disagree. The guide documents them instead.
+ *
+ * Presets are not here either. openDash has no store: a setting *is* a SimHub property, which is
+ * what makes it readable by anything and changeable while driving. A preset is a set of values with
+ * a name, which is a different feature with its own storage, its own migration and its own failure
+ * when a property is added.
+ */
 export const FLAG_BOX_MATRICES = [1, 2, 3, 4] as const;
 export type FlagBoxMatrix = (typeof FLAG_BOX_MATRICES)[number];
+
+/** What a matrix shows when nothing has taken it over. */
+export type FlagBoxRest = 'dark' | 'gear';
+export const FLAG_BOX_RESTS: readonly FlagBoxRest[] = ['dark', 'gear'];
+
+/**
+ * Which side of the rig a box is mounted on. The spotter reads it, and getting it wrong is worse
+ * than having no box: one to the left of the wheel lighting for a car on the right is actively
+ * dangerous. `both` is the single-box setup, where one panel has to show both sides.
+ */
+export type FlagBoxSide = 'both' | 'left' | 'right';
+export const FLAG_BOX_SIDES: readonly FlagBoxSide[] = ['both', 'left', 'right'];
+
+/** `FlagBoxMatrix1Rest` and its siblings. Prefixed, because a property name is a public interface. */
+export const flagBoxMatrixSetting = (matrix: FlagBoxMatrix, name: string): string => `FlagBoxMatrix${matrix}${name}`;
+
+/** What each matrix does by default: matrix 1 does everything, 2 to 4 are off. One box works out of the box. */
+export interface FlagBoxMatrixDefaults {
+  rest: FlagBoxRest;
+  flags: boolean;
+  spotter: boolean;
+  warnings: boolean;
+  side: FlagBoxSide;
+}
+
+export const FLAG_BOX_MATRIX_DEFAULTS: Record<FlagBoxMatrix, FlagBoxMatrixDefaults> = {
+  1: { rest: 'gear', flags: true, spotter: true, warnings: true, side: 'both' },
+  2: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
+  3: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
+  4: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
+};
+
+/** Reads of one matrix's settings. */
+export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
+  const d = FLAG_BOX_MATRIX_DEFAULTS[matrix];
+  const read = (name: string, fallback: Expr): Expr => isnull(prop(propertyName(flagBoxMatrixSetting(matrix, name))), fallback);
+  return {
+    rest: (): Expr => read('Rest', str(d.rest)),
+    flags: (): Expr => read('Flags', String(d.flags)),
+    spotter: (): Expr => read('Spotter', String(d.spotter)),
+    warnings: (): Expr => read('Warnings', String(d.warnings)),
+    side: (): Expr => read('Side', str(d.side)),
+  };
+};
+
+/** The five property names of one matrix, in the order the plugin attaches them. */
+export const flagBoxMatrixProperties = (matrix: FlagBoxMatrix): string[] =>
+  ['Rest', 'Flags', 'Spotter', 'Warnings', 'Side'].map((n) => flagBoxMatrixSetting(matrix, n));
 
 /**
  * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a
@@ -536,6 +598,26 @@ export const DEFAULT_LIGHTS_NIGHT_MODE = false;
 export const DEFAULT_FLAG_BOX_GEAR = true;
 
 /**
+ * Laps, not litres. A litre threshold means nothing without knowing the car; laps remaining means
+ * something in every car, and SimHub already publishes `Fuel_RemainingLaps`.
+ */
+export const FLAG_BOX_LOW_FUEL_LAPS_SETTING = 'FlagBoxLowFuelLaps';
+export const DEFAULT_FLAG_BOX_LOW_FUEL_LAPS = 2;
+
+/**
+ * Degrees, in **SimHub's unit**. A driver in Fahrenheit who sets 120 and gets a Celsius threshold
+ * has been given a broken feature, and a threshold that silently converts is worse than one that
+ * refuses — so the comparison is done in whatever unit `WaterTemperature` and `OilTemperature` are
+ * already reported in, which is the user's, and the default is stated per unit below.
+ */
+export const FLAG_BOX_OIL_TEMP_SETTING = 'FlagBoxOilTemp';
+export const FLAG_BOX_WATER_TEMP_SETTING = 'FlagBoxWaterTemp';
+
+/** 120 °C and 110 °C, and their equivalents, so a default is right in whatever unit is set. */
+export const DEFAULT_OIL_TEMP: Record<string, number> = { Celcius: 120, Fahrenheit: 248, Kelvin: 393 };
+export const DEFAULT_WATER_TEMP: Record<string, number> = { Celcius: 110, Fahrenheit: 230, Kelvin: 383 };
+
+/**
  * Off, so the box shows the whole catalogue until the driver asks for quiet. The default is the
  * one that tells a driver the most; a box that stays dark through a chequered flag is a surprise,
  * and a surprise is a worse default than a busy one.
@@ -556,9 +638,37 @@ export const flagBox = {
   criticalOnly: (): Expr => isnull(prop(propertyName(FLAG_BOX_CRITICAL_ONLY_SETTING)), String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
   /** `isnull([OpenDash.FlagBoxGear], true)`: the gear as the resting state. */
   gear: (): Expr => isnull(prop(propertyName(FLAG_BOX_GEAR_SETTING)), String(DEFAULT_FLAG_BOX_GEAR)),
+  /** `isnull([OpenDash.FlagBoxLowFuelLaps], 2)`. */
+  lowFuelLaps: (): Expr => isnull(prop(propertyName(FLAG_BOX_LOW_FUEL_LAPS_SETTING)), num(DEFAULT_FLAG_BOX_LOW_FUEL_LAPS)),
+  /**
+   * The oil threshold, defaulted **per unit**: the default is looked up from SimHub's own
+   * `TemperatureUnit` inside the expression, so a driver in Fahrenheit gets 248 rather than 120.
+   * Once they set a number it is theirs, in the unit they are reading.
+   */
+  oilTemp: (): Expr => isnull(prop(propertyName(FLAG_BOX_OIL_TEMP_SETTING)), defaultByUnit(DEFAULT_OIL_TEMP)),
+  /** As {@link oilTemp}, 110 °C. */
+  waterTemp: (): Expr => isnull(prop(propertyName(FLAG_BOX_WATER_TEMP_SETTING)), defaultByUnit(DEFAULT_WATER_TEMP)),
 };
+
+/** `if(unit = 'Fahrenheit', 248, if(unit = 'Kelvin', 393, 120))`, so no default is wrong in a unit. */
+function defaultByUnit(byUnit: Record<string, number>): Expr {
+  const unit = isnull(ncalc.game('TemperatureUnit'), str('Celcius'));
+  const celsius = byUnit.Celcius ?? 0;
+  return iff(eq(unit, str('Fahrenheit')), num(byUnit.Fahrenheit ?? celsius), iff(eq(unit, str('Kelvin')), num(byUnit.Kelvin ?? celsius), num(celsius)));
+}
 
 /** Every property the flag box profile reads. */
 export function flagBoxProperties(): string[] {
-  return [LIGHTS_BRIGHTNESS_SETTING, LIGHTS_NIGHT_BRIGHTNESS_SETTING, LIGHTS_NIGHT_MODE_SETTING, FLAG_BOX_CRITICAL_ONLY_SETTING, FLAG_BOX_GEAR_SETTING].map(propertyName);
+  const global = [
+    LIGHTS_BRIGHTNESS_SETTING,
+    LIGHTS_NIGHT_BRIGHTNESS_SETTING,
+    LIGHTS_NIGHT_MODE_SETTING,
+    FLAG_BOX_CRITICAL_ONLY_SETTING,
+    FLAG_BOX_GEAR_SETTING,
+    FLAG_BOX_LOW_FUEL_LAPS_SETTING,
+    FLAG_BOX_OIL_TEMP_SETTING,
+    FLAG_BOX_WATER_TEMP_SETTING,
+  ];
+  const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
+  return [...global, ...perMatrix].map(propertyName);
 }

@@ -9,8 +9,9 @@
  *       when the game is running
  *         when the ignition is off     a dim standby mark
  *         when the ignition is on
- *           flags                      the alert catalogue, in priority order
- *           the gear                   the resting state, under everything
+ *           matrix 1..4                each offset onto its own panel
+ *             flags                    the alert catalogue, in priority order
+ *             below the flags          the pit family, the spotter, the warnings, then the gear
  *
  * **Not racing is dark**, and that is the decision rather than a gap. Idle screens are a refusal
  * in scope.md, and a glowing logo on somebody's desk when nothing is running is the hardest
@@ -33,10 +34,11 @@
  * .djson resolves it. A hex value typed into this file is a bug.
  */
 import type { Expr } from '../bind.ts';
-import { flagBox } from '../contract.ts';
-import { conditionRaised, conditionVisible, flagsShown, type FlagCondition } from '../flags.ts';
+import { flagBox, flagBoxMatrix, FLAG_BOX_MATRICES, type FlagBoxMatrix } from '../contract.ts';
+import { conditionVisible, flagsShown, noFlagShown, type FlagCondition } from '../flags.ts';
 import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
 import { gearGroup } from './gear.ts';
+import { noneRaised, pitStates, spotterStates, stateContainers, warningStates } from './states.ts';
 import { flagFrames, ignitionOffFrames } from './glyphs.ts';
 
 /** The package name, the profile name and the file stem. Spaces are fine: the packages have them. */
@@ -53,53 +55,93 @@ export const COLUMNS = 8;
  */
 export const drawnFlags = (criticalOnly: boolean): FlagCondition[] => flagsShown(criticalOnly).filter((c) => flagFrames(c.id) !== undefined);
 
+/** `OpenDash.FlagBoxCriticalOnly` as a condition. */
+export const criticalOnly = (): Expr => ncalc.eq(flagBox.criticalOnly(), 'true');
+
 /**
- * The flag effects of one list, highest priority first, each shown only when no higher flag in
- * that same list is out.
+ * The flag effects, highest priority first, each shown only when no higher flag is out *and* the
+ * switch has not silenced it.
  */
-export function flagContainers(criticalOnly: boolean): MatrixContainer[] {
-  const shown = drawnFlags(criticalOnly);
+export function flagContainers(): MatrixContainer[] {
+  const shown = drawnFlags(false);
   return shown.map((condition) => ({
     kind: 'when' as const,
     description: condition.id,
-    formula: conditionVisible(condition, shown),
+    formula: conditionVisible(condition, criticalOnly(), shown),
     children: [{ kind: 'animation' as const, description: `${condition.id} glyph`, frames: flagFrames(condition.id) ?? [] }],
   }));
 }
 
-/** The two branches of the critical-flags-only switch, the whole catalogue first. */
+/** The catalogue, in order. */
 export function flagsGroup(): MatrixContainer {
-  const { eq, not } = ncalc;
-  const quiet = eq(flagBox.criticalOnly(), 'true');
-  return {
-    kind: 'group',
-    description: 'Flags',
-    children: [
-      { kind: 'when', description: 'Critical flags only', formula: quiet, children: flagContainers(true) },
-      { kind: 'when', description: 'Every flag', formula: not(quiet), children: flagContainers(false) },
-    ],
-  };
+  return { kind: 'group', description: 'Flags', children: flagContainers() };
 }
 
 /**
- * Nothing in the list that is actually being shown is raised.
- *
- * The gear is the resting state: every flag outranks it and takes the panel, and when they let go
- * it comes back. Rather than repeating the gear under both halves of the critical-flags-only
- * switch — which would double eighty-eight glyphs to save one expression — it sits beside them
- * once, under a condition that asks the question both ways. With the switch on, a chequered flag
- * no longer suppresses the gear, because it is no longer in the list being ranked.
+ * No flag is being shown, which is what everything below the flags needs to be true. A flag the
+ * switch has silenced does not hold the panel: with critical-flags-only on, a chequered flag shows
+ * the gear rather than nothing.
  */
-export function restingCondition(): Expr {
-  const { and, eq, not, or } = ncalc;
-  const quiet = eq(flagBox.criticalOnly(), 'true');
-  const none = (criticalOnly: boolean): Expr => and(...drawnFlags(criticalOnly).map((c) => not(conditionRaised(c))));
-  return or(and(quiet, none(true)), and(not(quiet), none(false)));
+export const noFlagShowing = (): Expr => noFlagShown(criticalOnly(), drawnFlags(false));
+
+/**
+ * Everything below the flags, for one matrix, in order: the pit family, the spotter, the three
+ * warnings, then the gear.
+ *
+ * The order is the point. A spotter warning that hides a yellow, or a low fuel light that hides
+ * one for the rest of a stint, is the failure this ranking exists to prevent — so all of it sits
+ * under `noFlagShowing()`, and each layer's condition excludes the layers above it.
+ */
+export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
+  const { and, eq, not } = ncalc;
+  const m = flagBoxMatrix(matrix);
+  const pit = pitStates();
+  const spotter = spotterStates(matrix);
+  const warnings = warningStates();
+  const on = (setting: Expr): Expr => eq(setting, 'true');
+  return [
+    { kind: 'when', description: 'Pit', formula: on(m.flags()), children: stateContainers(pit, 'Pit') },
+    {
+      kind: 'when',
+      description: 'Spotter',
+      formula: and(on(m.spotter()), noneRaised(pit)),
+      children: stateContainers(spotter, 'Spotter'),
+    },
+    {
+      kind: 'when',
+      description: 'Warnings',
+      formula: and(on(m.warnings()), noneRaised(pit), noneRaised(spotter)),
+      children: stateContainers(warnings, 'Warning'),
+    },
+    {
+      kind: 'when',
+      description: 'Resting',
+      formula: and(eq(m.rest(), "'gear'"), noneRaised(pit), noneRaised(spotter), noneRaised(warnings)),
+      children: [gearGroup()],
+    },
+  ].filter((c) => c.children.length > 0) as MatrixContainer[];
 }
 
-/** The gear, under everything the box can show instead. */
-export function restingGroup(): MatrixContainer {
-  return { kind: 'when', description: 'Resting', formula: restingCondition(), children: [gearGroup()] };
+/**
+ * One matrix's whole content, offset onto it.
+ *
+ * A group's `StartPositionMatrix` is an *offset* applied when its children's results are merged
+ * (`MultiMatrixResult.Merge(startPositionMatrix + i, …)`), so the subtree below is written once
+ * per matrix at matrix 1 and shifted here. The subtree is repeated in the file, which is the cost
+ * of SimHub having no way to bind which matrix a container paints; the gate above it is one
+ * expression, and `ConditionnalGroupContainer` does not descend when it is false, so a matrix
+ * nobody has switched on costs one evaluation a frame rather than a hundred.
+ */
+export function matrixGroup(matrix: FlagBoxMatrix): MatrixContainer | undefined {
+  const { and, eq, not, or } = ncalc;
+  const m = flagBoxMatrix(matrix);
+  const doesSomething = or(eq(m.flags(), 'true'), eq(m.spotter(), 'true'), eq(m.warnings(), 'true'), eq(m.rest(), "'gear'"));
+  const children: MatrixContainer[] = [
+    { kind: 'when', description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup()] },
+    { kind: 'when', description: 'Below the flags', formula: noFlagShowing(), children: belowFlags(matrix) },
+  ].filter((c) => c.children.length > 0) as MatrixContainer[];
+  if (children.length === 0) return undefined;
+  return { kind: 'when', description: `Matrix ${matrix}`, matrix, formula: doesSomething, children };
 }
 
 /**
@@ -151,7 +193,12 @@ export function flagBoxTree(): MatrixContainer[] {
           description: 'Racing',
           children: [
             { kind: 'when', description: 'Ignition off', formula: eq(ignitionOn(), num(0)), children: [{ kind: 'animation', description: 'Standby', frames: ignitionOffFrames() }] },
-            { kind: 'when', description: 'Ignition on', formula: eq(ignitionOn(), num(1)), children: [flagsGroup(), restingGroup()] },
+            {
+              kind: 'when',
+              description: 'Ignition on',
+              formula: eq(ignitionOn(), num(1)),
+              children: FLAG_BOX_MATRICES.map(matrixGroup).filter((c): c is MatrixContainer => c !== undefined),
+            },
           ],
         },
       ],

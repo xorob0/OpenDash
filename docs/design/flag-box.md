@@ -63,6 +63,80 @@ yellow, and bands are legible at this size where a pace-car silhouette is not.
 **Blue moves.** A blue flag with a moving arrow says which way to look. A static blue square says
 a colour.
 
+## Below the flags
+
+In order: the pit family, the spotter, the three warnings, then the gear. Each layer's condition
+excludes the layers above it, and the whole stack sits under "no flag is being shown".
+
+**That ordering is the point.** A spotter warning that hides a yellow, or a low fuel light that
+hides one for the rest of a stint, is the failure this ranking exists to prevent.
+
+### The pit family
+
+| Condition | Picture |
+|---|---|
+| Speeding in the lane | A double chevron in danger red, blinking. Outranks both limiter states: it is the one costing a penalty right now. |
+| Limiter on, out of the lane | An exclamation mark, blinking. A mistake costing a second a corner. |
+| Limiter on, in the lane | A two-pixel frame, steady. Quiet confirmation; the driver is doing the right thing. |
+
+Speeding is `SpeedKmh` against `PitLimiterSpeed` (iRacing's own `TrackPitSpeedLimit`), with one
+km/h of allowance so it does not flicker at exactly the limit. Comparing two published numbers is
+arithmetic over properties rather than state between frames, so it is not computed telemetry.
+
+The three differ in **shape**, not only in colour, which [XOR-78](https://linear.app/xorob/issue/XOR-78)
+requires. Two of them nearly did not: `purpose.pitLimiter` resolves to pure white, the same value
+as `purpose.flag.white`, so a filled panel for "limiter still on" would have been the white flag
+with a blink — telling a driver *last lap* when you mean *your limiter is on*. The token is not
+changed to fix that: `design/` is the design source and a colour is decided there, so the shapes
+carry the difference. A test now refuses any two identical pictures anywhere in the profile.
+
+### The spotter
+
+A bar two pixels wide down the edge the car is on: left, right, or both edges at once.
+
+Which side a box is *mounted* on is a per-matrix setting, not a guess. A box to the left of the
+wheel lighting for a car on the right is worse than no box. `Both` is the single-box setup and
+shows both edges.
+
+**Three states, not four.** iRacing's `CarLeftRight` distinguishes clear, a car on one side, cars
+on both sides and *two cars* on a side — but SimHub folds it into two booleans on the way through
+(`CarLeftRight` 2, 4 and 5 all become `SpotterCarLeft`), so the two-car state does not survive.
+Three are shipped rather than a fourth faked. The raw value would carry it; reading it has not been
+verified, and a spotter that is wrong is worse than one that says less.
+
+### The warnings
+
+| Condition | Threshold | Picture |
+|---|---|---|
+| Oil too hot | `OpenDash.FlagBoxOilTemp`, default 120 °C | A disc, orange, blinking |
+| Water too hot | `OpenDash.FlagBoxWaterTemp`, default 110 °C | Waves, orange, blinking |
+| Low fuel | `OpenDash.FlagBoxLowFuelLaps`, default 2 | A tank emptying, yellow, blinking |
+
+**Low fuel is measured in laps.** A litre threshold means nothing without knowing the car; laps
+remaining means something in every car, and SimHub publishes `Fuel_RemainingLaps`.
+
+**Temperatures are compared in SimHub's own unit.** A driver in Fahrenheit who sets 120 and gets a
+Celsius threshold has been given a broken feature, and a threshold that silently converts is worse
+than one that refuses. The *default* is chosen from `TemperatureUnit` inside the expression, so a
+driver who never opens the panel gets 248 °F rather than 120 °F. A car that reports no temperature
+reads as 0 and never trips a warning.
+
+**No acknowledgement.** DNR lets a driver dismiss a low fuel alert. That needs memory between
+frames and a button binding, so it is not here. What *is* here is the ordering: a standing warning
+sits below the flags and cannot hide one.
+
+### The countdown to your box, which is not drawn
+
+The most loved thing on any flag box profile, and not ours to draw. It needs a distance to the
+driver's own stall, and **iRacing publishes no such value**: the telemetry carries `PitSvFlags` and
+`PitRepairLeft` but no distance, and `CarIdxLapDistPct` is a lap fraction for every car rather than
+a distance to a stall. Deriving one from track position and the stall's position is computed
+telemetry, which [scope.md](../scope.md) refuses until
+[ADR 0009](../decisions/0009-does-the-plugin-compute.md) moves the line.
+
+So it is written down here rather than quietly computed. If XOR-47 moves that line, this is the
+first thing to build with it.
+
 ### The gear, underneath everything
 
 `OpenDash.FlagBoxGear` (on by default) draws the gear filling the panel when nothing else is on
@@ -150,6 +224,26 @@ ask for; the answer is that iRacing does not publish it, not that it was forgott
 | **Crossed, random waving** | `crossed` and `randomWaving` are published, and neither has a documented meaning in iRacing's own reference. Drawing something for a condition nobody can define is how a box starts lying. |
 | **Serviceable** | `servicible` is in the bitfield and iRacing's own header says it is *not a flag*: it reports whether the car may be serviced. |
 | **Start go** | `startGo` and the green flag are the same instant. Green is drawn. |
+
+## Four matrices, and what the file costs
+
+SimHub composes up to four matrix contents (`MultiMatrixResult` holds `MatrixResult[4]`), and each
+gets a group of its own with its own settings. A group's `StartPositionMatrix` is an *offset*
+applied when its children's results are merged, so the subtree below it is written at matrix 1 and
+shifted onto the right panel.
+
+**The subtree is repeated once per matrix, and that is the whole of the file's size.** SimHub has
+no way to bind which matrix a container paints — the position is a static property — so there is no
+alternative to writing it four times. The profile is about 785 KB and 600 containers, roughly 17%
+of the plugin DLL and about 42 KB once the release zip compresses it.
+
+What that does *not* cost is frames: `ConditionnalGroupContainer` does not descend into a group
+whose condition is false, so a matrix nobody has switched on is one expression a frame rather than
+a hundred. The defaults switch on exactly one.
+
+Two things were done to keep it from being twice that. The critical-flags-only switch is a guard on
+each non-critical flag rather than a second copy of the catalogue; and the gear, which is
+forty-four glyphs, sits beside the switch rather than under both halves of it.
 
 ## Seen, or not
 

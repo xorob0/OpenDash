@@ -120,17 +120,33 @@ export const flagCondition = (id: string): FlagCondition => {
 export const conditionRaised = (condition: FlagCondition): Expr => or(...condition.bits.map(bitSet));
 
 /**
- * The condition is raised and nothing above it in the catalogue is: one flag at a time, ranked
- * the same way everywhere. `only` narrows the list, which is how "critical flags only" works —
- * a suppressed flag stops outranking the ones below it, so the box shows the next one down
- * rather than going dark.
+ * The condition is raised *and the driver has asked to see it*.
+ *
+ * "Critical flags only" is a guard on the non-critical conditions rather than a second copy of the
+ * catalogue. Carrying the whole list twice, once per branch of the switch, reads better in the
+ * file and costs twice the glyphs — and the tree is already written once per matrix, so the
+ * doubling is eightfold by the time it reaches disk. This is the version that fits.
  */
-export function conditionVisible(condition: FlagCondition, only: readonly FlagCondition[] = FLAG_CATALOGUE): Expr {
+export function conditionShown(condition: FlagCondition, criticalOnly: Expr): Expr {
+  const raised = conditionRaised(condition);
+  return condition.critical ? raised : and(not(criticalOnly), raised);
+}
+
+/**
+ * The condition is shown and nothing above it in the catalogue is: one flag at a time, ranked the
+ * same way everywhere. A flag the switch has silenced stops outranking the ones below it, so the
+ * box shows the next one down rather than going dark.
+ */
+export function conditionVisible(condition: FlagCondition, criticalOnly: Expr, only: readonly FlagCondition[] = FLAG_CATALOGUE): Expr {
   const index = only.indexOf(condition);
   if (index < 0) throw new RangeError(`${condition.id} is not in the list it is being ranked within`);
-  const higher = only.slice(0, index).map((c) => not(conditionRaised(c)));
-  return and(...higher, conditionRaised(condition));
+  const higher = only.slice(0, index).map((c) => not(conditionShown(c, criticalOnly)));
+  return and(...higher, conditionShown(condition, criticalOnly));
 }
+
+/** Nothing in the catalogue is being shown, which is what everything below the flags needs. */
+export const noFlagShown = (criticalOnly: Expr, only: readonly FlagCondition[] = FLAG_CATALOGUE): Expr =>
+  and(...only.map((c) => not(conditionShown(c, criticalOnly))));
 
 /** The catalogue, or only the critical part of it. */
 export const flagsShown = (criticalOnly: boolean): readonly FlagCondition[] =>
