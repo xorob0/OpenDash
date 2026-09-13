@@ -117,38 +117,54 @@ files are untouched.
 Wordmark: `Open` in a light weight, `Dash` in bold. Condensed, technical. The two weights are the
 whole of it; there is no second typeface and no letter spacing.
 
-The mark is **the rev bar**, which is the one shape OpenDash owns: three segments sweeping up and
-to the right, and a fourth, set apart and heavier, which is the shift point a driver acts on. It is
-`media/logo.svg`, drawn in a 32 unit square in `purpose.ui.accent` and nothing else.
+The mark is **the dash itself**: a housing wider than it is tall, square across the bottom and
+closed over the top by a half circle, with a tachometer needle swept up and to the right inside it.
+It is `media/logo.svg`, drawn in a 32 unit square in `purpose.ui.accent` and nothing else.
 
-**No shared baseline.** This is the rule the mark turns on. Segments standing on a common baseline
-read as a measurement whatever else is done to them, which is why the first drawing of this mark
-was indistinguishable from a signal-strength icon. Here three progressions run at once and none of
-them is a baseline: each segment starts 6 units higher than the one before, ends 4 units higher,
-and is 2 units taller. The eye gets a sweep instead of a chart.
+It replaced a rev bar, which was the right idea argued the wrong way round. The rev bar is a part
+of the face rather than the face, and drawn as segments it could not escape being a bar chart:
+segments on a shared baseline read as a measurement whatever else is done to them, so the mark
+looked like a signal-strength icon at every size it was put at. The dash is the whole product, it
+is a silhouette rather than an arrangement, and a needle says *instrument* in a way no row of
+anything does.
 
-**The shift point is the loudest thing in it**, because it is the loudest thing on a dash. It is
-the widest and the tallest segment and it stands off a 5 unit gap where the others are spaced 3.
-The first drawing had this backwards — it made the shift point a two unit hairline and spaced it
-exactly like the four segments it was meant to be separated from, so the one element carrying the
-meaning was the one hardest to see.
+**Wider than it is tall**, because that is the shape of the thing. Every face OpenDash draws is a
+landscape rectangle, from the 1920 by 480 reference down to the 800 by 286 nano, and a mark shaped
+like a gauge pod would be standing for something the project does not make.
 
-**Hard edges**, radius 0, as `radius.none` says race dashes are. Rounding was the other thing
-wrong with the first drawing: the SVG asked for `rx="2"` and the panel drew `RadiusX = width / 2`,
-so the mark shipped as soft capsules on one surface and half-rounded bars on the other.
+**The top is one half circle, not two rounded corners.** Its radius is exactly half the width, so a
+single arc spans the whole of it and the straight sides are what is left underneath. Anything less
+leaves a flat run across the top, and the silhouette stops reading as a dash and starts reading as
+a box with the corners taken off. The floor stays square, which is `radius.none`: this is the one
+curve the brand allows itself, and it is the one doing all the work.
 
-Two constraints then fix the sizes rather than taste. It is seen at 16 px in a browser tab, so
-nothing in it is thinner than five units of thirty-two and no gap is narrower than three, which is
-2.5 px and 1.5 px there: at that size a mark can die by losing a segment or by merging into a blob,
-and both are tested. And it is seen monochrome on a dark panel, so it reads as a shape and not as a
-colour: take the fill away and the sweep is still a sweep.
+**The needle is a needle**: a round hub, and a blade running from that hub's own *tangent points*
+out to a single point. Tangents matter more than they sound. A wedge whose base is a chord across
+the hub steps off it and the whole thing reads as a comma at 24 px; tangent lines leave the circle
+smoothly, which is the difference between a needle and a blob. It pivots at the half circle's own
+centre, so the needle and the roof share a centre of curvature and the point aims at the arc
+wherever it is swept to. Up and to the right is a tachometer under load, which is the only state
+worth drawing.
 
-It is drawn twice, because WPF cannot render an SVG and Markdown cannot render a `Canvas`. The SVG
-is the source; `MarkShape.Bars` in the plugin mirrors it and `MarkTests` reads the file and checks
-the numbers against each other, so the copies cannot drift. Change the SVG first. The corner radius
-is checked too now, since comparing positions and sizes alone is exactly how the capsules went
-unnoticed, and so are the three rules above, so that the mark cannot quietly become a bar chart
-again.
+**One shape with one hole.** The housing is one subpath, the needle another, and `fill-rule`
+`evenodd` cuts the second out of the first, so the needle is the background showing through rather
+than a second colour. That is what keeps the mark to one brush and lets it sit on the near-black
+panel and on the README's white without being drawn twice.
+
+Two constraints then fix the sizes rather than taste. It is seen at 16 px in a browser tab, where
+one unit is half a pixel, and a mark that size dies by merging: the hub is 6 units across, the
+point stands 3 units clear of the arc and the hub 4 clear of the floor. The needle's taper is the
+one thing exempt from the four-unit floor the segments were held to, and deliberately — it is meant
+to reach nothing, and a taper is read from the body behind it. And it is seen monochrome, so it
+reads as a shape and not as a colour: take the fill away and the gauge is still a gauge.
+
+It is drawn twice, because WPF cannot render an SVG and Markdown cannot render a `Canvas`. The two
+copies are now **one string**: `MarkShape.PathData` is the SVG's own `d`, character for character,
+`Ui.Mark` hands it to `Geometry.Parse` behind an `F0` for the same even-odd rule, and `MarkTests`
+compares them. The rev bar was held together by four numbers per bar instead, and it still drifted
+— the rectangles matched and the corner radius did not, because a corner is neither a position nor
+a size. `MarkTests` also holds the rules above rather than only the numbers, so the shape cannot
+quietly stop being a dash. Change the SVG first.
 
 Where it goes: the settings panel's header beside the wordmark, and the top of `README.md`. Not on
 the face, which is a driver's instrument and not a billboard.
