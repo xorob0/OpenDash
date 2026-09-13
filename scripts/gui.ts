@@ -379,7 +379,13 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     sleep(2);
     click(host, searchX, LIST.firstRow - 123);
     sleep(1);
+    // Emptied rather than selected. The box keeps what the last run typed, and a select-all that
+    // lands while the box is not yet focused leaves that text in place, so the filter becomes the
+    // old name with the new one appended -- which matches no dashboard at all, and the loop then
+    // reports that it could not open a package that is installed and listed.
     press(host, 'ctrl-a');
+    sleep(1);
+    press(host, 'del');
     sleep(1);
     type(host, opts.filter ?? opts.name);
     sleep(3);
