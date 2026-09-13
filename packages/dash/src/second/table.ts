@@ -242,6 +242,30 @@ export interface TableSpec {
   header?: boolean;
   /** Row height; the density's by default. */
   rowHeight?: number;
+  /**
+   * When true, the table lists the player's own class rather than the whole field.
+   *
+   * An expression, because it is a plugin setting a driver changes mid-session and the file is
+   * written once. It only reaches `mode: 'full'` and `mode: 'relative'`: `mode: 'class'` is already
+   * one class and has nothing left to filter.
+   */
+  classOnly?: Expr;
+}
+
+/**
+ * Which car a row addresses.
+ *
+ * SimHub has a class-only twin of each of the two lookups a table uses, so filtering to the
+ * player's class is the same question asked of a different function rather than a row set built
+ * somewhere else. With no `classOnly` the expression is the bare lookup it has always been, so
+ * nothing the companion or the pit wall draws changes shape.
+ */
+function rowIndexFor(spec: TableSpec, centre: number): Expr {
+  if (spec.mode === 'class') return rowIndex.inClass();
+  const whole = spec.mode === 'relative' ? rowIndex.relative(centre) : rowIndex.full();
+  if (!spec.classOnly) return whole;
+  const inClass = spec.mode === 'relative' ? rowIndex.relativeInClass(centre) : rowIndex.inClass();
+  return iff(spec.classOnly, inClass, whole);
 }
 
 /** The widths of a table's columns, the name column taking what is left. */
@@ -294,7 +318,7 @@ export function table(spec: TableSpec): Item[] {
   const top = spec.frame.top + (header ? d.headerHeight : 0);
   // The player sits in the middle of a relative table, so the row index counts from that row.
   const centre = Math.ceil(rows / 2);
-  const idx = spec.mode === 'relative' ? rowIndex.relative(centre) : spec.mode === 'class' ? rowIndex.inClass() : rowIndex.full();
+  const idx = rowIndexFor(spec, centre);
   const isPlayer = carIsPlayer(idx);
   const inPit = carInPit(idx);
 

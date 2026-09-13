@@ -305,7 +305,7 @@ export function moduleBoxes(): { name: string; frame: Rect; density: Density }[]
       const key = `${wide ? 'wide' : 'zone'}-${size.width}x${size.height}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', page: 1, pages: 9 });
+      const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
       boxes.push({ name: `${def.folder} ${key}`, frame: body, density: wide ? 'wide' : 'zone' });
     }
   }

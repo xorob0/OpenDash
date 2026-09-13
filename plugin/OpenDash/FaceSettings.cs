@@ -25,6 +25,11 @@ namespace OpenDashPlugin
         /// <summary>Page each zone opens on.</summary>
         public int[] Starts { get; set; } = Contract.DefaultFaceZones();
 
+        /// <summary>Whether each zone's list pages show the player's own class rather than the whole
+        /// field, index 0 is zone A. Per zone rather than per face, because the point of it is zone B
+        /// listing the race and zone C listing the class a driver is actually in.</summary>
+        public bool[] ClassOnly { get; set; } = Contract.DefaultFaceZoneClassOnly();
+
         /// <summary>Field each end of the bar shows, in Contract.BarSlots order.</summary>
         public int[] BarFields { get; set; } = Contract.DefaultBarSlots();
 
@@ -67,6 +72,13 @@ namespace OpenDashPlugin
             Masks = masks;
             Starts = starts;
 
+            var classOnly = Contract.DefaultFaceZoneClassOnly();
+            if (ClassOnly != null)
+            {
+                for (var i = 0; i < classOnly.Length && i < ClassOnly.Length; i++) classOnly[i] = ClassOnly[i];
+            }
+            ClassOnly = classOnly;
+
             var bar = Contract.DefaultBarSlots();
             if (BarFields != null)
             {
@@ -106,6 +118,22 @@ namespace OpenDashPlugin
             Starts[index] = clamped;
             Zones[index] = clamped;
             SetPageEnabled(letter, clamped, true);
+        }
+
+        /// <summary>Whether a zone's list pages show the player's own class. Safe to call before Normalise().</summary>
+        public bool IsClassOnly(string letter)
+        {
+            var index = ZoneIndex(letter);
+            if (ClassOnly == null || index >= ClassOnly.Length) return Contract.DefaultZoneClassOnly;
+            return ClassOnly[index];
+        }
+
+        /// <summary>Sets a zone's class filter.</summary>
+        public void SetClassOnly(string letter, bool classOnly)
+        {
+            var index = ZoneIndex(letter);
+            EnsureArrays();
+            ClassOnly[index] = classOnly;
         }
 
         /// <summary>The enabled-page mask of a zone, by its letter.</summary>
@@ -223,6 +251,7 @@ namespace OpenDashPlugin
                 Zones = (int[])Zones?.Clone(),
                 Masks = (int[])Masks?.Clone(),
                 Starts = (int[])Starts?.Clone(),
+                ClassOnly = (bool[])ClassOnly?.Clone(),
                 BarFields = (int[])BarFields?.Clone(),
                 QuickGlance = QuickGlance,
             };
@@ -247,7 +276,8 @@ namespace OpenDashPlugin
             var zones = Contract.FaceZoneLetters.Length;
             if (Zones == null || Zones.Length != zones
                 || Masks == null || Masks.Length != zones
-                || Starts == null || Starts.Length != zones)
+                || Starts == null || Starts.Length != zones
+                || ClassOnly == null || ClassOnly.Length != zones)
             {
                 Normalise();
             }

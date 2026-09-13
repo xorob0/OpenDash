@@ -197,7 +197,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The shared settings first, then one group per screen the rig has, in the order
         /// OpenDashSettings.DeclaredProperties() lists them: a rig and not the catalogue, because eight
-        /// faces of seventeen properties is a hundred and thirty-six names for a rig of two screens.
+        /// faces of twenty-one properties is a hundred and sixty-eight names for a rig of two screens.
         ///
         /// A screen added while SimHub is running therefore has no properties until it is restarted.
         /// That is not a new limitation: SimHub reads its dashboard list once at startup too, so the
@@ -226,6 +226,7 @@ namespace OpenDashPlugin
                     this.AttachDelegate(Contract.ZonePageProperty(capturedFace, captured), () => Settings.FaceZone(capturedFace, captured));
                     this.AttachDelegate(Contract.ZoneMaskProperty(capturedFace, captured), () => Settings.FaceZoneMask(capturedFace, captured));
                     this.AttachDelegate(Contract.ZoneStartProperty(capturedFace, captured), () => Settings.FaceZoneStart(capturedFace, captured));
+                    this.AttachDelegate(Contract.ZoneClassOnlyProperty(capturedFace, captured), () => Settings.FaceZoneIsClassOnly(capturedFace, captured));
                 }
                 foreach (var slot in Contract.BarSlots)
                 {

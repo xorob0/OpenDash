@@ -10,7 +10,7 @@
  * read it off an artboard; see `docs/design/zones.md`.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect } from '../generator.ts';
-import { FACE_SIZES, FACE_ZONE_LETTERS, type FaceSize, type FaceZone } from '../contract.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
@@ -21,8 +21,8 @@ import { bar } from './bar.ts';
 import { rectOf, type ZoneLayout } from './layout.ts';
 import { label } from '../elements/label.ts';
 import { densityForBox, densityOf } from '../second/density.ts';
-import { zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
-import { zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
+import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
+import { widestCounter, zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
 export const FACE_SCREEN_NAME = 'Main';
 
@@ -69,9 +69,10 @@ export function faceItems(layout: ZoneLayout): Item[] {
     if (gapLeft > z.zoneB.left) items.push(rule(name, gapLeft, z.zoneB.top, 1, z.zoneB.height));
   }
 
+  const face = sizeOf(layout);
   for (const zone of FACE_ZONE_LETTERS) {
-    items.push(zoneWidget(`zone${zone}`, sizeOf(layout), zone, rectOf(layout, zone)));
-    items.push(...zoneLetter(zone, rectOf(layout, zone)));
+    items.push(zoneWidget(`zone${zone}`, face, zone, rectOf(layout, zone)));
+    items.push(...zoneHeaderParts(face, zone, rectOf(layout, zone)));
   }
 
   // A flag takes the band over, because an alert outranks fuel. The same sixty pixels goes to
@@ -86,22 +87,31 @@ export function faceItems(layout: ZoneLayout): Item[] {
 }
 
 /**
- * The letter in a zone's header, drawn by the face rather than by the zone.
+ * The two ends of a zone's header, drawn by the face rather than by the zone: the letter and the
+ * page counter.
  *
- * Zones B and C are the same rectangle on most faces, so one dashboard file serves both; a letter
- * inside it would say B in each. The face is the only thing that knows which rect is which, so the
- * letter is drawn here, over the widget, in the gap the header keeps for it.
+ * Zones B and C are the same rectangle on most faces, so one dashboard file serves both. A letter
+ * inside it would say B in each, and a counter inside it would count the catalogue -- "15 / 21" on
+ * a cycle of three, because a screen cannot know which zone's mask is deciding its length. The face
+ * is the only thing that knows which rect is which zone, so both are drawn here, over the widget,
+ * in the room the zone's header keeps at each end.
  *
- * Zones A and D carry no header, so they get no letter.
+ * Zones A and D carry no header, so they get neither.
  */
-function zoneLetter(zone: FaceZone, r: Rect): Item[] {
+function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect): Item[] {
   if (zone === 'A' || zone === 'D') return [];
   const density = densityForBox({ width: r.width, height: r.height });
   const { padX } = zoneFrameMetrics(density);
+  const size = densityOf(density).labelSm;
+  const y = zoneTitleY(r, density);
+  const counter = { kind: 'reserved', widest: widestCounter(zone, density) } as const;
   return [
-    label(`zone${zone}.letter`, zone, r.left + padX, zoneTitleY(r, density), zoneLetterWidth(density), {
-      size: densityOf(density).labelSm,
-      color: ds.color.text.secondary,
+    label(`zone${zone}.letter`, zone, r.left + padX, y, zoneLetterWidth(density), { size, color: ds.color.text.secondary }),
+    label(`zone${zone}.counter`, counter.widest, zoneCounterX(r, counter, density), y, zoneCounterWidth(counter, density), {
+      size,
+      hAlign: 'right',
+      bind: zoneCounter(face, zone),
+      widest: counter.widest,
     }),
   ];
 }
@@ -144,5 +154,5 @@ export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions): Built
     ],
     metadata,
   };
-  return { main, zones: zoneDashboardsFor(zonesOf(layout), metadata) };
+  return { main, zones: zoneDashboardsFor(sizeOf(layout), zonesOf(layout), metadata) };
 }
