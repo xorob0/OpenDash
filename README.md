@@ -3,33 +3,60 @@
 An open-source sim racing dashboard for [SimHub](https://www.simhubdash.com/), released under
 the MIT licence.
 
+OpenDash is the whole set of screens on a rig rather than a single dashboard: the face on the
+wheel or the dash, a companion on the phone or the tablet beside it, and a pit wall screen for
+whoever is not driving. Fourteen packages cover sizes from 1920 by 480 down to a 480 px round
+DDU, and one SimHub plugin installs all of them and carries the settings that decide what each
+one shows.
+
+A driver gets the gear, the revs and the flags where the eye already goes, and around them the
+values they asked for rather than the ones somebody else chose: speed, lap times, the delta,
+position, session progress, fuel and the laps it is worth, tyre temperatures and pressures,
+traction control and ABS. None of it has to be configured in order to work, since every package
+carries the default layout by itself, and the plugin is what makes that layout yours.
+
+The screen it draws on is whichever one SimHub already drives: an HDMI DDU, a Vocore or a
+USBD480 USB screen, a phone or a tablet on the network. The telemetry is SimHub's as well, so
+other sims will very probably work, although iRacing is the one OpenDash is tested against and
+therefore the only one it claims.
+
+The packages and the plugin are published on the
+[releases page](https://github.com/xorob0/OpenDash/releases), and [Install](#install) below says
+which file to take.
+
+## What it looks like
+
+Every capture below is the package itself, photographed through SimHub's own renderer at its own
+size while the telemetry emulator replayed a green flag lap at Spa, the car lying third of
+twenty-four. None of them is a mock-up, and no value in them was typed by hand.
+
+**The reference face, 1920 x 480.** Twelve slots around the hero column, which is the most a face
+carries; the smaller sizes carry fewer of the same cards.
+
+![The OpenDash face at 1920 by 480](media/readme/face-1920x480.png)
+
+**A narrow face, 800 x 286.** The same dashboard where the height is not there: four slots rather
+than twelve, a smaller gear, and a flag strip too thin to carry a label. Speed is a card here as
+it is everywhere else, which is what lets it move to another slot.
+
+![The OpenDash face at 800 by 286](media/readme/face-800x286.png)
+
+**The companion, 850 x 480.** A phone or a tablet beside the wheel, showing one of twenty-one
+modules at a time and paged with a wheel button.
+
+![The OpenDash companion at 850 by 480](media/readme/companion-850x480.png)
+
+**The pit wall, 1920 x 1080.** A screen for somebody who is not driving: the whole field with
+gaps, intervals, sectors, stints and stops, the driver's own lap beside it, and four data zones
+that are plugin settings.
+
+![The OpenDash pit wall at 1920 by 1080](media/readme/pit-wall-1920x1080.png)
+
 > **Status: alpha.** Fourteen packages are built: ten dash faces from 1920 by 480 down to a
 > 480 px round DDU, two companion screens and two pit wall screens, plus a SimHub plugin that
 > installs them all and exposes their settings. Everything below has been verified on
 > SimHub 9.12.6. See [docs/scope.md](docs/scope.md) for what OpenDash is and what it refuses to
 > be, and [docs/second-screens.md](docs/second-screens.md) for the companion and the pit wall.
-
-## What makes this different
-
-Existing SimHub dashboards ship as `.simhubdash` binaries. One cannot diff them, one cannot
-review a pull request against them, and every screen size is hand-maintained as a separate
-copy.
-
-OpenDash treats the dashboard as compiled output. The source of truth is TypeScript together
-with a set of design tokens; a generator emits the `.djson` scene graph that SimHub renders and
-packs it into a `.simhubdash`. A small SimHub plugin installs that package and exposes a
-handful of settings, so that the user can choose which card sits in which slot without touching
-the dashboard itself.
-
-That buys three things. Contributors can actually contribute, because a pull request is a
-TypeScript diff rather than an opaque blob. A feature change reaches every screen size at once,
-because cards are shared components and a size is only a layout that arranges them. Finally,
-one set of design tokens drives the dashboard and the plugin panel, so colours cannot drift
-between them.
-
-Because rendering stays native to SimHub, everything SimHub already does well is kept: HDMI
-DDUs, Vocore and USBD480 USB screens, phones and tablets, and the seventeen or so sims it
-reads.
 
 ## Install
 
@@ -93,6 +120,24 @@ side.
 Three modules ship off because iRacing publishes none of their data, and they say so rather than
 drawing zeros. [docs/second-screens.md](docs/second-screens.md) lists every such case and why.
 
+## Why it is generated from source
+
+Existing SimHub dashboards ship as `.simhubdash` binaries. One cannot diff them, one cannot
+review a pull request against them, and every screen size is hand-maintained as a separate
+copy.
+
+OpenDash treats the dashboard as compiled output. The source of truth is TypeScript together
+with a set of design tokens; a generator emits the `.djson` scene graph that SimHub renders and
+packs it into a `.simhubdash`. A small SimHub plugin installs that package and exposes a
+handful of settings, so that the user can choose which card sits in which slot without touching
+the dashboard itself.
+
+That buys three things. Contributors can actually contribute, because a pull request is a
+TypeScript diff rather than an opaque blob. A feature change reaches every screen size at once,
+because cards are shared components and a size is only a layout that arranges them. Finally,
+one set of design tokens drives the dashboard and the plugin panel, so colours cannot drift
+between them.
+
 ## Build from source
 
 Requirements: [Bun](https://bun.sh) 1.x for the dashboard and the .NET 8 SDK for the plugin.
@@ -119,6 +164,8 @@ at the result, not for authoring it: anything changed there is overwritten by th
 design/
   tokens.json          Design tokens, source of truth for all colour, type and spacing
   canvas/              Design system canvas artboards (Claude Design), derived from the tokens
+media/
+  readme/              The captures this file shows; media/README.md says why they live here
 packages/
   generator/           TypeScript library that emits SimHub .djson scene graphs (no OpenDash knowledge)
   dash/                OpenDash itself: tokens in code, elements, components, cards, hero, layouts, build
@@ -149,7 +196,8 @@ docs/
 face, and every text of every package measured against the box SimHub clips it to). `dotnet test` covers the plugin's version comparison, settings and card catalogue. On
 top of that the dashboard and the plugin are checked by hand on a Windows VM running SimHub,
 where [tools/irsdk-emulator](tools/irsdk-emulator/README.md) feeds scripted iRacing telemetry
-so that every card can be seen with real values.
+so that every card can be seen with real values. `bun run shots` is the same VM photographing a
+package, and it is where the images at the top of this file come from.
 
 ## Contributing
 
