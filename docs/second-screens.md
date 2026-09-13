@@ -10,16 +10,31 @@ the second screens are, how they are put together, and what they deliberately do
 
 ## The module
 
-A module is a function of a rectangle and a density:
+A module is a function of a rectangle, a density and a shape:
 
 ```ts
-(ctx: { frame: Rect; density: 'companion' | 'zone' | 'wide'; prefix: string }) => Item[]
+(ctx: { frame: Rect; density: Density; prefix: string; shape?: Shape }) => Item[]
 ```
 
-That is the whole design. The companion draws a module across an 802 x 356 page; a pit wall zone
-draws the same module in a 607 x 212 panel. Nothing in a module knows which it is on: the density
-carries the type ramp (116 / 64 / 46 / 34 / 24 on a companion page, 64 / 46 / 34 / 24 / 16 in a
-zone), the gaps, the row heights and the trace length.
+`Density` is `'companion' | 'zone' | 'compact' | 'wide'`, in
+`packages/dash/src/second/density.ts`. `compact` is the ramp a zone gets when it is too small for
+the zone ramp, and `densityForBox` is what chooses. `Shape` is a pair of bands, width and height,
+in `packages/dash/src/second/shape.ts`; it is derived from the frame when the caller does not pass
+one, which is every caller today. Density says how large the type is, shape says how much of the
+page fits.
+
+That is the whole design. Nothing in a module knows which screen it is on: the density carries the
+type ramp (116 / 64 / 46 / 34 / 24 on a companion page, 64 / 46 / 34 / 24 / 16 in a zone), the
+gaps, the row heights and the trace length.
+
+The boxes themselves are not written down, here or anywhere else. They are computed: a companion
+page is `companionGeometry` less the padding `contentRect` takes, and a pit wall zone is the
+widget rectangle the page placed less what `zoneFrame` takes for its title and its gutters.
+`moduleBoxes` in `packages/dash/test/secondScreens.test.ts` derives all seven the packages produce
+and builds every module into each of them, so running the test is how to see the list. Those sizes
+were once literals in that test and every one had drifted taller than the real box, which made the
+test read as a stronger guarantee than it was; a size copied into this document would be the same
+mistake with nothing to catch it.
 
 Rows of fields shrink their gaps and then wrap, so a row of three lap times is one line on the
 850 px companion and two on the 480 px portrait one. No module has a portrait variant.
