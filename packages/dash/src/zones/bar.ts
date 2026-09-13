@@ -138,11 +138,21 @@ export const STRIP_CELLS: readonly StripCell[] = [
  */
 const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', 'map', 'diff'];
 
-/** Width a strip cell takes: its label or its value, whichever is wider. */
+/**
+ * Width a strip cell takes: its label or its value, whichever is wider, rounded up to an even
+ * number.
+ *
+ * Even, because the strip is a centred rank that closes over what is missing, and `rank` centres
+ * on `(width - total) / 2` twice over: once in the static rect, which `roundRect` rounds, and once
+ * in the `Left` binding, which NCalc evaluates at runtime and nothing rounds. An odd total puts the
+ * two half a pixel apart. The strip's own width and its gap are both even, so even cells keep every
+ * arrangement the closing can produce -- not merely the one with every cell present -- on whole
+ * pixels, and the binding agrees with the rect it was laid out from.
+ */
 function stripCellWidth(cell: StripCell, valueFs: number, labelFs: number): number {
   const value = monoWidth(cells('SemiBold', valueFs), { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 });
   const text = Math.ceil(measureText('BarlowMedium', cell.label.toUpperCase(), labelFs)) + 2;
-  return Math.ceil(Math.max(value, text));
+  return 2 * Math.ceil(Math.max(value, text) / 2);
 }
 
 /** Width a bar end field takes: its value, its denominator, and the label above them. */
@@ -233,7 +243,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
   const stripWidth = Math.max(0, stripRight - stripLeft);
   const strip = rank(
     STRIP_CELLS.map((cell) => {
-      const w = stripCellWidth(cell, smallFs, labelFs);
+      const w = stripCellWidth(cell, valueFs, labelFs);
       const present = ncalc.not(ncalc.isNull(cell.present ?? cell.expr));
       const name = `${prefix}strip.${cell.id}`;
       return {
@@ -242,8 +252,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         present,
         draw: (at) => [
           label(`${name}.label`, cell.label.toUpperCase(), at.x, top, w, { size: labelFs, leftBind: at.leftAt(), visibleBind: at.visibleBind }),
-          numeral(`${name}.value`, cell.sample, at.x, valueTop + (valueFs - smallFs), smallFs, { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 }, {
-            color: ds.color.text.secondary,
+          numeral(`${name}.value`, cell.sample, at.x, valueTop, valueFs, { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 }, {
             maxWidth: w + 4,
             leftBind: at.leftAt(),
             visibleBind: at.visibleBind,
