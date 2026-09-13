@@ -26,8 +26,11 @@ weight, since a replaced PNG leaves the old one in the object store for ever; th
 because there are four of them, they come to under four hundred kilobytes together, and a face is
 not redrawn often.
 
-Regenerating them is one command, and the scenario matters: `green` pins every value, so the only
-difference between one capture and the next is the change being shown.
+Regenerating them is one command, and the scenario matters: `green` holds the flag, the session and
+the field still, so what differs between one capture and the next is the change being shown rather
+than the lap. The revs, the gear and the speed do keep moving, which is worth knowing before
+photographing a face: take several frames and keep the one where the rev bar is lit, since a bar
+photographed at part throttle is dark and says nothing.
 
 ```bash
 bun run shots --packages "openDash,openDash 800x286,openDash Companion,openDash Pit wall" --scenarios green
