@@ -167,6 +167,79 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void TheImportFolderIsWhereSimHubsOwnDialogOpens()
+        {
+            // ProfilesManager.importProfile_Click sets InitialDirectory to
+            // Path.Combine(GetFolderPath(SpecialFolder.Personal), "SimHub"), so a copy put there is
+            // already in front of the user when the dialog opens.
+            Assert.Equal(Path.Combine("D:\\docs", "SimHub"), FlagBoxProfile.ImportFolder("D:\\docs"));
+            // A host with no Documents folder -- this test runs on Linux, where SpecialFolder.Personal
+            // is empty -- gets null rather than a path rooted at nowhere. CopyForImport reports that
+            // instead of throwing, which is the only reason this branch is reachable at all.
+            Assert.Null(FlagBoxProfile.ImportFolder(""));
+            var real = FlagBoxProfile.ImportFolder();
+            if (real != null) Assert.EndsWith("SimHub", real, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void CopyingForImportWritesTheProfileWhereTheDialogOpens()
+        {
+            using (var root = new TempDir())
+            using (var docs = new TempDir())
+            {
+                var extracted = FlagBoxProfile.Extract(root.Path, Self);
+                var copied = FlagBoxProfile.CopyForImport(extracted, docs.Path);
+
+                Assert.Equal(FlagBoxStatus.Extracted, copied.Status);
+                Assert.Equal(Path.Combine(docs.Path, "SimHub", "openDash Flag box.ledsprofile"), copied.Path);
+                Assert.Equal(File.ReadAllText(extracted.Path), File.ReadAllText(copied.Path));
+            }
+        }
+
+        [Fact]
+        public void NothingIsWrittenToDocumentsUnlessAsked()
+        {
+            // Extract() is what runs at startup, for everybody. A stray file in the user's Documents
+            // for a fallback most people never need would be a poor trade.
+            using (var root = new TempDir())
+            using (var docs = new TempDir())
+            {
+                FlagBoxProfile.Extract(root.Path, Self);
+                Assert.Empty(Directory.GetFileSystemEntries(docs.Path));
+            }
+        }
+
+        [Fact]
+        public void CopyingForImportSaysSoWhenThereIsNothingToCopy()
+        {
+            using (var docs = new TempDir())
+            {
+                Assert.Equal(FlagBoxStatus.NotEmbedded, FlagBoxProfile.CopyForImport(null, docs.Path).Status);
+                Assert.Equal(FlagBoxStatus.NotEmbedded, FlagBoxProfile.CopyForImport(new FlagBoxResult(), docs.Path).Status);
+                // No Documents folder at all: reported, not thrown.
+                using (var root = new TempDir())
+                {
+                    Assert.Equal(FlagBoxStatus.Failed, FlagBoxProfile.CopyForImport(FlagBoxProfile.Extract(root.Path, Self), "").Status);
+                }
+            }
+        }
+
+        [Fact]
+        public void TheExtractedResultCarriesTheProfileSoThePanelNeedNotReadItBack()
+        {
+            using (var root = new TempDir())
+            {
+                var result = FlagBoxProfile.Extract(root.Path, Self);
+                Assert.False(string.IsNullOrEmpty(result.Json));
+                Assert.Equal(File.ReadAllText(result.Path), result.Json);
+                // And again when it is already current, or the panel would lose the profile on restart.
+                var second = FlagBoxProfile.Extract(root.Path, Self);
+                Assert.Equal(FlagBoxStatus.UpToDate, second.Status);
+                Assert.Equal(result.Json, second.Json);
+            }
+        }
+
+        [Fact]
         public void TheSummaryPointsAtTheButtonThatInstallsIt()
         {
             // A user who is not told where to go will wait for something that never happens.

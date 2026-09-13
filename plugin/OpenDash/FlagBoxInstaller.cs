@@ -97,15 +97,25 @@ namespace OpenDashPlugin
 
             try
             {
-                // Ours is the one carrying our ProfileId. Anything else in the list is the user's and
-                // is not touched, which is the whole reason this is safer than merging the file.
-                var mine = settings.Profiles.Where(p => p != null && p.ProfileId == embedded.ProfileId).ToList();
-                foreach (var old in mine) settings.Profiles.Remove(old);
+                // Ours is the one carrying our ProfileId. Anything else in either list is the user's
+                // and is not touched, which is the whole reason this is safer than merging the file.
+                //
+                // Both lists, because AddProfile appends to AvailableProfiles while the file is
+                // serialised from Profiles. For a plain Arduino matrix those are the same collection
+                // -- AvailableProfiles returns Profiles unless the settings filter by game family or
+                // have a built-in profiles path, and this driver has neither (ProfileSettingsBase.cs:422)
+                // -- but removing from only one would leave a duplicate if that ever stopped being true.
+                var removed = Remove(settings.Profiles, embedded.ProfileId);
+                if (!ReferenceEquals(settings.AvailableProfiles, settings.Profiles))
+                {
+                    removed += Remove(settings.AvailableProfiles, embedded.ProfileId);
+                }
 
                 settings.AddProfile(embedded);
                 driver.SaveSettings();
 
-                Log.Info("Installed the flag box profile into SimHub (" + (mine.Count > 0 ? "replaced" : "added") + ").");
+                Log.Info("Installed the flag box profile into SimHub (" + (removed > 0 ? "replaced" : "added")
+                    + "). Select it on the matrix device to use it: installing adds a profile, it does not switch to one.");
                 return FlagBoxInstallPlan.Decide(embedded.ProfileId, embedded.Description, Installed());
             }
             catch (Exception e)
@@ -113,6 +123,15 @@ namespace OpenDashPlugin
                 Log.Error("Installing the flag box profile into SimHub failed", e);
                 return new FlagBoxPlan { State = FlagBoxInstallState.Failed };
             }
+        }
+
+        /// <summary>Drops every copy of one profile id from a collection; returns how many went.</summary>
+        private static int Remove(System.Collections.ObjectModel.ObservableCollection<RGBMatrixProfile> list, Guid id)
+        {
+            if (list == null) return 0;
+            var mine = list.Where(p => p != null && p.ProfileId == id).ToList();
+            foreach (var old in mine) list.Remove(old);
+            return mine.Count;
         }
 
         /// <summary>

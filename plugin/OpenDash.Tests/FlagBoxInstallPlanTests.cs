@@ -135,6 +135,18 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void The_summary_says_that_installing_is_not_selecting()
+        {
+            // AddProfile appends to the list; SimHub picks the current profile from its own persisted
+            // activeProfileId. A user who presses the button and sees nothing on the box has been told
+            // half the job.
+            var installed = FlagBoxInstallPlan.Summary(FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) }), null);
+            Assert.Contains("Select it", installed, StringComparison.OrdinalIgnoreCase);
+            var fresh = FlagBoxInstallPlan.Summary(FlagBoxInstallPlan.Decide(Ours, V1, new List<InstalledProfile>()), null);
+            Assert.Contains("pick it", fresh, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
         public void The_summary_falls_back_to_the_file_when_SimHub_cannot_be_reached()
         {
             var text = FlagBoxInstallPlan.Summary(FlagBoxInstallPlan.Decide(Ours, V1, null), @"C:\SimHub\OpenDash\x.ledsprofile");

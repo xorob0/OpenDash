@@ -202,3 +202,17 @@ object graph, which is a larger surface to break on a SimHub update than a file 
 already reverse-engineered. That is true. It is mitigated by every call being null-checked and
 wrapped, by the failure mode being "the button says SimHub's matrix settings are not available, here
 is the file" rather than an exception, and by the file path remaining the documented fallback.
+
+**Two things the investigation turned up that the amendment above depends on.**
+
+*The file is not rewritten "whenever anything changes".* It is read once, when `SerialDashPlugin`
+constructs its driver, and written at four call sites — teardown, `Dispose`, and two unrelated
+Arduino text-screen handlers. So the original ADR overstated the mechanism as well as drawing the
+wrong conclusion from it. The real failure of a file merge would not have been losing the user's
+profiles; it would have been openDash's write being silently reverted at the next teardown. The
+in-process route avoids both, because SimHub stays the only writer.
+
+*Installing is not selecting.* `AddProfile` appends to the list. Which profile is live comes from
+SimHub's own persisted `activeProfileId`, so after installing, the box still runs whatever it was
+running. The panel and the guide both say to pick it on the device; openDash does not switch it,
+because which profile a user's hardware runs is theirs to choose.

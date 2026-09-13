@@ -145,8 +145,12 @@ namespace OpenDashPlugin
                     return "Not installed. Press the button to add it to SimHub's matrix profiles; "
                         + "then pick it on your matrix device.";
                 case FlagBoxInstallState.UpToDate:
+                    // Installing adds a profile; it does not switch to one. SimHub picks the current
+                    // profile from its own persisted activeProfileId, so a user who presses the button
+                    // and then sees nothing on the box has not been told the rest of the job.
                     return "Installed and up to date"
-                        + (plan.InstalledVersion == null ? "." : " (" + plan.InstalledVersion + ").");
+                        + (plan.InstalledVersion == null ? ". " : " (" + plan.InstalledVersion + "). ")
+                        + "Select it on your matrix device to use it.";
                 case FlagBoxInstallState.Outdated:
                     return "A newer profile is available ("
                         + (plan.InstalledVersion ?? "unknown") + " to " + (plan.EmbeddedVersion ?? "unknown")
