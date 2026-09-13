@@ -118,6 +118,42 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("v0.4.0", UpdateCheck.ReleaseFor(releases, "0.1.0").Tag);
         }
 
+        // Settles, and the pages it asks for
+
+        [Fact]
+        public void The_first_page_is_the_address_the_record_names_and_the_rest_follow_it()
+        {
+            Assert.Equal(UpdateCheck.ReleasesUrl, UpdateCheck.ReleasesPage(1));
+            Assert.Equal(UpdateCheck.ReleasesUrl, UpdateCheck.ReleasesPage(0));
+            Assert.Equal(UpdateCheck.ReleasesUrl + "&page=2", UpdateCheck.ReleasesPage(2));
+            Assert.EndsWith("per_page=" + UpdateCheck.PageSize, UpdateCheck.ReleasesUrl);
+        }
+
+        [Fact]
+        public void A_page_of_nothing_but_candidates_answers_nobody_on_a_stable_version()
+        {
+            // The window is a window over the newest releases of every kind, so a run of candidates can fill it
+            // and hide the stable release below. Such a page settles nothing and another has to be read.
+            var candidates = new[] { Release("v0.4.0-rc.2", preRelease: true), Release("v0.4.0-rc.1", preRelease: true) };
+            Assert.False(UpdateCheck.Settles(candidates, "0.2.0"));
+
+            // Whereas a user already on a candidate is answered by any release at all, so for them one page is
+            // always enough.
+            Assert.True(UpdateCheck.Settles(candidates, "0.3.0-rc.1"));
+        }
+
+        [Fact]
+        public void One_release_of_the_right_kind_settles_it_whether_or_not_it_is_newer()
+        {
+            // Newest first by creation date, so nothing below a stable release was cut later than it.
+            Assert.True(UpdateCheck.Settles(new[] { Release("v0.1.0") }, "0.2.0"));
+            Assert.True(UpdateCheck.Settles(new[] { Release("v0.9.0") }, "0.2.0"));
+
+            Assert.False(UpdateCheck.Settles(new[] { Release("v0.9.0", draft: true) }, "0.2.0"));
+            Assert.False(UpdateCheck.Settles(new ReleaseInfo[0], "0.2.0"));
+            Assert.False(UpdateCheck.Settles(null, "0.2.0"));
+        }
+
         // Conclude
 
         [Fact]

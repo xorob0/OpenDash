@@ -1,11 +1,15 @@
 # Architecture
 
-> **The face is being rebuilt.** Everything below describes the twelve-slot face, which is what
-> the code builds today and what 0.1.0 ships. The settled design is the zone model
+> **Two faces are built, and this describes the older one.** Since 0.2.0 the eight rectangular
+> sizes are zone faces and carry the shipped names; what is described below is the twelve-slot
+> path, which still builds and now produces the two round faces and the `openDash slots <size>`
+> packages beside them. The zone model is the settled design
 > ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)): five parts,
-> a catalogue and a wheel button per zone, and a page laid out for the shape of its box. This
-> document is rewritten when the card path is retired, not before, so that it keeps describing
-> the code rather than the intention.
+> a catalogue and a wheel button per zone, and a page laid out for the shape of its box.
+>
+> This document is rewritten when the card path is retired (XOR-95), not before, so that it keeps
+> describing the code rather than the intention. Read every mention of a slot below as belonging to
+> that path: `packages/dash/src/zones/` is the other one, and `design/zones.md` describes it.
 >
 > The second screens are already on the zone model and their half of this document is current.
 
@@ -16,6 +20,7 @@ design/tokens.json ───────────────┐
 packages/dash/src/cards/*.ts ─────┤  one module per card: readouts, labels, colour rules
 packages/dash/src/hero/*.ts ──────┤  gear, RPM bar, flags, pit limiter
 packages/dash/src/layouts/*.ts ───┤  slot geometry and slot count for one BaseWidth x BaseHeight
+packages/dash/src/zones/*.ts ─────┤  the five parts of a zone face, and the catalogue behind each zone
 packages/dash/src/modules/*.ts ───┤  one module per companion page, which is also a pit wall zone page
 packages/dash/src/screens/*.ts ───┤  the companion and pit wall packages built from those modules
 packages/dash/fonts/*.ttf ────────┤
