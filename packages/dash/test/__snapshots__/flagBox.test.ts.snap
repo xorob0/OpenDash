@@ -23,7 +23,7 @@ exports[`the emitted file the profile 1`] = `
       "StartPositionYEx": 1,
       "DeviceKind": 2,
       "BrightnessFormula": {
-        "Expression": "isnull([OpenDash.FlagBoxBrightness], 100)"
+        "Expression": "if((isnull([OpenDash.LightsNightMode], false)) = (true), isnull([OpenDash.LightsNightBrightness], 25), isnull([OpenDash.LightsBrightness], 100))"
       },
       "LedContainers": [
         {
@@ -37,964 +37,1015 @@ exports[`the emitted file the profile 1`] = `
           "DeviceKind": 2,
           "LedContainers": [
             {
-              "ContainerType": "GroupContainer",
-              "Description": "Flags",
-              "ContainerId": "f754017e-bfbc-5c5d-8af4-b4cf7cd803f6",
+              "ContainerType": "CustomConditionalGroupContainer",
+              "Description": "Ignition off",
+              "ContainerId": "77d4a568-7679-590d-96f2-b2f2e00c667f",
               "IsEnabled": true,
               "StartPositionMatrix": 1,
               "StartPositionXEx": 1,
               "StartPositionYEx": 1,
               "DeviceKind": 2,
+              "TriggerFormula": {
+                "Expression": "([DataCorePlugin.GameData.EngineIgnitionOn]) = (0)"
+              },
               "LedContainers": [
                 {
-                  "ContainerType": "CustomConditionalGroupContainer",
-                  "Description": "Critical flags only",
-                  "ContainerId": "4ffea057-e105-57ea-be0e-a99197f8b2af",
+                  "ContainerType": "AnimationContainer",
+                  "Description": "Standby",
+                  "ContainerId": "29397544-2275-5245-b2a9-c4eb90510fa5",
                   "IsEnabled": true,
                   "StartPositionMatrix": 1,
-                  "StartPositionXEx": 1,
-                  "StartPositionYEx": 1,
+                  "StartPositionX": 1,
+                  "StartPositionY": 1,
                   "DeviceKind": 2,
-                  "TriggerFormula": {
-                    "Expression": "(isnull([OpenDash.FlagBoxCriticalOnly], false)) = (true)"
-                  },
-                  "LedContainers": [
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "red",
-                      "ContainerId": "7e5b91e9-8268-5ff3-a535-4eacb846c98e",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "red glyph",
-                          "ContainerId": "af4a5ed2-b9a2-5bfe-a3ac-4e1750333e33",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FF2D46;0,1,#FF2D46;0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;0,5,#FF2D46;0,6,#FF2D46;0,7,#FF2D46;1,0,#FF2D46;1,1,#FF2D46;1,2,#FF2D46;1,3,#FF2D46;1,4,#FF2D46;1,5,#FF2D46;1,6,#FF2D46;1,7,#FF2D46;2,0,#FF2D46;2,1,#FF2D46;2,2,#FF2D46;2,3,#FF2D46;2,4,#FF2D46;2,5,#FF2D46;2,6,#FF2D46;2,7,#FF2D46;3,0,#FF2D46;3,1,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;3,5,#FF2D46;3,6,#FF2D46;3,7,#FF2D46;4,0,#FF2D46;4,1,#FF2D46;4,2,#FF2D46;4,3,#FF2D46;4,4,#FF2D46;4,5,#FF2D46;4,6,#FF2D46;4,7,#FF2D46;5,0,#FF2D46;5,1,#FF2D46;5,2,#FF2D46;5,3,#FF2D46;5,4,#FF2D46;5,5,#FF2D46;5,6,#FF2D46;5,7,#FF2D46;6,0,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46;6,6,#FF2D46;6,7,#FF2D46;7,0,#FF2D46;7,1,#FF2D46;7,2,#FF2D46;7,3,#FF2D46;7,4,#FF2D46;7,5,#FF2D46;7,6,#FF2D46;7,7,#FF2D46",
-                                "FrameDuration": 1000
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "disqualify",
-                      "ContainerId": "44f83496-d12c-5e76-a0b6-0651adb27a31",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "disqualify glyph",
-                          "ContainerId": "f371e7fc-b9e1-51dd-8cbe-4eca09704340",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#F5F7FA;0,7,#F5F7FA;1,1,#F5F7FA;1,6,#F5F7FA;2,2,#F5F7FA;2,5,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;5,2,#F5F7FA;5,5,#F5F7FA;6,1,#F5F7FA;6,6,#F5F7FA;7,0,#F5F7FA;7,7,#F5F7FA",
-                                "FrameDuration": 250
-                              },
-                              {
-                                "Colors": "",
-                                "FrameDuration": 250
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "black",
-                      "ContainerId": "3239a953-23c3-5183-9842-b9befe803d7b",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "black glyph",
-                          "ContainerId": "b8965fca-6cab-555c-ac58-e5972077f3ba",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#F5F7FA;0,1,#F5F7FA;0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;0,6,#F5F7FA;0,7,#F5F7FA;1,0,#F5F7FA;1,7,#F5F7FA;2,0,#F5F7FA;2,7,#F5F7FA;3,0,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,7,#F5F7FA;5,0,#F5F7FA;5,7,#F5F7FA;6,0,#F5F7FA;6,7,#F5F7FA;7,0,#F5F7FA;7,1,#F5F7FA;7,2,#F5F7FA;7,3,#F5F7FA;7,4,#F5F7FA;7,5,#F5F7FA;7,6,#F5F7FA;7,7,#F5F7FA",
-                                "FrameDuration": 1000
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "furled",
-                      "ContainerId": "8f107746-424d-5f09-aa80-edb9f5be7e63",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "furled glyph",
-                          "ContainerId": "b99d1c3f-4360-5663-a748-dcf7d97ed3e0",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "3,0,#F5F7FA;3,1,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;3,5,#F5F7FA;3,6,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,1,#F5F7FA;4,2,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;4,5,#F5F7FA;4,6,#F5F7FA;4,7,#F5F7FA",
-                                "FrameDuration": 1000
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "meatball",
-                      "ContainerId": "e9393bab-a7e0-556e-907d-5420aa77a4f5",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "meatball glyph",
-                          "ContainerId": "2c81c7b7-1f88-5dbd-a1e3-df60bbad6451",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;0,5,#FFB300;1,1,#FFB300;1,2,#FFB300;1,3,#FFB300;1,4,#FFB300;1,5,#FFB300;1,6,#FFB300;2,0,#FFB300;2,1,#FFB300;2,2,#FFB300;2,3,#FFB300;2,4,#FFB300;2,5,#FFB300;2,6,#FFB300;2,7,#FFB300;3,0,#FFB300;3,1,#FFB300;3,2,#FFB300;3,3,#FFB300;3,4,#FFB300;3,5,#FFB300;3,6,#FFB300;3,7,#FFB300;4,0,#FFB300;4,1,#FFB300;4,2,#FFB300;4,3,#FFB300;4,4,#FFB300;4,5,#FFB300;4,6,#FFB300;4,7,#FFB300;5,0,#FFB300;5,1,#FFB300;5,2,#FFB300;5,3,#FFB300;5,4,#FFB300;5,5,#FFB300;5,6,#FFB300;5,7,#FFB300;6,1,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300;6,5,#FFB300;6,6,#FFB300;7,2,#FFB300;7,3,#FFB300;7,4,#FFB300;7,5,#FFB300",
-                                "FrameDuration": 1000
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "caution",
-                      "ContainerId": "a54f4ca1-1cb4-5897-a833-03440d224220",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "caution glyph",
-                          "ContainerId": "30ebdfcd-fb95-5af9-beb3-ee5af254323f",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
-                                "FrameDuration": 1000
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "yellowWaving",
-                      "ContainerId": "6a8d61db-46d4-5066-8668-8d680a4c7dfa",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "yellowWaving glyph",
-                          "ContainerId": "f8d69860-ff97-5f05-8a04-f46a6e0cffe6",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;2,0,#FFD400;2,1,#FFD400;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FFD400;2,6,#FFD400;2,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;5,0,#FFD400;5,1,#FFD400;5,2,#FFD400;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FFD400;5,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
-                                "FrameDuration": 250
-                              },
-                              {
-                                "Colors": "",
-                                "FrameDuration": 250
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "yellow",
-                      "ContainerId": "fb0c6a81-96f4-5d33-a65e-1649c52c4cc9",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "yellow glyph",
-                          "ContainerId": "cfb2ec36-d3a2-520b-8975-3f3ba0446026",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;2,0,#FFD400;2,1,#FFD400;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FFD400;2,6,#FFD400;2,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;5,0,#FFD400;5,1,#FFD400;5,2,#FFD400;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FFD400;5,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
-                                "FrameDuration": 1000
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "debris",
-                      "ContainerId": "f480c411-1dcb-53d4-9e0f-a671e8583a44",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "debris glyph",
-                          "ContainerId": "6f5f48f9-7601-5609-b765-9da8511dd00b",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FF2D46;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FF2D46;1,0,#FFD400;1,1,#FFD400;1,2,#FF2D46;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FF2D46;1,7,#FFD400;2,0,#FFD400;2,1,#FF2D46;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FF2D46;2,6,#FFD400;2,7,#FFD400;3,0,#FF2D46;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FF2D46;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FF2D46;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FF2D46;5,0,#FFD400;5,1,#FFD400;5,2,#FF2D46;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FF2D46;5,7,#FFD400;6,0,#FFD400;6,1,#FF2D46;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FF2D46;6,6,#FFD400;6,7,#FFD400;7,0,#FF2D46;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FF2D46;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
-                                "FrameDuration": 1000
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "blue",
-                      "ContainerId": "78fa2dec-79cb-53ad-90cd-67facb1fdc8c",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))"
-                      },
-                      "LedContainers": [
-                        {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "blue glyph",
-                          "ContainerId": "7cb92d7f-b4fc-5406-b1c2-586dce778ea9",
-                          "IsEnabled": true,
-                          "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
-                          "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#2E7BFF;0,1,#2E7BFF;0,2,#2E7BFF;0,3,#2E7BFF;0,4,#2E7BFF;0,5,#2E7BFF;0,6,#2E7BFF;0,7,#2E7BFF;1,0,#2E7BFF;1,1,#2E7BFF;1,2,#2E7BFF;1,3,#2E7BFF;1,4,#2E7BFF;1,5,#2E7BFF;1,6,#2E7BFF;1,7,#2E7BFF;2,0,#2E7BFF;2,1,#2E7BFF;2,2,#2E7BFF;2,4,#2E7BFF;2,5,#2E7BFF;2,6,#2E7BFF;2,7,#2E7BFF;3,0,#2E7BFF;3,1,#2E7BFF;3,2,#2E7BFF;3,3,#2E7BFF;3,5,#2E7BFF;3,6,#2E7BFF;3,7,#2E7BFF;4,0,#2E7BFF;4,7,#2E7BFF;5,0,#2E7BFF;5,1,#2E7BFF;5,2,#2E7BFF;5,3,#2E7BFF;5,5,#2E7BFF;5,6,#2E7BFF;5,7,#2E7BFF;6,0,#2E7BFF;6,1,#2E7BFF;6,2,#2E7BFF;6,4,#2E7BFF;6,5,#2E7BFF;6,6,#2E7BFF;6,7,#2E7BFF;7,0,#2E7BFF;7,1,#2E7BFF;7,2,#2E7BFF;7,3,#2E7BFF;7,4,#2E7BFF;7,5,#2E7BFF;7,6,#2E7BFF;7,7,#2E7BFF",
-                                "FrameDuration": 250
-                              },
-                              {
-                                "Colors": "0,0,#2E7BFF;0,1,#2E7BFF;0,2,#2E7BFF;0,3,#2E7BFF;0,4,#2E7BFF;0,5,#2E7BFF;0,6,#2E7BFF;0,7,#2E7BFF;1,0,#2E7BFF;1,1,#2E7BFF;1,2,#2E7BFF;1,3,#2E7BFF;1,4,#2E7BFF;1,5,#2E7BFF;1,6,#2E7BFF;1,7,#2E7BFF;2,0,#2E7BFF;2,1,#2E7BFF;2,2,#2E7BFF;2,3,#2E7BFF;2,5,#2E7BFF;2,6,#2E7BFF;2,7,#2E7BFF;3,0,#2E7BFF;3,1,#2E7BFF;3,2,#2E7BFF;3,3,#2E7BFF;3,4,#2E7BFF;3,6,#2E7BFF;3,7,#2E7BFF;4,0,#2E7BFF;4,1,#2E7BFF;5,0,#2E7BFF;5,1,#2E7BFF;5,2,#2E7BFF;5,3,#2E7BFF;5,4,#2E7BFF;5,6,#2E7BFF;5,7,#2E7BFF;6,0,#2E7BFF;6,1,#2E7BFF;6,2,#2E7BFF;6,3,#2E7BFF;6,5,#2E7BFF;6,6,#2E7BFF;6,7,#2E7BFF;7,0,#2E7BFF;7,1,#2E7BFF;7,2,#2E7BFF;7,3,#2E7BFF;7,4,#2E7BFF;7,5,#2E7BFF;7,6,#2E7BFF;7,7,#2E7BFF",
-                                "FrameDuration": 250
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
+                  "Animation": {
+                    "Columns": 8,
+                    "Rows": 8,
+                    "PenColor": "#FFFFFFFF",
+                    "Frames": [
+                      {
+                        "Colors": "3,3,#33383F;3,4,#33383F;4,3,#33383F;4,4,#33383F",
+                        "FrameDuration": 1000
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "ContainerType": "CustomConditionalGroupContainer",
+              "Description": "Ignition on",
+              "ContainerId": "d9ce120c-ca18-5521-9b28-b9777f3adebd",
+              "IsEnabled": true,
+              "StartPositionMatrix": 1,
+              "StartPositionXEx": 1,
+              "StartPositionYEx": 1,
+              "DeviceKind": 2,
+              "TriggerFormula": {
+                "Expression": "([DataCorePlugin.GameData.EngineIgnitionOn]) = (1)"
+              },
+              "LedContainers": [
                 {
-                  "ContainerType": "CustomConditionalGroupContainer",
-                  "Description": "Every flag",
-                  "ContainerId": "986b2a94-91c9-5f6c-a037-61aa7be32972",
+                  "ContainerType": "GroupContainer",
+                  "Description": "Flags",
+                  "ContainerId": "13f18ab1-c001-563f-b8d2-17b20e87a947",
                   "IsEnabled": true,
                   "StartPositionMatrix": 1,
                   "StartPositionXEx": 1,
                   "StartPositionYEx": 1,
                   "DeviceKind": 2,
-                  "TriggerFormula": {
-                    "Expression": "!((isnull([OpenDash.FlagBoxCriticalOnly], false)) = (true))"
-                  },
                   "LedContainers": [
                     {
                       "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "red",
-                      "ContainerId": "f0cce1c2-328a-50a0-943a-76a91e03df01",
+                      "Description": "Critical flags only",
+                      "ContainerId": "426b930d-9fb2-5e9c-94ba-6e98b2369047",
                       "IsEnabled": true,
                       "StartPositionMatrix": 1,
                       "StartPositionXEx": 1,
                       "StartPositionYEx": 1,
                       "DeviceKind": 2,
                       "TriggerFormula": {
-                        "Expression": "((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))"
+                        "Expression": "(isnull([OpenDash.FlagBoxCriticalOnly], false)) = (true)"
                       },
                       "LedContainers": [
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "red glyph",
-                          "ContainerId": "277c9c03-5568-593e-ae06-648ded6b261c",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "red",
+                          "ContainerId": "14af7c8e-4cc0-5e72-990b-ee0041f00a9a",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FF2D46;0,1,#FF2D46;0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;0,5,#FF2D46;0,6,#FF2D46;0,7,#FF2D46;1,0,#FF2D46;1,1,#FF2D46;1,2,#FF2D46;1,3,#FF2D46;1,4,#FF2D46;1,5,#FF2D46;1,6,#FF2D46;1,7,#FF2D46;2,0,#FF2D46;2,1,#FF2D46;2,2,#FF2D46;2,3,#FF2D46;2,4,#FF2D46;2,5,#FF2D46;2,6,#FF2D46;2,7,#FF2D46;3,0,#FF2D46;3,1,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;3,5,#FF2D46;3,6,#FF2D46;3,7,#FF2D46;4,0,#FF2D46;4,1,#FF2D46;4,2,#FF2D46;4,3,#FF2D46;4,4,#FF2D46;4,5,#FF2D46;4,6,#FF2D46;4,7,#FF2D46;5,0,#FF2D46;5,1,#FF2D46;5,2,#FF2D46;5,3,#FF2D46;5,4,#FF2D46;5,5,#FF2D46;5,6,#FF2D46;5,7,#FF2D46;6,0,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46;6,6,#FF2D46;6,7,#FF2D46;7,0,#FF2D46;7,1,#FF2D46;7,2,#FF2D46;7,3,#FF2D46;7,4,#FF2D46;7,5,#FF2D46;7,6,#FF2D46;7,7,#FF2D46",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "red glyph",
+                              "ContainerId": "36b57fd6-5f81-5afb-a338-56c52015b0ea",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FF2D46;0,1,#FF2D46;0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;0,5,#FF2D46;0,6,#FF2D46;0,7,#FF2D46;1,0,#FF2D46;1,1,#FF2D46;1,2,#FF2D46;1,3,#FF2D46;1,4,#FF2D46;1,5,#FF2D46;1,6,#FF2D46;1,7,#FF2D46;2,0,#FF2D46;2,1,#FF2D46;2,2,#FF2D46;2,3,#FF2D46;2,4,#FF2D46;2,5,#FF2D46;2,6,#FF2D46;2,7,#FF2D46;3,0,#FF2D46;3,1,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;3,5,#FF2D46;3,6,#FF2D46;3,7,#FF2D46;4,0,#FF2D46;4,1,#FF2D46;4,2,#FF2D46;4,3,#FF2D46;4,4,#FF2D46;4,5,#FF2D46;4,6,#FF2D46;4,7,#FF2D46;5,0,#FF2D46;5,1,#FF2D46;5,2,#FF2D46;5,3,#FF2D46;5,4,#FF2D46;5,5,#FF2D46;5,6,#FF2D46;5,7,#FF2D46;6,0,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46;6,6,#FF2D46;6,7,#FF2D46;7,0,#FF2D46;7,1,#FF2D46;7,2,#FF2D46;7,3,#FF2D46;7,4,#FF2D46;7,5,#FF2D46;7,6,#FF2D46;7,7,#FF2D46",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "disqualify",
+                          "ContainerId": "25ca6c1b-a0dd-5fcc-93f7-ce53e1357fc9",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "disqualify glyph",
+                              "ContainerId": "ed05cd0e-28d6-5062-856c-9c96dd494db1",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#F5F7FA;0,7,#F5F7FA;1,1,#F5F7FA;1,6,#F5F7FA;2,2,#F5F7FA;2,5,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;5,2,#F5F7FA;5,5,#F5F7FA;6,1,#F5F7FA;6,6,#F5F7FA;7,0,#F5F7FA;7,7,#F5F7FA",
+                                    "FrameDuration": 250
+                                  },
+                                  {
+                                    "Colors": "",
+                                    "FrameDuration": 250
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "black",
+                          "ContainerId": "8ebf3ad9-28cd-5b9f-993e-e1e11170cc63",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "black glyph",
+                              "ContainerId": "b4c98906-9e4d-55a9-aab3-f6f14bfca61f",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#F5F7FA;0,1,#F5F7FA;0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;0,6,#F5F7FA;0,7,#F5F7FA;1,0,#F5F7FA;1,7,#F5F7FA;2,0,#F5F7FA;2,7,#F5F7FA;3,0,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,7,#F5F7FA;5,0,#F5F7FA;5,7,#F5F7FA;6,0,#F5F7FA;6,7,#F5F7FA;7,0,#F5F7FA;7,1,#F5F7FA;7,2,#F5F7FA;7,3,#F5F7FA;7,4,#F5F7FA;7,5,#F5F7FA;7,6,#F5F7FA;7,7,#F5F7FA",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "furled",
+                          "ContainerId": "6c1ea28b-a964-5732-8ad6-67fb332824ea",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "furled glyph",
+                              "ContainerId": "e5fdb8b7-7b40-552d-a298-da7e11edf78c",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "3,0,#F5F7FA;3,1,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;3,5,#F5F7FA;3,6,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,1,#F5F7FA;4,2,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;4,5,#F5F7FA;4,6,#F5F7FA;4,7,#F5F7FA",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "meatball",
+                          "ContainerId": "d59b2c86-7b30-564b-a44b-2f6f2bc4fc1f",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "meatball glyph",
+                              "ContainerId": "9dd84f20-a6ae-5468-b243-fab30179bb20",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;0,5,#FFB300;1,1,#FFB300;1,2,#FFB300;1,3,#FFB300;1,4,#FFB300;1,5,#FFB300;1,6,#FFB300;2,0,#FFB300;2,1,#FFB300;2,2,#FFB300;2,3,#FFB300;2,4,#FFB300;2,5,#FFB300;2,6,#FFB300;2,7,#FFB300;3,0,#FFB300;3,1,#FFB300;3,2,#FFB300;3,3,#FFB300;3,4,#FFB300;3,5,#FFB300;3,6,#FFB300;3,7,#FFB300;4,0,#FFB300;4,1,#FFB300;4,2,#FFB300;4,3,#FFB300;4,4,#FFB300;4,5,#FFB300;4,6,#FFB300;4,7,#FFB300;5,0,#FFB300;5,1,#FFB300;5,2,#FFB300;5,3,#FFB300;5,4,#FFB300;5,5,#FFB300;5,6,#FFB300;5,7,#FFB300;6,1,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300;6,5,#FFB300;6,6,#FFB300;7,2,#FFB300;7,3,#FFB300;7,4,#FFB300;7,5,#FFB300",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "caution",
+                          "ContainerId": "98a7d315-d08f-59ff-b379-6371939e8848",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "caution glyph",
+                              "ContainerId": "460c5d73-235a-5d1f-88a0-7f63e16b559e",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "yellowWaving",
+                          "ContainerId": "8e382cca-204d-5184-85d7-a16bf483a720",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "yellowWaving glyph",
+                              "ContainerId": "651f8160-78cc-5c91-9555-63e2b2688eb4",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;2,0,#FFD400;2,1,#FFD400;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FFD400;2,6,#FFD400;2,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;5,0,#FFD400;5,1,#FFD400;5,2,#FFD400;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FFD400;5,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
+                                    "FrameDuration": 250
+                                  },
+                                  {
+                                    "Colors": "",
+                                    "FrameDuration": 250
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "yellow",
+                          "ContainerId": "0fd7c501-66a4-55ad-8f9b-c02444055e45",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "yellow glyph",
+                              "ContainerId": "583f79fb-3c72-58e0-a21b-ff6ddd18b294",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;2,0,#FFD400;2,1,#FFD400;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FFD400;2,6,#FFD400;2,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;5,0,#FFD400;5,1,#FFD400;5,2,#FFD400;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FFD400;5,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "debris",
+                          "ContainerId": "82c46a3e-6e7c-5743-a98a-350493095b54",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "debris glyph",
+                              "ContainerId": "ce99a937-69a8-5566-9bb8-7754ead116fe",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FF2D46;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FF2D46;1,0,#FFD400;1,1,#FFD400;1,2,#FF2D46;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FF2D46;1,7,#FFD400;2,0,#FFD400;2,1,#FF2D46;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FF2D46;2,6,#FFD400;2,7,#FFD400;3,0,#FF2D46;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FF2D46;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FF2D46;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FF2D46;5,0,#FFD400;5,1,#FFD400;5,2,#FF2D46;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FF2D46;5,7,#FFD400;6,0,#FFD400;6,1,#FF2D46;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FF2D46;6,6,#FFD400;6,7,#FFD400;7,0,#FF2D46;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FF2D46;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "blue",
+                          "ContainerId": "5e1c1b84-4a1d-5bed-8b73-e34432c1beef",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "blue glyph",
+                              "ContainerId": "df4a9f17-9417-56db-9a4e-7c1ed4b3044e",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#2E7BFF;0,1,#2E7BFF;0,2,#2E7BFF;0,3,#2E7BFF;0,4,#2E7BFF;0,5,#2E7BFF;0,6,#2E7BFF;0,7,#2E7BFF;1,0,#2E7BFF;1,1,#2E7BFF;1,2,#2E7BFF;1,3,#2E7BFF;1,4,#2E7BFF;1,5,#2E7BFF;1,6,#2E7BFF;1,7,#2E7BFF;2,0,#2E7BFF;2,1,#2E7BFF;2,2,#2E7BFF;2,4,#2E7BFF;2,5,#2E7BFF;2,6,#2E7BFF;2,7,#2E7BFF;3,0,#2E7BFF;3,1,#2E7BFF;3,2,#2E7BFF;3,3,#2E7BFF;3,5,#2E7BFF;3,6,#2E7BFF;3,7,#2E7BFF;4,0,#2E7BFF;4,7,#2E7BFF;5,0,#2E7BFF;5,1,#2E7BFF;5,2,#2E7BFF;5,3,#2E7BFF;5,5,#2E7BFF;5,6,#2E7BFF;5,7,#2E7BFF;6,0,#2E7BFF;6,1,#2E7BFF;6,2,#2E7BFF;6,4,#2E7BFF;6,5,#2E7BFF;6,6,#2E7BFF;6,7,#2E7BFF;7,0,#2E7BFF;7,1,#2E7BFF;7,2,#2E7BFF;7,3,#2E7BFF;7,4,#2E7BFF;7,5,#2E7BFF;7,6,#2E7BFF;7,7,#2E7BFF",
+                                    "FrameDuration": 250
+                                  },
+                                  {
+                                    "Colors": "0,0,#2E7BFF;0,1,#2E7BFF;0,2,#2E7BFF;0,3,#2E7BFF;0,4,#2E7BFF;0,5,#2E7BFF;0,6,#2E7BFF;0,7,#2E7BFF;1,0,#2E7BFF;1,1,#2E7BFF;1,2,#2E7BFF;1,3,#2E7BFF;1,4,#2E7BFF;1,5,#2E7BFF;1,6,#2E7BFF;1,7,#2E7BFF;2,0,#2E7BFF;2,1,#2E7BFF;2,2,#2E7BFF;2,3,#2E7BFF;2,5,#2E7BFF;2,6,#2E7BFF;2,7,#2E7BFF;3,0,#2E7BFF;3,1,#2E7BFF;3,2,#2E7BFF;3,3,#2E7BFF;3,4,#2E7BFF;3,6,#2E7BFF;3,7,#2E7BFF;4,0,#2E7BFF;4,1,#2E7BFF;5,0,#2E7BFF;5,1,#2E7BFF;5,2,#2E7BFF;5,3,#2E7BFF;5,4,#2E7BFF;5,6,#2E7BFF;5,7,#2E7BFF;6,0,#2E7BFF;6,1,#2E7BFF;6,2,#2E7BFF;6,3,#2E7BFF;6,5,#2E7BFF;6,6,#2E7BFF;6,7,#2E7BFF;7,0,#2E7BFF;7,1,#2E7BFF;7,2,#2E7BFF;7,3,#2E7BFF;7,4,#2E7BFF;7,5,#2E7BFF;7,6,#2E7BFF;7,7,#2E7BFF",
+                                    "FrameDuration": 250
+                                  }
+                                ]
+                              }
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "disqualify",
-                      "ContainerId": "cf009990-4483-56e4-83b6-62ba976a2265",
+                      "Description": "Every flag",
+                      "ContainerId": "9f90d0b3-bd0b-50bd-9c9c-a6f5f4ddea5b",
                       "IsEnabled": true,
                       "StartPositionMatrix": 1,
                       "StartPositionXEx": 1,
                       "StartPositionYEx": 1,
                       "DeviceKind": 2,
                       "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))"
+                        "Expression": "!((isnull([OpenDash.FlagBoxCriticalOnly], false)) = (true))"
                       },
                       "LedContainers": [
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "disqualify glyph",
-                          "ContainerId": "af4fefd9-79fb-5a88-a832-2b5abb453beb",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "red",
+                          "ContainerId": "f1312661-2d16-50d6-b493-9e7dc90fcece",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#F5F7FA;0,7,#F5F7FA;1,1,#F5F7FA;1,6,#F5F7FA;2,2,#F5F7FA;2,5,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;5,2,#F5F7FA;5,5,#F5F7FA;6,1,#F5F7FA;6,6,#F5F7FA;7,0,#F5F7FA;7,7,#F5F7FA",
-                                "FrameDuration": 250
-                              },
-                              {
-                                "Colors": "",
-                                "FrameDuration": 250
+                          "TriggerFormula": {
+                            "Expression": "((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "red glyph",
+                              "ContainerId": "5041a186-3ee8-5aac-b1da-6f65d40b9722",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FF2D46;0,1,#FF2D46;0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;0,5,#FF2D46;0,6,#FF2D46;0,7,#FF2D46;1,0,#FF2D46;1,1,#FF2D46;1,2,#FF2D46;1,3,#FF2D46;1,4,#FF2D46;1,5,#FF2D46;1,6,#FF2D46;1,7,#FF2D46;2,0,#FF2D46;2,1,#FF2D46;2,2,#FF2D46;2,3,#FF2D46;2,4,#FF2D46;2,5,#FF2D46;2,6,#FF2D46;2,7,#FF2D46;3,0,#FF2D46;3,1,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;3,5,#FF2D46;3,6,#FF2D46;3,7,#FF2D46;4,0,#FF2D46;4,1,#FF2D46;4,2,#FF2D46;4,3,#FF2D46;4,4,#FF2D46;4,5,#FF2D46;4,6,#FF2D46;4,7,#FF2D46;5,0,#FF2D46;5,1,#FF2D46;5,2,#FF2D46;5,3,#FF2D46;5,4,#FF2D46;5,5,#FF2D46;5,6,#FF2D46;5,7,#FF2D46;6,0,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46;6,6,#FF2D46;6,7,#FF2D46;7,0,#FF2D46;7,1,#FF2D46;7,2,#FF2D46;7,3,#FF2D46;7,4,#FF2D46;7,5,#FF2D46;7,6,#FF2D46;7,7,#FF2D46",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "black",
-                      "ContainerId": "30a565fb-a4d6-52ba-81ca-5a88578eee61",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "black glyph",
-                          "ContainerId": "b4fcd66c-309b-517a-8c71-fbeb8e814cf5",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "disqualify",
+                          "ContainerId": "49fd2740-23f7-5547-978c-f025c3400852",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#F5F7FA;0,1,#F5F7FA;0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;0,6,#F5F7FA;0,7,#F5F7FA;1,0,#F5F7FA;1,7,#F5F7FA;2,0,#F5F7FA;2,7,#F5F7FA;3,0,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,7,#F5F7FA;5,0,#F5F7FA;5,7,#F5F7FA;6,0,#F5F7FA;6,7,#F5F7FA;7,0,#F5F7FA;7,1,#F5F7FA;7,2,#F5F7FA;7,3,#F5F7FA;7,4,#F5F7FA;7,5,#F5F7FA;7,6,#F5F7FA;7,7,#F5F7FA",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "disqualify glyph",
+                              "ContainerId": "7c06ed1d-059a-5da1-9fb7-09f4c6f07067",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#F5F7FA;0,7,#F5F7FA;1,1,#F5F7FA;1,6,#F5F7FA;2,2,#F5F7FA;2,5,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;5,2,#F5F7FA;5,5,#F5F7FA;6,1,#F5F7FA;6,6,#F5F7FA;7,0,#F5F7FA;7,7,#F5F7FA",
+                                    "FrameDuration": 250
+                                  },
+                                  {
+                                    "Colors": "",
+                                    "FrameDuration": 250
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "furled",
-                      "ContainerId": "b247e8c4-3207-50c8-8f1b-f10395bbbd68",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "furled glyph",
-                          "ContainerId": "0bf4ab5c-f813-5155-8681-b4c7356de6cd",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "black",
+                          "ContainerId": "2fda9c85-bac6-531f-a744-8f4a0f2021b5",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "3,0,#F5F7FA;3,1,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;3,5,#F5F7FA;3,6,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,1,#F5F7FA;4,2,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;4,5,#F5F7FA;4,6,#F5F7FA;4,7,#F5F7FA",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "black glyph",
+                              "ContainerId": "d04a9e35-1ad5-591d-8810-15a2da465e04",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#F5F7FA;0,1,#F5F7FA;0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;0,6,#F5F7FA;0,7,#F5F7FA;1,0,#F5F7FA;1,7,#F5F7FA;2,0,#F5F7FA;2,7,#F5F7FA;3,0,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,7,#F5F7FA;5,0,#F5F7FA;5,7,#F5F7FA;6,0,#F5F7FA;6,7,#F5F7FA;7,0,#F5F7FA;7,1,#F5F7FA;7,2,#F5F7FA;7,3,#F5F7FA;7,4,#F5F7FA;7,5,#F5F7FA;7,6,#F5F7FA;7,7,#F5F7FA",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "meatball",
-                      "ContainerId": "ea28c6f6-8849-5a75-ba93-29e83c39da03",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "meatball glyph",
-                          "ContainerId": "a64642ef-d9ab-5cf4-89bd-43c349816180",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "furled",
+                          "ContainerId": "6d0b2ae5-fbe6-5daa-9557-31e011d76b95",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;0,5,#FFB300;1,1,#FFB300;1,2,#FFB300;1,3,#FFB300;1,4,#FFB300;1,5,#FFB300;1,6,#FFB300;2,0,#FFB300;2,1,#FFB300;2,2,#FFB300;2,3,#FFB300;2,4,#FFB300;2,5,#FFB300;2,6,#FFB300;2,7,#FFB300;3,0,#FFB300;3,1,#FFB300;3,2,#FFB300;3,3,#FFB300;3,4,#FFB300;3,5,#FFB300;3,6,#FFB300;3,7,#FFB300;4,0,#FFB300;4,1,#FFB300;4,2,#FFB300;4,3,#FFB300;4,4,#FFB300;4,5,#FFB300;4,6,#FFB300;4,7,#FFB300;5,0,#FFB300;5,1,#FFB300;5,2,#FFB300;5,3,#FFB300;5,4,#FFB300;5,5,#FFB300;5,6,#FFB300;5,7,#FFB300;6,1,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300;6,5,#FFB300;6,6,#FFB300;7,2,#FFB300;7,3,#FFB300;7,4,#FFB300;7,5,#FFB300",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "furled glyph",
+                              "ContainerId": "468c4ca5-ec16-57c7-8d1b-5c595758d394",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "3,0,#F5F7FA;3,1,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;3,5,#F5F7FA;3,6,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,1,#F5F7FA;4,2,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;4,5,#F5F7FA;4,6,#F5F7FA;4,7,#F5F7FA",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "chequered",
-                      "ContainerId": "9fd0ead6-ea0a-58c0-9a46-8446000bacb6",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "chequered glyph",
-                          "ContainerId": "b2b1eb50-dbc4-584d-ae3a-8ccdafb6420e",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "meatball",
+                          "ContainerId": "0c3d640d-1e80-59d0-a8c2-fa7737af25fe",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#F5F7FA;0,1,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;1,0,#F5F7FA;1,1,#F5F7FA;1,4,#F5F7FA;1,5,#F5F7FA;2,2,#F5F7FA;2,3,#F5F7FA;2,6,#F5F7FA;2,7,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,6,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,1,#F5F7FA;4,4,#F5F7FA;4,5,#F5F7FA;5,0,#F5F7FA;5,1,#F5F7FA;5,4,#F5F7FA;5,5,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA;6,6,#F5F7FA;6,7,#F5F7FA;7,2,#F5F7FA;7,3,#F5F7FA;7,6,#F5F7FA;7,7,#F5F7FA",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "meatball glyph",
+                              "ContainerId": "d7bca43f-47b0-5fed-88ed-529f347b61a0",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;0,5,#FFB300;1,1,#FFB300;1,2,#FFB300;1,3,#FFB300;1,4,#FFB300;1,5,#FFB300;1,6,#FFB300;2,0,#FFB300;2,1,#FFB300;2,2,#FFB300;2,3,#FFB300;2,4,#FFB300;2,5,#FFB300;2,6,#FFB300;2,7,#FFB300;3,0,#FFB300;3,1,#FFB300;3,2,#FFB300;3,3,#FFB300;3,4,#FFB300;3,5,#FFB300;3,6,#FFB300;3,7,#FFB300;4,0,#FFB300;4,1,#FFB300;4,2,#FFB300;4,3,#FFB300;4,4,#FFB300;4,5,#FFB300;4,6,#FFB300;4,7,#FFB300;5,0,#FFB300;5,1,#FFB300;5,2,#FFB300;5,3,#FFB300;5,4,#FFB300;5,5,#FFB300;5,6,#FFB300;5,7,#FFB300;6,1,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300;6,5,#FFB300;6,6,#FFB300;7,2,#FFB300;7,3,#FFB300;7,4,#FFB300;7,5,#FFB300",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "caution",
-                      "ContainerId": "e96070d4-422a-5fac-8de4-f4f4039d8aed",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "caution glyph",
-                          "ContainerId": "f0a28ca0-bc42-5da4-8059-80e7035297f4",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "chequered",
+                          "ContainerId": "a1b950b3-76a3-5071-8b16-00aacd2fe81c",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "chequered glyph",
+                              "ContainerId": "d884f587-335c-549a-80e6-74f811eb69c7",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#F5F7FA;0,1,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;1,0,#F5F7FA;1,1,#F5F7FA;1,4,#F5F7FA;1,5,#F5F7FA;2,2,#F5F7FA;2,3,#F5F7FA;2,6,#F5F7FA;2,7,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,6,#F5F7FA;3,7,#F5F7FA;4,0,#F5F7FA;4,1,#F5F7FA;4,4,#F5F7FA;4,5,#F5F7FA;5,0,#F5F7FA;5,1,#F5F7FA;5,4,#F5F7FA;5,5,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA;6,6,#F5F7FA;6,7,#F5F7FA;7,2,#F5F7FA;7,3,#F5F7FA;7,6,#F5F7FA;7,7,#F5F7FA",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "yellowWaving",
-                      "ContainerId": "8a6e621e-5456-5696-a261-65bb18e3b773",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "yellowWaving glyph",
-                          "ContainerId": "72ab50b2-a19b-54af-bbd4-037e89f53b8d",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "caution",
+                          "ContainerId": "c021f97e-acfe-5f2a-8250-f07e5a214d7a",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;2,0,#FFD400;2,1,#FFD400;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FFD400;2,6,#FFD400;2,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;5,0,#FFD400;5,1,#FFD400;5,2,#FFD400;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FFD400;5,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
-                                "FrameDuration": 250
-                              },
-                              {
-                                "Colors": "",
-                                "FrameDuration": 250
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "caution glyph",
+                              "ContainerId": "5c5a3874-9b64-590d-9f1d-f95084bd990c",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "yellow",
-                      "ContainerId": "f5a2597c-852c-50cc-b5cd-f5a53d0c3781",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "yellow glyph",
-                          "ContainerId": "4488d95e-2151-5099-b48d-4a337f32dc2e",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "yellowWaving",
+                          "ContainerId": "bc1dedd8-89cd-567b-97f5-394336cde8a7",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;2,0,#FFD400;2,1,#FFD400;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FFD400;2,6,#FFD400;2,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;5,0,#FFD400;5,1,#FFD400;5,2,#FFD400;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FFD400;5,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "yellowWaving glyph",
+                              "ContainerId": "44a971d5-530b-5377-90e6-a2b3027dc603",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;2,0,#FFD400;2,1,#FFD400;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FFD400;2,6,#FFD400;2,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;5,0,#FFD400;5,1,#FFD400;5,2,#FFD400;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FFD400;5,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
+                                    "FrameDuration": 250
+                                  },
+                                  {
+                                    "Colors": "",
+                                    "FrameDuration": 250
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "debris",
-                      "ContainerId": "417c698e-5770-5d8e-97e7-b03096f5a488",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "debris glyph",
-                          "ContainerId": "3200b688-ef36-5b38-aa28-289910bd3825",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "yellow",
+                          "ContainerId": "55b7a288-6f64-5c38-9904-5d089e0de031",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FF2D46;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FF2D46;1,0,#FFD400;1,1,#FFD400;1,2,#FF2D46;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FF2D46;1,7,#FFD400;2,0,#FFD400;2,1,#FF2D46;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FF2D46;2,6,#FFD400;2,7,#FFD400;3,0,#FF2D46;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FF2D46;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FF2D46;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FF2D46;5,0,#FFD400;5,1,#FFD400;5,2,#FF2D46;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FF2D46;5,7,#FFD400;6,0,#FFD400;6,1,#FF2D46;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FF2D46;6,6,#FFD400;6,7,#FFD400;7,0,#FF2D46;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FF2D46;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "yellow glyph",
+                              "ContainerId": "5e8243ea-6d62-5e46-9ae4-ee8c48014379",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FFD400;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FFD400;1,0,#FFD400;1,1,#FFD400;1,2,#FFD400;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FFD400;1,7,#FFD400;2,0,#FFD400;2,1,#FFD400;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FFD400;2,6,#FFD400;2,7,#FFD400;3,0,#FFD400;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FFD400;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FFD400;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FFD400;5,0,#FFD400;5,1,#FFD400;5,2,#FFD400;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FFD400;5,7,#FFD400;6,0,#FFD400;6,1,#FFD400;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FFD400;6,6,#FFD400;6,7,#FFD400;7,0,#FFD400;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FFD400;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "blue",
-                      "ContainerId": "680b5d38-8c55-5b8f-89df-704b5568e0df",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "blue glyph",
-                          "ContainerId": "34f3344c-870c-5328-88da-4540932cbcde",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "debris",
+                          "ContainerId": "79e5c0a9-10f3-5320-92aa-047b4327c59d",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#2E7BFF;0,1,#2E7BFF;0,2,#2E7BFF;0,3,#2E7BFF;0,4,#2E7BFF;0,5,#2E7BFF;0,6,#2E7BFF;0,7,#2E7BFF;1,0,#2E7BFF;1,1,#2E7BFF;1,2,#2E7BFF;1,3,#2E7BFF;1,4,#2E7BFF;1,5,#2E7BFF;1,6,#2E7BFF;1,7,#2E7BFF;2,0,#2E7BFF;2,1,#2E7BFF;2,2,#2E7BFF;2,4,#2E7BFF;2,5,#2E7BFF;2,6,#2E7BFF;2,7,#2E7BFF;3,0,#2E7BFF;3,1,#2E7BFF;3,2,#2E7BFF;3,3,#2E7BFF;3,5,#2E7BFF;3,6,#2E7BFF;3,7,#2E7BFF;4,0,#2E7BFF;4,7,#2E7BFF;5,0,#2E7BFF;5,1,#2E7BFF;5,2,#2E7BFF;5,3,#2E7BFF;5,5,#2E7BFF;5,6,#2E7BFF;5,7,#2E7BFF;6,0,#2E7BFF;6,1,#2E7BFF;6,2,#2E7BFF;6,4,#2E7BFF;6,5,#2E7BFF;6,6,#2E7BFF;6,7,#2E7BFF;7,0,#2E7BFF;7,1,#2E7BFF;7,2,#2E7BFF;7,3,#2E7BFF;7,4,#2E7BFF;7,5,#2E7BFF;7,6,#2E7BFF;7,7,#2E7BFF",
-                                "FrameDuration": 250
-                              },
-                              {
-                                "Colors": "0,0,#2E7BFF;0,1,#2E7BFF;0,2,#2E7BFF;0,3,#2E7BFF;0,4,#2E7BFF;0,5,#2E7BFF;0,6,#2E7BFF;0,7,#2E7BFF;1,0,#2E7BFF;1,1,#2E7BFF;1,2,#2E7BFF;1,3,#2E7BFF;1,4,#2E7BFF;1,5,#2E7BFF;1,6,#2E7BFF;1,7,#2E7BFF;2,0,#2E7BFF;2,1,#2E7BFF;2,2,#2E7BFF;2,3,#2E7BFF;2,5,#2E7BFF;2,6,#2E7BFF;2,7,#2E7BFF;3,0,#2E7BFF;3,1,#2E7BFF;3,2,#2E7BFF;3,3,#2E7BFF;3,4,#2E7BFF;3,6,#2E7BFF;3,7,#2E7BFF;4,0,#2E7BFF;4,1,#2E7BFF;5,0,#2E7BFF;5,1,#2E7BFF;5,2,#2E7BFF;5,3,#2E7BFF;5,4,#2E7BFF;5,6,#2E7BFF;5,7,#2E7BFF;6,0,#2E7BFF;6,1,#2E7BFF;6,2,#2E7BFF;6,3,#2E7BFF;6,5,#2E7BFF;6,6,#2E7BFF;6,7,#2E7BFF;7,0,#2E7BFF;7,1,#2E7BFF;7,2,#2E7BFF;7,3,#2E7BFF;7,4,#2E7BFF;7,5,#2E7BFF;7,6,#2E7BFF;7,7,#2E7BFF",
-                                "FrameDuration": 250
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "debris glyph",
+                              "ContainerId": "9890b379-dfbe-57c7-b9a7-d34461c5c6fc",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFD400;0,1,#FFD400;0,2,#FFD400;0,3,#FF2D46;0,4,#FFD400;0,5,#FFD400;0,6,#FFD400;0,7,#FF2D46;1,0,#FFD400;1,1,#FFD400;1,2,#FF2D46;1,3,#FFD400;1,4,#FFD400;1,5,#FFD400;1,6,#FF2D46;1,7,#FFD400;2,0,#FFD400;2,1,#FF2D46;2,2,#FFD400;2,3,#FFD400;2,4,#FFD400;2,5,#FF2D46;2,6,#FFD400;2,7,#FFD400;3,0,#FF2D46;3,1,#FFD400;3,2,#FFD400;3,3,#FFD400;3,4,#FF2D46;3,5,#FFD400;3,6,#FFD400;3,7,#FFD400;4,0,#FFD400;4,1,#FFD400;4,2,#FFD400;4,3,#FF2D46;4,4,#FFD400;4,5,#FFD400;4,6,#FFD400;4,7,#FF2D46;5,0,#FFD400;5,1,#FFD400;5,2,#FF2D46;5,3,#FFD400;5,4,#FFD400;5,5,#FFD400;5,6,#FF2D46;5,7,#FFD400;6,0,#FFD400;6,1,#FF2D46;6,2,#FFD400;6,3,#FFD400;6,4,#FFD400;6,5,#FF2D46;6,6,#FFD400;6,7,#FFD400;7,0,#FF2D46;7,1,#FFD400;7,2,#FFD400;7,3,#FFD400;7,4,#FF2D46;7,5,#FFD400;7,6,#FFD400;7,7,#FFD400",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "white",
-                      "ContainerId": "85d1272c-0385-5693-8e63-767d7a023a75",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "white glyph",
-                          "ContainerId": "08afc42c-b69e-5455-a3a3-e5c9d22a4c81",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "blue",
+                          "ContainerId": "a83361bd-62ec-5fda-bed0-5aa4a0ff7fd5",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#FFFFFF;0,1,#FFFFFF;0,2,#FFFFFF;0,3,#FFFFFF;0,4,#FFFFFF;0,5,#FFFFFF;0,6,#FFFFFF;0,7,#FFFFFF;1,0,#FFFFFF;1,1,#FFFFFF;1,2,#FFFFFF;1,3,#FFFFFF;1,4,#FFFFFF;1,5,#FFFFFF;1,6,#FFFFFF;1,7,#FFFFFF;2,0,#FFFFFF;2,1,#FFFFFF;2,2,#FFFFFF;2,3,#FFFFFF;2,4,#FFFFFF;2,5,#FFFFFF;2,6,#FFFFFF;2,7,#FFFFFF;3,0,#FFFFFF;3,1,#FFFFFF;3,2,#FFFFFF;3,3,#FFFFFF;3,4,#FFFFFF;3,5,#FFFFFF;3,6,#FFFFFF;3,7,#FFFFFF;4,0,#FFFFFF;4,1,#FFFFFF;4,2,#FFFFFF;4,3,#FFFFFF;4,4,#FFFFFF;4,5,#FFFFFF;4,6,#FFFFFF;4,7,#FFFFFF;5,0,#FFFFFF;5,1,#FFFFFF;5,2,#FFFFFF;5,3,#FFFFFF;5,4,#FFFFFF;5,5,#FFFFFF;5,6,#FFFFFF;5,7,#FFFFFF;6,0,#FFFFFF;6,1,#FFFFFF;6,2,#FFFFFF;6,3,#FFFFFF;6,4,#FFFFFF;6,5,#FFFFFF;6,6,#FFFFFF;6,7,#FFFFFF;7,0,#FFFFFF;7,1,#FFFFFF;7,2,#FFFFFF;7,3,#FFFFFF;7,4,#FFFFFF;7,5,#FFFFFF;7,6,#FFFFFF;7,7,#FFFFFF",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "blue glyph",
+                              "ContainerId": "dda845ac-1540-5726-b5da-520f00769fdd",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#2E7BFF;0,1,#2E7BFF;0,2,#2E7BFF;0,3,#2E7BFF;0,4,#2E7BFF;0,5,#2E7BFF;0,6,#2E7BFF;0,7,#2E7BFF;1,0,#2E7BFF;1,1,#2E7BFF;1,2,#2E7BFF;1,3,#2E7BFF;1,4,#2E7BFF;1,5,#2E7BFF;1,6,#2E7BFF;1,7,#2E7BFF;2,0,#2E7BFF;2,1,#2E7BFF;2,2,#2E7BFF;2,4,#2E7BFF;2,5,#2E7BFF;2,6,#2E7BFF;2,7,#2E7BFF;3,0,#2E7BFF;3,1,#2E7BFF;3,2,#2E7BFF;3,3,#2E7BFF;3,5,#2E7BFF;3,6,#2E7BFF;3,7,#2E7BFF;4,0,#2E7BFF;4,7,#2E7BFF;5,0,#2E7BFF;5,1,#2E7BFF;5,2,#2E7BFF;5,3,#2E7BFF;5,5,#2E7BFF;5,6,#2E7BFF;5,7,#2E7BFF;6,0,#2E7BFF;6,1,#2E7BFF;6,2,#2E7BFF;6,4,#2E7BFF;6,5,#2E7BFF;6,6,#2E7BFF;6,7,#2E7BFF;7,0,#2E7BFF;7,1,#2E7BFF;7,2,#2E7BFF;7,3,#2E7BFF;7,4,#2E7BFF;7,5,#2E7BFF;7,6,#2E7BFF;7,7,#2E7BFF",
+                                    "FrameDuration": 250
+                                  },
+                                  {
+                                    "Colors": "0,0,#2E7BFF;0,1,#2E7BFF;0,2,#2E7BFF;0,3,#2E7BFF;0,4,#2E7BFF;0,5,#2E7BFF;0,6,#2E7BFF;0,7,#2E7BFF;1,0,#2E7BFF;1,1,#2E7BFF;1,2,#2E7BFF;1,3,#2E7BFF;1,4,#2E7BFF;1,5,#2E7BFF;1,6,#2E7BFF;1,7,#2E7BFF;2,0,#2E7BFF;2,1,#2E7BFF;2,2,#2E7BFF;2,3,#2E7BFF;2,5,#2E7BFF;2,6,#2E7BFF;2,7,#2E7BFF;3,0,#2E7BFF;3,1,#2E7BFF;3,2,#2E7BFF;3,3,#2E7BFF;3,4,#2E7BFF;3,6,#2E7BFF;3,7,#2E7BFF;4,0,#2E7BFF;4,1,#2E7BFF;5,0,#2E7BFF;5,1,#2E7BFF;5,2,#2E7BFF;5,3,#2E7BFF;5,4,#2E7BFF;5,6,#2E7BFF;5,7,#2E7BFF;6,0,#2E7BFF;6,1,#2E7BFF;6,2,#2E7BFF;6,3,#2E7BFF;6,5,#2E7BFF;6,6,#2E7BFF;6,7,#2E7BFF;7,0,#2E7BFF;7,1,#2E7BFF;7,2,#2E7BFF;7,3,#2E7BFF;7,4,#2E7BFF;7,5,#2E7BFF;7,6,#2E7BFF;7,7,#2E7BFF",
+                                    "FrameDuration": 250
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "green",
-                      "ContainerId": "1460c487-068c-50bf-b741-9f933e87eb3f",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isgreen]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "green glyph",
-                          "ContainerId": "6be543a0-eeed-5b9d-801c-a6e9998729dc",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "white",
+                          "ContainerId": "e2141c20-9caa-58f1-bb99-58a4b819e8d6",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "0,0,#00D96A;0,1,#00D96A;0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;0,5,#00D96A;0,6,#00D96A;0,7,#00D96A;1,0,#00D96A;1,1,#00D96A;1,2,#00D96A;1,3,#00D96A;1,4,#00D96A;1,5,#00D96A;1,6,#00D96A;1,7,#00D96A;2,0,#00D96A;2,1,#00D96A;2,2,#00D96A;2,3,#00D96A;2,4,#00D96A;2,5,#00D96A;2,6,#00D96A;2,7,#00D96A;3,0,#00D96A;3,1,#00D96A;3,2,#00D96A;3,3,#00D96A;3,4,#00D96A;3,5,#00D96A;3,6,#00D96A;3,7,#00D96A;4,0,#00D96A;4,1,#00D96A;4,2,#00D96A;4,3,#00D96A;4,4,#00D96A;4,5,#00D96A;4,6,#00D96A;4,7,#00D96A;5,0,#00D96A;5,1,#00D96A;5,2,#00D96A;5,3,#00D96A;5,4,#00D96A;5,5,#00D96A;5,6,#00D96A;5,7,#00D96A;6,0,#00D96A;6,1,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A;6,5,#00D96A;6,6,#00D96A;6,7,#00D96A;7,0,#00D96A;7,1,#00D96A;7,2,#00D96A;7,3,#00D96A;7,4,#00D96A;7,5,#00D96A;7,6,#00D96A;7,7,#00D96A",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "white glyph",
+                              "ContainerId": "2581546f-c203-5968-94d6-ecdd0d96d5f9",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#FFFFFF;0,1,#FFFFFF;0,2,#FFFFFF;0,3,#FFFFFF;0,4,#FFFFFF;0,5,#FFFFFF;0,6,#FFFFFF;0,7,#FFFFFF;1,0,#FFFFFF;1,1,#FFFFFF;1,2,#FFFFFF;1,3,#FFFFFF;1,4,#FFFFFF;1,5,#FFFFFF;1,6,#FFFFFF;1,7,#FFFFFF;2,0,#FFFFFF;2,1,#FFFFFF;2,2,#FFFFFF;2,3,#FFFFFF;2,4,#FFFFFF;2,5,#FFFFFF;2,6,#FFFFFF;2,7,#FFFFFF;3,0,#FFFFFF;3,1,#FFFFFF;3,2,#FFFFFF;3,3,#FFFFFF;3,4,#FFFFFF;3,5,#FFFFFF;3,6,#FFFFFF;3,7,#FFFFFF;4,0,#FFFFFF;4,1,#FFFFFF;4,2,#FFFFFF;4,3,#FFFFFF;4,4,#FFFFFF;4,5,#FFFFFF;4,6,#FFFFFF;4,7,#FFFFFF;5,0,#FFFFFF;5,1,#FFFFFF;5,2,#FFFFFF;5,3,#FFFFFF;5,4,#FFFFFF;5,5,#FFFFFF;5,6,#FFFFFF;5,7,#FFFFFF;6,0,#FFFFFF;6,1,#FFFFFF;6,2,#FFFFFF;6,3,#FFFFFF;6,4,#FFFFFF;6,5,#FFFFFF;6,6,#FFFFFF;6,7,#FFFFFF;7,0,#FFFFFF;7,1,#FFFFFF;7,2,#FFFFFF;7,3,#FFFFFF;7,4,#FFFFFF;7,5,#FFFFFF;7,6,#FFFFFF;7,7,#FFFFFF",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "startSet",
-                      "ContainerId": "c1e7b87d-edaa-575a-9faf-81fce253f777",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isgreen]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsstartSet]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "startSet glyph",
-                          "ContainerId": "707fe87b-261f-5699-91bb-f7b1c73d0e8a",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "green",
+                          "ContainerId": "33a52428-d928-5602-8e65-86e160305239",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "3,0,#FF2D46;3,1,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;3,5,#FF2D46;3,6,#FF2D46;3,7,#FF2D46;4,0,#FF2D46;4,1,#FF2D46;4,2,#FF2D46;4,3,#FF2D46;4,4,#FF2D46;4,5,#FF2D46;4,6,#FF2D46;4,7,#FF2D46;6,0,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46;6,6,#FF2D46;6,7,#FF2D46;7,0,#FF2D46;7,1,#FF2D46;7,2,#FF2D46;7,3,#FF2D46;7,4,#FF2D46;7,5,#FF2D46;7,6,#FF2D46;7,7,#FF2D46",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isgreen]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "green glyph",
+                              "ContainerId": "a15950f4-36b6-55bc-8e5b-9b7d3685f6f3",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "0,0,#00D96A;0,1,#00D96A;0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;0,5,#00D96A;0,6,#00D96A;0,7,#00D96A;1,0,#00D96A;1,1,#00D96A;1,2,#00D96A;1,3,#00D96A;1,4,#00D96A;1,5,#00D96A;1,6,#00D96A;1,7,#00D96A;2,0,#00D96A;2,1,#00D96A;2,2,#00D96A;2,3,#00D96A;2,4,#00D96A;2,5,#00D96A;2,6,#00D96A;2,7,#00D96A;3,0,#00D96A;3,1,#00D96A;3,2,#00D96A;3,3,#00D96A;3,4,#00D96A;3,5,#00D96A;3,6,#00D96A;3,7,#00D96A;4,0,#00D96A;4,1,#00D96A;4,2,#00D96A;4,3,#00D96A;4,4,#00D96A;4,5,#00D96A;4,6,#00D96A;4,7,#00D96A;5,0,#00D96A;5,1,#00D96A;5,2,#00D96A;5,3,#00D96A;5,4,#00D96A;5,5,#00D96A;5,6,#00D96A;5,7,#00D96A;6,0,#00D96A;6,1,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A;6,5,#00D96A;6,6,#00D96A;6,7,#00D96A;7,0,#00D96A;7,1,#00D96A;7,2,#00D96A;7,3,#00D96A;7,4,#00D96A;7,5,#00D96A;7,6,#00D96A;7,7,#00D96A",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "ContainerType": "CustomConditionalGroupContainer",
-                      "Description": "startReady",
-                      "ContainerId": "c57a5a10-53c0-5c1b-8564-06ca8b692e38",
-                      "IsEnabled": true,
-                      "StartPositionMatrix": 1,
-                      "StartPositionXEx": 1,
-                      "StartPositionYEx": 1,
-                      "DeviceKind": 2,
-                      "TriggerFormula": {
-                        "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isgreen]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsstartSet]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsstartReady]) = (1)))"
-                      },
-                      "LedContainers": [
+                            }
+                          ]
+                        },
                         {
-                          "ContainerType": "AnimationContainer",
-                          "Description": "startReady glyph",
-                          "ContainerId": "b812e659-3802-5d77-9d0d-5e426a472514",
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "startSet",
+                          "ContainerId": "a733ba3a-11a1-57ed-871d-52332f0301ef",
                           "IsEnabled": true,
                           "StartPositionMatrix": 1,
-                          "StartPositionX": 1,
-                          "StartPositionY": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
                           "DeviceKind": 2,
-                          "Animation": {
-                            "Columns": 8,
-                            "Rows": 8,
-                            "PenColor": "#FFFFFFFF",
-                            "Frames": [
-                              {
-                                "Colors": "5,0,#FF2D46;5,1,#FF2D46;5,2,#FF2D46;5,3,#FF2D46;5,4,#FF2D46;5,5,#FF2D46;5,6,#FF2D46;5,7,#FF2D46;6,0,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46;6,6,#FF2D46;6,7,#FF2D46",
-                                "FrameDuration": 1000
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isgreen]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsstartSet]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "startSet glyph",
+                              "ContainerId": "f812d713-e94f-5b86-8a46-ad18ae71085c",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "3,0,#FF2D46;3,1,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;3,5,#FF2D46;3,6,#FF2D46;3,7,#FF2D46;4,0,#FF2D46;4,1,#FF2D46;4,2,#FF2D46;4,3,#FF2D46;4,4,#FF2D46;4,5,#FF2D46;4,6,#FF2D46;4,7,#FF2D46;6,0,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46;6,6,#FF2D46;6,7,#FF2D46;7,0,#FF2D46;7,1,#FF2D46;7,2,#FF2D46;7,3,#FF2D46;7,4,#FF2D46;7,5,#FF2D46;7,6,#FF2D46;7,7,#FF2D46",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
                               }
-                            ]
-                          }
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "startReady",
+                          "ContainerId": "b488f5ac-fd33-545d-8829-fbe42000612b",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isgreen]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsstartSet]) = (1)))) and ((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsstartReady]) = (1)))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "AnimationContainer",
+                              "Description": "startReady glyph",
+                              "ContainerId": "ba178380-ba61-5a9b-94fd-27cebe7198f2",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionX": 1,
+                              "StartPositionY": 1,
+                              "DeviceKind": 2,
+                              "Animation": {
+                                "Columns": 8,
+                                "Rows": 8,
+                                "PenColor": "#FFFFFFFF",
+                                "Frames": [
+                                  {
+                                    "Colors": "5,0,#FF2D46;5,1,#FF2D46;5,2,#FF2D46;5,3,#FF2D46;5,4,#FF2D46;5,5,#FF2D46;5,6,#FF2D46;5,7,#FF2D46;6,0,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46;6,6,#FF2D46;6,7,#FF2D46",
+                                    "FrameDuration": 1000
+                                  }
+                                ]
+                              }
+                            }
+                          ]
                         }
                       ]
                     }

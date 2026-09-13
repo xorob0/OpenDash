@@ -4,10 +4,19 @@
  * The tree is evaluated outside in, which is what makes it answerable to one brightness and one
  * on-air decision instead of forty:
  *
- *     brightness                     OpenDash.FlagBoxBrightness, defaulted
- *       when the game is not running  the box at rest
+ *     brightness                     day or night, defaulted
+ *       when the game is not running  nothing: the box is dark
  *       when the game is running
- *         flags                       the alert catalogue, in priority order
+ *         when the ignition is off     a dim standby mark
+ *         when the ignition is on
+ *           flags                      the alert catalogue, in priority order
+ *
+ * **Not racing is dark**, and that is the decision rather than a gap. Idle screens are a refusal
+ * in scope.md, and a glowing logo on somebody's desk when nothing is running is the hardest
+ * version of that refusal to defend. The branch is declared below and prunes itself away, so the
+ * shape says so in one place. Ignition off is the exception: the car being switched off is a real
+ * condition and a box that goes dark for it would be indistinguishable from a profile that failed
+ * to load, so it gets the smallest mark that is still visibly on.
  *
  * The order inside `flags` is `FLAG_CATALOGUE` from flags.ts, the one ordered list the face ranks
  * from too: the box and the face rank the same conditions, and two lists would eventually
@@ -22,10 +31,11 @@
  * Colour comes from `design/tokens.json` through `ds`, resolved to a literal here the way the
  * .djson resolves it. A hex value typed into this file is a bug.
  */
+import type { Expr } from '../bind.ts';
 import { flagBox } from '../contract.ts';
 import { conditionVisible, flagsShown, type FlagCondition } from '../flags.ts';
 import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
-import { flagFrames } from './glyphs.ts';
+import { flagFrames, ignitionOffFrames } from './glyphs.ts';
 
 /** The package name, the profile name and the file stem. Spaces are fine: the packages have them. */
 export const FLAG_BOX_PROFILE_NAME = 'openDash Flag box';
@@ -94,18 +104,33 @@ export function flagBoxContainers(): MatrixContainer[] {
   return pruneEmpty(flagBoxTree());
 }
 
+/**
+ * Whether the car is switched on. SimHub normalises it from the sim, so this is one of the few
+ * places the box reads `GameData` rather than iRacing's raw telemetry.
+ */
+export const ignitionOn = (): Expr => ncalc.game('EngineIgnitionOn');
+
 /** The tree as declared, empty branches included. `flagBoxContainers` is what the build writes. */
 export function flagBoxTree(): MatrixContainer[] {
+  const { eq, num } = ncalc;
   return [
     {
       kind: 'brightnessFormula',
       description: 'Brightness',
       formula: flagBox.brightness(),
       children: [
-        // The box at rest is XOR-229. It exists as a branch here so the shape is settled before
-        // anything has to be drawn into it, and an empty group paints nothing.
+        // Deliberately empty, and pruned away before it is written: not racing is dark. See the
+        // header. Nothing here reads an image from the user's disk; a custom idle picture is
+        // personalisation, which ADR 0011 owes an answer before anything builds it.
         { kind: 'gameNotRunning', description: 'Not racing', children: [] },
-        { kind: 'gameRunning', description: 'Racing', children: [flagsGroup()] },
+        {
+          kind: 'gameRunning',
+          description: 'Racing',
+          children: [
+            { kind: 'when', description: 'Ignition off', formula: eq(ignitionOn(), num(0)), children: [{ kind: 'animation', description: 'Standby', frames: ignitionOffFrames() }] },
+            { kind: 'when', description: 'Ignition on', formula: eq(ignitionOn(), num(1)), children: [flagsGroup()] },
+          ],
+        },
       ],
     },
   ];

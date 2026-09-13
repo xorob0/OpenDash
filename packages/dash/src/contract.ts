@@ -7,7 +7,7 @@
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 
-const { isnull, prop, str, num } = ncalc;
+const { eq, iff, isnull, prop, str, num } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -504,11 +504,32 @@ export const secondScreen = {
 export const FLAG_BOX_MATRICES = [1, 2, 3, 4] as const;
 export type FlagBoxMatrix = (typeof FLAG_BOX_MATRICES)[number];
 
-export const FLAG_BOX_BRIGHTNESS_SETTING = 'FlagBoxBrightness';
+/**
+ * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a
+ * flag box probably owns other lights, and "how bright are my lights and is it night" is one
+ * answer for a rig rather than one per device. If openDash ever ships a second profile it reads
+ * these same three properties; naming them per device now would mean renaming a public interface
+ * later, which ADR 0003 says a property name is.
+ */
+export const LIGHTS_BRIGHTNESS_SETTING = 'LightsBrightness';
+export const LIGHTS_NIGHT_BRIGHTNESS_SETTING = 'LightsNightBrightness';
+export const LIGHTS_NIGHT_MODE_SETTING = 'LightsNightMode';
+
+/** Flag-box-specific, because it is about flags rather than about lights. */
 export const FLAG_BOX_CRITICAL_ONLY_SETTING = 'FlagBoxCriticalOnly';
 
-/** Percent. SimHub's own global brightness applies on top of this. */
-export const DEFAULT_FLAG_BOX_BRIGHTNESS = 100;
+/** Percent. SimHub's own global brightness for the device applies on top of this. */
+export const DEFAULT_LIGHTS_BRIGHTNESS = 100;
+
+/**
+ * Percent, at night. Sixty-four LEDs at full output beside a wheel in a dark room is genuinely
+ * too bright, and no amount of good colour choice fixes it; a quarter is the starting point, and
+ * it is a setting because the right number depends on the room.
+ */
+export const DEFAULT_LIGHTS_NIGHT_BRIGHTNESS = 25;
+
+/** Off. A switch the driver flips, not a time of day we guess at. */
+export const DEFAULT_LIGHTS_NIGHT_MODE = false;
 
 /**
  * Off, so the box shows the whole catalogue until the driver asks for quiet. The default is the
@@ -517,15 +538,21 @@ export const DEFAULT_FLAG_BOX_BRIGHTNESS = 100;
  */
 export const DEFAULT_FLAG_BOX_CRITICAL_ONLY = false;
 
-/** Reads of the flag box settings, each defaulted so the profile works without the plugin. */
+/** Reads of the lights settings, each defaulted so the profile works without the plugin. */
 export const flagBox = {
-  /** `isnull([OpenDash.FlagBoxBrightness], 100)`: the brightness every effect is drawn at. */
-  brightness: (): Expr => isnull(prop(propertyName(FLAG_BOX_BRIGHTNESS_SETTING)), num(DEFAULT_FLAG_BOX_BRIGHTNESS)),
+  /** `isnull([OpenDash.LightsBrightness], 100)`: the day brightness. */
+  dayBrightness: (): Expr => isnull(prop(propertyName(LIGHTS_BRIGHTNESS_SETTING)), num(DEFAULT_LIGHTS_BRIGHTNESS)),
+  /** `isnull([OpenDash.LightsNightBrightness], 25)`. */
+  nightBrightness: (): Expr => isnull(prop(propertyName(LIGHTS_NIGHT_BRIGHTNESS_SETTING)), num(DEFAULT_LIGHTS_NIGHT_BRIGHTNESS)),
+  /** `isnull([OpenDash.LightsNightMode], false)`. */
+  nightMode: (): Expr => isnull(prop(propertyName(LIGHTS_NIGHT_MODE_SETTING)), String(DEFAULT_LIGHTS_NIGHT_MODE)),
+  /** The brightness in force: the night value when night mode is on, else the day value. */
+  brightness: (): Expr => iff(eq(flagBox.nightMode(), 'true'), flagBox.nightBrightness(), flagBox.dayBrightness()),
   /** `isnull([OpenDash.FlagBoxCriticalOnly], false)`: quiet until something matters. */
   criticalOnly: (): Expr => isnull(prop(propertyName(FLAG_BOX_CRITICAL_ONLY_SETTING)), String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
 };
 
 /** Every property the flag box profile reads. */
 export function flagBoxProperties(): string[] {
-  return [FLAG_BOX_BRIGHTNESS_SETTING, FLAG_BOX_CRITICAL_ONLY_SETTING].map(propertyName);
+  return [LIGHTS_BRIGHTNESS_SETTING, LIGHTS_NIGHT_BRIGHTNESS_SETTING, LIGHTS_NIGHT_MODE_SETTING, FLAG_BOX_CRITICAL_ONLY_SETTING].map(propertyName);
 }

@@ -12,9 +12,20 @@ import { FLAG_PRIORITY } from '../src/components/flagStrip.ts';
 import { declaredProperties, flagBoxProperties, PROPERTY_PREFIX } from '../src/contract.ts';
 import { FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, type SessionFlagBit } from '../src/flags.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type MatrixContainer } from '../src/generator.ts';
-import { flagFrames, FLAG_PALETTE } from '../src/leds/glyphs.ts';
+import { flagFrames, FLAG_PALETTE, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
 import { buildFlagBoxProfile, drawnFlags, flagBoxTree, flagContainers, pruneEmpty } from '../src/leds/profile.ts';
 import { ds } from '../src/tokens.ts';
+
+/** Every colour `ds` resolves, so "is this a token" is a question about tokens.json rather than
+ * about one branch of it. */
+const TOKEN_COLOURS = new Set<string>();
+(function collect(node: unknown): void {
+  if (typeof node === 'string') {
+    if (/^#[0-9A-F]{6}$/.test(node)) TOKEN_COLOURS.add(node);
+    return;
+  }
+  if (node !== null && typeof node === 'object') for (const v of Object.values(node)) collect(v);
+})(ds);
 
 const profile = buildFlagBoxProfile();
 const all = [...walkContainers(profile.containers)];
@@ -92,16 +103,14 @@ describe('the rules it inherits from the packages', () => {
   });
 
   test('colour comes from the tokens, so nothing here re-picks one', () => {
-    const tokenColours = new Set<string>(Object.values(ds.purpose.flag).filter((v) => typeof v === 'string'));
     for (const container of all) {
       if (container.kind !== 'animation') continue;
-      for (const frame of container.frames) for (const row of frame.pixels) for (const c of row) if (c) expect(tokenColours.has(c)).toBe(true);
+      for (const frame of container.frames) for (const row of frame.pixels) for (const c of row) if (c) expect(TOKEN_COLOURS.has(c)).toBe(true);
     }
   });
 
-  test('the palette is tokens and nothing else', () => {
-    const tokenColours = new Set<string>(Object.values(ds.purpose.flag).filter((v) => typeof v === 'string'));
-    for (const colour of Object.values(FLAG_PALETTE)) expect(tokenColours.has(colour)).toBe(true);
+  test('the palettes are tokens and nothing else', () => {
+    for (const colour of [...Object.values(FLAG_PALETTE), ...Object.values(STANDBY_PALETTE)]) expect(TOKEN_COLOURS.has(colour)).toBe(true);
   });
 });
 
@@ -253,6 +262,66 @@ describe('sixty-four pixels', () => {
       expect({ id: condition.id, clash }).toEqual({ id: condition.id, clash: undefined });
       seen.set(key, condition.id);
     }
+  });
+});
+
+describe('what the box does when nobody is racing', () => {
+  test('not racing is dark, and that is the decision rather than a gap', () => {
+    // Idle screens are a refusal in scope.md; a glowing logo on somebody's desk when nothing is
+    // running is the hardest version of it to defend.
+    const declared = [...walkContainers(flagBoxTree())].find((c) => c.kind === 'gameNotRunning');
+    expect(declared).toBeDefined();
+    expect(declared && 'children' in declared ? declared.children : ['something']).toEqual([]);
+    expect(kinds).not.toContain('gameNotRunning');
+  });
+
+  test('ignition off is visibly distinct from a profile that failed to load', () => {
+    const text = serializeProfile(profile);
+    expect(text).toInclude('"Description": "Ignition off"');
+    const standby = all.find((c) => c.description === 'Standby');
+    expect(standby?.kind).toBe('animation');
+    const lit = ignitionOffFrames()[0]?.pixels.flat().filter((p) => p !== null) ?? [];
+    expect(lit.length).toBeGreaterThan(0);
+    expect(lit.length).toBeLessThan(8);
+    expect(new Set(lit)).toEqual(new Set([ds.purpose.shift.unlit]));
+  });
+
+  test('the flags only run with the ignition on', () => {
+    const text = serializeProfile(profile);
+    expect(text).toInclude('"Description": "Ignition on"');
+    expect(text).toInclude('[DataCorePlugin.GameData.EngineIgnitionOn]');
+  });
+
+  test('nothing reads an image from the user\'s disk', () => {
+    // Every picture is frames in the file. A custom idle image is personalisation, which ADR 0011
+    // owes an answer before anything here builds it.
+    const text = serializeProfile(profile);
+    for (const word of ['AnimationPath', 'FileName', 'ledanimation', 'UserOverrides', 'C:\\\\']) expect(text).not.toInclude(word);
+  });
+});
+
+describe('brightness', () => {
+  test('day, night and the switch are all contract properties', () => {
+    expect(flagBoxProperties()).toEqual(['OpenDash.LightsBrightness', 'OpenDash.LightsNightBrightness', 'OpenDash.LightsNightMode', 'OpenDash.FlagBoxCriticalOnly']);
+  });
+
+  test('they are named for the rig, not for this box', () => {
+    // A driver who owns a flag box probably owns other lights, and "how bright, and is it night"
+    // is one answer for a rig. Naming them per device now means renaming a public interface later.
+    for (const name of flagBoxProperties().slice(0, 3)) expect(name).toStartWith('OpenDash.Lights');
+  });
+
+  test('night mode picks the night value, and it is dimmer', () => {
+    const text = serializeProfile(profile);
+    expect(text).toInclude('if(');
+    expect(text).toInclude('isnull([OpenDash.LightsNightMode], false)');
+    expect(text).toInclude('isnull([OpenDash.LightsNightBrightness], 25)');
+    expect(text).toInclude('isnull([OpenDash.LightsBrightness], 100)');
+  });
+
+  test('one brightness answers for everything, because it is the root', () => {
+    expect(profile.containers[0]?.kind).toBe('brightnessFormula');
+    expect(all.filter((c) => c.kind === 'brightnessFormula' || c.kind === 'brightness')).toHaveLength(1);
   });
 });
 

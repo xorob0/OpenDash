@@ -20,12 +20,18 @@ namespace OpenDashPlugin
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
 
-        /// <summary>The flag box. Not a screen, but its settings are properties for the same reason the
-        /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.</summary>
-        public const string FlagBoxBrightness = "FlagBoxBrightness";
+        /// <summary>The lights. Not a screen, but their settings are properties for the same reason the
+        /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.
+        ///
+        /// Named Lights* rather than FlagBox* on purpose: a driver who owns a flag box probably owns
+        /// other lights, and "how bright, and is it night" is one answer for a rig rather than one per
+        /// device. A property name is a public interface, so the rename would have to happen later.</summary>
+        public const string LightsBrightness = "LightsBrightness";
+        public const string LightsNightBrightness = "LightsNightBrightness";
+        public const string LightsNightMode = "LightsNightMode";
 
         /// <summary>Quiet until something matters: the box shows only the flags that mean slow down or
-        /// are addressed to this car.</summary>
+        /// are addressed to this car. Flag-box-specific, because it is about flags rather than lights.</summary>
         public const string FlagBoxCriticalOnly = "FlagBoxCriticalOnly";
 
         public const bool DefaultShiftLights = true;
@@ -53,7 +59,14 @@ namespace OpenDashPlugin
         public const string DefaultWebViewUrl = "";
 
         /// <summary>Percent. SimHub's own global brightness for the device applies on top of this.</summary>
-        public const int DefaultFlagBoxBrightness = 100;
+        public const int DefaultLightsBrightness = 100;
+
+        /// <summary>Percent, at night. Sixty-four LEDs at full output beside a wheel in a dark room is
+        /// genuinely too bright, and no amount of good colour choice fixes it.</summary>
+        public const int DefaultLightsNightBrightness = 25;
+
+        /// <summary>Off. A switch the driver flips, not a time of day we guess at.</summary>
+        public const bool DefaultLightsNightMode = false;
 
         /// <summary>Off. A box that stays dark through a chequered flag is a surprise, and a surprise is
         /// a worse default than a busy one.</summary>
@@ -409,7 +422,9 @@ namespace OpenDashPlugin
             foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
             yield return PitWallWide;
             yield return WebViewUrl;
-            yield return FlagBoxBrightness;
+            yield return LightsBrightness;
+            yield return LightsNightBrightness;
+            yield return LightsNightMode;
             yield return FlagBoxCriticalOnly;
         }
 
