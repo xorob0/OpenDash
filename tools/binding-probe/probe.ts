@@ -196,9 +196,14 @@ const walk = (node: unknown): void => {
   if (Array.isArray(node)) { for (const n of node) walk(n); return; }
   if (node === null || typeof node !== 'object') return;
   const o = node as Json;
-  const name = typeof o['Name'] === 'string' ? (o['Name'] as string) : undefined;
-  const inject = name === undefined ? undefined : INJECT[name];
-  if (inject) { inject(o); injected.push(name!); }
+  const name = o['Name'];
+  if (typeof name === 'string') {
+    const inject = INJECT[name];
+    if (inject) {
+      inject(o);
+      injected.push(name);
+    }
+  }
   for (const v of Object.values(o)) walk(v);
 };
 walk(dashboard);

@@ -68,6 +68,7 @@ const outDir = join(source, '..', to);
 rmSync(outDir, { recursive: true, force: true });
 cpSync(source, outDir, { recursive: true });
 
+// A package folder is flat: the dashboard, its widgets, their metadata sidecars, and _SHFonts.
 for (const file of readdirSync(outDir)) {
   if (!file.endsWith('.djson')) continue;
   const path = join(outDir, file);
