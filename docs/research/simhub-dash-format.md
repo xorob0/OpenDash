@@ -197,6 +197,11 @@ next to `Formula`, and a `PreExpression` may sit inside it. Bound targets seen i
 `Image`, `BlinkEnabled`, `Maximum` and `InitialScreenIndex`; `Width`, which the RPM bar needs,
 is the one target no sample happened to bind, and it is item 3 of the spike.
 
+`BorderColor` in that list is a mistake kept here because the generator was written against it.
+None of SimHub's own bundled dashboards binds it, and an item-level `Bindings.BorderColor` cannot
+work; the property is on the `BorderStyle` sub-object, which takes bindings of its own. The next
+section is the rule that settles it.
+
 The gradient form, `Mode` 4, maps the value of a formula onto a colour ramp:
 
 ```json
@@ -208,6 +213,66 @@ The gradient form, `Mode` 4, maps the value of a formula onto a colour ramp:
   "Mode": 4
 }
 ```
+
+### What a binding can target, and what silently does not (2026-09-13, XOR-73)
+
+The list above is what samples happened to bind. This is the rule underneath it, from
+`BindingHelper`, `EditorModel.ApplyBindings` and `PropertyItemWrapper`.
+
+**A target is a CLR property name, resolved by reflection, once.** `BindingHelper.InitBinding` does
+`item.GetType().GetProperty(propertyName)` and, when that returns null, leaves `ValueGetter` unset.
+`Applybindings` returns on exactly that check. So a misspelt or non-existent target is a **silent
+no-op**: the item keeps its literal, nothing is logged, and the editor shows nothing wrong. Same
+failure shape as the NCalc arity trap below, and the reason `BindingTarget` in
+[`packages/generator/src/model.ts`](../../packages/generator/src/model.ts) is a union rather than a
+string.
+
+**Only six types can be bound**: `string`, `int`, `double`, `bool`, `Color` and `Brush`. The set
+appears in `PropertyItemWrapper`, which decides what the editor offers, and again as the branch list
+in `Applybindings`. An enum property cannot be bound at all, which rules out `FontWeight`,
+`HorizontalAlignment`, `VerticalAlignment` and `TextWrapping`.
+
+**`Mode` 4 requires a `Color`.** `InitBinding` sets `AllowColorGradient` from
+`p.PropertyType == typeof(Color)`, and the gradient branch of `Applybindings` maps the formula's
+number through `StartColor`/`MiddleColor`/`EndColor`. `AllowText` is the same test against `string`.
+
+**Bindings nest one level, into sub-objects.** `ApplyBindings` walks
+`GetBindableProperties(item.GetType())` — every public property whose type implements `IBindable`
+and is not itself an item — and recurses into each with the same evaluation. On a drawable item
+those are `BorderStyle` and, on text, `TextPadding`; both derive from `SubPropertyBindingBase`, and
+the item's `Owner` setter assigns their `Owner` and `ParentItem` as it is set. So these are real:
+
+```json
+"BorderStyle": {
+  "BorderColor": "#FFFF2D46", "BorderTop": 4, "BorderBottom": 4, "BorderLeft": 4, "BorderRight": 4,
+  "Bindings": { "BorderColor": { "Formula": { "Expression": "'#FF00D96A'" }, "Mode": 2 } }
+}
+```
+
+`BorderColor`, `BorderTop`/`Bottom`/`Left`/`Right`, `RadiusTopLeft` and its three siblings, and
+`PaddingTop`/`Bottom`/`Left`/`Right` are all bindable **there**. None of them is bindable on the
+item, for the reflection reason above.
+
+**`Font` and `CharWidth` carry `[NoBinding]`.** The attribute is read in one place,
+`PropertyItemWrapper`, which is the editor's property grid, and never by `ApplyBindings`. So the
+runtime does not enforce what the editor refuses to offer. Treat these as unsupported whatever the
+runtime does with them: they are the only two properties on a `TextItem` SimHub marks this way, and
+both are exactly the properties a text box was measured from.
+
+**`ImageFromFileItem.ImagePath` is an ordinary bindable string**, unattributed, which is the path to
+an image outside the package. `ImageFromUrlItem.ImageUrl` likewise.
+
+**What it costs, per frame.** `ApplyBindings` runs over the rendered screen every frame.
+
+- `Visible` and `Repetitions` are evaluated first, and **an invisible item returns before its other
+  bindings are evaluated at all**. Switching a page off is cheap.
+- Every other binding of every visible item is evaluated every frame. There is no dirty tracking of
+  the formula.
+- The **setter** fires only when the value differs from `LastValue`, so a binding whose value is not
+  moving costs an evaluation and a comparison and never touches WPF.
+- A binding that throws is logged once and **muted for 30 seconds** (`binding.LastError`).
+- `double.IsInfinity` on a bound number throws rather than drawing: a zero division in a bound
+  `Width` is an error, not a silent zero.
 
 ### Widgets and dashboard variables
 
