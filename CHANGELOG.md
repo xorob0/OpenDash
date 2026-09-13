@@ -9,6 +9,65 @@ Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashbo
 to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
 including any that the plugin does not install.
 
+## 0.1.0-rc.4 (2026-09-13)
+
+The candidate that can tell you it is out of date, and then fix that itself. openDash now asks
+GitHub once a day whether a newer release exists, says so in the plugin's Dashboard section, and
+replaces your installed dashboards with one click when you ask it to. Nothing about you is sent,
+it can be switched off, and switching it off means nothing is fetched at all rather than fetched
+and discarded.
+
+The face itself is unchanged for anyone who has one installed. The zone faces are still built for
+review and still not installed, as in rc.3; they take the shipped names in 0.2.0.
+
+### Added
+
+- **An update check.** Once a day, the plugin asks GitHub what the newest release is and tells you
+  in the Dashboard section. What is sent is a request carrying your IP address, which reaches
+  GitHub and not us, and a `User-Agent` naming the product; that is the whole of it, and
+  `docs/decisions/0012-update-checks.md` states it in full. There is a switch beside it.
+- **One click applies it.** The Update button downloads what the release carries for the dashboards
+  you actually have, checks each against the digest GitHub published, and installs them. Everything
+  is in hand before anything on disk is touched, so a download that fails half way through leaves
+  the machine as it was rather than half updated.
+- **Your work is not overwritten.** A dashboard you have edited in Dash Studio is recognised and
+  left alone, with a sentence saying so; pressing Reinstall a second time replaces it, and the copy
+  taken then is kept under a name no later update reclaims. A dashboard openDash has never seen
+  before is adopted as it is, because an edit made before openDash started watching cannot be told
+  from an untouched folder.
+- **A Restore button**, for putting back the copy an update kept.
+
+### Changed
+
+- Release notes are this file rather than a list of pull request titles, and a tag with no entry
+  here fails the release rather than publishing empty notes.
+- The settings panel says which screen it is configuring and draws that screen. Each screen keeps
+  its own zones, bar and glance, so a rig with a face on the wheel and another beside it is set up
+  apart; they used to move together.
+- The car settings strip closes over a setting your car does not have, instead of leaving a hole
+  where it would have been.
+- The black flag covers band D, as the other five flags do. It used to be an outline you could read
+  the page through.
+
+### Fixed
+
+- **Every package now carries `OFL.txt`**, the licence of the Barlow typefaces it ships. Earlier
+  releases shipped the fonts without it, which the licence does not permit. The plugin zip carries
+  it too, and the release publishes it.
+- The tenth release candidate is no longer reported as older than the second, which would have
+  offered a user a downgrade.
+- The Update button goes when the update is done, rather than staying on screen and doing nothing
+  when pressed.
+- Closing SimHub during an update no longer leaves a dashboard folder half replaced.
+- On the 1280 faces, page D6 of band D drew its last field over the DRS lamp.
+
+### Known
+
+- The eight zone faces are still for review and are not installed. They take the shipped names in
+  0.2.0, and updating to that release replaces your face with a different design; it will say so.
+- `plugin/INSTALL.md` and `README.md` describe the twelve-slot face, which is still what this
+  release installs, so they are accurate for this one and not for the next.
+
 ## 0.1.0-rc.3 (2026-09-12)
 
 The candidate that fixes the font. Every numeral openDash draws has been drawn in the wrong face
