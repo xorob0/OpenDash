@@ -60,8 +60,11 @@ export interface PagedWidgetSpec {
 /**
  * The widget that shows one page of a paged dashboard.
  *
- * The dashboard is drawn for this rectangle, so there is nothing to scale; `autoSize` is on because
- * SimHub reads it as "this widget is the size its file says", which is the same rectangle.
+ * `autoSize` scales the included dashboard to the item's rect, and it is left on. That is safe only
+ * because a paged dashboard is generated at exactly the rectangle its widget gives it, which makes
+ * the scale the identity -- which is the whole reason there is one file per distinct rectangle. A
+ * widget pointed at a file drawn for some other box would scale the type with it, and rule 17 says
+ * nothing is ever scaled down.
  */
 export function pagedWidget(spec: PagedWidgetSpec): WidgetItem {
   return {

@@ -265,6 +265,35 @@ Two worked examples, so the shape of the table is clear:
 The pattern holds generally: a narrow zone loses columns before it loses rows, and a tall one
 buys rows before it buys columns.
 
+### The class filter
+
+**A zone may list the player's own class rather than the whole field.** It is the one option the
+leaderboard and the relative need that the companion never gave them, and it is per zone rather
+than per face because the point of it is zone B listing the race while zone C lists the class a
+driver is actually racing in.
+
+It is **not** `PositionMode`. That setting is which number a position column shows; this one is who
+is in the list at all, and one class counted by overall position is a legitimate thing to ask for.
+What `PositionMode: class` currently does to a list it did not reorder is XOR-161.
+
+Two pages read it: the leaderboard and the relative. Zone A lists nobody. Band D's own relative
+page is three gaps rather than a list, so filtering it means asking for the car *ahead in class*
+rather than listing fewer of them — the same idea, a different change, and XOR-159. The panel
+offers the checkbox only where a page would change.
+
+### The counter
+
+**A zone's header counts its cycle, not its catalogue.** A zone with three pages enabled reads
+"2 / 3" and not "15 / 21": the mask is what decides how long the cycle is, so it is what the
+counter counts.
+
+The counter is drawn by the face rather than by the zone, for the same reason the letter is —
+zones B and C share one dashboard file where they are the same rectangle, and a screen in it cannot
+know whose mask is deciding its length. The arithmetic is in the expression, which is what
+[ADR 0009](../decisions/0009-does-the-plugin-compute.md) settled: a popcount is
+`truncate(mask / 2^i) % 2` summed over the catalogue, and the mask is a property that already
+exists. Without the plugin, the mask reads as its default and the counter says "n / 21".
+
 ---
 
 ## 6. Band D — eight pages
@@ -304,6 +333,7 @@ One property per decision, all under the `OpenDash` prefix.
 | `ZoneA` … `ZoneD` | The page each zone is showing. A button advances it. |
 | `ZoneAPages` … `ZoneDPages` | A mask of which pages are enabled, which is what sets the cycle's length. |
 | `ZoneAStart` … `ZoneDStart` | The page the zone opens on. |
+| `ZoneAClassOnly` … `ZoneDClassOnly` | Whether the zone's list pages show the player's own class rather than the whole field. Off. |
 | `QuickGlance` | The zone and page held while a button is down, as one property rather than a pair per zone. |
 | `BarLeft1`, `BarLeft2`, `BarRight1`, `BarRight2` | The bar's four end fields. |
 
@@ -322,11 +352,12 @@ the bar with an end control at each side, zones B, A and C across the body at 24
 band D along the foot. Every part is at the size the artboard gives it, because "zone C" means
 nothing until you see where zone C is.
 
-Three things the artboard does not settle, and what the panel does about each:
+Four things the artboard does not settle, and what the panel does about each:
 
 | | |
 |---|---|
 | **The mask has no control drawn.** | It is the setting that decides how long a driver's cycle is, so it cannot simply be missing. The panel puts a second drop in each zone cell, reading "21 of 21 pages", opening a checkbox per page. Owed on the canvas. |
+| **Nor has the class filter.** | A checkbox under the start page in each zone cell, reading "My class only", and only in the cells where a page would change — zones B and C. Owed on the canvas alongside the mask. |
 | **An end of the bar is drawn as one control** reading "Race · lap", and an end carries two fields. | The control stays one box and opens a panel with a picker for each, rather than splitting into two boxes the artboard does not have. |
 | **Nothing says what happens to a zone sitting on a page that is then turned off.** | It snaps *forward* to the next enabled page, wrapping once — forward because a cycle runs forward, so the next press of the button carries on rather than repeats. Turning off a zone's last enabled page is refused: a zone with an empty cycle has nothing to draw. |
 

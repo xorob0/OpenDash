@@ -248,12 +248,16 @@ export function zoneProperties(): string[] {
 }
 
 /**
- * Bit `i` of a zone's mask, as arithmetic.
+ * Bit `i` of a zone's mask, as arithmetic rather than as a bitwise operator.
  *
- * SimHub's NCalc has no bitwise operator we can rely on, and `truncate(mask / 2^i) % 2` asks the
- * same question in operators it certainly has. The mask is an integer property, so the truncate is
- * belt and braces rather than necessary, and it costs nothing to keep the expression honest about
- * what it means.
+ * NCalc's grammar has `>>` and `&`, and `(mask >> i) & 1` would be half the characters. It is not
+ * used because nothing in openDash has ever evaluated one on the VM, and an expression SimHub
+ * cannot evaluate does not fail: it draws the empty string. That is the `left([Class], 4)` bug
+ * that shipped for months and is why `ncalcFunctions.ts` exists. `truncate(x / n) % 2` is the same
+ * question in three things the packages already rely on everywhere.
+ *
+ * The mask is an integer property, so the truncate is belt and braces rather than necessary, and
+ * it costs nothing to keep the expression honest about what it means.
  */
 const maskBit = (z: FaceZone, i: number): Expr => mod(truncate(div(zone.mask(z), num(2 ** i))), num(2));
 
