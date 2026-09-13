@@ -9,9 +9,10 @@
  */
 import type { JsonObject, JsonValue } from '../serialize.ts';
 import {
-  CONTAINER_TYPES,
   REMAP_POSITIONS,
   RPM_MODES,
+  containerTypeOf,
+  type LedDialect,
   type LedAnimation,
   type LedConditionalGroup,
   type LedContainer,
@@ -59,19 +60,31 @@ export const buildFrameColors = (frame: LedFrame): string => {
 
 const buildFrameObject = (frame: LedFrame): JsonObject => ({ Colors: buildFrameColors(frame), FrameDuration: frame.durationMs });
 
-/** What every container carries, in the order `LedsContainerBase` declares it. */
-const base = (c: LedContainer): JsonObject => ({
-  ...(c.description !== undefined ? { Description: c.description } : {}),
-  ...(c.startPosition !== undefined && c.startPosition !== 1 ? { StartPosition: c.startPosition } : {}),
-  ...(c.enabled === false ? { IsEnabled: false } : {}),
-});
+/**
+ * What every container carries. The two dialects position differently: a strip container has one
+ * 1-based `StartPosition` along the run, a matrix container has `StartPositionXEx` and
+ * `StartPositionYEx`. Both are omitted at SimHub's own default of 1.
+ */
+const base = (c: LedContainer, dialect: LedDialect): JsonObject =>
+  dialect === 'matrix'
+    ? {
+        ...(c.description !== undefined ? { Description: c.description } : {}),
+        ...(c.startXY && c.startXY.x !== 1 ? { StartPositionXEx: c.startXY.x } : {}),
+        ...(c.startXY && c.startXY.y !== 1 ? { StartPositionYEx: c.startXY.y } : {}),
+        ...(c.enabled === false ? { IsEnabled: false } : {}),
+      }
+    : {
+        ...(c.description !== undefined ? { Description: c.description } : {}),
+        ...(c.startPosition !== undefined && c.startPosition !== 1 ? { StartPosition: c.startPosition } : {}),
+        ...(c.enabled === false ? { IsEnabled: false } : {}),
+      };
 
-const group = (c: LedGroup): JsonObject => ({ LedContainers: c.children.map(buildContainerObject) });
+const group = (c: LedGroup, d: LedDialect): JsonObject => ({ LedContainers: c.children.map((k) => buildContainerObject(k, d)) });
 
-const conditionalGroup = (c: LedConditionalGroup): JsonObject => ({
+const conditionalGroup = (c: LedConditionalGroup, d: LedDialect): JsonObject => ({
   TriggerFormula: buildExpressionObject(c.trigger),
   ...(c.clearBackgroundWhenActive ? { ClearBackgroundWhenActive: true } : {}),
-  LedContainers: c.children.map(buildContainerObject),
+  LedContainers: c.children.map((k) => buildContainerObject(k, d)),
 });
 
 /**
@@ -82,9 +95,9 @@ const conditionalGroup = (c: LedConditionalGroup): JsonObject => ({
 export const buildRemapPositions = (positions: readonly number[]): JsonValue =>
   Array.from({ length: REMAP_POSITIONS }, (_, i) => ({ Position: positions[i] ?? i + 1 }));
 
-const remapGroup = (c: LedRemapGroup): JsonObject => ({
+const remapGroup = (c: LedRemapGroup, d: LedDialect): JsonObject => ({
   Positions: buildRemapPositions(c.positions),
-  LedContainers: c.children.map(buildContainerObject),
+  LedContainers: c.children.map((k) => buildContainerObject(k, d)),
 });
 
 const staticColor = (c: LedStaticColor): JsonObject => ({
@@ -123,20 +136,20 @@ const animation = (c: LedAnimation): JsonObject => ({
   Animation: { Columns: c.columns, Rows: c.rows, Frames: c.frames.map(buildFrameObject) },
 });
 
-const raw = (c: LedRaw): JsonObject => ({
+const raw = (c: LedRaw, d: LedDialect): JsonObject => ({
   ...(c.fields ?? {}),
-  ...(c.children ? { LedContainers: c.children.map(buildContainerObject) } : {}),
+  ...(c.children ? { LedContainers: c.children.map((k) => buildContainerObject(k, d)) } : {}),
 });
 
 /** One container, `ContainerType` last so that the shape reads the way SimHub's own files do. */
-export function buildContainerObject(c: LedContainer): JsonObject {
+export function buildContainerObject(c: LedContainer, dialect: LedDialect = 'strip'): JsonObject {
   const body: JsonObject =
     c.kind === 'group'
-      ? group(c)
+      ? group(c, dialect)
       : c.kind === 'conditionalGroup'
-        ? conditionalGroup(c)
+        ? conditionalGroup(c, dialect)
         : c.kind === 'remapGroup'
-          ? remapGroup(c)
+          ? remapGroup(c, dialect)
           : c.kind === 'staticColor'
             ? staticColor(c)
             : c.kind === 'customStatus'
@@ -147,9 +160,8 @@ export function buildContainerObject(c: LedContainer): JsonObject {
                   ? rpmSegments(c)
                   : c.kind === 'animation'
                     ? animation(c)
-                    : raw(c);
-  const containerType = c.kind === 'raw' ? c.containerType : CONTAINER_TYPES[c.kind];
-  return { ...base(c), ...body, ContainerType: containerType };
+                    : raw(c, dialect);
+  return { ...base(c, dialect), ...body, ContainerType: containerTypeOf(c, dialect) };
 }
 
 /**
@@ -161,7 +173,7 @@ export function buildProfileObject(profile: LedProfile): JsonObject {
     CarChoices: [],
     ...(profile.embeddedJavascript !== undefined ? { EmbeddedJavascript: profile.embeddedJavascript } : {}),
     ...(profile.globalBrightness !== undefined ? { GlobalBrightness: profile.globalBrightness } : {}),
-    LedContainers: profile.containers.map(buildContainerObject) as JsonValue,
+    LedContainers: profile.containers.map((c) => buildContainerObject(c, profile.dialect ?? 'strip')) as JsonValue,
     ...(profile.useProfileBrightness ? { UseProfileBrightness: true } : {}),
     Name: profile.name,
     ProfileId: profile.profileId,
