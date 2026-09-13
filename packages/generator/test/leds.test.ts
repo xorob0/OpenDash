@@ -20,13 +20,15 @@ import {
   type MatrixContainer,
   type MatrixProfile,
 } from '../src/leds.ts';
+import type { Hex } from '../src/model.ts';
 
 const RED = '#FF0000';
 const GREEN = '#00FF00';
 
+// Off the diagonal on purpose: a symmetric fixture cannot tell a row from a column.
 const animation = (over: Partial<Extract<MatrixContainer, { kind: 'animation' }>> = {}): MatrixContainer => ({
   kind: 'animation',
-  frames: [{ durationMs: 100, pixels: [[RED, null], [null, GREEN]] }],
+  frames: [{ durationMs: 100, pixels: [[null, RED], [GREEN, null]] }],
   ...over,
 });
 
@@ -72,8 +74,20 @@ describe('groups rename their position', () => {
 });
 
 describe('a frame is one string, row then column', () => {
-  test('pixels are y,x,#colour and unlit pixels are absent', () => {
-    expect(encodeFramePixels({ durationMs: 1, pixels: [[RED, null], [null, GREEN]] })).toBe('0,0,#FF0000;1,1,#00FF00');
+  test('pixels are row,column,#colour and unlit pixels are absent', () => {
+    // Deliberately off the diagonal. A fixture whose lit pixels are at (0,0) and (1,1) reads the
+    // same whichever way round the pair is written, so it proves nothing about the one fact this
+    // test exists for: GetPixel(x, y) reads Colors[y][x], so the row is written first.
+    const pixels: (Hex | null)[][] = [
+      [null, RED, null],
+      [null, null, null],
+      [GREEN, null, null],
+    ];
+    expect(encodeFramePixels({ durationMs: 1, pixels })).toBe('0,1,#FF0000;2,0,#00FF00');
+  });
+
+  test('a wide frame is not transposed, which a square one would hide', () => {
+    expect(encodeFramePixels({ durationMs: 1, pixels: [[null, null, null, RED]] })).toBe('0,3,#FF0000');
   });
 
   test('an opaque colour loses its alpha pair, a translucent one keeps it', () => {
@@ -84,7 +98,7 @@ describe('a frame is one string, row then column', () => {
 
   test('a frame carries its own duration', () => {
     const o = buildContainerObject(animation(), 'p/0', 'matrix8x8');
-    expect(o.Animation).toMatchObject({ Rows: 8, Columns: 8, Frames: [{ Colors: '0,0,#FF0000;1,1,#00FF00', FrameDuration: 100 }] });
+    expect(o.Animation).toMatchObject({ Rows: 8, Columns: 8, Frames: [{ Colors: '0,1,#FF0000;1,0,#00FF00', FrameDuration: 100 }] });
   });
 
   test('a frame taller than the matrix is refused rather than clipped', () => {
