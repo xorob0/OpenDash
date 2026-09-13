@@ -24,13 +24,13 @@ const uniqueNamesPerScreen = (d: Dashboard): void => {
 
 describe('main dashboard', () => {
   test('is the layout size with one screen for every role', () => {
-    expect(main.name).toBe('openDash');
+    expect(main.name).toBe('openDash slots 1920x480');
     expect(main.width).toBe(1920);
     expect(main.height).toBe(480);
     expect(main.backgroundColor).toBe('#0A0B0D');
     expect(main.screens).toHaveLength(1);
     expect(main.screens[0]).toMatchObject({ name: 'Main', inGame: true, idle: true, pit: true });
-    expect(main.metadata).toMatchObject({ title: 'openDash', author: 'OpenDash contributors', version: '0.0.0-test', simHubVersion: '9.12.6' });
+    expect(main.metadata).toMatchObject({ title: 'openDash slots 1920x480', author: 'OpenDash contributors', version: '0.0.0-test', simHubVersion: '9.12.6' });
   });
 
   test('has one widget per slot bound to its slot setting', () => {
@@ -129,9 +129,9 @@ describe('package', () => {
     expect(fonts.map((f) => f.split('/').pop())).toEqual(['openDashDisplay-SemiBold.ttf', 'openDashDisplay-Bold.ttf', 'Barlow-Medium.ttf']);
     for (const f of fonts) expect({ f, exists: existsSync(f) }).toEqual({ f, exists: true });
     const pkg = buildPackage(layout1920x480, opts);
-    expect(pkg.folderName).toBe('openDash');
-    expect(pkg.dashboards.map((d) => d.name)).toEqual(['openDash', 'cards']);
+    expect(pkg.folderName).toBe('openDash slots 1920x480');
+    expect(pkg.dashboards.map((d) => d.name)).toEqual(['openDash slots 1920x480', 'cards']);
     expect(pkg.dashboards[0]!.name).toBe(pkg.folderName);
-    expect(buildPackage(layout1920x480, { ...opts, strategy: 'inline' }).dashboards.map((d) => d.name)).toEqual(['openDash']);
+    expect(buildPackage(layout1920x480, { ...opts, strategy: 'inline' }).dashboards.map((d) => d.name)).toEqual(['openDash slots 1920x480']);
   });
 });

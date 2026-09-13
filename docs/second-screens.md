@@ -1,9 +1,10 @@
 # The companion and the pit wall
 
-OpenDash draws three kinds of screen. The **face** is the one on the wheel: a hero zone and
-twelve slots, described in [scope.md](scope.md). The **companion** is a phone or tablet
-beside it showing one module at a time. The **pit wall** is a big screen for someone who is not
-driving.
+OpenDash draws three kinds of screen. The **face** is the one on the wheel: a rev bar, a bar of
+settled values, three zones across the body and a band at the foot, each zone cycling its own
+catalogue from a wheel button, described in [design/zones.md](design/zones.md) and summarised in
+[scope.md](scope.md). The **companion** is a phone or tablet beside it showing one module at a
+time. The **pit wall** is a big screen for someone who is not driving.
 
 All three are built from the same source and installed by the same plugin. This document is what
 the second screens are, how they are put together, and what they deliberately do not show.
@@ -58,9 +59,11 @@ Three landscape pages and one portrait page:
 ### Zones
 
 A zone is a widget over a small dashboard that holds every zone page as a screen, with the
-widget's screen index bound to the zone's plugin property. It is the slot mechanism of the dash
-face applied to a bigger screen, and it works for the same reason: a widget's `InitialScreenIndex`
-can be bound, so a setting change moves a zone to another page without touching a file.
+widget's screen index bound to the zone's plugin property. It is the same mechanism the dash face
+uses for its own zones, and it works for the same reason: a widget's `InitialScreenIndex` can be
+bound, so a setting change moves a zone to another page without touching a file. The difference is
+who moves it, and it is the reason the two catalogues have stayed apart: a pit wall zone is chosen
+with a mouse by somebody who is not driving, and a face zone is cycled with a thumb mid-lap.
 
 One zone dashboard exists per distinct zone rectangle a package uses, because a widget scaled to a
 box it was not drawn for would scale its type with it. The zone dashboards are derived from the
