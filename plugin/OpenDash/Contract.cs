@@ -23,6 +23,9 @@ namespace OpenDashPlugin
         /// <summary>What the middle of an RGB LED strip shows. ADR 0013; read by a generated .ledsprofile.</summary>
         public const string LedCentre = "LedCentre";
 
+        /// <summary>How the rev ladder fills a strip: the look, never the thresholds. ADR 0014.</summary>
+        public const string LedRpmStyle = "LedRpmStyle";
+
         public const bool DefaultShiftLights = true;
 
         public static readonly string[] PositionModes = { "overall", "class" };
@@ -36,6 +39,9 @@ namespace OpenDashPlugin
 
         public static readonly string[] LedCentres = { "rpm", "rpmOnly", "brake", "throttleBrake", "fuel" };
         public const string DefaultLedCentre = "rpm";
+
+        public static readonly string[] LedRpmStyles = { "leftToRight", "meetInMiddle", "f1" };
+        public const string DefaultLedRpmStyle = "leftToRight";
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -401,6 +407,7 @@ namespace OpenDashPlugin
             yield return PitWallWide;
             yield return WebViewUrl;
             yield return LedCentre;
+            yield return LedRpmStyle;
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>
