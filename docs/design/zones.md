@@ -329,7 +329,8 @@ Two worked examples first, because they are the two that show why it cannot be d
   The `tall narrow` row used to be two, which is what the catalogue draws at 274 × 300, and it was
   wrong about the box it really answers: a zone that stacks one column has room for four of them,
   and what the build actually drew there was two 34 px times side by side with 234 px of the zone
-  empty under them. See §10 — **the catalogue owes a redraw of this one** (XOR-190).
+  empty under them. See §10 — **the catalogue owes a redraw of this one**, and
+  [readability-pass.md](readability-pass.md) §1 is the ticket.
 - **Relative.** `wide`: position, number, code, class, gap. `grid`: the same five. `tall narrow`:
   position, code and gap only, and eight rows rather than six. The number and the class chip go
   from between two columns that stay, which no rule about prefixes produces.
@@ -545,7 +546,7 @@ a mistake in this document.
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
 | The face with no rev bar | XOR-138 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
-| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw is XOR-190; the other twenty pages are owed the same pass, one ticket each. |
+| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [readability-pass.md](readability-pass.md). |
 
 ---
 
@@ -579,6 +580,8 @@ target, verified in [research/simhub-dash-format.md](../research/simhub-dash-for
 [scope.md](../scope.md) is what OpenDash is and what it refuses to be.
 [ADR 0006](../decisions/0006-the-zone-face.md) is why the model changed.
 [brand.md](brand.md) is the reasoning behind the colours and the type.
+[readability-pass.md](readability-pass.md) is one ticket per page: what each of the twenty-one
+would have to change to put the reading a driver needs first.
 [second-screens.md](../second-screens.md) is the companion and the pit wall, which share the
 twenty-one pages.
 [research/simhub-dash-format.md](../research/simhub-dash-format.md) is what SimHub actually does,
