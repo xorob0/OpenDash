@@ -61,12 +61,13 @@ namespace OpenDashPlugin.Tests
         public void Property_names_cover_the_dash_the_companion_and_the_pit_wall()
         {
             var names = Contract.PropertyNames().ToList();
-            // Four settings, twelve slots, the zone face of every face that ships (four pages, four
-            // masks, four starts, four class filters, four bar fields and the glance), twenty-one
-            // companion modules, four pit wall zones, the wide zone, the URL, and the flag box.
+            // Four settings, twelve slots, the rev bar mode, the zone face of every face that ships
+            // (four pages, four masks, four starts, four class filters, four bar fields and the
+            // glance), twenty-one companion modules, four pit wall zones, the wide zone, the URL,
+            // and the flag box.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
             // Eight global flag box settings and five per matrix, the way every face carries its own group.
-            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 6, names.Count);
+            Assert.Equal(4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 6, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -77,18 +78,23 @@ namespace OpenDashPlugin.Tests
             // read Slot01 to Slot12, and README publishes them as properties an LED profile may read.
             // The zone face's groups follow, one per face that ships, each naming its own screen so
             // that two faces on a rig are configured apart.
+            // Appended to the shared group, not inserted beside ShiftLights: the four names above and
+            // the twelve slots have shipped and this test asserts them by index. XOR-119, XOR-138.
+            Assert.Equal("RevBar", names[16]);
+            Assert.Contains("RevBar", Contract.SharedPropertyNames());
+
             var p = Contract.FacePrefix(Contract.ReferenceFace);
-            Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(16).Take(4));
-            Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(20).Take(4));
-            Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(24).Take(4));
-            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(28).Take(4));
-            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(32).Take(4));
-            Assert.Equal(p + "QuickGlance", names[36]);
+            Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(17).Take(4));
+            Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(21).Take(4));
+            Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(25).Take(4));
+            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(29).Take(4));
+            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(33).Take(4));
+            Assert.Equal(p + "QuickGlance", names[37]);
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
 
-            var afterFaces = 16 + Contract.FaceSizes.Count * perFace;
+            var afterFaces = 17 + Contract.FaceSizes.Count * perFace;
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
@@ -209,6 +215,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DeltaReferences, ListOf(source, "DELTA_REFERENCES"));
             Assert.Equal(Contract.SessionProgressModes, ListOf(source, "SESSION_PROGRESS_MODES"));
             Assert.Contains("ShiftLights: " + Contract.DefaultShiftLights.ToString().ToLowerInvariant(), source);
+            Assert.Equal(Contract.RevBarModes, ListOf(source, "REV_BAR_MODES"));
+            Assert.Contains("RevBar: '" + Contract.DefaultRevBar + "'", source);
             Assert.Contains("PositionMode: '" + Contract.DefaultPositionMode + "'", source);
             Assert.Contains("DeltaReference: '" + Contract.DefaultDeltaReference + "'", source);
             Assert.Contains("SessionProgress: '" + Contract.DefaultSessionProgress + "'", source);

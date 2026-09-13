@@ -224,6 +224,10 @@ namespace OpenDashPlugin
                 var captured = slot;
                 this.AttachDelegate(Contract.SlotProperty(captured), () => Settings.Slot(captured));
             }
+            // Shared rather than one face's, because the round faces' rev arc and the companion's
+            // speedo read it too, and attached last of the shared group because ShiftLights is one of
+            // the names this list has always opened with. XOR-119, XOR-138.
+            this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
             foreach (var face in Settings.RigFaces())
             {
                 var capturedFace = face;

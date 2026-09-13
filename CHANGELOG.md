@@ -9,6 +9,22 @@ Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashbo
 to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
 including any that the plugin does not install.
 
+## Unreleased
+
+### Added
+
+- The rev bar can be turned **off entirely**, for a wheel or DDU that already has LEDs across its
+  top. `OpenDash.RevBar` carries the three states — `shift`, `rpm`, `off` — and the General row in
+  the plugin panel is now a three-way choice rather than a toggle. `OpenDash.ShiftLights` stays
+  attached as its deprecated alias for a release, so a settings file and a dashboard written before
+  the mode existed both still say what their owner meant.
+- With the rev bar off, a rectangular zone face draws a **second arrangement** rather than a hole
+  where the well was: the bar rises to the top margin and the zones take the room back, which is 44
+  rows of 480 on the reference face and a ninth of the nano. Both arrangements are built into the
+  same package as two screens, so the setting changes the face in front of the driver with no
+  reinstall. Their rectangles are derived rather than drawn and
+  [docs/design/zones.md](docs/design/zones.md) §10 records what the canvas owes.
+
 ## 0.2.0-rc.1 (2026-09-13)
 
 The candidate that replaces your dashboard with a different one rather than a newer version.
