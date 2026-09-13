@@ -156,16 +156,24 @@ The line moves if a derivation is shared widely enough to need a name, or if som
 needs memory between frames. The first is a JavaScript binding before it is a plugin, because the
 standalone package is the property worth defending.
 
-**Theming and colour customisation.** openDash ships one opinionated look, resolved at build time
-into literal values in the `.djson`. Nothing a user can change reaches a colour, a typeface or a
-size. How far personalisation could ever reach into a generated package is
-[ADR 0011](decisions/0011-personalisation.md), and it has to be written before any of it is built,
-because the one line the product holds is that two states a driver cannot tell apart is a bug
-whoever chose the colours.
+**Personalisation that changes the layout.** Colour is no longer refused:
+[ADR 0011](decisions/0011-personalisation.md) settled how far personalisation reaches, and the
+colours, the frames and the idle screen are settings read through bindings like every other setting.
+What stays refused is anything a binding cannot reach without giving up the guarantee that a glyph
+is never clipped. A typeface, a font size, a spacing and a position are consumed by a layout
+decision in TypeScript, and a value that arrives after the build cannot re-run it. Those are build
+inputs, and a package built from a user's own tokens is XOR-81.
+
+The one line the product holds underneath all of it is unchanged: two states a driver cannot tell
+apart is a bug whoever chose the colours. A user may choose any colours they like, and openDash
+says so when a choice collides rather than quietly shipping it.
 
 **Idle and pit screens.** Every screen already declares `IdleScreen`, so SimHub shows the racing
 face with no data in it between sessions, which is arguably worse than SimHub's own default. A
-screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan.
+screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan. What
+a user may then do to it is no longer the open question:
+[ADR 0011](decisions/0011-personalisation.md) puts the idle screen in the runtime bucket, so XOR-53
+waits on the screen existing rather than on a record.
 
 **Licensing, activation or accounts.** openDash is MIT and there is nothing to unlock.
 
@@ -183,7 +191,7 @@ audited.
 
 ## What the MVP refused and what reversed it
 
-The MVP scope listed nine things as explicitly out of scope. Five of them have since been built,
+The MVP scope listed nine things as explicitly out of scope. Six of them have since been built,
 and each reversal is recorded here so that a reader of the old document is not misled.
 
 | The MVP refused | Reversed by | What is true now |
@@ -193,13 +201,15 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Round DDUs | XOR-6 | 480 and 800 round faces ship |
 | Phone and tablet layouts | XOR-8 | Two companion packages ship |
 | Page navigation | XOR-8, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
+| Theming and colour customisation | XOR-73, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
 
-Four of the nine still stand. Each is restated above with the record that would have to move it:
+Three of the nine still stand, and ADR 0011 left a narrower line behind it. Each is restated above
+with the record that would have to move it:
 
 | Still refused | What would have to happen first |
 |---|---|
-| Theming and colour customisation | ADR 0011, and this line moving with it. The Personalisation project is unmergeable until it does |
-| Idle and pit screens | XOR-62 and XOR-53, behind the same record |
+| Personalisation that changes the layout | XOR-81: a package built from the user's tokens. Nothing at runtime re-measures a text box |
+| Idle and pit screens | XOR-62. The screen has to exist before XOR-53 can hand it to the user |
 | Network update checks | ADR 0012, stating exactly what is sent and how it is switched off |
 | Computed telemetry of our own | ADR 0009, owed before zones B and C |
 
