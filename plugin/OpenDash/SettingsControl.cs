@@ -970,9 +970,9 @@ namespace OpenDashPlugin
             var rows = new List<UIElement>
             {
                 Ui.Caption(
-                    "An 8x8 LED matrix beside the screen. openDash builds the profile and puts it where you can find it, "
-                        + "but does not install it: SimHub keeps matrix profiles in a file it rewrites itself. Import it once, "
-                        + "and everything on this page reaches it while you drive.",
+                    "An 8x8 LED matrix beside the screen. Install the profile below, then select it on your matrix "
+                        + "device; everything on this page then reaches it while you drive. openDash adds the profile "
+                        + "through SimHub's own settings and never touches a profile you made yourself.",
                     846),
                 BuildFlagBoxRow(),
                 Ui.Row("Brightness", "Percent, for every light openDash drives. SimHub's own device brightness applies on top.", BuildPercentBox(Settings.LightsBrightness, v => { Settings.LightsBrightness = v; plugin.SaveSettings(); })),
@@ -1007,6 +1007,7 @@ namespace OpenDashPlugin
                 4,
                 Ui.Row("At rest", "What this panel shows when nothing has taken it over.", rest),
                 Ui.Row("Flags", "Let the flag catalogue take this panel.", BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; plugin.SaveSettings(); })),
+                Ui.Row("Pit", "Let the limiter, the lane and speeding take this panel.", BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[m - 1] = on; plugin.SaveSettings(); })),
                 Ui.Row("Spotter", "Let a car alongside take this panel.", BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; plugin.SaveSettings(); })),
                 Ui.Row("Warnings", "Let low fuel, oil and water take this panel.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; plugin.SaveSettings(); })),
                 // Which side the box is physically on. One to the left of the wheel lighting for a car on

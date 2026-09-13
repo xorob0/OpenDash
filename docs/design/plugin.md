@@ -55,6 +55,7 @@ Lights
   Matrix 1
       At rest                                                        [ Dark |  Gear  ]
       Flags                                                                     (  on )
+      Pit                                                                       (  on )
       Spotter                                                                   (  on )
       Warnings                                                                  (  on )
       Mounted                                                 [ Both | Left | Right ]

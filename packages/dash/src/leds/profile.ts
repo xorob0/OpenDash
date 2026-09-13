@@ -100,7 +100,9 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
   const warnings = warningStates();
   const on = (setting: Expr): Expr => eq(setting, 'true');
   return [
-    { kind: 'when', description: 'Pit', formula: on(m.flags()), children: stateContainers(pit, 'Pit') },
+    // Its own switch, not the flags'. A driver who turns flags off on a panel has not asked to lose
+    // the pit limiter warning, and reading m.flags() here was a copy of the line below it.
+    { kind: 'when', description: 'Pit', formula: on(m.pit()), children: stateContainers(pit, 'Pit') },
     {
       kind: 'when',
       description: 'Spotter',
@@ -135,10 +137,14 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
 export function matrixGroup(matrix: FlagBoxMatrix): MatrixContainer | undefined {
   const { and, eq, not, or } = ncalc;
   const m = flagBoxMatrix(matrix);
-  const doesSomething = or(eq(m.flags(), 'true'), eq(m.spotter(), 'true'), eq(m.warnings(), 'true'), eq(m.rest(), "'gear'"));
+  const doesSomething = or(eq(m.flags(), 'true'), eq(m.pit(), 'true'), eq(m.spotter(), 'true'), eq(m.warnings(), 'true'), eq(m.rest(), "'gear'"));
+  // "No flag is holding THIS panel": a flag only suppresses what is under it on a panel that is
+  // actually showing flags. Gating on noFlagShowing() alone blacked out the spotter, the warnings
+  // and the gear on a panel with Flags switched off, for the whole time a flag was out.
+  const flagsFree = or(not(eq(m.flags(), 'true')), noFlagShowing());
   const children: MatrixContainer[] = [
     { kind: 'when', description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup()] },
-    { kind: 'when', description: 'Below the flags', formula: noFlagShowing(), children: belowFlags(matrix) },
+    { kind: 'when', description: 'Below the flags', formula: flagsFree, children: belowFlags(matrix) },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
   if (children.length === 0) return undefined;
   return { kind: 'when', description: `Matrix ${matrix}`, matrix, formula: doesSomething, children };
