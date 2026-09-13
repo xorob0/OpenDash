@@ -63,6 +63,31 @@ yellow, and bands are legible at this size where a pace-car silhouette is not.
 **Blue moves.** A blue flag with a moving arrow says which way to look. A static blue square says
 a colour.
 
+### The gear, underneath everything
+
+`OpenDash.FlagBoxGear` (on by default) draws the gear filling the panel when nothing else is on
+it. It is the resting state rather than a feature: every flag outranks it, and when they let go
+it comes back. Off leaves the panel dark rather than showing something else.
+
+The glyphs are a 5 by 7 font in source, centred in the panel, not text rendered small — the
+bundled Barlow Condensed does not exist at eight pixels, and a thin face leaves one or two pixels
+between a 6 and an 8 on a box read in peripheral vision. `R` and `N` have glyphs of their own.
+
+The colour is the shift model: `shiftBands()` in `components/revSegments.ts` is the one place the
+three bands are defined, and the rev bar and the gear both read it, so a driver with both learns
+one relationship and reads it in two places. The redline band **blinks the digit** rather than
+filling the panel behind it: a filled panel is a flag's vocabulary and the box has to keep those
+apart. When [XOR-230](https://linear.app/xorob/issue/XOR-230) replaces SimHub's per-car bands with
+the sim's own `DriverCarSL*` values it changes that one function, not this file.
+
+There is no gear colour theme. Theming is refused in [scope.md](../scope.md) until ADR 0011 says
+otherwise, and the argument there — two states a driver cannot tell apart is a bug whoever chose
+the colours — is at its strongest on a device whose entire vocabulary is colour.
+
+**Not judged on a diffused matrix at arm's length.** The font was designed against the constraint
+and checked for pairwise distinctness in a test; whether a 6 reads as a 6 through a diffuser is
+the check no VM can do.
+
 ### When nobody is racing
 
 **No game running is dark.** Idle screens are a refusal in [scope.md](../scope.md), and a glowing

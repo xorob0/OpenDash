@@ -515,8 +515,9 @@ export const LIGHTS_BRIGHTNESS_SETTING = 'LightsBrightness';
 export const LIGHTS_NIGHT_BRIGHTNESS_SETTING = 'LightsNightBrightness';
 export const LIGHTS_NIGHT_MODE_SETTING = 'LightsNightMode';
 
-/** Flag-box-specific, because it is about flags rather than about lights. */
+/** Flag-box-specific, because they are about this box rather than about lights in general. */
 export const FLAG_BOX_CRITICAL_ONLY_SETTING = 'FlagBoxCriticalOnly';
+export const FLAG_BOX_GEAR_SETTING = 'FlagBoxGear';
 
 /** Percent. SimHub's own global brightness for the device applies on top of this. */
 export const DEFAULT_LIGHTS_BRIGHTNESS = 100;
@@ -530,6 +531,9 @@ export const DEFAULT_LIGHTS_NIGHT_BRIGHTNESS = 25;
 
 /** Off. A switch the driver flips, not a time of day we guess at. */
 export const DEFAULT_LIGHTS_NIGHT_MODE = false;
+
+/** On. The gear is the box's resting state; off leaves the panel dark rather than showing something else. */
+export const DEFAULT_FLAG_BOX_GEAR = true;
 
 /**
  * Off, so the box shows the whole catalogue until the driver asks for quiet. The default is the
@@ -550,9 +554,11 @@ export const flagBox = {
   brightness: (): Expr => iff(eq(flagBox.nightMode(), 'true'), flagBox.nightBrightness(), flagBox.dayBrightness()),
   /** `isnull([OpenDash.FlagBoxCriticalOnly], false)`: quiet until something matters. */
   criticalOnly: (): Expr => isnull(prop(propertyName(FLAG_BOX_CRITICAL_ONLY_SETTING)), String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
+  /** `isnull([OpenDash.FlagBoxGear], true)`: the gear as the resting state. */
+  gear: (): Expr => isnull(prop(propertyName(FLAG_BOX_GEAR_SETTING)), String(DEFAULT_FLAG_BOX_GEAR)),
 };
 
 /** Every property the flag box profile reads. */
 export function flagBoxProperties(): string[] {
-  return [LIGHTS_BRIGHTNESS_SETTING, LIGHTS_NIGHT_BRIGHTNESS_SETTING, LIGHTS_NIGHT_MODE_SETTING, FLAG_BOX_CRITICAL_ONLY_SETTING].map(propertyName);
+  return [LIGHTS_BRIGHTNESS_SETTING, LIGHTS_NIGHT_BRIGHTNESS_SETTING, LIGHTS_NIGHT_MODE_SETTING, FLAG_BOX_CRITICAL_ONLY_SETTING, FLAG_BOX_GEAR_SETTING].map(propertyName);
 }

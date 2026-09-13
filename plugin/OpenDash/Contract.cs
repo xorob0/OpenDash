@@ -34,6 +34,10 @@ namespace OpenDashPlugin
         /// are addressed to this car. Flag-box-specific, because it is about flags rather than lights.</summary>
         public const string FlagBoxCriticalOnly = "FlagBoxCriticalOnly";
 
+        /// <summary>The gear as the box's resting state. Off leaves the panel dark rather than showing
+        /// something else.</summary>
+        public const string FlagBoxGear = "FlagBoxGear";
+
         public const bool DefaultShiftLights = true;
 
         public static readonly string[] PositionModes = { "overall", "class" };
@@ -67,6 +71,9 @@ namespace OpenDashPlugin
 
         /// <summary>Off. A switch the driver flips, not a time of day we guess at.</summary>
         public const bool DefaultLightsNightMode = false;
+
+        /// <summary>On: the gear is what the box shows when nothing is happening.</summary>
+        public const bool DefaultFlagBoxGear = true;
 
         /// <summary>Off. A box that stays dark through a chequered flag is a surprise, and a surprise is
         /// a worse default than a busy one.</summary>
@@ -426,6 +433,7 @@ namespace OpenDashPlugin
             yield return LightsNightBrightness;
             yield return LightsNightMode;
             yield return FlagBoxCriticalOnly;
+            yield return FlagBoxGear;
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a

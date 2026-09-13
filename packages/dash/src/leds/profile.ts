@@ -10,6 +10,7 @@
  *         when the ignition is off     a dim standby mark
  *         when the ignition is on
  *           flags                      the alert catalogue, in priority order
+ *           the gear                   the resting state, under everything
  *
  * **Not racing is dark**, and that is the decision rather than a gap. Idle screens are a refusal
  * in scope.md, and a glowing logo on somebody's desk when nothing is running is the hardest
@@ -33,8 +34,9 @@
  */
 import type { Expr } from '../bind.ts';
 import { flagBox } from '../contract.ts';
-import { conditionVisible, flagsShown, type FlagCondition } from '../flags.ts';
+import { conditionRaised, conditionVisible, flagsShown, type FlagCondition } from '../flags.ts';
 import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
+import { gearGroup } from './gear.ts';
 import { flagFrames, ignitionOffFrames } from './glyphs.ts';
 
 /** The package name, the profile name and the file stem. Spaces are fine: the packages have them. */
@@ -77,6 +79,27 @@ export function flagsGroup(): MatrixContainer {
       { kind: 'when', description: 'Every flag', formula: not(quiet), children: flagContainers(false) },
     ],
   };
+}
+
+/**
+ * Nothing in the list that is actually being shown is raised.
+ *
+ * The gear is the resting state: every flag outranks it and takes the panel, and when they let go
+ * it comes back. Rather than repeating the gear under both halves of the critical-flags-only
+ * switch — which would double eighty-eight glyphs to save one expression — it sits beside them
+ * once, under a condition that asks the question both ways. With the switch on, a chequered flag
+ * no longer suppresses the gear, because it is no longer in the list being ranked.
+ */
+export function restingCondition(): Expr {
+  const { and, eq, not, or } = ncalc;
+  const quiet = eq(flagBox.criticalOnly(), 'true');
+  const none = (criticalOnly: boolean): Expr => and(...drawnFlags(criticalOnly).map((c) => not(conditionRaised(c))));
+  return or(and(quiet, none(true)), and(not(quiet), none(false)));
+}
+
+/** The gear, under everything the box can show instead. */
+export function restingGroup(): MatrixContainer {
+  return { kind: 'when', description: 'Resting', formula: restingCondition(), children: [gearGroup()] };
 }
 
 /**
@@ -128,7 +151,7 @@ export function flagBoxTree(): MatrixContainer[] {
           description: 'Racing',
           children: [
             { kind: 'when', description: 'Ignition off', formula: eq(ignitionOn(), num(0)), children: [{ kind: 'animation', description: 'Standby', frames: ignitionOffFrames() }] },
-            { kind: 'when', description: 'Ignition on', formula: eq(ignitionOn(), num(1)), children: [flagsGroup()] },
+            { kind: 'when', description: 'Ignition on', formula: eq(ignitionOn(), num(1)), children: [flagsGroup(), restingGroup()] },
           ],
         },
       ],
