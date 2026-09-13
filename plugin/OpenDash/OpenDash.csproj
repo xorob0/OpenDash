@@ -7,7 +7,7 @@
     <OutputType>Library</OutputType>
     <AssemblyName>OpenDash</AssemblyName>
     <RootNamespace>OpenDashPlugin</RootNamespace>
-    <Description>openDash: an open-source SimHub dashboard and the plugin that installs it and exposes its settings.</Description>
+    <Description>OpenDash: an open-source SimHub dashboard and the plugin that installs it and exposes its settings.</Description>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <DebugType>portable</DebugType>
