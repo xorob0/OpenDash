@@ -10,7 +10,8 @@
  * Coordinates are the fragile part and are treated as such. Everything anchored to the window's
  * top-left, which is the left menu, is a fixed pixel offset and holds at any resolution while the
  * guest stays at 100% DPI; everything in the centred content column is a fraction of the screen
- * width. Both were measured on the 3840 by 2160 guest. Nothing is trusted: `openDashboard` asks
+ * width. Both were measured on the 3840 by 2160 guest. Nothing is trusted: `openDashboard` waits
+ * for SimHub's window to exist and to fill the screen before it measures anything from it, asks
  * Windows which dash windows exist afterwards, retries once, and fails with what to do by hand
  * rather than leaving the caller to wonder.
  */
@@ -28,12 +29,24 @@ const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
 /**
  * The first dashboard row, and the step between rows, in pixels of a 100% DPI guest.
  *
+ * `firstRow` is a point inside the first row's card, not its top: the card spans y=302..380 and 336
+ * is the middle of it. `quickRunOffset` is measured from that same point, and it deliberately lands
+ * **below** the card, at y=422. Clicking a hovered row does not start the dashboard; it opens the
+ * Quick run popup, which is drawn under the card with its header at 390 and "Windowed", the item
+ * this wants, as the first entry at 422. Both were re-measured against a screenshot of the real
+ * list while XOR-252 was open and are right; anything that looks wrong about a Start click landing
+ * forty pixels past the bottom of a 78 pixel card is this popup.
+ *
  * `lastUsedBand` is the second first row. Dash Studio draws a "Last used" strip above the list
  * holding the dashboards recently opened, and it appears only when one of them matches what is in
  * the search box, so the list starts 221 px lower in some searches and not others. It went
  * unnoticed for as long as every search was a package's full name, which no other dashboard
  * matches; the face is now called plainly "openDash", every other package name begins with it, and
  * the band turned up.
+ *
+ * Which is why the second attempt is an offset and not a repeat, and why `maximiseSimHub` below has
+ * to be the thing that waits: a first attempt that failed for any reason other than the band is not
+ * retried by the second, it is only clicked 221 pixels further down, at nothing at all.
  */
 const LIST = { firstRow: 336, lastUsedBand: 221, rowHeight: 84, quickRunOffset: 86 } as const;
 /**
@@ -196,6 +209,8 @@ public class OpenDashWindows {
   [DllImport("user32.dll")] public static extern bool EnumWindows(Enum cb, IntPtr l);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
+  /// <summary>True when the window is in the maximised state, whatever shape that left it.</summary>
+  [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr h);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr a, int x, int y, int cx, int cy, uint f);
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
@@ -270,50 +285,92 @@ Start-Sleep -Milliseconds 900`,
 }
 
 /**
- * Puts SimHub's main window where the coordinates below expect it: top-left, filling the screen.
+ * Waits for SimHub's main window and puts it where the coordinates below expect it: top-left,
+ * filling the screen. Prints `rect x,y WxH` once it is there, and otherwise a line saying what it
+ * waited for and never got, which the caller is expected to read.
  *
- * `ShowWindow(SW_MAXIMIZE)` is asked for first and then checked, because it does not always take:
- * a window that WPF has not finished laying out stays where it was, and every click after that
- * lands on the desktop. When the rectangle is not the whole screen, `SetWindowPos` puts it there,
- * which no window state can decline. The returned rectangle is what the caller should trust.
+ * **The waiting is the point of this function, and the lack of it was a bug.** `vm.ts`'s
+ * `simhubStart` returns as soon as the process exists, which on this guest is about a second after
+ * launch; SimHub's real window arrives twenty-five to fifty seconds later. What sits in
+ * `MainWindowHandle` in between is not nothing, which is the trap. Measured on the VM, from the
+ * moment the process appears:
+ *
+ * * for three seconds the handle is zero;
+ * * for the next twenty it is the **splash**: a 540x320 window that reports `IsZoomed` as true and
+ *   that `SW_MAXIMIZE` stretches to 3840x320, because only its width is free;
+ * * then the real window, 1300x760 at 78,0, which maximises to -8,-8 by 3856x2136.
+ *
+ * So a caller that maximised once and carried on was clicking full-screen coordinates at a 320
+ * pixel strip, and a moment later at an unmaximised 1300x760 window with the desktop around it.
+ * That is what made `bun run shots` fail on whichever package it photographed first after the
+ * install's SimHub restart -- reported, misleadingly, as a package that could not be found.
+ *
+ * Each round therefore asks for `SW_MAXIMIZE` and then measures, and only a rectangle covering the
+ * **working area** counts as arrived. Working area rather than `Bounds`: a maximised window here is
+ * -8,-8 by 3856x2136, which is the working area plus the invisible resize border and forty pixels
+ * short of `Bounds`, because the taskbar owns them. A test against `Bounds` can never pass, so the
+ * old one fired `SetWindowPos` at every already-correct window and could not have told an arrived
+ * window from a splash.
+ *
+ * `SetWindowPos` stays as the fallback for the case it was written for -- `SW_MAXIMIZE` not taking
+ * on a window WPF has not finished laying out -- but only when the window is not zoomed afterwards.
+ * The splash is zoomed and still the wrong shape, and forcing that one to the working area would
+ * make it pass the test and hand the caller a splash to click on.
  */
-export function maximiseSimHub(host: Host): RunResult {
+export function maximiseSimHub(host: Host, waitSeconds = 120): RunResult {
   return inDesktopScript(
     host,
     `${WINDOW_HELPER}
 Add-Type -AssemblyName System.Windows.Forms
-$screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-# The process's own MainWindowHandle, not a title match. SimHub has three visible windows called
-# "SimHub", one of which is a full-screen overlay, and matching on the title maximised that one
-# while every click went to the real window still sitting at 78,0.
-$proc = Get-Process SimHubWPF -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $proc -or $proc.MainWindowHandle -eq [IntPtr]::Zero) { 'SimHub main window not found'; exit }
-$found = $proc.MainWindowHandle
-# Anything else on the desktop takes the clicks meant for SimHub: an Explorer window left open on
-# the share was doing exactly that. Only the two kinds a developer leaves lying about are
-# minimised, chosen by window class rather than by title, so no shell window is touched.
-foreach ($h in [OpenDashWindows]::Visible()) {
-  if ($h -eq $found) { continue }
-  $c = [OpenDashWindows]::Cls($h)
-  if ($c -eq 'CabinetWClass' -or $c -eq 'ExploreWClass' -or $c -eq 'ConsoleWindowClass') {
-    [OpenDashWindows]::ShowWindow($h, 6) | Out-Null   # SW_MINIMIZE
+$work = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+function Covers($r) {
+  return ($r[0] -le $work.X -and $r[1] -le $work.Y -and
+          ($r[0] + $r[2]) -ge ($work.X + $work.Width) -and ($r[1] + $r[3]) -ge ($work.Y + $work.Height))
+}
+$deadline = (Get-Date).AddSeconds(${Math.trunc(waitSeconds)})
+$last = 'SimHub has no main window yet'
+while ($true) {
+  # The process's own MainWindowHandle, not a title match. SimHub has three visible windows called
+  # "SimHub", one of which is a full-screen overlay, and matching on the title maximised that one
+  # while every click went to the real window still sitting at 78,0.
+  $proc = Get-Process SimHubWPF -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $proc) {
+    $last = 'SimHub is not running'
+  } elseif ($proc.MainWindowHandle -ne [IntPtr]::Zero) {
+    $found = $proc.MainWindowHandle
+    # Anything else on the desktop takes the clicks meant for SimHub: an Explorer window left open on
+    # the share was doing exactly that. Only the two kinds a developer leaves lying about are
+    # minimised, chosen by window class rather than by title, so no shell window is touched.
+    foreach ($h in [OpenDashWindows]::Visible()) {
+      if ($h -eq $found) { continue }
+      $c = [OpenDashWindows]::Cls($h)
+      if ($c -eq 'CabinetWClass' -or $c -eq 'ExploreWClass' -or $c -eq 'ConsoleWindowClass') {
+        [OpenDashWindows]::ShowWindow($h, 6) | Out-Null   # SW_MINIMIZE
+      }
+    }
+    [OpenDashWindows]::ShowWindow($found, 3) | Out-Null    # SW_MAXIMIZE
+    [OpenDashWindows]::SetForegroundWindow($found) | Out-Null
+    Start-Sleep -Milliseconds 700
+    $r = [OpenDashWindows]::Rect($found)
+    if (-not (Covers $r) -and -not [OpenDashWindows]::IsZoomed($found)) {
+      # SW_MAXIMIZE did not take. SWP_NOZORDER | SWP_NOACTIVATE.
+      [OpenDashWindows]::SetWindowPos($found, [IntPtr]::Zero, $work.X, $work.Y, $work.Width, $work.Height, 0x0004 -bor 0x0010) | Out-Null
+      Start-Sleep -Milliseconds 700
+      $r = [OpenDashWindows]::Rect($found)
+    }
+    if (Covers $r) {
+      "rect {0},{1} {2}x{3}" -f $r[0], $r[1], $r[2], $r[3]
+      exit
+    }
+    $last = "SimHub's window is {0}x{1} at {2},{3}, which does not cover the {4}x{5} working area; still starting" -f $r[2], $r[3], $r[0], $r[1], $work.Width, $work.Height
   }
+  if ((Get-Date) -ge $deadline) { break }
+  Start-Sleep -Seconds 2
 }
-[OpenDashWindows]::ShowWindow($found, 3) | Out-Null    # SW_MAXIMIZE
-[OpenDashWindows]::SetForegroundWindow($found) | Out-Null
-Start-Sleep -Milliseconds 700
-$r = [OpenDashWindows]::Rect($found)
-# A maximised window reports -8,-8 and eight pixels larger than the screen on each axis: the
-# invisible resize border sits off-screen and the client area still starts at 0,0. So the test is
-# whether the rectangle covers the screen, not whether it equals it. Testing for equality sent
-# SetWindowPos at an already correct window, which a maximised window ignores anyway.
-if ($r[0] -gt 0 -or $r[1] -gt 0 -or ($r[0] + $r[2]) -lt $screen.Width -or ($r[1] + $r[3]) -lt $screen.Height) {
-  # SWP_NOZORDER | SWP_NOACTIVATE
-  [OpenDashWindows]::SetWindowPos($found, [IntPtr]::Zero, 0, 0, $screen.Width, $screen.Height, 0x0004 -bor 0x0010) | Out-Null
-  Start-Sleep -Milliseconds 700
-  $r = [OpenDashWindows]::Rect($found)
-}
-"rect {0},{1} {2}x{3}" -f $r[0], $r[1], $r[2], $r[3]`,
+"$last after ${Math.trunc(waitSeconds)}s"`,
+    // The script does its own waiting, so the host has to outlast it or it reads an empty file and
+    // calls a slow start a failure.
+    Math.trunc(waitSeconds) + 60,
   );
 }
 
@@ -385,7 +442,22 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   const offsets = [0, LIST.lastUsedBand];
   for (const [attempt, bandOffset] of offsets.map((o, i) => [i + 1, o] as const)) {
     const rowY = LIST.firstRow + bandOffset + row * LIST.rowHeight;
-    maximiseSimHub(host);
+    // Read, not fired and forgotten. Every coordinate below is measured from a SimHub filling the
+    // screen, so if the window is not there yet there is nothing to click and no offset that helps:
+    // say so instead of spending the second attempt clicking the desktop at a different height.
+    const maximised = maximiseSimHub(host);
+    if (!maximised.stdout.startsWith('rect')) {
+      return {
+        ok: false,
+        code: 1,
+        stdout: '',
+        stderr:
+          `${maximised.stdout || maximised.stderr || 'maximising SimHub produced nothing'}.\n` +
+          `Nothing was clicked: every coordinate here is measured from a SimHub filling the screen. ` +
+          `Its window takes around half a minute to appear after the process starts, so a restart ` +
+          `that is merely slow looks the same as one that failed; \`bun run vm shot\` shows which.`,
+      };
+    }
     sleep(2);
     click(host, MENU.x, MENU.dashStudio);
     sleep(4);

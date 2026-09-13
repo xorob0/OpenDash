@@ -59,10 +59,10 @@ over VNC.
 
 It is the fragile part of the loop and it is treated as such. The coordinates are a fixed offset
 from the window's top-left for the menu and a fraction of the screen width for the centred content
-column, the window is put where they expect it first, every other window that could take a click is
-minimised, and the result is checked by asking Windows which dash windows exist. It retries once
-and then tells you to open it by hand, which is enough, since everything else will already be in
-place.
+column, the window is **waited for** and then put where they expect it, every other window that
+could take a click is minimised, and the result is checked by asking Windows which dash windows
+exist. It retries once and then tells you to open it by hand, which is enough, since everything
+else will already be in place.
 
 ## The flag box, which has no hardware
 
@@ -100,8 +100,8 @@ performed:
 * **Nothing has opened SimHub's own matrix preview.** SimHub's LED profile editor previews a
   matrix on screen, and if that preview is faithful it is the whole answer for everyone without a
   box. Whether `bun run dev`'s scripted clicking can reach it has not been tried; the traps in
-  this file apply unchanged, and XOR-252 already has `dev` failing to open a *dashboard*, which is
-  the easier case.
+  this file apply unchanged, and the easier case -- `dev` opening a *dashboard* -- took XOR-252 to
+  get right.
 * **The profile has not been loaded in real SimHub.** It is generated against the format read out
   of the decompiled 9.12.6 assemblies. Until somebody imports it, "it parses" is a claim about
   Json.NET rather than about SimHub.
@@ -120,6 +120,15 @@ simply shows its defaults, with nothing in any log.
 
 **SimHub reads its template list once**, at startup, so a package has to be installed before SimHub
 starts rather than after.
+
+**SimHub's process exists long before its window does.** `bun run vm install` reports "started" as
+soon as `SimHubWPF.exe` is running, which is about a second after launch; the window you can click
+arrives twenty-five to fifty seconds later. The gap is not empty, which is the trap: for three
+seconds the process has no main window at all, and then for twenty seconds its main window is the
+splash, a 540x320 panel that answers "are you maximised" with yes and stretches to 3840x320 when
+you maximise it. A script that maximised once and started clicking was aiming full-screen
+coordinates at a 320 pixel strip. `maximiseSimHub` in [gui.ts](../scripts/gui.ts) is what waits,
+and it accepts nothing but a rectangle covering the desktop's working area.
 
 **Bun does not deliver signals to a handler.** On 1.3.3, `process.on('SIGINT', ...)` registers a
 handler that is never called, and registering it suppresses the default action, so a long running
