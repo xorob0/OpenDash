@@ -79,7 +79,13 @@ namespace OpenDashPlugin
                 // Before installing, not after: a staging folder left by an interrupted update is a complete
                 // extracted dashboard sitting in DashTemplates, and they accumulate one per abandoned update.
                 PackageExtractor.RemoveOrphanedStaging(Installer.SimHubRoot, new SimHubInstallLog());
+                // The rig decides what is written. Before ADR 0017 this wrote every package the plugin
+                // embeds on every start, so a user who owned one screen found fourteen dashboards in
+                // SimHub's list; now a screen exists because somebody added it. Nothing outside the rig
+                // is deleted -- that is a thing a user asks for -- it is simply no longer rewritten.
+                Installer.Wanted = Settings.RigScreens().Select(screen => screen.Folder).Where(folder => folder != null).ToList();
                 Installer.EnsureInstalled(false);
+                WriteScreenFolders();
             }
             catch (Exception ex)
             {
@@ -100,6 +106,27 @@ namespace OpenDashPlugin
             Log.Info(FlagBoxProfile.Summary(FlagBox));
             // The installer records what it wrote into each folder but never saves; this is the safe moment.
             SaveSettings();
+        }
+
+        /// <summary>
+        /// Writes the folder of any screen that has not got one.
+        /// </summary>
+        /// <remarks>
+        /// The stock screens are DashboardInstaller's, because their folder is a package's own and it
+        /// keeps them at the embedded version. A screen with a namespace of its own has a folder no
+        /// package writes, so it is written here -- once, when it is missing. A folder somebody deleted
+        /// comes back on the next start, which is the same promise the stock ones have always made; the
+        /// panel offers the same thing on a button for a user who does not want to restart to get it.
+        /// </remarks>
+        private void WriteScreenFolders()
+        {
+            var log = new SimHubInstallLog();
+            foreach (var screen in Settings.RigScreens())
+            {
+                if (screen.IsStock) continue;
+                var result = ScreenInstaller.Write(screen, Installer.PackageSource, Installer.SimHubRoot, Installer.Record, log);
+                if (!result.Ok) Log.Warn("The screen " + screen.Name + " has no folder: " + result.Error);
+            }
         }
 
         /// <summary>The lights, which no dashboard reads and the lighting profiles do. A profile the user
