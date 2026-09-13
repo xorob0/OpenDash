@@ -71,7 +71,9 @@ namespace OpenDashPlugin
                 var missing = !Installed(captured);
                 wrap.Children.Add(Ui.Card(
                     captured.Name,
-                    captured.SizeLabel,
+                    // A screen whose package is gone has no size to show, and "0 × 0" is worse than
+                    // the folder it lives in.
+                    captured.Width > 0 ? captured.SizeLabel : (captured.Folder ?? string.Empty),
                     KindLabel(captured),
                     current != null && ReferenceEquals(current, captured),
                     missing ? Theme.StatusFailed : null,
@@ -154,7 +156,7 @@ namespace OpenDashPlugin
             // creation and a rename does not move it, so a screen called "Rim" whose properties say
             // MainDash has to be able to say so rather than leave it to be discovered.
             var facts = Ui.Caption(
-                KindLabel(screen) + " · " + screen.SizeLabel + " · " + (screen.Folder ?? "not installed")
+                KindLabel(screen) + (screen.Width > 0 ? " · " + screen.SizeLabel : string.Empty) + " · " + (screen.Folder ?? "not installed")
                     + " · properties OpenDash." + screen.Namespace + "*",
                 BodyWidth - 260);
             var text = Ui.VStack(4, title, facts);
