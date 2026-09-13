@@ -219,6 +219,12 @@ The gradient form, `Mode` 4, maps the value of a formula onto a colour ramp:
 The list above is what samples happened to bind. This is the rule underneath it, from
 `BindingHelper`, `EditorModel.ApplyBindings` and `PropertyItemWrapper`.
 
+The rule is decompiled. Which targets actually apply at runtime was then checked on the VM as
+`openDash Probe` ([tools/binding-probe](../../tools/binding-probe/probe.ts)): twelve rows, each
+drawing a literal that reads FAIL beside a binding that reads PASS, captured in
+[media/xor-73/binding-probe.png](../../media/xor-73/binding-probe.png). Where a claim below was run
+there rather than only read, it says so.
+
 **A target is a CLR property name, resolved by reflection, once.** `BindingHelper.InitBinding` does
 `item.GetType().GetProperty(propertyName)` and, when that returns null, leaves `ValueGetter` unset.
 `Applybindings` returns on exactly that check. So a misspelt or non-existent target is a **silent
@@ -237,10 +243,11 @@ in `Applybindings`. An enum property cannot be bound at all, which rules out `Fo
 number through `StartColor`/`MiddleColor`/`EndColor`. `AllowText` is the same test against `string`.
 
 **Bindings nest one level, into sub-objects.** `ApplyBindings` walks
-`GetBindableProperties(item.GetType())` — every public property whose type implements `IBindable`
-and is not itself an item — and recurses into each with the same evaluation. On a drawable item
-those are `BorderStyle` and, on text, `TextPadding`; both derive from `SubPropertyBindingBase`, and
-the item's `Owner` setter assigns their `Owner` and `ParentItem` as it is set. So these are real:
+`GetBindableProperties(item.GetType())`, which is every public property whose type implements
+`IBindable` and is not itself an item, and recurses into each with the same evaluation. On a
+drawable item those are `BorderStyle` and, on text, `TextPadding`; both derive from
+`SubPropertyBindingBase`, and the item's `Owner` setter assigns their `Owner` and `ParentItem` as it
+is set. So these are real, and were run:
 
 ```json
 "BorderStyle": {
@@ -250,8 +257,10 @@ the item's `Owner` setter assigns their `Owner` and `ParentItem` as it is set. S
 ```
 
 `BorderColor`, `BorderTop`/`Bottom`/`Left`/`Right`, `RadiusTopLeft` and its three siblings, and
-`PaddingTop`/`Bottom`/`Left`/`Right` are all bindable **there**. None of them is bindable on the
-item, for the reflection reason above.
+`PaddingTop`/`Bottom`/`Left`/`Right` are all bindable **there**. On the VM a bound `BorderColor`
+drew green over a red literal, a bound `BorderTop` thickened the top edge, and a bound `PaddingLeft`
+moved the text. The same `BorderColor` written at item level left its box red, which is the
+reflection rule above doing what it says.
 
 **`Font` and `CharWidth` carry `[NoBinding]`, and both bind anyway.** The attribute is read in one
 place, `PropertyItemWrapper`, which is the editor's property grid, and never by `ApplyBindings`. A
@@ -261,13 +270,9 @@ the same. They are the only two properties on a `TextItem` SimHub marks this way
 the properties a text box was measured from, and a behaviour that survives only because nothing
 enforces the attribute is one update away from disappearing without a message.
 
-Every claim in this section was run on the VM as `openDash Probe`
-([tools/binding-probe](../../tools/binding-probe/probe.ts)), twelve rows each drawing a literal that
-reads FAIL beside a binding that reads PASS. The capture is
-[media/xor-73/binding-probe.png](../../media/xor-73/binding-probe.png).
-
 **`ImageFromFileItem.ImagePath` is an ordinary bindable string**, unattributed, which is the path to
-an image outside the package. `ImageFromUrlItem.ImageUrl` likewise.
+an image outside the package. `ImageFromUrlItem.ImageUrl` likewise. Both are read off the type
+rather than run, so what SimHub does with a path that does not resolve is still unknown.
 
 **What it costs, per frame.** `ApplyBindings` runs over the rendered screen every frame.
 
