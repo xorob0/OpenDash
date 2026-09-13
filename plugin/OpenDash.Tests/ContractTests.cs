@@ -61,17 +61,12 @@ namespace OpenDashPlugin.Tests
         public void Property_names_cover_the_dash_the_companion_and_the_pit_wall()
         {
             var names = Contract.PropertyNames().ToList();
-            // Four settings, twelve slots, the zone face (four pages, four masks, four starts, four
-            // bar fields and the glance), twenty-one companion modules, four pit wall zones, the
-            // wide zone and the URL, and the LED centre — which no screen reads and a generated
-            // .ledsprofile does (ADR 0013).
-            const int perFace = 4 + 4 + 4 + 4 + 1;
-            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 2, names.Count);
-            Assert.Equal(Contract.LedCentre, names[names.Count - 2]);
-            Assert.Equal(Contract.LedRpmStyle, names[names.Count - 1]);
-            Assert.Equal("rpm", Contract.DefaultLedCentre);
-            Assert.Contains(Contract.DefaultLedCentre, Contract.LedCentres);
-            Assert.Contains(Contract.DefaultLedRpmStyle, Contract.LedRpmStyles);
+            // Four settings, twelve slots, the zone face of every face that ships (four pages, four
+            // masks, four starts, four class filters, four bar fields and the glance), twenty-one
+            // companion modules, four pit wall zones, the wide zone, the URL, and the flag box.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
+            // Eight global flag box settings and five per matrix, the way every face carries its own group.
+            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 5, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -86,8 +81,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(16).Take(4));
             Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(20).Take(4));
             Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(24).Take(4));
-            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(28).Take(4));
-            Assert.Equal(p + "QuickGlance", names[32]);
+            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(28).Take(4));
+            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(32).Take(4));
+            Assert.Equal(p + "QuickGlance", names[36]);
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
@@ -96,8 +92,40 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LedCentre", "LedRpmStyle" }, names.Skip(afterFaces + 21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LightsBrightness", "LightsNightBrightness", "LightsNightMode", "FlagBoxCriticalOnly", "FlagBoxGear",
+                "FlagBoxLowFuelLaps", "FlagBoxOilTemp", "FlagBoxWaterTemp" }, names.Skip(afterFaces + 21).Take(14));
             Assert.Equal("OpenDash", Contract.Prefix);
+        }
+
+        [Fact]
+        public void Every_property_belongs_to_one_screen_or_to_every_screen()
+        {
+            // The rule the build enforces over a package is a partition of the contract: a name is one
+            // screen's or it is shared by all of them, and never both. Without that, attaching a rig's
+            // properties would either drop a name no screen claims or attach one twice.
+            //
+            // The lights are a third part of that partition rather than an exception to it. They belong
+            // to no screen -- a matrix is not one -- and they are not the screens' shared settings
+            // either, so folding them into SharedPropertyNames would make "shared" mean two things.
+            var all = Contract.PropertyNames().ToList();
+            var owned = Contract.ScreenPrefixes().SelectMany(Contract.ScreenPropertyNames).ToList();
+            var lights = Contract.LightsPropertyNames().ToList();
+            Assert.Equal(owned.Count, owned.Distinct().Count());
+            Assert.Empty(owned.Except(all));
+            Assert.Empty(lights.Except(all));
+            Assert.Empty(lights.Intersect(owned));
+            Assert.Empty(lights.Intersect(Contract.SharedPropertyNames()));
+            Assert.Equal(Contract.SharedPropertyNames(), all.Except(owned).Except(lights));
+
+            // The web view address is the pit wall's although its name carries no prefix: it was named
+            // before the idiom, and no other screen has a browser page to point anywhere.
+            Assert.Contains(Contract.WebViewUrl, Contract.ScreenPropertyNames(Contract.PitWallPrefix));
+            Assert.Equal(Modules.Count, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
+            Assert.Equal(Contract.FacePropertyNames(Contract.ReferenceFace), Contract.ScreenPropertyNames(Contract.FacePrefix(Contract.ReferenceFace)));
+
+            Assert.True(Contract.IsKnownScreen(Contract.FacePrefix(Contract.ReferenceFace)));
+            Assert.False(Contract.IsKnownScreen("Face1x1"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ScreenPropertyNames("Face1x1").ToList());
         }
 
         [Fact]
@@ -293,10 +321,48 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Face1920x480ZoneB", Contract.ZonePageProperty(face, "B"));
             Assert.Equal("Face1920x480ZoneBPages", Contract.ZoneMaskProperty(face, "B"));
             Assert.Equal("Face1920x480ZoneBStart", Contract.ZoneStartProperty(face, "B"));
+            Assert.Equal("Face1920x480ZoneBClassOnly", Contract.ZoneClassOnlyProperty(face, "B"));
             Assert.Equal("Face1920x480BarRight2", Contract.BarFieldProperty(face, "Right2"));
             Assert.Equal("Face1920x480QuickGlance", Contract.QuickGlanceProperty(face));
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty(face, "E"));
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty(face, "Middle"));
+        }
+
+        [Fact]
+        public void The_flag_box_is_declared_last_and_clamps_its_brightness()
+        {
+            // Last because it is the one artefact the plugin does not install (ADR 0013); declared at
+            // all because a profile reads it, and an undeclared read fails the dash build.
+            Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Last());
+            Assert.True(Contract.DefaultFlagBoxGear);
+            // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
+            Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
+            Assert.False(Contract.DefaultFlagBoxMatrixOn(2));
+            Assert.Equal("gear", Contract.DefaultFlagBoxMatrixRest(1));
+            Assert.Equal("dark", Contract.DefaultFlagBoxMatrixRest(4));
+            Assert.Equal("both", Contract.DefaultFlagBoxSide);
+            Assert.Equal("FlagBoxMatrix2Spotter", Contract.FlagBoxMatrixProperty(2, "Spotter"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.FlagBoxMatrixProperty(5, "Rest"));
+            // Rotation and serpentine are SimHub device settings, not ours.
+            foreach (var name in Contract.PropertyNames())
+            {
+                Assert.DoesNotContain("Rotation", name, StringComparison.Ordinal);
+                Assert.DoesNotContain("Serpentine", name, StringComparison.Ordinal);
+            }
+            // The defaults are right in every unit SimHub reports, not only in Celsius.
+            Assert.Equal(120, Contract.DefaultOilTemp["Celcius"]);
+            Assert.Equal(248, Contract.DefaultOilTemp["Fahrenheit"]);
+            Assert.Equal(110, Contract.DefaultWaterTemp["Celcius"]);
+            Assert.Equal(2, Contract.DefaultFlagBoxLowFuelLaps);
+            Assert.Equal(100, Contract.DefaultLightsBrightness);
+            // Dimmer at night: 64 LEDs at full output beside a wheel in a dark room is too bright.
+            Assert.True(Contract.DefaultLightsNightBrightness < Contract.DefaultLightsBrightness);
+            Assert.False(Contract.DefaultLightsNightMode);
+            // Off: the box shows the whole catalogue until the driver asks for quiet.
+            Assert.False(Contract.DefaultFlagBoxCriticalOnly);
+            Assert.Equal(0, Contract.NormaliseBrightness(-5));
+            Assert.Equal(100, Contract.NormaliseBrightness(101));
+            Assert.Equal(60, Contract.NormaliseBrightness(60));
         }
 
         [Fact]
@@ -312,8 +378,9 @@ namespace OpenDashPlugin.Tests
                     Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
                 }
             }
-            // Seventeen each: four zones times page, mask and start, four bar fields, and the glance.
-            Assert.Equal(17, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+            // Twenty-one each: four zones times page, mask, start and class filter, four bar fields,
+            // and the glance.
+            Assert.Equal(21, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
         }
 
         [Fact]

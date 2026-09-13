@@ -69,27 +69,10 @@ export interface LedFrame {
   durationMs: number;
 }
 
-/**
- * Which driver a profile is for, and therefore how its containers are named and positioned.
- *
- * The same `.ledsprofile` extension carries two object models. `strip` is the RGB LED driver, whose
- * `ContainerType` is the type's full name minus the `LedsContainers.` prefix and the `Container`
- * suffix (`Flags.YellowFlagContainer` becomes `Flags.YellowFlag`), positioned by a 1-based index
- * along a run. `matrix` is the 8x8 driver, whose `MatrixContainerBase.ContainerType` is
- * `GetType().Name` — the *bare* class name, `AnimationContainer` — and which positions by
- * `StartPositionXEx` / `StartPositionYEx`.
- *
- * An emitter that assumes one against the other produces a file of disabled `UnknownContainer`s,
- * which loads without complaint and lights nothing.
- */
-export type LedDialect = 'strip' | 'matrix';
-
 /** What every container carries, from `LedsContainerBase`. */
 interface LedContainerBase {
   /** 1-based index of the first LED this effect paints. SimHub's default, omitted when 1. */
   startPosition?: number;
-  /** 1-based column and row, for a matrix profile. Ignored by the strip dialect. */
-  startXY?: { x: number; y: number };
   /** Shown as the effect's label in SimHub's editor. Cosmetic. */
   description?: string;
   /** SimHub's default is true, and it is omitted when true. */
@@ -207,8 +190,6 @@ export type LedContainer =
 /** A whole profile: what a `.ledsprofile` file holds, and what one entry of `Profiles` holds. */
 export interface LedProfile {
   name: string;
-  /** Which driver this is for. Defaults to `strip`. */
-  dialect?: LedDialect;
   /** A GUID. SimHub logs and ignores a duplicate, so this must be stable and unique. */
   profileId: string;
   containers: readonly LedContainer[];
@@ -221,7 +202,7 @@ export interface LedProfile {
   ledCount?: number;
 }
 
-/** The `ContainerType` a container is written as, in the strip dialect. */
+/** The `ContainerType` a container is written as. */
 export const CONTAINER_TYPES: Record<Exclude<LedContainer['kind'], 'raw'>, string> = {
   group: 'Base.Group',
   conditionalGroup: 'Groups.CustomConditionalGroup',
@@ -232,65 +213,6 @@ export const CONTAINER_TYPES: Record<Exclude<LedContainer['kind'], 'raw'>, strin
   rpmSegments: 'RPMSegments',
   animation: 'Animation',
 };
-
-/**
- * The `ContainerType` a container is written as, in the matrix dialect: the bare class name, which
- * is what `MatrixContainerBase.ContainerType => GetType().Name` produces. Only the kinds the matrix
- * driver actually has appear; it has no `RPMSegments` and no `StaticColor`.
- */
-export const MATRIX_CONTAINER_TYPES: Partial<Record<Exclude<LedContainer['kind'], 'raw'>, string>> = {
-  group: 'GroupContainer',
-  conditionalGroup: 'CustomConditionalGroupContainer',
-  scriptedContent: 'ScriptedContentContainer',
-  animation: 'AnimationContainer',
-};
-
-/**
- * Every `ContainerType` SimHub 9.12.6's *matrix* driver resolves, from the classes under
- * `RGBMatrixDriver.MatrixContainers` and confirmed against the driver's own settings file on the
- * test VM, which contains `AnimationContainer`, `FlagsContainer`, `GameNotRunningGroupContainer`,
- * `GameRunningGroupContainer`, `GearContainer` and `SpotterContainer`.
- */
-export const KNOWN_MATRIX_CONTAINER_TYPES: ReadonlySet<string> = new Set([
-  'AnimationContainer',
-  'ConditionnalGroupContainer',
-  'CustomConditionalGroupContainer',
-  'FlagsContainer',
-  'GearContainer',
-  'GroupContainer',
-  'IncludeProfileGroupContainer',
-  'ScriptedContentContainer',
-  'SpotterContainer',
-  'BlackFlagContainer',
-  'BlueFlagContainer',
-  'GreenFlagContainer',
-  'WhiteFlagContainer',
-  'YellowFlagContainer',
-  'BrakeGroupContainer',
-  'BrightnessFormulaGroupContainer',
-  'BrightnessGroupContainer',
-  'CurrentGameGroupContainer',
-  'GameCarInPitLaneGroupContainer',
-  'GameCarModelGroupContainer',
-  'GameCarSpeedLimiterGroupContainer',
-  'GameCarStatedGroupContainer',
-  'GameNotRunningGroupContainer',
-  'GameRunningGroupContainer',
-  'AbsActiveContainer',
-  'AbsOnContainer',
-  'BrakeActiveContainer',
-  'DrsAvailableContainer',
-  'DrsOnContainer',
-  'LowFuelRemainingLapsAlertContainer',
-  'RedlineReachedContainer',
-  'SpeedLimiterContainer',
-  'SpotterCarLeftContainer',
-  'SpotterCarRightContainer',
-  'TCActiveContainer',
-  'TCOnContainer',
-  'TurnIndicatorLeftContainer',
-  'TurnIndicatorRightContainer',
-]);
 
 /**
  * Every `ContainerType` SimHub 9.12.6's RGB driver resolves, enumerated by reflection over the
@@ -356,13 +278,8 @@ export const KNOWN_CONTAINER_TYPES: ReadonlySet<string> = new Set([
   'Turbo',
 ]);
 
-/** The `ContainerType` a container will be written as, in the given dialect. */
-export const containerTypeOf = (c: LedContainer, dialect: LedDialect = 'strip'): string =>
-  c.kind === 'raw' ? c.containerType : dialect === 'matrix' ? (MATRIX_CONTAINER_TYPES[c.kind] ?? c.kind) : CONTAINER_TYPES[c.kind];
-
-/** The set of types the given dialect's driver resolves. */
-export const knownContainerTypes = (dialect: LedDialect = 'strip'): ReadonlySet<string> =>
-  dialect === 'matrix' ? KNOWN_MATRIX_CONTAINER_TYPES : KNOWN_CONTAINER_TYPES;
+/** The `ContainerType` a container will be written as. */
+export const containerTypeOf = (c: LedContainer): string => (c.kind === 'raw' ? c.containerType : CONTAINER_TYPES[c.kind]);
 
 /** The children a container composes, which is empty for every leaf effect. */
 export const childrenOf = (c: LedContainer): readonly LedContainer[] =>

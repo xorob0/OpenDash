@@ -11,14 +11,16 @@
   "scripts": {
     "build": "bun packages/dash/src/build.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit -p packages/generator/tsconfig.json && tsc --noEmit -p packages/dash/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json",
+    "typecheck": "tsc --noEmit -p packages/generator/tsconfig.json && tsc --noEmit -p packages/dash/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json && tsc --noEmit -p tools/tsconfig.json",
     "check": "bun run typecheck && bun test",
     "package": "bash scripts/package.sh",
     "vm": "bun scripts/vm.ts",
     "emulator": "bash scripts/emulator.sh",
     "dev": "bun scripts/dev.ts",
     "shots": "bun scripts/shots.ts",
-    "affected": "bun scripts/affected.ts"
+    "affected": "bun scripts/affected.ts",
+    "trace": "bun scripts/trace.ts",
+    "record": "bun scripts/record.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

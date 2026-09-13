@@ -5,6 +5,7 @@
 // Every change writes the settings object and saves it at once; the attached properties read the same object.
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -289,6 +290,7 @@ namespace OpenDashPlugin
         private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
         private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
         private readonly Dictionary<string, List<CheckBox>> zoneMaskBoxes = new Dictionary<string, List<CheckBox>>();
+        private readonly Dictionary<string, CheckBox> zoneClassBoxes = new Dictionary<string, CheckBox>();
         private readonly Dictionary<string, ToggleButton> barEndButtons = new Dictionary<string, ToggleButton>();
         private TextBlock faceWarningText;
         private FrameworkElement faceWarningRow;
@@ -354,6 +356,7 @@ namespace OpenDashPlugin
             zoneSelects.Clear();
             zoneMaskButtons.Clear();
             zoneMaskBoxes.Clear();
+            zoneClassBoxes.Clear();
             barEndButtons.Clear();
             faceHost.Content = BuildFacePicture();
             RefreshStripCaption();
@@ -536,7 +539,8 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        /// <summary>"ZONE B" at the top, the enabled pages and the start page at the bottom.</summary>
+        /// <summary>"ZONE B" at the top, the enabled pages and the start page at the bottom, and the
+        /// class filter under them where the zone has a page it changes.</summary>
         private FrameworkElement BuildZoneCell(string letter, double width)
         {
             var inner = width - 2 * FaceCellPadding;
@@ -544,6 +548,14 @@ namespace OpenDashPlugin
             var label = Ui.Label("Zone " + letter);
             DockPanel.SetDock(label, Dock.Top);
             dock.Children.Add(label);
+
+            if (FacePages.OffersClassFilter(letter))
+            {
+                var classOnly = BuildClassFilterBox(letter);
+                classOnly.Margin = new Thickness(0, 6, 0, 0);
+                DockPanel.SetDock(classOnly, Dock.Bottom);
+                dock.Children.Add(classOnly);
+            }
 
             var select = BuildZoneSelectFor(letter, inner);
             DockPanel.SetDock(select, Dock.Bottom);
@@ -585,6 +597,36 @@ namespace OpenDashPlugin
             select.ToolTip = "The page zone " + letter + " opens on";
             zoneSelects[letter] = select;
             return select;
+        }
+
+        /// <summary>
+        /// Whether this zone's lists show the player's own class.
+        ///
+        /// It sits in the zone's own cell rather than beside PositionMode, because it is a property of
+        /// the zone and not of the face: the point of it is zone B listing the race while zone C lists
+        /// the class a driver is actually racing in.
+        /// </summary>
+        private CheckBox BuildClassFilterBox(string letter)
+        {
+            var box = new CheckBox
+            {
+                Content = "My class only",
+                FontSize = Theme.SizeLabel,
+                FontFamily = PanelFonts.Label,
+                Foreground = Ui.Brush(Theme.TextSecondary),
+                IsChecked = Settings.FaceZoneIsClassOnly(face, letter),
+                ToolTip = "Show the leaderboard and the relative in zone " + letter + " for your own class",
+            };
+            box.Checked += (sender, args) => SetClassFilter(letter, true);
+            box.Unchecked += (sender, args) => SetClassFilter(letter, false);
+            zoneClassBoxes[letter] = box;
+            return box;
+        }
+
+        private void SetClassFilter(string letter, bool classOnly)
+        {
+            Settings.SetFaceZoneClassOnly(face, letter, classOnly);
+            plugin.SaveSettings();
         }
 
         /// <summary>A page picker in page-number order, so that SelectedIndex is the page number.</summary>
@@ -737,6 +779,12 @@ namespace OpenDashPlugin
                     var enabled = Settings.FaceZonePageEnabled(face, letter, pages[i].Number);
                     if (boxes[i].IsChecked != enabled) boxes[i].IsChecked = enabled;
                 }
+            }
+            CheckBox classOnly;
+            if (zoneClassBoxes.TryGetValue(letter, out classOnly))
+            {
+                var on = Settings.FaceZoneIsClassOnly(face, letter);
+                if (classOnly.IsChecked != on) classOnly.IsChecked = on;
             }
         }
 
@@ -905,6 +953,128 @@ namespace OpenDashPlugin
             row.Margin = new Thickness(0, 0, 24, 8);
             row.ToolTip = module.Description;
             return row;
+        }
+
+        // Lights
+
+        /// <summary>
+        /// The lights page: brightness for the rig, then what each of SimHub's four matrix contents
+        /// does. Drawn in docs/design/plugin.md before it was drawn here.
+        ///
+        /// Rotation and serpentine are not on it. They are SimHub device settings decided by the corner
+        /// the data cable enters, and a second place to set them is a second place to disagree; the
+        /// guide says where they live instead.
+        /// </summary>
+        private FrameworkElement BuildLights()
+        {
+            var rows = new List<UIElement>
+            {
+                Ui.Caption(
+                    "An 8x8 LED matrix beside the screen. openDash builds the profile and puts it where you can find it, "
+                        + "but does not install it: SimHub keeps matrix profiles in a file it rewrites itself. Import it once, "
+                        + "and everything on this page reaches it while you drive.",
+                    846),
+                Ui.Row("Profile", FlagBoxLine(), FlagBoxPathBox()),
+                Ui.Row("Brightness", "Percent, for every light openDash drives. SimHub's own device brightness applies on top.", BuildPercentBox(Settings.LightsBrightness, v => { Settings.LightsBrightness = v; plugin.SaveSettings(); })),
+                Ui.Row("Night brightness", "Used while night mode is on. 64 LEDs at full output beside a wheel in a dark room is too bright.", BuildPercentBox(Settings.LightsNightBrightness, v => { Settings.LightsNightBrightness = v; plugin.SaveSettings(); })),
+                Ui.Row("Night mode", "A switch you flip, not a time of day we guess at.", BuildToggle(Settings.LightsNightMode, on => { Settings.LightsNightMode = on; plugin.SaveSettings(); })),
+                Ui.Row("Critical flags only", "Quiet until something matters: drops the chequer, the white, the green and the start gantry.", BuildToggle(Settings.FlagBoxCriticalOnly, on => { Settings.FlagBoxCriticalOnly = on; plugin.SaveSettings(); })),
+                Ui.Row("Show the gear", "What the box shows when nothing else is on it. Off leaves it dark.", BuildToggle(Settings.FlagBoxGear, on => { Settings.FlagBoxGear = on; plugin.SaveSettings(); })),
+                Ui.Row("Low fuel, laps", "Lights when the laps left in the tank fall under this. Laps, not litres: litres mean nothing without the car.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; plugin.SaveSettings(); })),
+                Ui.Row("Oil temperature", "In your own unit; 0 uses the default for it (120 C, 248 F).", BuildNumberBox(Settings.FlagBoxOilTemp, 0, 999, v => { Settings.FlagBoxOilTemp = v; plugin.SaveSettings(); })),
+                Ui.Row("Water temperature", "In your own unit; 0 uses the default for it (110 C, 230 F).", BuildNumberBox(Settings.FlagBoxWaterTemp, 0, 999, v => { Settings.FlagBoxWaterTemp = v; plugin.SaveSettings(); })),
+                Ui.Caption("SimHub composes up to four matrix contents. Matrix 1 does everything by default; switch on a second only if you own a second box.", 846),
+            };
+            foreach (var matrix in Contract.FlagBoxMatrices) rows.Add(BuildMatrixRow(matrix));
+            return Ui.Section("Lights", rows.ToArray());
+        }
+
+        /// <summary>One matrix: what it shows at rest, what may take it over, and which side it is on.</summary>
+        private FrameworkElement BuildMatrixRow(int matrix)
+        {
+            var m = matrix;
+            var rest = BuildSegmented(Contract.FlagBoxRests, new[] { "Dark", "Gear" }, Settings.MatrixRest(m), value =>
+            {
+                Settings.FlagBoxRest[m - 1] = value;
+                plugin.SaveSettings();
+            });
+            var side = BuildSegmented(Contract.FlagBoxSides, new[] { "Both", "Left", "Right" }, Settings.MatrixSide(m), value =>
+            {
+                Settings.FlagBoxSide[m - 1] = value;
+                plugin.SaveSettings();
+            });
+            var stack = Ui.VStack(
+                4,
+                Ui.Row("At rest", "What this panel shows when nothing has taken it over.", rest),
+                Ui.Row("Flags", "Let the flag catalogue take this panel.", BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; plugin.SaveSettings(); })),
+                Ui.Row("Spotter", "Let a car alongside take this panel.", BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; plugin.SaveSettings(); })),
+                Ui.Row("Warnings", "Let low fuel, oil and water take this panel.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; plugin.SaveSettings(); })),
+                // Which side the box is physically on. One to the left of the wheel lighting for a car on
+                // the right is worse than no box at all, so it is asked rather than guessed.
+                Ui.Row("Mounted", "Which side of the rig this box is on. A left box must not light for a car on your right.", side));
+            stack.Margin = new Thickness(24, 4, 0, 12);
+            return Ui.VStack(0, Ui.Caption("Matrix " + m, 846), stack);
+        }
+
+        /// <summary>What became of the profile at startup, and where it went.</summary>
+        private string FlagBoxLine()
+        {
+            var result = plugin.FlagBox;
+            if (result == null) return "Not checked yet.";
+            switch (result.Status)
+            {
+                case FlagBoxStatus.NotEmbedded: return "No profile is embedded in this build.";
+                case FlagBoxStatus.Failed: return "Could not be written: " + result.Message;
+                default: return "Import this file in SimHub's matrix device settings. openDash does not install it.";
+            }
+        }
+
+        private FrameworkElement FlagBoxPathBox()
+        {
+            var box = new TextBox
+            {
+                Width = 320,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                IsReadOnly = true,
+                Text = plugin.FlagBox?.Path ?? string.Empty,
+                ToolTip = "Where openDash left the profile. Read-only: copy it, then import it in SimHub.",
+            };
+            return box;
+        }
+
+        private FrameworkElement BuildPercentBox(int value, Action<int> changed) => BuildNumberBox(value, 0, 100, changed);
+
+        /// <summary>A small number field that repairs whatever is typed into it rather than refusing it.</summary>
+        private FrameworkElement BuildNumberBox(int value, int min, int max, Action<int> changed)
+        {
+            var box = new TextBox
+            {
+                Width = 80,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalContentAlignment = HorizontalAlignment.Right,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Text = value.ToString(CultureInfo.InvariantCulture),
+            };
+            Action commit = () =>
+            {
+                int parsed;
+                if (!int.TryParse(box.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsed)) parsed = value;
+                if (parsed < min) parsed = min;
+                if (parsed > max) parsed = max;
+                box.Text = parsed.ToString(CultureInfo.InvariantCulture);
+                changed(parsed);
+            };
+            box.LostFocus += (sender, args) => commit();
+            box.KeyDown += (sender, args) =>
+            {
+                if (args.Key == Key.Enter) commit();
+            };
+            return box;
         }
 
         // Pit wall
@@ -1309,74 +1479,6 @@ namespace OpenDashPlugin
             updateLine.Text = line ?? string.Empty;
             updateLine.Visibility = updateStatus.IsVisible && line != null ? Visibility.Visible : Visibility.Collapsed;
             updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        // Lights
-
-        private TextBlock lightsLine;
-
-        /// <summary>
-        /// The LED profiles, offered rather than installed.
-        ///
-        /// ADR 0013 is the whole of this section's shape. A dashboard package is a file in a folder and the worst case
-        /// is a dashboard somebody can close; a device profile changes what hardware they own does, in a dark room, at
-        /// speed. So there is a button per device family and no automatic anything — and the button writes the files to
-        /// a folder rather than into the RGB driver's settings, because that file is rewritten by the driver on change
-        /// and a profile added underneath a running SimHub does not survive.
-        /// </summary>
-        private FrameworkElement BuildLights()
-        {
-            var source = new AssemblyLedProfileSource(typeof(SettingsControl).Assembly);
-            var families = LedProfiles.FamiliesIn(source);
-
-            var title = Ui.Body("LED profiles");
-            var caption = Ui.Caption(LedProfiles.Summary(source));
-            var text = Ui.VStack(4, title, caption);
-            text.MaxWidth = 460;
-            text.HorizontalAlignment = HorizontalAlignment.Left;
-
-            lightsLine = Ui.Caption(string.Empty);
-            lightsLine.Visibility = Visibility.Collapsed;
-            text.Children.Add(lightsLine);
-
-            if (families.Count == 0) return Ui.Section("Lights", Ui.Row(text, new Border()));
-
-            var buttons = new List<FrameworkElement>();
-            foreach (var family in families) buttons.Add(BuildExportButton(source, family));
-            var right = Ui.HStack(12, buttons.ToArray());
-            return Ui.Section("Lights", Ui.Row(text, right));
-        }
-
-        /// <summary>One button per device family: somebody with a wheel owns one strip, not nineteen.</summary>
-        private Button BuildExportButton(ILedProfileSource source, LedDeviceFamily family)
-        {
-            Button button;
-            try
-            {
-                button = new SHButtonPrimary();
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("SHButtonPrimary is unavailable; using a plain button: " + ex.Message);
-                button = new Button();
-            }
-
-            button.Content = family.Label();
-            button.MinWidth = 110;
-            button.ToolTip = "Write the " + family.Label().ToLowerInvariant() +
-                " profiles to a folder, then import the one for your device in SimHub. openDash never writes to the device itself.";
-            button.Click += (sender, args) =>
-            {
-                var result = LedProfiles.Export(source, AppDomain.CurrentDomain.BaseDirectory, family);
-                var message = LedProfiles.ImportInstructions(result, family);
-                if (result.Ok) Log.Info(message); else Log.Warn(message);
-                if (lightsLine == null) return;
-                lightsLine.Text = result.Ok
-                    ? "Wrote " + result.Written.Count + " to " + result.Folder + ". Import it in SimHub to use it."
-                    : "Could not write the profiles: " + result.Error;
-                lightsLine.Visibility = Visibility.Visible;
-            };
-            return button;
         }
 
         /// <summary>SimHub's primary button (SHButtonPrimary); a plain button when the type cannot be created.</summary>

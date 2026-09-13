@@ -10,3 +10,6 @@ export * from './images.ts';
 export * from './serialize.ts';
 export * from './validate.ts';
 export * from './package.ts';
+// Two LED object models, because SimHub has two. The matrix (the flag box) is flat-exported; the
+// strip is namespaced, because a strip naturally declares names the matrix already has.
+export * from './leds/matrix.ts';

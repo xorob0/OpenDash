@@ -12,6 +12,7 @@ import { withBindings, type Expr } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
+import { FACE_FLAG_PRIORITY, type FaceFlag } from '../flags.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { game, eq, and, num } = ncalc;
@@ -36,9 +37,17 @@ export const FLAG_STRIP_STYLES = {
 /** Half period of the yellow flag's flash in ms (250 at 2 Hz). */
 export const FLAG_BLINK_MS = Math.round(1000 / ds.indicator.flagBand.flashHz / 2);
 
-/** SimHub flag properties in priority order. */
-export const FLAG_PRIORITY = ['Flag_Black', 'Flag_Checkered', 'Flag_Yellow', 'Flag_Blue', 'Flag_White', 'Flag_Green'] as const;
-export type FlagProperty = (typeof FLAG_PRIORITY)[number];
+/**
+ * SimHub flag properties in priority order, taken from `FLAG_CATALOGUE` rather than restated: the
+ * face and the flag box rank the same conditions, and two lists would eventually disagree about
+ * which of two live flags wins.
+ *
+ * The face draws the six SimHub normalises. The box draws the whole catalogue, because
+ * `Flag_Yellow` folds four iRacing bits together and `Flag_Black` hides a furled black; see
+ * flags.ts.
+ */
+export const FLAG_PRIORITY: readonly FaceFlag[] = FACE_FLAG_PRIORITY;
+export type FlagProperty = FaceFlag;
 
 /** `[Flag_X] = 1` and every higher-priority flag `= 0`. */
 export function flagVisible(flag: FlagProperty): Expr {

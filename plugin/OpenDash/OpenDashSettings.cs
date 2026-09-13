@@ -95,6 +95,99 @@ namespace OpenDashPlugin
         /// <summary>Address of the web view zone page; empty until the user sets one.</summary>
         public string WebViewUrl { get; set; } = Contract.DefaultWebViewUrl;
 
+        // --- The lights ------------------------------------------------------------------------
+        //
+        // Brightness and night mode are the rig's, not this box's: a driver who owns a flag box
+        // probably owns other lights. The rest are the flag box's own. ADR 0013.
+
+        public int LightsBrightness { get; set; } = Contract.DefaultLightsBrightness;
+
+        public int LightsNightBrightness { get; set; } = Contract.DefaultLightsNightBrightness;
+
+        public bool LightsNightMode { get; set; } = Contract.DefaultLightsNightMode;
+
+        public bool FlagBoxCriticalOnly { get; set; } = Contract.DefaultFlagBoxCriticalOnly;
+
+        public bool FlagBoxGear { get; set; } = Contract.DefaultFlagBoxGear;
+
+        public int FlagBoxLowFuelLaps { get; set; } = Contract.DefaultFlagBoxLowFuelLaps;
+
+        /// <summary>Zero means "not set", so that the profile's own per-unit default applies. A driver in
+        /// Fahrenheit who has never opened this page must not get a Celsius number.</summary>
+        public int FlagBoxOilTemp { get; set; }
+
+        public int FlagBoxWaterTemp { get; set; }
+
+        /// <summary>Per matrix, index 0 is matrix 1. Always four long after Normalise().</summary>
+        public string[] FlagBoxRest { get; set; } = Contract.DefaultFlagBoxRests();
+
+        public bool[] FlagBoxFlags { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public bool[] FlagBoxSpotter { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public bool[] FlagBoxWarnings { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public string[] FlagBoxSide { get; set; } = Contract.DefaultFlagBoxSides();
+
+        /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
+        public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
+
+        public bool MatrixFlags(int matrix) => Pick(FlagBoxFlags, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public bool MatrixSpotter(int matrix) => Pick(FlagBoxSpotter, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public bool MatrixWarnings(int matrix) => Pick(FlagBoxWarnings, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public string MatrixSide(int matrix) => Pick(FlagBoxSide, matrix, Contract.DefaultFlagBoxSide);
+
+        private static T Pick<T>(T[] values, int matrix, T fallback)
+        {
+            if (values == null || matrix < 1 || matrix > values.Length) return fallback;
+            var value = values[matrix - 1];
+            return value == null ? fallback : value;
+        }
+
+        /// <summary>Repairs the per-matrix arrays, whatever came back from disk.</summary>
+        private void NormaliseLights()
+        {
+            LightsBrightness = Contract.NormaliseBrightness(LightsBrightness);
+            LightsNightBrightness = Contract.NormaliseBrightness(LightsNightBrightness);
+            if (FlagBoxLowFuelLaps < 0) FlagBoxLowFuelLaps = Contract.DefaultFlagBoxLowFuelLaps;
+            if (FlagBoxOilTemp < 0) FlagBoxOilTemp = 0;
+            if (FlagBoxWaterTemp < 0) FlagBoxWaterTemp = 0;
+            FlagBoxRest = Resize(FlagBoxRest, Contract.DefaultFlagBoxRests(), v => Array.IndexOf(Contract.FlagBoxRests, v) >= 0);
+            FlagBoxSide = Resize(FlagBoxSide, Contract.DefaultFlagBoxSides(), v => Array.IndexOf(Contract.FlagBoxSides, v) >= 0);
+            FlagBoxFlags = Resize(FlagBoxFlags, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxSpotter = Resize(FlagBoxSpotter, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
+        }
+
+        private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)
+        {
+            var result = (T[])defaults.Clone();
+            if (values == null) return result;
+            for (var i = 0; i < result.Length && i < values.Length; i++)
+            {
+                if (values[i] != null && valid(values[i])) result[i] = values[i];
+            }
+            return result;
+        }
+        // --- The rig ------------------------------------------------------------------------------
+
+        /// <summary>
+        /// The screens the rig has, by the prefix each one's properties carry: "Face1920x480",
+        /// "Face850x480", "Companion", "PitWall". The plugin attaches the properties of these and of no
+        /// other screen, so the property list is proportional to the rig rather than to the catalogue.
+        /// </summary>
+        /// <remarks>
+        /// Null until Normalise() fills it, and deliberately not initialised here: Json.NET's default
+        /// ObjectCreationHandling adds to a collection a property already holds rather than replacing
+        /// it, so a rig of two screens read into a list that already named ten would come back as
+        /// twelve. Null therefore means "this file has never named a rig", which is what a file written
+        /// before the rig existed looks like, and what Normalise() reads as every screen OpenDash ships.
+        /// </remarks>
+        public List<string> Screens { get; set; }
+
         // --- The dash face ---------------------------------------------------------------------
 
         /// <summary>
@@ -150,6 +243,7 @@ namespace OpenDashPlugin
             PositionMode = Contract.NormaliseChoice(PositionMode, Contract.PositionModes, Contract.DefaultPositionMode);
             DeltaReference = Contract.NormaliseChoice(DeltaReference, Contract.DeltaReferences, Contract.DefaultDeltaReference);
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
+            NormaliseLights();
 
             var normalised = Contract.DefaultSlots();
             if (Slots != null)
@@ -180,7 +274,71 @@ namespace OpenDashPlugin
 
             WideZone = Contract.NormaliseWideZonePage(WideZone);
             WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
+            NormaliseScreens();
             NormaliseFace();
+        }
+
+        /// <summary>
+        /// The rig, repaired: a prefix no screen carries is dropped, a screen named twice is kept once,
+        /// and a file that has never named a rig is read as every screen OpenDash ships.
+        /// </summary>
+        /// <remarks>
+        /// Every screen rather than none, because nothing outside this file knows the rig yet: the
+        /// installer installs everything the plugin embeds, and the panel that adds a screen and removes
+        /// one is XOR-125. So an old settings file attaches exactly what it attached before the rig
+        /// existed, and a driver who updates finds nothing reset; what the rig adds today is that the
+        /// list can shrink at all.
+        /// </remarks>
+        private void NormaliseScreens()
+        {
+            if (Screens == null)
+            {
+                Screens = new List<string>(Contract.ScreenPrefixes());
+                return;
+            }
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var kept = new List<string>();
+            foreach (var screen in Screens)
+            {
+                if (screen != null && Contract.IsKnownScreen(screen) && seen.Add(screen)) kept.Add(screen);
+            }
+            Screens = kept;
+        }
+
+        /// <summary>
+        /// The rig, readable before Normalise() has filled it: a settings object that has never named one
+        /// reads as every screen OpenDash ships, which is the same thing NormaliseScreens() writes.
+        /// </summary>
+        private IEnumerable<string> Rig()
+        {
+            return Screens ?? Contract.ScreenPrefixes();
+        }
+
+        /// <summary>Whether the rig has a screen, by the prefix its properties carry. Safe to call before Normalise().</summary>
+        public bool HasScreen(string screen)
+        {
+            if (screen == null) return false;
+            foreach (var known in Rig())
+            {
+                if (string.Equals(known, screen, StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The faces the rig has, in the order the settings name them. Safe to call before Normalise().</summary>
+        public IEnumerable<Contract.FaceSize> RigFaces()
+        {
+            foreach (var screen in Rig())
+            {
+                if (Contract.IsKnownFacePrefix(screen)) yield return Contract.FaceForPrefix(screen);
+            }
+        }
+
+        /// <summary>Every property the plugin attaches for this rig, in attachment order. OpenDash.cs
+        /// attaches exactly these, in this order, and ContractTests holds the two together.</summary>
+        public IEnumerable<string> DeclaredProperties()
+        {
+            return Contract.PropertyNames(Rig());
         }
 
         /// <summary>
@@ -222,10 +380,12 @@ namespace OpenDashPlugin
             {
                 if (!Contract.IsKnownFacePrefix(prefix) || Faces[prefix] == null) Faces.Remove(prefix);
             }
-            foreach (var face in Contract.FaceSizes)
-            {
-                Face(face).Normalise();
-            }
+            // A face the rig has gained since the last save gets its group here, which is what makes a
+            // screen added later start from the defaults rather than from nothing. A group belonging to
+            // a face the rig no longer has is repaired and kept rather than deleted: removing a screen
+            // is something a user asks for, and Normalise() runs on every save.
+            foreach (var face in RigFaces()) Face(face);
+            foreach (var state in Faces.Values) state.Normalise();
         }
 
         /// <summary>What one face is set to, created with its defaults the first time it is asked for.</summary>
@@ -265,6 +425,18 @@ namespace OpenDashPlugin
             return Face(face).Mask(letter);
         }
 
+        /// <summary>Whether a face zone's list pages show the player's own class, by its letter.</summary>
+        public bool FaceZoneIsClassOnly(Contract.FaceSize face, string letter)
+        {
+            return Face(face).IsClassOnly(letter);
+        }
+
+        /// <summary>Sets a face zone's class filter.</summary>
+        public void SetFaceZoneClassOnly(Contract.FaceSize face, string letter, bool classOnly)
+        {
+            Face(face).SetClassOnly(letter, classOnly);
+        }
+
         public bool FaceZonePageEnabled(Contract.FaceSize face, string letter, int page)
         {
             return Face(face).PageEnabled(letter, page);
@@ -297,10 +469,10 @@ namespace OpenDashPlugin
             Face(face).QuickGlance = Contract.NormaliseQuickGlance(value);
         }
 
-        /// <summary>Puts every zone of every face on the page it opens on, once, when the plugin starts.</summary>
+        /// <summary>Puts every zone of every face the rig has on the page it opens on, once, when the plugin starts.</summary>
         public void OpenOnStartPages()
         {
-            foreach (var face in Contract.FaceSizes) Face(face).OpenOnStartPages();
+            foreach (var face in RigFaces()) Face(face).OpenOnStartPages();
         }
 
         /// <summary>Advances one zone of one face to its next enabled page and returns it.</summary>
@@ -314,7 +486,7 @@ namespace OpenDashPlugin
         {
             get
             {
-                foreach (var face in Contract.FaceSizes)
+                foreach (var face in RigFaces())
                 {
                     if (Face(face).GlanceHeld) return true;
                 }
@@ -333,12 +505,12 @@ namespace OpenDashPlugin
         /// </remarks>
         public void BeginQuickGlance()
         {
-            foreach (var face in Contract.FaceSizes) Face(face).BeginQuickGlance();
+            foreach (var face in RigFaces()) Face(face).BeginQuickGlance();
         }
 
         public void EndQuickGlance()
         {
-            foreach (var face in Contract.FaceSizes) Face(face).EndQuickGlance();
+            foreach (var face in RigFaces()) Face(face).EndQuickGlance();
         }
 
         /// <summary>Zones of one face showing the same page as another, which the panel says and allows.</summary>
@@ -404,6 +576,7 @@ namespace OpenDashPlugin
             PositionMode = other.PositionMode;
             DeltaReference = other.DeltaReference;
             SessionProgress = other.SessionProgress;
+            Screens = other.Screens == null ? null : new List<string>(other.Screens);
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
             Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();
             Zones = other.Zones == null ? null : (int[])other.Zones.Clone();

@@ -13,6 +13,8 @@ import {
   cardMeta,
   declaredProperties,
   ledProperties,
+  flagBoxProperties,
+  FLAG_BOX_MATRICES,
   PIT_WALL_DEFAULT_WIDE_ZONE_PAGE,
   PIT_WALL_DEFAULT_ZONE_PAGES,
   MODULE_CATALOGUE,
@@ -25,6 +27,11 @@ import {
   PIT_WALL_ZONE_LETTERS,
   PIT_WALL_ZONE_PAGES,
   pitWallZoneSettingName,
+  COMPANION_PREFIX,
+  PIT_WALL_PREFIX,
+  foreignProperties,
+  screenPrefixes,
+  screenProperties,
   defaultCardForSlot,
   DEFAULT_SLOT_CARDS,
   DEFAULTS,
@@ -59,10 +66,18 @@ describe('settings', () => {
   test('declares the dash, the zones, the companion and the pit wall', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
-    // 850 face beside it are configured apart instead of sharing one set of zones.
-    const perFace = FACE_ZONE_LETTERS.length * 3 + BAR_SLOTS.length + 1;
-    // ...plus the LED settings, which a generated .ledsprofile reads and no screen does (ADR 0013).
-    expect(props).toHaveLength(4 + SLOT_MAX + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + ledProperties().length);
+    // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
+    // page, mask, start and the class filter -- plus the bar's ends and the glance.
+    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 1;
+    // The last two terms are the lights, which are not screens but whose settings are properties for
+    // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is eight
+    // global and five per matrix, the way every face carries its own group; the strips are the two
+    // that decide what a strip shows.
+    expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 5);
+    expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle']);
+    expect(props).toHaveLength(
+      4 + SLOT_MAX + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length + ledProperties().length,
+    );
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -72,12 +87,17 @@ describe('settings', () => {
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
+    expect(props).toContain('OpenDash.Face1280x400ZoneBClassOnly');
     expect(props).toContain('OpenDash.Face600x686BarLeft1');
     expect(props).toContain('OpenDash.Face800x286QuickGlance');
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance)/.test(p))).toEqual([]);
-    expect(props.slice(-8)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl', 'OpenDash.LedCentre', 'OpenDash.LedRpmStyle']);
+    const lights = flagBoxProperties().length + ledProperties().length;
+    expect(props.slice(-(lights + 6), -lights)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
+    // The lights come last, after the screens, because they are the artefacts the plugin does not
+    // install; see ADR 0013. The flag box first, then the strips.
+    expect(props.slice(-lights)).toEqual([...flagBoxProperties(), ...ledProperties()]);
   });
 
   test('every face that ships has a group, and every group is complete', () => {
@@ -90,6 +110,40 @@ describe('settings', () => {
     for (const face of FACE_SIZES) expect(facePrefix(face)).toMatch(/^Face\d+x\d+$/);
     expect(faceForPrefix('Face1920x480')).toMatchObject({ width: 1920, height: 480 });
     expect(faceForPrefix('Face1x1')).toBeUndefined();
+  });
+
+  test('every property belongs to one screen or to every screen', () => {
+    // The rule the build enforces is a partition of the contract: a name is one screen's or it is
+    // shared by all of them, and never both. Without that a package could be told it may read
+    // something no screen owns, or be denied one of its own.
+    const declared = declaredProperties();
+    const owned = screenPrefixes().flatMap(screenProperties);
+    expect(new Set(owned).size).toBe(owned.length);
+    for (const name of owned) expect({ name, declared: declared.includes(name) }).toMatchObject({ declared: true });
+
+    // What is left over is what a rig shares and what its lights read. The four modes and the
+    // twelve slots mean the same thing on the wheel, on the rim and on the pit wall, so they carry
+    // no screen's name; the lights' settings belong to no screen either, because neither a matrix
+    // nor a strip is one. Three parts of one partition rather than two parts and an exception.
+    const lights = [...flagBoxProperties(), ...ledProperties()];
+    for (const name of lights) expect({ name, owned: owned.includes(name) }).toMatchObject({ owned: false });
+    const shared = declared.filter((name) => !owned.includes(name) && !lights.includes(name));
+    const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
+    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1))].map((n) => `${PROPERTY_PREFIX}.${n}`));
+
+    // The web view address is the pit wall's although its name carries no prefix: it was named
+    // before the idiom, and no other screen has a browser page to point anywhere.
+    expect(screenProperties(PIT_WALL_PREFIX)).toContain('OpenDash.WebViewUrl');
+    expect(screenProperties(COMPANION_PREFIX)).toHaveLength(MODULE_COUNT);
+
+    const own = facePrefix(FACE_SIZES[0]!);
+    expect(foreignProperties(own)).not.toContain('OpenDash.Face1920x480ZoneA');
+    expect(foreignProperties(own)).toContain('OpenDash.Face850x480ZoneA');
+    expect(foreignProperties(own)).toContain('OpenDash.PitWallZoneA');
+    // A card face owns nothing and every group is foreign to it.
+    expect(foreignProperties()).toHaveLength(owned.length);
+    expect(() => screenProperties('Face1x1')).toThrow(RangeError);
+    expect(() => foreignProperties('Face1x1')).toThrow(RangeError);
   });
 
   test('slot names and defaults', () => {
