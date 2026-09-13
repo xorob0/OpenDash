@@ -7,7 +7,7 @@
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 
-const { isnull, prop, str, num } = ncalc;
+const { add, concat, div, fmt, iff, isnull, lt, mod, num, prop, str, truncate } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -234,6 +234,45 @@ export function zoneProperties(): string[] {
   const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(z), zoneMaskSettingName(z), zoneStartSettingName(z)]);
   const bar = BAR_SLOTS.map(barFieldSettingName);
   return [...perZone, ...bar, QUICK_GLANCE_SETTING].map(propertyName);
+}
+
+/**
+ * Bit `i` of a zone's mask, as arithmetic.
+ *
+ * SimHub's NCalc has no bitwise operator we can rely on, and `truncate(mask / 2^i) % 2` asks the
+ * same question in operators it certainly has. The mask is an integer property, so the truncate is
+ * belt and braces rather than necessary, and it costs nothing to keep the expression honest about
+ * what it means.
+ */
+const maskBit = (z: FaceZone, i: number): Expr => mod(truncate(div(zone.mask(z), num(2 ** i))), num(2));
+
+/**
+ * How long a zone's cycle is: the number of pages its mask leaves enabled.
+ *
+ * This is derived in the expression rather than published by the plugin, which is what
+ * [ADR 0009](../../../docs/decisions/0009-does-the-plugin-compute.md) settled: a value is derived
+ * from properties that already exist, so the package is still right on its own. Without the plugin
+ * the mask reads as its default and the answer is the whole catalogue, which is exactly what a
+ * driver with no plugin can cycle.
+ */
+export const zoneCycleLength = (z: FaceZone): Expr => add(...pagesForZone(z).map((_, i) => maskBit(z, i)));
+
+/**
+ * Where the page a zone is showing sits in its cycle, counting from one: the enabled pages before
+ * it, plus itself. A page the mask has turned off counts as the one after the last enabled page
+ * before it, which is a state the plugin's `Normalise` does not leave a zone in.
+ */
+export const zoneCyclePosition = (z: FaceZone): Expr => add(num(1), ...pagesForZone(z).map((_, i) => iff(lt(num(i), zone.page(z)), maskBit(z, i), num(0))));
+
+/** `2 / 3`: what a zone's header counts, which follows the mask and not the catalogue. */
+export const zoneCounter = (z: FaceZone): Expr => concat(fmt(zoneCyclePosition(z), '0'), str(' / '), fmt(zoneCycleLength(z), '0'));
+
+/** Every counter a zone could draw, so a caller can measure the box for the widest of them. */
+export function zoneCounterReadings(z: FaceZone): string[] {
+  const n = pagesForZone(z).length;
+  const readings: string[] = [];
+  for (let length = 1; length <= n; length++) for (let position = 1; position <= length; position++) readings.push(`${position} / ${length}`);
+  return readings;
 }
 
 export interface CardMeta {

@@ -172,12 +172,20 @@ export const ZONE_TITLE_HEIGHT = 28;
 export const zoneFrameMetrics = (density: Density): { title: number; padX: number; padBottom: number } =>
   density === 'compact' ? { title: 20, padX: 10, padBottom: 16 } : { title: ZONE_TITLE_HEIGHT, padX: 16, padBottom: 16 };
 
+/**
+ * The page counter in a zone's title bar.
+ *
+ * `static` is a catalogue with no mask behind it, which is the pit wall: the screen knows it is
+ * page three of eleven and says so. `reserved` keeps the room and draws nothing, for a zone whose
+ * counter somebody else binds -- the face zones, where the mask decides how long the cycle is and
+ * only the face knows which zone a shared dashboard is serving.
+ */
+export type ZoneCounter = { kind: 'static'; page: number; pages: number } | { kind: 'reserved'; widest: string };
+
 export interface ZoneSpec {
   frame: Rect;
   title: string;
-  /** "3 / 11": which page of how many. */
-  page: number;
-  pages: number;
+  counter: ZoneCounter;
   /**
    * Space kept clear before the title, for a zone letter somebody else draws. Zones B and C are the
    * same rectangle on most faces and so share one dashboard file, which means the letter cannot be
@@ -190,18 +198,31 @@ export interface ZoneSpec {
 export const zoneTitleY = (frame: Rect, density: Density = 'zone'): number =>
   frame.top + (zoneFrameMetrics(density).title - densityOf(density).labelSm) / 2;
 
+/** The room a zone's title bar keeps at its right for the counter, drawn there or not. */
+export function zoneCounterWidth(counter: ZoneCounter, density: Density = 'zone'): number {
+  const text = counter.kind === 'static' ? `${counter.page} / ${counter.pages}` : counter.widest;
+  return Math.ceil(measureText('BarlowMedium', text, densityOf(density).labelSm)) + 2;
+}
+
+/** The x a zone's counter is drawn at, which a caller that draws its own needs. */
+export const zoneCounterX = (frame: Rect, counter: ZoneCounter, density: Density = 'zone'): number =>
+  frame.left + frame.width - zoneFrameMetrics(density).padX - zoneCounterWidth(counter, density);
+
 /** A data zone: a title bar with the page name and counter, and the body rect under it. */
 export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone'): { items: Item[]; body: Rect } {
   const d = densityOf(density);
   const { title: titleHeight, padX, padBottom } = zoneFrameMetrics(density);
   const titleY = zoneTitleY(spec.frame, density);
   const indent = spec.indent ?? 0;
-  const counter = `${spec.page} / ${spec.pages}`;
-  const counterWidth = Math.ceil(measureText('BarlowMedium', counter, d.labelSm)) + 2;
+  const counterWidth = zoneCounterWidth(spec.counter, density);
   const items: Item[] = [
     label(`${name}.title`, spec.title, spec.frame.left + padX + indent, titleY, spec.frame.width - 2 * padX - indent - counterWidth, { size: d.labelSm, color: ds.color.text.secondary }),
-    label(`${name}.counter`, counter, spec.frame.left + spec.frame.width - padX - counterWidth, titleY, counterWidth, { size: d.labelSm, hAlign: 'right' }),
   ];
+  if (spec.counter.kind === 'static') {
+    items.push(
+      label(`${name}.counter`, `${spec.counter.page} / ${spec.counter.pages}`, zoneCounterX(spec.frame, spec.counter, density), titleY, counterWidth, { size: d.labelSm, hAlign: 'right' }),
+    );
+  }
   const bodyTop = spec.frame.top + titleHeight;
   return {
     items,

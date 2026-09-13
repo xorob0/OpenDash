@@ -12,12 +12,12 @@
  * cannot share a file even at the same size.
  */
 import type { Dashboard, DashboardMetadata, Item, Screen, WidgetItem } from '../generator.ts';
-import { BAND_D_PAGES, FACE_ZONE_LETTERS, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, type FaceZone, type FaceZonePageMeta } from '../contract.ts';
+import { BAND_D_PAGES, FACE_ZONE_LETTERS, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, zoneCounterReadings, type FaceZone, type FaceZonePageMeta } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, type Size } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { pageScreen, pagedDashboard, pagedWidget } from '../pagedDashboard.ts';
-import { zoneFrame, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
+import { zoneFrame } from '../second/header.ts';
 import { densityForBox, densityOf, type Density } from '../second/density.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
@@ -40,7 +40,7 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
  * say which page is showing. Zone A carries none: it is the gear, and 22 px of the column it is
  * sized to is too much to spend saying so. What zone A does instead is XOR-103.
  */
-export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Size, pageCount: number, corners = false): Screen {
+export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Size, corners = false): Screen {
   const frame = rect(0, 0, size.width, size.height);
 
   let items: Item[];
@@ -57,10 +57,16 @@ export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Siz
     // The chrome is prefixed `zone.` rather than with the page id, because a module already names
     // its own items after itself: the track page draws `track.title` and so did the header.
     const density = densityForBox(size);
-    // The letter is not in the title. Zones B and C are the same rectangle on most faces, so they
-    // share one dashboard file; a letter baked in here would draw B in both of them, which is
-    // exactly what the first capture of the 1920 face showed. The face draws it instead.
-    const { items: chrome, body } = zoneFrame(`${page.id}.zone`, { frame, title: page.name, page: page.number + 1, pages: pageCount, indent: zoneLetterWidth(density) }, density);
+    // Neither the letter nor the counter is in the title. Zones B and C are the same rectangle on
+    // most faces, so they share one dashboard file; a letter baked in here would draw B in both of
+    // them, which is exactly what the first capture of the 1920 face showed, and a counter baked in
+    // here would count the catalogue rather than the cycle the zone's own mask leaves. The face
+    // draws both, and the frame keeps the room.
+    const { items: chrome, body } = zoneFrame(
+      `${page.id}.zone`,
+      { frame, title: page.name, counter: { kind: 'reserved', widest: widestCounter(zone, density) }, indent: zoneLetterWidth(density) },
+      density,
+    );
     items = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body) })];
   }
 
@@ -74,7 +80,7 @@ export function zoneDashboard(zone: FaceZone, size: Size, metadata: DashboardMet
   return pagedDashboard({
     name: zoneDashboardName(kind, size),
     size,
-    screens: pages.map((page) => zonePageScreen(zone, page, size, pages.length, corners)),
+    screens: pages.map((page) => zonePageScreen(zone, page, size, corners)),
     metadata,
     description: `${kind === 'zoneA' ? ZONE_A_PAGES.length : kind === 'band' ? BAND_D_PAGES.length : pages.length} pages drawn for a ${size.width} x ${size.height} zone.`,
   });
@@ -102,6 +108,27 @@ export function zoneDashboardsFor(zones: readonly { zone: FaceZone; size: Size; 
     seen.set(key, zoneDashboard(zone, size, metadata, corners ?? false));
   }
   return [...seen.values()];
+}
+
+/**
+ * The widest counter a zone can draw, which is the string its box is measured for.
+ *
+ * Every reading is tried rather than assuming the longest is the largest number twice over: the
+ * label face is proportional, so "18 / 19" is wider than "21 / 21" at some sizes, and a box cut to
+ * the wrong one clips a digit in a header that is otherwise never wrong.
+ */
+export function widestCounter(zone: FaceZone, density: Density): string {
+  const size = densityOf(density).labelSm;
+  let widest = '';
+  let width = -1;
+  for (const reading of zoneCounterReadings(zone)) {
+    const w = measureText('BarlowMedium', reading, size);
+    if (w > width) {
+      width = w;
+      widest = reading;
+    }
+  }
+  return widest;
 }
 
 /**

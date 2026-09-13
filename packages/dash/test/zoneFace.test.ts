@@ -7,13 +7,16 @@
  * be a second opinion about the design rather than a check on the code.
  */
 import { describe, expect, test } from 'bun:test';
-import { BAND_D_PAGES, FACE_ZONE_LETTERS, MODULE_COUNT, ZONE_A_PAGES, pagesForZone, zoneProperties } from '../src/contract.ts';
+import { BAND_D_PAGES, FACE_ZONE_LETTERS, MODULE_CATALOGUE, MODULE_COUNT, ZONE_A_PAGES, pagesForZone, zoneCounterReadings, zoneProperties } from '../src/contract.ts';
 import { validatePackage, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
+import { rect } from '../src/design/geometry.ts';
+import { shapeOf } from '../src/second/shape.ts';
+import { zoneFrame } from '../src/second/header.ts';
 import { ZONE_FACES, buildZoneFace, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
@@ -325,4 +328,124 @@ describe('the bar keeps its three blocks apart', () => {
       expect(right!.right).toBeLessThanOrEqual(bar.left + bar.width);
     });
   }
+});
+
+describe('the twenty-one pages reach the face', () => {
+  const size = { width: 769, height: 314 };
+  const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', size))!;
+
+  test('zones B and C cycle the module catalogue, and it is the catalogue the companion cycles', () => {
+    expect(shared.screens.map((s) => s.name)).toEqual(MODULE_CATALOGUE.map((m) => m.id));
+    for (const zone of ['B', 'C'] as const) {
+      const r = rectOf(zoneFace1920x480, zone);
+      expect({ zone, width: r.width, height: r.height }).toEqual({ zone, ...size });
+    }
+  });
+
+  test('every page of the catalogue draws, and draws inside a 769 by 314 zone at shape wide', () => {
+    // The ticket's own measure. The zone is 769 by 314; what a page is handed is the body under the
+    // header, and the shape model is asked what that body is before anything is drawn into it.
+    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: MODULE_COUNT } });
+    expect(shapeOf(body).width).toBe('wide');
+
+    for (const screen of shared.screens) {
+      const items = [...walkItems(screen.items)].filter((i) => i.kind !== 'layer');
+      expect({ page: screen.name, drew: items.length > 0 }).toMatchObject({ drew: true });
+      for (const item of items) {
+        const r = item.rect;
+        const inside = r.left >= 0 && r.top >= -2 && r.left + r.width <= size.width && r.top + r.height <= size.height + 2;
+        expect({ page: screen.name, item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+      }
+    }
+  });
+});
+
+/**
+ * Evaluates the counter's arithmetic by turning it into the JavaScript it already almost is.
+ *
+ * This is not an NCalc interpreter and is not trying to be one -- that is XOR-20. The counter uses
+ * six things (a property, `isnull`, `truncate`, `if`, `format` and arithmetic), every one of which
+ * has a JavaScript spelling, so substituting the two properties and renaming three calls is enough
+ * to ask the real expression what it answers. The point is that the arithmetic is checked against a
+ * plain count rather than against itself.
+ */
+function readCounter(expression: string, zone: 'B' | 'C', page: number, mask: number): string {
+  const js = expression
+    .replace(new RegExp(`isnull\\(\\[OpenDash\\.Zone${zone}Pages\\], \\d+\\)`, 'g'), String(mask))
+    .replace(new RegExp(`isnull\\(\\[OpenDash\\.Zone${zone}\\], \\d+\\)`, 'g'), String(page))
+    .replace(/\bif\(/g, 'iff(')
+    .replace(/\btruncate\(/g, 'Math.trunc(')
+    .replace(/\bformat\(/g, 'fmt(');
+  expect(js).not.toContain('OpenDash.');
+  const iff = (c: boolean, a: unknown, b: unknown): unknown => (c ? a : b);
+  const fmt = (v: number): string => String(Math.round(v));
+  return new Function('iff', 'fmt', `return ${js};`)(iff, fmt) as string;
+}
+
+describe('a zone counts its cycle, not its catalogue', () => {
+  const texts = faceItems(zoneFace1920x480).filter((i): i is TextItem => i.kind === 'text');
+
+  test('the counter comes from the face too, because only the face knows whose mask is deciding', () => {
+    for (const zone of ['B', 'C'] as const) {
+      const counter = texts.find((t) => t.name === `zone${zone}.counter`)!;
+      expect(counter).toBeDefined();
+      const formula = counter.bindings?.Text;
+      expect(formula).toBeDefined();
+      const expression = (formula as { formula: string }).formula;
+      expect(expression).toContain(`OpenDash.Zone${zone}Pages`);
+      expect(expression).toContain(`OpenDash.Zone${zone}`);
+      // Bound text is measured by its widest reading, not by the sample it was written with.
+      expect(counter.widest).toBeDefined();
+    }
+    expect(texts.some((t) => t.name === 'zoneA.counter' || t.name === 'zoneD.counter')).toBe(false);
+  });
+
+  test('and no page of the shared dashboard counts for itself, which would count to twenty-one', () => {
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    const counters = itemsOf(shared).filter((i) => i.name.endsWith('.zone.counter'));
+    expect(counters).toEqual([]);
+  });
+
+  test('a mask of any length reads as that length, and the page reads as its place in it', () => {
+    const expression = ((texts.find((t) => t.name === 'zoneB.counter')!.bindings!.Text as { formula: string }).formula);
+    const all = (1 << MODULE_COUNT) - 1;
+
+    // Everything on: the counter is the catalogue, which is what it always used to say.
+    expect(readCounter(expression, 'B', 0, all)).toBe(`1 / ${MODULE_COUNT}`);
+    expect(readCounter(expression, 'B', MODULE_COUNT - 1, all)).toBe(`${MODULE_COUNT} / ${MODULE_COUNT}`);
+
+    // Three pages on -- lap times, fuel and the relative -- is a cycle of three whichever of them
+    // is showing, and the twenty-one is nowhere on the screen.
+    const three = (1 << 0) | (1 << 4) | (1 << 14);
+    expect(readCounter(expression, 'B', 0, three)).toBe('1 / 3');
+    expect(readCounter(expression, 'B', 4, three)).toBe('2 / 3');
+    expect(readCounter(expression, 'B', 14, three)).toBe('3 / 3');
+
+    // One page on is a cycle of one, which is a zone that does not move when the button is pressed.
+    expect(readCounter(expression, 'B', 6, 1 << 6)).toBe('1 / 1');
+
+    // And every mask of every length agrees with a plain count of the bits below the page.
+    for (const mask of [all, three, 0b101010101010101010101, 0b11, 1 << 20]) {
+      for (let page = 0; page < MODULE_COUNT; page++) {
+        if ((mask & (1 << page)) === 0) continue;
+        const before = [...Array(page).keys()].filter((i) => (mask & (1 << i)) !== 0).length;
+        const length = [...Array(MODULE_COUNT).keys()].filter((i) => (mask & (1 << i)) !== 0).length;
+        expect({ mask, page, read: readCounter(expression, 'B', page, mask) }).toMatchObject({ read: `${before + 1} / ${length}` });
+      }
+    }
+  });
+
+  test('every reading of the counter fits the box it is measured for', () => {
+    for (const { face, built } of BUILT) {
+      const items = itemsOf(built.main).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.counter'));
+      expect(items.length).toBe(2);
+      for (const item of items) {
+        const zone = item.name.startsWith('zoneB') ? 'B' : 'C';
+        for (const reading of zoneCounterReadings(zone)) {
+          const width = measureText('BarlowMedium', reading, item.fontSize);
+          expect({ face: face.folder, item: item.name, reading, fits: width <= item.rect.width }).toMatchObject({ fits: true });
+        }
+      }
+    }
+  });
 });
