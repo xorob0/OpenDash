@@ -96,6 +96,42 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The size a package declares in its .djson.metadata sidecar.
+        /// </summary>
+        /// <remarks>
+        /// SimHub's own Width and Height, which is the size the dashboard was drawn for and therefore the
+        /// size the screen is. Read with a search rather than a JSON parser because this is the only
+        /// thing wanted out of the file, and because parsing and reserialising a scene graph through a
+        /// library we do not control is what PackageExtractor avoids for the same reason.
+        /// </remarks>
+        public static bool SizeFromMetadata(System.IO.Compression.ZipArchive zip, string folder, out int width, out int height)
+        {
+            width = 0;
+            height = 0;
+            var wanted = folder + "/" + folder + PackageExtractor.MetadataExtension;
+            var entry = zip.Entries.FirstOrDefault(e =>
+                string.Equals(e.FullName.Replace('\\', '/'), wanted, StringComparison.OrdinalIgnoreCase));
+            if (entry == null) return false;
+            string text;
+            using (var reader = new System.IO.StreamReader(entry.Open())) text = reader.ReadToEnd();
+            return Number(text, "\"Width\"", out width) && Number(text, "\"Height\"", out height) && width > 0 && height > 0;
+        }
+
+        private static bool Number(string text, string key, out int value)
+        {
+            value = 0;
+            var at = text.IndexOf(key, StringComparison.Ordinal);
+            if (at < 0) return false;
+            var i = text.IndexOf(':', at + key.Length);
+            if (i < 0) return false;
+            i++;
+            while (i < text.Length && (text[i] == ' ' || text[i] == '\t')) i++;
+            var start = i;
+            while (i < text.Length && text[i] >= '0' && text[i] <= '9') i++;
+            return i > start && int.TryParse(text.Substring(start, i - start), NumberStyles.None, CultureInfo.InvariantCulture, out value);
+        }
+
+        /// <summary>
         /// Every package the source carries, as screens they could become.
         /// </summary>
         /// <remarks>
@@ -118,7 +154,10 @@ namespace OpenDashPlugin
                         var folder = PackageExtractor.PackageFolderName(zip);
                         if (folder == null) continue;
                         int width, height;
-                        SizeFromFolder(folder, out width, out height);
+                        // The package's own metadata, not the folder name. "openDash Companion" and
+                        // "openDash 480 round" carry no size at all, and reading it off the name left
+                        // their cards saying 0 x 0.
+                        if (!SizeFromMetadata(zip, folder, out width, out height)) SizeFromFolder(folder, out width, out height);
                         entries.Add(new PackageEntry
                         {
                             Package = name,

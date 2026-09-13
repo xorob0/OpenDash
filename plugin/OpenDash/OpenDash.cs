@@ -121,11 +121,40 @@ namespace OpenDashPlugin
         private void WriteScreenFolders()
         {
             var log = new SimHubInstallLog();
+            RepairScreenSizes(log);
             foreach (var screen in Settings.RigScreens())
             {
                 if (screen.IsStock) continue;
                 var result = ScreenInstaller.Write(screen, Installer.PackageSource, Installer.SimHubRoot, Installer.Record, log);
                 if (!result.Ok) Log.Warn("The screen " + screen.Name + " has no folder: " + result.Error);
+            }
+        }
+
+        /// <summary>
+        /// Gives a size to any screen that has none.
+        /// </summary>
+        /// <remarks>
+        /// A rig migrated from a settings file written before ADR 0017 takes its sizes from the folder
+        /// names, and "openDash Companion", "openDash Pit wall" and the round faces carry none, so those
+        /// screens arrived at 0 x 0 and their cards said so. The packages know: the size is in each
+        /// one's .djson.metadata. Matched on the folder, because that is the one thing a migrated screen
+        /// certainly has.
+        /// </remarks>
+        private void RepairScreenSizes(IInstallLog log)
+        {
+            if (!Settings.RigScreens().Any(screen => screen.Width <= 0 || screen.Height <= 0)) return;
+            var catalogue = PackageCatalogue.From(Installer.PackageSource, log);
+            foreach (var screen in Settings.RigScreens())
+            {
+                if (screen.Width > 0 && screen.Height > 0) continue;
+                var match = catalogue.FirstOrDefault(entry => string.Equals(entry.Folder, screen.Folder, StringComparison.OrdinalIgnoreCase));
+                if (match == null || match.Width <= 0) continue;
+                screen.Width = match.Width;
+                screen.Height = match.Height;
+                if (screen.Package == null) screen.Package = match.Package;
+                // The name was the folder because there was no size to call it by; a screen the user has
+                // renamed keeps whatever they chose.
+                if (string.Equals(screen.Name, screen.Folder, StringComparison.Ordinal)) screen.Name = screen.SizeLabel;
             }
         }
 
