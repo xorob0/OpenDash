@@ -79,9 +79,17 @@ hides one for the rest of a stint, is the failure this ranking exists to prevent
 | Limiter on, out of the lane | An exclamation mark, blinking. A mistake costing a second a corner. |
 | Limiter on, in the lane | A two-pixel frame, steady. Quiet confirmation; the driver is doing the right thing. |
 
-Speeding is `SpeedKmh` against `PitLimiterSpeed` (iRacing's own `TrackPitSpeedLimit`), with one
-km/h of allowance so it does not flicker at exactly the limit. Comparing two published numbers is
-arithmetic over properties rather than state between frames, so it is not computed telemetry.
+Speeding compares the car's speed with the lane limit **in metres per second**, which matters more
+than it looks: `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit`, so for a driver whose
+SimHub speed unit is MPH a 60 km/h limit arrives as 37 — and against `SpeedKmh`, which is always
+km/h, that reads as speeding from a standstill. Because speeding heads the exclusion chain, it
+would have blacked out the spotter, the warnings and the gear for every imperial user rather than
+merely lighting the wrong picture. `PitLimiterSpeedMs` is metres per second whatever the user has
+set, and it is `isnull()`-wrapped with a speed nothing reaches, so a track that publishes no limit
+means "not speeding" rather than "always speeding".
+
+Comparing two published numbers is arithmetic over properties rather than state between frames, so
+it is not computed telemetry.
 
 The three differ in **shape**, not only in colour, which [XOR-78](https://linear.app/xorob/issue/XOR-78)
 requires. Two of them nearly did not: `purpose.pitLimiter` resolves to pure white, the same value
@@ -234,12 +242,20 @@ shifted onto the right panel.
 
 **The subtree is repeated once per matrix, and that is the whole of the file's size.** SimHub has
 no way to bind which matrix a container paints — the position is a static property — so there is no
-alternative to writing it four times. The profile is about 785 KB and 600 containers, roughly 17%
-of the plugin DLL and about 42 KB once the release zip compresses it.
+alternative to writing it four times. The profile is about 757 KB and 600 containers, roughly 16%
+of the plugin DLL and about 40 KB once the release zip compresses it.
 
-What that does *not* cost is frames: `ConditionnalGroupContainer` does not descend into a group
-whose condition is false, so a matrix nobody has switched on is one expression a frame rather than
-a hundred. The defaults switch on exactly one.
+**It does cost frames, and an earlier version of this file claimed otherwise.** The claim was that a
+group whose condition is false is not descended into. It is: `MatrixContainerBase.GetResult` calls
+`GetGroupResult` unconditionally and passes its own truth down as `parentEnabled`, so children are
+walked and their conditions evaluated every frame whether the parent is active or not — only the
+*painting* is skipped. Six hundred containers means six hundred `IsActive` calls a frame, on all
+four matrices, including the three nobody switched on.
+
+That has not been measured on real hardware, and it is the first thing to measure. If it is too
+slow, the fix is the one this file rejected on size grounds: fewer containers, by moving the gear's
+four colour bands behind a `ScriptedContent` container or by accepting SimHub's own `GearContainer`
+and its two colours.
 
 Two things were done to keep it from being twice that. The critical-flags-only switch is a guard on
 each non-critical flag rather than a second copy of the catalogue; and the gear, which is

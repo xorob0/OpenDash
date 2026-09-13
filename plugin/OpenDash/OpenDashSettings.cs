@@ -136,6 +136,9 @@ namespace OpenDashPlugin
 
         public bool[] FlagBoxFlags { get; set; } = Contract.DefaultFlagBoxOn();
 
+        /// <summary>The limiter, the lane and speeding. Its own switch, not the flags'.</summary>
+        public bool[] FlagBoxPit { get; set; } = Contract.DefaultFlagBoxOn();
+
         public bool[] FlagBoxSpotter { get; set; } = Contract.DefaultFlagBoxOn();
 
         public bool[] FlagBoxWarnings { get; set; } = Contract.DefaultFlagBoxOn();
@@ -146,6 +149,8 @@ namespace OpenDashPlugin
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
 
         public bool MatrixFlags(int matrix) => Pick(FlagBoxFlags, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public bool MatrixPit(int matrix) => Pick(FlagBoxPit, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
 
         public bool MatrixSpotter(int matrix) => Pick(FlagBoxSpotter, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
 
@@ -171,6 +176,7 @@ namespace OpenDashPlugin
             FlagBoxRest = Resize(FlagBoxRest, Contract.DefaultFlagBoxRests(), v => Array.IndexOf(Contract.FlagBoxRests, v) >= 0);
             FlagBoxSide = Resize(FlagBoxSide, Contract.DefaultFlagBoxSides(), v => Array.IndexOf(Contract.FlagBoxSides, v) >= 0);
             FlagBoxFlags = Resize(FlagBoxFlags, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxPit = Resize(FlagBoxPit, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxSpotter = Resize(FlagBoxSpotter, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
         }

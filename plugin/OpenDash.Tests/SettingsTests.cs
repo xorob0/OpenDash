@@ -901,12 +901,14 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal("gear", settings.MatrixRest(1));
             Assert.True(settings.MatrixFlags(1));
+            Assert.True(settings.MatrixPit(1));
             Assert.True(settings.MatrixSpotter(1));
             Assert.True(settings.MatrixWarnings(1));
             foreach (var matrix in new[] { 2, 3, 4 })
             {
                 Assert.Equal("dark", settings.MatrixRest(matrix));
                 Assert.False(settings.MatrixFlags(matrix));
+                Assert.False(settings.MatrixPit(matrix));
                 Assert.False(settings.MatrixSpotter(matrix));
                 Assert.False(settings.MatrixWarnings(matrix));
             }

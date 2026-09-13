@@ -446,6 +446,10 @@ describe('the gear, as the resting state', () => {
 });
 
 describe('the four matrix contents', () => {
+  test('no container carries a DeviceKind, which SimHub would drop anyway', () => {
+    expect(serializeProfile(profile)).not.toInclude('DeviceKind');
+  });
+
   test('each matrix has a group of its own, offset onto it', () => {
     // A group's StartPositionMatrix is an offset applied when its children's results are merged,
     // so the subtree below stays at matrix 1 and the group shifts it.
@@ -468,9 +472,9 @@ describe('the four matrix contents', () => {
   });
 
   test('the defaults are a working single-box setup: matrix 1 does everything, 2 to 4 are off', () => {
-    expect(FLAG_BOX_MATRIX_DEFAULTS[1]).toEqual({ rest: 'gear', flags: true, spotter: true, warnings: true, side: 'both' });
+    expect(FLAG_BOX_MATRIX_DEFAULTS[1]).toEqual({ rest: 'gear', flags: true, pit: true, spotter: true, warnings: true, side: 'both' });
     for (const matrix of [2, 3, 4] as const) {
-      expect(FLAG_BOX_MATRIX_DEFAULTS[matrix]).toEqual({ rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' });
+      expect(FLAG_BOX_MATRIX_DEFAULTS[matrix]).toEqual({ rest: 'dark', flags: false, pit: false, spotter: false, warnings: false, side: 'both' });
     }
   });
 
@@ -517,7 +521,7 @@ describe('the pit family, the spotter and the warnings', () => {
 
   test('speeding is a comparison of two published numbers, not state between frames', () => {
     const text = serializeProfile(profile);
-    expect(text).toInclude('[DataCorePlugin.GameData.PitLimiterSpeed]');
+    expect(text).toInclude('[DataCorePlugin.GameData.PitLimiterSpeedMs]');
     expect(text).toInclude('[DataCorePlugin.GameData.SpeedKmh]');
     expect(text).toInclude('[DataCorePlugin.GameData.IsInPitLane]');
   });
@@ -546,6 +550,34 @@ describe('the pit family, the spotter and the warnings', () => {
     const formula = (below as Extract<MatrixContainer, { kind: 'when' }>).formula;
     const text = typeof formula === 'string' ? formula : formula.expression;
     for (const condition of FLAG_CATALOGUE) expect(text).toInclude(condition.bits[0] ?? '');
+  });
+
+  test('the pit family has its own switch, not the flags\' one', () => {
+    // A driver who turns flags off on a panel has not asked to lose the pit limiter warning.
+    const pit = all.find((c) => c.description === 'Pit');
+    const formula = (pit as Extract<MatrixContainer, { kind: 'when' }>).formula;
+    const text = typeof formula === 'string' ? formula : formula.expression;
+    expect(text).toInclude('FlagBoxMatrix1Pit');
+    expect(text).not.toInclude('FlagBoxMatrix1Flags');
+  });
+
+  test('a panel that does not show flags is not blacked out by one', () => {
+    // "Below the flags" used to be gated on the flag conditions alone, so a live flag suppressed the
+    // spotter, the warnings and the gear even on a panel with Flags switched off.
+    const below = all.find((c) => c.description === 'Below the flags');
+    const formula = (below as Extract<MatrixContainer, { kind: 'when' }>).formula;
+    const text = typeof formula === 'string' ? formula : formula.expression;
+    expect(text).toInclude('FlagBoxMatrix1Flags');
+  });
+
+  test('speeding is compared in one unit, and an unpublished limit never fires', () => {
+    // PitLimiterSpeed is converted to the user's local speed unit, so comparing it with SpeedKmh
+    // reads as speeding from a standstill for anyone on MPH -- and that term gates everything below
+    // the flags, so it would black out the panel rather than merely light the wrong picture.
+    const text = serializeProfile(profile);
+    expect(text).toInclude('PitLimiterSpeedMs');
+    expect(text).not.toInclude('GameData.PitLimiterSpeed]');
+    expect(text).toInclude('isnull([DataCorePlugin.GameData.PitLimiterSpeedMs], 999)');
   });
 
   test('the pit family outranks the spotter, which outranks the warnings', () => {
