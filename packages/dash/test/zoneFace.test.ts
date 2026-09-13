@@ -7,19 +7,20 @@
  * be a second opinion about the design rather than a check on the code.
  */
 import { describe, expect, test } from 'bun:test';
-import { BAND_D_PAGES, FACE_ZONE_LETTERS, MODULE_COUNT, ZONE_A_PAGES, pagesForZone, zoneProperties } from '../src/contract.ts';
+import { BAND_D_PAGES, FACE_SIZES, FACE_ZONE_LETTERS, MODULE_COUNT, ZONE_A_PAGES, bodyOrder, facePrefix, pagesForZone, zoneProperties } from '../src/contract.ts';
 import { validatePackage, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
-import { ZONE_FACES, buildZoneFace, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
+import { ZONE_FACES, buildZoneFace, sizeOf, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
-const reference = BUILT.find((b) => b.face.folder === 'openDash zones 1920x480')!;
+// Looked up by identity rather than by folder name, which moved to plain "openDash" in XOR-118.
+const reference = BUILT.find((b) => b.face === zoneFace1920x480)!;
 
 describe('the reference face is the artboard', () => {
   const z = zoneFace1920x480.zones;
@@ -85,7 +86,7 @@ describe('every zone cycles its own catalogue', () => {
       const widget = widgets.find((w) => w.name === `zone${zone}`)!;
       const formula = widget.bindings?.InitialScreenIndex?.formula;
       expect({ zone, bound: formula !== undefined }).toMatchObject({ bound: true });
-      expect(String(formula)).toContain(`${PROPERTY_PREFIX}.Zone${zone}`);
+      expect(String(formula)).toContain(`${PROPERTY_PREFIX}.${facePrefix(sizeOf(reference.face))}Zone${zone}`);
     }
   });
 
@@ -107,6 +108,47 @@ describe('every zone cycles its own catalogue', () => {
   });
 });
 
+/**
+ * The contract carries a little of each face's shape, because the plugin draws a plan of the face in
+ * its panel and cannot read a layout file. A plan drawn to one face's proportions for every face is
+ * how the nano at 800 x 286 came to be offered bar fields for a bar it does not have, so the two
+ * descriptions have to agree.
+ */
+describe('the contract describes the shape each face really has', () => {
+  test('every layout is named by FACE_SIZES, and named once', () => {
+    expect(FACE_SIZES).toHaveLength(ZONE_FACES.length);
+    const named = FACE_SIZES.map((f) => `${f.width}x${f.height}`);
+    expect(new Set(named).size).toBe(named.length);
+    for (const layout of ZONE_FACES) expect(named).toContain(`${layout.width}x${layout.height}`);
+  });
+
+  for (const layout of ZONE_FACES) {
+    test(`${layout.folder} is described as it is drawn`, () => {
+      const face = sizeOf(layout);
+      const z = layout.zones;
+      expect({ folder: layout.folder, hasBar: face.hasBar }).toMatchObject({ hasBar: z.bar !== undefined });
+      expect({ folder: layout.folder, per: face.barFieldsPerEnd }).toMatchObject({ per: layout.barFieldsPerEnd });
+
+      // A body whose three zones share a left edge is stacked; one that does not is a row.
+      const stacked = z.zoneA.left === z.zoneB.left && z.zoneB.left === z.zoneC.left;
+      expect({ folder: layout.folder, body: face.body }).toMatchObject({ body: stacked ? 'column' : 'row' });
+
+      // The parts are the sizes along whichever axis the body runs, in drawing order.
+      const order = bodyOrder(face).map((letter) => (letter === 'A' ? z.zoneA : letter === 'B' ? z.zoneB : z.zoneC));
+      const drawn = order.map((r) => (stacked ? r.height : r.width));
+      expect({ folder: layout.folder, parts: [...face.parts] }).toMatchObject({ parts: drawn });
+    });
+  }
+
+  test('and the drawing order is the one the design settled on', () => {
+    // B, A, C across a wide face, because zone A holds the gear and the gear is read by reflex; A
+    // over B over C in portrait, for the same reason with the axis turned.
+    expect(bodyOrder(sizeOf(zoneFace1920x480))).toEqual(['B', 'A', 'C']);
+    const portrait = ZONE_FACES.find((f) => f.width === 600)!;
+    expect(bodyOrder(sizeOf(portrait))).toEqual(['A', 'B', 'C']);
+  });
+});
+
 describe('the face reads what it declares and nothing else', () => {
   test('every package validates with no error and no warning', () => {
     for (const { face, built } of BUILT) {
@@ -121,8 +163,12 @@ describe('the face reads what it declares and nothing else', () => {
     const used = new Set(
       [reference.built.main, ...reference.built.zones].flatMap((d) => propertiesIn(d)).filter((p) => p.startsWith(`${PROPERTY_PREFIX}.`)),
     );
-    for (const zone of FACE_ZONE_LETTERS) expect(used).toContain(`${PROPERTY_PREFIX}.Zone${zone}`);
-    for (const p of zoneProperties().filter((n) => n.includes('.Bar'))) expect(used).toContain(p);
+    for (const zone of FACE_ZONE_LETTERS) expect(used).toContain(`${PROPERTY_PREFIX}.${facePrefix(sizeOf(reference.face))}Zone${zone}`);
+    for (const p of zoneProperties().filter((n) => n.includes(`${facePrefix(sizeOf(reference.face))}Bar`))) expect(used).toContain(p);
+    // And nothing belonging to another face, which is the point of the prefix: this package must
+    // not move when somebody configures the 850 beside it.
+    const others = zoneProperties().filter((n) => !n.includes(facePrefix(sizeOf(reference.face))));
+    expect([...used].filter((p) => others.includes(p))).toEqual([]);
     // And no slot, because a zone is not a slot.
     expect([...used].some((p) => p.includes('.Slot'))).toBe(false);
   });
@@ -285,6 +331,44 @@ describe('what the first photograph of the face showed', () => {
     // Neutral and reverse match nothing and draw nothing, and so does the gear below first.
     expect(bind(below)).not.toContain("= ('1'), '0'");
   });
+});
+
+/**
+ * Band D is the same three blocks as the bar, on every face that draws its corners: the left
+ * corner, the page rank, the right corner. The bar got this test when BIAS was found sitting on
+ * POSITION; the band never did, and page D6 Sectors was six pixels into the DRS lamp at 1280.
+ */
+describe('band D keeps its rank clear of its corners', () => {
+  for (const { face, built } of BUILT) {
+    if (!face.bandCorners) continue;
+    const band = face.zones.band;
+    const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
+
+    for (const screen of dashboard.screens) {
+      test(`${face.folder} draws no field of ${screen.name} over a corner block`, () => {
+        const items = [...walkItems(screen.items)].filter((i): i is TextItem => i.kind === 'text');
+        const extent = (of: (name: string) => boolean): { left: number; right: number } | null => {
+          const group = items.filter((i) => of(i.name));
+          if (group.length === 0) return null;
+          return { left: Math.min(...group.map((i) => i.rect.left)), right: Math.max(...group.map((i) => i.rect.left + i.rect.width)) };
+        };
+        // A corner item is named "<page>.corner.<field>"; everything else on the screen is the rank.
+        const corner = (name: string): boolean => name.includes('.corner.');
+        const leftNames = ['incidents', 'trackState'];
+        const left = extent((n) => corner(n) && leftNames.some((f) => n.includes(`.corner.${f}`)));
+        const right = extent((n) => corner(n) && !leftNames.some((f) => n.includes(`.corner.${f}`)));
+        const rank = extent((n) => !corner(n));
+
+        expect({ screen: screen.name, left: left !== null, right: right !== null }).toMatchObject({ left: true, right: true });
+        if (rank) {
+          expect({ screen: screen.name, clearOfLeft: rank.left >= left!.right }).toMatchObject({ clearOfLeft: true });
+          expect({ screen: screen.name, clearOfRight: rank.right <= right!.left }).toMatchObject({ clearOfRight: true });
+          expect(rank.left).toBeGreaterThanOrEqual(0);
+          expect(rank.right).toBeLessThanOrEqual(band.width);
+        }
+      });
+    }
+  }
 });
 
 /**

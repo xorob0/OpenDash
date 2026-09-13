@@ -250,7 +250,7 @@ initial screen bound to a plugin property.
 }
 ```
 
-Inside the widget, a variable is read as `[variable.Name]` in NCalc. openDash's slots follow
+Inside the widget, a variable is read as `[variable.Name]` in NCalc. OpenDash's slots follow
 the same pattern with NCalc expressions and without variables, since the slot property can be
 bound on the `WidgetItem` itself.
 
@@ -287,7 +287,7 @@ released)` — which additionally sets `IsInput = true` and a no-op `PressFallba
 entry in SimHub's input list rather than its action list.
 
 So an action that has to do something on release is registered through `PluginManager`
-directly. openDash registers all five that way, the four that need no release included, so
+directly. OpenDash registers all five that way, the four that need no release included, so
 that nobody has to remember which is which.
 
 **And the binding needs press type `During` (3).** `TriggerInputPress` calls `ActionStart` only
@@ -306,12 +306,45 @@ writes one without the dialog.
 
 ### Images and fonts
 
-Modern exports keep image bytes out of the `.djson`. `Images` is a list of descriptors (`Name`,
-`Extension`, `Width`, `Height`, `Length`, `MD5`) and the bytes live in the `.ressources` zip,
-one file per image. The older ETS2 sample inlined them as base64, where they were 87.6 percent
-of the file. The MVP design uses no images at all, so the generator writes an empty `Images`
-list and no `.ressources` file; whether SimHub imports a package without that sidecar is item 7
-of the spike.
+Modern exports keep image bytes out of the `.djson`. The older ETS2 sample inlined them as base64,
+where they were 87.6 percent of the file, and nothing SimHub ships today does that.
+
+Read off `DashTemplates/AIM MXS`, which SimHub itself installs, on 2026-09-12. Eighteen of the
+dashboards SimHub ships carry a non-empty `Images` list and every one of them has a `.ressources`
+sidecar beside it.
+
+A descriptor carries eight fields, two more than were recorded here before:
+
+```json
+{"Name":"Aim_MXS_Strada_Car_Dash_Display_with_Icons_1024x1024","Extension":".png",
+ "Modified":false,"Optimized":false,"Width":811,"Height":807,
+ "Length":194362,"MD5":"fa70de0750a27598b4ccdb3230a8d44f"}
+```
+
+`Length` is the uncompressed byte count and `MD5` is of those same bytes. `Width` and `Height` are
+the image's own pixels, not the box it is drawn in.
+
+The sidecar is an ordinary zip with one entry per image at its root, named `<Name><Extension>`:
+
+```
+AIM MXS.djson.ressources    Aim_MXS_Strada_Car_Dash_Display_with_Icons_1024x1024.png
+```
+
+An `ImageItem` references a descriptor by name through `Image`:
+
+```json
+{"$type":"SimHub.Plugins.OutputPlugins.GraphicalDash.Models.ImageItem, SimHub.Plugins",
+ "Image":"Aim_MXS_Strada_Car_Dash_Display_with_Icons_1024x1024",
+ "AutoSize":true,"AutoSizeScale":2.5,"BackgroundColor":"#00FFFFFF",
+ "Left":-360.0,"Top":-580.0,"Width":2027.5,"Height":2017.5,
+ "Opacity":20.0,"Visible":false,"IsFreezed":true,"Name":"ImageItem0"}
+```
+
+`AutoSize` with `AutoSizeScale` sizes the item from the image rather than from `Width` and
+`Height`; OpenDash wants the opposite, a fixed box, so it writes `AutoSize` false and sets both.
+Verified on the VM on 2026-09-12: one 240 x 180 source drawn by three items into 480 x 180,
+240 x 240 and 96 x 72 fills each rect, so the image is stretched to the box rather than letterboxed
+inside it. `Opacity` is a percentage, as it is on every other item.
 
 Fonts are referenced by family name in `Font`, with `FontWeight` taking WPF weight names such
 as `Normal`, `SemiBold`, `Bold` and `Black`, and the files are shipped in `_SHFonts/`. Blumlaut
@@ -327,7 +360,7 @@ tracking is therefore not expressible on the dashboard face.
 
 Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over `**/*.djson`
 on every pull request for diff readability. Both stop short of generating the JSON, which is
-where openDash goes further.
+where OpenDash goes further.
 
 ## Verified in the spike (2026-09-10, SimHub 9.12.6)
 
@@ -343,8 +376,17 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
 - `Width`, `BackgroundColor`, `Visible`, `Text`, `BlinkEnabled` and `InitialScreenIndex`
   bindings all evaluate at runtime. A `WidgetItem` whose `InitialScreenIndex` is bound switches
   screen live, so slots do not need the "every card in every slot" fallback.
-- Barlow and Barlow Condensed resolve by family name with `FontWeight` `Medium`, `SemiBold` and
-  `Bold`. Their digits are proportional and SimHub cannot request `tnum`, so numerals use
+- A face resolves by family name with `FontWeight` `Medium`, `SemiBold` and `Bold`, and this entry
+  used to say that Barlow and Barlow Condensed both did. They do not, and a release shipped on the
+  strength of it. WPF reads the width word out of a family name and files the condensed faces under
+  "Barlow" as a stretch, so `Font: "Barlow Condensed"` reached a face about a fifth wider than the
+  design, on the dash face, on the second screens and in the plugin's own settings panel. A `.djson`
+  carries `Font` and `FontWeight` and nothing for stretch, and `usWidthClass` does not override the
+  name, which was tried on the VM. What OpenDash ships is therefore Barlow Condensed with its family
+  renamed to one carrying no width word, "openDash Display", so that WPF has nothing to fold; see
+  `packages/dash/src/design/fontFiles.ts` and XOR-108. The lesson generalises beyond this font: no
+  family OpenDash asks for may contain Condensed, Narrow, Compressed, Extended, Expanded or Wide.
+  Their digits are proportional and SimHub cannot request `tnum`, so numerals use
   `UseMonospacedText` with `CharWidth` and `SpecialCharsWidth` cells, which SimHub offers for
   exactly this purpose.
 - `Layer` children carry absolute coordinates; a layer's own `Left`, `Top`, `Width`, `Height` and

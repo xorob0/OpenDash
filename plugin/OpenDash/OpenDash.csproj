@@ -7,7 +7,7 @@
     <OutputType>Library</OutputType>
     <AssemblyName>OpenDash</AssemblyName>
     <RootNamespace>OpenDashPlugin</RootNamespace>
-    <Description>openDash: an open-source SimHub dashboard and the plugin that installs it and exposes its settings.</Description>
+    <Description>OpenDash: an open-source SimHub dashboard and the plugin that installs it and exposes its settings.</Description>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <DebugType>portable</DebugType>
@@ -26,6 +26,8 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <!-- DataContractJsonSerializer, for reading the release listing; see ReleaseFeed.cs. -->
+    <Reference Include="System.Runtime.Serialization" />
   </ItemGroup>
 
   <!-- SimHub reference assemblies, committed under plugin/lib. Private=false: SimHub ships them. -->
@@ -62,7 +64,18 @@
        these "OpenDashPlugin.Resources.<file name>" and keeps the spaces of names like "openDash 1280x480.simhubdash";
        the dashboard folder is read from the zip itself (PackageExtractor.PackageFolderName). -->
   <ItemGroup>
-    <EmbeddedResource Include="Resources/*.simhubdash" />
+    <!-- Except the card faces, which since XOR-118 are the ones named "openDash slots ...". The zone faces
+         now carry the shipped names and are what a user gets; the card faces are still built so that the two
+         can be compared on a rig before XOR-95 deletes the card path, and they must not be installed beside
+         their replacements.
+
+         This exclusion was the other way round until the rename, and it is the line that has to move with it:
+         a stale pattern here excludes nothing and the plugin silently embeds every package, which is exactly
+         the shape of XOR-123. e2e.test.ts asserts which folders a release embeds, so the two cannot part
+         company unnoticed. The exclusion lives here rather than in the copy step because CI copies the whole
+         dash artefact in, and a rule that only scripts/package.sh applied would hold locally and not in a
+         release. -->
+    <EmbeddedResource Include="Resources/*.simhubdash" Exclude="Resources/openDash slots *.simhubdash" />
   </ItemGroup>
 
   <!-- The faces the settings panel draws in, extracted to a private folder at runtime (PanelFonts.cs).
@@ -75,4 +88,13 @@
     <EmbeddedResource Include="Resources/fonts/*.ttf" Link="Fonts/%(Filename)%(Extension)" LogicalName="OpenDash.Fonts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../packages/dash/fonts/OFL.txt" Link="Fonts/OFL.txt" LogicalName="OpenDash.Fonts.OFL.txt" />
   </ItemGroup>
+
+  <!-- A glob that matches nothing embeds nothing, the build still succeeds, and the panel then falls back to
+       Segoe UI behind one warning in SimHub's log, which is a release-looking DLL whose panel is quietly
+       unstyled. The packages are allowed to be absent, since a plugin without them still loads and says so;
+       the fonts are not, because nothing downstream can tell that they were meant to be there. -->
+  <Target Name="RequirePanelFonts" BeforeTargets="BeforeBuild">
+    <Error Condition="'@(EmbeddedResource->WithMetadataValue('Extension', '.ttf'))' == ''"
+           Text="No fonts in plugin/OpenDash/Resources/fonts. They are build output of packages/dash: run `bun run build` and `cp -R build/fonts plugin/OpenDash/Resources/fonts`, or use `bun run package`, which does both." />
+  </Target>
 </Project>

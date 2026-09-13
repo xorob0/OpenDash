@@ -7,8 +7,10 @@
  * one a 26 px body and it computes negative rectangles, which is exactly what happened the first
  * time this file reached for `pageBuilder`.
  *
- * So a band page is **one rank of fields**, read left to right, packed and centred, with nothing
- * spread to fill. The field count follows the width: seven at 1920, five at 850.
+ * So a band page is **one rank of fields**, read left to right, packed and centred between the
+ * corner blocks, with nothing spread to fill. A page sheds its last field when the rank will not
+ * fit, though no shipped page is wide enough for that to fire: the widest catalogue entry holds
+ * five fields and every one of them fits at 600, which is the narrowest band there is.
  *
  * The fields are read off `design/canvas/ZoneCatalogue.dc.html`, page by page.
  */
@@ -198,7 +200,7 @@ function fieldWidth(field: BandField, valueFs: number, labelFs: number): number 
  * importance order. Nothing is spread to fill: a band with three fields in it is three fields in
  * the middle, not three fields stretched across 1920 px.
  */
-export function bandPageItems(id: string, frame: Rect, prefix: string): Item[] {
+export function bandPageItems(id: string, frame: Rect, prefix: string, corners = false): Item[] {
   const fields = BAND_PAGES[id];
   if (!fields) throw new RangeError(`band D has no page "${id}"`);
   const d = densityOf('zone');
@@ -206,15 +208,21 @@ export function bandPageItems(id: string, frame: Rect, prefix: string): Item[] {
   const gap = d.gapX;
   const valueFs = valueSizeFor(frame.height, d.mid, labelFs, d.fieldGap);
 
+  // The rank gets what the corner blocks leave, not the whole band. Centring in the whole band put
+  // the last field of D6 Sectors six pixels into the DRS lamp at 1280, where a page and a corner
+  // block drew over each other and only a photograph would have shown it.
+  const taken = corners ? bandCornerWidths(frame) : { left: 0, right: 0 };
+  const usable = { left: frame.left + taken.left, width: Math.max(0, frame.width - taken.left - taken.right) };
+
   const kept = [...fields];
   const widthOf = (list: readonly BandField[]): number =>
     list.reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs), 0) + gap * Math.max(0, list.length - 1);
-  while (kept.length > 1 && widthOf(kept) > frame.width) kept.pop();
+  while (kept.length > 1 && widthOf(kept) > usable.width) kept.pop();
 
   const blockHeight = labelFs + d.fieldGap + valueFs;
   const top = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
   const valueTop = top + labelFs + d.fieldGap;
-  let x = frame.left + Math.max(0, (frame.width - widthOf(kept)) / 2);
+  let x = usable.left + Math.max(0, (usable.width - widthOf(kept)) / 2);
 
   const items: Item[] = [];
   for (const field of kept) {
@@ -252,20 +260,57 @@ export function bandPageItems(id: string, frame: Rect, prefix: string): Item[] {
  * The threshold is those drawings rather than a round number, which is why the layout carries the
  * answer rather than this file computing one.
  */
+const CORNER_PAD_X = 20;
+
+/** The two fields in the left corner. */
+const leftCornerFields = (): BandField[] => [
+  { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.count },
+  { id: 'trackState', label: 'Track', sample: 'DRY', bind: ncalc.ucase(isnull(game('TrackGripStatus'), str('--'))), chars: { digits: 5, specials: 0 }, widest: 'MODERATE' },
+];
+
+/** The three lamps in the right corner. A lamp is a word, lit or dim; it never disappears. */
+const cornerLamps = (): { id: string; text: string; on: string; colour: `#${string}` }[] => [
+  { id: 'drs', text: 'DRS', on: eq(isnull(game('DRSAvailable'), num(0)), num(1)), colour: ds.purpose.flag.green },
+  { id: 'p2p', text: 'P2P', on: eq(isnull(raw('PushToPass'), num(0)), num(1)), colour: ds.purpose.flag.blue },
+  { id: 'spt', text: 'SPT', on: ncalc.ne(isnull(game('CarLeftRight'), num(0)), num(1)), colour: ds.purpose.flag.yellow },
+];
+
+/** The two clocks in the right corner. */
+const cornerClocks = (): BandField[] => [
+  { id: 'clock', label: 'Clock', sample: '13:11', bind: localClock(), chars: CHARS.clock },
+  { id: 'sim', label: 'Sim', sample: '19:26', bind: simClock(), chars: CHARS.clock },
+];
+
+/**
+ * How much of the band each corner block takes, padding included.
+ *
+ * Measured here rather than by the drawing code, because the page rank has to know it before it
+ * lays anything out: a rank centred in the whole band draws its last field over the DRS lamp at
+ * 1280, which is the same mistake the bar made at 850 before d839bd5, and the one thing a band
+ * page must never do is hide the field beside it.
+ */
+export function bandCornerWidths(frame: Rect): { left: number; right: number } {
+  const d = densityOf('zone');
+  const labelFs = d.labelSm;
+  const valueFs = valueSizeFor(frame.height, d.small, labelFs, d.fieldGap);
+  const left = leftCornerFields().reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs) + d.gapX, 0);
+  const clockWidth = cornerClocks().reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs), 0) + d.gapX;
+  const lampWidth = Math.ceil(measureText('BarlowMedium', 'DRS', labelFs)) + 8;
+  const right = cornerLamps().length * (lampWidth + d.gapX / 2) + clockWidth;
+  return { left: CORNER_PAD_X + left, right: CORNER_PAD_X + right };
+}
+
 export function bandCorners(frame: Rect, prefix: string): Item[] {
   const d = densityOf('zone');
   const labelFs = d.labelSm;
   const valueFs = valueSizeFor(frame.height, d.small, labelFs, d.fieldGap);
-  const padX = 20;
+  const padX = CORNER_PAD_X;
   const blockHeight = labelFs + d.fieldGap + valueFs;
   const top = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
   const valueTop = top + labelFs + d.fieldGap;
   const items: Item[] = [];
 
-  const left: BandField[] = [
-    { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.count },
-    { id: 'trackState', label: 'Track', sample: 'DRY', bind: ncalc.ucase(isnull(game('TrackGripStatus'), str('--'))), chars: { digits: 5, specials: 0 }, widest: 'MODERATE' },
-  ];
+  const left = leftCornerFields();
   let x = frame.left + padX;
   for (const field of left) {
     const w = fieldWidth(field, valueFs, labelFs);
@@ -281,20 +326,11 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   // The right corner: three lamps, then the two clocks. A lamp is a word in its own colour when it
   // is true and the dim ink when it is not, because a lamp that vanished would move the two beside
   // it at the moment they matter.
-  const lamps: { id: string; text: string; on: string; colour: `#${string}` }[] = [
-    { id: 'drs', text: 'DRS', on: eq(isnull(game('DRSAvailable'), num(0)), num(1)), colour: ds.purpose.flag.green },
-    { id: 'p2p', text: 'P2P', on: eq(isnull(raw('PushToPass'), num(0)), num(1)), colour: ds.purpose.flag.blue },
-    { id: 'spt', text: 'SPT', on: ncalc.ne(isnull(game('CarLeftRight'), num(0)), num(1)), colour: ds.purpose.flag.yellow },
-  ];
-  const clocks: BandField[] = [
-    { id: 'clock', label: 'Clock', sample: '13:11', bind: localClock(), chars: CHARS.clock },
-    { id: 'sim', label: 'Sim', sample: '19:26', bind: simClock(), chars: CHARS.clock },
-  ];
-  const clockWidth = clocks.reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs), 0) + d.gapX;
+  const lamps = cornerLamps();
+  const clocks = cornerClocks();
   const lampWidth = Math.ceil(measureText('BarlowMedium', 'DRS', labelFs)) + 8;
-  const rightWidth = lamps.length * (lampWidth + d.gapX / 2) + clockWidth;
 
-  x = frame.left + frame.width - padX - rightWidth;
+  x = frame.left + frame.width - bandCornerWidths(frame).right;
   for (const lamp of lamps) {
     items.push({
       ...label(`${prefix}${lamp.id}`, lamp.text, x, top + (blockHeight - labelFs) / 2, lampWidth, { size: labelFs, hAlign: 'center', color: ds.color.text.dim }),

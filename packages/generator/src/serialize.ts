@@ -16,6 +16,8 @@ import type {
   DrawableItem,
   EllipseItem,
   Formula,
+  ImageAsset,
+  ImageItem,
   Item,
   ItemBase,
   LayerItem,
@@ -52,6 +54,7 @@ export const ITEM_TYPES = {
   radar: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RadarItem, SimHub.Plugins',
   staticMap: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.GeneratedStaticMapItem, SimHub.Plugins',
   webPage: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.WebPageItem, SimHub.Plugins',
+  image: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.ImageItem, SimHub.Plugins',
 } as const satisfies Record<Item['kind'], string>;
 
 export const DEFAULT_OPACITY = 100;
@@ -59,6 +62,8 @@ export const DEFAULT_BLINK_DELAY_MS = 250;
 export const DEFAULT_ROTATION = 0;
 export const DEFAULT_SPECIAL_CHARS = '.,:';
 export const DEFAULT_GRID_SIZE = 5;
+/** SimHub's own default, written on every image item so a DashStudio round trip is not a diff. */
+export const DEFAULT_AUTO_SIZE_SCALE = 1;
 export const METADATA_VERSION = 2;
 
 export const H_ALIGN = { left: 0, center: 1, right: 2 } as const;
@@ -388,6 +393,23 @@ const buildWebPageObject = (item: WebPageItem, id: string): JsonObject => {
 };
 
 /**
+ * `AutoSize` false with `AutoSizeScale` at its default: openDash sizes an image from its rect,
+ * not from the image's own pixels, so that a telltale occupies the same box whichever artwork
+ * ends up behind it. `AutoSizeScale` is written even though it is unused, because SimHub
+ * populates it on load and leaving it out makes every round trip through DashStudio a diff.
+ */
+const buildImageObject = (item: ImageItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.image,
+    Image: item.image,
+    AutoSize: false,
+    AutoSizeScale: DEFAULT_AUTO_SIZE_SCALE,
+  };
+  appendDrawable(o, item, id, { border: false, rotation: false });
+  return o;
+};
+
+/**
  * One item as SimHub's JSON. `parentPath` is the screen's or enclosing layer's path; the item's
  * own path is `<parentPath>/<name>` and its id derives from it unless `item.id` is set.
  */
@@ -413,6 +435,8 @@ export const buildItemObject = (item: Item, parentPath: string): JsonObject => {
       return buildRadarObject(item, id);
     case 'staticMap':
       return buildStaticMapObject(item, id);
+    case 'image':
+      return buildImageObject(item, id);
     case 'webPage':
       return buildWebPageObject(item, id);
   }
@@ -470,6 +494,21 @@ export const buildMetadataObject = (dashboard: Dashboard): JsonObject => {
   };
 };
 
+/**
+ * One entry of a dashboard's `Images` list. `Modified` and `Optimized` are DashStudio's record of
+ * what a person did to an image after importing it, and a generated package has done neither.
+ */
+export const buildImageDescriptor = (image: ImageAsset): JsonObject => ({
+  Name: image.name,
+  Extension: image.extension,
+  Modified: false,
+  Optimized: false,
+  Width: image.width,
+  Height: image.height,
+  Length: image.length,
+  MD5: image.md5,
+});
+
 export const buildDashboardObject = (dashboard: Dashboard, ctx: SerializeContext): JsonObject => ({
   Version: 2,
   Id: dashboard.id ?? stableGuid(dashboardPath(ctx.packageName, dashboard.name)),
@@ -485,7 +524,7 @@ export const buildDashboardObject = (dashboard: Dashboard, ctx: SerializeContext
   BackgroundOpacity: 100,
   ShowBoundingRectangles: true,
   GridSize: DEFAULT_GRID_SIZE,
-  Images: [],
+  Images: (dashboard.images ?? []).map(buildImageDescriptor),
   Metadata: buildMetadataObject(dashboard),
   ShowOnScreenControls: true,
   IsOverlay: false,

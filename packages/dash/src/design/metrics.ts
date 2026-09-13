@@ -93,9 +93,15 @@ export function cells(weight: DataWeight, fs: number): Monospace {
  */
 export const GEAR_CELL = ds.font.cell.gear;
 
-/** Integer monospace cells for the gear: the letter-wide cell with the Bold face's special cell. */
+/**
+ * Integer monospace cells for the gear: the letter-wide cell with the Bold face's special cell.
+ *
+ * Rounded up, as `cells` is. This rounded to nearest while the cell was 0.68 em and had a sixth of
+ * an em of headroom to absorb it; at 0.52 em the headroom is 0.006 em, so below about 83 px a cell
+ * rounded down would be narrower than the "N" it has to hold.
+ */
 export function gearCells(fs: number): Monospace {
-  return { ...cells('Bold', fs), charWidth: Math.round(GEAR_CELL * fs) };
+  return { ...cells('Bold', fs), charWidth: Math.ceil(GEAR_CELL * fs) };
 }
 
 /** Maximum character budget of a monospaced numeral. */
