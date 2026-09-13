@@ -10,8 +10,8 @@ using SimHub.Plugins;
 
 namespace OpenDashPlugin
 {
-    [PluginName("openDash")]
-    [PluginAuthor("openDash contributors")]
+    [PluginName("OpenDash")]
+    [PluginAuthor("OpenDash contributors")]
     public class OpenDash : IPlugin, IWPFSettingsV2
     {
         /// <summary>SimHub stores the settings as PluginsData/Common/OpenDash.GeneralSettings.json.</summary>
@@ -28,14 +28,14 @@ namespace OpenDashPlugin
         private DashboardInstaller installer;
 
         /// <summary>
-        /// Built on first use rather than eagerly, because the record of what openDash wrote into each folder lives
+        /// Built on first use rather than eagerly, because the record of what OpenDash wrote into each folder lives
         /// in the settings and the settings are read in Init. The lambda reads Settings each time, so the record
         /// follows the object the panel replaces when a user changes something.
         /// </summary>
         public DashboardInstaller Installer =>
             installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
 
-        public string LeftMenuTitle => "openDash";
+        public string LeftMenuTitle => "OpenDash";
 
         public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create(this));
 
@@ -61,7 +61,7 @@ namespace OpenDashPlugin
 
         public void Init(PluginManager pluginManager)
         {
-            Log.Info("openDash plugin " + Version + " starting");
+            Log.Info("OpenDash plugin " + Version + " starting");
             LoadSettings();
             // Every zone starts on the page it is set to open on, which is what that setting means.
             Settings.OpenOnStartPages();
@@ -99,7 +99,7 @@ namespace OpenDashPlugin
                 if (!UpdateService.WaitForIdle(ShutdownGrace))
                 {
                     Log.Warn("The update was still installing after " + ShutdownGrace.TotalSeconds
-                        + " seconds and SimHub is closing anyway; a dashboard may be left as openDash found it.");
+                        + " seconds and SimHub is closing anyway; a dashboard may be left as OpenDash found it.");
                 }
             }
             SaveSettings();
@@ -118,7 +118,7 @@ namespace OpenDashPlugin
                 {
                     Content = new TextBlock
                     {
-                        Text = "openDash settings could not be displayed: " + ex.Message,
+                        Text = "OpenDash settings could not be displayed: " + ex.Message,
                         TextWrapping = System.Windows.TextWrapping.Wrap,
                         Margin = new System.Windows.Thickness(24),
                     },

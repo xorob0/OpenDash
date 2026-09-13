@@ -1,6 +1,6 @@
 # The companion and the pit wall
 
-openDash draws three kinds of screen. The **face** is the one on the wheel: a hero zone and
+OpenDash draws three kinds of screen. The **face** is the one on the wheel: a hero zone and
 twelve slots, described in [scope.md](scope.md). The **companion** is a phone or tablet
 beside it showing one module at a time. The **pit wall** is a big screen for someone who is not
 driving.
@@ -42,7 +42,7 @@ modules off means paging through thirteen.
 Every screen carries the same roles: in game and idle, not pit. SimHub only filters screens by
 role when the roles differ between them, so identical roles keep every enabled screen navigable
 whatever the game is doing, which is what a companion is for. Paging is a wheel button bound to
-the device's own `NextScreen` action in SimHub, not something openDash can do from the dashboard.
+the device's own `NextScreen` action in SimHub, not something OpenDash can do from the dashboard.
 
 ## The pit wall
 

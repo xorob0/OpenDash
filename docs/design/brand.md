@@ -24,7 +24,7 @@ Real race dashes are white numerals on black, where the only chroma is functiona
 lights, warnings, flags. A driver at 200 km/h reads colour as state, instantly and without
 parsing, and every decorative use of colour erodes that reflex.
 
-This is why openDash's accent is `#33D9F2` ice cyan and never appears on the dash face. An
+This is why OpenDash's accent is `#33D9F2` ice cyan and never appears on the dash face. An
 amber accent would collide with shift stage 2, and green or red would collide with flags and
 alarms. Cyan sits outside the functional palette entirely, so it can be the identity colour in
 the logo, the plugin panel and the documentation without ever being misread at speed. It is a
@@ -65,7 +65,7 @@ be distinctive would cost drivers real recognition time.
 
 | | Token | Value |
 |---|---|---|
-| openDash cyan | `color.brand.primary` | `#33D9F2` |
+| OpenDash cyan | `color.brand.primary` | `#33D9F2` |
 
 Logo, plugin panel, documentation, website. Never on the dash face.
 
@@ -97,7 +97,7 @@ recorded in `font.cell`. **Only what fits a cell may be drawn in one**, which is
 belongs to the label. That is rule 19 on the canvas.
 
 One more thing the renderer decides rather than taste: the condensed faces ship under the family
-name `openDash Display`. WPF reads the width word out of a family name and files "Barlow
+name `OpenDash Display`. WPF reads the width word out of a family name and files "Barlow
 Condensed" as a *stretch* of Barlow, which a `.djson` has no way to ask back, so every numeral
 came out about a fifth too wide. Same outlines, renamed on the way into a package; the vendored
 files are untouched.

@@ -30,7 +30,7 @@ describe('main dashboard', () => {
     expect(main.backgroundColor).toBe('#0A0B0D');
     expect(main.screens).toHaveLength(1);
     expect(main.screens[0]).toMatchObject({ name: 'Main', inGame: true, idle: true, pit: true });
-    expect(main.metadata).toMatchObject({ title: 'openDash', author: 'openDash contributors', version: '0.0.0-test', simHubVersion: '9.12.6' });
+    expect(main.metadata).toMatchObject({ title: 'openDash', author: 'OpenDash contributors', version: '0.0.0-test', simHubVersion: '9.12.6' });
   });
 
   test('has one widget per slot bound to its slot setting', () => {

@@ -1,4 +1,4 @@
-# openDash
+# OpenDash
 
 An open-source sim racing dashboard for [SimHub](https://www.simhubdash.com/), released under
 the MIT licence.
@@ -6,7 +6,7 @@ the MIT licence.
 > **Status: alpha.** Fourteen packages are built: ten dash faces from 1920 by 480 down to a
 > 480 px round DDU, two companion screens and two pit wall screens, plus a SimHub plugin that
 > installs them all and exposes their settings. Everything below has been verified on
-> SimHub 9.12.6. See [docs/scope.md](docs/scope.md) for what openDash is and what it refuses to
+> SimHub 9.12.6. See [docs/scope.md](docs/scope.md) for what OpenDash is and what it refuses to
 > be, and [docs/second-screens.md](docs/second-screens.md) for the companion and the pit wall.
 
 ## What makes this different
@@ -15,7 +15,7 @@ Existing SimHub dashboards ship as `.simhubdash` binaries. One cannot diff them,
 review a pull request against them, and every screen size is hand-maintained as a separate
 copy.
 
-openDash treats the dashboard as compiled output. The source of truth is TypeScript together
+OpenDash treats the dashboard as compiled output. The source of truth is TypeScript together
 with a set of design tokens; a generator emits the `.djson` scene graph that SimHub renders and
 packs it into a `.simhubdash`. A small SimHub plugin installs that package and exposes a
 handful of settings, so that the user can choose which card sits in which slot without touching
@@ -35,19 +35,19 @@ reads.
 
 Everything is on the [releases page](https://github.com/xorob0/OpenDash/releases), which carries
 `OpenDash-plugin.zip` and one `.simhubdash` per screen. A release whose version ends in a suffix
-such as `-rc.2` is marked as a pre-release, which is what to expect while openDash is alpha. You
+such as `-rc.2` is marked as a pre-release, which is what to expect while OpenDash is alpha. You
 need SimHub 9.12.6 or later on Windows. [CHANGELOG.md](CHANGELOG.md) says what each release
 changed.
 
 - **Dashboard only.** Double-click the `.simhubdash` for your screen; SimHub imports it. You get
   the default layout and the default modes, and no settings page. Nothing else is needed, so this
-  is the shortest way to see openDash on a display.
+  is the shortest way to see OpenDash on a display.
 - **Dashboard and plugin.** `OpenDash-plugin.zip` is the only file to download, since the fourteen
   dashboards it installs are embedded in it. Close SimHub, unzip the archive and copy `OpenDash.dll`
   into
   SimHub's install folder, the one holding `SimHubWPF.exe`, rather than into a subfolder of it.
   Unblock the file, then start SimHub and accept the new plugin. The plugin extracts all fourteen
-  dashboards and adds an "openDash" page to the left menu. The full procedure, the table of sizes
+  dashboards and adds an "OpenDash" page to the left menu. The full procedure, the table of sizes
   and the troubleshooting list are in [plugin/INSTALL.md](plugin/INSTALL.md).
 
 Copying a file by hand is how SimHub loads any third-party plugin, and unblocking is the step
@@ -59,7 +59,7 @@ plugin, so SimHub either reports a loading error or never mentions the plugin at
 Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"
 ```
 
-In both cases openDash is a normal SimHub dashboard afterwards: assign it to a display from
+In both cases OpenDash is a normal SimHub dashboard afterwards: assign it to a display from
 Dash Studio like any other.
 
 ## The dashboard
@@ -120,8 +120,8 @@ design/
   tokens.json          Design tokens, source of truth for all colour, type and spacing
   canvas/              Design system canvas artboards (Claude Design), derived from the tokens
 packages/
-  generator/           TypeScript library that emits SimHub .djson scene graphs (no openDash knowledge)
-  dash/                openDash itself: tokens in code, elements, components, cards, hero, layouts, build
+  generator/           TypeScript library that emits SimHub .djson scene graphs (no OpenDash knowledge)
+  dash/                OpenDash itself: tokens in code, elements, components, cards, hero, layouts, build
     src/second/        the shared second-screen parts: fields, chips, gauges, traces, tables
     src/modules/       the 21 companion modules, which are also the pit wall's zone pages
     src/screens/       the companion and pit wall packages
@@ -132,7 +132,7 @@ plugin/
 tools/
   irsdk-emulator/      Synthetic iRacing telemetry feed for testing dashboards without the sim
 docs/
-  scope.md             What openDash is, what ships, and what is deliberately not built
+  scope.md             What OpenDash is, what ships, and what is deliberately not built
   scope-mvp.md         The MVP contract, closed and superseded by scope.md
   second-screens.md    The companion and the pit wall, and what they deliberately do not show
   architecture.md      How source becomes a .simhubdash, and how a setting reaches it
@@ -168,9 +168,9 @@ This project exists because others documented the path first.
 - [Lovely Dashboard](https://github.com/Lovely-Sim-Racing/lovely-dashboard) is the reference
   for what a mature SimHub dash ecosystem looks like.
 
-Lovely's licence explicitly forbids reuse of its UI design. openDash's visual design is
+Lovely's licence explicitly forbids reuse of its UI design. OpenDash's visual design is
 independently derived: do not copy Lovely layouts, and do not use its screenshots in any
-openDash material.
+OpenDash material.
 
 Barlow and Barlow Condensed are redistributed under the SIL Open Font Licence 1.1; see
 `packages/dash/fonts/OFL.txt`.

@@ -1,4 +1,4 @@
-// SettingsControl.cs: the openDash page in SimHub's left menu, built in code from design/canvas/Plugin.dc.html:
+// SettingsControl.cs: the OpenDash page in SimHub's left menu, built in code from design/canvas/Plugin.dc.html:
 // header (mark, wordmark, plugin version), then General, Data, Zones, Buttons, Layout, Companion, Pit wall
 // and Dashboard sections, then the footer. Zones is the picture of the face; Layout is the twelve-slot
 // picture it replaces, which stays while both models ship and leaves with the cards in XOR-95.
@@ -85,7 +85,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildHeader()
         {
             var wordmark = Ui.HStack(0,
-                Ui.Text("open", Theme.SizeWordmark, FontWeights.Light, Theme.TextPrimary, PanelFonts.Data),
+                Ui.Text("Open", Theme.SizeWordmark, FontWeights.Light, Theme.TextPrimary, PanelFonts.Data),
                 Ui.Text("Dash", Theme.SizeWordmark, FontWeights.Bold, Theme.TextPrimary, PanelFonts.Data));
             var left = Ui.HStack(12, Ui.Mark(), wordmark);
             var right = Ui.HStack(8, Ui.Label("Plugin"), Ui.Numeral(OpenDash.Version, Theme.SizeNumeral, Theme.TextSecondary));
@@ -302,7 +302,7 @@ namespace OpenDashPlugin
             stripCaption = Ui.Caption("", 846);
             // The warning row is built before RebuildFace fills the hosts, because RebuildFace refreshes
             // it: doing it the other way round dereferenced a control that did not exist yet, and the
-            // whole panel came up as "openDash settings could not be displayed".
+            // whole panel came up as "OpenDash settings could not be displayed".
             var picker = BuildFacePicker();
             var warning = BuildFaceWarning();
             RebuildFace();
@@ -1057,7 +1057,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildDashboard()
         {
-            dashboardTitle = Ui.Body("openDash");
+            dashboardTitle = Ui.Body("OpenDash");
             var caption = Ui.Caption("One dashboard per screen size, installed in SimHub DashTemplates. Reinstall restores every embedded copy; settings are kept.");
             var text = Ui.VStack(4, dashboardTitle, caption);
             text.MaxWidth = 460;
@@ -1256,7 +1256,7 @@ namespace OpenDashPlugin
                 confirmingEdited = true;
                 updateButton.Content = "Replace anyway";
                 updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
-                    + " changed since openDash wrote them: " + string.Join(", ", edited)
+                    + " changed since OpenDash wrote them: " + string.Join(", ", edited)
                     + ". Updating replaces what is there. A copy of yours is kept beside it in DashTemplates, "
                     + "and \"Put mine back\" restores it.";
                 updateLine.Visibility = Visibility.Visible;
@@ -1338,7 +1338,7 @@ namespace OpenDashPlugin
         /// It used to leave an edited folder alone and report "Up to date", which made the button appear to have
         /// worked while nothing happened. Worse, the only path that could replace an edited folder was the Update
         /// button's second click, and that button appears only while a newer release exists, so a person who had
-        /// edited a dashboard had no way at all to get openDash's own version back.
+        /// edited a dashboard had no way at all to get OpenDash's own version back.
         /// </remarks>
         private void Reinstall()
         {
@@ -1352,7 +1352,7 @@ namespace OpenDashPlugin
                 confirmingReinstall = true;
                 reinstallButton.Content = "Replace anyway";
                 updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
-                    + " changed since openDash wrote them: " + string.Join(", ", edited)
+                    + " changed since OpenDash wrote them: " + string.Join(", ", edited)
                     + ". Reinstalling replaces what is there. A copy of yours is kept beside it in DashTemplates, "
                     + "and \"Put mine back\" restores it.";
                 updateLine.Visibility = Visibility.Visible;
