@@ -8,7 +8,7 @@
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 
-const { eq, iff, isnull, prop, str, num } = ncalc;
+const { add, and, concat, div, eq, fmt, iff, isnull, lt, mod, num, or, prop, str, truncate } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -263,7 +263,16 @@ export const defaultZoneMask = (zone: FaceZone): number => (1 << pagesForZone(zo
 export const zonePageSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}`;
 export const zoneMaskSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Pages`;
 export const zoneStartSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Start`;
+export const zoneClassOnlySettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}ClassOnly`;
 export const barFieldSettingName = (face: FaceSize, slot: BarSlot): string => `${facePrefix(face)}Bar${slot}`;
+
+/**
+ * Whether a zone's list pages show the player's own class rather than the whole field.
+ *
+ * Off, because most racing is single-class and a driver in one would not thank us for a
+ * leaderboard that hides nobody but says it does.
+ */
+export const DEFAULT_ZONE_CLASS_ONLY = false;
 
 /**
  * The zone and page a held button shows, as one property rather than a pair per zone: a glance is
@@ -290,11 +299,13 @@ export const zone = {
   quickGlance: (face: FaceSize): Expr => isnull(prop(propertyName(quickGlanceSettingName(face))), num(DEFAULT_QUICK_GLANCE)),
   /** `isnull([OpenDash.Face1920x480BarLeft1], 0)`: which field an end of the bar shows. */
   barField: (face: FaceSize, slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(face, slot))), num(DEFAULT_BAR_FIELDS[slot])),
+  /** `isnull([OpenDash.Face1920x480ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
+  classOnly: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(face, z))), String(DEFAULT_ZONE_CLASS_ONLY)),
 };
 
 /** Every property one face reads, which is the group the plugin attaches for it. */
 export function facePropertyNames(face: FaceSize): string[] {
-  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z)]);
+  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
   return [...perZone, ...bar, quickGlanceSettingName(face)];
 }
@@ -303,6 +314,63 @@ export function facePropertyNames(face: FaceSize): string[] {
 export function zoneProperties(): string[] {
   return FACE_SIZES.flatMap((face) => facePropertyNames(face)).map(propertyName);
 }
+
+/**
+ * Bit `i` of a zone's mask, as arithmetic rather than as a bitwise operator.
+ *
+ * NCalc's grammar has `>>` and `&`, and `(mask >> i) & 1` would be half the characters. It is not
+ * used because nothing in openDash has ever evaluated one on the VM, and an expression SimHub
+ * cannot evaluate does not fail: it draws the empty string. That is the `left([Class], 4)` bug
+ * that shipped for months and is why `ncalcFunctions.ts` exists. `truncate(x / n) % 2` is the same
+ * question in three things the packages already rely on everywhere.
+ *
+ * The mask is an integer property, so the truncate is belt and braces rather than necessary, and
+ * it costs nothing to keep the expression honest about what it means.
+ */
+const maskBit = (face: FaceSize, z: FaceZone, i: number): Expr => mod(truncate(div(zone.mask(face, z), num(2 ** i))), num(2));
+
+/**
+ * How long a zone's cycle is: the number of pages its mask leaves enabled.
+ *
+ * This is derived in the expression rather than published by the plugin, which is what
+ * [ADR 0009](../../../docs/decisions/0009-does-the-plugin-compute.md) settled: a value is derived
+ * from properties that already exist, so the package is still right on its own. Without the plugin
+ * the mask reads as its default and the answer is the whole catalogue, which is exactly what a
+ * driver with no plugin can cycle.
+ */
+export const zoneCycleLength = (face: FaceSize, z: FaceZone): Expr => add(...pagesForZone(z).map((_, i) => maskBit(face, z, i)));
+
+/**
+ * Where the page a zone is showing sits in its cycle, counting from one: the enabled pages before
+ * it, plus itself. A page the mask has turned off counts as the one after the last enabled page
+ * before it, which is a state the plugin's `Normalise` does not leave a zone in.
+ */
+export const zoneCyclePosition = (face: FaceSize, z: FaceZone): Expr =>
+  add(num(1), ...pagesForZone(z).map((_, i) => iff(lt(num(i), zone.page(face, z)), maskBit(face, z, i), num(0))));
+
+/** `2 / 3`: what a zone's header counts, which follows the mask and not the catalogue. */
+export const zoneCounter = (face: FaceSize, z: FaceZone): Expr =>
+  concat(fmt(zoneCyclePosition(face, z), '0'), str(' / '), fmt(zoneCycleLength(face, z), '0'));
+
+/** Every counter a zone could draw, so a caller can measure the box for the widest of them. */
+export function zoneCounterReadings(z: FaceZone): string[] {
+  const n = pagesForZone(z).length;
+  const readings: string[] = [];
+  for (let length = 1; length <= n; length++) for (let position = 1; position <= length; position++) readings.push(`${position} / ${length}`);
+  return readings;
+}
+
+/**
+ * When a list page drawn in one of these zones shows the player's own class.
+ *
+ * Zones B and C are the same rectangle on most faces and so share one dashboard file, which means
+ * a page in it cannot simply read "my zone's" setting: it has to ask which of the zones sharing the
+ * file is showing it. The one ambiguity that leaves is both zones showing the same list page with
+ * different settings, and docs/design/zones.md already records that two zones on one page is
+ * reported and allowed; there they agree rather than disagreeing.
+ */
+export const zoneClassOnlyOnPage = (face: FaceSize, zones: readonly [FaceZone, ...FaceZone[]], page: number): Expr =>
+  or(...zones.map((z) => and(eq(zone.page(face, z), num(page)), zone.classOnly(face, z))));
 
 // --- What one screen owns ---------------------------------------------------------------------
 //

@@ -425,6 +425,18 @@ namespace OpenDashPlugin
             return Face(face).Mask(letter);
         }
 
+        /// <summary>Whether a face zone's list pages show the player's own class, by its letter.</summary>
+        public bool FaceZoneIsClassOnly(Contract.FaceSize face, string letter)
+        {
+            return Face(face).IsClassOnly(letter);
+        }
+
+        /// <summary>Sets a face zone's class filter.</summary>
+        public void SetFaceZoneClassOnly(Contract.FaceSize face, string letter, bool classOnly)
+        {
+            Face(face).SetClassOnly(letter, classOnly);
+        }
+
         public bool FaceZonePageEnabled(Contract.FaceSize face, string letter, int page)
         {
             return Face(face).PageEnabled(letter, page);

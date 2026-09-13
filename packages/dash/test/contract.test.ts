@@ -65,8 +65,9 @@ describe('settings', () => {
   test('declares the dash, the zones, the companion and the pit wall', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
-    // 850 face beside it are configured apart instead of sharing one set of zones.
-    const perFace = FACE_ZONE_LETTERS.length * 3 + BAR_SLOTS.length + 1;
+    // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
+    // page, mask, start and the class filter -- plus the bar's ends and the glance.
+    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 1;
     // The last term is the flag box, which is not a screen but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why the box is here at all. Eight global and
     // five per matrix, the way every face carries its own group.
@@ -81,6 +82,7 @@ describe('settings', () => {
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
+    expect(props).toContain('OpenDash.Face1280x400ZoneBClassOnly');
     expect(props).toContain('OpenDash.Face600x686BarLeft1');
     expect(props).toContain('OpenDash.Face800x286QuickGlance');
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's

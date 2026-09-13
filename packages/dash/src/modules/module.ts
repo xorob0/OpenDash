@@ -8,6 +8,7 @@
  * to its catalogue entry.
  */
 import type { Item, Rect } from '../generator.ts';
+import type { Expr } from '../bind.ts';
 import { moduleMeta, type ModuleMeta } from '../contract.ts';
 import { drawFieldBlock, fieldBlockHeight, wrapFields, type FieldSpec, type FieldValue } from '../second/field.ts';
 import { densityOf } from '../second/density.ts';
@@ -36,6 +37,13 @@ export interface ModuleContext {
    * about. A page at `wide` takes one rank; the same page at `tall narrow` stacks one column.
    */
   shape?: Shape;
+  /**
+   * When true, a page that lists other cars lists the player's own class rather than the whole
+   * field. An expression rather than a flag, because the answer is a plugin setting a driver
+   * changes mid-session, and because it is a property of the zone showing the page rather than of
+   * the page: the companion and the pit wall pass nothing and list everybody, as they always have.
+   */
+  classOnly?: Expr;
 }
 
 /** The shape a context is drawn at, derived from its frame unless the caller named one. */

@@ -61,10 +61,10 @@ namespace OpenDashPlugin.Tests
         public void Property_names_cover_the_dash_the_companion_and_the_pit_wall()
         {
             var names = Contract.PropertyNames().ToList();
-            // Four settings, twelve slots, the zone face (four pages, four masks, four starts, four
-            // bar fields and the glance), twenty-one companion modules, four pit wall zones, the
-            // wide zone, the URL, and the flag box brightness.
-            const int perFace = 4 + 4 + 4 + 4 + 1;
+            // Four settings, twelve slots, the zone face of every face that ships (four pages, four
+            // masks, four starts, four class filters, four bar fields and the glance), twenty-one
+            // companion modules, four pit wall zones, the wide zone, the URL, and the flag box.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
             // Eight global flag box settings and five per matrix, the way every face carries its own group.
             Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 5, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
@@ -81,8 +81,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(16).Take(4));
             Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(20).Take(4));
             Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(24).Take(4));
-            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(28).Take(4));
-            Assert.Equal(p + "QuickGlance", names[32]);
+            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(28).Take(4));
+            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(32).Take(4));
+            Assert.Equal(p + "QuickGlance", names[36]);
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
@@ -320,6 +321,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Face1920x480ZoneB", Contract.ZonePageProperty(face, "B"));
             Assert.Equal("Face1920x480ZoneBPages", Contract.ZoneMaskProperty(face, "B"));
             Assert.Equal("Face1920x480ZoneBStart", Contract.ZoneStartProperty(face, "B"));
+            Assert.Equal("Face1920x480ZoneBClassOnly", Contract.ZoneClassOnlyProperty(face, "B"));
             Assert.Equal("Face1920x480BarRight2", Contract.BarFieldProperty(face, "Right2"));
             Assert.Equal("Face1920x480QuickGlance", Contract.QuickGlanceProperty(face));
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty(face, "E"));
@@ -376,8 +378,9 @@ namespace OpenDashPlugin.Tests
                     Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
                 }
             }
-            // Seventeen each: four zones times page, mask and start, four bar fields, and the glance.
-            Assert.Equal(17, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+            // Twenty-one each: four zones times page, mask, start and class filter, four bar fields,
+            // and the glance.
+            Assert.Equal(21, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
         }
 
         [Fact]

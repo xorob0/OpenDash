@@ -290,6 +290,7 @@ namespace OpenDashPlugin
         private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
         private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
         private readonly Dictionary<string, List<CheckBox>> zoneMaskBoxes = new Dictionary<string, List<CheckBox>>();
+        private readonly Dictionary<string, CheckBox> zoneClassBoxes = new Dictionary<string, CheckBox>();
         private readonly Dictionary<string, ToggleButton> barEndButtons = new Dictionary<string, ToggleButton>();
         private TextBlock faceWarningText;
         private FrameworkElement faceWarningRow;
@@ -355,6 +356,7 @@ namespace OpenDashPlugin
             zoneSelects.Clear();
             zoneMaskButtons.Clear();
             zoneMaskBoxes.Clear();
+            zoneClassBoxes.Clear();
             barEndButtons.Clear();
             faceHost.Content = BuildFacePicture();
             RefreshStripCaption();
@@ -537,7 +539,8 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        /// <summary>"ZONE B" at the top, the enabled pages and the start page at the bottom.</summary>
+        /// <summary>"ZONE B" at the top, the enabled pages and the start page at the bottom, and the
+        /// class filter under them where the zone has a page it changes.</summary>
         private FrameworkElement BuildZoneCell(string letter, double width)
         {
             var inner = width - 2 * FaceCellPadding;
@@ -545,6 +548,14 @@ namespace OpenDashPlugin
             var label = Ui.Label("Zone " + letter);
             DockPanel.SetDock(label, Dock.Top);
             dock.Children.Add(label);
+
+            if (FacePages.OffersClassFilter(letter))
+            {
+                var classOnly = BuildClassFilterBox(letter);
+                classOnly.Margin = new Thickness(0, 6, 0, 0);
+                DockPanel.SetDock(classOnly, Dock.Bottom);
+                dock.Children.Add(classOnly);
+            }
 
             var select = BuildZoneSelectFor(letter, inner);
             DockPanel.SetDock(select, Dock.Bottom);
@@ -586,6 +597,36 @@ namespace OpenDashPlugin
             select.ToolTip = "The page zone " + letter + " opens on";
             zoneSelects[letter] = select;
             return select;
+        }
+
+        /// <summary>
+        /// Whether this zone's lists show the player's own class.
+        ///
+        /// It sits in the zone's own cell rather than beside PositionMode, because it is a property of
+        /// the zone and not of the face: the point of it is zone B listing the race while zone C lists
+        /// the class a driver is actually racing in.
+        /// </summary>
+        private CheckBox BuildClassFilterBox(string letter)
+        {
+            var box = new CheckBox
+            {
+                Content = "My class only",
+                FontSize = Theme.SizeLabel,
+                FontFamily = PanelFonts.Label,
+                Foreground = Ui.Brush(Theme.TextSecondary),
+                IsChecked = Settings.FaceZoneIsClassOnly(face, letter),
+                ToolTip = "Show the leaderboard and the relative in zone " + letter + " for your own class",
+            };
+            box.Checked += (sender, args) => SetClassFilter(letter, true);
+            box.Unchecked += (sender, args) => SetClassFilter(letter, false);
+            zoneClassBoxes[letter] = box;
+            return box;
+        }
+
+        private void SetClassFilter(string letter, bool classOnly)
+        {
+            Settings.SetFaceZoneClassOnly(face, letter, classOnly);
+            plugin.SaveSettings();
         }
 
         /// <summary>A page picker in page-number order, so that SelectedIndex is the page number.</summary>
@@ -738,6 +779,12 @@ namespace OpenDashPlugin
                     var enabled = Settings.FaceZonePageEnabled(face, letter, pages[i].Number);
                     if (boxes[i].IsChecked != enabled) boxes[i].IsChecked = enabled;
                 }
+            }
+            CheckBox classOnly;
+            if (zoneClassBoxes.TryGetValue(letter, out classOnly))
+            {
+                var on = Settings.FaceZoneIsClassOnly(face, letter);
+                if (classOnly.IsChecked != on) classOnly.IsChecked = on;
             }
         }
 

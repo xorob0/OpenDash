@@ -445,6 +445,13 @@ namespace OpenDashPlugin
             return FacePrefix(face) + "Zone" + letter + "Start";
         }
 
+        /// <summary>Property name of a zone's class filter: Face1920x480ZoneAClassOnly.</summary>
+        public static string ZoneClassOnlyProperty(FaceSize face, string letter)
+        {
+            RequireFaceZone(letter);
+            return FacePrefix(face) + "Zone" + letter + "ClassOnly";
+        }
+
         /// <summary>Property name of a bar end field: Face1920x480BarLeft1.</summary>
         public static string BarFieldProperty(FaceSize face, string slot)
         {
@@ -458,6 +465,7 @@ namespace OpenDashPlugin
             foreach (var letter in FaceZoneLetters) yield return ZonePageProperty(face, letter);
             foreach (var letter in FaceZoneLetters) yield return ZoneMaskProperty(face, letter);
             foreach (var letter in FaceZoneLetters) yield return ZoneStartProperty(face, letter);
+            foreach (var letter in FaceZoneLetters) yield return ZoneClassOnlyProperty(face, letter);
             foreach (var slot in BarSlots) yield return BarFieldProperty(face, slot);
             yield return QuickGlanceProperty(face);
         }
@@ -481,6 +489,19 @@ namespace OpenDashPlugin
             var zones = new int[FaceZoneLetters.Length];
             for (var i = 0; i < zones.Length; i++) zones[i] = DefaultFaceZonePages[i];
             return zones;
+        }
+
+        /// <summary>Whether a zone's list pages show the player's own class rather than the whole field.
+        /// Off: most racing is single-class, and a driver in one would not thank us for a leaderboard
+        /// that hides nobody but says it does.</summary>
+        public const bool DefaultZoneClassOnly = false;
+
+        /// <summary>The class filter of every face zone, in letter order.</summary>
+        public static bool[] DefaultFaceZoneClassOnly()
+        {
+            var flags = new bool[FaceZoneLetters.Length];
+            for (var i = 0; i < flags.Length; i++) flags[i] = DefaultZoneClassOnly;
+            return flags;
         }
 
         /// <summary>The default mask of every face zone, in letter order.</summary>
@@ -571,8 +592,8 @@ namespace OpenDashPlugin
         /// shared ones, then each screen the rig has, in the order the settings name them.
         /// </summary>
         /// <remarks>
-        /// A rig and not the catalogue, because eight faces of seventeen properties is a hundred and
-        /// thirty-six names for a rig that has two screens, and a property list proportional to the rig
+        /// A rig and not the catalogue, because eight faces of twenty-one properties is a hundred and
+        /// sixty-eight names for a rig that has two screens, and a property list proportional to the rig
         /// is both smaller and truthful. OpenDashSettings.DeclaredProperties() is how the plugin asks.
         /// </remarks>
         public static IEnumerable<string> PropertyNames(IEnumerable<string> screens)
