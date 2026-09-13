@@ -18,7 +18,7 @@
  * Name, so the family may be renamed. The copyright and licence strings inside each file are
  * untouched and still credit the Barlow authors.
  */
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /** Where the renamed files are written: build output, beside the vendored originals. */
@@ -27,8 +27,8 @@ export const GENERATED_FONTS_DIR = '.generated';
 /**
  * What is rewritten inside the name table, longest first so that the shorter form cannot eat the
  * start of the longer one. Each replacement is the same length as what it replaces, which is what
- * lets the whole thing be a substitution rather than a rebuild: no name record changes length, so
- * no offset moves and no table but `head` needs a new checksum.
+ * lets the whole thing be a substitution rather than a rebuild: no name record changes length and
+ * no offset moves, so only the `name` table's own checksum and `head.checkSumAdjustment` change.
  *
  * "Display" is the operative choice: it is not one of the width or weight words WPF reads out of a
  * family name (Condensed, Narrow, Compressed, Expanded, Extended, Wide, and the weights), so the
@@ -52,10 +52,40 @@ export const needsRename = (source: string): boolean => FAMILY_RENAMES.some(([fr
 const utf16be = (s: string): number[] => [...s].flatMap((c) => [c.charCodeAt(0) >> 8, c.charCodeAt(0) & 0xff]);
 const ascii = (s: string): number[] => [...s].map((c) => c.charCodeAt(0));
 
-/** Every index at which `needle` occurs in `bytes`. */
-function occurrences(bytes: Uint8Array, needle: readonly number[]): number[] {
+interface TableRecord {
+  /** Offset of the table's 16 byte entry in the directory, where its checksum lives. */
+  record: number;
+  offset: number;
+  length: number;
+}
+
+/** The table directory, by tag. */
+function tables(view: DataView): Map<string, TableRecord> {
+  const found = new Map<string, TableRecord>();
+  const count = view.getUint16(4);
+  for (let i = 0; i < count; i++) {
+    const record = 12 + i * 16;
+    const tag = String.fromCharCode(view.getUint8(record), view.getUint8(record + 1), view.getUint8(record + 2), view.getUint8(record + 3));
+    found.set(tag, { record, offset: view.getUint32(record + 8), length: view.getUint32(record + 12) });
+  }
+  return found;
+}
+
+/** A table's checksum: its bytes summed as big-endian 32 bit words, zero padded to a multiple of four. */
+function tableChecksum(view: DataView, offset: number, length: number): number {
+  let sum = 0;
+  for (let i = 0; i < length; i += 4) {
+    let word = 0;
+    for (let b = 0; b < 4; b++) word = ((word << 8) | (i + b < length ? view.getUint8(offset + i + b) : 0)) >>> 0;
+    sum = (sum + word) >>> 0;
+  }
+  return sum;
+}
+
+/** Every index within `[from, to)` at which `needle` occurs. */
+function occurrences(bytes: Uint8Array, needle: readonly number[], from: number, to: number): number[] {
   const at: number[] = [];
-  outer: for (let i = 0; i + needle.length <= bytes.length; i++) {
+  outer: for (let i = from; i + needle.length <= to; i++) {
     for (let k = 0; k < needle.length; k++) if (bytes[i + k] !== needle[k]) continue outer;
     at.push(i);
   }
@@ -63,45 +93,41 @@ function occurrences(bytes: Uint8Array, needle: readonly number[]): number[] {
 }
 
 /**
- * `head.checkSumAdjustment`: 0xB1B0AFBA less the sum of the whole file read as big-endian 32 bit
- * words, with the field itself zeroed first. Every other table's checksum is unchanged, since no
- * table's bytes moved and only equal-length strings were swapped.
+ * The bytes of `source` with its family renamed. Returns how many strings were rewritten.
+ *
+ * Only the `name` table is searched. The needles are long enough that a chance hit in outline data
+ * is not credible, and none of the vendored files has one anywhere else, but a substitution loose
+ * in a binary is the kind of thing that is fine until a font is refreshed and then silently is not.
  */
-function fixHeadChecksum(bytes: Uint8Array): void {
-  const padded = new Uint8Array(Math.ceil(bytes.length / 4) * 4);
-  padded.set(bytes);
-  const view = new DataView(padded.buffer);
-  let head = -1;
-  const tables = view.getUint16(4);
-  for (let i = 0; i < tables; i++) {
-    const record = 12 + i * 16;
-    const tag = String.fromCharCode(view.getUint8(record), view.getUint8(record + 1), view.getUint8(record + 2), view.getUint8(record + 3));
-    if (tag === 'head') head = view.getUint32(record + 8);
-  }
-  if (head < 0) throw new Error('the font has no head table');
-  view.setUint32(head + 8, 0);
-  let sum = 0;
-  for (let i = 0; i < padded.length; i += 4) sum = (sum + view.getUint32(i)) >>> 0;
-  view.setUint32(head + 8, (0xb1b0afba - sum) >>> 0);
-  bytes.set(padded.subarray(0, bytes.length));
-}
-
-/** The bytes of `source` with its family renamed. Returns how many strings were rewritten. */
 export function renameFamily(bytes: Uint8Array): number {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const directory = tables(view);
+  const name = directory.get('name');
+  const head = directory.get('head');
+  if (!name || !head) throw new Error('the font has no name or head table');
+
   let rewritten = 0;
   for (const [from, to] of FAMILY_RENAMES) {
     if (from.length !== to.length) throw new Error(`"${from}" and "${to}" are not the same length, so the name table would have to be rebuilt`);
     // Both encodings: the Windows name records are UTF-16BE, the Macintosh ones are single byte.
     for (const encode of [utf16be, ascii]) {
-      const needle = encode(from);
       const replacement = encode(to);
-      for (const at of occurrences(bytes, needle)) {
+      for (const at of occurrences(bytes, encode(from), name.offset, name.offset + name.length)) {
         bytes.set(replacement, at);
         rewritten++;
       }
     }
   }
-  if (rewritten > 0) fixHeadChecksum(bytes);
+  if (rewritten === 0) return 0;
+
+  // The name table's own bytes changed, so its directory checksum has. Then checkSumAdjustment,
+  // which is 0xB1B0AFBA less the whole file summed the same way with that field zeroed, and which
+  // therefore has to be computed after the directory is correct.
+  view.setUint32(name.record + 4, tableChecksum(view, name.offset, name.length));
+  view.setUint32(head.offset + 8, 0);
+  const padded = new Uint8Array(Math.ceil(bytes.length / 4) * 4);
+  padded.set(bytes);
+  view.setUint32(head.offset + 8, (0xb1b0afba - tableChecksum(new DataView(padded.buffer), 0, padded.length)) >>> 0);
   return rewritten;
 }
 
@@ -118,22 +144,38 @@ export const PANEL_FONT_FILES = [
   'BarlowCondensed-Bold.ttf',
 ] as const;
 
+/** What has already been prepared in this process, so that fourteen packages do not redo the work. */
+const prepared = new Map<string, string>();
+
 /**
- * Writes the renamed font into `outDir` and returns its path, reusing what is there when the
- * source has not changed. A font that needs no renaming is copied as it is, so that a caller gets
- * one directory holding everything a package ships.
+ * Writes the renamed font into `outDir` and returns its path. A font that needs no renaming is
+ * copied as it is, so that a caller gets one directory holding everything a package ships.
+ *
+ * Written once per process and never reused from a previous one. A timestamp comparison was the
+ * obvious cache and the wrong one: `unzip`, `tar x` and a font downloaded from upstream all carry
+ * an mtime older than whatever is already in `.generated`, so refreshing `fonts/` would have gone
+ * unnoticed and the old face would have shipped. An interrupted write left a truncated file that
+ * looked newer than its source and was then reused for ever, which is worse.
+ *
+ * The write goes to a temporary name and is renamed into place, which is atomic on every platform
+ * this runs on, so a reader never sees half a font however the build is interrupted or repeated.
  */
 export function prepareFont(source: string, outDir: string): string {
-  mkdirSync(outDir, { recursive: true });
   const target = path.join(outDir, renamedFileName(source));
-  if (existsSync(target) && statSync(target).mtimeMs >= statSync(source).mtimeMs) return target;
-  if (!needsRename(source)) {
-    copyFileSync(source, target);
-    return target;
+  const done = prepared.get(target);
+  if (done !== undefined) return done;
+
+  mkdirSync(outDir, { recursive: true });
+  const temporary = `${target}.${process.pid}.tmp`;
+  if (needsRename(source)) {
+    const bytes = new Uint8Array(readFileSync(source));
+    if (renameFamily(bytes) === 0) throw new Error(`${path.basename(source)} carries none of the names this renames, so its family would not resolve`);
+    writeFileSync(temporary, bytes);
+  } else {
+    copyFileSync(source, temporary);
   }
-  const bytes = new Uint8Array(readFileSync(source));
-  if (renameFamily(bytes) === 0) throw new Error(`${path.basename(source)} carries none of the names this renames, so its family would not resolve`);
-  writeFileSync(target, bytes);
+  renameSync(temporary, target);
+  prepared.set(target, target);
   return target;
 }
 

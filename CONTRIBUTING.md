@@ -1,6 +1,6 @@
-# Contributing to openDash
+# Contributing to OpenDash
 
-Thank you for looking at this. The whole point of openDash is that a dashboard change is a
+Thank you for looking at this. The whole point of OpenDash is that a dashboard change is a
 readable pull request, so most of this file is about keeping that true.
 
 ## The one rule
@@ -55,7 +55,7 @@ and the pit wall at once.
 - `packages/dash/src/contract.ts` is the settings contract shared with the plugin. Every read of
   an `OpenDash.*` property goes through it, and the validator rejects a build that reads a
   property the contract does not declare.
-- `packages/generator` knows nothing about openDash. It is the typed model of SimHub's scene
+- `packages/generator` knows nothing about OpenDash. It is the typed model of SimHub's scene
   graph, the NCalc helpers, the serialiser, the validator and the package writer, and it could
   serve any other dashboard project.
 - `plugin/OpenDash` is the C# plugin. `Contract.cs` mirrors `contract.ts` and a test keeps the
@@ -63,7 +63,7 @@ and the pit wall at once.
 
 ## Before you start
 
-[docs/scope.md](docs/scope.md) says what openDash is, what ships, and what is deliberately not
+[docs/scope.md](docs/scope.md) says what OpenDash is, what ships, and what is deliberately not
 built. The last of those is a list of refusals rather than a backlog, so a change that falls
 under one of its lines will be declined however well it is written. Should you believe a line
 ought to move, argue that first, in an issue or a decision record, and the code afterwards.
@@ -80,6 +80,12 @@ measured from the wrong face or from a sample narrower than the runtime value lo
 without failing anything. `bun run dev` puts one package on the VM with live telemetry and
 photographs it; `bun run shots` does the same for several at once. If you cannot run SimHub, say
 so in the pull request rather than leaving it unsaid.
+
+Which packages to photograph is not a matter of judgement, because a card is shared and an edit to
+one of them reaches every face it appears on. `bun run affected` builds the branch and the commit
+it forked from, compares the packages the two builds wrote, and prints the `bun run shots` command
+that captures exactly those. CI runs the same comparison on every pull request and keeps the answer
+in one comment, so a reviewer sees the reach of a change without running anything.
 
 The pull request template asks for exactly this and nothing else.
 
