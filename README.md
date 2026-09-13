@@ -1,3 +1,5 @@
+<img src="media/logo.svg" alt="" width="44" align="left" hspace="12">
+
 # OpenDash
 
 An open-source sim racing dashboard for [SimHub](https://www.simhubdash.com/), released under
