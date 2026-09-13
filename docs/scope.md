@@ -76,15 +76,32 @@ decided and are noted below.
 | Package | Size | |
 |---|---|---|
 | `openDash` | 1920 x 480 | the reference face |
-| `openDash 1280x480` | 1280 x 480 | |
+| `openDash 1280x480` | 1280 x 480 | **the large size** |
 | `openDash 1280x400` | 1280 x 400 | a shorter body, the same zones |
 | `openDash 1280x720` | 1280 x 720 | the tall body lets zone C list the field |
-| `openDash 850x480` | 850 x 480 | narrow zones, five settings in the bar |
+| `openDash 850x480` | 850 x 480 | **the base size**: narrow zones, five settings in the bar |
 | `openDash 800x480` | 800 x 480 | derived from 850 x 480 |
 | `openDash 800x286` | 800 x 286 | no bar: the height is not there |
 | `openDash 600x686` | 600 x 686 | portrait, A over B over C |
 | `openDash 800 round` | 800 x 800 | still on the card model; see below |
 | `openDash 480 round` | 480 x 480 | still on the card model; see below |
+
+**The base size is 850 x 480 and the large size is 1280 x 480.** They are the pair anything that
+has to pick a face picks: the size `bun run dev` opens when no package is named, the two the
+README photographs, and the two a change to the face is looked at in before it is looked at
+anywhere else. 850 x 480 is the base because it is the tightest face the design drew an artboard
+for that still carries all five parts -- 800 x 480 is derived from it, 800 x 286 has no room for
+the bar -- so its zones are the first real tall narrow in the repository and a page that survives
+them survives anywhere. 1280 x 480 is the large one because it is the widest size a driver is
+likely to own, and because the pair together shows what one capture cannot: the same page in a
+274 x 328 zone and in a 469 x 320 one, stacked in the first and tabulated in the second, laid out
+for its box rather than scaled into it.
+
+`openDash` at 1920 x 480 stays **the reference face**, and that is a different job from being the
+base. It is the widest artboard, the one [design/zones.md](design/zones.md) tabulates every other
+size after, and the face the plugin's pre-face settings migrate into, which is why the code and the
+canvas keep calling it that. None of that makes it the size to reach for when one face has to stand
+for the product, and it is not one many people own.
 
 **The package folders keep the small o**, and that is deliberate rather than an oversight. The
 product is OpenDash, and everything a person reads says so; a folder name is a path on somebody's
@@ -139,9 +156,10 @@ same `purpose.flag.*` tokens.
 
 One profile ships, `openDash Flag box.ledsprofile`, built by `bun run build` like everything else
 and embedded in the plugin like everything else. It is the one artefact **the plugin does not
-install**: SimHub keeps matrix profiles inside a settings file it rewrites itself, and painting
-hardware somebody owns is not something a dashboard should do without being asked. The plugin
-extracts the file and the lights page says what to import.
+install by itself**: a profile paints hardware somebody owns, which is a thing to be asked about
+rather than assumed. The Lights page has a button that adds it to SimHub's own matrix profiles
+through SimHub's own API, and it never presses itself. The file is written out as well, as the
+fallback and as the thing you copy to another machine.
 [ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning, [flag-box.md](flag-box.md) is
 the guide, and the rest of the LED families — strips, brows, wheel buttons, ambient lighting — are
 deliberately not claimed.

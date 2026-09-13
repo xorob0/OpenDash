@@ -22,6 +22,7 @@ import {
 import { FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, type SessionFlagBit } from '../src/flags.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type MatrixContainer } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
+import { eitherLadder, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { flagFrames, FLAG_PALETTE, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
 import { buildFlagBoxProfile, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
@@ -38,6 +39,16 @@ const TOKEN_COLOURS = new Set<string>();
   }
   if (node !== null && typeof node === 'object') for (const v of Object.values(node)) collect(v);
 })(ds);
+
+/**
+ * The condition inside a segment's `if(lit, colour, unlit)`. A segment carries its test that way,
+ * so this is how a band's threshold is compared against the bar's rather than eyeballed.
+ */
+const litOf = (colorBind: string | undefined): string => {
+  const m = /^if\((.*), '#[0-9A-F]{6}', '#[0-9A-F]{6}'\)$/.exec(colorBind ?? '');
+  if (m?.[1] === undefined) throw new Error(`not a segment colour bind: ${colorBind}`);
+  return m[1];
+};
 
 const profile = buildFlagBoxProfile();
 const all = [...walkContainers(profile.containers)];
@@ -378,8 +389,9 @@ describe('the gear, as the resting state', () => {
   });
 
   test('the colour is the shift model, taken from the rev bar', () => {
-    // One relationship learned once and read in two places. When XOR-230 replaces SimHub's
-    // per-car bands with the sim's own DriverCarSL* values, it changes shiftBands() alone.
+    // One relationship learned once and read in two places. XOR-230 replaced SimHub's per-car
+    // bands with the sim's own DriverCarSL* values and changed shiftBands() alone, so the box now
+    // carries both ladders: the car's own, and SimHub's for a car that publishes none.
     const bands = shiftBands();
     expect(bands.map((b) => b.id)).toEqual(['redline', 'stage2', 'stage1', 'rest']);
     expect(bands.map((b) => b.colour)).toEqual([ds.purpose.shift.stage3, ds.purpose.shift.stage2, ds.purpose.shift.stage1, ds.color.text.primary]);
@@ -387,16 +399,82 @@ describe('the gear, as the resting state', () => {
     expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMRedLineReached]');
     expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMShiftLight1]');
     expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMShiftLight2]');
+    // All four are read: First, Shift and Last are the band boundaries, and Blink is the over-rev
+    // flash the digit shares with the bar. The test below is the one that pins the fourth.
+    for (const property of Object.values(SHIFT_RPM_PROPERTIES)) expect(text).toInclude(`[${property}]`);
   });
 
   test('the bands the gear uses are the ones the rev bar segments light at', () => {
-    // revSegmentOptions lights the first segment of stage 0 when RPMShiftLight1 leaves zero and
-    // the first of stage 1 when RPMShiftLight2 does; shiftBands says the same thing for a digit.
-    const bands = shiftBands();
-    const first = revSegmentOptions(0, 15);
-    const stage1Entry = bands.find((b) => b.id === 'stage1');
-    expect(first.shift.colorBind).toInclude(ds.purpose.shift.stage1);
-    expect(stage1Entry?.raised).toInclude('CarSettings_RPMShiftLight1');
+    // The real invariant, and the one ADR 0014 turns on: a band is entered at *exactly* the
+    // expression the rev bar's first segment of that stage lights at — under both ladders, because
+    // since XOR-230 the bar picks between them per frame and the digit has to pick the same way.
+    // String equality rather than a shared colour token: a colour in common would still pass with
+    // the two sides reading different properties, which is what this test was doing before.
+    const raisedOf = (id: string): string => shiftBands().find((b) => b.id === id)?.raised ?? '';
+    const stages = [
+      { stage: 0, id: 'stage1' },
+      { stage: 1, id: 'stage2' },
+      { stage: 2, id: 'redline' },
+    ] as const;
+    for (const { stage, id } of stages) {
+      // Segment 0, 5 and 10 of fifteen are the first segments of the three stages.
+      const first = revSegmentOptions(stage * 5, 15);
+      const raised = raisedOf(id);
+      // The two halves are the bar's own two layers, chosen by the bar's own test.
+      expect({ id, raised }).toEqual({ id, raised: eitherLadder(litOf(first.shift.colorBind), litOf(first.simhub.colorBind)) });
+      expect(raised).toInclude(mirrorAvailable());
+    }
+    // A band the digit shows is a band the bar is in: nothing here is the plain RPM bar's.
+    for (const { id } of stages) expect(raisedOf(id)).not.toInclude('CurrentDisplayedRPMPercent');
+  });
+
+  test("the digit flashes on the bar's over-rev threshold, not merely on the top band", () => {
+    // XOR-233's review, and the defect ADR 0014 says cannot exist. The digit used to flash the
+    // moment the top band was entered -- `Rpms >= LastRPM` -- while the bar's top band flashes at
+    // `max(BlinkRPM, LastRPM)` and stops in the last gear. On a rig with a box and a screen the
+    // digit strobed against a solid bar, and went on strobing in top gear where the bar
+    // deliberately does not.
+    //
+    // String equality against the expressions both sides actually emit. A shared colour token
+    // would pass with the two reading different properties, which is how this survived the test
+    // above it.
+    const top = revSegmentOptions(14, 15);
+    const bar = eitherLadder(top.shift.blinkBind ?? '', top.simhub.blinkBind ?? '');
+
+    const overRev = all.find((c) => c.description === 'Gear redline over-rev');
+    const steady = all.find((c) => c.description === 'Gear redline steady');
+    expect(overRev?.kind).toBe('when');
+    expect(steady?.kind).toBe('when');
+    const flash = overRev?.kind === 'when' ? String(overRev.formula) : '';
+    expect(flash).toBe(bar);
+    // And the two halves partition the band, so there is no RPM at which the digit is neither.
+    expect(steady?.kind === 'when' ? String(steady.formula) : '').toBe(`!(${bar})`);
+
+    // The two properties whose absence was the bug: the over-rev RPM, and the gear count the last
+    // gear is found from. Neither appeared anywhere in this profile before.
+    const text = serializeProfile(profile);
+    expect(flash).toInclude(SHIFT_RPM_PROPERTIES.blink);
+    expect(flash).toInclude(GEAR_COUNT_PROPERTY);
+    expect(text).toInclude(flash);
+    // Entering the top band is a different question from flashing in it, and stays one.
+    expect(flash).not.toBe(shiftBands().find((b) => b.id === 'redline')?.raised);
+  });
+
+  test('the flashing glyphs are the ones under the over-rev condition', () => {
+    // The blink is a condition on the matrix rather than a binding on a glyph, because an
+    // AnimationContainer just loops its frames. So the pin above is only worth something if the
+    // two-frame glyphs are the ones inside that group and the one-frame glyphs are the others.
+    const framesUnder = (description: string): number[] => {
+      const group = all.find((c) => c.description === description);
+      return [...walkContainers(group ? [group] : [])].filter((c) => c.kind === 'animation').map((c) => (c.kind === 'animation' ? c.frames.length : 0));
+    };
+    expect(new Set(framesUnder('Gear redline over-rev'))).toEqual(new Set([2]));
+    expect(new Set(framesUnder('Gear redline steady'))).toEqual(new Set([1]));
+    // Every other band is steady throughout, which is what `blink: null` means.
+    for (const band of shiftBands().filter((b) => b.id !== 'redline')) {
+      expect({ band: band.id, blink: band.blink }).toEqual({ band: band.id, blink: null });
+      expect(new Set(framesUnder(`Gear ${band.id}`))).toEqual(new Set([1]));
+    }
   });
 
   test('the redline band blinks the digit rather than filling the panel', () => {
@@ -446,6 +524,10 @@ describe('the gear, as the resting state', () => {
 });
 
 describe('the four matrix contents', () => {
+  test('no container carries a DeviceKind, which SimHub would drop anyway', () => {
+    expect(serializeProfile(profile)).not.toInclude('DeviceKind');
+  });
+
   test('each matrix has a group of its own, offset onto it', () => {
     // A group's StartPositionMatrix is an offset applied when its children's results are merged,
     // so the subtree below stays at matrix 1 and the group shifts it.
@@ -468,9 +550,9 @@ describe('the four matrix contents', () => {
   });
 
   test('the defaults are a working single-box setup: matrix 1 does everything, 2 to 4 are off', () => {
-    expect(FLAG_BOX_MATRIX_DEFAULTS[1]).toEqual({ rest: 'gear', flags: true, spotter: true, warnings: true, side: 'both' });
+    expect(FLAG_BOX_MATRIX_DEFAULTS[1]).toEqual({ rest: 'gear', flags: true, pit: true, spotter: true, warnings: true, side: 'both' });
     for (const matrix of [2, 3, 4] as const) {
-      expect(FLAG_BOX_MATRIX_DEFAULTS[matrix]).toEqual({ rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' });
+      expect(FLAG_BOX_MATRIX_DEFAULTS[matrix]).toEqual({ rest: 'dark', flags: false, pit: false, spotter: false, warnings: false, side: 'both' });
     }
   });
 
@@ -517,7 +599,7 @@ describe('the pit family, the spotter and the warnings', () => {
 
   test('speeding is a comparison of two published numbers, not state between frames', () => {
     const text = serializeProfile(profile);
-    expect(text).toInclude('[DataCorePlugin.GameData.PitLimiterSpeed]');
+    expect(text).toInclude('[DataCorePlugin.GameData.PitLimiterSpeedMs]');
     expect(text).toInclude('[DataCorePlugin.GameData.SpeedKmh]');
     expect(text).toInclude('[DataCorePlugin.GameData.IsInPitLane]');
   });
@@ -546,6 +628,34 @@ describe('the pit family, the spotter and the warnings', () => {
     const formula = (below as Extract<MatrixContainer, { kind: 'when' }>).formula;
     const text = typeof formula === 'string' ? formula : formula.expression;
     for (const condition of FLAG_CATALOGUE) expect(text).toInclude(condition.bits[0] ?? '');
+  });
+
+  test('the pit family has its own switch, not the flags\' one', () => {
+    // A driver who turns flags off on a panel has not asked to lose the pit limiter warning.
+    const pit = all.find((c) => c.description === 'Pit');
+    const formula = (pit as Extract<MatrixContainer, { kind: 'when' }>).formula;
+    const text = typeof formula === 'string' ? formula : formula.expression;
+    expect(text).toInclude('FlagBoxMatrix1Pit');
+    expect(text).not.toInclude('FlagBoxMatrix1Flags');
+  });
+
+  test('a panel that does not show flags is not blacked out by one', () => {
+    // "Below the flags" used to be gated on the flag conditions alone, so a live flag suppressed the
+    // spotter, the warnings and the gear even on a panel with Flags switched off.
+    const below = all.find((c) => c.description === 'Below the flags');
+    const formula = (below as Extract<MatrixContainer, { kind: 'when' }>).formula;
+    const text = typeof formula === 'string' ? formula : formula.expression;
+    expect(text).toInclude('FlagBoxMatrix1Flags');
+  });
+
+  test('speeding is compared in one unit, and an unpublished limit never fires', () => {
+    // PitLimiterSpeed is converted to the user's local speed unit, so comparing it with SpeedKmh
+    // reads as speeding from a standstill for anyone on MPH -- and that term gates everything below
+    // the flags, so it would black out the panel rather than merely light the wrong picture.
+    const text = serializeProfile(profile);
+    expect(text).toInclude('PitLimiterSpeedMs');
+    expect(text).not.toInclude('GameData.PitLimiterSpeed]');
+    expect(text).toInclude('isnull([DataCorePlugin.GameData.PitLimiterSpeedMs], 999)');
   });
 
   test('the pit family outranks the spotter, which outranks the warnings', () => {

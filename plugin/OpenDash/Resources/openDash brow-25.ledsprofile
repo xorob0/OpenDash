@@ -336,7 +336,7 @@
                           "LedCount": 1,
                           "Color": "#00D96A",
                           "EnabledFormula": {
-                            "Expression": "((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (9)) > (0)"
+                            "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) > (0)"
                           },
                           "ContainerType": "CustomStatus"
                         },
@@ -426,7 +426,7 @@
                           "LedCount": 1,
                           "Color": "#FFB300",
                           "EnabledFormula": {
-                            "Expression": "((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (8)) > (0)"
+                            "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) > (0)"
                           },
                           "ContainerType": "CustomStatus"
                         },
@@ -951,7 +951,7 @@
                           "LedCount": 1,
                           "Color": "#00D96A",
                           "EnabledFormula": {
-                            "Expression": "((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0)"
+                            "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) > (0)"
                           },
                           "ContainerType": "CustomStatus"
                         },
@@ -1001,7 +1001,7 @@
                           "LedCount": 1,
                           "Color": "#FFB300",
                           "EnabledFormula": {
-                            "Expression": "((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (4)) > (0)"
+                            "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) > (0)"
                           },
                           "ContainerType": "CustomStatus"
                         },
@@ -1183,7 +1183,7 @@
                           "LedCount": 1,
                           "Color": "#FFB300",
                           "EnabledFormula": {
-                            "Expression": "((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (4)) > (0)"
+                            "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) > (0)"
                           },
                           "ContainerType": "CustomStatus"
                         },
@@ -1233,7 +1233,7 @@
                           "LedCount": 1,
                           "Color": "#00D96A",
                           "EnabledFormula": {
-                            "Expression": "((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0)"
+                            "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) > (0)"
                           },
                           "ContainerType": "CustomStatus"
                         }
@@ -1671,7 +1671,7 @@
                           "BlinkEnabled": true,
                           "BlinkDelay": 62,
                           "EnabledFormula": {
-                            "Expression": "((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (9)) > (0)"
+                            "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) > (0)"
                           },
                           "BlinkFormula": {
                             "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
@@ -1815,7 +1815,7 @@
                           "BlinkEnabled": true,
                           "BlinkDelay": 62,
                           "EnabledFormula": {
-                            "Expression": "((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (8)) > (0)"
+                            "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) > (0)"
                           },
                           "BlinkFormula": {
                             "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"

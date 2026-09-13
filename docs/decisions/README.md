@@ -21,7 +21,7 @@ the thing that is wrong when the two disagree.
 | 0011 | [How far personalisation reaches](0011-personalisation.md) | Colour is a runtime setting, geometry is a build input, and nothing regenerates a package locally |
 | 0012 | [Update checks, and what leaves the user's machine](0012-update-checks.md) | openDash asks GitHub what the newest release is, sends nothing about the user, and never installs without being told |
 | 0013 | [openDash lights hardware, and the flag box is where it starts](0013-lighting-hardware.md) | An 8x8 matrix profile is build output like a package, but the user imports it rather than the plugin installing it |
-| 0014 | [The shift model is the car's own](0014-the-shift-model.md) | iRacing publishes the car's shift-light RPMs and SimHub ignores them; one definition drives the bar, the arc and the strip. Amends 0004 |
+| 0014 | [The shift model is the car's own](0014-the-shift-model.md) | iRacing publishes the car's shift-light RPMs and SimHub ignores them; one definition drives the bar, the arc, the flag box and the strip. Amends 0004 |
 
 ## Reserved
 

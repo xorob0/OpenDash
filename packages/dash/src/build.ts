@@ -364,7 +364,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
   // in composePackages because only this function can see the profiles.
   const staged = composePackages({ ...opts, version, simHubVersion, strategy, log }, true);
 
-  const ledProfile = opts.ledProfile ?? buildFlagBoxProfile();
+  const ledProfile = opts.ledProfile ?? buildFlagBoxProfile(version);
   const stripShapes = opts.stripShapes ?? ALL_SHAPES;
   if (staged.length === 0 && stripShapes.length === 0) throw new BuildError('there is nothing to build');
   const ledWarnings = validateProfileOrThrow(ledProfile);

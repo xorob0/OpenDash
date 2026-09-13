@@ -177,31 +177,31 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The mark: the rev bar, which is the one shape OpenDash owns, as five segments lit left to right.
+        /// The mark: the dash, a housing under a half circle with a tachometer needle swept up and to the right.
         /// </summary>
         /// <remarks>
-        /// The geometry is MarkShape.Bars, which mirrors media/logo.svg; MarkTests checks the two against each
-        /// other. WPF cannot render an SVG and Markdown cannot render a Canvas, so the shape is written twice and
-        /// the test is what stops the copies drifting. Change the SVG first and the constants second.
+        /// The geometry is MarkShape.PathData, which is the SVG's own `d` string rather than a transcription of it,
+        /// so the two copies are one string and MarkTests compares them character for character. WPF cannot render
+        /// an SVG and Markdown cannot render a Canvas, so the shape is drawn twice; this is what stops the copies
+        /// drifting, and the last mark proved it is needed, because the rectangles matched and the corner radius
+        /// did not. Change the SVG first.
+        ///
+        /// "F0" is the path mini-language's even-odd fill rule, which is what the SVG spells as
+        /// fill-rule="evenodd": it is what makes the needle a hole in the housing rather than a second shape on
+        /// top of it, so the mark carries one brush and works on any ground. RenderTransform rather than Stretch,
+        /// because Stretch fits the ink's bounds and would quietly drop the box's padding.
         /// </remarks>
         public static FrameworkElement Mark(double size = 24)
         {
             var scale = size / MarkShape.Box;
-            var canvas = new Canvas { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
-            foreach (var bar in MarkShape.Bars)
+            var mark = new Path
             {
-                var rect = new Rectangle
-                {
-                    Width = bar[2] * scale,
-                    Height = bar[3] * scale,
-                    RadiusX = bar[2] * scale / 2,
-                    RadiusY = bar[2] * scale / 2,
-                    Fill = Brush(Theme.Accent),
-                };
-                Canvas.SetLeft(rect, bar[0] * scale);
-                Canvas.SetTop(rect, bar[1] * scale);
-                canvas.Children.Add(rect);
-            }
+                Data = Geometry.Parse("F0 " + MarkShape.PathData),
+                Fill = Brush(Theme.Accent),
+                RenderTransform = new ScaleTransform(scale, scale),
+            };
+            var canvas = new Canvas { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
+            canvas.Children.Add(mark);
             return canvas;
         }
 

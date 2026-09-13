@@ -24,7 +24,7 @@ The same five parts on every rectangular face. Only their sizes change.
 
 | | |
 |---|---|
-| **Rev bar** | Shift lights in a recessed well, full width, never moves. |
+| **Rev bar** | Shift lights in a recessed well, full width, never moves. It can be turned off entirely, in which case the face is drawn in its second arrangement and the well's room goes to the zones. |
 | **The bar** | What the car is set to and where the session is: a field at each end that a driver may swap, and a settings strip between them that hides what the game does not expose. |
 | **Zone B** | A page from the catalogue of twenty-one. |
 | **Zone A** | The one read by reflex: gear, gear and speed, speed, or the track. |
@@ -121,6 +121,42 @@ rather than B beside A beside C, and each end of the bar carries one field rathe
 
 **800 × 480** has no artboard and never did. It is derived from 850 × 480, and the layout file
 says so, exactly as `layouts/800x480.ts` says it today.
+
+### The face with the rev bar off
+
+**Derived, not drawn.** `OpenDash.RevBar` has a third state, `off`, for a driver whose wheel or DDU
+already carries LEDs across its top (XOR-138). Hiding the segments alone leaves the well lit by
+nothing, so the face has a second arrangement, and its rectangles are the only ones in this document
+that no artboard gives. §10 records what the canvas owes.
+
+The rule, in `zonesWithoutRevBar`:
+
+- What is given back is **the well and the gap under it**. The one to four pixels above the well are
+  not: that is the top margin of the face, and giving it back would put the bar's labels' line box a
+  pixel above the canvas, where WPF clips the row.
+- The bar rises to where the well began. The zones that **start the body** rise with it and grow by
+  the same amount, so they keep their bottom edge. In portrait only zone A starts the body, so B and
+  C keep both their rectangles and their zone dashboards.
+- Band D does not move: it is measured from the bottom edge and the bottom edge has not changed. The
+  pit limiter moves with zone A, because that is what it is drawn over.
+
+| Face | Given back | Of the height | Bar | Body |
+|---|---|---|---|---|
+| 1920 × 480 | 44 | 9% | 0, 4 | 61, 358 |
+| 1280 × 480 | 41 | 9% | 0, 3 | 58, 361 |
+| 1280 × 400 | 34 | 9% | 0, 2 | 53, 292 |
+| 1280 × 720 | 44 | 6% | 0, 4 | 61, 598 |
+| 850 × 480 | 38 | 8% | 0, 2 | 53, 366 |
+| 800 × 480 | 38 | 8% | 0, 2 | 53, 366 |
+| 600 × 686 | 34 | 5% | 0, 2 | zone A 49, 268 |
+| 800 × 286 | 32 | 11% | none | 1, 226 |
+
+It is a second **screen** and not a second package: the two arrangements sit in one `.djson` with
+complementary `ScreenEnabledExpression`s, so the setting changes the face in front of the driver
+rather than asking them to reinstall. SimHub re-evaluates those expressions every frame and moves
+off a screen that has stopped being enabled — `EditorModel.CheckGameModeScreen` in 9.12.6. The cost
+is the zone dashboards the grown rectangles need: two more per landscape face, one per portrait one,
+about 17% on a package.
 
 ### The zone header
 
@@ -398,7 +434,13 @@ Each name is written here without its prefix, for the shape. A screen owns its s
 attached is `Face1920x480ZoneA` and `Face1280x400ZoneBClassOnly`: the same decision, once per face.
 
 The four modes the slot model already had — `ShiftLights`, `PositionMode`, `DeltaReference`,
-`SessionProgress` — are unchanged.
+`SessionProgress` — are unchanged, and `RevBar` joins them: what the top of the face carries,
+`shift`, `rpm` or `off`, with `off` drawing the second arrangement. It carries no face's prefix
+because it is not one face's, whatever the second arrangement is: the round faces' rev arc and the
+companion's speedo draw the same segments from the same setting, and a screen may not read a
+property another screen owns. `ShiftLights` is now its deprecated alias and stays attached for a
+release: an rc.2 user's properties do not vanish without warning (XOR-119), and a package installed
+beside an older plugin falls back through it.
 
 Every expression that reads one of these wraps it in `isnull()` with the default, so a package
 installed without the plugin shows each zone's start page and simply cannot cycle. That is still a
@@ -472,6 +514,7 @@ a mistake in this document.
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
+| The face with no rev bar | XOR-138 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
 
 ---
 

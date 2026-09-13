@@ -34,7 +34,14 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
 
 A face is **five parts**, and every rectangular size is the same five.
 
-- The **rev bar** across the top, with its shift lights, in a recessed well.
+- The **rev bar** across the top, with its shift lights, in a recessed well. The lights come on at
+  the RPMs **your sim publishes for the car you are driving**, so a car released this morning is
+  right with nothing to set up; for a car that publishes none, the bar falls back to SimHub's own
+  per-car bands, the ones you tune on SimHub's Car Settings page. Nothing in the plugin chooses
+  between the two and there is no setting for it: the bar asks the car, every frame. It can show a
+  plain RPM bar instead, or nothing at all: switched off, the well goes with it, the bar rises into
+  its room and the body grows by what it gained. The band keeps its place, because it is measured
+  from the bottom edge.
 - The **bar** below it, carrying what does not change during a lap: two fields at each end,
   chosen from a catalogue of ten, and between them the car settings your sim publishes.
 - The **body**, which is **zone B, zone A and zone C** side by side. Zone A is the narrow middle
@@ -57,15 +64,22 @@ than the same thing larger.
 | Dashboard | Screen | |
 |---|---|---|
 | openDash | 1920 x 480 | the reference face |
-| openDash 1280x480 | 1280 x 480 | |
+| openDash 1280x480 | 1280 x 480 | **the large size** |
 | openDash 1280x400 | 1280 x 400 | a shorter body, the same zones |
 | openDash 1280x720 | 1280 x 720 | the tall body lets zone C list the field |
-| openDash 850x480 | 850 x 480 | narrower zones, fewer cells in the car settings |
+| openDash 850x480 | 850 x 480 | **the base size**: narrower zones, fewer cells in the car settings |
 | openDash 800x480 | 800 x 480 | |
 | openDash 800x286 | 800 x 286 | no bar: the height is not there |
 | openDash 600x686 | 600 x 686 | portrait, zone A above B above C, one bar field per end |
 | openDash 480 round | 480 x 480, round | still the twelve-slot face; see below |
 | openDash 800 round | 800 x 800, round | still the twelve-slot face; see below |
+
+Take the one that matches your display. If nothing matches exactly, **850 x 480 is the base
+size** and the one to try first: it is the common wheel-mounted DDU, and it is the tightest face
+that still carries all five parts. **1280 x 480 is the large size**, for a wider DDU. SimHub scales
+whichever face you assign to whatever display you assign it to, so a mismatched size is not broken,
+only drawn at the wrong proportions and the wrong density; take the nearest shape rather than the
+biggest number.
 
 Four more dashboards are not faces for the wheel but second screens, described below.
 
@@ -144,22 +158,23 @@ If you have an **8x8 LED matrix** on an Arduino — the printed box a lot of peo
 screen — openDash drives it too: the flag that is out, the gear, the pit state, a car alongside,
 and the warnings you would otherwise miss.
 
-It is the one thing openDash **does not install for you.** SimHub keeps matrix profiles inside a
-settings file it rewrites whenever anything changes, so writing into it underneath a running
-SimHub would lose the other profiles you have made. The plugin writes the file where you can find
-it and stops:
+Install it from the OpenDash page under **Lights**: press **Install into SimHub**, then pick the
+profile on your matrix device. The button says what it will do before you press it, and the line
+beside it says what SimHub holds now.
 
-```
-SimHub\OpenDash\openDash Flag box.ledsprofile
-```
+**openDash never installs it on its own.** A profile paints hardware you own, so it is asked about
+once rather than assumed. It also only ever recognises its own profile, so one you made yourself is
+never touched. When openDash updates, the button offers **Update in SimHub** — and updating replaces
+the copy in SimHub, including any changes you made to it there.
 
-The exact path is on the OpenDash page under **Lights**. Import it once, in SimHub's own matrix
-device settings, and everything on that page then reaches the box while you drive.
+If the button is greyed out, SimHub's matrix settings could not be reached. openDash also writes the
+profile to `SimHub\OpenDash\openDash Flag box.ledsprofile`, shown under the button, which you can
+import through SimHub's own profile import.
 
-Before that, set the matrix's **rotation** and **serpentine** on the device in SimHub. Those two
-belong to SimHub rather than to openDash, because the right values depend on which corner your
-data cable enters — and if they are wrong, the picture comes out sideways or shredded and the
-profile looks broken when it is not.
+Before any of that, set the matrix's **rotation** and **serpentine** on the device in SimHub. Those
+belong to SimHub rather than to openDash, because the right values depend on which corner your data
+cable enters — and if they are wrong, the picture comes out sideways or shredded and the profile
+looks broken when it is not.
 
 [docs/flag-box.md](../docs/flag-box.md) is the full guide: what every picture means, what the box
 does not do and why, and what to check when it looks wrong.
@@ -171,7 +186,7 @@ nothing to save and no restart.
 
 | Section | Setting | Values |
 |---|---|---|
-| General | Shift lights on the dash | on, off (the rev bar stays; turn off if your DDU has physical LEDs) |
+| General | The rev bar | Shift lights (the car's own, SimHub's bands where the car publishes none), RPM bar, Off (off gives the bar's room back to the zones on a zone face; pick it if your DDU has LEDs of its own) |
 | Data | Position | Overall, Class |
 | Data | Delta reference | Session best, All-time best |
 | Data | Session progress | Auto, Laps, Time |
@@ -199,9 +214,13 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `Face1920x480ZoneAStart` the one it opens on, `Face1920x480BarLeft1` a bar field and
 `Face1920x480QuickGlance` the glance, with the same set for every other size. Alongside them are
 `OpenDash.ShiftLights`, `OpenDash.PositionMode`, `OpenDash.DeltaReference`,
-`OpenDash.SessionProgress`, `OpenDash.Slot01` to `OpenDash.Slot12` for the round faces,
-`OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallZoneA` to `PitWallZoneD`,
-`OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
+`OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to `OpenDash.Slot12` for the
+round faces, `OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallZoneA` to
+`PitWallZoneD`, `OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
+
+`OpenDash.RevBar` is `shift`, `rpm` or `off`, and it is what the General section's control writes.
+`OpenDash.ShiftLights` is the deprecated alias kept beside it, true only in the `shift` state, so a
+dashboard or an LED profile written against it still reads.
 
 ## Update
 

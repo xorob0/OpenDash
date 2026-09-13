@@ -18,10 +18,77 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings();
             Assert.True(settings.ShiftLights);
+            Assert.Equal(Contract.RevBarShift, settings.RevBarMode());
             Assert.Equal("overall", settings.PositionMode);
             Assert.Equal("session", settings.DeltaReference);
             Assert.Equal("auto", settings.SessionProgress);
             Assert.Equal(Contract.DefaultSlots(), settings.Slots);
+        }
+
+        /// <summary>
+        /// XOR-138 and XOR-119. The mode arrived after rc.2 shipped, so a settings file may not carry
+        /// it, and the one thing that must not happen is a driver who turned the shift lights off
+        /// finding them back on after an update.
+        /// </summary>
+        [Fact]
+        public void A_settings_file_written_before_the_mode_existed_keeps_its_answer()
+        {
+            // What Json.NET leaves behind for an rc.2 file: ShiftLights set, RevBar absent.
+            var off = new OpenDashSettings { ShiftLights = false, RevBar = null };
+            Assert.Equal(Contract.RevBarRpm, off.RevBarMode());
+            off.Normalise();
+            Assert.Equal(Contract.RevBarRpm, off.RevBar);
+            Assert.False(off.ShiftLights);
+
+            var on = new OpenDashSettings { ShiftLights = true, RevBar = null };
+            on.Normalise();
+            Assert.Equal(Contract.RevBarShift, on.RevBar);
+            Assert.True(on.ShiftLights);
+        }
+
+        [Fact]
+        public void The_mode_wins_over_the_alias_once_it_is_set_and_the_two_stay_in_step()
+        {
+            // A file that carries both: the mode is what the driver chose last, so it decides, and
+            // the alias is rewritten to agree rather than left to contradict it.
+            var settings = new OpenDashSettings { ShiftLights = true, RevBar = Contract.RevBarOff };
+            settings.Normalise();
+            Assert.Equal(Contract.RevBarOff, settings.RevBar);
+            Assert.False(settings.ShiftLights);
+
+            settings.SetRevBar(Contract.RevBarShift);
+            Assert.True(settings.ShiftLights);
+            settings.SetRevBar(Contract.RevBarRpm);
+            Assert.False(settings.ShiftLights);
+        }
+
+        [Fact]
+        public void An_unreadable_mode_falls_back_through_the_alias()
+        {
+            var settings = new OpenDashSettings { ShiftLights = false, RevBar = "sparkles" };
+            settings.Normalise();
+            Assert.Equal(Contract.RevBarRpm, settings.RevBar);
+
+            // Case and whitespace are the shapes a hand-edited file has.
+            var typed = new OpenDashSettings { RevBar = "  OFF " };
+            typed.Normalise();
+            Assert.Equal(Contract.RevBarOff, typed.RevBar);
+
+            // And an unknown mode handed to the setter is refused rather than stored.
+            var set = new OpenDashSettings();
+            set.SetRevBar("sparkles");
+            Assert.Equal(Contract.DefaultRevBar, set.RevBar);
+        }
+
+        [Fact]
+        public void CopyFrom_carries_the_mode()
+        {
+            var source = new OpenDashSettings();
+            source.SetRevBar(Contract.RevBarOff);
+            var target = new OpenDashSettings();
+            target.CopyFrom(source);
+            Assert.Equal(Contract.RevBarOff, target.RevBar);
+            Assert.False(target.ShiftLights);
         }
 
         [Fact]
@@ -827,6 +894,80 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void Normalise_repairs_a_strip_setting_it_does_not_recognise()
+        {
+            // A profile reads both through isnull() with its own default, so a value that reaches the
+            // strip unrecognised lights nothing at all: every gate inside compares against a spelling.
+            var settings = new OpenDashSettings { LedCentre = "sparkles", LedRpmStyle = null };
+            settings.Normalise();
+            Assert.Equal(Contract.DefaultLedCentre, settings.LedCentre);
+            Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedRpmStyle);
+
+            // Canonical casing, the way every other choice is normalised.
+            var typed = new OpenDashSettings { LedCentre = " ThrottleBrake ", LedRpmStyle = "MEETINMIDDLE" };
+            typed.Normalise();
+            Assert.Equal("throttleBrake", typed.LedCentre);
+            Assert.Equal("meetInMiddle", typed.LedRpmStyle);
+        }
+
+        [Fact]
+        public void CopyFrom_carries_the_lights()
+        {
+            // It carried none of them before the strips were added: the panel's copy handed back a rig
+            // with the brightness at 100 and matrix 1 back on flags, whatever the driver had set.
+            var source = new OpenDashSettings
+            {
+                LightsBrightness = 60,
+                LightsNightBrightness = 10,
+                LightsNightMode = true,
+                FlagBoxCriticalOnly = true,
+                FlagBoxGear = false,
+                FlagBoxLowFuelLaps = 5,
+                FlagBoxOilTemp = 130,
+                FlagBoxWaterTemp = 115,
+                LedCentre = "fuel",
+                LedRpmStyle = "f1",
+            };
+            source.Normalise();
+            source.FlagBoxRest[1] = "gear";
+            source.FlagBoxSide[0] = "left";
+            source.FlagBoxFlags[3] = true;
+
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(source);
+            Assert.Equal(60, copy.LightsBrightness);
+            Assert.Equal(10, copy.LightsNightBrightness);
+            Assert.True(copy.LightsNightMode);
+            Assert.True(copy.FlagBoxCriticalOnly);
+            Assert.False(copy.FlagBoxGear);
+            Assert.Equal(5, copy.FlagBoxLowFuelLaps);
+            Assert.Equal(130, copy.FlagBoxOilTemp);
+            Assert.Equal(115, copy.FlagBoxWaterTemp);
+            Assert.Equal("gear", copy.MatrixRest(2));
+            Assert.Equal("left", copy.MatrixSide(1));
+            Assert.True(copy.MatrixFlags(4));
+            Assert.Equal("fuel", copy.LedCentre);
+            Assert.Equal("f1", copy.LedRpmStyle);
+
+            // A clone, not the same array: editing one settings object must not edit the other.
+            copy.FlagBoxRest[1] = "dark";
+            Assert.Equal("gear", source.MatrixRest(2));
+        }
+
+        [Fact]
+        public void A_settings_file_written_before_the_strips_existed_comes_back_with_them_defaulted()
+        {
+            // The strips shipped their profiles before the plugin had either name, so every file
+            // written until now is one of these.
+            var json = "{\"LightsBrightness\":80}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+            Assert.Equal(80, settings.LightsBrightness);
+            Assert.Equal(Contract.DefaultLedCentre, settings.LedCentre);
+            Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedRpmStyle);
+        }
+
+        [Fact]
         public void The_defaults_are_a_working_single_box_setup()
         {
             var settings = new OpenDashSettings();
@@ -834,12 +975,14 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal("gear", settings.MatrixRest(1));
             Assert.True(settings.MatrixFlags(1));
+            Assert.True(settings.MatrixPit(1));
             Assert.True(settings.MatrixSpotter(1));
             Assert.True(settings.MatrixWarnings(1));
             foreach (var matrix in new[] { 2, 3, 4 })
             {
                 Assert.Equal("dark", settings.MatrixRest(matrix));
                 Assert.False(settings.MatrixFlags(matrix));
+                Assert.False(settings.MatrixPit(matrix));
                 Assert.False(settings.MatrixSpotter(matrix));
                 Assert.False(settings.MatrixWarnings(matrix));
             }
@@ -879,11 +1022,11 @@ namespace OpenDashPlugin.Tests
         public void The_declared_properties_grow_and_shrink_with_the_rig()
         {
             // Eight face sizes times twenty-one properties is what the plugin used to attach whatever
-            // the rig was. What it attaches now is the four modes and the twelve slots, which every
-            // screen shares, and one group per screen the settings hold.
+            // the rig was. What it attaches now is the four modes, the twelve slots and the rev bar,
+            // which every screen shares, and one group per screen the settings hold.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(16, shared);
+            Assert.Equal(17, shared);
             // The lights are declared whatever the rig is: openDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
             // rather than the hundred and thirty-six that made the screens worth narrowing.

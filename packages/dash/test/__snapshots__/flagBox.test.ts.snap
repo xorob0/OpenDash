@@ -64,28 +64,52 @@ exports[`the emitted file the tree 1`] = `
           when Resting
             when Gear
               when Gear redline
-                when Gear R redline
-                  animation Gear R redline glyph
-                when Gear N redline
-                  animation Gear N redline glyph
-                when Gear 1 redline
-                  animation Gear 1 redline glyph
-                when Gear 2 redline
-                  animation Gear 2 redline glyph
-                when Gear 3 redline
-                  animation Gear 3 redline glyph
-                when Gear 4 redline
-                  animation Gear 4 redline glyph
-                when Gear 5 redline
-                  animation Gear 5 redline glyph
-                when Gear 6 redline
-                  animation Gear 6 redline glyph
-                when Gear 7 redline
-                  animation Gear 7 redline glyph
-                when Gear 8 redline
-                  animation Gear 8 redline glyph
-                when Gear 9 redline
-                  animation Gear 9 redline glyph
+                when Gear redline over-rev
+                  when Gear R redline
+                    animation Gear R redline glyph
+                  when Gear N redline
+                    animation Gear N redline glyph
+                  when Gear 1 redline
+                    animation Gear 1 redline glyph
+                  when Gear 2 redline
+                    animation Gear 2 redline glyph
+                  when Gear 3 redline
+                    animation Gear 3 redline glyph
+                  when Gear 4 redline
+                    animation Gear 4 redline glyph
+                  when Gear 5 redline
+                    animation Gear 5 redline glyph
+                  when Gear 6 redline
+                    animation Gear 6 redline glyph
+                  when Gear 7 redline
+                    animation Gear 7 redline glyph
+                  when Gear 8 redline
+                    animation Gear 8 redline glyph
+                  when Gear 9 redline
+                    animation Gear 9 redline glyph
+                when Gear redline steady
+                  when Gear R redline
+                    animation Gear R redline glyph
+                  when Gear N redline
+                    animation Gear N redline glyph
+                  when Gear 1 redline
+                    animation Gear 1 redline glyph
+                  when Gear 2 redline
+                    animation Gear 2 redline glyph
+                  when Gear 3 redline
+                    animation Gear 3 redline glyph
+                  when Gear 4 redline
+                    animation Gear 4 redline glyph
+                  when Gear 5 redline
+                    animation Gear 5 redline glyph
+                  when Gear 6 redline
+                    animation Gear 6 redline glyph
+                  when Gear 7 redline
+                    animation Gear 7 redline glyph
+                  when Gear 8 redline
+                    animation Gear 8 redline glyph
+                  when Gear 9 redline
+                    animation Gear 9 redline glyph
               when Gear stage2
                 when Gear R stage2
                   animation Gear R stage2 glyph
@@ -213,28 +237,52 @@ exports[`the emitted file the tree 1`] = `
           when Resting
             when Gear
               when Gear redline
-                when Gear R redline
-                  animation Gear R redline glyph
-                when Gear N redline
-                  animation Gear N redline glyph
-                when Gear 1 redline
-                  animation Gear 1 redline glyph
-                when Gear 2 redline
-                  animation Gear 2 redline glyph
-                when Gear 3 redline
-                  animation Gear 3 redline glyph
-                when Gear 4 redline
-                  animation Gear 4 redline glyph
-                when Gear 5 redline
-                  animation Gear 5 redline glyph
-                when Gear 6 redline
-                  animation Gear 6 redline glyph
-                when Gear 7 redline
-                  animation Gear 7 redline glyph
-                when Gear 8 redline
-                  animation Gear 8 redline glyph
-                when Gear 9 redline
-                  animation Gear 9 redline glyph
+                when Gear redline over-rev
+                  when Gear R redline
+                    animation Gear R redline glyph
+                  when Gear N redline
+                    animation Gear N redline glyph
+                  when Gear 1 redline
+                    animation Gear 1 redline glyph
+                  when Gear 2 redline
+                    animation Gear 2 redline glyph
+                  when Gear 3 redline
+                    animation Gear 3 redline glyph
+                  when Gear 4 redline
+                    animation Gear 4 redline glyph
+                  when Gear 5 redline
+                    animation Gear 5 redline glyph
+                  when Gear 6 redline
+                    animation Gear 6 redline glyph
+                  when Gear 7 redline
+                    animation Gear 7 redline glyph
+                  when Gear 8 redline
+                    animation Gear 8 redline glyph
+                  when Gear 9 redline
+                    animation Gear 9 redline glyph
+                when Gear redline steady
+                  when Gear R redline
+                    animation Gear R redline glyph
+                  when Gear N redline
+                    animation Gear N redline glyph
+                  when Gear 1 redline
+                    animation Gear 1 redline glyph
+                  when Gear 2 redline
+                    animation Gear 2 redline glyph
+                  when Gear 3 redline
+                    animation Gear 3 redline glyph
+                  when Gear 4 redline
+                    animation Gear 4 redline glyph
+                  when Gear 5 redline
+                    animation Gear 5 redline glyph
+                  when Gear 6 redline
+                    animation Gear 6 redline glyph
+                  when Gear 7 redline
+                    animation Gear 7 redline glyph
+                  when Gear 8 redline
+                    animation Gear 8 redline glyph
+                  when Gear 9 redline
+                    animation Gear 9 redline glyph
               when Gear stage2
                 when Gear R stage2
                   animation Gear R stage2 glyph
@@ -362,28 +410,52 @@ exports[`the emitted file the tree 1`] = `
           when Resting
             when Gear
               when Gear redline
-                when Gear R redline
-                  animation Gear R redline glyph
-                when Gear N redline
-                  animation Gear N redline glyph
-                when Gear 1 redline
-                  animation Gear 1 redline glyph
-                when Gear 2 redline
-                  animation Gear 2 redline glyph
-                when Gear 3 redline
-                  animation Gear 3 redline glyph
-                when Gear 4 redline
-                  animation Gear 4 redline glyph
-                when Gear 5 redline
-                  animation Gear 5 redline glyph
-                when Gear 6 redline
-                  animation Gear 6 redline glyph
-                when Gear 7 redline
-                  animation Gear 7 redline glyph
-                when Gear 8 redline
-                  animation Gear 8 redline glyph
-                when Gear 9 redline
-                  animation Gear 9 redline glyph
+                when Gear redline over-rev
+                  when Gear R redline
+                    animation Gear R redline glyph
+                  when Gear N redline
+                    animation Gear N redline glyph
+                  when Gear 1 redline
+                    animation Gear 1 redline glyph
+                  when Gear 2 redline
+                    animation Gear 2 redline glyph
+                  when Gear 3 redline
+                    animation Gear 3 redline glyph
+                  when Gear 4 redline
+                    animation Gear 4 redline glyph
+                  when Gear 5 redline
+                    animation Gear 5 redline glyph
+                  when Gear 6 redline
+                    animation Gear 6 redline glyph
+                  when Gear 7 redline
+                    animation Gear 7 redline glyph
+                  when Gear 8 redline
+                    animation Gear 8 redline glyph
+                  when Gear 9 redline
+                    animation Gear 9 redline glyph
+                when Gear redline steady
+                  when Gear R redline
+                    animation Gear R redline glyph
+                  when Gear N redline
+                    animation Gear N redline glyph
+                  when Gear 1 redline
+                    animation Gear 1 redline glyph
+                  when Gear 2 redline
+                    animation Gear 2 redline glyph
+                  when Gear 3 redline
+                    animation Gear 3 redline glyph
+                  when Gear 4 redline
+                    animation Gear 4 redline glyph
+                  when Gear 5 redline
+                    animation Gear 5 redline glyph
+                  when Gear 6 redline
+                    animation Gear 6 redline glyph
+                  when Gear 7 redline
+                    animation Gear 7 redline glyph
+                  when Gear 8 redline
+                    animation Gear 8 redline glyph
+                  when Gear 9 redline
+                    animation Gear 9 redline glyph
               when Gear stage2
                 when Gear R stage2
                   animation Gear R stage2 glyph
@@ -511,28 +583,52 @@ exports[`the emitted file the tree 1`] = `
           when Resting
             when Gear
               when Gear redline
-                when Gear R redline
-                  animation Gear R redline glyph
-                when Gear N redline
-                  animation Gear N redline glyph
-                when Gear 1 redline
-                  animation Gear 1 redline glyph
-                when Gear 2 redline
-                  animation Gear 2 redline glyph
-                when Gear 3 redline
-                  animation Gear 3 redline glyph
-                when Gear 4 redline
-                  animation Gear 4 redline glyph
-                when Gear 5 redline
-                  animation Gear 5 redline glyph
-                when Gear 6 redline
-                  animation Gear 6 redline glyph
-                when Gear 7 redline
-                  animation Gear 7 redline glyph
-                when Gear 8 redline
-                  animation Gear 8 redline glyph
-                when Gear 9 redline
-                  animation Gear 9 redline glyph
+                when Gear redline over-rev
+                  when Gear R redline
+                    animation Gear R redline glyph
+                  when Gear N redline
+                    animation Gear N redline glyph
+                  when Gear 1 redline
+                    animation Gear 1 redline glyph
+                  when Gear 2 redline
+                    animation Gear 2 redline glyph
+                  when Gear 3 redline
+                    animation Gear 3 redline glyph
+                  when Gear 4 redline
+                    animation Gear 4 redline glyph
+                  when Gear 5 redline
+                    animation Gear 5 redline glyph
+                  when Gear 6 redline
+                    animation Gear 6 redline glyph
+                  when Gear 7 redline
+                    animation Gear 7 redline glyph
+                  when Gear 8 redline
+                    animation Gear 8 redline glyph
+                  when Gear 9 redline
+                    animation Gear 9 redline glyph
+                when Gear redline steady
+                  when Gear R redline
+                    animation Gear R redline glyph
+                  when Gear N redline
+                    animation Gear N redline glyph
+                  when Gear 1 redline
+                    animation Gear 1 redline glyph
+                  when Gear 2 redline
+                    animation Gear 2 redline glyph
+                  when Gear 3 redline
+                    animation Gear 3 redline glyph
+                  when Gear 4 redline
+                    animation Gear 4 redline glyph
+                  when Gear 5 redline
+                    animation Gear 5 redline glyph
+                  when Gear 6 redline
+                    animation Gear 6 redline glyph
+                  when Gear 7 redline
+                    animation Gear 7 redline glyph
+                  when Gear 8 redline
+                    animation Gear 8 redline glyph
+                  when Gear 9 redline
+                    animation Gear 9 redline glyph
               when Gear stage2
                 when Gear R stage2
                   animation Gear R stage2 glyph

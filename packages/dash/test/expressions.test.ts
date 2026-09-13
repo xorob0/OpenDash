@@ -2,9 +2,12 @@
 import { describe, expect, test } from 'bun:test';
 import { ncalc } from '../src/generator.ts';
 import { revBar, REDLINE_BLINK_MS } from '../src/components/revBar.ts';
-import { GEAR_COUNT_PROPERTY, SHIFT_RPM_PROPERTIES, lastGear } from '../src/shift.ts';
+import { GEAR_COUNT_PROPERTY, SHIFT_RPM_PROPERTIES, lastGear, redlineRpm } from '../src/shift.ts';
+import { MODULES } from '../src/modules/index.ts';
+import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { readFileSync } from 'node:fs';
 import { flagVisible } from '../src/components/flagStrip.ts';
+import { setting } from '../src/contract.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
@@ -129,7 +132,7 @@ describe('hero expressions', () => {
   const RPMS = 'isnull([DataCorePlugin.GameData.Rpms], 0)';
   const SL = (n: string) => `isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSL${n}RPM], 0)`;
   const MIRROR = `((${SL('First')}) > (0)) and ((${SL('Last')}) > (${SL('First')})) and ((${SL('Shift')}) >= (${SL('First')})) and ((${SL('Last')}) >= (${SL('Shift')}))`;
-  const ON = 'isnull([OpenDash.ShiftLights], true)';
+  const ON = setting.revBarIs('shift');
   const GEARS = 'isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)';
   const LAST_GEAR = `((${GEARS}) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (${GEARS}))`;
 
@@ -139,10 +142,23 @@ describe('hero expressions', () => {
     return s as Extract<import('../src/generator.ts').Item, { kind: 'rect' }>;
   };
 
+  /** A field of the speedo page, drawn at the one shape that keeps all three of them. */
+  const speedoField = (id: string): TextItem => {
+    const speedo = MODULES.find((m) => m.id === 'speedo');
+    if (!speedo) throw new Error('no speedo module');
+    const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
+    const item = [...walkItems(speedo.build({ frame: box, density: 'companion', prefix: 'speedo.' }))].find((i) => i.name === `speedo.${id}.value`);
+    if (!item || item.kind !== 'text') throw new Error(`speedo.${id}.value is not a text item`);
+    return item;
+  };
+
   test('the rev bar is three layers, and exactly one of them is visible at a time', () => {
     const layers = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
     expect(layers.map((l) => l.kind)).toEqual(['layer', 'layer', 'layer']);
     expect(layers.map((l) => l.name)).toEqual(['revBar.shiftLights', 'revBar.shiftLightsSimHub', 'revBar.rpmBar']);
+    // The gate is the tri-state RevBar (ADR 0004, XOR-138), not the deprecated ShiftLights boolean,
+    // so `rpm` and `off` both land on the plain bar and the ladder split applies only within `shift`.
+    expect(ON).toContain('[OpenDash.RevBar]');
     // Which ladder a car is on is which layer is visible, which is how it is seen in Dash Studio.
     expect(layers[0]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and (${MIRROR})` });
     expect(layers[1]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and (!(${MIRROR}))` });
@@ -178,9 +194,12 @@ describe('hero expressions', () => {
     // CustomStatusContainer catches the throw and falls back to 1.0. ADR 0003's rule, applied late.
     const B = (n: 1 | 2) => `isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight${n}], 0)`;
     const REDLINE = '(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)';
-    expect(expressionsOf(seg(0))).toEqual([`if(((${B(1)}) * (5)) > (0), '#00D96A', '#33383F')`]);
+    // The first segment of a band is the band's entry test and nothing more, the same reduction the
+    // car's own ladder makes above: `x * 5 > 0` and `x > 0` are one test, and writing it once is
+    // what lets anything with a single thing to colour ask the same question (`stageEntered`).
+    expect(expressionsOf(seg(0))).toEqual([`if((${B(1)}) > (0), '#00D96A', '#33383F')`]);
     expect(expressionsOf(seg(4))).toEqual([`if(((${B(1)}) * (5)) > (4), '#00D96A', '#33383F')`]);
-    expect(expressionsOf(seg(5))).toEqual([`if(((${B(2)}) * (5)) > (0), '#FFB300', '#33383F')`]);
+    expect(expressionsOf(seg(5))).toEqual([`if((${B(2)}) > (0), '#FFB300', '#33383F')`]);
     expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if(${REDLINE}, '#FF2D46', '#33383F')` });
     expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: REDLINE });
     expect(seg(14).blink).toEqual({ delayMs: 62 });
@@ -214,6 +233,42 @@ describe('hero expressions', () => {
     for (const k of [0, 4, 5, 9, 10]) expect(segOf(shift, k).bindings?.BackgroundColor?.formula).not.toContain('Gear');
     // SimHub's fallback is untouched by this: it never knew about gears either.
     expect(segOf(simhub, 14).bindings?.BlinkEnabled?.formula).not.toContain('Gear');
+  });
+
+  test("the speedo's Redline prints the RPM the rev bar's top band lights at", () => {
+    // ADR 0014 applied to a readout, and the defect that hid behind the bar being right. The field
+    // printed `CarSettings_CurrentGearRedLineRPM` unconditionally -- SimHub's number, stock
+    // `DriverCarRedLine * 95/100` -- directly under a bar whose top band goes red at
+    // `DriverCarSLLastRPM`. Two answers to one question, side by side, on the same page.
+    //
+    // String equality against what both sides emit, the way the flag box's flash is pinned in
+    // flagBox.test.ts. A shared helper name would pass with the two reading different properties.
+    const [shift] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    if (shift?.kind !== 'layer') throw new Error('layer');
+
+    // The bar's top band is `Rpms >= X`. X is the number a readout beside it has to print.
+    const band = String(segOf(shift, 14).bindings?.BackgroundColor?.formula ?? '');
+    const parts = /^if\(\((.*)\) >= \((.*)\), '#[0-9A-F]{6}', '#[0-9A-F]{6}'\)$/.exec(band);
+    expect(parts?.[1]).toBe(RPMS);
+    const threshold = parts?.[2] ?? '';
+    expect(threshold).toBe(SL('Last'));
+
+    // Under the car's own ladder the printed number IS that threshold, character for character.
+    // Under SimHub's there is no RPM to print -- ADR 0004's fallback is two band progress values
+    // and a `RedLineReached` flag -- so the fallback is SimHub's own redline, which is the single
+    // seam and is a property of what SimHub exposes rather than a second model.
+    const simhub = 'isnull([DataCorePlugin.GameData.CarSettings_CurrentGearRedLineRPM], 0)';
+    expect(redlineRpm()).toBe(`if(${MIRROR}, ${threshold}, ${simhub})`);
+    expect(formulaOf(speedoField('redline'), 'Text')).toBe(`format(${redlineRpm()}, '#,0')`);
+
+    // And the choice is the bar's own gate, evaluated the same frame, not a second test that could
+    // drift: the same string the bar picks its visible layer with.
+    expect(formulaOf(speedoField('redline'), 'Text')).toContain(MIRROR);
+    expect(String(shift.bindings?.Visible?.formula ?? '')).toContain(MIRROR);
+
+    // The RPM readout above it is still engine speed and nothing else, so the page has not simply
+    // printed the same number twice.
+    expect(formulaOf(speedoField('rpm'), 'Text')).toBe(`format(${RPMS}, '#,0')`);
   });
 
   test('the four shift RPM property names appear in exactly one module', () => {
