@@ -63,6 +63,37 @@ yellow, and bands are legible at this size where a pace-car silhouette is not.
 **Blue moves.** A blue flag with a moving arrow says which way to look. A static blue square says
 a colour.
 
+### When nobody is racing
+
+**No game running is dark.** Idle screens are a refusal in [scope.md](../scope.md), and a glowing
+logo on somebody's desk when nothing is running is the hardest version of that refusal to defend.
+The branch exists in the tree and is deliberately empty, so the code says so in one place.
+
+**Ignition off is a dim mark**, four pixels of `purpose.shift.unlit` in the middle. The car being
+switched off is a real condition, and a box that went fully dark for it would be indistinguishable
+from a profile that failed to load. It is the smallest thing that is still visibly on.
+
+Nothing reads a picture from the user's disk. Every glyph is frames in the file; a custom idle
+image is personalisation, which ADR 0011 owes an answer before anything here builds it.
+
+### Brightness, and night
+
+| Property | Default | |
+|---|---|---|
+| `OpenDash.LightsBrightness` | 100 | Percent. SimHub's own device brightness applies on top. |
+| `OpenDash.LightsNightBrightness` | 25 | Percent, when night mode is on. |
+| `OpenDash.LightsNightMode` | off | A switch the driver flips, not a time of day we guess at. |
+
+They are named `Lights*` rather than `FlagBox*` on purpose. A driver who owns a flag box probably
+owns other lights, and "how bright are my lights, and is it night" is one answer for a rig rather
+than one per device; a second profile would read these same three. A property name is a public
+interface under ADR 0003, so the alternative is renaming one later.
+
+Sixty-four LEDs at full output beside a wheel in a dark room is genuinely too bright, and no
+amount of good colour choice fixes it. `purpose.*` decides hue; brightness decides how much of it
+arrives. **The night default has not been judged in a dark room on real hardware**, which is the
+one thing this ticket asked for that the VM cannot give; 25 is a starting point.
+
 ### Critical flags only
 
 `OpenDash.FlagBoxCriticalOnly` is off by default: the box shows the whole catalogue until the

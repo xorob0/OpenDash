@@ -232,3 +232,28 @@ export function flagFrames(id: string): MatrixFrame[] | undefined {
       return undefined;
   }
 }
+
+// --- The box when nothing is happening -------------------------------------------------------
+
+/**
+ * Ignition off: a dim mark in the middle, so that a box which is dark *because the car is off*
+ * does not look like a box which is dark because the profile failed to load. It is deliberately
+ * the smallest thing that is still visibly on — four pixels of `purpose.shift.unlit`, the grey
+ * the rev bar's unlit segments use.
+ */
+export const IGNITION_OFF: Grid = [
+  '........',
+  '........',
+  '........',
+  '...UU...',
+  '...UU...',
+  '........',
+  '........',
+  '........',
+];
+
+/** The palette the standby mark uses. Separate from the flags: nothing here is a flag colour. */
+export const STANDBY_PALETTE: Palette = { U: ds.purpose.shift.unlit };
+
+/** The standby mark's frames. */
+export const ignitionOffFrames = (): MatrixFrame[] => still(IGNITION_OFF, STANDBY_PALETTE, 'ignitionOff');

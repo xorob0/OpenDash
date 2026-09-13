@@ -78,10 +78,10 @@ describe('settings', () => {
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance)/.test(p))).toEqual([]);
-    expect(props.slice(-8, -2)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
+    expect(props.slice(-10, -4)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
     // The flag box comes last, after the screens, because it is the one artefact the plugin does
     // not install; see ADR 0013.
-    expect(props.slice(-2)).toEqual(flagBoxProperties());
+    expect(props.slice(-4)).toEqual(flagBoxProperties());
   });
 
   test('every face that ships has a group, and every group is complete', () => {
