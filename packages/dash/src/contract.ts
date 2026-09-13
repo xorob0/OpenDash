@@ -70,7 +70,7 @@ export function secondScreenProperties(): string[] {
 
 /** Every property the plugin exposes, in the order the plugin attaches them. */
 export function declaredProperties(): string[] {
-  return [...dashProperties(), ...secondScreenProperties()];
+  return [...dashProperties(), ...secondScreenProperties(), ...flagBoxProperties()];
 }
 
 function assertSlot(slot: number): void {
@@ -487,3 +487,35 @@ export const secondScreen = {
   /** `isnull([OpenDash.WebViewUrl], '')`: the address of the web view page. */
   webViewUrl: (): Expr => isnull(prop(propertyName(WEB_VIEW_SETTING)), str(DEFAULT_WEB_VIEW_URL)),
 };
+
+// --- The flag box ---------------------------------------------------------------------------
+//
+// An 8x8 LED matrix is not a screen, but its settings are ordinary SimHub properties for exactly
+// the reason ADR 0003 gives for the screens: a property is readable by anything and changeable
+// while driving. The profile reads these through `flagBox` below, every one wrapped in isnull()
+// with its default, so a user who imports the profile and never installs the plugin still gets a
+// working box. ADR 0013 is why the plugin does not install the profile itself.
+//
+// Rotation and serpentine wiring are deliberately absent: they are SimHub device settings decided
+// by the corner the data cable enters, and a second place to set them would be a second place to
+// disagree. The guide documents them instead.
+
+/** SimHub composes at most four matrix contents, so a box setting exists once per matrix. */
+export const FLAG_BOX_MATRICES = [1, 2, 3, 4] as const;
+export type FlagBoxMatrix = (typeof FLAG_BOX_MATRICES)[number];
+
+export const FLAG_BOX_BRIGHTNESS_SETTING = 'FlagBoxBrightness';
+
+/** Percent. SimHub's own global brightness applies on top of this. */
+export const DEFAULT_FLAG_BOX_BRIGHTNESS = 100;
+
+/** Reads of the flag box settings, each defaulted so the profile works without the plugin. */
+export const flagBox = {
+  /** `isnull([OpenDash.FlagBoxBrightness], 100)`: the brightness every effect is drawn at. */
+  brightness: (): Expr => isnull(prop(propertyName(FLAG_BOX_BRIGHTNESS_SETTING)), num(DEFAULT_FLAG_BOX_BRIGHTNESS)),
+};
+
+/** Every property the flag box profile reads. */
+export function flagBoxProperties(): string[] {
+  return [FLAG_BOX_BRIGHTNESS_SETTING].map(propertyName);
+}
