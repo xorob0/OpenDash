@@ -85,6 +85,12 @@ without failing anything. `bun run dev` puts one package on the VM with live tel
 photographs it; `bun run shots` does the same for several at once. If you cannot run SimHub, say
 so in the pull request rather than leaving it unsaid.
 
+Which packages to photograph is not a matter of judgement, because a card is shared and an edit to
+one of them reaches every face it appears on. `bun run affected` builds the branch and the commit
+it forked from, compares the packages the two builds wrote, and prints the `bun run shots` command
+that captures exactly those. CI runs the same comparison on every pull request and keeps the answer
+in one comment, so a reviewer sees the reach of a change without running anything.
+
 The pull request template asks for exactly this and nothing else.
 
 ## Making a change
