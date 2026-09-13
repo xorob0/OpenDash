@@ -153,7 +153,20 @@ namespace OpenDashPlugin
             Settings.Normalise();
         }
 
-        /// <summary>One delegate per setting. SimHub names them <class name>.<name>, hence OpenDash.ShiftLights.</summary>
+        /// <summary>
+        /// One delegate per setting. SimHub names them <class name>.<name>, hence OpenDash.ShiftLights.
+        /// </summary>
+        /// <remarks>
+        /// The shared settings first, then one group per screen the rig has, in the order
+        /// OpenDashSettings.DeclaredProperties() lists them: a rig and not the catalogue, because eight
+        /// faces of seventeen properties is a hundred and thirty-six names for a rig of two screens.
+        ///
+        /// A screen added while SimHub is running therefore has no properties until it is restarted.
+        /// That is not a new limitation: SimHub reads its dashboard list once at startup too, so the
+        /// screen a user has just added is not one they can open in this session either. Until then its
+        /// bindings fall back to the defaults they carry, which is what a package does with no plugin at
+        /// all.
+        /// </remarks>
         private void AttachProperties()
         {
             this.AttachDelegate(Contract.ShiftLights, () => Settings.ShiftLights);
@@ -165,10 +178,7 @@ namespace OpenDashPlugin
                 var captured = slot;
                 this.AttachDelegate(Contract.SlotProperty(captured), () => Settings.Slot(captured));
             }
-            // One group per face that ships, so that a rig with two screens configures them apart. A
-            // property for a face nobody has installed costs one integer and is never read, which is
-            // cheaper than a face that cannot be configured until SimHub is restarted.
-            foreach (var face in Contract.FaceSizes)
+            foreach (var face in Settings.RigFaces())
             {
                 var capturedFace = face;
                 foreach (var letter in Contract.FaceZoneLetters)
@@ -185,18 +195,24 @@ namespace OpenDashPlugin
                 }
                 this.AttachDelegate(Contract.QuickGlanceProperty(capturedFace), () => Settings.QuickGlanceOf(capturedFace));
             }
-            for (var module = 1; module <= Modules.Count; module++)
+            if (Settings.HasScreen(Contract.CompanionPrefix))
             {
-                var captured = module;
-                this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+                for (var module = 1; module <= Modules.Count; module++)
+                {
+                    var captured = module;
+                    this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+                }
             }
-            foreach (var letter in Contract.PitWallZoneLetters)
+            if (Settings.HasScreen(Contract.PitWallPrefix))
             {
-                var captured = letter;
-                this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
+                foreach (var letter in Contract.PitWallZoneLetters)
+                {
+                    var captured = letter;
+                    this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
+                }
+                this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
+                this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
             }
-            this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
-            this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
         }
 
         /// <summary>
