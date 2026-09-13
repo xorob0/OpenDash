@@ -1,4 +1,4 @@
-// ReleaseClient.cs: the one place openDash talks to the network.
+// ReleaseClient.cs: the one place OpenDash talks to the network.
 //
 // Deliberately small and deliberately dull. ADR 0012 makes exactly two promises about the wire, that a User-Agent
 // naming the product is sent and that nothing identifying the user is, and both are pinned by ReleaseClientTests
@@ -47,7 +47,7 @@ namespace OpenDashPlugin
             userAgent = "openDash/" + (string.IsNullOrWhiteSpace(productVersion) ? "0.0.0" : productVersion.Trim());
         }
 
-        /// <summary>The User-Agent every request carries, which is the whole of what openDash discloses about itself.</summary>
+        /// <summary>The User-Agent every request carries, which is the whole of what OpenDash discloses about itself.</summary>
         public string UserAgent => userAgent;
 
         /// <summary>Fetches a text body, for the release listing.</summary>
@@ -94,7 +94,7 @@ namespace OpenDashPlugin
                 EnsureModernTls();
                 var request = (HttpWebRequest)WebRequest.Create(url);
                 request.Method = "GET";
-                // api.github.com answers 403 without this, and it is the only thing openDash says about itself.
+                // api.github.com answers 403 without this, and it is the only thing OpenDash says about itself.
                 request.UserAgent = userAgent;
                 request.Accept = "application/vnd.github+json";
                 request.Timeout = TimeoutMilliseconds;

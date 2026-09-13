@@ -56,7 +56,7 @@ namespace OpenDashPlugin
     }
 
     /// <summary>
-    /// What openDash wrote into a dashboard folder, remembered between runs so that a folder somebody has since
+    /// What OpenDash wrote into a dashboard folder, remembered between runs so that a folder somebody has since
     /// edited can be told from one that is still ours. It is implemented over the plugin's settings; the installer
     /// keeps no state itself and knows nothing about where this is kept.
     /// </summary>
@@ -65,7 +65,7 @@ namespace OpenDashPlugin
         /// <summary>The fingerprint recorded when the folder was last written, or null when there is none.</summary>
         string Get(string folderName);
 
-        /// <summary>Remembers the fingerprint of a folder openDash has just written.</summary>
+        /// <summary>Remembers the fingerprint of a folder OpenDash has just written.</summary>
         void Set(string folderName, string fingerprint);
     }
 
@@ -100,7 +100,7 @@ namespace OpenDashPlugin
         /// <summary>The failure, null when the package was read (and installed, when asked) without error.</summary>
         public string Error { get; set; }
 
-        /// <summary>True when the folder on disk is not the one openDash wrote, so replacing it would destroy
+        /// <summary>True when the folder on disk is not the one OpenDash wrote, so replacing it would destroy
         /// somebody's work. Biased towards true: no record and an unreadable folder both count.</summary>
         public bool Edited { get; set; }
 
@@ -147,7 +147,7 @@ namespace OpenDashPlugin
         public string SimHubRoot { get; }
 
         /// <summary>The record this installer keeps, so that an installer built over downloaded packages keeps the
-        /// same one rather than starting a second, disagreeing memory of what openDash wrote.</summary>
+        /// same one rather than starting a second, disagreeing memory of what OpenDash wrote.</summary>
         public IFolderRecord Record => record;
 
         /// <summary>The worst status across the packages (Failed over NotInstalled over UpdateAvailable over UpToDate).</summary>
@@ -219,7 +219,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <param name="force">Install every package whether or not it is current, which is what Reinstall means.</param>
         /// <param name="replaceEdited">
-        /// Replace a folder that has changed since openDash wrote it. False everywhere except where a person has been
+        /// Replace a folder that has changed since OpenDash wrote it. False everywhere except where a person has been
         /// shown what it means and said yes, because such a folder holds work that deleting it destroys.
         /// </param>
         public void EnsureInstalled(bool force, bool replaceEdited = false)
@@ -273,9 +273,9 @@ namespace OpenDashPlugin
                 var installedFolder = PackageExtractor.InstalledFolder(SimHubRoot, folder);
                 var remembered = record.Get(folder);
                 // Three cases, and only the third is somebody's work. Not installed: nothing to lose. Installed with
-                // nothing remembered: openDash has never looked at this folder, which is every folder the first time
+                // nothing remembered: OpenDash has never looked at this folder, which is every folder the first time
                 // this runs, so it is adopted rather than held back. Installed and different from what was recorded:
-                // it changed after openDash wrote it, and that is the case worth stopping for.
+                // it changed after OpenDash wrote it, and that is the case worth stopping for.
                 entry.Edited = entry.InstalledVersion != null
                     && !string.IsNullOrWhiteSpace(remembered)
                     && !FolderFingerprint.LooksUntouched(installedFolder, remembered);
@@ -287,7 +287,7 @@ namespace OpenDashPlugin
                     if (entry.Edited && !replaceEdited)
                     {
                         entry.HeldBack = true;
-                        log.Warn(folder + " has changed since openDash wrote it, so it was left alone. "
+                        log.Warn(folder + " has changed since OpenDash wrote it, so it was left alone. "
                             + "Press Reinstall a second time to replace it; the copy you have is kept.");
                         return entry;
                     }
@@ -306,7 +306,7 @@ namespace OpenDashPlugin
                 }
                 else if (entry.InstalledVersion != null && string.IsNullOrWhiteSpace(remembered))
                 {
-                    // Adopting what is already there. An edit made before openDash started looking cannot be seen,
+                    // Adopting what is already there. An edit made before OpenDash started looking cannot be seen,
                     // and pretending otherwise would mean asking every user about every folder exactly once, for
                     // nothing. From here on the folder is watched.
                     record.Set(folder, FolderFingerprint.Of(installedFolder));

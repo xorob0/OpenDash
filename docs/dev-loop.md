@@ -11,7 +11,7 @@ restarts SimHub, starts the telemetry emulator, opens the dashboard and photogra
 `build/dev.png`. Two and a half minutes from cold, most of which is the VM.
 
 ```bash
-bun run dev                                   # openDash on the race scenario
+bun run dev                                   # OpenDash on the race scenario
 bun run dev 'openDash Pit wall'               # another package
 bun run dev --scenario notc                   # another scenario
 bun run dev --no-build                        # when only the scenario changed

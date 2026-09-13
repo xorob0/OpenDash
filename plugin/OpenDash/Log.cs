@@ -6,7 +6,7 @@ namespace OpenDashPlugin
 {
     internal static class Log
     {
-        public const string Prefix = "[openDash] ";
+        public const string Prefix = "[OpenDash] ";
 
         public static void Info(string message)
         {
