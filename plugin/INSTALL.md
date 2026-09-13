@@ -144,22 +144,23 @@ If you have an **8x8 LED matrix** on an Arduino — the printed box a lot of peo
 screen — openDash drives it too: the flag that is out, the gear, the pit state, a car alongside,
 and the warnings you would otherwise miss.
 
-It is the one thing openDash **does not install for you.** SimHub keeps matrix profiles inside a
-settings file it rewrites whenever anything changes, so writing into it underneath a running
-SimHub would lose the other profiles you have made. The plugin writes the file where you can find
-it and stops:
+Install it from the OpenDash page under **Lights**: press **Install into SimHub**, then pick the
+profile on your matrix device. The button says what it will do before you press it, and the line
+beside it says what SimHub holds now.
 
-```
-SimHub\OpenDash\openDash Flag box.ledsprofile
-```
+**openDash never installs it on its own.** A profile paints hardware you own, so it is asked about
+once rather than assumed. It also only ever recognises its own profile, so one you made yourself is
+never touched. When openDash updates, the button offers **Update in SimHub** — and updating replaces
+the copy in SimHub, including any changes you made to it there.
 
-The exact path is on the OpenDash page under **Lights**. Import it once, in SimHub's own matrix
-device settings, and everything on that page then reaches the box while you drive.
+If the button is greyed out, SimHub's matrix settings could not be reached. openDash also writes the
+profile to `SimHub\OpenDash\openDash Flag box.ledsprofile`, shown under the button, which you can
+import through SimHub's own profile import.
 
-Before that, set the matrix's **rotation** and **serpentine** on the device in SimHub. Those two
-belong to SimHub rather than to openDash, because the right values depend on which corner your
-data cable enters — and if they are wrong, the picture comes out sideways or shredded and the
-profile looks broken when it is not.
+Before any of that, set the matrix's **rotation** and **serpentine** on the device in SimHub. Those
+belong to SimHub rather than to openDash, because the right values depend on which corner your data
+cable enters — and if they are wrong, the picture comes out sideways or shredded and the profile
+looks broken when it is not.
 
 [docs/flag-box.md](../docs/flag-box.md) is the full guide: what every picture means, what the box
 does not do and why, and what to check when it looks wrong.

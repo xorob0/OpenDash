@@ -56,12 +56,17 @@ puts the old face back under a name of its own, beside the new one rather than o
   water, and the gear underneath all of it — one picture at a time, ranked the way the face ranks
   the same conditions, coloured from the same tokens.
 
-  **It is the one thing the plugin does not install for you.** SimHub keeps matrix profiles inside
-  a settings file it rewrites whenever anything changes, so writing into it would lose the other
-  profiles you have made, and painting hardware you own is not something a dashboard should do
-  unasked. The plugin writes `SimHub\OpenDash\openDash Flag box.ledsprofile`, the new **Lights**
-  page says where it is, and you import it once in SimHub's own matrix settings. After that every
-  setting on that page reaches the box while you drive.
+  **Installing it is one button.** Open the OpenDash page, scroll to **Lights**, press
+  **Install into SimHub**, then pick the profile on your matrix device. openDash adds it through
+  SimHub's own matrix-profile API, so SimHub writes its own settings and nothing of yours is
+  touched — openDash only ever recognises its own profile. It **never installs on its own**: a
+  profile paints hardware you own, so it is asked about once rather than assumed.
+
+  When openDash updates, the button offers **Update in SimHub**. Updating replaces the copy in
+  SimHub, including any changes you made to it there, so copy it under a new name first if you have
+  customised it. The profile is also written to `SimHub\OpenDash\openDash Flag box.ledsprofile`,
+  shown under the button, as the fallback when SimHub's matrix settings cannot be reached and as the
+  thing you copy to a second machine.
 
   Set the matrix's **rotation and serpentine on the device in SimHub first.** They belong to SimHub
   because the right values depend on which corner your data cable enters, and if they are wrong the

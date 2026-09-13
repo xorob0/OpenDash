@@ -31,6 +31,7 @@
     <Compile Include="../OpenDash/UpdatePlan.cs" Link="Plugin/UpdatePlan.cs" />
     <Compile Include="../OpenDash/UpdateService.cs" Link="Plugin/UpdateService.cs" />
     <Compile Include="../OpenDash/FlagBoxProfile.cs" Link="Plugin/FlagBoxProfile.cs" />
+    <Compile Include="../OpenDash/FlagBoxInstallPlan.cs" Link="Plugin/FlagBoxInstallPlan.cs" />
   </ItemGroup>
 
   <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;

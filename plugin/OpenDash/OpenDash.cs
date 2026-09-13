@@ -38,6 +38,12 @@ namespace OpenDashPlugin
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
 
+        /// <summary>The embedded profile as JSON, which the lights page installs into SimHub.</summary>
+        public string FlagBoxJson
+        {
+            get { return FlagBox?.Json; }
+        }
+
         public string LeftMenuTitle => "OpenDash";
 
         public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create(this));
