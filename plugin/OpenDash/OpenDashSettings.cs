@@ -64,7 +64,7 @@ namespace OpenDashPlugin
             if (current.FolderFingerprints == null) current.FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             // A fingerprint that could not be computed is not a reason to forget the one we had. Erasing it turned
             // "cannot vouch for this folder" into "this folder is not ours", which is the opposite bias, and the
-            // adoption branch would then have recorded whatever was on disk as openDash's own work.
+            // adoption branch would then have recorded whatever was on disk as OpenDash's own work.
             if (string.IsNullOrWhiteSpace(fingerprint)) return;
             current.FolderFingerprints[folderName] = fingerprint;
         }
@@ -127,7 +127,7 @@ namespace OpenDashPlugin
         /// <summary>Pre-face quick glance. Migrated into the reference face, then zero.</summary>
         public int QuickGlance { get; set; }
 
-        /// <summary>Whether openDash may ask GitHub what the newest release is. Plugin-local rather than an
+        /// <summary>Whether OpenDash may ask GitHub what the newest release is. Plugin-local rather than an
         /// [OpenDash.*] property: a dashboard cannot react to it, so ADR 0003's reason for making a setting a
         /// property does not apply. It is read before a request is constructed, so off means nothing is
         /// fetched at all rather than fetched and discarded. On by default; see ADR 0012.</summary>
@@ -137,9 +137,9 @@ namespace OpenDashPlugin
         /// interval ADR 0012 sets. Zero means never. Persisted so the interval survives a restart.</summary>
         public long LastUpdateCheckTicks { get; set; }
 
-        /// <summary>Fingerprint of each dashboard folder as openDash last wrote it, keyed by folder name. An entry
+        /// <summary>Fingerprint of each dashboard folder as OpenDash last wrote it, keyed by folder name. An entry
         /// that no longer matches what is on disk is somebody's Dash Studio work; see FolderFingerprint. Kept here
-        /// rather than beside the dashboard so that nothing openDash writes into DashTemplates can confuse SimHub's
+        /// rather than beside the dashboard so that nothing OpenDash writes into DashTemplates can confuse SimHub's
         /// own scanner.</summary>
         public Dictionary<string, string> FolderFingerprints { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

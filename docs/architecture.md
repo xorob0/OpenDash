@@ -69,7 +69,7 @@ design canvas is derived from it, so a colour exists in exactly one place.
 
 ### Generator (`packages/generator`)
 
-A TypeScript library with no knowledge of openDash, which could serve any SimHub dashboard
+A TypeScript library with no knowledge of OpenDash, which could serve any SimHub dashboard
 project. It provides a typed model of the node types the MVP needs (`TextItem`,
 `RectangleItem`, `Layer`, `WidgetItem`, and the screen and dashboard envelopes), helpers that
 build NCalc and JavaScript binding objects from typed inputs, a validator, and a serialiser
@@ -86,7 +86,7 @@ hash, so that a rebuild does not churn identifiers.
 
 ### Dashboard (`packages/dash`)
 
-openDash itself. `src/cards/` holds one module per card, each exporting a function that takes
+OpenDash itself. `src/cards/` holds one module per card, each exporting a function that takes
 a slot rectangle and returns items; `src/hero/` holds the fixed elements;
 `src/layouts/1920x480.ts` declares the slot geometry and the slot count; `src/build.ts`
 composes them into two documents, the main dashboard and the cards widget, and hands them to
@@ -190,7 +190,7 @@ design/
   canvas/                design system artboards (Claude Design), derived from the tokens
 packages/
   generator/             SimHub .djson emitter: node model, bindings, validator, serialiser
-  dash/                  openDash: cards, hero, layouts, fonts, build script, snapshots
+  dash/                  OpenDash: cards, hero, layouts, fonts, build script, snapshots
 plugin/
   OpenDash/              C# project: settings, properties, installer, WPF panel
   OpenDash.Tests/        unit tests for the plugin's pure logic
@@ -198,7 +198,7 @@ plugin/
 tools/
   irsdk-emulator/        synthetic iRacing telemetry for the test VM
 docs/
-  scope.md               what openDash is, and what is deliberately not built
+  scope.md               what OpenDash is, and what is deliberately not built
   scope-mvp.md           the MVP contract, closed and superseded by scope.md
   architecture.md        this document
   decisions/             architecture decision records

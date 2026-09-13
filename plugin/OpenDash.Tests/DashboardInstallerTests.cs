@@ -20,6 +20,7 @@ namespace OpenDashPlugin.Tests
         private const string SmallFolder = "openDash 1280x480";
 
         private readonly string root;
+        private readonly DeniedPaths denied = new DeniedPaths();
 
         public DashboardInstallerTests()
         {
@@ -29,6 +30,7 @@ namespace OpenDashPlugin.Tests
 
         public void Dispose()
         {
+            denied.Dispose();
             try { Directory.Delete(root, true); } catch { }
         }
 
@@ -47,7 +49,7 @@ namespace OpenDashPlugin.Tests
         // Somebody's Dash Studio work, and whether an install destroys it
 
         /// <summary>
-        /// The first run after this shipped must not hold everything back. No record means openDash has never looked
+        /// The first run after this shipped must not hold everything back. No record means OpenDash has never looked
         /// at the folder, not that it was edited, so the folder is adopted and watched from then on.
         /// </summary>
         [Fact]
@@ -144,7 +146,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(entry.Extracted);
             Assert.Equal("0.1.0", entry.InstalledVersion);
             Assert.Equal("{\"Version\":2,\"mine\":true}", File.ReadAllText(djson));
-            Assert.Contains(log.Lines, line => line.Contains("has changed since openDash wrote it"));
+            Assert.Contains(log.Lines, line => line.Contains("has changed since OpenDash wrote it"));
         }
 
         /// <summary>
@@ -185,6 +187,36 @@ namespace OpenDashPlugin.Tests
             // And what was there is recoverable, because Install kept it.
             Assert.True(PackageExtractor.Restore(root, "openDash", null));
             Assert.Equal("{\"Version\":2,\"mine\":true}", File.ReadAllText(djson));
+        }
+
+        /// <summary>
+        /// A folder openDash cannot read is one it cannot vouch for, which is the asking case rather than a failure.
+        /// It used to be a failure that never went away, since the fingerprint is taken where Edited is assigned: the
+        /// exception an unreadable file raises landed in the blanket catch of Process, the package was reported Failed,
+        /// and every later run reached the same line and did the same thing, so the dashboard was never installed
+        /// again and nobody was ever asked about the folder either.
+        /// </summary>
+        [DeniedPathFact]
+        public void A_folder_that_cannot_be_read_is_asked_about_rather_than_marked_failed()
+        {
+            var record = new MemoryFolderRecord();
+            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.1.0")), record: record).EnsureInstalled(false);
+
+            // A file beside the dashboard rather than its sidecar: the version is read from the sidecar before the
+            // fingerprint is taken, and a sidecar that cannot be read is a failure the installer reports on purpose.
+            denied.Deny(Path.Combine(root, "DashTemplates", "openDash", "cards.djson"));
+
+            var log = new ListLog();
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), log, record);
+            installer.EnsureInstalled(false);
+
+            var entry = installer.Packages.Single();
+            Assert.Null(entry.Error);
+            Assert.NotEqual(InstallStatus.Failed, entry.Status);
+            Assert.True(entry.Edited);
+            Assert.True(entry.HeldBack);
+            Assert.False(entry.Extracted);
+            Assert.Contains(log.Lines, line => line.Contains("has changed since openDash wrote it"));
         }
 
         // The install run
