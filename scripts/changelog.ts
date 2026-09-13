@@ -69,29 +69,47 @@ export const parseArgs = (argv: readonly string[]): Options | { help: true } => 
 
 export const USAGE = 'usage: bun scripts/changelog.ts <version|tag> [--out <file>]';
 
-export function main(argv: readonly string[]): number {
+/**
+ * Where `main` writes. Injectable for one reason: the `::error::` prefix below is a GitHub Actions
+ * *workflow command*, and GitHub promotes it to a red annotation on the run **whatever the exit
+ * code is**. A test that exercises the failure path by calling `main` therefore painted a red X on
+ * every green CI run, which is exactly as good as no annotation at all — a red mark that does not
+ * mean red teaches people to ignore red marks. The test passes its own sink and asserts the
+ * message instead of emitting it.
+ */
+export interface MainIO {
+  out: (line: string) => void;
+  err: (line: string) => void;
+}
+
+const CONSOLE_IO: MainIO = {
+  out: (line) => console.log(line),
+  err: (line) => console.error(line),
+};
+
+export function main(argv: readonly string[], io: MainIO = CONSOLE_IO): number {
   let opts: Options | { help: true };
   try {
     opts = parseArgs(argv);
   } catch (e) {
-    console.error(`changelog: ${e instanceof Error ? e.message : String(e)}`);
-    console.error(USAGE);
+    io.err(`changelog: ${e instanceof Error ? e.message : String(e)}`);
+    io.err(USAGE);
     return 2;
   }
   if ('help' in opts) {
-    console.log(USAGE);
+    io.out(USAGE);
     return 0;
   }
   const markdown = readFileSync(CHANGELOG_FILE, 'utf8');
   const body = sectionFor(markdown, opts.version);
   if (body === null) {
     // ::error:: so that the failure is annotated on the workflow run rather than buried in a log,
-    // matching the tag-against-VERSION check beside it.
-    console.error(`::error::CHANGELOG.md has no section for ${versionOf(opts.version)}; it has ${versionsIn(markdown).join(', ') || 'none'}`);
+    // matching the tag-against-VERSION check beside it. See MainIO for why it is injectable.
+    io.err(`::error::CHANGELOG.md has no section for ${versionOf(opts.version)}; it has ${versionsIn(markdown).join(', ') || 'none'}`);
     return 1;
   }
   if (opts.out) writeFileSync(opts.out, `${body}\n`, 'utf8');
-  else console.log(body);
+  else io.out(body);
   return 0;
 }
 
