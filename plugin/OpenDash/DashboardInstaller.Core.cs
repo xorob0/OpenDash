@@ -146,6 +146,10 @@ namespace OpenDashPlugin
 
         public string SimHubRoot { get; }
 
+        /// <summary>The packages this build carries, so the panel can offer them and ScreenInstaller can write one.</summary>
+        public IPackageSource PackageSource => packages;
+
+
         /// <summary>The record this installer keeps, so that an installer built over downloaded packages keeps the
         /// same one rather than starting a second, disagreeing memory of what OpenDash wrote.</summary>
         public IFolderRecord Record => record;
@@ -227,6 +231,23 @@ namespace OpenDashPlugin
             Run(force, install: true, replaceEdited: replaceEdited);
         }
 
+        /// <summary>
+        /// The folders the rig actually wants installed, or null for every package the assembly carries.
+        /// </summary>
+        /// <remarks>
+        /// Until ADR 0017 the plugin wrote every package it embeds on every start, so a user who owned
+        /// one screen got fourteen dashboards in SimHub's list and no way to be rid of them. A rig is a
+        /// list of what somebody has, so it is also the list of what to write; anything outside it is
+        /// left exactly as it is rather than deleted, because removing a screen is something a user
+        /// asks for and never something an upgrade decides.
+        ///
+        /// Null rather than an empty list for "everything", so that a caller which has not been taught
+        /// about the rig -- the update path, and the tests -- behaves as it always did. An empty rig is
+        /// an empty list and correctly installs nothing: that is a new user, and the panel teaches from
+        /// exactly that state.
+        /// </remarks>
+        public IReadOnlyCollection<string> Wanted { get; set; }
+
         private void Run(bool force, bool install, bool replaceEdited = false)
         {
             LastError = null;
@@ -238,7 +259,12 @@ namespace OpenDashPlugin
                 return;
             }
 
-            var results = names.Select(name => Process(name, force, install, replaceEdited)).ToList();
+            // Read for every package, so the panel can still say what is installable and at what
+            // version; written only for the folders the rig wants.
+            var wanted = Wanted;
+            var results = names
+                .Select(name => Process(name, force, install && Includes(wanted, FolderOf(name)), replaceEdited))
+                .ToList();
             Packages = results;
             Status = results.Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
             LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null);
@@ -319,6 +345,38 @@ namespace OpenDashPlugin
                 log.Error("Installing " + name + " failed: " + ex);
             }
             return entry;
+        }
+
+        /// <summary>Whether the rig wants this folder. A null list is "everything", which is what a caller
+        /// that has not been taught about the rig means.</summary>
+        private static bool Includes(IReadOnlyCollection<string> wanted, string folder)
+        {
+            if (wanted == null) return true;
+            if (folder == null) return false;
+            foreach (var name in wanted)
+            {
+                if (string.Equals(name, folder, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The folder a package writes, without extracting it. Null when it cannot be read.</summary>
+        private string FolderOf(string name)
+        {
+            try
+            {
+                using (var package = packages.Open(name))
+                {
+                    string folder;
+                    PackageExtractor.ReadPackageVersion(package, out folder);
+                    return folder;
+                }
+            }
+            catch (Exception ex)
+            {
+                log.Warn("Could not read the folder of " + name + ": " + ex.Message);
+                return null;
+            }
         }
 
         private void RefreshWithoutPackage()
