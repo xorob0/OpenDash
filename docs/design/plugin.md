@@ -20,9 +20,10 @@ Lights
   find it, but does not install it: SimHub keeps matrix profiles in a file it rewrites itself.
   Import it once, and everything on this page reaches it while you drive.
 
-  Profile                                              [ C:\…\SimHub\OpenDash\openDash Flag… ]
-    Import this file in SimHub's matrix device
-    settings. openDash does not install it.
+  Flag box profile                                            [ Install into SimHub ]
+    Not installed. Press the button to add it to      [ C:\…\OpenDash\openDash Flag… ]
+    SimHub's matrix profiles; then pick it on your
+    matrix device.
 
   Brightness                                                                          [  100 ]
     Percent, for every light openDash drives. SimHub's
@@ -66,9 +67,12 @@ Lights
 and `LightsNightMode` are not flag-box settings: a driver who owns a flag box probably owns other
 lights, and a second profile would read the same three. Everything below them is this box's.
 
-**The profile row is a path, not a button.** The plugin writes the file and stops; there is no
-"install" to press. Saying where the file is and that SimHub's own import is the next step is the
-whole of the honesty ADR 0013 bought, and a button would imply otherwise.
+**The profile row is a button, and it never presses itself.** openDash hands SimHub a profile object
+through SimHub's own public API and SimHub writes its own settings file, so there is nothing unsafe
+about the act — what is left is consent, and a profile paints hardware the user owns. The button
+carries the verb (*Install*, *Update*, *Reinstall*) and the line above it says what SimHub holds
+now, so pressing it is never a guess. The path stays under it as the fallback for when SimHub's
+matrix settings cannot be reached. See the amendment to ADR 0013.
 
 **One group per matrix**, prefixed, the way [XOR-124](https://linear.app/xorob/issue/XOR-124)
 settled that a screen owns its settings. A device is the same shape of thing. People do own two

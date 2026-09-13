@@ -1,14 +1,15 @@
-// FlagBoxProfile.cs: the embedded .ledsprofile, extracted to a folder and left there.
+// FlagBoxProfile.cs: the embedded .ledsprofile, written out to a folder.
 //
-// This is deliberately not an installer. ADR 0013 decided the flag box profile is the one artefact
-// the plugin does not install: on the Arduino path every matrix profile a user owns lives inside
-// PluginsData/Common/ArduinoRGBMatrixSettings.json, which SimHub's RGBMatrixDriver reads when it is
-// constructed and rewrites whenever anything changes, so merging into it is a write we cannot
-// sequence against and would lose somebody's other profiles. Painting hardware the user owns
-// because they installed a dashboard is also a larger liberty than installing a dashboard.
+// This is not the installer -- FlagBoxInstaller.cs is, and it hands the profile to SimHub's own API
+// rather than writing SimHub's settings file. What this does is keep a copy on disk, which is the
+// fallback when SimHub's matrix settings cannot be reached, the thing a user copies to a second
+// machine, and the thing somebody opens to read what openDash is asking their hardware to do.
 //
-// So: write the file where the user can find it, tell them where, and stop. No SimHub or WPF types
-// here, so this compiles into the tests.
+// It still never writes PluginsData/Common/ArduinoRGBMatrixSettings.json: that file belongs to
+// SimHub's RGBMatrixDriver, which rewrites it whenever anything changes. See the amendment to
+// ADR 0013 for why the install goes through the object model instead.
+//
+// No SimHub or WPF types here, so this compiles into the tests.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -41,6 +42,9 @@ namespace OpenDashPlugin
         /// <summary>The profile's Name field, for the panel. Null when it could not be read.</summary>
         public string ProfileName { get; set; }
 
+        /// <summary>The profile itself, so the panel can install it without reading the file back.</summary>
+        public string Json { get; set; }
+
         public string Message { get; set; }
     }
 
@@ -54,7 +58,7 @@ namespace OpenDashPlugin
         public const string FolderName = "OpenDash";
 
         /// <summary>SimHub's settings file for matrix profiles. Named here only so the panel can say what
-        /// the plugin does not touch; nothing in this class opens it.</summary>
+        /// openDash does not touch; nothing anywhere in the plugin opens it.</summary>
         public const string SimHubMatrixSettings = @"PluginsData\Common\ArduinoRGBMatrixSettings.json";
 
         public static string FolderPath(string simHubRoot)
@@ -80,18 +84,106 @@ namespace OpenDashPlugin
             return at < 0 ? resourceName : resourceName.Substring(at + marker.Length);
         }
 
-        /// <summary>The profile's Name, read without a JSON parser: the file is generated, the field is a
-        /// plain string, and taking a dependency for one value would be worse than this.</summary>
-        public static string ProfileNameOf(string json)
+        /// <summary>The profile's Description, read the same way as its Name.</summary>
+        public static string DescriptionOf(string json)
+        {
+            return FieldOf(json, "Description");
+        }
+
+        /// <summary>The profile's Author, which the build stamps with "openDash".</summary>
+        public static string AuthorOf(string json)
+        {
+            return FieldOf(json, "Author");
+        }
+
+        /// <summary>
+        /// A string field of the profile's TOP-LEVEL object, read without a JSON parser.
+        ///
+        /// Depth matters: every container in the tree has a "Description" of its own and they appear
+        /// before the profile's, so the first match in the file is a container's. This walks the text
+        /// tracking brace depth and string state, and only accepts a key at depth 1. The plugin targets
+        /// net48 and the test project net8.0, and they share no JSON library between them, which is why
+        /// this is here rather than three lines of Newtonsoft.
+        /// </summary>
+        internal static string FieldOf(string json, string field)
         {
             if (string.IsNullOrEmpty(json)) return null;
-            const string key = "\"Name\":";
-            int at = json.IndexOf(key, StringComparison.Ordinal);
-            if (at < 0) return null;
-            int open = json.IndexOf('"', at + key.Length);
-            if (open < 0) return null;
-            int close = json.IndexOf('"', open + 1);
-            return close < 0 ? null : json.Substring(open + 1, close - open - 1);
+            int depth = 0;
+            for (int i = 0; i < json.Length; i++)
+            {
+                char c = json[i];
+                if (c == '"')
+                {
+                    int end = EndOfString(json, i);
+                    if (end < 0) return null;
+                    // A key at depth 1, followed by a colon, is one of the profile's own fields.
+                    if (depth == 1 && Matches(json, i + 1, end, field))
+                    {
+                        int colon = SkipSpace(json, end + 1);
+                        if (colon < json.Length && json[colon] == ':')
+                        {
+                            int valueStart = SkipSpace(json, colon + 1);
+                            if (valueStart >= json.Length || json[valueStart] != '"') return null;
+                            int valueEnd = EndOfString(json, valueStart);
+                            return valueEnd < 0 ? null : Unescape(json.Substring(valueStart + 1, valueEnd - valueStart - 1));
+                        }
+                    }
+                    i = end;
+                    continue;
+                }
+                if (c == '{' || c == '[') depth++;
+                else if (c == '}' || c == ']') depth--;
+            }
+            return null;
+        }
+
+        /// <summary>Index of the closing quote of the string starting at `open`, or -1.</summary>
+        private static int EndOfString(string json, int open)
+        {
+            for (int i = open + 1; i < json.Length; i++)
+            {
+                if (json[i] == '\\') { i++; continue; }
+                if (json[i] == '"') return i;
+            }
+            return -1;
+        }
+
+        private static int SkipSpace(string json, int from)
+        {
+            int i = from;
+            while (i < json.Length && char.IsWhiteSpace(json[i])) i++;
+            return i;
+        }
+
+        private static bool Matches(string json, int start, int end, string field)
+        {
+            return end - start == field.Length && string.CompareOrdinal(json, start, field, 0, field.Length) == 0;
+        }
+
+        /// <summary>The escapes the build can actually emit in a description.</summary>
+        private static string Unescape(string raw)
+        {
+            if (raw.IndexOf('\\') < 0) return raw;
+            var sb = new StringBuilder(raw.Length);
+            for (int i = 0; i < raw.Length; i++)
+            {
+                if (raw[i] != '\\' || i + 1 >= raw.Length) { sb.Append(raw[i]); continue; }
+                char next = raw[++i];
+                switch (next)
+                {
+                    case 'n': sb.Append('\n'); break;
+                    case 't': sb.Append('\t'); break;
+                    case 'r': sb.Append('\r'); break;
+                    default: sb.Append(next); break;
+                }
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>The profile's Name. Same depth-aware read as the other two.</summary>
+        public static string ProfileNameOf(string json)
+        {
+            return FieldOf(json, "Name");
         }
 
         /// <summary>Writes the embedded profile into SimHub/OpenDash/ when it is missing or has changed.
@@ -128,13 +220,13 @@ namespace OpenDashPlugin
                 string profileName = ProfileNameOf(embedded);
                 if (File.Exists(path) && string.Equals(File.ReadAllText(path), embedded, StringComparison.Ordinal))
                 {
-                    return new FlagBoxResult { Status = FlagBoxStatus.UpToDate, Path = path, ProfileName = profileName, Message = "Up to date" };
+                    return new FlagBoxResult { Status = FlagBoxStatus.UpToDate, Path = path, ProfileName = profileName, Json = embedded, Message = "Up to date" };
                 }
 
                 Directory.CreateDirectory(folder);
                 File.WriteAllText(path, embedded, new UTF8Encoding(false));
-                log.Info("Wrote the flag box profile to " + path + ". Import it in SimHub under the matrix device; OpenDash does not install it.");
-                return new FlagBoxResult { Status = FlagBoxStatus.Extracted, Path = path, ProfileName = profileName, Message = "Written" };
+                log.Info("Wrote the flag box profile to " + path + ". Install it from the OpenDash settings page under Lights.");
+                return new FlagBoxResult { Status = FlagBoxStatus.Extracted, Path = path, ProfileName = profileName, Json = embedded, Message = "Written" };
             }
             catch (Exception e)
             {
@@ -143,9 +235,8 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>What the lights page says. The wording carries the manual step, because it is the whole
-        /// difference between this and a package and a user who is not told will wait for something that
-        /// is never going to happen.</summary>
+        /// <summary>What the log says at startup. The panel says the rest, because only the panel knows
+        /// whether SimHub already holds the profile; see FlagBoxInstallPlan.Summary.</summary>
         public static string Summary(FlagBoxResult result)
         {
             if (result == null) return "Flag box: not checked";
@@ -157,7 +248,7 @@ namespace OpenDashPlugin
                     return "Flag box: could not write the profile (" + result.Message + ")";
                 default:
                     return "Flag box: " + (result.ProfileName ?? "profile") + " is at " + result.Path
-                        + ". Import it in SimHub's matrix device settings; OpenDash does not install it.";
+                        + ". Install it from the OpenDash settings page under Lights.";
             }
         }
     }
