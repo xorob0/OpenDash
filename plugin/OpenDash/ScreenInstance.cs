@@ -145,8 +145,13 @@ namespace OpenDashPlugin
 
             if (IsPitWall)
             {
+                // A null Zones array is a pit wall nothing has configured yet -- one just added, or one
+                // a settings file names without a state -- so the whole group takes its defaults. Zero
+                // is a legal wide page, so WideZone cannot tell "unset" from "the first page" on its
+                // own, and a screen added from the panel used to open on the wrong one because of it.
+                var fresh = Zones == null;
                 var zones = Contract.PitWallDefaultZones();
-                if (Zones != null)
+                if (!fresh)
                 {
                     for (var i = 0; i < zones.Length && i < Zones.Length; i++)
                     {
@@ -154,8 +159,8 @@ namespace OpenDashPlugin
                     }
                 }
                 Zones = zones;
-                WideZone = Contract.NormaliseWideZonePage(WideZone);
-                WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
+                WideZone = fresh ? Contract.DefaultWideZonePage : Contract.NormaliseWideZonePage(WideZone);
+                WebViewUrl = fresh ? Contract.DefaultWebViewUrl : Contract.NormaliseUrl(WebViewUrl);
             }
             else
             {

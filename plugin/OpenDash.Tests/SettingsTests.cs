@@ -194,61 +194,79 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Second_screen_settings_start_at_their_defaults()
         {
-            var settings = new OpenDashSettings();
-            settings.Normalise();
-            Assert.Equal(21, settings.Modules.Length);
-            Assert.True(settings.Module(1));
-            Assert.False(settings.Module(6));
-            Assert.False(settings.Module(20));
-            Assert.False(settings.Module(21));
-            Assert.Equal(new[] { 0, 1, 4, 2 }, settings.Zones);
-            Assert.Equal(0, settings.Zone("A"));
-            Assert.Equal(2, settings.Zone("D"));
-            Assert.Equal(5, settings.WideZone);
-            Assert.Equal("", settings.WebViewUrl);
+            // Since ADR 0017 the companion's rotation and the pit wall's zones live on the screen that
+            // has them, so the defaults are a new screen's rather than the settings object's.
+            var companion = Screen(Contract.KindCompanion, 850, 480);
+            Assert.Equal(21, companion.Modules.Length);
+            Assert.True(companion.Modules[0]);
+            Assert.False(companion.Modules[5]);
+            Assert.False(companion.Modules[19]);
+            Assert.False(companion.Modules[20]);
+
+            var wall = Screen(Contract.KindPitWall, 1920, 1080);
+            Assert.Equal(new[] { 0, 1, 4, 2 }, wall.Zones);
+            Assert.Equal(5, wall.WideZone);
+            Assert.Equal("", wall.WebViewUrl);
         }
 
         [Fact]
         public void A_short_or_broken_second_screen_state_is_repaired()
         {
-            var settings = new OpenDashSettings
+            var companion = new ScreenInstance
             {
+                Kind = Contract.KindCompanion,
+                Width = 850,
+                Height = 480,
                 Modules = new[] { false, true },
+            };
+            companion.Normalise();
+            // What the file carried is kept; the rest goes back to the catalogue defaults.
+            Assert.Equal(21, companion.Modules.Length);
+            Assert.False(companion.Modules[0]);
+            Assert.True(companion.Modules[1]);
+            Assert.False(companion.Modules[5]);
+
+            var wall = new ScreenInstance
+            {
+                Kind = Contract.KindPitWall,
+                Width = 1920,
+                Height = 1080,
                 Zones = new[] { 99, 3 },
                 WideZone = 42,
                 WebViewUrl = "javascript:alert(1)",
             };
-            settings.Normalise();
-            // What the file carried is kept; the rest goes back to the catalogue defaults.
-            Assert.Equal(21, settings.Modules.Length);
-            Assert.False(settings.Module(1));
-            Assert.True(settings.Module(2));
-            Assert.False(settings.Module(6));
+            wall.Normalise();
             // 99 is not a page, so zone A falls back; zone B keeps the 3 the file gave it.
-            Assert.Equal(new[] { 0, 3, 4, 2 }, settings.Zones);
-            Assert.Equal(Contract.DefaultWideZonePage, settings.WideZone);
-            Assert.Equal("", settings.WebViewUrl);
+            Assert.Equal(new[] { 0, 3, 4, 2 }, wall.Zones);
+            Assert.Equal(Contract.DefaultWideZonePage, wall.WideZone);
+            Assert.Equal("", wall.WebViewUrl);
         }
 
         [Fact]
-        public void Second_screen_settings_are_copied_and_set_through_the_contract()
+        public void Second_screen_settings_are_copied_with_the_rig()
         {
-            var source = new OpenDashSettings();
-            source.SetModule(6, true);
-            source.SetZone("B", 7);
-            source.WideZone = 1;
-            source.WebViewUrl = "https://garage61.net";
+            var source = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            source.Normalise();
+            var companion = Screen(Contract.KindCompanion, 850, 480);
+            var wall = Screen(Contract.KindPitWall, 1920, 1080);
+            source.Rig.Add(companion);
+            source.Rig.Add(wall);
+            companion.Modules[5] = true;
+            wall.Zones[1] = 7;
+            wall.WideZone = 1;
+            wall.WebViewUrl = "https://garage61.net";
+
             var copy = new OpenDashSettings();
             copy.CopyFrom(source);
-            Assert.True(copy.Module(6));
-            Assert.Equal(7, copy.Zone("B"));
-            Assert.Equal(1, copy.WideZone);
-            Assert.Equal("https://garage61.net", copy.WebViewUrl);
-            // The copy is independent: it holds its own arrays.
-            source.SetModule(6, false);
-            Assert.True(copy.Module(6));
-            Assert.Throws<ArgumentOutOfRangeException>(() => copy.SetModule(22, true));
-            Assert.Throws<ArgumentOutOfRangeException>(() => copy.SetZone("E", 0));
+            Assert.True(copy.ScreenByNamespace(Contract.CompanionPrefix).Modules[5]);
+            Assert.Equal(7, copy.ScreenZone(Contract.PitWallPrefix, "B"));
+            Assert.Equal(1, copy.ScreenWideZone(Contract.PitWallPrefix));
+            Assert.Equal("https://garage61.net", copy.ScreenWebViewUrl(Contract.PitWallPrefix));
+
+            // The copy is independent: it holds its own screens and its own arrays.
+            companion.Modules[5] = false;
+            Assert.True(copy.ScreenByNamespace(Contract.CompanionPrefix).Modules[5]);
+            Assert.Throws<ArgumentOutOfRangeException>(() => copy.ScreenZone(Contract.PitWallPrefix, "E"));
         }
 
         // --- The dash face ---------------------------------------------------------------------
@@ -745,32 +763,38 @@ namespace OpenDashPlugin.Tests
         {
             // SimHub persists the settings with Json.NET; what is asserted here is the shape rather than
             // that serialiser, namely that every part of a rig is a plain settable member and comes back
-            // as it went in. A second face is the case that matters: the two carry different zones.
-            var rim = Contract.FaceSizes[3];
-            var settings = new OpenDashSettings
-            {
-                Screens = new List<string> { Contract.FacePrefix(Face), Contract.FacePrefix(rim), Contract.CompanionPrefix, Contract.PitWallPrefix },
-            };
+            // as it went in. Two faces of one size is the case that matters: the two carry different
+            // zones, which before ADR 0017 was not expressible at all.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
             settings.Normalise();
-            settings.SetFaceZoneStart(Face, "B", 4);
-            settings.SetFaceZoneStart(rim, "B", 9);
-            settings.SetBarField(rim, "Left1", 3);
-            settings.SetModule(6, true);
-            settings.SetZone("A", 3);
-            settings.WebViewUrl = "https://garage61.net";
+            var entry = new PackageEntry { Package = "p", Folder = "openDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            var main = settings.AddScreen(entry, "Main dash");
+            var rim = settings.AddScreen(entry, "Rim");
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
+            settings.Normalise();
+
+            main.Face.SetStart("B", 4);
+            rim.Face.SetStart("B", 9);
+            rim.Face.SetBarField("Left1", 3);
+            settings.ScreenByNamespace(Contract.CompanionPrefix).Modules[5] = true;
+            settings.ScreenByNamespace(Contract.PitWallPrefix).Zones[0] = 3;
+            settings.ScreenByNamespace(Contract.PitWallPrefix).WebViewUrl = "https://garage61.net";
 
             var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
             read.Normalise();
 
-            Assert.Equal(settings.Screens, read.Screens);
-            Assert.Equal(4, read.FaceZoneStart(Face, "B"));
-            Assert.Equal(9, read.FaceZoneStart(rim, "B"));
-            Assert.Equal(3, read.BarField(rim, "Left1"));
-            Assert.True(read.Module(6));
-            Assert.Equal(3, read.Zone("A"));
-            Assert.Equal("https://garage61.net", read.WebViewUrl);
-            // And the rig it names is the rig it keeps: a face outside it is not added back by a save.
-            Assert.Equal(2, read.Screens.Count(Contract.IsKnownFacePrefix));
+            Assert.Equal(4, read.ScreenFace("Face1280x480").Start("B"));
+            Assert.Equal(9, read.ScreenFace("Rim").Start("B"));
+            Assert.Equal(3, read.ScreenFace("Rim").BarField("Left1"));
+            Assert.True(read.ScreenByNamespace(Contract.CompanionPrefix).Modules[5]);
+            Assert.Equal(3, read.ScreenZone(Contract.PitWallPrefix, "A"));
+            Assert.Equal("https://garage61.net", read.ScreenWebViewUrl(Contract.PitWallPrefix));
+            // The names and the folders survive, which is what makes the two 1280x480 screens tellable
+            // apart in SimHub's own dashboard list.
+            Assert.Equal("Main dash", read.ScreenByNamespace("Face1280x480").Name);
+            Assert.Equal("openDash Rim", read.ScreenByNamespace("Rim").Folder);
+            Assert.Equal(4, read.RigScreens().Count);
         }
 
         [Fact]
