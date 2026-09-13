@@ -351,6 +351,81 @@ namespace OpenDashPlugin
         /// idiom and a published property cannot be renamed under ADR 0003, but no other screen has a
         /// browser page to point anywhere.
         /// </remarks>
+        // --- The kinds of screen a rig can hold -------------------------------------------------
+        //
+        // A screen used to be identified by the prefix its properties carry, which worked only while
+        // there could be one of each: "Face1280x480" was both the name and the kind and the size at
+        // once. ADR 0017 separates them, so a screen now carries a kind of its own and a namespace
+        // that is no longer required to spell out what it is.
+
+        /// <summary>A rectangular zone face: four zones, a bar and a glance.</summary>
+        public const string KindFace = "face";
+
+        /// <summary>A companion: one module at a time behind a header.</summary>
+        public const string KindCompanion = "companion";
+
+        /// <summary>A pit wall: three pages sharing four data zones and one wide zone.</summary>
+        public const string KindPitWall = "pitwall";
+
+        /// <summary>A twelve-slot face, from the card model that the zones replaced. Leaves with XOR-95.</summary>
+        public const string KindSlots = "slots";
+
+        public static readonly string[] ScreenKinds = { KindFace, KindCompanion, KindPitWall, KindSlots };
+
+        /// <summary>The kind the stock prefix of a screen names, for migrating a settings file that had only prefixes.</summary>
+        public static string KindForPrefix(string prefix)
+        {
+            if (IsKnownFacePrefix(prefix)) return KindFace;
+            if (string.Equals(prefix, CompanionPrefix, StringComparison.Ordinal)) return KindCompanion;
+            if (string.Equals(prefix, PitWallPrefix, StringComparison.Ordinal)) return KindPitWall;
+            return null;
+        }
+
+        /// <summary>
+        /// The properties one screen of a kind owns under its own namespace, in attachment order.
+        /// </summary>
+        /// <remarks>
+        /// The same names as ScreenPropertyNames(prefix) produces for a stock screen, which is what
+        /// keeps a rig of one screen per size attaching exactly what it attached before ADR 0017. The
+        /// companion's and the pit wall's names carried no size even then, so under an instance they
+        /// take the namespace where they used to take the fixed prefix.
+        /// </remarks>
+        public static IEnumerable<string> ScreenPropertyNames(string kind, string ns)
+        {
+            if (string.Equals(kind, KindFace, StringComparison.Ordinal))
+            {
+                foreach (var name in FacePropertyNames(ns)) yield return name;
+                yield break;
+            }
+            if (string.Equals(kind, KindCompanion, StringComparison.Ordinal))
+            {
+                for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
+                yield break;
+            }
+            if (string.Equals(kind, KindPitWall, StringComparison.Ordinal))
+            {
+                foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(ns, letter);
+                yield return PitWallWideProperty(ns);
+                yield return WebViewUrlProperty(ns);
+                yield break;
+            }
+            // A slots face reads the twelve shared slot properties and nothing of its own, which is why
+            // the card model never needed a prefix and why two of them cannot be told apart. That is a
+            // property of the model being retired, not something this fixes.
+            if (string.Equals(kind, KindSlots, StringComparison.Ordinal)) yield break;
+            throw new ArgumentOutOfRangeException("kind", kind, "no screen is of that kind");
+        }
+
+        /// <summary>Every action one screen of a kind owns, in registration order.</summary>
+        public static IEnumerable<string> ScreenActionNames(string kind, string ns)
+        {
+            if (string.Equals(kind, KindFace, StringComparison.Ordinal)) return FaceActionNames(ns);
+            // Only a face has a button today. The canvas draws "Next module" on the companion pane and
+            // no such action is registered, so the panel says it is not bound rather than offering a
+            // binder for a name SimHub would never call.
+            return new string[0];
+        }
+
         public static IEnumerable<string> ScreenPropertyNames(string prefix)
         {
             if (IsKnownFacePrefix(prefix))
@@ -424,10 +499,69 @@ namespace OpenDashPlugin
         /// zoneIndex * 100 + page, so a glance is one property rather than a pair per zone.</summary>
         public const int DefaultQuickGlance = 2 * 100 + 12;
 
+        /// <summary>
+        /// The characters a namespace may be spelled with, and the rule that produces one from a name.
+        /// </summary>
+        /// <remarks>
+        /// Letters and digits only. The contract's note on FacePrefix records that SimHub already puts
+        /// one dot in front of every property name and that whether its parser accepts a second inside
+        /// the name is unverified; a namespace is user-typed, so this is not the place to find out.
+        /// Everything else in the name is dropped rather than substituted, because a separator that
+        /// survives is a separator somebody's name ends with.
+        ///
+        /// The case the user typed is kept, so "Main dash" is MainDash and not maindash: a namespace is
+        /// read in SimHub's property browser and the panel prints it, and both are nicer in the shape
+        /// the person chose.
+        /// </remarks>
+        public static string Slug(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return string.Empty;
+            var built = new System.Text.StringBuilder(name.Length);
+            var startOfWord = false;
+            foreach (var character in name)
+            {
+                if (character >= '0' && character <= '9')
+                {
+                    // A namespace that begins with a digit would read as a number wherever a property is
+                    // parsed, so the leading run of them is dropped rather than kept.
+                    if (built.Length > 0) built.Append(character);
+                    continue;
+                }
+                var upper = character >= 'A' && character <= 'Z';
+                var lower = character >= 'a' && character <= 'z';
+                if (!upper && !lower)
+                {
+                    startOfWord = built.Length > 0;
+                    continue;
+                }
+                built.Append(startOfWord && lower ? char.ToUpperInvariant(character) : character);
+                startOfWord = false;
+            }
+            return built.ToString();
+        }
+
+        /// <summary>
+        /// Whether a namespace is one the plugin allocates for itself and a user's screen may not take.
+        /// </summary>
+        /// <remarks>
+        /// Every stock face prefix, the companion's and the pit wall's. A screen that took one of these
+        /// would read the properties of whichever screen holds the stock package, which is the exact
+        /// collision ADR 0017 exists to stop.
+        /// </remarks>
+        public static bool IsReservedNamespace(string ns)
+        {
+            return ns != null && IsKnownScreen(ns);
+        }
+
         /// <summary>Property name of a face's quick glance: Face1920x480QuickGlance.</summary>
+        public static string QuickGlanceProperty(string ns)
+        {
+            return ns + "QuickGlance";
+        }
+
         public static string QuickGlanceProperty(FaceSize face)
         {
-            return FacePrefix(face) + "QuickGlance";
+            return QuickGlanceProperty(FacePrefix(face));
         }
 
         /// <summary>
@@ -438,16 +572,26 @@ namespace OpenDashPlugin
         public const string HoldQuickGlanceAction = "HoldQuickGlance";
 
         /// <summary>Action that advances one zone of one face: Face1920x480CycleZoneA.</summary>
-        public static string CycleZoneAction(FaceSize face, string letter)
+        public static string CycleZoneAction(string ns, string letter)
         {
             RequireFaceZone(letter);
-            return FacePrefix(face) + "CycleZone" + letter;
+            return ns + "CycleZone" + letter;
+        }
+
+        public static string CycleZoneAction(FaceSize face, string letter)
+        {
+            return CycleZoneAction(FacePrefix(face), letter);
         }
 
         /// <summary>Action that holds the glance on one face: Face1920x480HoldQuickGlance.</summary>
+        public static string HoldQuickGlanceActionFor(string ns)
+        {
+            return ns + HoldQuickGlanceAction;
+        }
+
         public static string HoldQuickGlanceActionFor(FaceSize face)
         {
-            return FacePrefix(face) + HoldQuickGlanceAction;
+            return HoldQuickGlanceActionFor(FacePrefix(face));
         }
 
         /// <summary>
@@ -483,49 +627,86 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Property name of a zone's current page: Face1920x480ZoneA .. Face600x686ZoneD.</summary>
-        public static string ZonePageProperty(FaceSize face, string letter)
+        public static string ZonePageProperty(string ns, string letter)
         {
             RequireFaceZone(letter);
-            return FacePrefix(face) + "Zone" + letter;
+            return ns + "Zone" + letter;
+        }
+
+        public static string ZonePageProperty(FaceSize face, string letter)
+        {
+            return ZonePageProperty(FacePrefix(face), letter);
         }
 
         /// <summary>Property name of a zone's enabled-page mask: Face1920x480ZoneAPages.</summary>
-        public static string ZoneMaskProperty(FaceSize face, string letter)
+        public static string ZoneMaskProperty(string ns, string letter)
         {
             RequireFaceZone(letter);
-            return FacePrefix(face) + "Zone" + letter + "Pages";
+            return ns + "Zone" + letter + "Pages";
+        }
+
+        public static string ZoneMaskProperty(FaceSize face, string letter)
+        {
+            return ZoneMaskProperty(FacePrefix(face), letter);
         }
 
         /// <summary>Property name of a zone's start page: Face1920x480ZoneAStart.</summary>
-        public static string ZoneStartProperty(FaceSize face, string letter)
+        public static string ZoneStartProperty(string ns, string letter)
         {
             RequireFaceZone(letter);
-            return FacePrefix(face) + "Zone" + letter + "Start";
+            return ns + "Zone" + letter + "Start";
+        }
+
+        public static string ZoneStartProperty(FaceSize face, string letter)
+        {
+            return ZoneStartProperty(FacePrefix(face), letter);
         }
 
         /// <summary>Property name of a zone's class filter: Face1920x480ZoneAClassOnly.</summary>
-        public static string ZoneClassOnlyProperty(FaceSize face, string letter)
+        public static string ZoneClassOnlyProperty(string ns, string letter)
         {
             RequireFaceZone(letter);
-            return FacePrefix(face) + "Zone" + letter + "ClassOnly";
+            return ns + "Zone" + letter + "ClassOnly";
+        }
+
+        public static string ZoneClassOnlyProperty(FaceSize face, string letter)
+        {
+            return ZoneClassOnlyProperty(FacePrefix(face), letter);
         }
 
         /// <summary>Property name of a bar end field: Face1920x480BarLeft1.</summary>
-        public static string BarFieldProperty(FaceSize face, string slot)
+        public static string BarFieldProperty(string ns, string slot)
         {
             if (Array.IndexOf(BarSlots, slot) < 0) throw new ArgumentOutOfRangeException(nameof(slot));
-            return FacePrefix(face) + "Bar" + slot;
+            return ns + "Bar" + slot;
+        }
+
+        public static string BarFieldProperty(FaceSize face, string slot)
+        {
+            return BarFieldProperty(FacePrefix(face), slot);
         }
 
         /// <summary>Every property one face owns, in attachment order.</summary>
+        public static IEnumerable<string> FacePropertyNames(string ns)
+        {
+            foreach (var letter in FaceZoneLetters) yield return ZonePageProperty(ns, letter);
+            foreach (var letter in FaceZoneLetters) yield return ZoneMaskProperty(ns, letter);
+            foreach (var letter in FaceZoneLetters) yield return ZoneStartProperty(ns, letter);
+            foreach (var letter in FaceZoneLetters) yield return ZoneClassOnlyProperty(ns, letter);
+            foreach (var slot in BarSlots) yield return BarFieldProperty(ns, slot);
+            yield return QuickGlanceProperty(ns);
+        }
+
         public static IEnumerable<string> FacePropertyNames(FaceSize face)
         {
-            foreach (var letter in FaceZoneLetters) yield return ZonePageProperty(face, letter);
-            foreach (var letter in FaceZoneLetters) yield return ZoneMaskProperty(face, letter);
-            foreach (var letter in FaceZoneLetters) yield return ZoneStartProperty(face, letter);
-            foreach (var letter in FaceZoneLetters) yield return ZoneClassOnlyProperty(face, letter);
-            foreach (var slot in BarSlots) yield return BarFieldProperty(face, slot);
-            yield return QuickGlanceProperty(face);
+            return FacePropertyNames(FacePrefix(face));
+        }
+
+        /// <summary>Every action one face's screen owns, in registration order: one per zone and the glance.</summary>
+        public static IEnumerable<string> FaceActionNames(string ns)
+        {
+            foreach (var letter in FaceZoneLetters) yield return CycleZoneAction(ns, letter);
+            yield return HoldQuickGlanceActionFor(ns);
         }
 
         private static void RequireFaceZone(string letter)
@@ -609,18 +790,48 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Property name of a companion module, 1-based: CompanionModule01 .. CompanionModule21.</summary>
-        public static string ModuleProperty(int module)
+        public static string ModuleProperty(string ns, int module)
         {
             if (!Modules.IsValidNumber(module)) throw new ArgumentOutOfRangeException(nameof(module));
-            return "CompanionModule" + module.ToString("00");
+            return ns + "Module" + module.ToString("00");
+        }
+
+        public static string ModuleProperty(int module)
+        {
+            return ModuleProperty(CompanionPrefix, module);
         }
 
         /// <summary>Property name of a pit wall zone: PitWallZoneA .. PitWallZoneD.</summary>
-        public static string ZoneProperty(string letter)
+        public static string ZoneProperty(string ns, string letter)
         {
             var index = Array.IndexOf(PitWallZoneLetters, letter);
             if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            return "PitWallZone" + letter;
+            return ns + "Zone" + letter;
+        }
+
+        public static string ZoneProperty(string letter)
+        {
+            return ZoneProperty(PitWallPrefix, letter);
+        }
+
+        /// <summary>Property name of a pit wall's wide zone: PitWallWide, or GarageWide on a second one.</summary>
+        public static string PitWallWideProperty(string ns)
+        {
+            return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? PitWallWide : ns + "Wide";
+        }
+
+        /// <summary>
+        /// Property name of a pit wall's web view address.
+        /// </summary>
+        /// <remarks>
+        /// The stock one is "WebViewUrl" with no prefix at all: it was named before the idiom and a
+        /// published property cannot be renamed under ADR 0003. A second pit wall therefore takes a
+        /// prefixed spelling, which is the one place where an instance's names are not simply the stock
+        /// ones with the namespace swapped in.
+        /// </remarks>
+        public static string WebViewUrlProperty(string ns)
+        {
+            return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? WebViewUrl : ns + "WebViewUrl";
         }
 
         /// <summary>Default page of a zone, by its letter.</summary>
@@ -662,6 +873,30 @@ namespace OpenDashPlugin
                 foreach (var screen in screens)
                 {
                     foreach (var name in ScreenPropertyNames(screen)) yield return name;
+                }
+            }
+            foreach (var name in LightsPropertyNames()) yield return name;
+        }
+
+        /// <summary>
+        /// Every property a rig of instances attaches, in attachment order.
+        /// </summary>
+        /// <remarks>
+        /// The same shape as the overload above and the same order, so that a rig of one screen per size
+        /// declares exactly the names it declared before ADR 0017 and the pin in
+        /// packages/dash/test/declared-properties.txt keeps checking what it always checked. A screen
+        /// with a namespace of its own contributes names that are not in the pin and cannot be: they
+        /// exist because a user typed a name, and nothing a build can see produces them.
+        /// </remarks>
+        public static IEnumerable<string> PropertyNames(IEnumerable<ScreenInstance> screens)
+        {
+            foreach (var name in SharedPropertyNames()) yield return name;
+            if (screens != null)
+            {
+                foreach (var screen in screens)
+                {
+                    if (screen == null) continue;
+                    foreach (var name in screen.PropertyNames()) yield return name;
                 }
             }
             foreach (var name in LightsPropertyNames()) yield return name;

@@ -1,6 +1,6 @@
 /** contract.ts: the card catalogue, the property list and the isnull-wrapped setting reads. */
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import {
   BAR_SLOTS,
@@ -192,6 +192,19 @@ describe('settings', () => {
 
 /** The plugin sources mirror contract.ts; a missing file fails here rather than skipping. */
 const pluginSource = (file: string): string => readFileSync(path.resolve(import.meta.dir, '../../../plugin/OpenDash', file), 'utf8');
+
+/**
+ * The settings panel as one string.
+ *
+ * It is four tabs across six partial classes since XOR-125, so a test that named SettingsControl.cs
+ * was reading a sixth of it and went green on the strips having moved to the Lights tab. The whole
+ * panel is what these assertions mean: a setting is offered somewhere a user can reach it.
+ */
+const panelSource = (): string =>
+  readdirSync(path.resolve(import.meta.dir, '../../../plugin/OpenDash'))
+    .filter((name) => name.startsWith('SettingsControl') && name.endsWith('.cs'))
+    .map((name) => pluginSource(name))
+    .join('\n');
 const csArray = (values: readonly string[]): string => `{ ${values.map((v) => `"${v}"`).join(', ')} }`;
 
 /** The pinned list, without its header. `declared-properties.txt` says what it is for. */
@@ -232,7 +245,7 @@ describe('plugin mirror', () => {
     // profile stuck on its isnull() default, which is exactly how these two shipped.
     const attach = pluginSource('OpenDash.cs');
     for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
-    const panel = pluginSource('SettingsControl.cs');
+    const panel = panelSource();
     expect(panel).toContain('Contract.LedCentres');
     expect(panel).toContain('Contract.LedRpmStyles');
   });

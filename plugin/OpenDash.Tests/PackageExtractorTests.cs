@@ -324,6 +324,183 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(log.Lines, line => line.StartsWith("info: Installed openDash 0.2.0"));
             Assert.Equal(2, log.Lines.Count(line => line.StartsWith("info: Installed font")));
         }
+
+        // --- ADR 0017: a second screen at a size gets its own copy ------------------------------
+
+        /// <summary>A package shaped like a real one: bindings in the main dashboard and in a widget.</summary>
+        private static MemoryStream Instanceable(string folder, string ns)
+        {
+            var main = "{\"Version\":2,\"Metadata\":{\"Title\":\"" + folder + "\"},"
+                + "\"A\":\"isnull([OpenDash." + ns + "ZoneA],0)\",\"B\":\"isnull([OpenDash." + ns + "ZoneBPages],0)\"}";
+            var widget = "{\"Version\":2,\"C\":\"isnull([OpenDash." + ns + "ZoneC],0)\"}";
+            var stream = new MemoryStream();
+            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
+            {
+                SyntheticPackage.Add(zip, folder + "/" + folder + ".djson", main);
+                SyntheticPackage.Add(zip, folder + "/" + folder + ".djson.metadata", "{\"Title\":\"" + folder + "\",\"DashboardVersion\":\"1.0.0\"}");
+                SyntheticPackage.Add(zip, folder + "/zoneface-module.djson", widget);
+                SyntheticPackage.Add(zip, folder + "/_SHFonts/Barlow-Medium.ttf", "font-a");
+            }
+            stream.Position = 0;
+            return stream;
+        }
+
+        [Fact]
+        public void A_second_screen_at_a_size_gets_its_own_folder_and_its_own_properties()
+        {
+            {
+                var target = new PackageExtractor.ScreenTarget
+                {
+                    Folder = "openDash Rim",
+                    Title = "Rim",
+                    FromNamespace = "Face1280x480",
+                    ToNamespace = "Rim",
+                };
+                var result = PackageExtractor.Install(Instanceable("openDash 1280x480", "Face1280x480"), root, null, false, target);
+                Assert.Equal("openDash Rim", result.FolderName);
+
+                // SimHub finds a dashboard as <folder>/<folder>.djson, so both were renamed.
+                var folder = Path.Combine(root, PackageExtractor.DashTemplates, "openDash Rim");
+                Assert.True(File.Exists(Path.Combine(folder, "openDash Rim.djson")));
+                Assert.True(File.Exists(Path.Combine(folder, "openDash Rim.djson.metadata")));
+                Assert.False(File.Exists(Path.Combine(folder, "openDash 1280x480.djson")));
+                // The sub-dashboards are referenced by bare file name and must not be renamed.
+                Assert.True(File.Exists(Path.Combine(folder, "zoneface-module.djson")));
+
+                // Every binding now reads this screen's properties, in the widget as well as the main
+                // dashboard, and none of them reads the one it was built for.
+                var main = File.ReadAllText(Path.Combine(folder, "openDash Rim.djson"));
+                var widget = File.ReadAllText(Path.Combine(folder, "zoneface-module.djson"));
+                Assert.Contains("[OpenDash.RimZoneA]", main);
+                Assert.Contains("[OpenDash.RimZoneBPages]", main);
+                Assert.Contains("[OpenDash.RimZoneC]", widget);
+                Assert.DoesNotContain("OpenDash.Face1280x480", main);
+                Assert.DoesNotContain("OpenDash.Face1280x480", widget);
+
+                // And SimHub's dashboard list shows the name the user chose, which is the whole reason
+                // two screens of one size were previously indistinguishable.
+                Assert.Contains("\"Title\":\"Rim\"", File.ReadAllText(Path.Combine(folder, "openDash Rim.djson.metadata")));
+                Assert.Contains("\"Title\":\"Rim\"", main);
+            }
+        }
+
+        [Fact]
+        public void The_stock_screen_is_written_byte_for_byte()
+        {
+            // The first screen at a size rewrites nothing, which is what keeps the ordinary rig
+            // producing exactly the files it produced before ADR 0017.
+            {
+                var target = new PackageExtractor.ScreenTarget
+                {
+                    Folder = "openDash 1280x480",
+                    Title = "openDash 1280x480",
+                    FromNamespace = "Face1280x480",
+                    ToNamespace = "Face1280x480",
+                };
+                Assert.False(target.Rewrites);
+                PackageExtractor.Install(Instanceable("openDash 1280x480", "Face1280x480"), root, null, false, target);
+                var main = Path.Combine(root, PackageExtractor.DashTemplates, "openDash 1280x480", "openDash 1280x480.djson");
+                Assert.Contains("[OpenDash.Face1280x480ZoneA]", File.ReadAllText(main));
+            }
+        }
+
+        [Fact]
+        public void A_rewrite_that_cannot_find_the_namespace_refuses_to_install()
+        {
+            // A package that mentions the namespace nowhere would be a copy silently reading the first
+            // screen's settings, which is the exact failure the mechanism exists to prevent.
+            {
+                var target = new PackageExtractor.ScreenTarget
+                {
+                    Folder = "openDash Rim",
+                    Title = "Rim",
+                    FromNamespace = "Face1920x480",
+                    ToNamespace = "Rim",
+                };
+                Assert.Throws<InvalidDataException>(() =>
+                    PackageExtractor.Install(Instanceable("openDash 1280x480", "Face1280x480"), root, null, false, target));
+                Assert.False(Directory.Exists(Path.Combine(root, PackageExtractor.DashTemplates, "openDash Rim")));
+            }
+        }
+
+        [Fact]
+        public void Two_screens_of_one_size_end_up_with_disjoint_properties()
+        {
+            // The end-to-end statement of ADR 0017, on disk: the two folders share no property name.
+            {
+                PackageExtractor.Install(Instanceable("openDash 1280x480", "Face1280x480"), root, null, false,
+                    new PackageExtractor.ScreenTarget { Folder = "openDash 1280x480", Title = "Main dash", FromNamespace = "Face1280x480", ToNamespace = "Face1280x480" });
+                PackageExtractor.Install(Instanceable("openDash 1280x480", "Face1280x480"), root, null, false,
+                    new PackageExtractor.ScreenTarget { Folder = "openDash Rim", Title = "Rim", FromNamespace = "Face1280x480", ToNamespace = "Rim" });
+
+                var templates = Path.Combine(root, PackageExtractor.DashTemplates);
+                var first = File.ReadAllText(Path.Combine(templates, "openDash 1280x480", "openDash 1280x480.djson"));
+                var second = File.ReadAllText(Path.Combine(templates, "openDash Rim", "openDash Rim.djson"));
+                Assert.Contains("OpenDash.Face1280x480ZoneA", first);
+                Assert.DoesNotContain("OpenDash.RimZoneA", first);
+                Assert.Contains("OpenDash.RimZoneA", second);
+                Assert.DoesNotContain("OpenDash.Face1280x480ZoneA", second);
+            }
+        }
+
+        [BuildOutputFact]
+        public void The_real_package_instances_cleanly()
+        {
+            // The synthetic packages above prove the mechanism; this proves it against the scene graph
+            // the generator actually emits, which on 2026-09-13 held 716 references across four files.
+            // ADR 0017 rests on that rewrite being total, so it is checked on the real thing rather
+            // than only on a package shaped like it.
+            var package = Path.Combine(RepoPaths.BuildOutput(), "openDash 1280x480.simhubdash");
+            if (!File.Exists(package)) return;
+
+            int before;
+            using (var zip = ZipFile.OpenRead(package))
+            {
+                before = zip.Entries
+                    .Where(entry => entry.FullName.EndsWith(PackageExtractor.DashExtension, StringComparison.OrdinalIgnoreCase))
+                    .Sum(entry =>
+                    {
+                        using (var reader = new StreamReader(entry.Open())) return Count(reader.ReadToEnd(), "OpenDash.Face1280x480");
+                    });
+            }
+            Assert.True(before > 0, "the built package should read its own namespace");
+
+            using (var stream = File.OpenRead(package))
+            {
+                PackageExtractor.Install(stream, root, null, false, new PackageExtractor.ScreenTarget
+                {
+                    Folder = "openDash Rim",
+                    Title = "Rim",
+                    FromNamespace = "Face1280x480",
+                    ToNamespace = "Rim",
+                });
+            }
+
+            var folder = Path.Combine(root, PackageExtractor.DashTemplates, "openDash Rim");
+            Assert.True(File.Exists(Path.Combine(folder, "openDash Rim.djson")));
+            var after = 0;
+            foreach (var file in Directory.GetFiles(folder, "*" + PackageExtractor.DashExtension, SearchOption.AllDirectories))
+            {
+                var text = File.ReadAllText(file);
+                // Not one reference may be left behind: one that was would read the other screen's
+                // settings, silently, which is the failure the whole mechanism exists to prevent.
+                Assert.DoesNotContain("OpenDash.Face1280x480", text);
+                after += Count(text, "OpenDash.Rim");
+            }
+            Assert.Equal(before, after);
+        }
+
+        private static int Count(string text, string token)
+        {
+            var count = 0;
+            var at = text.IndexOf(token, StringComparison.Ordinal);
+            while (at >= 0)
+            {
+                count++;
+                at = text.IndexOf(token, at + token.Length, StringComparison.Ordinal);
+            }
+            return count;
+        }
     }
 
     /// <summary>A fact that needs build/openDash.simhubdash: reported as skipped, not failed, until `bun run build` has run.</summary>
@@ -340,5 +517,6 @@ namespace OpenDashPlugin.Tests
                 Skip = "The dash build output cannot be located: " + ex.Message;
             }
         }
+
     }
 }
