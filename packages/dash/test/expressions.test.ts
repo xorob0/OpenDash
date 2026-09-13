@@ -2,6 +2,8 @@
 import { describe, expect, test } from 'bun:test';
 import { ncalc } from '../src/generator.ts';
 import { revBar, REDLINE_BLINK_MS } from '../src/components/revBar.ts';
+import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { readFileSync } from 'node:fs';
 import { flagVisible } from '../src/components/flagStrip.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
@@ -124,27 +126,83 @@ describe('card expressions', () => {
 });
 
 describe('hero expressions', () => {
-  test('shift lights light per band and flash the last band at redline', () => {
-    const [shift, rpm] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
-    if (shift?.kind !== 'layer' || rpm?.kind !== 'layer') throw new Error('revBar returns two layers');
-    expect(shift.bindings?.Visible).toEqual({ mode: 'formula', formula: 'isnull([OpenDash.ShiftLights], true)' });
-    expect(rpm.bindings?.Visible).toEqual({ mode: 'formula', formula: '!(isnull([OpenDash.ShiftLights], true))' });
-    const seg = (layer: typeof shift, k: number) => {
-      const s = layer.children[k];
-      if (!s || s.kind !== 'rect') throw new Error('segment');
-      return s;
-    };
-    expect(expressionsOf(seg(shift, 0))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"]);
-    expect(expressionsOf(seg(shift, 4))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"]);
-    expect(expressionsOf(seg(shift, 5))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"]);
-    expect(seg(shift, 10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')" });
-    expect(seg(shift, 14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: '([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)' });
-    expect(seg(shift, 14).blink).toEqual({ delayMs: 62 });
-    expect(seg(shift, 9).blink).toBeUndefined();
+  const RPMS = 'isnull([DataCorePlugin.GameData.Rpms], 0)';
+  const SL = (n: string) => `isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSL${n}RPM], 0)`;
+  const MIRROR = `((${SL('First')}) > (0)) and ((${SL('Last')}) > (${SL('First')})) and ((${SL('Shift')}) >= (${SL('First')})) and ((${SL('Last')}) >= (${SL('Shift')}))`;
+  const ON = 'isnull([OpenDash.ShiftLights], true)';
+
+  const segOf = (layer: { children: readonly unknown[] }, k: number) => {
+    const s = layer.children[k];
+    if (!s || typeof s !== 'object' || (s as { kind?: string }).kind !== 'rect') throw new Error('segment');
+    return s as Extract<import('../src/generator.ts').Item, { kind: 'rect' }>;
+  };
+
+  test('the rev bar is three layers, and exactly one of them is visible at a time', () => {
+    const layers = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    expect(layers.map((l) => l.kind)).toEqual(['layer', 'layer', 'layer']);
+    expect(layers.map((l) => l.name)).toEqual(['revBar.shiftLights', 'revBar.shiftLightsSimHub', 'revBar.rpmBar']);
+    // Which ladder a car is on is which layer is visible, which is how it is seen in Dash Studio.
+    expect(layers[0]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and (${MIRROR})` });
+    expect(layers[1]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `(${ON}) and (!(${MIRROR}))` });
+    expect(layers[2]!.bindings?.Visible).toEqual({ mode: 'formula', formula: `!(${ON})` });
+  });
+
+  test("the car's own ladder: nothing below First, bands at First and Shift, the last band at Last, the flash at Blink", () => {
+    const [shift] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    if (shift?.kind !== 'layer') throw new Error('layer');
+    const seg = (k: number) => segOf(shift, k);
+
+    // The first segment of a band is the band's entry test and nothing more.
+    expect(expressionsOf(seg(0))).toEqual([`if((${RPMS}) > (${SL('First')}), '#00D96A', '#33383F')`]);
+    expect(expressionsOf(seg(5))).toEqual([`if((${RPMS}) > (${SL('Shift')}), '#FFB300', '#33383F')`]);
+    // ...and the rest carry the band's progress as a cross-multiplication, so a zero-width band divides by nothing.
+    expect(expressionsOf(seg(4))).toEqual([
+      `if(((${RPMS}) > (${SL('First')})) and ((((${RPMS}) - (${SL('First')})) * (5)) > ((4) * ((${SL('Shift')}) - (${SL('First')})))), '#00D96A', '#33383F')`,
+    ]);
+    // The last band lights together at the last light, and flashes above the blink RPM rather than at redline.
+    const blink = `max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), ${SL('Last')})`;
+    expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if((${RPMS}) >= (${SL('Last')}), '#FF2D46', '#33383F')` });
+    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: `(${RPMS}) >= (${blink})` });
+    expect(seg(14).blink).toEqual({ delayMs: 62 });
+    expect(seg(9).blink).toBeUndefined();
     expect(REDLINE_BLINK_MS).toBe(62);
-    expect(expressionsOf(seg(rpm, 3))).toEqual(["if(([DataCorePlugin.GameData.CarSettings_CurrentDisplayedRPMPercent]) > (20), '#8A9099', '#33383F')"]);
-    expect(seg(rpm, 14).blink).toBeUndefined();
-    for (const s of [...walkItems([shift, rpm])]) if (s.kind === 'rect') expect(s.border).toEqual({ radius: 2 });
+  });
+
+  test("SimHub's bands are unchanged for a car that publishes no ladder of its own, and still flash at redline", () => {
+    const [, simhub, rpm] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    if (simhub?.kind !== 'layer' || rpm?.kind !== 'layer') throw new Error('layers');
+    const seg = (k: number) => segOf(simhub, k);
+    expect(expressionsOf(seg(0))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"]);
+    expect(expressionsOf(seg(4))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"]);
+    expect(expressionsOf(seg(5))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"]);
+    expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')" });
+    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: '([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)' });
+    expect(seg(14).blink).toEqual({ delayMs: 62 });
+
+    expect(expressionsOf(segOf(rpm, 3))).toEqual(["if(([DataCorePlugin.GameData.CarSettings_CurrentDisplayedRPMPercent]) > (20), '#8A9099', '#33383F')"]);
+    expect(segOf(rpm, 14).blink).toBeUndefined();
+  });
+
+  test('every rev segment keeps its 2 px radius in all three layers', () => {
+    for (const s of walkItems(revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 }))) {
+      if (s.kind === 'rect') expect(s.border).toEqual({ radius: 2 });
+    }
+  });
+
+  test('the four shift RPM property names appear in exactly one module', () => {
+    expect(Object.values(SHIFT_RPM_PROPERTIES)).toEqual([
+      'DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM',
+      'DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM',
+      'DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM',
+      'DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM',
+    ]);
+    const src = new Bun.Glob('**/*.ts');
+    const offenders: string[] = [];
+    for (const file of src.scanSync({ cwd: `${import.meta.dir}/../src`, absolute: true })) {
+      if (file.endsWith('/shift.ts')) continue;
+      if (/DriverCarSL[A-Za-z]*RPM/.test(readFileSync(file, 'utf8'))) offenders.push(file);
+    }
+    expect(offenders).toEqual([]);
   });
 
   test('flags are visible by priority', () => {

@@ -55,7 +55,7 @@ describe('main dashboard', () => {
   test('carries the hero: two rev bar layers, the gear alone, six flags, the pit limiter', () => {
     const names = main.screens[0]!.items.map((i) => i.name);
     expect(names.filter((n) => n.startsWith('hero.'))).toEqual(['hero.gear']);
-    for (const n of ['revBar.shiftLights', 'revBar.rpmBar', 'hero.gear', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']) {
+    for (const n of ['revBar.shiftLights', 'revBar.shiftLightsSimHub', 'revBar.rpmBar', 'hero.gear', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']) {
       expect(names).toContain(n);
     }
   });

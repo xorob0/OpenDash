@@ -1,7 +1,12 @@
 # ADR 0004: The rev bar is SimHub's shift-light model, and a plain RPM bar when shift lights are off
 
 **Date:** 2026-09-10
-**Status:** Accepted
+**Status:** Accepted, and amended by [ADR 0014](0014-the-shift-model.md). What this record says
+about SimHub's three properties is correct and its rendering is unchanged — but those properties
+turned out to be SimHub's *idea* of the car's shift lights, computed from its own per-car settings,
+rather than the car's. iRacing publishes the car's own and SimHub reads none of them. Since 0014
+this behaviour is the fallback, drawn for a car that publishes no ladder of its own, and the
+default is the car's.
 
 ## Context
 

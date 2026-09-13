@@ -306,7 +306,8 @@ describe('the emitted JSON', () => {
       }
       const rotated = items.filter((i) => 'Rotation' in i);
       // 14 rev segments per layer (the one at the top is not rotated) and 23 checks (the one at the top is not).
-      expect(rotated).toHaveLength(14 * 2 + 23);
+      // Three rev layers since ADR 0014: the car's own ladder, SimHub's bands, and the plain RPM bar.
+      expect(rotated).toHaveLength(14 * 3 + 23);
       for (const r of rotated) {
         const keys = Object.keys(r);
         expect(keys.indexOf('Rotation')).toBe(keys.indexOf('Height') + 1);
