@@ -1,6 +1,6 @@
-// FolderFingerprint.cs: whether an installed dashboard is still the one openDash wrote.
+// FolderFingerprint.cs: whether an installed dashboard is still the one OpenDash wrote.
 //
-// Dash Studio edits a dashboard in place, and openDash replaces a folder by deleting it. Until this existed there
+// Dash Studio edits a dashboard in place, and OpenDash replaces a folder by deleting it. Until this existed there
 // was no way to tell the two apart, so an update destroyed a person's work without anyone being asked. A hash taken
 // when the folder is written, and compared before it is replaced, is enough to ask first.
 //
@@ -63,7 +63,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Whether the folder still holds what openDash put there.
+        /// Whether the folder still holds what OpenDash put there.
         /// </summary>
         /// <remarks>
         /// Biased towards asking. No record, an unreadable folder, or a record that does not match all read as

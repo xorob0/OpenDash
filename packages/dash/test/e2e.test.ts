@@ -238,7 +238,7 @@ describe('widget build on disk', () => {
         expect(sidecar).toEqual(doc.Metadata as JsonItem);
         expect(sidecar.DashboardVersion).toBe(readVersion());
         expect(sidecar.SimHubVersion).toBe('9.12.6');
-        expect(sidecar.Author).toBe('openDash contributors');
+        expect(sidecar.Author).toBe('OpenDash contributors');
         expect(sidecar.MetadataVersion).toBe(2);
       }
       expect(readJson(join(folder, `${layout.folder}.djson.metadata`))).toMatchObject({ Title: layout.folder, Description: layout.description, Width: layout.width, Height: layout.height, ScreenCount: 1 });

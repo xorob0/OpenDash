@@ -250,7 +250,7 @@ initial screen bound to a plugin property.
 }
 ```
 
-Inside the widget, a variable is read as `[variable.Name]` in NCalc. openDash's slots follow
+Inside the widget, a variable is read as `[variable.Name]` in NCalc. OpenDash's slots follow
 the same pattern with NCalc expressions and without variables, since the slot property can be
 bound on the `WidgetItem` itself.
 
@@ -287,7 +287,7 @@ released)` — which additionally sets `IsInput = true` and a no-op `PressFallba
 entry in SimHub's input list rather than its action list.
 
 So an action that has to do something on release is registered through `PluginManager`
-directly. openDash registers all five that way, the four that need no release included, so
+directly. OpenDash registers all five that way, the four that need no release included, so
 that nobody has to remember which is which.
 
 **And the binding needs press type `During` (3).** `TriggerInputPress` calls `ActionStart` only
@@ -341,7 +341,7 @@ An `ImageItem` references a descriptor by name through `Image`:
 ```
 
 `AutoSize` with `AutoSizeScale` sizes the item from the image rather than from `Width` and
-`Height`; openDash wants the opposite, a fixed box, so it writes `AutoSize` false and sets both.
+`Height`; OpenDash wants the opposite, a fixed box, so it writes `AutoSize` false and sets both.
 Verified on the VM on 2026-09-12: one 240 x 180 source drawn by three items into 480 x 180,
 240 x 240 and 96 x 72 fills each rect, so the image is stretched to the box rather than letterboxed
 inside it. `Opacity` is a percentage, as it is on every other item.
@@ -360,7 +360,7 @@ tracking is therefore not expressible on the dashboard face.
 
 Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over `**/*.djson`
 on every pull request for diff readability. Both stop short of generating the JSON, which is
-where openDash goes further.
+where OpenDash goes further.
 
 ## Verified in the spike (2026-09-10, SimHub 9.12.6)
 
@@ -382,10 +382,10 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   "Barlow" as a stretch, so `Font: "Barlow Condensed"` reached a face about a fifth wider than the
   design, on the dash face, on the second screens and in the plugin's own settings panel. A `.djson`
   carries `Font` and `FontWeight` and nothing for stretch, and `usWidthClass` does not override the
-  name, which was tried on the VM. What openDash ships is therefore Barlow Condensed with its family
-  renamed to one carrying no width word, "openDash Display", so that WPF has nothing to fold; see
+  name, which was tried on the VM. What OpenDash ships is therefore Barlow Condensed with its family
+  renamed to one carrying no width word, "OpenDash Display", so that WPF has nothing to fold; see
   `packages/dash/src/design/fontFiles.ts` and XOR-108. The lesson generalises beyond this font: no
-  family openDash asks for may contain Condensed, Narrow, Compressed, Extended, Expanded or Wide.
+  family OpenDash asks for may contain Condensed, Narrow, Compressed, Extended, Expanded or Wide.
   Their digits are proportional and SimHub cannot request `tnum`, so numerals use
   `UseMonospacedText` with `CharWidth` and `SpecialCharsWidth` cells, which SimHub offers for
   exactly this purpose.

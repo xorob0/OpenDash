@@ -27,7 +27,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Taken verbatim from design/canvas/Plugin.dc.html, where the author wrote it. The canvas is the design
         /// source and is not edited from code, so when the two disagree this is what moves. It is here rather than
-        /// in the panel because it is copy, and because the whole of what openDash discloses ought to be readable
+        /// in the panel because it is copy, and because the whole of what OpenDash discloses ought to be readable
         /// in one sentence beside the switch that turns it off.
         /// </remarks>
         public const string CheckCaption = "Asks GitHub for the newest release once a day. Nothing else leaves your machine.";

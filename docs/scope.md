@@ -3,10 +3,10 @@
 **Status:** current. Supersedes [scope-mvp.md](scope-mvp.md), which is closed and kept as the
 record of what the MVP was.
 
-This document describes what openDash is: what it ships, what is deliberately not built, and
+This document describes what OpenDash is: what it ships, what is deliberately not built, and
 which of the MVP's refusals have since been reversed and by what. It is the document a
 contributor or an agent should read first, and the one that has to be amended when the answer to
-"what is openDash" changes.
+"what is OpenDash" changes.
 
 > **The face is being rebuilt.** The zone model described below is the settled design
 > ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)) and it is what
@@ -19,7 +19,7 @@ contributor or an agent should read first, and the one that has to be amended wh
 
 ## Product
 
-openDash is an open-source dashboard package for [SimHub](https://www.simhubdash.com/),
+OpenDash is an open-source dashboard package for [SimHub](https://www.simhubdash.com/),
 released under the MIT licence. It consists of fourteen dashboards covering three kinds of
 screen, together with a SimHub plugin that installs them and exposes the settings which decide
 what they show. It is free, and bounties or donations may follow later.
@@ -80,6 +80,14 @@ decided and are noted below.
 | `openDash 800 round` | 800 x 800 | still on the card model; see below |
 | `openDash 480 round` | 480 x 480 | still on the card model; see below |
 
+**The package folders keep the small o**, and that is deliberate rather than an oversight. The
+product is OpenDash, and everything a person reads says so; a folder name is a path on somebody's
+disk, and Windows file names are case-insensitive but case-preserving, so renaming
+`DashTemplates/openDash` to `DashTemplates/OpenDash` is not a rename the installer or SimHub would
+notice as one. A user could end up with either spelling depending on what created the folder, and a
+user with both would see two entries in Dash Studio. The cost of the inconsistency is one reader
+raising an eyebrow; the cost of the rename is somebody's dashboard list.
+
 `packages/dash/src/contract.ts` holds the catalogues and the defaults, and
 `plugin/OpenDash/Contract.cs` mirrors it, with a test on each side reading the other file so
 that the two cannot drift.
@@ -135,7 +143,7 @@ own.
 This list is a set of refusals, not a backlog. Work that falls under one of these lines does not
 belong in a pull request until the line is removed from this document.
 
-**Our own renderer.** openDash renders through SimHub and will continue to.
+**Our own renderer.** OpenDash renders through SimHub and will continue to.
 [ADR 0001](decisions/0001-simhub-native-rendering.md) settled it, and reversing it would discard
 everything SimHub already does for DDUs, USB screens, phones and the seventeen sims it reads.
 
@@ -156,7 +164,7 @@ The line moves if a derivation is shared widely enough to need a name, or if som
 needs memory between frames. The first is a JavaScript binding before it is a plugin, because the
 standalone package is the property worth defending.
 
-**Theming and colour customisation.** openDash ships one opinionated look, resolved at build time
+**Theming and colour customisation.** OpenDash ships one opinionated look, resolved at build time
 into literal values in the `.djson`. Nothing a user can change reaches a colour, a typeface or a
 size. How far personalisation could ever reach into a generated package is
 [ADR 0011](decisions/0011-personalisation.md), and it has to be written before any of it is built,
@@ -167,7 +175,7 @@ whoever chose the colours.
 face with no data in it between sessions, which is arguably worse than SimHub's own default. A
 screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan.
 
-**Licensing, activation or accounts.** openDash is MIT and there is nothing to unlock.
+**Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
 
 **Telemetry about the user.** Nothing about the user leaves their machine: no identifier, no
 installation id, no usage counting, no error reporting. The one exception is the update check, and
@@ -176,9 +184,9 @@ What is sent is an anonymous request to GitHub asking what the newest release is
 user's IP address, which reaches GitHub and not us, and a `User-Agent` naming the product. It can
 be switched off, and switching it off means nothing is fetched at all.
 
-**Copying Lovely's visual design.** Lovely's licence forbids reuse of its UI design. openDash's
+**Copying Lovely's visual design.** Lovely's licence forbids reuse of its UI design. OpenDash's
 design is independently derived: do not copy its layouts, and do not use its screenshots in any
-openDash material.
+OpenDash material.
 
 **Sims other than iRacing, as a supported claim.** They may work, and they are welcome to, but
 nothing is advertised as supported before somebody has driven it and the bindings have been

@@ -185,7 +185,7 @@ race time · lap and total · time left · clock · simulated time · position �
 incidents · air temperature · track temperature
 
 Strength of field was the eleventh and is not built, because SimHub publishes it in no form at all
-and openDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
+and OpenDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
 named here only so that a reader of an older draft knows where it went.
 
 The default is Race and Lap on the left, Position and Class on the right.
@@ -393,14 +393,14 @@ a mistake in this document.
 | Zone C's capacity | Stated as ten drivers at 1920; seven rows are drawn. |
 | Page dots | `pageIndicator` is still in the component list, against "there is no row of page dots". |
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
-| The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
+| The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `OpenDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
 
 ---
 
 ## Related
 
-[scope.md](../scope.md) is what openDash is and what it refuses to be.
+[scope.md](../scope.md) is what OpenDash is and what it refuses to be.
 [ADR 0006](../decisions/0006-the-zone-face.md) is why the model changed.
 [brand.md](brand.md) is the reasoning behind the colours and the type.
 [second-screens.md](../second-screens.md) is the companion and the pit wall, which share the
