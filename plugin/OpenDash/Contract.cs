@@ -129,6 +129,13 @@ namespace OpenDashPlugin
             return "Zone" + letter + "Start";
         }
 
+        /// <summary>Property name of a zone's class filter: ZoneAClassOnly .. ZoneDClassOnly.</summary>
+        public static string ZoneClassOnlyProperty(string letter)
+        {
+            RequireFaceZone(letter);
+            return "Zone" + letter + "ClassOnly";
+        }
+
         /// <summary>Property name of a bar end field: BarLeft1 .. BarRight2.</summary>
         public static string BarFieldProperty(string slot)
         {
@@ -155,6 +162,19 @@ namespace OpenDashPlugin
             var zones = new int[FaceZoneLetters.Length];
             for (var i = 0; i < zones.Length; i++) zones[i] = DefaultFaceZonePages[i];
             return zones;
+        }
+
+        /// <summary>Whether a zone's list pages show the player's own class rather than the whole field.
+        /// Off: most racing is single-class, and a driver in one would not thank us for a leaderboard
+        /// that hides nobody but says it does.</summary>
+        public const bool DefaultZoneClassOnly = false;
+
+        /// <summary>The class filter of every face zone, in letter order.</summary>
+        public static bool[] DefaultFaceZoneClassOnly()
+        {
+            var flags = new bool[FaceZoneLetters.Length];
+            for (var i = 0; i < flags.Length; i++) flags[i] = DefaultZoneClassOnly;
+            return flags;
         }
 
         /// <summary>The default mask of every face zone, in letter order.</summary>
@@ -251,6 +271,7 @@ namespace OpenDashPlugin
             foreach (var letter in FaceZoneLetters) yield return ZonePageProperty(letter);
             foreach (var letter in FaceZoneLetters) yield return ZoneMaskProperty(letter);
             foreach (var letter in FaceZoneLetters) yield return ZoneStartProperty(letter);
+            foreach (var letter in FaceZoneLetters) yield return ZoneClassOnlyProperty(letter);
             foreach (var slot in BarSlots) yield return BarFieldProperty(slot);
             yield return QuickGlance;
             for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(module);

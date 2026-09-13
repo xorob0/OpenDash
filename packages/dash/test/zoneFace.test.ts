@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { BAND_D_PAGES, FACE_ZONE_LETTERS, MODULE_CATALOGUE, MODULE_COUNT, ZONE_A_PAGES, pagesForZone, zoneCounterReadings, zoneProperties } from '../src/contract.ts';
-import { validatePackage, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { validatePackage, type Dashboard, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
@@ -19,9 +19,12 @@ import { shapeOf } from '../src/second/shape.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { ZONE_FACES, buildZoneFace, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
+import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
+/** The companion and the pit walls, to check the face's new options stay off their screens. */
+const SECOND_SCREENS = SCREEN_PACKAGES.map((def) => buildScreenPackage(def, OPTS));
 const reference = BUILT.find((b) => b.face.folder === 'openDash zones 1920x480')!;
 
 describe('the reference face is the artboard', () => {
@@ -445,6 +448,71 @@ describe('a zone counts its cycle, not its catalogue', () => {
           const width = measureText('BarlowMedium', reading, item.fontSize);
           expect({ face: face.folder, item: item.name, reading, fits: width <= item.rect.width }).toMatchObject({ fits: true });
         }
+      }
+    }
+  });
+});
+
+describe('a zone may list the class a driver is racing in', () => {
+  /** The row lookup a table's cells address their car through, which is what the filter changes. */
+  const rowLookups = (dashboard: Dashboard, page: string): string[] => {
+    const screen = dashboard.screens.find((s) => s.name === page)!;
+    return itemsOf({ ...dashboard, screens: [screen] })
+      .flatMap((item) => Object.values(item.bindings ?? {}))
+      .map((b) => (b as { formula?: string }).formula ?? '')
+      .filter((f) => f.includes('repeatindex()'));
+  };
+
+  test('the leaderboard and the relative in zone B or C ask whose zone is showing them', () => {
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    for (const page of ['leaderboard', 'relative']) {
+      const lookups = rowLookups(shared, page);
+      expect({ page, found: lookups.length > 0 }).toMatchObject({ found: true });
+      for (const lookup of lookups) {
+        // Both zones, because one file serves both and a page in it cannot know which is showing it.
+        expect({ page, lookup }).toMatchObject({ lookup: expect.stringContaining('OpenDash.ZoneBClassOnly') });
+        expect({ page, lookup }).toMatchObject({ lookup: expect.stringContaining('OpenDash.ZoneCClassOnly') });
+        // And the class-only twin of the lookup it would otherwise use.
+        expect(lookup).toContain('playerclassonly');
+      }
+    }
+  });
+
+  test('a page with nobody to list does not read the setting at all', () => {
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    for (const page of ['fuel', 'tyres', 'sectors', 'gear']) {
+      const screen = shared.screens.find((s) => s.name === page)!;
+      const used = propertiesIn({ ...shared, screens: [screen] });
+      expect({ page, used: used.filter((p) => p.endsWith('ClassOnly')) }).toMatchObject({ used: [] });
+    }
+  });
+
+  test('a portrait face gives B and C a file each, and neither reads the other zone', () => {
+    // 600 x 686 stacks A over B over C, so the two are different rectangles and cannot share.
+    const portrait = BUILT.find((b) => b.face.folder === 'openDash zones 600x686')!;
+    const b = rectOf(portrait.face, 'B');
+    const c = rectOf(portrait.face, 'C');
+    expect({ b: b.height, c: c.height }).not.toMatchObject({ b: c.height });
+
+    for (const [zone, r, other] of [
+      ['B', b, 'C'],
+      ['C', c, 'B'],
+    ] as const) {
+      const file = portrait.built.zones.find((d) => d.name === zoneDashboardName('module', { width: r.width, height: r.height }))!;
+      const lookups = rowLookups(file, 'leaderboard');
+      expect({ zone, found: lookups.length > 0 }).toMatchObject({ found: true });
+      for (const lookup of lookups) {
+        expect({ zone, lookup }).toMatchObject({ lookup: expect.stringContaining(`OpenDash.Zone${zone}ClassOnly`) });
+        expect(lookup).not.toContain(`OpenDash.Zone${other}ClassOnly`);
+      }
+    }
+  });
+
+  test('the companion and the pit wall list everybody, as they always have', () => {
+    for (const pkg of SECOND_SCREENS) {
+      for (const dashboard of pkg.dashboards) {
+        const used = propertiesIn(dashboard).filter((p) => p.endsWith('ClassOnly'));
+        expect({ dashboard: dashboard.name, used }).toMatchObject({ used: [] });
       }
     }
   });

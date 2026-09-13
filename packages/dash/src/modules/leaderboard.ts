@@ -1,7 +1,11 @@
 /**
- * Module 14, Leaderboard: the order of the race, overall or in the player's class per the plugin's
- * PositionMode. The row set fits the box, so the same module is seven rows on a companion page and
- * four in a short zone.
+ * Module 14, Leaderboard: the order of the race, overall or in the player's class. The row set fits
+ * the box, so the same module is seven rows on a companion page and four in a short zone.
+ *
+ * Two different settings say "class" here and they are not the same question. `PositionMode` is
+ * which number a position column shows; a zone's `classOnly` is who is in the list at all. A zone
+ * set to one class and counting overall positions is a legitimate thing to want on a multi-class
+ * grid, which is why neither implies the other.
  *
  * Columns drop as the box narrows, longest-tail first: the class chip and the last lap go before
  * the gap does, because a leaderboard without a gap is a list of names.
@@ -51,5 +55,6 @@ export const leaderboard = defineModule('leaderboard', (ctx) =>
     columns: fittingColumns(LEADERBOARD_COLUMNS, ctx.frame.width, ctx.density),
     mode: 'full',
     density: ctx.density,
+    classOnly: ctx.classOnly,
   }),
 );

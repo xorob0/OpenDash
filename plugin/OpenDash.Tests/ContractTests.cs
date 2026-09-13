@@ -61,9 +61,9 @@ namespace OpenDashPlugin.Tests
         {
             var names = Contract.PropertyNames().ToList();
             // Four settings, twelve slots, the zone face (four pages, four masks, four starts, four
-            // bar fields and the glance), twenty-one companion modules, four pit wall zones, the
-            // wide zone and the URL.
-            const int zoneFace = 4 + 4 + 4 + 4 + 1;
+            // class filters, four bar fields and the glance), twenty-one companion modules, four pit
+            // wall zones, the wide zone and the URL.
+            const int zoneFace = 4 + 4 + 4 + 4 + 4 + 1;
             Assert.Equal(4 + 12 + zoneFace + 21 + 4 + 2, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
@@ -76,13 +76,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "ZoneA", "ZoneB", "ZoneC", "ZoneD" }, names.Skip(16).Take(4));
             Assert.Equal(new[] { "ZoneAPages", "ZoneBPages", "ZoneCPages", "ZoneDPages" }, names.Skip(20).Take(4));
             Assert.Equal(new[] { "ZoneAStart", "ZoneBStart", "ZoneCStart", "ZoneDStart" }, names.Skip(24).Take(4));
-            Assert.Equal(new[] { "BarLeft1", "BarLeft2", "BarRight1", "BarRight2" }, names.Skip(28).Take(4));
-            Assert.Equal("QuickGlance", names[32]);
+            Assert.Equal(new[] { "ZoneAClassOnly", "ZoneBClassOnly", "ZoneCClassOnly", "ZoneDClassOnly" }, names.Skip(28).Take(4));
+            Assert.Equal(new[] { "BarLeft1", "BarLeft2", "BarRight1", "BarRight2" }, names.Skip(32).Take(4));
+            Assert.Equal("QuickGlance", names[36]);
 
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
-            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(33).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(54));
+            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(37).Take(21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(58));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 

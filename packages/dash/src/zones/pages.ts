@@ -12,7 +12,17 @@
  * cannot share a file even at the same size.
  */
 import type { Dashboard, DashboardMetadata, Item, Screen, WidgetItem } from '../generator.ts';
-import { BAND_D_PAGES, FACE_ZONE_LETTERS, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, zoneCounterReadings, type FaceZone, type FaceZonePageMeta } from '../contract.ts';
+import {
+  BAND_D_PAGES,
+  FACE_ZONE_LETTERS,
+  ZONE_A_PAGES,
+  pagesForZone,
+  zone as zoneSetting,
+  zoneClassOnlyOnPage,
+  zoneCounterReadings,
+  type FaceZone,
+  type FaceZonePageMeta,
+} from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, type Size } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
@@ -29,6 +39,13 @@ export type ZoneKind = 'zoneA' | 'module' | 'band';
 
 export const kindOf = (zone: FaceZone): ZoneKind => (zone === 'A' ? 'zoneA' : zone === 'D' ? 'band' : 'module');
 
+/**
+ * The zones one dashboard file serves. Usually one; B and C where they are the same rectangle, in
+ * which case a page in the file has to ask which of them is showing it before it reads a per-zone
+ * setting. Non-empty by construction, so `zones[0]` needs no guard.
+ */
+export type ZoneGroup = readonly [FaceZone, ...FaceZone[]];
+
 /** `zoneface-module-769x314`: the dashboard name, which is also its file name. */
 export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zoneface-${kind}-${size.width}x${size.height}`;
 
@@ -40,8 +57,9 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
  * say which page is showing. Zone A carries none: it is the gear, and 22 px of the column it is
  * sized to is too much to spend saying so. What zone A does instead is XOR-103.
  */
-export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Size, corners = false): Screen {
+export function zonePageScreen(zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false): Screen {
   const frame = rect(0, 0, size.width, size.height);
+  const zone = zones[0];
 
   let items: Item[];
 
@@ -67,20 +85,24 @@ export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Siz
       { frame, title: page.name, counter: { kind: 'reserved', widest: widestCounter(zone, density) }, indent: zoneLetterWidth(density) },
       density,
     );
-    items = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body) })];
+    items = [
+      ...chrome,
+      ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body), classOnly: zoneClassOnlyOnPage(zones, page.number) }),
+    ];
   }
 
   return pageScreen(page.id, items);
 }
 
 /** A zone dashboard: every page of its catalogue, in the order the plugin lists them. */
-export function zoneDashboard(zone: FaceZone, size: Size, metadata: DashboardMetadata, corners = false): Dashboard {
+export function zoneDashboard(zones: ZoneGroup, size: Size, metadata: DashboardMetadata, corners = false): Dashboard {
+  const zone = zones[0];
   const pages = pagesForZone(zone);
   const kind = kindOf(zone);
   return pagedDashboard({
     name: zoneDashboardName(kind, size),
     size,
-    screens: pages.map((page) => zonePageScreen(zone, page, size, corners)),
+    screens: pages.map((page) => zonePageScreen(zones, page, size, corners)),
     metadata,
     description: `${kind === 'zoneA' ? ZONE_A_PAGES.length : kind === 'band' ? BAND_D_PAGES.length : pages.length} pages drawn for a ${size.width} x ${size.height} zone.`,
   });
@@ -99,15 +121,25 @@ export function zoneWidget(name: string, zone: FaceZone, frame: { left: number; 
   });
 }
 
-/** Every distinct zone dashboard a face needs, one per rectangle and catalogue it uses. */
+/**
+ * Every distinct zone dashboard a face needs, one per rectangle and catalogue it uses.
+ *
+ * Zones that land on the same file are grouped rather than dropped, because the file has to know
+ * which zones read it: a page that filters to the player's class asks whether *the zone showing it*
+ * was set to, and answering that with the wrong letter would have zone B follow zone C's setting.
+ */
 export function zoneDashboardsFor(zones: readonly { zone: FaceZone; size: Size; corners?: boolean }[], metadata: DashboardMetadata): Dashboard[] {
-  const seen = new Map<string, Dashboard>();
+  const groups = new Map<string, { zones: [FaceZone, ...FaceZone[]]; size: Size; corners: boolean }>();
   for (const { zone, size, corners } of zones) {
     const key = zoneDashboardName(kindOf(zone), size);
-    if (seen.has(key)) continue;
-    seen.set(key, zoneDashboard(zone, size, metadata, corners ?? false));
+    const group = groups.get(key);
+    if (group) {
+      if (!group.zones.includes(zone)) group.zones.push(zone);
+      continue;
+    }
+    groups.set(key, { zones: [zone], size, corners: corners ?? false });
   }
-  return [...seen.values()];
+  return [...groups.values()].map((g) => zoneDashboard(g.zones, g.size, metadata, g.corners));
 }
 
 /**

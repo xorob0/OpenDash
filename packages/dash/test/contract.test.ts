@@ -53,7 +53,8 @@ describe('card catalogue', () => {
 describe('settings', () => {
   test('declares the dash, the zones, the companion and the pit wall', () => {
     const props = declaredProperties();
-    const zoneCount = FACE_ZONE_LETTERS.length * 3 + BAR_SLOTS.length + 1;
+    // Four per zone -- page, mask, start and the class filter -- plus the bar's ends and the glance.
+    const zoneCount = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 1;
     expect(props).toHaveLength(4 + SLOT_MAX + zoneCount + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
@@ -64,6 +65,7 @@ describe('settings', () => {
     expect(props).toContain('OpenDash.ZoneA');
     expect(props).toContain('OpenDash.ZoneDPages');
     expect(props).toContain('OpenDash.ZoneCStart');
+    expect(props).toContain('OpenDash.ZoneBClassOnly');
     expect(props).toContain('OpenDash.BarLeft1');
     expect(props).toContain('OpenDash.QuickGlance');
     expect(props.slice(-6)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);

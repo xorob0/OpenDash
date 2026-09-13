@@ -7,7 +7,7 @@
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 
-const { add, concat, div, fmt, iff, isnull, lt, mod, num, prop, str, truncate } = ncalc;
+const { add, and, concat, div, eq, fmt, iff, isnull, lt, mod, num, or, prop, str, truncate } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -200,7 +200,16 @@ export const defaultZoneMask = (zone: FaceZone): number => (1 << pagesForZone(zo
 export const zonePageSettingName = (zone: FaceZone): string => `Zone${zone}`;
 export const zoneMaskSettingName = (zone: FaceZone): string => `Zone${zone}Pages`;
 export const zoneStartSettingName = (zone: FaceZone): string => `Zone${zone}Start`;
+export const zoneClassOnlySettingName = (zone: FaceZone): string => `Zone${zone}ClassOnly`;
 export const barFieldSettingName = (slot: BarSlot): string => `Bar${slot}`;
+
+/**
+ * Whether a zone's list pages show the player's own class rather than the whole field.
+ *
+ * Off, because most racing is single-class and a driver in one would not thank us for a
+ * leaderboard that hides nobody but says it does.
+ */
+export const DEFAULT_ZONE_CLASS_ONLY = false;
 
 /**
  * The zone and page a held button shows, as one property rather than a pair per zone: a glance is
@@ -227,11 +236,13 @@ export const zone = {
   quickGlance: (): Expr => isnull(prop(propertyName(QUICK_GLANCE_SETTING)), num(DEFAULT_QUICK_GLANCE)),
   /** `isnull([OpenDash.BarLeft1], 0)`: which field an end of the bar shows. */
   barField: (slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(slot))), num(DEFAULT_BAR_FIELDS[slot])),
+  /** `isnull([OpenDash.ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
+  classOnly: (z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(z))), String(DEFAULT_ZONE_CLASS_ONLY)),
 };
 
 /** Every property the zone face reads. */
 export function zoneProperties(): string[] {
-  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(z), zoneMaskSettingName(z), zoneStartSettingName(z)]);
+  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(z), zoneMaskSettingName(z), zoneStartSettingName(z), zoneClassOnlySettingName(z)]);
   const bar = BAR_SLOTS.map(barFieldSettingName);
   return [...perZone, ...bar, QUICK_GLANCE_SETTING].map(propertyName);
 }
@@ -274,6 +285,18 @@ export function zoneCounterReadings(z: FaceZone): string[] {
   for (let length = 1; length <= n; length++) for (let position = 1; position <= length; position++) readings.push(`${position} / ${length}`);
   return readings;
 }
+
+/**
+ * When a list page drawn in one of these zones shows the player's own class.
+ *
+ * Zones B and C are the same rectangle on most faces and so share one dashboard file, which means
+ * a page in it cannot simply read "my zone's" setting: it has to ask which of the zones sharing the
+ * file is showing it. The one ambiguity that leaves is both zones showing the same list page with
+ * different settings, and docs/design/zones.md already records that two zones on one page is
+ * reported and allowed; there they agree rather than disagreeing.
+ */
+export const zoneClassOnlyOnPage = (zones: readonly [FaceZone, ...FaceZone[]], page: number): Expr =>
+  or(...zones.map((z) => and(eq(zone.page(z), num(page)), zone.classOnly(z))));
 
 export interface CardMeta {
   /** The value a slot setting takes. */

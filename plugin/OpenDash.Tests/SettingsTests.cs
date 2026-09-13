@@ -1,5 +1,6 @@
 // SettingsTests.cs: defaults, normalisation of what comes back from disk, and duplicate detection.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -391,6 +392,47 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_mask_of_any_length_cycles_through_exactly_the_pages_it_leaves_on()
+        {
+            // Zone B cycles twenty-one, which is where a mask can be any of two million shapes. What
+            // has to hold for every one of them is that the cycle visits the enabled pages, in order,
+            // and returns to where it started after as many presses as there are pages enabled.
+            var masks = new[]
+            {
+                Contract.DefaultZoneMask(1),                        // everything
+                1 << 4,                                             // one page
+                (1 << 0) | (1 << 4) | (1 << 14),                    // three, spread out
+                (1 << 19) | (1 << 20),                              // two, at the far end
+                0x155555,                                           // every other page
+                (1 << 0) | (1 << 20),                               // the first and the last
+            };
+
+            foreach (var mask in masks)
+            {
+                var settings = new OpenDashSettings { FaceZoneMasks = new[] { Contract.DefaultZoneMask(0), mask, Contract.DefaultZoneMask(2), Contract.DefaultZoneMask(3) } };
+                settings.Normalise();
+                Assert.Equal(mask, settings.FaceZoneMask("B"));
+
+                var expected = new List<int>();
+                for (var page = 0; page < Modules.Count; page++)
+                {
+                    if ((mask & (1 << page)) != 0) expected.Add(page);
+                }
+
+                settings.OpenOnStartPages();
+                var first = settings.FaceZone("B");
+                Assert.Contains(first, expected);
+
+                // One press per enabled page comes back to the start, having seen each one once.
+                var seen = new List<int> { first };
+                for (var press = 1; press < expected.Count; press++) seen.Add(settings.CycleFaceZone("B"));
+                Assert.Equal(expected.Count, seen.Distinct().Count());
+                Assert.Equal(expected.OrderBy(p => p), seen.OrderBy(p => p));
+                Assert.Equal(first, settings.CycleFaceZone("B"));
+            }
+        }
+
+        [Fact]
         public void A_zone_with_one_page_left_stays_where_it_is()
         {
             var settings = new OpenDashSettings();
@@ -412,6 +454,48 @@ namespace OpenDashPlugin.Tests
             // they happened to leave it.
             settings.OpenOnStartPages();
             Assert.Equal(6, settings.FaceZone("B"));
+        }
+
+        // --- Listing the class a driver is racing in ---------------------------------------------
+
+        [Fact]
+        public void The_class_filter_is_off_and_is_per_zone()
+        {
+            var settings = new OpenDashSettings();
+            foreach (var letter in Contract.FaceZoneLetters) Assert.False(settings.FaceZoneIsClassOnly(letter));
+
+            // The point of it being per zone: zone B lists the race, zone C lists the class.
+            settings.SetFaceZoneClassOnly("C", true);
+            Assert.True(settings.FaceZoneIsClassOnly("C"));
+            Assert.False(settings.FaceZoneIsClassOnly("B"));
+        }
+
+        [Fact]
+        public void The_class_filter_survives_a_save_and_a_short_array()
+        {
+            var settings = new OpenDashSettings { FaceZoneClassOnly = new[] { true } };
+            settings.Normalise();
+            Assert.Equal(Contract.FaceZoneLetters.Length, settings.FaceZoneClassOnly.Length);
+            Assert.True(settings.FaceZoneIsClassOnly("A"));
+            Assert.False(settings.FaceZoneIsClassOnly("D"));
+
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.True(copy.FaceZoneIsClassOnly("A"));
+            // A clone, not the same array: editing one settings object must not edit the other.
+            copy.SetFaceZoneClassOnly("A", false);
+            Assert.True(settings.FaceZoneIsClassOnly("A"));
+        }
+
+        [Fact]
+        public void The_panel_offers_the_class_filter_only_where_a_page_would_change()
+        {
+            // Zones B and C hold the leaderboard and the relative. Zone A lists nobody, and band D's
+            // relative page is three gaps rather than a list.
+            Assert.True(FacePages.OffersClassFilter("B"));
+            Assert.True(FacePages.OffersClassFilter("C"));
+            Assert.False(FacePages.OffersClassFilter("A"));
+            Assert.False(FacePages.OffersClassFilter("D"));
         }
 
         [Fact]

@@ -33,6 +33,7 @@ const {
   driver,
   playerPosition,
   aheadBehind,
+  aheadBehindInClass,
   classPosition,
   bestLapPosition,
   repeatIndex,
@@ -127,6 +128,8 @@ export const rowIndex = {
   inClass: (): Expr => classPosition(repeatIndex()),
   /** Relative to the player on track, the player on row `centre`. */
   relative: (centre: number): Expr => aheadBehind(sub(repeatIndex(), num(centre))),
+  /** The same, counting only the player's own class. */
+  relativeInClass: (centre: number): Expr => aheadBehindInClass(sub(repeatIndex(), num(centre))),
 };
 
 /** The leaderboard index of the car holding the session's best lap. */

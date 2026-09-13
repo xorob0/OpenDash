@@ -141,6 +141,7 @@ namespace OpenDashPlugin
                 this.AttachDelegate(Contract.ZonePageProperty(captured), () => Settings.FaceZone(captured));
                 this.AttachDelegate(Contract.ZoneMaskProperty(captured), () => Settings.FaceZoneMask(captured));
                 this.AttachDelegate(Contract.ZoneStartProperty(captured), () => Settings.FaceZoneStart(captured));
+                this.AttachDelegate(Contract.ZoneClassOnlyProperty(captured), () => Settings.FaceZoneIsClassOnly(captured));
             }
             foreach (var slot in Contract.BarSlots)
             {
