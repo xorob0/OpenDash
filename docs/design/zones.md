@@ -184,6 +184,31 @@ the other.
 - **Width** picks the column set and the rank width.
 - **Height** picks the row count, and whether the lead values are promoted.
 
+**Rule 20.** *A rank fills the box it is given. It grows until it meets an edge, and there are
+three: the height of the box, the width of the box, and the next size up its density ramp.*
+
+Rule 17 is one half of a thought and this is the other. Rule 17 says what a page does when its box
+is too small; rule 20 says what it does when the box is too large, which on this product is the
+commoner case — zone B of the 850 × 480 face is 274 × 328 and lap times was using 58 px of it.
+
+The ramp is the part that makes this filling rather than scaling. A rank grows by one factor, the
+whole stack at once, and no value may pass the next named size on `density.ts`'s ramp — so what
+comes out is the same drawing one size larger, with its hierarchy intact, and never a drawing
+stretched to a rectangle. Three consequences worth knowing:
+
+- **All of the stack grows or none of it does.** A page whose sectors are a drawing and whose lap
+  times are fields would otherwise grow the times alone until they matched the sectors above them.
+- **Growing is what stacks a narrow zone.** Two lap times fit side by side in a 254 px zone at
+  34 px and do not at 46 px, so the rank wraps to one column on its way up. `columnsAt` is still the
+  declaration of what a shape may hold; it is not a second mechanism.
+- **A stack already too tall for its box does not grow.** It has nothing to spend, and rule 17 is
+  about to take a row off it.
+
+The room a grown stack may take is its box less its own tail at each end, not the flat two pixels
+`ROW_TAIL` reserved: a WPF line box runs about a tenth of the font size below the row it sits on,
+which is two pixels at 24 px and seven at 75 px. A constant was enough while every value was a ramp
+size in a box with slack. A value grown into its box is exactly where it stops being enough.
+
 The four shapes the catalogue draws, which are the test fixtures:
 
 | Shape | Size | What it does |
@@ -298,8 +323,13 @@ Two worked examples first, because they are the two that show why it cannot be d
 
 - **Lap times.** `wide`: last lap, session best, your best, laps, estimated, delta to your best —
   six. `grid`: drops laps and estimated — four. So what goes is neither the tail of the row nor
-  the narrowest field; the delta outlives both of the values drawn before it. `tall narrow`: last
-  lap and session best — two. `tall`: all six again, stacked.
+  the narrowest field; the delta outlives both of the values drawn before it. `tall narrow`: the
+  same four as `grid`, one per line. `tall`: all six again, stacked.
+
+  The `tall narrow` row used to be two, which is what the catalogue draws at 274 × 300, and it was
+  wrong about the box it really answers: a zone that stacks one column has room for four of them,
+  and what the build actually drew there was two 34 px times side by side with 234 px of the zone
+  empty under them. See §10 — **the catalogue owes a redraw of this one** (XOR-190).
 - **Relative.** `wide`: position, number, code, class, gap. `grid`: the same five. `tall narrow`:
   position, code and gap only, and eight rows rather than six. The number and the class chip go
   from between two columns that stay, which no rule about prefixes produces.
@@ -316,7 +346,7 @@ does not fit still sheds afterwards: a declared set is a design decision and a b
 
 | № | Page | `wide` | `grid` | `tall narrow` | `tall` |
 |---|---|---|---|---|---|
-| 1 | Lap times | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` |
+| 1 | Lap times | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` |
 | 2 | Delta | `delta` | `delta` | `delta` | `delta` |
 | 3 | Sectors | `yourBest` · `last` · `sessionBest` | `yourBest` · `last` · `sessionBest` | `yourBest` · `last` | `last` · `sessionBest` |
 | 4 | Speedo | `speed` · `rpm` · `redline` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
@@ -515,6 +545,7 @@ a mistake in this document.
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
 | The face with no rev bar | XOR-138 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
+| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw is XOR-190; the other twenty pages are owed the same pass, one ticket each. |
 
 ---
 
