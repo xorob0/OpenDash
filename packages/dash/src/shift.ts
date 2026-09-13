@@ -15,7 +15,7 @@
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 
-const { prop, game, gt, ge, eq, mul, sub, num, isnull, and, max } = ncalc;
+const { prop, game, raw, gt, ge, eq, mul, sub, num, isnull, and, not, max } = ncalc;
 
 /** Where the session string puts the driver's own car. The same nested path `incidentLimit` reads. */
 const DRIVER_INFO = 'DataCorePlugin.GameRawData.SessionData.DriverInfo.';
@@ -31,6 +31,12 @@ export const SHIFT_RPM_PROPERTIES = {
   last: `${DRIVER_INFO}DriverCarSLLastRPM`,
   blink: `${DRIVER_INFO}DriverCarSLBlinkRPM`,
 } as const;
+
+/**
+ * How many forward gears the car has, from the same DriverInfo block as the four RPMs. Used only
+ * to find the gear there is nothing to shift out of.
+ */
+export const GEAR_COUNT_PROPERTY = `${DRIVER_INFO}DriverCarGearNumForward`;
 
 /** Engine speed now. */
 export const rpms = (): Expr => isnull(game('Rpms'), num(0));
@@ -79,8 +85,25 @@ const bandLit = (from: Expr, to: Expr, local: number, count: number): Expr =>
 export const mirrorStageLit = (stage: number, local: number, count: number): Expr =>
   stage === 0 ? bandLit(firstRpm(), shiftRpm(), local, count) : stage === 1 ? bandLit(shiftRpm(), lastRpm(), local, count) : ge(rpms(), lastRpm());
 
-/** Over-rev: the flash, under the car's own ladder. */
-export const mirrorOverRev = (): Expr => ge(rpms(), blinkRpm());
+/**
+ * Top gear: the gear there is nothing to shift out of. Read from iRacing's own numeric gear rather
+ * than `[Gear]`, which is a string ("N", "R", "1"), and false whenever the car does not say how
+ * many gears it has — so a car that publishes no count keeps flashing as it did.
+ *
+ * ADR 0014, amended for XOR-233.
+ */
+export const lastGear = (): Expr => {
+  const count = isnull(prop(GEAR_COUNT_PROPERTY), num(0));
+  return and(gt(count, num(0)), ge(isnull(raw('Gear'), num(0)), count));
+};
+
+/**
+ * Over-rev: the flash, under the car's own ladder — and not in the last gear, where a flash is an
+ * instruction that cannot be followed. The top band stays lit, so the bar still says the engine is
+ * at its limit; it just stops asking for a shift that does not exist. SimHub's own `RPMSegments`
+ * container carries `BlinkOnLastGear` for the same reason.
+ */
+export const mirrorOverRev = (): Expr => and(ge(rpms(), blinkRpm()), not(lastGear()));
 
 /**
  * Stage `stage`, segment `local` of `count`, under SimHub's own bands — ADR 0004 unchanged, and

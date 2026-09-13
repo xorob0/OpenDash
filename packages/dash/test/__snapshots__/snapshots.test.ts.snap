@@ -1651,7 +1651,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+              "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
             },
             "Mode": 2
           }
@@ -1686,7 +1686,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+              "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
             },
             "Mode": 2
           }
@@ -1721,7 +1721,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+              "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
             },
             "Mode": 2
           }
@@ -1756,7 +1756,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+              "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
             },
             "Mode": 2
           }
@@ -1791,7 +1791,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+              "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
             },
             "Mode": 2
           }
@@ -5073,7 +5073,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -5108,7 +5108,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -5143,7 +5143,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -5178,7 +5178,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -5213,7 +5213,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -10639,7 +10639,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -10674,7 +10674,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -10709,7 +10709,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -10744,7 +10744,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -10779,7 +10779,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -15609,7 +15609,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -15644,7 +15644,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -15679,7 +15679,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -15714,7 +15714,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -15749,7 +15749,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -20819,7 +20819,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -20854,7 +20854,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -20889,7 +20889,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -20924,7 +20924,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -20959,7 +20959,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -25416,7 +25416,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -25451,7 +25451,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -25486,7 +25486,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -25521,7 +25521,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -25556,7 +25556,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -29998,7 +29998,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -30033,7 +30033,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -30068,7 +30068,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -30103,7 +30103,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -30138,7 +30138,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -35054,7 +35054,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -35089,7 +35089,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -35124,7 +35124,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -35159,7 +35159,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -35194,7 +35194,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -40808,7 +40808,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -40843,7 +40843,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -40878,7 +40878,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -40913,7 +40913,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -40948,7 +40948,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -45115,7 +45115,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -45151,7 +45151,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -45187,7 +45187,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -45223,7 +45223,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -45259,7 +45259,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -49140,7 +49140,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -49176,7 +49176,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -49212,7 +49212,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -49248,7 +49248,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }
@@ -49284,7 +49284,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "(isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))"
+                    "Expression": "((isnull([DataCorePlugin.GameData.Rpms], 0)) >= (max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM], 0)))) and (!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)))))"
                   },
                   "Mode": 2
                 }

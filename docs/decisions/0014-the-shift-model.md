@@ -56,7 +56,8 @@ the fallback for a car that publishes none. One definition, read by the rev bar,
 every generated LED profile.**
 
 **The ladder.** Nothing is lit below `First`. The first band runs `First` to `Shift`, the second
-`Shift` to `Last`, the third lights together at `Last`, and the whole top band flashes at `Blink`.
+`Shift` to `Last`, the third lights together at `Last`, and the whole top band flashes at `Blink`
+(except in the last gear, below).
 Each of the four values maps to exactly one thing a driver can see, which is the property that
 makes it a mirror rather than an approximation. A band lights segment by segment on the same rule
 ADR 0004 used — the band's progress times its segment count passed the segment's index — so the
@@ -89,6 +90,27 @@ cross-multiplication rather than a division, so a zero-width band divides by not
 Studio is the one in use, which is how somebody debugging a car finds out which ladder it is on
 without reading an expression. It costs nothing at runtime: the hidden layer is not drawn.
 
+**One ladder per car, and the last gear is the exception.** iRacing publishes one set of four RPMs
+for the car, not one per gear, and that is what the car's own lights show — so openDash shows the
+same, with no per-gear offset and no table of cars in this repository. The one place a single
+ladder is plainly wrong is the last gear, where there is nothing to shift into: a flashing bar is
+an instruction that cannot be followed. So **in the last gear the top band stays lit but stops
+flashing.** The bar still says the engine is at its limit; it just stops asking for a shift that
+does not exist. SimHub's own `RPMSegments` container carries `BlinkOnLastGear` for the same reason,
+which is the precedent for treating this as a choice rather than an oversight.
+
+The last gear is found from `DriverCarGearNumForward`, in the same DriverInfo block as the four
+RPMs, against iRacing's numeric `Telemetry.Gear` rather than `[Gear]`, which is a string. A car
+that does not publish a gear count keeps flashing exactly as before, because the test requires a
+count above zero.
+
+This is where a hand-measured table would beat the mirror, and it is worth saying so plainly: in a
+car whose power band moves with the ratio, the useful upshift is not the same in second as in
+fifth, and Daniel Newman Racing measures shift points per gear for six hundred cars. openDash does
+not, and will not. `CarSettings_CurrentGearRedLineRPM` and SimHub's learned
+`GearSettings[].UpshiftRpm` table are available if that judgement is ever reversed, and the answer
+would be SimHub's table rather than one of ours.
+
 **Thresholds are mirrored; colour never is.** The sim publishes when a light comes on and no
 colour sequence at all — there is none anywhere in the session string. So a mirror is a mirror of
 *behaviour*. Colours stay in `design/tokens.json`, and a car's own colour sequence belongs to Car
@@ -104,9 +126,12 @@ sufficient and it adds nothing they do not already carry.
 names. Supporting a second sim's ladder is a third branch, not a change to this one, and it should
 wait until somebody has actually driven that sim.
 
-**Per-gear shift points.** iRacing publishes one ladder for the car, and some cars genuinely want a
-different one in first gear or at the top of the box. XOR-233 owns that question; this record
-assumes one ladder per car and is what that ticket would amend.
+**Per-gear shift points.** Settled above for XOR-233: one ladder, the last gear excepted. What
+would reopen it is a car where the single ladder is visibly wrong in a gear that is not the last —
+the Mercedes-AMG GT4, whose manual says the first LED moves with the selected gear and quotes its
+ladder for third only, is the known candidate, and XOR-170 hits the same question from the theme
+side. If that car cannot be reproduced faithfully without per-gear thresholds, the two tickets
+should agree on one answer before either moves.
 
 **Evidence that a car's published ladder is wrong.** The whole decision rests on the sim's numbers
 being better than SimHub's defaults. If a car is found whose published values do not match its
