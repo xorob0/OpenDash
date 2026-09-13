@@ -9,36 +9,91 @@ Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashbo
 to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
 including any that the plugin does not install.
 
-## 0.2.0-rc.1 (2026-09-12)
+## 0.2.0-rc.1 (2026-09-13)
 
-The candidate that makes the zone face the face. If you have openDash installed, updating replaces
-what you have with a different dashboard rather than a newer version of the same one, and that is
-the whole point of this release: the twelve-slot face becomes four zones you cycle with a wheel
-button. Drive it before it becomes the only one.
+The candidate that replaces your dashboard with a different one rather than a newer version.
+The twelve-slot face becomes the zone face rc.3 published for review: a rev bar, a bar of settled
+values, three zones across the body and a band along the foot, each zone holding one page at a time
+out of its own catalogue and advanced with a wheel button. If you are on 0.1.0-rc.4 this is the
+first release its Update button has to offer you, and pressing it changes what the dashboard is
+rather than what it says.
 
-**Your existing dashboard is copied before it is replaced.** Each folder is zipped to
-`DashTemplates/<name>_backup.zip` first, so anything you had edited in Dash Studio is recoverable.
-That copy is reclaimed by the next install of the same folder, so move it somewhere else if you
-want to keep it. The twelve-slot faces are still published as `openDash slots <size>.simhubdash` on
-this release, and installing one by hand gives you the old face back under a name of its own.
+**Your existing dashboard is copied before it is replaced.** A face OpenDash wrote and you have not
+edited is zipped to `DashTemplates/<name>_backup.zip`, which the next install of the same folder
+reclaims, so move it elsewhere if you want to keep it. A face you have edited in Dash Studio is
+recognised and held back instead, and pressing Reinstall a second time is what replaces it; the
+copy taken then is kept under a name no later update reclaims. Either way, Restore puts one back. A
+folder installed by rc.3 or earlier carries no record of what OpenDash wrote, so an edit to it
+cannot be told from an untouched copy and nothing can ask you; there the zipped copy is the whole
+of the protection.
+
+Nothing you have set is lost. A face's zones, bar and glance are stored against its screen size
+rather than against the package that carried the name, so a zone face configured in 0.1.0-rc.4
+comes up configured, and what rc.3 carried comes up on the 1920 x 480 face. The twelve-slot faces
+are still built and published as `openDash slots <size>.simhubdash`, and installing one by hand
+puts the old face back under a name of its own, beside the new one rather than over it.
 
 ### Changed
 
-- The zone faces take the shipped names. `openDash zones 1920x480` is now `openDash`, and its seven
-  siblings follow; the twelve-slot faces they replace are renamed `openDash slots <size>` and are
-  built and published but no longer installed by the plugin. The two round faces are untouched: they
-  have no zone equivalent yet, so they stay as they are and keep their names.
-- Every screen keeps its own zones, bar and glance. A rig with a face on the wheel and another
-  beside it used to configure them together, so cycling zone C on one moved zone C on the other.
-  Each face now has its own settings, named for its size, and its own wheel actions. Settings from
-  rc.3 are carried over to the 1920 x 480 face.
-- The plugin's settings page says which screen it is configuring and draws that screen: the portrait
-  face reads as a column, and the 800 x 286 no longer offers fields for a bar it does not have.
-- Release notes are this file rather than a list of pull request titles.
+- **The zone faces take the shipped names.** `openDash zones 1920x480` is now `openDash` and its
+  seven rectangular siblings follow, so the face the plugin installs at each rectangular size is
+  the zone face. The twelve-slot faces they replace are renamed `openDash slots <size>`. They are
+  still built and still published, so that the two can be compared on a rig, but the plugin no
+  longer embeds them and so no longer installs them. The two round faces are untouched and keep
+  their names.
+- The documents a user reads describe the zone face. `README.md` and `plugin/INSTALL.md` were
+  written around twelve slots and are now written around the five parts, each zone's catalogue and
+  the wheel button that cycles it, which is what this release installs, and `docs/second-screens.md`
+  points at that face rather than at twelve slots. `docs/architecture.md` still describes the card
+  path, because that path still builds; it carries a banner saying which of the two it is about,
+  and is rewritten when the path is retired.
+
+### Known
+
+- The round faces are still the twelve-slot design, because what a round face does with zones is
+  not decided. They are the only face at their size, so a user who has one keeps getting one.
+
+## 0.1.0-rc.4 (2026-09-13)
+
+The candidate that can tell you it is out of date, and then fix that itself. OpenDash now asks
+GitHub once a day whether a newer release exists, says so in the plugin's Dashboard section, and
+replaces your installed dashboards with one click when you ask it to. Nothing about you is sent,
+it can be switched off, and switching it off means nothing is fetched at all rather than fetched
+and discarded.
+
+The face itself is unchanged for anyone who has one installed. The zone faces are still built for
+review and still not installed, as in rc.3; they take the shipped names in 0.2.0-rc.1, which is the
+section above.
 
 ### Added
 
+- **An update check.** Once a day, the plugin asks GitHub what the newest release is and tells you
+  in the Dashboard section. What is sent is a request carrying your IP address, which reaches
+  GitHub and not us, and a `User-Agent` naming the product; that is the whole of it, and
+  `docs/decisions/0012-update-checks.md` states it in full. There is a switch beside it.
+- **One click applies it.** The Update button downloads what the release carries for the dashboards
+  you actually have, checks each against the digest GitHub published, and installs them. Everything
+  is in hand before anything on disk is touched, so a download that fails half way through leaves
+  the machine as it was rather than half updated.
+- **Your work is not overwritten.** A dashboard you have edited in Dash Studio is recognised and
+  left alone, with a sentence saying so; pressing Reinstall a second time replaces it, and the copy
+  taken then is kept under a name no later update reclaims. A dashboard OpenDash has never seen
+  before is adopted as it is, because an edit made before OpenDash started watching cannot be told
+  from an untouched folder.
+- **A Restore button**, for putting back the copy an update kept.
 - The generator can draw an image, which is what the telltales and the nationality flags will need.
+  Nothing on a face draws one yet.
+
+### Changed
+
+- Release notes are this file rather than a list of pull request titles, and a tag with no entry
+  here fails the release rather than publishing empty notes.
+- The settings panel says which screen it is configuring and draws that screen: the portrait face
+  reads as a column, and the 800 x 286 no longer offers fields for a bar it does not have.
+- Every screen keeps its own zones, bar and glance, and its own wheel actions. A rig with a face on
+  the wheel and another beside it used to configure them together, so cycling zone C on one moved
+  zone C on the other; each face now has its own settings, named for its size. What you set in rc.3
+  is carried over to the 1920 x 480 face.
 - The car settings strip closes over a setting your car does not have, instead of leaving a hole
   where it would have been.
 - The black flag covers band D, as the other five flags do. It used to be an outline you could read
@@ -46,15 +101,24 @@ this release, and installing one by hand gives you the old face back under a nam
 
 ### Fixed
 
-- Every package now carries `OFL.txt`, the licence for the Barlow faces it ships. Earlier releases
-  shipped the fonts without it, which the licence does not permit.
-- On the 1280 faces, page D6 drew its last field over the DRS lamp.
+- **Every package now carries `OFL.txt`**, the licence of the Barlow typefaces it ships. Earlier
+  releases shipped the fonts without it, which the licence does not permit. The plugin zip carries
+  it too, and the release publishes it.
+- The tenth release candidate is no longer reported as older than the second, which would have
+  offered a user a downgrade.
+- The Update button goes when the update is done, rather than staying on screen and doing nothing
+  when pressed.
+- Closing SimHub during an update no longer leaves a dashboard folder half replaced.
+- On the 1280 faces, page D6 of band D drew its last field over the DRS lamp.
 
 ### Known
 
-- The round faces are still the twelve-slot design, because what a round face does with zones is not
-  decided.
-- `plugin/INSTALL.md` still describes the twelve-slot face and has not caught up with this release.
+- The eight zone faces are still for review and are not installed. They take the shipped names in
+  0.2.0-rc.1, and updating to that release replaces your face with a different design; it will say
+  so beside the Update button, and the section above says what happens to the dashboard you have.
+- `README.md` and `plugin/INSTALL.md` now describe the zone face, having been rewritten for
+  0.2.0-rc.1. On this release they are right about installing the plugin and wrong about the face
+  it installs; the section above describes that face.
 
 ## 0.1.0-rc.3 (2026-09-12)
 

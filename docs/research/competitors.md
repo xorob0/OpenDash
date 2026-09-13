@@ -26,7 +26,7 @@ Sizes shipped, from the project README:
 | Lovely Dashboard, Curved, Rallye, TK Edition, Companion, Flags | 850 by 480 | 5 in DDU |
 | XL, XLC | 1280 by 480 | 10 in |
 | MXL | 1280 by 400 | 7.8 in |
-| UXL | 1920 by 480 | ultrawide, the openDash MVP size |
+| UXL | 1920 by 480 | ultrawide, the OpenDash MVP size |
 | Round, Square, Flags Square | 480 by 480 | round and square DDUs |
 | Flags Round | 800 by 800 | round |
 | Nano | 800 by 286 | compact |
@@ -47,8 +47,8 @@ Lovely's licence explicitly covers its user interface design:
 > under. Any use in commercial or marketing material [...] is forbidden unless direct consent
 > is given."
 
-openDash's design must therefore be independently derived. Do not copy Lovely layouts or visual
-language, and do not put Lovely screenshots in openDash marketing, documentation or comparison
+OpenDash's design must therefore be independently derived. Do not copy Lovely layouts or visual
+language, and do not put Lovely screenshots in OpenDash marketing, documentation or comparison
 material. This is why the design direction is the Porsche GT3 R and 963 race dash rather than
 anything "Lovely-like"; see [../design/brand.md](../design/brand.md).
 
@@ -58,7 +58,7 @@ anything "Lovely-like"; see [../design/brand.md](../design/brand.md).
 
 Paid SimHub dashboard and LED profile packs with a strong presence in iRacing, ACC and LMU, on
 the same substrate and with the same plugin-centred distribution. DNR is the reference for the
-end goal of openDash, and three of its packages were inspected in order to understand how a
+end goal of OpenDash, and three of its packages were inspected in order to understand how a
 mature product is built.
 
 | Product | Resolution | Target |
@@ -99,21 +99,21 @@ A feature report of the three packages was written separately. Its families are,
 - twelve LED profiles for RPM strips, wheels, brows, matrix flag boxes and ambient lighting,
   with per-car redline tables for hundreds of cars.
 
-Every one of those items maps onto a card, a screen or a plugin property in the openDash model,
+Every one of those items maps onto a card, a screen or a plugin property in the OpenDash model,
 which is the reason the MVP invests in the slot mechanism and the property contract.
 
-## Where openDash can actually win
+## Where OpenDash can actually win
 
 Both competitors maintain every screen size as a separate `.simhubdash`, and every feature
 change is redone by hand in each variant. Neither can accept outside contributions in any
 meaningful way, because the artifact is an opaque binary.
 
-openDash's generator turns the hand work into a build step. The claim has to be stated
+OpenDash's generator turns the hand work into a build step. The claim has to be stated
 carefully: a new aspect ratio still needs a designed layout, so a new size is not free. What is
 free is everything else, since the cards, the bindings, the plugin contract and the tests are
 shared, and a feature change lands in every size at once.
 
-| | Competitors | openDash |
+| | Competitors | OpenDash |
 |---|---|---|
 | New screen size | rebuild the dashboard by hand | write one layout function |
 | Feature change | repeat in every variant | once, in source |
@@ -129,7 +129,7 @@ structural, which means it only pays off if the generator works. That is why the
 
 Blumlaut ships dashes named "Porsche 992 GT3" and "Porsche 992 GT3 Cup", so there is precedent
 for trading on the association. Do not follow it. A design inspired by GT3 R visual language is
-fine; using Porsche marks, logos or model names in openDash branding is not.
+fine; using Porsche marks, logos or model names in OpenDash branding is not.
 
 ## Sources
 
