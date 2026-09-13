@@ -9,7 +9,24 @@ Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashbo
 to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
 including any that the plugin does not install.
 
-## Unreleased
+From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
+strips, the brows and the flag box, together with a `manifest.json` listing everything published.
+
+## 0.2.0-rc.2 (2026-09-13)
+
+The candidate that lights the hardware around the screen, and that asks the car itself where its
+shift point is rather than deriving one from the redline. Nineteen profiles for RGB strips and
+brows are built beside the flag box's and published with this release, the rev bar can be switched
+off entirely on a rig whose wheel already carries LEDs, and the bar, the arc and the companion's
+speedo light at the four RPMs your sim publishes for the car you are driving. Besides the lights,
+the pages inside the zones grow to fill the box they are given, so a narrow face no longer draws a
+small table under a large empty space.
+
+If you are on 0.1.0-rc.3, this is the first release the Update button has to offer you: 0.1.0-rc.4
+and 0.2.0-rc.1 were prepared but neither was ever published, so the two sections beneath this one
+describe changes that reach you here as well. The 0.2.0-rc.1 section is the one to read first,
+because it replaces your dashboard with a different design rather than with a newer version of the
+same one, and it says what happens to the face you have installed.
 
 ### Added
 
@@ -58,6 +75,44 @@ including any that the plugin does not install.
   in the middle, or the F1 look that flashes the whole bar. A style never changes *when* a light
   comes on, only which LED takes which rung and what colour it is, so your car's own shift points
   survive whichever look you pick.
+- **A car whose shift point moves with the gear can be given a table.** `data/shift-points.json`
+  overrides the published ladder for a named car, gear by gear, and a gear left out of an entry
+  falls back to what the sim publishes for the car as a whole. It ships **empty**, which is
+  deliberate rather than unfinished: openDash does not carry measurements it has not made, and an
+  invented number puts a shift light in the wrong place with total confidence. What ships is the
+  mechanism, its validator and the rules for contributing an entry, so a car somebody has actually
+  measured can arrive as a reviewable pull request. A car that is not in the table gets the ladder
+  iRacing publishes for it, which is right for most cars.
+
+### Changed
+
+- **A page fills the zone it is given.** A page's type grows one step of its density ramp at a time
+  until it meets the height of its box, the width of its box or the top of the ramp, and it is
+  refused a step that would leave it in a more ragged wrap than it started in. Zone B of the
+  850 x 480 face drew two 34 px lap times across the top of it with most of the zone empty
+  underneath, which the README capture showed plainly; that page now stacks and fills. Three pages
+  moved and eighteen stayed where they were, and
+  [docs/design/readability-pass.md](docs/design/readability-pass.md) records the reason for each
+  one that stayed.
+- **The car settings strip is drawn at the size of the bar's other values.** Slip, TC, bias and ABS
+  were measured and drawn at the size of their own uppercase labels, and dimmed besides, which left
+  them small and faint between RACE, LAP, POSITION and CLASS at 34 px. The canvas had said 34 px on
+  the 1280 and 28 px on the 850 from the start, and the build now agrees with it. One consequence
+  is visible on the two narrowest faces: brake bias needs 58 px where it needed 30, so the
+  850 x 480 keeps TC and bias where it used to keep ABS as well, and the 800 x 480 keeps bias
+  alone.
+- Every release carries `manifest.json`, which lists the packages and the LED profiles it published
+  with the size, the slot count and the rung of each. It carries a `schemaVersion` of its own, so a
+  reader meeting one out in the world can tell which shape it is reading.
+
+### Known
+
+- **No profile openDash generates has yet been imported into a real SimHub**, and no strip, brow or
+  matrix has been lit by one. They are generated against the format read out of the decompiled
+  9.12.6 assemblies, their pictures are checked by tests and the whole catalogue can be driven in
+  the emulator, so for the moment "it parses" is a claim about Json.NET rather than about SimHub.
+  If you own any of this hardware, saying what it actually does is the most useful thing you could
+  report.
 
 ## 0.2.0-rc.1 (2026-09-13)
 
