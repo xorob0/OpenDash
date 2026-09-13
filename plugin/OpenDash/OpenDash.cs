@@ -233,41 +233,48 @@ namespace OpenDashPlugin
             // speedo read it too, and attached last of the shared group because ShiftLights is one of
             // the names this list has always opened with. XOR-119, XOR-138.
             this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
-            foreach (var face in Settings.RigFaces())
+            // One group per screen the rig holds, under that screen's own namespace, which is what lets
+            // two screens of one size be configured apart (ADR 0017). The screen object is captured
+            // rather than looked up per read: the panel replaces the settings object on every change, so
+            // a delegate that searched the rig by namespace would be searching a rig that has moved.
+            foreach (var screen in Settings.RigScreens())
             {
-                var capturedFace = face;
-                foreach (var letter in Contract.FaceZoneLetters)
+                var s = screen;
+                if (s.IsFace)
                 {
-                    var captured = letter;
-                    this.AttachDelegate(Contract.ZonePageProperty(capturedFace, captured), () => Settings.FaceZone(capturedFace, captured));
-                    this.AttachDelegate(Contract.ZoneMaskProperty(capturedFace, captured), () => Settings.FaceZoneMask(capturedFace, captured));
-                    this.AttachDelegate(Contract.ZoneStartProperty(capturedFace, captured), () => Settings.FaceZoneStart(capturedFace, captured));
-                    this.AttachDelegate(Contract.ZoneClassOnlyProperty(capturedFace, captured), () => Settings.FaceZoneIsClassOnly(capturedFace, captured));
+                    foreach (var letter in Contract.FaceZoneLetters)
+                    {
+                        var captured = letter;
+                        this.AttachDelegate(Contract.ZonePageProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Zone(captured));
+                        this.AttachDelegate(Contract.ZoneMaskProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Mask(captured));
+                        this.AttachDelegate(Contract.ZoneStartProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Start(captured));
+                        this.AttachDelegate(Contract.ZoneClassOnlyProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).IsClassOnly(captured));
+                    }
+                    foreach (var slot in Contract.BarSlots)
+                    {
+                        var captured = slot;
+                        this.AttachDelegate(Contract.BarFieldProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).BarField(captured));
+                    }
+                    this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
                 }
-                foreach (var slot in Contract.BarSlots)
+                else if (s.IsCompanion)
                 {
-                    var captured = slot;
-                    this.AttachDelegate(Contract.BarFieldProperty(capturedFace, captured), () => Settings.BarField(capturedFace, captured));
+                    for (var module = 1; module <= Modules.Count; module++)
+                    {
+                        var captured = module;
+                        this.AttachDelegate(Contract.ModuleProperty(s.Namespace, captured), () => Settings.ScreenModule(s.Namespace, captured));
+                    }
                 }
-                this.AttachDelegate(Contract.QuickGlanceProperty(capturedFace), () => Settings.QuickGlanceOf(capturedFace));
-            }
-            if (Settings.HasScreen(Contract.CompanionPrefix))
-            {
-                for (var module = 1; module <= Modules.Count; module++)
+                else if (s.IsPitWall)
                 {
-                    var captured = module;
-                    this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+                    foreach (var letter in Contract.PitWallZoneLetters)
+                    {
+                        var captured = letter;
+                        this.AttachDelegate(Contract.ZoneProperty(s.Namespace, captured), () => Settings.ScreenZone(s.Namespace, captured));
+                    }
+                    this.AttachDelegate(Contract.PitWallWideProperty(s.Namespace), () => Settings.ScreenWideZone(s.Namespace));
+                    this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
                 }
-            }
-            if (Settings.HasScreen(Contract.PitWallPrefix))
-            {
-                foreach (var letter in Contract.PitWallZoneLetters)
-                {
-                    var captured = letter;
-                    this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
-                }
-                this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
-                this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
             }
         }
 
@@ -286,19 +293,25 @@ namespace OpenDashPlugin
         /// </summary>
         private void AttachActions(PluginManager pluginManager)
         {
-            foreach (var face in Contract.FaceSizes)
+            // The rig's faces and not the catalogue's. An action a rig does not have is a button a
+            // driver may already have assigned, left bound to nothing, which is why this used to
+            // register all eight sizes whatever the rig was -- but a namespace a user typed cannot be
+            // enumerated ahead of time, so the rig is the only list there is once screens are
+            // instances (ADR 0017). The panel warns before a remove that a button bound to that screen
+            // will go quiet, which is the cost said out loud rather than designed around.
+            foreach (var screen in Settings.FaceScreens())
             {
-                var capturedFace = face;
+                var ns = screen.Namespace;
                 foreach (var letter in Contract.FaceZoneLetters)
                 {
                     var captured = letter;
-                    pluginManager.AddAction(Contract.CycleZoneAction(capturedFace, captured), typeof(OpenDash), (manager, name) => Settings.CycleFaceZone(capturedFace, captured), null);
+                    pluginManager.AddAction(Contract.CycleZoneAction(ns, captured), typeof(OpenDash), (manager, name) => Settings.CycleScreenZone(ns, captured), null);
                 }
                 pluginManager.AddAction(
-                    Contract.HoldQuickGlanceActionFor(capturedFace),
+                    Contract.HoldQuickGlanceActionFor(ns),
                     typeof(OpenDash),
-                    (manager, name) => Settings.Face(capturedFace).BeginQuickGlance(),
-                    (manager, name) => Settings.Face(capturedFace).EndQuickGlance());
+                    (manager, name) => Settings.ScreenFace(ns).BeginQuickGlance(),
+                    (manager, name) => Settings.ScreenFace(ns).EndQuickGlance());
             }
         }
     }
