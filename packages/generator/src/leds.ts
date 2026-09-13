@@ -308,7 +308,10 @@ export const buildProfileObject = (profile: MatrixProfile): JsonObject => {
     CarChoices: [],
     CarChoice: null,
     GameCode: null,
-    UseStrictJSIsolation: false,
+    // SimHub's own default, declared [DefaultValue(true)] with DefaultValueHandling.Populate on
+    // RGBMatrixProfile. Writing false would flip a behaviour switch for no reason -- inert while the
+    // profile carries no JavaScript, and a trap for the first one that does.
+    UseStrictJSIsolation: true,
     EmbeddedJavascript: null,
     GlobalBrightness: brightness,
     GlobalBrightnessPreset: { CurrentMode: 0, Brightness: brightness },

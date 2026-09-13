@@ -179,6 +179,13 @@ describe('the file', () => {
     expect(text).not.toInclude('$type');
   });
 
+  test('does not flip a SimHub default it has no reason to touch', () => {
+    // RGBMatrixProfile declares UseStrictJSIsolation [DefaultValue(true)] with
+    // DefaultValueHandling.Populate. We carry no JavaScript, so false was inert -- and a trap for
+    // the first profile that does.
+    expect(buildProfileObject(profileOf([animation()])).UseStrictJSIsolation).toBe(true);
+  });
+
   test('carries the fields RGBMatrixProfile reads back', () => {
     const o = buildProfileObject(profileOf([animation()]));
     expect(o).toMatchObject({ Name: 'Test', UseProfileBrightness: false, GlobalBrightness: 100, CarChoices: [] });

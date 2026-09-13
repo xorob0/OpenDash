@@ -114,9 +114,23 @@ namespace OpenDashPlugin
                 settings.AddProfile(embedded);
                 driver.SaveSettings();
 
-                Log.Info("Installed the flag box profile into SimHub (" + (removed > 0 ? "replaced" : "added")
-                    + "). Select it on the matrix device to use it: installing adds a profile, it does not switch to one.");
-                return FlagBoxInstallPlan.Decide(embedded.ProfileId, embedded.Description, Installed());
+                // AddProfile re-GUIDs any profile whose id already exists in the target list
+                // (ProfileSettingsBase.cs:853-858), and the newcomer is the one it renames. That
+                // cannot happen while the removal above works, but if it ever stops working the
+                // symptom is silent: our profile becomes unrecognisable and the next install adds a
+                // second copy. Checking costs one comparison and turns that into a log line.
+                var plan = FlagBoxInstallPlan.Decide(embedded.ProfileId, embedded.Description, Installed());
+                if (plan.State != FlagBoxInstallState.UpToDate)
+                {
+                    Log.Warn("The flag box profile was added but cannot be found again by its id; SimHub may have"
+                        + " renumbered it because a copy was already present. Check SimHub's matrix profile list.");
+                }
+                else
+                {
+                    Log.Info("Installed the flag box profile into SimHub (" + (removed > 0 ? "replaced" : "added")
+                        + "). Select it on the matrix device to use it: installing adds a profile, it does not switch to one.");
+                }
+                return plan;
             }
             catch (Exception e)
             {
