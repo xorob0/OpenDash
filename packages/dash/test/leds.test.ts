@@ -10,7 +10,7 @@ import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES } from
 import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, rungFlashes } from '../src/leds/ladder.ts';
-import { ALL_EFFECTS, NOT_ON_IRACING, PIT_SPEEDING_MARGIN, SIDE_EFFECTS, SPOTTER_EFFECTS, flagEffects } from '../src/leds/effects.ts';
+import { ALL_EFFECTS, BEST_EFFORT, NO_PROPERTY, PIT_SPEEDING_MARGIN, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects } from '../src/leds/effects.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
@@ -155,24 +155,58 @@ describe('the effect catalogue', () => {
     expect(speeding.source).toContain('SimHub publishes no speeding property');
   });
 
-  test('the TC light is the dial, not the intervention, because the intervention is always zero', () => {
+  test('the TC light degrades rather than going dark: steady on the dial, blinking on the intervention', () => {
     const tc = SIDE_EFFECTS.find((e) => e.id === 'tc')!;
+    // TCLevel is filled on every sim including iRacing, so the light is never simply absent...
     expect(tc.when).toContain('TCLevel');
-    expect(tc.when).not.toContain('TCActive');
-    expect(NOT_ON_IRACING.map((n) => n.effect)).toContain('TC intervening');
+    // ...and TCActive is the intervention, which iRacing does not fill, so on iRacing it never blinks.
+    expect(tc.blinkWhen).toContain('TCActive');
+    expect(BEST_EFFORT.map((b) => b.effect)).toContain('TC intervening');
   });
 
-  test('what iRacing does not publish is refused rather than shipped dark, and says why', () => {
-    const refused = NOT_ON_IRACING.map((n) => n.effect);
-    expect(refused).toEqual(
-      expect.arrayContaining(['TC intervening', 'Turn indicators', 'ERS and battery charge', 'KERS', 'Headlights on/off and beam', 'Water pressure']),
-    );
-    for (const n of NOT_ON_IRACING) expect({ effect: n.effect, hasReason: n.reason.length > 20 }).toMatchObject({ hasReason: true });
-    // ...and none of them reaches a profile.
-    const text = textOf(profileFor('4-14-4'));
-    for (const dead of ['TCActive', 'TurnIndicatorLeft', 'TurnIndicatorRight', 'ERSPercent', 'ERSStored', 'ERSMax']) {
-      expect({ dead, inProfile: text.includes(dead) }).toMatchObject({ inProfile: false });
+  test('the best-effort effects ship and read a real property, rather than being refused', () => {
+    // The user's call: an LED that stays dark asserts nothing, unlike a readout drawing 0.00, so an
+    // effect whose property exists ships and simply does not light on a sim that leaves it zero.
+    const ids = ALL_EFFECTS().map((e) => e.id);
+    expect(ids).toContain('ers');
+    expect(ids).toContain('turn.left');
+    expect(ids).toContain('turn.right');
+    for (const b of BEST_EFFORT) {
+      expect({ effect: b.effect, prop: b.property.startsWith('DataCorePlugin.') }).toMatchObject({ prop: true });
+      expect(b.reason.length).toBeGreaterThan(30);
     }
+    // ...and each reaches a profile.
+    const text = textOf(profileFor('4-14-4'));
+    for (const name of ['TCActive', 'TurnIndicatorLeft', 'TurnIndicatorRight', 'ERSPercent']) {
+      expect({ name, inProfile: text.includes(name) }).toMatchObject({ inProfile: true });
+    }
+  });
+
+  test('the turn indicators signal on the side being signalled, like the spotters', () => {
+    expect(TURN_EFFECTS.map((e) => e.placement)).toEqual(['left', 'right']);
+    expect(TURN_EFFECTS[0]!.when).toContain('TurnIndicatorLeft');
+    expect(TURN_EFFECTS[1]!.when).toContain('TurnIndicatorRight');
+  });
+
+  test('what has no property anywhere is absent, and says what the nearest thing is', () => {
+    expect(NO_PROPERTY.map((n) => n.effect)).toEqual(
+      expect.arrayContaining(['Headlights on, off, low or high beam', 'Water pressure', 'Oil temperature warning']),
+    );
+    for (const n of NO_PROPERTY) {
+      expect(n.reason.length).toBeGreaterThan(30);
+      expect(n.nearest.length).toBeGreaterThan(10);
+    }
+    // KERS is not here: SimHub has no KERS member at all and folds every hybrid store into ERS,
+    // so it ships as the ERS light rather than as an absence.
+    expect(NO_PROPERTY.map((n) => n.effect)).not.toContain('KERS');
+    expect(BEST_EFFORT.map((b) => b.effect).join(' ')).toContain('KERS');
+    // Nothing that has no property reaches a profile. Headlights need care: the flash-to-pass is a
+    // real raw variable and IS shipped, so what must be absent is a headlight *state* read, which
+    // would have to come through the normalised layer that has no such member.
+    const text = textOf(profileFor('4-14-4'));
+    for (const dead of ['WaterPressure', 'KERS', 'GameData.Headlight']) expect({ dead, inProfile: text.includes(dead) }).toMatchObject({ inProfile: false });
+    // ...and the flash itself is there, read from the only place it exists.
+    expect(text).toContain('GameRawData.Telemetry.dcHeadlightFlash');
   });
 
   test('a sides effect is dropped on a shape with no sides rather than moved onto the rev LEDs', () => {
