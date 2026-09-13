@@ -18,12 +18,17 @@ some issue. A capture there is therefore **replaced in place** under the same na
 changes, so that the README never points at a picture of something that has been redrawn, and so
 that the directory does not grow a file per release.
 
+Which four they are is a product decision rather than this directory's: the base face and the large
+one, which `docs/scope.md` names as 850 x 480 and 1280 x 480, plus the companion and the pit wall.
+A file here is named for its size, so changing which sizes the README shows does rename files, and
+that is the one time the replace-in-place rule does not apply.
+
 They live in the repository rather than being attached to a release for two reasons. A relative
 path is rendered by GitHub at whatever commit the reader is looking at, so a reader of an old tag
 sees the dashboard of that tag, whereas a link to a release asset shows today's picture whatever
 the reader checked out, and it breaks outright if the release is deleted. The cost is history
 weight, since a replaced PNG leaves the old one in the object store for ever; that cost is bounded
-because there are four of them, they come to under four hundred kilobytes together, and a face is
+because there are four of them, they come to about four hundred kilobytes together, and a face is
 not redrawn often.
 
 Regenerating them is one command, and the scenario matters: `green` holds the flag, the session and
@@ -33,7 +38,7 @@ photographing a face: take several frames and keep the one where the rev bar is 
 photographed at part throttle is dark and says nothing.
 
 ```bash
-bun run shots --packages "openDash,openDash 800x286,openDash Companion,openDash Pit wall" --scenarios green
+bun run shots --packages "openDash 850x480,openDash 1280x480,openDash Companion,openDash Pit wall" --scenarios green
 ```
 
 Then copy the four PNGs over the ones in `media/readme/`, keeping the names, and say in the commit
