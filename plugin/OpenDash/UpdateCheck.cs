@@ -1,6 +1,6 @@
 // UpdateCheck.cs: whether to ask, which release matters, and what the panel says about it.
 //
-// Everything here is a decision openDash makes and can therefore get wrong, so all of it is pure and all of it is
+// Everything here is a decision OpenDash makes and can therefore get wrong, so all of it is pure and all of it is
 // tested. What is left outside is the HTTP call itself, which encodes a fact about Windows rather than a choice of
 // ours. See docs/decisions/0012-update-checks.md, which this implements rather than resembles.
 using System;

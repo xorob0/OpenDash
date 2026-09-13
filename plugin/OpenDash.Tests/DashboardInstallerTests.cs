@@ -47,7 +47,7 @@ namespace OpenDashPlugin.Tests
         // Somebody's Dash Studio work, and whether an install destroys it
 
         /// <summary>
-        /// The first run after this shipped must not hold everything back. No record means openDash has never looked
+        /// The first run after this shipped must not hold everything back. No record means OpenDash has never looked
         /// at the folder, not that it was edited, so the folder is adopted and watched from then on.
         /// </summary>
         [Fact]
@@ -103,7 +103,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(entry.Extracted);
             Assert.Equal("0.1.0", entry.InstalledVersion);
             Assert.Equal("{\"Version\":2,\"mine\":true}", File.ReadAllText(djson));
-            Assert.Contains(log.Lines, line => line.Contains("has changed since openDash wrote it"));
+            Assert.Contains(log.Lines, line => line.Contains("has changed since OpenDash wrote it"));
         }
 
         /// <summary>

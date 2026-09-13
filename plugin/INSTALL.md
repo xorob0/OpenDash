@@ -1,7 +1,7 @@
-# Installing the openDash plugin
+# Installing the OpenDash plugin
 
-The plugin does two things: it installs the openDash dashboards into SimHub, one per screen
-size plus the two companions and the two pit walls, and it adds an "openDash" page to SimHub's
+The plugin does two things: it installs the OpenDash dashboards into SimHub, one per screen
+size plus the two companions and the two pit walls, and it adds an "OpenDash" page to SimHub's
 left menu where you choose what each of them shows. It reads no telemetry and renders nothing;
 SimHub does that.
 
@@ -20,12 +20,12 @@ this file.
    The same from PowerShell: `Unblock-File "C:\Program Files (x86)\SimHub\OpenDash.dll"`.
 4. Start SimHub. It notices the new plugin and asks whether to enable it; accept. If SimHub
    asks to restart, restart it.
-5. "openDash" now appears in SimHub's left menu. Open it: the Dashboard section at the bottom
-   should say "openDash <version> · 14 dashboards" and "Up to date", which means every dashboard
+5. "OpenDash" now appears in SimHub's left menu. Open it: the Dashboard section at the bottom
+   should say "OpenDash <version> · 14 dashboards" and "Up to date", which means every dashboard
    was extracted into its own folder under `DashTemplates` on that start (`openDash`,
    `openDash 1280x480` and so on, see Sizes below).
 6. Assign a dashboard to a display. Pick the size that matches the display from the Sizes table;
-   openDash is a normal SimHub dashboard from here on: in Dash Studio the sizes are listed as
+   OpenDash is a normal SimHub dashboard from here on: in Dash Studio the sizes are listed as
    "openDash", "openDash 1280x480" and so on, and you open one in a window, send it to a USB or
    HDMI display, or point a phone or tablet at it exactly like any other dashboard. Nothing in
    the plugin launches it; that is SimHub's job.
@@ -58,17 +58,17 @@ Four more dashboards are not faces for the wheel but second screens, described b
 | openDash Pit wall | 1920 x 1080 | three pages for someone who is not driving |
 | openDash Pit wall portrait | 1080 x 1920 | the same in one page, for a screen on its side |
 
-Slot numbering follows the picture on the openDash page: the left grid row by row, then the
+Slot numbering follows the picture on the OpenDash page: the left grid row by row, then the
 right grid row by row. The 600x686 face numbers its grid row by row under the hero; the round
 faces number the left side, then the right side, then the bottom.
 
 ## The companion
 
 The companion shows one module at a time: a big, calm page for a phone or a tablet beside the
-wheel. There are twenty-one modules, listed on the openDash page under Companion, and each has
+wheel. There are twenty-one modules, listed on the OpenDash page under Companion, and each has
 its own switch. A module that is off is skipped entirely.
 
-Paging is SimHub's, not openDash's. In SimHub, open the device or window the companion runs on,
+Paging is SimHub's, not OpenDash's. In SimHub, open the device or window the companion runs on,
 go to its "Controls and events" and bind a wheel button to **NextScreen** (and another to
 **PreviousScreen** if you want to go back). Those are per-device bindings, so the button that
 pages your companion does not page your dash.
@@ -85,7 +85,7 @@ intervals, sectors and stops, the driver's own lap next to it, and four **data z
 choose the contents of. The landscape dashboard has three pages (race, tower, telemetry) that
 you page with the same NextScreen binding; the portrait one has a single page.
 
-Zones A to D and the wide zone are set on the openDash page under Pit wall. Each can show any of
+Zones A to D and the wide zone are set on the OpenDash page under Pit wall. Each can show any of
 eleven pages (fuel, tyres, opponents, pit view, relative, leaderboard, lap history, web view,
 inputs, radar, sectors); the wide zone on the tower page has six of its own. The **Web view**
 page shows any web page you like: put an http or https address in the Web view address box. An
@@ -97,7 +97,7 @@ that is not there.
 
 ## Settings
 
-Every change on the openDash page takes effect immediately on a running dashboard; there is
+Every change on the OpenDash page takes effect immediately on a running dashboard; there is
 nothing to save and no restart.
 
 | Section | Setting | Values |
@@ -148,15 +148,15 @@ other dashboards.
   one of the folders is missing. Check that SimHub can write to its own folder, then click
   Reinstall, which extracts every dashboard again.
 - "Install failed": hover the status for the reason and the dashboard concerned. Details are in
-  SimHub's log, `Logs\SimHub.txt`, on the lines prefixed `[openDash]`.
+  SimHub's log, `Logs\SimHub.txt`, on the lines prefixed `[OpenDash]`.
 - The dashboard shows the default layout although you changed the slots: the dashboard reads
   the settings through the plugin's properties, so the plugin has to be enabled; check
   SimHub's Settings > Plugins page.
 - A smaller face does not show the card you assigned: it has fewer slots than the picture on the
-  openDash page and only reads the first ones (see Sizes). Assign the card to a lower slot
+  OpenDash page and only reads the first ones (see Sizes). Assign the card to a lower slot
   number.
 - The companion does not change page when you press the button: the binding is on the device,
-  not in openDash. Open that device's "Controls and events" in SimHub and bind NextScreen.
+  not in OpenDash. Open that device's "Controls and events" in SimHub and bind NextScreen.
 - The track map or the radar is empty: both are drawn from SimHub's recorded outline of the
   track, which appears after a lap has been recorded there.
 - A tyre pressure or a temperature reads `--`: iRacing reports pressures from the last pit stop
