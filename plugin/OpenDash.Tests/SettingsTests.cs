@@ -726,12 +726,18 @@ namespace OpenDashPlugin.Tests
         public void A_face_the_build_no_longer_ships_is_dropped()
         {
             // A settings file from another version can name a size nothing ships at. Carrying it
-            // forward would attach a group of properties for a face nobody has.
+            // forward would put a screen on the rig whose package can never be written.
             var settings = new OpenDashSettings();
             settings.Faces["Face1x1"] = new FaceSettings();
+            settings.Faces["Face1920x480"] = new FaceSettings { Starts = new[] { 1, 2, 3, 0 } };
             settings.Normalise();
-            Assert.False(settings.Faces.ContainsKey("Face1x1"));
-            Assert.Equal(Contract.FaceSizes.Count, settings.Faces.Count);
+            Assert.Null(settings.ScreenByNamespace("Face1x1"));
+            // The one that does ship is carried across with what the driver had set on it.
+            var kept = settings.ScreenByNamespace("Face1920x480");
+            Assert.NotNull(kept);
+            Assert.Equal(2, kept.Face.Start("B"));
+            // And the dictionary it came from is spent, so nothing keeps a second copy of the zones.
+            Assert.Empty(settings.Faces);
         }
 
         [Fact]
@@ -768,21 +774,23 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void Normalise_fills_in_a_screen_it_has_not_seen()
+        public void A_screen_that_has_just_been_added_starts_from_the_defaults()
         {
-            // What happens when a screen is added: the rig names it before anything has configured it,
+            // What happens when a screen is added: the rig holds it before anything has configured it,
             // and it has to start from the defaults rather than from nothing.
-            var settings = new OpenDashSettings { Screens = new List<string> { Contract.FacePrefix(Face) } };
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
             settings.Normalise();
-            Assert.Equal(new[] { Contract.FacePrefix(Face) }, settings.Faces.Keys);
-
             var rim = Contract.FaceSizes[3];
-            settings.Screens.Add(Contract.FacePrefix(rim));
+            var entry = new PackageEntry { Package = "p", Folder = "openDash 850x480", Kind = Contract.KindFace, Width = rim.Width, Height = rim.Height };
+
+            var added = settings.AddScreen(entry, null);
             settings.Normalise();
-            Assert.True(settings.Faces.ContainsKey(Contract.FacePrefix(rim)));
-            Assert.Equal(Contract.DefaultFaceZones(), settings.Face(rim).Zones);
-            Assert.Equal(Contract.DefaultFaceZoneMasks(), settings.Face(rim).Masks);
-            Assert.Equal(Contract.DefaultQuickGlance, settings.Face(rim).QuickGlance);
+            Assert.Equal(Contract.FacePrefix(rim), added.Namespace);
+            Assert.Equal(Contract.DefaultFaceZones(), added.Face.Zones);
+            Assert.Equal(Contract.DefaultFaceZoneMasks(), added.Face.Masks);
+            Assert.Equal(Contract.DefaultQuickGlance, added.Face.QuickGlance);
+            // Unnamed, it takes its size, which is what the panel prefills the box with.
+            Assert.Equal("850 × 480", added.Name);
         }
 
         [Fact]
@@ -1023,7 +1031,7 @@ namespace OpenDashPlugin.Tests
         {
             // Eight face sizes times twenty-one properties is what the plugin used to attach whatever
             // the rig was. What it attaches now is the four modes, the twelve slots and the rev bar,
-            // which every screen shares, and one group per screen the settings hold.
+            // which every screen shares, and one group per screen the rig holds.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
             var shared = Contract.SharedPropertyNames().Count();
             Assert.Equal(17, shared);
@@ -1032,14 +1040,15 @@ namespace OpenDashPlugin.Tests
             // rather than the hundred and thirty-six that made the screens worth narrowing.
             var lights = Contract.LightsPropertyNames().Count();
 
-            var settings = new OpenDashSettings { Screens = new List<string>() };
+            // An empty rig is a new install, and declares nothing of any screen's.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
             settings.Normalise();
             Assert.Equal(Contract.SharedPropertyNames().Concat(Contract.LightsPropertyNames()), settings.DeclaredProperties());
 
-            settings.Screens.Add(Contract.FacePrefix(Face));
-            settings.Screens.Add(Contract.FacePrefix(Contract.FaceSizes[3]));
-            settings.Screens.Add(Contract.CompanionPrefix);
-            settings.Screens.Add(Contract.PitWallPrefix);
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Rig.Add(Screen(Contract.KindFace, Contract.FaceSizes[3].Width, Contract.FaceSizes[3].Height));
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
             settings.Normalise();
             var names = settings.DeclaredProperties().ToList();
             Assert.Equal(shared + 2 * perFace + Modules.Count + 6 + lights, names.Count);
@@ -1051,16 +1060,199 @@ namespace OpenDashPlugin.Tests
             // And the six faces the rig has not got are not declared at all.
             Assert.DoesNotContain("Face1280x480ZoneA", names);
 
-            settings.Screens.Remove(Contract.FacePrefix(Contract.FaceSizes[3]));
+            settings.RemoveScreen("Face850x480");
             settings.Normalise();
             Assert.Equal(shared + perFace + Modules.Count + 6 + lights, settings.DeclaredProperties().Count());
+        }
 
-            // A settings file that has never named a rig reads as every screen, which is what the plugin
-            // attached before a rig could be named at all.
-            var old = new OpenDashSettings();
-            Assert.Equal(Contract.PropertyNames(), old.DeclaredProperties());
-            old.Normalise();
-            Assert.Equal(Contract.ScreenPrefixes(), old.Screens);
+        /// <summary>A screen on the stock namespace for its kind and size, as the first one at a size is.</summary>
+        private static ScreenInstance Screen(string kind, int width, int height)
+        {
+            var screen = new ScreenInstance { Kind = kind, Width = width, Height = height };
+            screen.Namespace = screen.StockNamespace;
+            screen.Normalise();
+            return screen;
+        }
+
+        // --- ADR 0017: a screen is an instance -------------------------------------------------
+
+        [Fact]
+        public void Two_faces_of_one_size_are_configured_apart()
+        {
+            // The whole point of ADR 0017. Before it, both of these were Faces["Face1280x480"] and
+            // cycling a zone on one moved the same zone on the other.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Normalise();
+            var entry = new PackageEntry { Package = "p", Folder = "openDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+
+            var main = settings.AddScreen(entry, "Main dash");
+            var rim = settings.AddScreen(entry, "Rim");
+            settings.Normalise();
+
+            // The first takes the stock namespace and the stock folder, so its package is the embedded
+            // one byte for byte and nothing about today's rigs changes.
+            Assert.Equal("Face1280x480", main.Namespace);
+            Assert.Equal("openDash 1280x480", main.Folder);
+            Assert.True(main.IsStock);
+
+            // The second gets its own of both.
+            Assert.Equal("Rim", rim.Namespace);
+            Assert.Equal("openDash Rim", rim.Folder);
+            Assert.False(rim.IsStock);
+
+            main.Face.SetStart("B", 3);
+            rim.Face.SetStart("B", 7);
+            Assert.Equal(3, main.Face.Start("B"));
+            Assert.Equal(7, rim.Face.Start("B"));
+
+            var names = settings.DeclaredProperties().ToList();
+            Assert.Contains("Face1280x480ZoneB", names);
+            Assert.Contains("RimZoneB", names);
+            Assert.Equal(names.Count, names.Distinct().Count());
+
+            // And their wheel buttons are separate, which is what lets one face sit still while the
+            // one in front of the driver cycles.
+            Assert.Contains("RimCycleZoneB", rim.ActionNames());
+            Assert.Contains("Face1280x480CycleZoneB", main.ActionNames());
+        }
+
+        [Fact]
+        public void A_namespace_is_frozen_at_creation_and_a_rename_is_a_label()
+        {
+            // ADR 0017: a property name is a public interface under ADR 0003, so a rename that
+            // re-pointed one would break whatever had been bound to it with no diagnostic.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Normalise();
+            var entry = new PackageEntry { Package = "p", Folder = "openDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            settings.AddScreen(entry, "First");
+            var screen = settings.AddScreen(entry, "Main dash");
+            Assert.Equal("MainDash", screen.Namespace);
+            Assert.Equal("openDash Main dash", screen.Folder);
+
+            screen.Name = "Rim";
+            settings.Normalise();
+            Assert.Equal("MainDash", screen.Namespace);
+            Assert.Equal("openDash Main dash", screen.Folder);
+            Assert.Equal("Rim", screen.Name);
+        }
+
+        [Theory]
+        [InlineData("Main dash", "MainDash")]
+        [InlineData("rim", "rim")]
+        [InlineData("Pit  wall  2", "PitWall2")]
+        [InlineData("1920 dash", "dash")]
+        [InlineData("écran", "cran")]
+        public void A_namespace_is_the_letters_and_digits_of_the_name(string name, string expected)
+        {
+            // Letters and digits only: contract.ts records that a second dot inside a property name is
+            // unverified, and a user-typed name is not the place to find out. A leading run of digits
+            // goes because a namespace that begins with one reads as a number wherever it is parsed.
+            Assert.Equal(expected, Contract.Slug(name));
+        }
+
+        [Fact]
+        public void A_name_that_slugs_to_nothing_still_gets_a_screen()
+        {
+            // A name written entirely in a script the slug drops must not be a refusal to add a screen.
+            Assert.Equal("Screen", PackageCatalogue.UniqueNamespace("日本語", new HashSet<string>()));
+            Assert.Equal("Screen2", PackageCatalogue.UniqueNamespace("日本語", new HashSet<string> { "Screen" }));
+        }
+
+        [Fact]
+        public void A_namespace_never_collides_with_a_stock_one()
+        {
+            // Naming a second 1280x480 screen "Face1280x480" would make it read the first one's
+            // properties, which is the exact collision the record exists to stop.
+            var taken = new HashSet<string> { "Face1280x480" };
+            Assert.Equal("Face1280x4802", PackageCatalogue.UniqueNamespace("Face1280x480", taken));
+            // And a reserved one is taken even when the rig does not hold it yet.
+            Assert.Equal("PitWall2", PackageCatalogue.UniqueNamespace("Pit wall", new HashSet<string>()));
+        }
+
+        [Fact]
+        public void A_new_install_has_an_empty_rig_and_an_upgrade_keeps_what_is_installed()
+        {
+            // A settings file that has never installed anything is a new install, and its empty rig is
+            // the state the panel teaches from (XOR-34). Nothing has to be dismissed.
+            var fresh = new OpenDashSettings();
+            fresh.Normalise();
+            Assert.Empty(fresh.RigScreens());
+
+            // A file that has installed dashboards gets one screen per folder, carrying the settings
+            // that were keyed by prefix before the rig existed.
+            var upgraded = new OpenDashSettings
+            {
+                FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "openDash 1280x480", "a" },
+                    { "openDash Companion", "b" },
+                    { "openDash Pit wall", "c" },
+                },
+                Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal)
+                {
+                    { "Face1280x480", new FaceSettings { Starts = new[] { 1, 2, 3, 4 } } },
+                },
+                WideZone = 3,
+            };
+            upgraded.Normalise();
+            Assert.Equal(3, upgraded.RigScreens().Count);
+            var face = upgraded.ScreenByNamespace("Face1280x480");
+            Assert.NotNull(face);
+            Assert.Equal(Contract.KindFace, face.Kind);
+            Assert.Equal(1280, face.Width);
+            // The zones the user had set are the zones they still have.
+            Assert.Equal(2, face.Face.Start("B"));
+            Assert.Equal(3, upgraded.ScreenByNamespace("PitWall").WideZone);
+            Assert.Equal("Companion", upgraded.ScreenByNamespace("Companion").Name);
+        }
+
+        [Fact]
+        public void A_second_pit_wall_gets_names_of_its_own_for_the_unprefixed_properties()
+        {
+            // WebViewUrl carries no prefix at all -- it was named before the idiom and ADR 0003 does not
+            // allow renaming a published property -- so only the stock pit wall keeps that spelling.
+            var stock = Contract.ScreenPropertyNames(Contract.KindPitWall, Contract.PitWallPrefix).ToList();
+            Assert.Contains("WebViewUrl", stock);
+            Assert.Contains("PitWallWide", stock);
+
+            var second = Contract.ScreenPropertyNames(Contract.KindPitWall, "Garage").ToList();
+            Assert.Contains("GarageWebViewUrl", second);
+            Assert.Contains("GarageWide", second);
+            Assert.DoesNotContain("WebViewUrl", second);
+            Assert.Empty(stock.Intersect(second));
+        }
+
+        [Fact]
+        public void A_rig_of_one_screen_per_size_declares_exactly_what_it_used_to()
+        {
+            // The load-bearing compatibility claim in ADR 0017, and the reason
+            // packages/dash/test/declared-properties.txt does not change: a rig holding the stock
+            // screen of every kind declares the same names, in the same order, as the prefix list did.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            foreach (var face in Contract.FaceSizes) settings.Rig.Add(Screen(Contract.KindFace, face.Width, face.Height));
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
+            settings.Normalise();
+            Assert.Equal(Contract.PropertyNames(), settings.DeclaredProperties());
+        }
+
+        [Fact]
+        public void A_screen_carries_only_the_settings_of_its_own_kind()
+        {
+            // A settings file that carried a face's zones on a pit wall -- which only a hand-edit could
+            // produce -- must not attach a face's properties to it.
+            var confused = new ScreenInstance
+            {
+                Kind = Contract.KindPitWall,
+                Width = 1920,
+                Height = 1080,
+                Face = new FaceSettings(),
+                Modules = Contract.DefaultModules(),
+            };
+            confused.Normalise();
+            Assert.Null(confused.Face);
+            Assert.Null(confused.Modules);
+            Assert.NotNull(confused.Zones);
         }
 
         [Fact]
