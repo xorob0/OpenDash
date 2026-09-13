@@ -32,8 +32,10 @@ import { rect } from '../src/design/geometry.ts';
 import { shapeOf } from '../src/second/shape.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import {
+  BASE_FACE,
   FACE_SCREEN_NAME,
   FACE_SCREEN_NAME_NO_REV_BAR,
+  LARGE_FACE,
   ZONE_FACES,
   bandCorners,
   bandPageItems,
@@ -61,6 +63,34 @@ const SECOND_SCREENS = SCREEN_PACKAGES.map((def) => buildScreenPackage(def, OPTS
 const reference = BUILT.find((b) => b.face === zoneFace1920x480)!;
 /** Every zone property carries its face's prefix, so a test that names one has to say whose. */
 const REFERENCE = facePrefix(sizeOf(zoneFace1920x480));
+
+describe('the base face and the large one', () => {
+  // Named constants rather than folder strings, because the two sizes are a product decision
+  // docs/scope.md holds and README.md photographs, and the scripts read them from here.
+  test('the base is 850 by 480 and the large one 1280 by 480', () => {
+    expect({ folder: BASE_FACE.folder, width: BASE_FACE.width, height: BASE_FACE.height }).toEqual({ folder: 'openDash 850x480', width: 850, height: 480 });
+    expect({ folder: LARGE_FACE.folder, width: LARGE_FACE.width, height: LARGE_FACE.height }).toEqual({ folder: 'openDash 1280x480', width: 1280, height: 480 });
+  });
+
+  test('both ship', () => {
+    expect(ZONE_FACES).toContain(BASE_FACE);
+    expect(ZONE_FACES).toContain(LARGE_FACE);
+  });
+
+  // The pair earns its place by being two shapes rather than two sizes of one: the base stacks a
+  // page into a tall narrow zone, the large one tabulates it into a wide one.
+  test('their zones are different shapes, not the same shape scaled', () => {
+    const base = BASE_FACE.zones.zoneB;
+    const large = LARGE_FACE.zones.zoneB;
+    expect(base.width).toBeLessThan(base.height);
+    expect(large.width).toBeGreaterThan(large.height);
+  });
+
+  test('neither is the reference face', () => {
+    expect(BASE_FACE).not.toBe(zoneFace1920x480);
+    expect(LARGE_FACE).not.toBe(zoneFace1920x480);
+  });
+});
 
 describe('the reference face is the artboard', () => {
   const z = zoneFace1920x480.zones;

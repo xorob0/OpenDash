@@ -6,13 +6,14 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { packageSize, parseArgs } from './dev.ts';
+import { BASE_FACE, LARGE_FACE } from '../packages/dash/src/zones/index.ts';
+import { LIST_ORDER, packageSize, parseArgs } from './dev.ts';
 
 const MANIFEST = path.resolve(import.meta.dir, '../build/manifest.json');
 
 describe('reading the arguments', () => {
-  test('nothing means the face and a race', () => {
-    expect(parseArgs([])).toMatchObject({ packageName: 'openDash', scenario: 'race', noBuild: false, keep: false });
+  test('nothing means the base face and a race', () => {
+    expect(parseArgs([])).toMatchObject({ packageName: 'openDash 850x480', scenario: 'race', noBuild: false, keep: false });
   });
 
   test('a package name is positional', () => {
@@ -20,7 +21,7 @@ describe('reading the arguments', () => {
   });
 
   test('a scenario is a flag, and does not become the package', () => {
-    expect(parseArgs(['--scenario', 'notc'])).toMatchObject({ packageName: 'openDash', scenario: 'notc' });
+    expect(parseArgs(['--scenario', 'notc'])).toMatchObject({ packageName: 'openDash 850x480', scenario: 'notc' });
   });
 
   test('the two together', () => {
@@ -37,6 +38,20 @@ describe('reading the arguments', () => {
 
   test('help wins over everything else', () => {
     expect(parseArgs(['openDash', '--help'])).toEqual({ help: true });
+  });
+});
+
+describe('the base face and the large one', () => {
+  // The default has to be a package Dash Studio lists, or `bun run dev` with no arguments filters
+  // the list by a name nothing matches and reports that it could not open an installed dashboard.
+  test('both are packages this script can open', () => {
+    const listed: readonly string[] = LIST_ORDER;
+    expect(listed).toContain(BASE_FACE.folder);
+    expect(listed).toContain(LARGE_FACE.folder);
+  });
+
+  test('the default with no arguments is the base face', () => {
+    expect(parseArgs([])).toMatchObject({ packageName: BASE_FACE.folder });
   });
 });
 

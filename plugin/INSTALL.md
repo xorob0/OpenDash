@@ -60,15 +60,22 @@ than the same thing larger.
 | Dashboard | Screen | |
 |---|---|---|
 | openDash | 1920 x 480 | the reference face |
-| openDash 1280x480 | 1280 x 480 | |
+| openDash 1280x480 | 1280 x 480 | **the large size** |
 | openDash 1280x400 | 1280 x 400 | a shorter body, the same zones |
 | openDash 1280x720 | 1280 x 720 | the tall body lets zone C list the field |
-| openDash 850x480 | 850 x 480 | narrower zones, fewer cells in the car settings |
+| openDash 850x480 | 850 x 480 | **the base size**: narrower zones, fewer cells in the car settings |
 | openDash 800x480 | 800 x 480 | |
 | openDash 800x286 | 800 x 286 | no bar: the height is not there |
 | openDash 600x686 | 600 x 686 | portrait, zone A above B above C, one bar field per end |
 | openDash 480 round | 480 x 480, round | still the twelve-slot face; see below |
 | openDash 800 round | 800 x 800, round | still the twelve-slot face; see below |
+
+Take the one that matches your display. If nothing matches exactly, **850 x 480 is the base
+size** and the one to try first: it is the common wheel-mounted DDU, and it is the tightest face
+that still carries all five parts. **1280 x 480 is the large size**, for a wider DDU. SimHub scales
+whichever face you assign to whatever display you assign it to, so a mismatched size is not broken,
+only drawn at the wrong proportions and the wrong density; take the nearest shape rather than the
+biggest number.
 
 Four more dashboards are not faces for the wheel but second screens, described below.
 

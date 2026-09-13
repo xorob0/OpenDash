@@ -15,6 +15,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { build as buildEmulator, runningPid, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
 import { captureDashboard, guiAvailable, openDashboard, placeDashboards } from './gui.ts';
+import { BASE_FACE } from '../packages/dash/src/zones/index.ts';
 import { claim, install, readClaim, release, resolveHost, screenshot, simhubStop, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
@@ -79,7 +80,7 @@ export function parseArgs(argv: readonly string[]): DevOptions | { help: true } 
   // The scenario is also positional-looking once `--scenario race` has been read, so it is removed.
   const named = positional.filter((a) => a !== scenario);
   return {
-    packageName: named[0] ?? 'openDash',
+    packageName: named[0] ?? BASE_FACE.folder,
     scenario,
     noBuild: argv.includes('--no-build'),
     keep: argv.includes('--keep'),
@@ -90,7 +91,8 @@ const USAGE = `dev: bring the whole rig up and leave a dash rendering live telem
 
   bun run dev [package] [--scenario <name>] [--no-build] [--keep]
 
-  package     which one to install and open; default "openDash"
+  package     which one to install and open; default "${BASE_FACE.folder}", the base size
+              (docs/scope.md: 850 x 480 is the base, 1280 x 480 the large one)
               ${LIST_ORDER.join(', ')}
   --scenario  which telemetry to replay; default "race"
               ${scenarios().join(', ') || '(none built)'}
