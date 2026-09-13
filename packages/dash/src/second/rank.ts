@@ -18,10 +18,9 @@
  * one component rather than twenty-one judgements. A rank whose members can never go missing
  * carries no bindings at all, so the two modes cost nothing where neither applies.
  */
-import type { Item } from '../generator.ts';
+import type { Hex, Item } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import type { Hex } from '../generator.ts';
 import { ds } from '../tokens.ts';
 
 const { add, div, iff, num, str, sub } = ncalc;
@@ -70,6 +69,15 @@ export interface RankOptions {
   shedOrder?: readonly string[];
   /** Packed and centred by default, which is what band D asks for. */
   align?: 'centre' | 'left';
+  /**
+   * How few members the rank may shed to, one by default.
+   *
+   * A page keeps one whatever the width, because a page that draws nothing is worse than a page
+   * drawing one thing badly. The bar's strip passes zero: it is one of three blocks on a line, and
+   * a cell that will not fit is a cell drawn over the field beside it -- which is what the first
+   * photograph of the 850 face showed, BIAS sitting on POSITION.
+   */
+  atLeast?: number;
 }
 
 /** Width a set of members takes, drawn side by side. */
@@ -77,12 +85,13 @@ export const rankWidth = (members: readonly RankMember[], gap: number): number =
   members.reduce((sum, m) => sum + m.width, 0) + gap * Math.max(0, members.length - 1);
 
 /**
- * The members that fit `width`, least important dropped first, never fewer than one.
+ * The members that fit `width`, least important dropped first, never fewer than `atLeast`.
  *
- * Never fewer than one, because a rank that sheds its last member draws nothing at all; a single
- * member too wide for its box is the case a caller has to answer some other way.
+ * One by default, because a rank that sheds its last member draws nothing at all; a single member
+ * too wide for its box is the case a caller has to answer some other way. A caller with room to
+ * draw nothing says so with `atLeast: 0`.
  */
-export function rankThatFits(members: readonly RankMember[], width: number, gap: number, shedOrder?: readonly string[]): RankMember[] {
+export function rankThatFits(members: readonly RankMember[], width: number, gap: number, shedOrder?: readonly string[], atLeast = 1): RankMember[] {
   // Most important first. An id the shedding order does not name is less important than every id
   // it does, and ties among those break on the drawing order, so the tail still goes first.
   const importance = (m: RankMember): number => {
@@ -90,7 +99,7 @@ export function rankThatFits(members: readonly RankMember[], width: number, gap:
     return i === -1 ? (shedOrder?.length ?? 0) + members.indexOf(m) : i;
   };
   const kept = [...members];
-  while (kept.length > 1 && rankWidth(kept, gap) > width) {
+  while (kept.length > Math.max(0, atLeast) && rankWidth(kept, gap) > width) {
     const worst = kept.reduce((a, b) => (importance(b) > importance(a) ? b : a));
     kept.splice(kept.indexOf(worst), 1);
   }
@@ -132,6 +141,10 @@ function placements(members: readonly RankMember[], opts: RankOptions): { x: num
   return members.map((m, i) => {
     const before = slots.slice(0, i);
     const offset = add(num(before.reduce((sum, s) => sum + s.fixed, 0)), ...before.flatMap((s) => (s.term ? [s.term] : [])));
+    // A rank laid out from the left only moves a member that has an optional one before it; a
+    // centred one moves every member, because the centre itself moves. A member nothing can move
+    // is left with no binding rather than one that always evaluates to where it already is.
+    if (!centred && !before.some((s) => s.term)) return { x: xs[i] ?? left };
     const base = centred ? add(num(left), div(sub(num(width), totalExpr), num(2)), offset) : add(num(left), offset);
     return { x: xs[i] ?? left, leftBind: base };
   });
@@ -144,7 +157,7 @@ function placements(members: readonly RankMember[], opts: RankOptions): { x: num
  * test wants to assert and a caller sometimes wants to report.
  */
 export function rank(members: readonly RankMember[], opts: RankOptions): { items: Item[]; kept: RankMember[] } {
-  const kept = rankThatFits(members, opts.width, opts.gap, opts.shedOrder);
+  const kept = rankThatFits(members, opts.width, opts.gap, opts.shedOrder, opts.atLeast);
   const placed = placements(kept, opts);
   const items = kept.flatMap((m, i) => {
     const at = placed[i] ?? { x: opts.left };

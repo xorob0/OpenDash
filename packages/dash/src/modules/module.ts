@@ -48,7 +48,10 @@ export interface Module extends ModuleMeta {
 }
 
 export function defineModule(id: string, build: ModuleBuilder): Module {
-  return { ...moduleMeta(id), build: (ctx) => build({ ...ctx, page: ctx.page ?? id }) };
+  // A module is always its own page, even when another page builds it inside itself: the car
+  // telemetry page embeds the car settings module, and the table that applies to it is the car
+  // settings one.
+  return { ...moduleMeta(id), build: (ctx) => build({ ...ctx, page: id }) };
 }
 
 /** A field of this module, its item name prefixed so it is unique on the screen. */
