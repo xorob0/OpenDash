@@ -18,7 +18,7 @@
  * does rather than leaving it to be remembered.
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /** Where the VM's files live on whichever host runs the container. */
@@ -27,6 +27,8 @@ const WINVM_DIR = '/opt/winvm';
 const GUEST_SSH_PORT = 2222;
 const SIMHUB_DIR = 'C:\\Program Files (x86)\\SimHub';
 const DASH_TEMPLATES = `${SIMHUB_DIR}\\DashTemplates`;
+/** SimHub's record of which plugins are enabled, read once at startup. */
+const SIMHUB_ACTIVATION = `${SIMHUB_DIR}\\PluginsData\\PluginsActivation.json`;
 /** The share that is `Z:\` in the interactive session and `\\host.lan\Data` from an SSH one. */
 const SHARE_UNC = '\\\\host.lan\\Data';
 const LOCK_PATH = `${WINVM_DIR}/shared/vm.lock`;
@@ -329,22 +331,93 @@ export function installPlugin(host: Host, build = true): RunResult {
 Copy-Item ${psq(`${SHARE_UNC}\\OpenDash.dll`)} $dest -Force
 # Windows marks a file that arrived over a network share, and .NET refuses to load it silently.
 Unblock-File -LiteralPath $dest -ErrorAction SilentlyContinue
-# Pre-activating spares the "new plugin found" prompt, which blocks the desktop until clicked.
-$activation = Join-Path ${psq(SIMHUB_DIR)} 'PluginsData\\PluginsActivation.json'
-if (Test-Path $activation) {
-  $json = Get-Content $activation -Raw | ConvertFrom-Json
-  if (-not $json.'OpenDash.OpenDashPlugin') {
-    $json | Add-Member -NotePropertyName 'OpenDash.OpenDashPlugin' -NotePropertyValue $true -Force
-    $json | ConvertTo-Json -Depth 10 | Set-Content $activation -Encoding UTF8
-  }
-}
 "installed $((Get-Item $dest).Length) bytes"`,
     180,
   );
   if (!copy.ok) return copy;
+  const activated = activatePlugin(host, OPENDASH_PLUGIN_CLASS);
+  if (!activated.ok) return activated;
   const started = simhubStart(host);
   return { ...copy, stdout: `${copy.stdout}\n${started.stdout}` };
 }
+
+/** The openDash plugin's type, which is how SimHub names it in PluginsActivation.json. */
+export const OPENDASH_PLUGIN_CLASS = 'OpenDashPlugin.OpenDash';
+
+/** One entry of SimHub's PluginsActivation.json, keyed by the plugin type's full name. */
+export interface PluginActivation {
+  ClassName: string;
+  IsEnabled: boolean;
+  ShowInMainMenu: boolean;
+  ShowInMainMenuPosition: number;
+}
+
+/** Reads the activation list, refusing anything that is not the flat array SimHub writes. */
+export function parseActivation(text: string): PluginActivation[] {
+  const parsed: unknown = JSON.parse(text.replace(/^\uFEFF/, ''));
+  if (!Array.isArray(parsed)) throw new Error('PluginsActivation.json is not an array of plugins');
+  return parsed.map((entry, i) => {
+    if (typeof entry !== 'object' || entry === null || typeof (entry as PluginActivation).ClassName !== 'string') {
+      throw new Error(`PluginsActivation.json entry ${i} names no plugin class`);
+    }
+    const e = entry as Record<string, unknown>;
+    return {
+      ClassName: e.ClassName as string,
+      IsEnabled: e.IsEnabled === true,
+      ShowInMainMenu: e.ShowInMainMenu === true,
+      ShowInMainMenuPosition: typeof e.ShowInMainMenuPosition === 'number' ? e.ShowInMainMenuPosition : 0,
+    };
+  });
+}
+
+/** The activation list with one plugin enabled, added at the end when SimHub has never seen it. */
+export function withPluginActivated(entries: readonly PluginActivation[], className: string, showInMainMenu = false): PluginActivation[] {
+  if (entries.some((e) => e.ClassName === className)) return entries.map((e) => (e.ClassName === className ? { ...e, IsEnabled: true } : e));
+  return [...entries, { ClassName: className, IsEnabled: true, ShowInMainMenu: showInMainMenu, ShowInMainMenuPosition: 0 }];
+}
+
+/**
+ * Edits SimHub's PluginsActivation.json, which it reads once at startup, so this has to run while
+ * it is stopped.
+ *
+ * The file travels through the share and is edited here rather than in PowerShell. PowerShell 5.1's
+ * `ConvertTo-Json` wraps an array it is handed in `{"value": [...], "Count": n}`, which SimHub reads
+ * back as one plugin with no class name and dies at startup with a NullReferenceException before
+ * it draws anything. A round trip through a real JSON parser cannot do that. Should it happen
+ * anyway, SimHub keeps copies of the file under `PluginsData\\_Backups`.
+ */
+function editActivation(host: Host, what: string, edit: (entries: PluginActivation[]) => PluginActivation[]): RunResult {
+  const name = path.basename(SIMHUB_ACTIVATION);
+  const local = path.join(repoRoot, 'build', name);
+  const out = powershell(host, `Copy-Item ${psq(SIMHUB_ACTIVATION)} ${psq(`${SHARE_UNC}\\${name}`)} -Force; 'copied'`, 180);
+  if (!out.ok) return out;
+  const back = fromShare(host, name, local);
+  if (!back.ok) return back;
+
+  let entries: PluginActivation[];
+  try {
+    entries = edit(parseActivation(readFileSync(local, 'utf8')));
+  } catch (e) {
+    return { ok: false, code: 1, stdout: '', stderr: `${SIMHUB_ACTIVATION}: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  writeFileSync(local, `${JSON.stringify(entries, null, 2)}\n`, 'utf8');
+
+  const sent = toShare(host, local, name);
+  if (!sent.ok) return sent;
+  return powershell(host, `Copy-Item ${psq(`${SHARE_UNC}\\${name}`)} ${psq(SIMHUB_ACTIVATION)} -Force; "${what}"`, 180);
+}
+
+/**
+ * Marks a plugin enabled, which spares the "new plugin found" prompt. That prompt is modal and
+ * blocks the interactive desktop until somebody clicks it, so an unattended run that skipped this
+ * would hang rather than fail.
+ */
+export const activatePlugin = (host: Host, className: string, showInMainMenu = false): RunResult =>
+  editActivation(host, `activated ${className}`, (entries) => withPluginActivated(entries, className, showInMainMenu));
+
+/** Forgets a plugin entirely, for one that is being taken off the VM again. */
+export const forgetPlugin = (host: Host, className: string): RunResult =>
+  editActivation(host, `forgot ${className}`, (entries) => entries.filter((e) => e.ClassName !== className));
 
 // --------------------------------------------------------------------------------- screenshot
 
@@ -392,7 +465,6 @@ PY`,
  * while SimHub is stopped and is live when it comes back.
  */
 export const SIMHUB_SETTINGS = `${SIMHUB_DIR}\\PluginsData\\PluginManagerSettings.json`;
-const SIMHUB_ACTIVATION = `${SIMHUB_DIR}\\PluginsData\\PluginsActivation.json`;
 /** The input plugin that turns a key press into a SimHub trigger. Off in a fresh install. */
 const KEYBOARD_PLUGIN = 'SimHub.Plugins.InputPlugins.KeyboardReaderPlugin';
 
