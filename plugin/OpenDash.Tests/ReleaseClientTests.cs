@@ -47,16 +47,24 @@ namespace OpenDashPlugin.Tests
             return port;
         }
 
+        /// <summary>
+        /// Answers requests until the listener stops.
+        /// </summary>
+        /// <remarks>
+        /// The whole body is guarded and not merely the GetContext call, which is what it used to be. Disposing the
+        /// listener while a request is in flight makes the response object throw ObjectDisposedException on this
+        /// thread, where nothing observes it, and an unobserved exception on a thread takes the test host down with
+        /// it: the run then reports every test passed and exits non-zero, which is what CI kept showing. Nothing
+        /// here is worth reporting, since the listener is shutting down and the test that cared has its answer.
+        /// </remarks>
         private void Serve()
         {
             while (listener.IsListening)
             {
-                HttpListenerContext context;
-                try { context = listener.GetContext(); }
-                catch { return; }
-
                 try
                 {
+                    var context = listener.GetContext();
+
                     var record = new NameValueCollection2();
                     foreach (string key in context.Request.Headers) record.Headers[key] = context.Request.Headers[key];
                     lock (seen) seen.Add(record);
@@ -69,10 +77,6 @@ namespace OpenDashPlugin.Tests
                 }
                 catch
                 {
-                    // Dispose closes the listener at the end of every test, and a request still being
-                    // answered here then throws ObjectDisposedException on this thread. Nothing catches
-                    // it, so it does not fail a test: it takes the test host down with it, and the run
-                    // is reported aborted after every test has already passed. The thread ends instead.
                     return;
                 }
             }

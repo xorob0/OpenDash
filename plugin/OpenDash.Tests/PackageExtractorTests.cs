@@ -172,7 +172,17 @@ namespace OpenDashPlugin.Tests
             using (var package = File.OpenRead(RepoPaths.BuildPackage()))
             {
                 string folder;
-                Assert.Equal(RepoPaths.Version(), PackageExtractor.ReadPackageVersion(package, out folder));
+                var built = PackageExtractor.ReadPackageVersion(package, out folder);
+                var expected = RepoPaths.Version();
+                // Checking out another branch rewrites VERSION and leaves build/ untouched, so a mismatch here is
+                // far more often a package older than the checkout than a regression in whatever writes the version.
+                // A bare Assert.Equal names neither the cause nor the remedy, and the misreading costs a diagnosis
+                // every time.
+                Assert.True(expected == built,
+                    "build/openDash.simhubdash carries version " + built + ", whereas VERSION says " + expected +
+                    ". That package is build output which a branch switch does not refresh, so the likely cause is " +
+                    "a stale build rather than a regression: run `bun run build` and try again. Should the two " +
+                    "still disagree after a fresh build, then the version written into the package is genuinely wrong.");
                 Assert.Equal("openDash", folder);
             }
         }
