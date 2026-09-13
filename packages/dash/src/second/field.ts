@@ -271,6 +271,18 @@ export function wrapFields(specs: readonly FieldSpec[], width: number, density: 
 }
 
 /**
+ * How uneven a wrapped block is: the longest line less the shortest, and zero for one line.
+ *
+ * The measure rule 20 grows against. Almost every rank on the catalogue artboard is an even grid --
+ * `repeat(3, minmax(0, 1fr))` over three or nine cells -- and growing a rank that fits one line
+ * into two lines of two and one is a page that looks broken for the sake of a larger digit. The
+ * companion's three lap times are the case: at 64 px they are one row of three, at 75 they are two
+ * and one, and at 72 they are still one row of three.
+ */
+export const raggedness = (lines: readonly (readonly FieldSpec[])[]): number =>
+  lines.length <= 1 ? 0 : Math.max(...lines.map((l) => l.length)) - Math.min(...lines.map((l) => l.length));
+
+/**
  * How far a set of fields may grow before the smallest step on the ramp would carry one of them
  * past the next named size. **Rule 20's third edge.**
  *

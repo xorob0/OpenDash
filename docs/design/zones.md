@@ -203,6 +203,12 @@ stretched to a rectangle. Three consequences worth knowing:
   declaration of what a shape may hold; it is not a second mechanism.
 - **A stack already too tall for its box does not grow.** It has nothing to spend, and rule 17 is
   about to take a row off it.
+- **A rank may not grow into a worse shape than it started in.** Almost every rank on the catalogue
+  artboard is an even grid — `repeat(3, minmax(0, 1fr))` over three or nine cells — so a grown wrap
+  is refused when it is more ragged than the wrap it grew from. Turning two lines of two and one
+  into three lines of one is the narrow zone stacking itself and is allowed; turning one line of
+  three into two and one is the companion's lap times and is not. That is the difference between
+  72 px and 75 px there, and 72 keeps the row.
 
 The room a grown stack may take is its box less its own tail at each end, not the flat two pixels
 `ROW_TAIL` reserved: a WPF line box runs about a tenth of the font size below the row it sits on,
