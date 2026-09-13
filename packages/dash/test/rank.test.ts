@@ -107,25 +107,22 @@ function evaluate(expression: string, truth: Record<string, boolean>): number {
     at += match[0].length;
     return Number(match[0]);
   };
-  /** `(1=1) = (1)` and the like: every condition a present marker turns into. */
+  /** The condition of an `if`: everything up to the comma that closes no bracket of its own. */
   const parseCondition = (): boolean => {
-    const depth = (): number => {
-      let d = 0;
-      let i = at;
-      for (; i < text.length; i += 1) {
-        if (text[i] === '(') d += 1;
-        else if (text[i] === ')') d -= 1;
-        else if (text[i] === ',' && d === 0) break;
-      }
-      return i;
-    };
-    const end = depth();
-    const source = text.slice(at, end);
+    let depth = 0;
+    let end = at;
+    for (; end < text.length; end += 1) {
+      if (text[end] === '(') depth += 1;
+      else if (text[end] === ')') depth -= 1;
+      else if (text[end] === ',' && depth === 0) break;
+    }
+    const source = text.slice(at, end).trim();
     at = end;
-    return source.includes('1=1');
+    // Only a marker, so that a compound condition cannot quietly read as true.
+    if (source !== '1=1' && source !== '1=0') throw new Error(`rank formula: ${source} is not a switched marker`);
+    return source === '1=1';
   };
-  const result = parseExpression();
-  return result;
+  return parseExpression();
 }
 
 const BOX = { left: 100, width: 400, gap: 10, when: 'close' as const };
