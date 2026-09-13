@@ -42,10 +42,11 @@ times and the relative, and the band across the foot.
 
 **The large face, 1280 x 480.** The same five parts and 430 px more width, which the page spends
 rather than stretches. A page is laid out for the box it is given rather than scaled into it, so
-the wider zone shows more of the page at the same size: the relative carries the car number and
-the class beside every driver here, and the lap times page adds your best and the delta to it. The
-base spends what it saves on rows instead, listing thirteen cars in the relative where this lists
-nine.
+the wider zone shows more of the page: the relative carries the car number and the class beside
+every driver here, which the base has no room for. The base spends what it saves on rows instead,
+listing thirteen cars in the relative where this lists nine. The lap times are larger here than on
+the base because the zone is 180 px wider, not because anything was stretched into it — a rank
+grows to the next size on its own ramp and stops.
 
 ![The OpenDash face at 1280 by 480](media/readme/face-1280x480.png)
 
@@ -116,9 +117,11 @@ short strip, and a flag takes the band over while one is out. The bar does not c
 earns it the space: it carries what does not change during a lap, two fields at each end and the
 car settings your sim publishes between them.
 
-A page is never scaled. It is laid out for the shape of the box it is given and sheds its secondary
-rows before it shrinks its numerals, so a bigger screen shows more in each zone rather than the
-same thing larger.
+A page is never scaled. It is laid out for the shape of the box it is given: it sheds its secondary
+rows before it shrinks its numerals, and it grows to fill a box it does not fill — until it meets
+the height, the width, or the next size up its own type ramp, whichever comes first. So a bigger
+screen shows more in each zone, and what it does show is drawn at a size that suits the room rather
+than at whatever size the smallest screen settled on.
 
 The plugin settings are SimHub properties, so other dashboards and LED profiles can read them too,
 and every change applies to the running dashboard immediately. Each screen keeps its own, named for

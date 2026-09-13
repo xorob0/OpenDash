@@ -11,6 +11,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import type { Chars } from '../design/metrics.ts';
 import { setting } from '../contract.ts';
+import { rpms } from '../shift.ts';
 import { ds as dsTokens } from '../tokens.ts';
 
 const {
@@ -206,7 +207,10 @@ export const fieldSize = (): Expr => iff(eq(setting.positionMode(), str('class')
 
 export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
 export const speedUnit = (): Expr => isnull(game('SpeedLocalUnit'), str(''));
-export const rpm = (): Expr => isnull(game('Rpms'), num(0));
+// Engine speed has one body, `rpms` in `shift.ts`, because the speedo prints it directly above a
+// rev bar that reads the same value: two spellings of one expression is how the redline came to
+// disagree with the bar it sits on. ADR 0014.
+export const rpm = rpms;
 // The redline a readout prints is not a value of its own: it is the RPM the rev bar's top band
 // lights at, and it lives in `shift.ts` as `redlineRpm` so that the number and the bar cannot
 // disagree. ADR 0014. This file used to carry a second body for it, reading SimHub's number

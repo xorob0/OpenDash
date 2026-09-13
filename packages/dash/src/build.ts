@@ -5,7 +5,8 @@
  * contract (every `[OpenDash.X]` read must be a declared property, and one this package's own
  * screen owns or every screen shares, plus the generator's own checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
  * zips that folder into `<out>/<folder>.simhubdash` and records `{ folder, width, height,
- * slots, rung, file }` in `<out>/manifest.json`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
+ * slots, rung, file }` in `<out>/manifest.json`, which every release publishes beside the packages
+ * and which therefore carries a `schemaVersion`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -49,6 +50,14 @@ export const DEFAULT_OUT_DIR = path.join(REPO_ROOT, 'build');
 /** The one version string of the project. */
 export const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
 export const MANIFEST_FILE = 'manifest.json';
+/**
+ * The shape of {@link Manifest}, carried in the file itself. The manifest is published with every
+ * release rather than kept as build output, so a reader out in the world meets manifests this
+ * build never saw: one that knows only version 1 can refuse a 2 it cannot read, instead of
+ * guessing at fields that moved. Raise it when an existing field changes meaning or leaves, never
+ * for a field that is merely added.
+ */
+export const MANIFEST_SCHEMA_VERSION = 1;
 /** Where the build leaves the fonts the plugin embeds, relative to the output directory. */
 export const PANEL_FONTS_DIR = 'fonts';
 /** The flag box profile, relative to the output directory. Not a package: see ADR 0013. */
@@ -220,6 +229,8 @@ export interface ManifestEntry {
 }
 
 export interface Manifest {
+  /** {@link MANIFEST_SCHEMA_VERSION}, so that a reader can tell this shape from a later one. */
+  schemaVersion: number;
   version: string;
   simHubVersion: string;
   packages: ManifestEntry[];
@@ -388,7 +399,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
   mkdirSync(out, { recursive: true });
   const packages: BuiltPackage[] = [];
   const stripProfiles: BuiltProfile[] = [];
-  const manifest: Manifest = { version, simHubVersion, packages: [], ledProfiles: [] };
+  const manifest: Manifest = { schemaVersion: MANIFEST_SCHEMA_VERSION, version, simHubVersion, packages: [], ledProfiles: [] };
   for (const { layout, zoneFace, screen, kind, pkg, warnings } of staged) {
     // Derived here rather than by each builder, so that a package cannot be assembled anywhere in
     // this file without the licences for what it carries.
