@@ -13,7 +13,7 @@ namespace OpenDashPlugin
         private const string ResourcePrefix = "OpenDash.Fonts.";
         private const string FallbackFamily = "Segoe UI";
 
-        // The condensed faces are openDash's own build of Barlow Condensed, renamed so that WPF files them
+        // The condensed faces are OpenDash's own build of Barlow Condensed, renamed so that WPF files them
         // as a family of their own instead of folding them into Barlow as a stretch; the panel asks for the
         // same family the dash face does. See packages/dash/src/design/fontFiles.ts.
         private static readonly string[] Files =
