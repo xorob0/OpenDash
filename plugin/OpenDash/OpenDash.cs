@@ -35,6 +35,9 @@ namespace OpenDashPlugin
         public DashboardInstaller Installer =>
             installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
 
+        /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
+        public FlagBoxResult FlagBox { get; private set; }
+
         public string LeftMenuTitle => "OpenDash";
 
         public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create(this));
@@ -76,9 +79,19 @@ namespace OpenDashPlugin
             {
                 Log.Error("Dashboard installation failed", ex);
             }
+            try
+            {
+                // Extracted, not installed: ADR 0013. The user imports it, and the panel says so.
+                FlagBox = FlagBoxProfile.Extract(Installer.SimHubRoot, typeof(OpenDash).Assembly, new SimHubInstallLog());
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Writing the flag box profile failed", ex);
+            }
             AttachProperties();
             AttachActions(pluginManager);
             Log.Info("Dashboard status: " + Installer.Status);
+            Log.Info(FlagBoxProfile.Summary(FlagBox));
             // The installer records what it wrote into each folder but never saves; this is the safe moment.
             SaveSettings();
         }

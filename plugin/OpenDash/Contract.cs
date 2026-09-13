@@ -20,6 +20,10 @@ namespace OpenDashPlugin
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
 
+        /// <summary>The flag box. Not a screen, but its settings are properties for the same reason the
+        /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.</summary>
+        public const string FlagBoxBrightness = "FlagBoxBrightness";
+
         public const bool DefaultShiftLights = true;
 
         public static readonly string[] PositionModes = { "overall", "class" };
@@ -43,6 +47,9 @@ namespace OpenDashPlugin
 
         /// <summary>The web view page shows nothing until the user sets an address.</summary>
         public const string DefaultWebViewUrl = "";
+
+        /// <summary>Percent. SimHub's own global brightness for the device applies on top of this.</summary>
+        public const int DefaultFlagBoxBrightness = 100;
 
 
         // --- The zone face ---------------------------------------------------------------------
@@ -394,6 +401,15 @@ namespace OpenDashPlugin
             foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
             yield return PitWallWide;
             yield return WebViewUrl;
+            yield return FlagBoxBrightness;
+        }
+
+        /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a
+        /// value the panel never wrote still has to be one SimHub can use.</summary>
+        public static int NormaliseBrightness(int percent)
+        {
+            if (percent < 0) return 0;
+            return percent > 100 ? 100 : percent;
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>

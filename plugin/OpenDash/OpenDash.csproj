@@ -78,6 +78,14 @@
     <EmbeddedResource Include="Resources/*.simhubdash" Exclude="Resources/openDash slots *.simhubdash" />
   </ItemGroup>
 
+  <!-- The flag box profile. Embedded the same way and extracted at runtime (FlagBoxProfile.cs), but
+       not installed: ADR 0013 decided the plugin writes the file where the user can find it and never
+       into SimHub's own ArduinoRGBMatrixSettings.json, which SimHub rewrites underneath us. Allowed to
+       be absent for the same reason the packages are: the plugin loads without it and says so. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/*.ledsprofile" />
+  </ItemGroup>
+
   <!-- The faces the settings panel draws in, extracted to a private folder at runtime (PanelFonts.cs).
        They come from the dash build rather than from fonts/ directly: the condensed ones are renamed on the
        way out of it, because WPF folds a family whose name carries a width word into the unadorned one and

@@ -12,6 +12,7 @@ import {
   CARD_CATALOGUE,
   cardMeta,
   declaredProperties,
+  flagBoxProperties,
   PIT_WALL_DEFAULT_WIDE_ZONE_PAGE,
   PIT_WALL_DEFAULT_ZONE_PAGES,
   MODULE_CATALOGUE,
@@ -60,7 +61,9 @@ describe('settings', () => {
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
     // 850 face beside it are configured apart instead of sharing one set of zones.
     const perFace = FACE_ZONE_LETTERS.length * 3 + BAR_SLOTS.length + 1;
-    expect(props).toHaveLength(4 + SLOT_MAX + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2);
+    // The last term is the flag box, which is not a screen but whose settings are properties for
+    // the same reason: ADR 0003, and ADR 0013 for why the box is here at all.
+    expect(props).toHaveLength(4 + SLOT_MAX + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -75,7 +78,10 @@ describe('settings', () => {
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance)/.test(p))).toEqual([]);
-    expect(props.slice(-6)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
+    expect(props.slice(-7, -1)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
+    // The flag box comes last, after the screens, because it is the one artefact the plugin does
+    // not install; see ADR 0013.
+    expect(props.slice(-1)).toEqual(flagBoxProperties());
   });
 
   test('every face that ships has a group, and every group is complete', () => {

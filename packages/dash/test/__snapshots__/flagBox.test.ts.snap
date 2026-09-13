@@ -1,0 +1,97 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`the emitted file the profile 1`] = `
+"{
+  "CarChoices": [],
+  "CarChoice": null,
+  "GameCode": null,
+  "UseStrictJSIsolation": false,
+  "EmbeddedJavascript": null,
+  "GlobalBrightness": 100,
+  "GlobalBrightnessPreset": {
+    "CurrentMode": 0,
+    "Brightness": 100
+  },
+  "LedContainers": [
+    {
+      "ContainerType": "BrightnessFormulaGroupContainer",
+      "Description": "Brightness",
+      "ContainerId": "88bc47dd-9db1-5692-98b4-eb0e2a9c64f3",
+      "IsEnabled": true,
+      "StartPositionMatrix": 1,
+      "StartPositionXEx": 1,
+      "StartPositionYEx": 1,
+      "DeviceKind": 2,
+      "BrightnessFormula": {
+        "Expression": "isnull([OpenDash.FlagBoxBrightness], 100)"
+      },
+      "LedContainers": [
+        {
+          "ContainerType": "GameRunningGroupContainer",
+          "Description": "Racing",
+          "ContainerId": "9a688961-43c2-532e-b045-d4f4fe9b45e6",
+          "IsEnabled": true,
+          "StartPositionMatrix": 1,
+          "StartPositionXEx": 1,
+          "StartPositionYEx": 1,
+          "DeviceKind": 2,
+          "LedContainers": [
+            {
+              "ContainerType": "GroupContainer",
+              "Description": "Flags",
+              "ContainerId": "f754017e-bfbc-5c5d-8af4-b4cf7cd803f6",
+              "IsEnabled": true,
+              "StartPositionMatrix": 1,
+              "StartPositionXEx": 1,
+              "StartPositionYEx": 1,
+              "DeviceKind": 2,
+              "LedContainers": [
+                {
+                  "ContainerType": "CustomConditionalGroupContainer",
+                  "Description": "Flag_Green",
+                  "ContainerId": "9deaacda-0434-57f1-8d5e-85fd29a19bcc",
+                  "IsEnabled": true,
+                  "StartPositionMatrix": 1,
+                  "StartPositionXEx": 1,
+                  "StartPositionYEx": 1,
+                  "DeviceKind": 2,
+                  "TriggerFormula": {
+                    "Expression": "(([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Checkered]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (0)) and (([DataCorePlugin.GameData.Flag_Blue]) = (0)) and (([DataCorePlugin.GameData.Flag_White]) = (0)) and (([DataCorePlugin.GameData.Flag_Green]) = (1))"
+                  },
+                  "LedContainers": [
+                    {
+                      "ContainerType": "AnimationContainer",
+                      "Description": "Flag_Green glyph",
+                      "ContainerId": "99f41eb5-d747-5677-a4e4-21bc5c5dba52",
+                      "IsEnabled": true,
+                      "StartPositionMatrix": 1,
+                      "StartPositionX": 1,
+                      "StartPositionY": 1,
+                      "DeviceKind": 2,
+                      "Animation": {
+                        "Columns": 8,
+                        "Rows": 8,
+                        "PenColor": "#FFFFFFFF",
+                        "Frames": [
+                          {
+                            "Colors": "0,0,#00D96A;0,1,#00D96A;0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;0,5,#00D96A;0,6,#00D96A;0,7,#00D96A;1,0,#00D96A;1,1,#00D96A;1,2,#00D96A;1,3,#00D96A;1,4,#00D96A;1,5,#00D96A;1,6,#00D96A;1,7,#00D96A;2,0,#00D96A;2,1,#00D96A;2,2,#00D96A;2,3,#00D96A;2,4,#00D96A;2,5,#00D96A;2,6,#00D96A;2,7,#00D96A;3,0,#00D96A;3,1,#00D96A;3,2,#00D96A;3,3,#00D96A;3,4,#00D96A;3,5,#00D96A;3,6,#00D96A;3,7,#00D96A;4,0,#00D96A;4,1,#00D96A;4,2,#00D96A;4,3,#00D96A;4,4,#00D96A;4,5,#00D96A;4,6,#00D96A;4,7,#00D96A;5,0,#00D96A;5,1,#00D96A;5,2,#00D96A;5,3,#00D96A;5,4,#00D96A;5,5,#00D96A;5,6,#00D96A;5,7,#00D96A;6,0,#00D96A;6,1,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A;6,5,#00D96A;6,6,#00D96A;6,7,#00D96A;7,0,#00D96A;7,1,#00D96A;7,2,#00D96A;7,3,#00D96A;7,4,#00D96A;7,5,#00D96A;7,6,#00D96A;7,7,#00D96A",
+                            "FrameDuration": 1000
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Name": "openDash Flag box",
+  "ProfileId": "05fd8aed-242c-5367-9b39-f23e27f2bfd5",
+  "UseProfileBrightness": false,
+  "Description": "openDash flag box: the alert catalogue on an 8x8 matrix, ranked the way the face ranks it."
+}"
+`;
