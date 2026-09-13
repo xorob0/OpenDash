@@ -45,6 +45,11 @@ namespace OpenDashPlugin
         /// <summary>Page each face zone opens on, index 0 is zone A.</summary>
         public int[] FaceZoneStarts { get; set; } = Contract.DefaultFaceZones();
 
+        /// <summary>Whether each face zone's list pages show the player's own class rather than the whole
+        /// field, index 0 is zone A. Per zone rather than per face, because the point of it is zone B
+        /// listing the race and zone C listing the class a driver is actually in.</summary>
+        public bool[] FaceZoneClassOnly { get; set; } = Contract.DefaultFaceZoneClassOnly();
+
         /// <summary>Field each end of the bar shows, in Contract.BarSlots order.</summary>
         public int[] BarFields { get; set; } = Contract.DefaultBarSlots();
 
@@ -123,6 +128,13 @@ namespace OpenDashPlugin
             FaceZoneMasks = masks;
             FaceZoneStarts = starts;
 
+            var classOnly = Contract.DefaultFaceZoneClassOnly();
+            if (FaceZoneClassOnly != null)
+            {
+                for (var i = 0; i < classOnly.Length && i < FaceZoneClassOnly.Length; i++) classOnly[i] = FaceZoneClassOnly[i];
+            }
+            FaceZoneClassOnly = classOnly;
+
             var bar = Contract.DefaultBarSlots();
             if (BarFields != null)
             {
@@ -171,6 +183,22 @@ namespace OpenDashPlugin
             if (FaceZoneMasks == null || index >= FaceZoneMasks.Length) return Contract.DefaultZoneMask(index);
             var mask = FaceZoneMasks[index] & Contract.DefaultZoneMask(index);
             return mask == 0 ? Contract.DefaultZoneMask(index) : mask;
+        }
+
+        /// <summary>Whether a zone's list pages show the player's own class, by its letter.</summary>
+        public bool FaceZoneIsClassOnly(string letter)
+        {
+            var index = FaceZoneIndex(letter);
+            if (FaceZoneClassOnly == null || index >= FaceZoneClassOnly.Length) return Contract.DefaultZoneClassOnly;
+            return FaceZoneClassOnly[index];
+        }
+
+        /// <summary>Sets a zone's class filter.</summary>
+        public void SetFaceZoneClassOnly(string letter, bool classOnly)
+        {
+            var index = FaceZoneIndex(letter);
+            EnsureFaceArrays();
+            FaceZoneClassOnly[index] = classOnly;
         }
 
         public bool FaceZonePageEnabled(string letter, int page)
@@ -227,7 +255,8 @@ namespace OpenDashPlugin
             var zones = Contract.FaceZoneLetters.Length;
             if (FaceZones == null || FaceZones.Length != zones
                 || FaceZoneMasks == null || FaceZoneMasks.Length != zones
-                || FaceZoneStarts == null || FaceZoneStarts.Length != zones)
+                || FaceZoneStarts == null || FaceZoneStarts.Length != zones
+                || FaceZoneClassOnly == null || FaceZoneClassOnly.Length != zones)
             {
                 Normalise();
             }
@@ -370,6 +399,7 @@ namespace OpenDashPlugin
             FaceZones = other.FaceZones == null ? null : (int[])other.FaceZones.Clone();
             FaceZoneMasks = other.FaceZoneMasks == null ? null : (int[])other.FaceZoneMasks.Clone();
             FaceZoneStarts = other.FaceZoneStarts == null ? null : (int[])other.FaceZoneStarts.Clone();
+            FaceZoneClassOnly = other.FaceZoneClassOnly == null ? null : (bool[])other.FaceZoneClassOnly.Clone();
             BarFields = other.BarFields == null ? null : (int[])other.BarFields.Clone();
             QuickGlance = other.QuickGlance;
             Normalise();
