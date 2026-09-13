@@ -7,7 +7,7 @@ applies a binding to, and what a package full of bindings costs per frame.
 Neither is a dashboard. Neither ships. They exist so the record cites a measurement rather than an
 expectation, and so the measurement can be repeated when SimHub changes.
 
-## `probe.ts` — which properties bind
+## `probe.ts`: which properties bind
 
 ```bash
 bun tools/binding-probe/probe.ts build
@@ -35,7 +35,7 @@ FAIL and a binding that says PASS, so the answer needs no telemetry and no plugi
 It is written as plain JSON rather than through `packages/generator`, because the generator's
 validator permits only the targets openDash already relies on and the point is the ones it does not.
 
-## `themedTwin.ts` — what the bindings cost
+## `themedTwin.ts`: what the bindings cost
 
 ```bash
 bun tools/binding-probe/themedTwin.ts 'build/openDash zones 1920x480'

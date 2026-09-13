@@ -17,6 +17,7 @@ the thing that is wrong when the two disagree.
 | 0005 | [The plugin builds on Linux](0005-plugin-builds-on-linux.md) | net48, code-only WPF, no Windows in the build |
 | 0006 | [The face is zones, not slots](0006-the-zone-face.md) | Five parts, a catalogue and a wheel button per zone; amends 0003 |
 | 0009 | [Does the plugin compute?](0009-does-the-plugin-compute.md) | No, and it turned out not to need to: SimHub already publishes almost all of it |
+| 0011 | [How far personalisation reaches](0011-personalisation.md) | Colour is a runtime setting, geometry is a build input, and nothing regenerates a package locally |
 
 ## Reserved
 
@@ -29,7 +30,6 @@ collide.
 | 0007 | The second screens, written down after the fact | XOR-67 |
 | 0008 | How a pull request renders a dash | XOR-18 |
 | 0010 | Where alert priority is decided | XOR-56 |
-| 0011 | How far personalisation reaches into a generated package | XOR-73 |
 | 0012 | Update checks, and what leaves the user's machine | XOR-29 |
 
 ## Writing one

@@ -4,9 +4,9 @@
  * that reads PASS, so the answer needs no telemetry, no plugin and no running sim.
  *
  * The items come from `packages/generator` so that their shape is exactly the shape SimHub already
- * accepts, ids and all. The rows the generator will not model — a target outside `BindingTarget`,
- * and a binding on a sub-object rather than on the item — are injected into the serialised JSON
- * afterwards, by item name. Writing the whole file by hand instead cost an afternoon: a screen
+ * accepts, ids and all. The rows the generator will not model, meaning a target outside
+ * `BindingTarget` and a binding on a sub-object rather than on the item, are injected into the
+ * serialised JSON afterwards, by item name. Writing the whole file by hand instead cost an afternoon: a screen
  * whose `ScreenEnabledExpression` was null took SimHub down with a NullReferenceException that
  * appears only in its log.
  *
@@ -149,7 +149,7 @@ const pkg: DashPackage = {
 };
 
 // The probe reads no plugin property, so the declared set is empty; everything else the validator
-// checks — colours, ids, geometry, which targets an item kind accepts — is exactly what it is for.
+// checks (colours, ids, geometry, which targets an item kind accepts) is exactly what it is for.
 const result = validatePackage(pkg, { declaredProperties: [], propertyPrefix: 'OpenDash' });
 for (const w of result.warnings) console.warn(`warn ${w.code} ${w.path}: ${w.message}`);
 if (!result.ok) {
