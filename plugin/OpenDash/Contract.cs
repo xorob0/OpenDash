@@ -133,6 +133,7 @@ namespace OpenDashPlugin
         {
             yield return FlagBoxMatrixProperty(matrix, "Rest");
             yield return FlagBoxMatrixProperty(matrix, "Flags");
+            yield return FlagBoxMatrixProperty(matrix, "Pit");
             yield return FlagBoxMatrixProperty(matrix, "Spotter");
             yield return FlagBoxMatrixProperty(matrix, "Warnings");
             yield return FlagBoxMatrixProperty(matrix, "Side");

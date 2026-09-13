@@ -73,7 +73,7 @@ describe('settings', () => {
     // The last term is the flag box, which is not a screen but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why the box is here at all. Eight global and
     // five per matrix, the way every face carries its own group.
-    expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 5);
+    expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 6);
     // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length);
     expect(new Set(props).size).toBe(props.length);

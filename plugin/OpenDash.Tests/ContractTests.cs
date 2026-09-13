@@ -67,7 +67,7 @@ namespace OpenDashPlugin.Tests
             // and the flag box.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
             // Eight global flag box settings and five per matrix, the way every face carries its own group.
-            Assert.Equal(4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 5, names.Count);
+            Assert.Equal(4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 6, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -350,6 +350,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("dark", Contract.DefaultFlagBoxMatrixRest(4));
             Assert.Equal("both", Contract.DefaultFlagBoxSide);
             Assert.Equal("FlagBoxMatrix2Spotter", Contract.FlagBoxMatrixProperty(2, "Spotter"));
+            // Pit is its own switch, not the flags'. A driver who silences flags on a panel has not
+            // asked to lose the pit limiter warning with them.
+            Assert.Contains("FlagBoxMatrix1Pit", Contract.PropertyNames());
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.FlagBoxMatrixProperty(5, "Rest"));
             // Rotation and serpentine are SimHub device settings, not ours.
             foreach (var name in Contract.PropertyNames())

@@ -696,16 +696,18 @@ export const flagBoxMatrixSetting = (matrix: FlagBoxMatrix, name: string): strin
 export interface FlagBoxMatrixDefaults {
   rest: FlagBoxRest;
   flags: boolean;
+  /** The limiter, the lane and speeding. Its own switch: a driver who silences flags still wants it. */
+  pit: boolean;
   spotter: boolean;
   warnings: boolean;
   side: FlagBoxSide;
 }
 
 export const FLAG_BOX_MATRIX_DEFAULTS: Record<FlagBoxMatrix, FlagBoxMatrixDefaults> = {
-  1: { rest: 'gear', flags: true, spotter: true, warnings: true, side: 'both' },
-  2: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
-  3: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
-  4: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
+  1: { rest: 'gear', flags: true, pit: true, spotter: true, warnings: true, side: 'both' },
+  2: { rest: 'dark', flags: false, pit: false, spotter: false, warnings: false, side: 'both' },
+  3: { rest: 'dark', flags: false, pit: false, spotter: false, warnings: false, side: 'both' },
+  4: { rest: 'dark', flags: false, pit: false, spotter: false, warnings: false, side: 'both' },
 };
 
 /** Reads of one matrix's settings. */
@@ -715,6 +717,7 @@ export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
   return {
     rest: (): Expr => read('Rest', str(d.rest)),
     flags: (): Expr => read('Flags', String(d.flags)),
+    pit: (): Expr => read('Pit', String(d.pit)),
     spotter: (): Expr => read('Spotter', String(d.spotter)),
     warnings: (): Expr => read('Warnings', String(d.warnings)),
     side: (): Expr => read('Side', str(d.side)),
@@ -723,7 +726,7 @@ export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
 
 /** The five property names of one matrix, in the order the plugin attaches them. */
 export const flagBoxMatrixProperties = (matrix: FlagBoxMatrix): string[] =>
-  ['Rest', 'Flags', 'Spotter', 'Warnings', 'Side'].map((n) => flagBoxMatrixSetting(matrix, n));
+  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side'].map((n) => flagBoxMatrixSetting(matrix, n));
 
 /**
  * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a

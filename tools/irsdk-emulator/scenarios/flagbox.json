@@ -12,7 +12,7 @@
   // See docs/design/flag-box.md for what each state should look like.
   "extends": "race.json",
   "name": "The flag box catalogue, one state at a time",
-  "loop": 156,
+  "loop": 200,
   "variables": [
     // Nothing moves on its own: every state below is set deliberately and held until the next one.
     {"name": "SessionFlags", "value": "green", "pin": true},
@@ -53,9 +53,14 @@
 
     // --- The pit family ---------------------------------------------------------------------
     // EngineWarnings 16 is PitSpeedLimiter, which is what SimHub reads for PitLimiterOn.
-    {"at": 100, "log": "limiter on, out of the lane: an exclamation mark, blinking", "set": {"EngineWarnings": 16}},
-    {"at": 106, "log": "limiter on, in the lane: a two-pixel frame, steady", "set": {"OnPitRoad": 1}},
-    {"at": 112, "log": "speeding in the lane: a double chevron in red", "set": {"Speed": 34.0}},
+    //
+    // Speed matters here and is inherited from race.json at racing pace, which would read as
+    // speeding the moment the car enters the lane -- and speeding outranks both limiter states, so
+    // the in-lane frame would never be drawn at all. Every step below therefore sets Speed itself.
+    // Speed is m/s: 16.6 is 60 km/h, under a typical 80 km/h (22.2 m/s) pit limit.
+    {"at": 100, "log": "limiter on, out of the lane: an exclamation mark, blinking", "set": {"EngineWarnings": 16, "Speed": 40.0}},
+    {"at": 106, "log": "limiter on, in the lane and under the limit: a two-pixel frame, steady", "set": {"OnPitRoad": 1, "Speed": 16.6}},
+    {"at": 112, "log": "speeding in the lane: a double chevron in red", "set": {"Speed": 30.0}},
     {"at": 118, "log": "out of the pits", "set": {"EngineWarnings": 0, "OnPitRoad": 0, "Speed": 55.0}},
 
     // --- The spotter ------------------------------------------------------------------------
@@ -71,8 +76,17 @@
     {"at": 150, "log": "low fuel: a tank emptying", "set": {"WaterTemp": 88.0, "FuelLevel": 1.2}},
 
     // --- The gear, which is what comes back when nothing else is out -------------------------
-    {"at": 153, "log": "nothing out: the gear, resting colour", "set": {"FuelLevel": 40.0, "Gear": 1, "RPM": 2000.0}},
-    {"at": 154, "log": "the gear through the shift bands and the redline", "driver": {"type": "rpmSweep", "enabled": true}},
-    {"at": 154, "driver": {"type": "gearFromRpm", "enabled": true}}
+    //
+    // Long enough to be worth watching: the rpm sweep takes six seconds a cycle, and the gear model
+    // only walks the gears it is given, so R and N are set by hand and the sweep is left running for
+    // several cycles rather than the two seconds the first version of this gave it.
+    {"at": 153, "log": "nothing out: the gear at rest", "set": {"FuelLevel": 40.0, "Gear": 1, "RPM": 2000.0}},
+    {"at": 156, "log": "reverse", "set": {"Gear": -1}},
+    {"at": 160, "log": "neutral", "set": {"Gear": 0}},
+    {"at": 164, "log": "the top gears, which a sweep from idle does not reach", "set": {"Gear": 7, "RPM": 5000.0}},
+    {"at": 168, "set": {"Gear": 8}},
+    {"at": 172, "set": {"Gear": 9}},
+    {"at": 176, "log": "the gear through the shift bands and the redline, four sweeps", "set": {"Gear": 3}, "driver": {"type": "rpmSweep", "enabled": true}},
+    {"at": 176, "driver": {"type": "gearFromRpm", "enabled": true}}
   ]
 }
