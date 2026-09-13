@@ -1,11 +1,15 @@
 # Architecture
 
-> **The face is being rebuilt.** Everything below describes the twelve-slot face, which is what
-> the code builds today and what 0.1.0 ships. The settled design is the zone model
+> **Two faces are built, and this describes the older one.** Since 0.2.0 the eight rectangular
+> sizes are zone faces and carry the shipped names; what is described below is the twelve-slot
+> path, which still builds and now produces the two round faces and the `openDash slots <size>`
+> packages beside them. The zone model is the settled design
 > ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)): five parts,
-> a catalogue and a wheel button per zone, and a page laid out for the shape of its box. This
-> document is rewritten when the card path is retired, not before, so that it keeps describing
-> the code rather than the intention.
+> a catalogue and a wheel button per zone, and a page laid out for the shape of its box.
+>
+> This document is rewritten when the card path is retired (XOR-95), not before, so that it keeps
+> describing the code rather than the intention. Read every mention of a slot below as belonging to
+> that path: `packages/dash/src/zones/` is the other one, and `design/zones.md` describes it.
 >
 > The second screens are already on the zone model and their half of this document is current.
 
@@ -16,6 +20,7 @@ design/tokens.json ───────────────┐
 packages/dash/src/cards/*.ts ─────┤  one module per card: readouts, labels, colour rules
 packages/dash/src/hero/*.ts ──────┤  gear, RPM bar, flags, pit limiter
 packages/dash/src/layouts/*.ts ───┤  slot geometry and slot count for one BaseWidth x BaseHeight
+packages/dash/src/zones/*.ts ─────┤  the five parts of a zone face, and the catalogue behind each zone
 packages/dash/src/modules/*.ts ───┤  one module per companion page, which is also a pit wall zone page
 packages/dash/src/screens/*.ts ───┤  the companion and pit wall packages built from those modules
 packages/dash/fonts/*.ttf ────────┤
@@ -64,7 +69,7 @@ design canvas is derived from it, so a colour exists in exactly one place.
 
 ### Generator (`packages/generator`)
 
-A TypeScript library with no knowledge of openDash, which could serve any SimHub dashboard
+A TypeScript library with no knowledge of OpenDash, which could serve any SimHub dashboard
 project. It provides a typed model of the node types the MVP needs (`TextItem`,
 `RectangleItem`, `Layer`, `WidgetItem`, and the screen and dashboard envelopes), helpers that
 build NCalc and JavaScript binding objects from typed inputs, a validator, and a serialiser
@@ -81,7 +86,7 @@ hash, so that a rebuild does not churn identifiers.
 
 ### Dashboard (`packages/dash`)
 
-openDash itself. `src/cards/` holds one module per card, each exporting a function that takes
+OpenDash itself. `src/cards/` holds one module per card, each exporting a function that takes
 a slot rectangle and returns items; `src/hero/` holds the fixed elements;
 `src/layouts/1920x480.ts` declares the slot geometry and the slot count; `src/build.ts`
 composes them into two documents, the main dashboard and the cards widget, and hands them to
@@ -185,7 +190,7 @@ design/
   canvas/                design system artboards (Claude Design), derived from the tokens
 packages/
   generator/             SimHub .djson emitter: node model, bindings, validator, serialiser
-  dash/                  openDash: cards, hero, layouts, fonts, build script, snapshots
+  dash/                  OpenDash: cards, hero, layouts, fonts, build script, snapshots
 plugin/
   OpenDash/              C# project: settings, properties, installer, WPF panel
   OpenDash.Tests/        unit tests for the plugin's pure logic
@@ -193,7 +198,7 @@ plugin/
 tools/
   irsdk-emulator/        synthetic iRacing telemetry for the test VM
 docs/
-  scope.md               what openDash is, and what is deliberately not built
+  scope.md               what OpenDash is, and what is deliberately not built
   scope-mvp.md           the MVP contract, closed and superseded by scope.md
   architecture.md        this document
   decisions/             architecture decision records
