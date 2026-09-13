@@ -48,10 +48,43 @@ puts the old face back under a name of its own, beside the new one rather than o
   path, because that path still builds; it carries a banner saying which of the two it is about,
   and is rewritten when the path is retired.
 
+### Added
+
+- **The flag box: openDash now lights an 8x8 LED matrix.** A profile for the printed WS2812b box a
+  lot of people have beside the screen, built by the same build as the dashboards and embedded in
+  the same plugin. It shows the flag that is out, the pit state, a car alongside, low fuel, oil and
+  water, and the gear underneath all of it — one picture at a time, ranked the way the face ranks
+  the same conditions, coloured from the same tokens.
+
+  **It is the one thing the plugin does not install for you.** SimHub keeps matrix profiles inside
+  a settings file it rewrites whenever anything changes, so writing into it would lose the other
+  profiles you have made, and painting hardware you own is not something a dashboard should do
+  unasked. The plugin writes `SimHub\OpenDash\openDash Flag box.ledsprofile`, the new **Lights**
+  page says where it is, and you import it once in SimHub's own matrix settings. After that every
+  setting on that page reaches the box while you drive.
+
+  Set the matrix's **rotation and serpentine on the device in SimHub first.** They belong to SimHub
+  because the right values depend on which corner your data cable enters, and if they are wrong the
+  picture comes out sideways and the profile looks broken. [docs/flag-box.md](docs/flag-box.md) is
+  the guide; [ADR 0013](docs/decisions/0013-lighting-hardware.md) is the reasoning.
+
+- **The Lights page**, with brightness, a separate night brightness and a night switch for the
+  whole rig, a critical-flags-only switch for drivers who want the box quiet until something
+  matters, thresholds for the three warnings, and a settings group for each of SimHub's four matrix
+  contents so that two boxes can do different jobs.
+
 ### Known
 
 - The round faces are still the twelve-slot design, because what a round face does with zones is
   not decided. They are the only face at their size, so a user who has one keeps getting one.
+- **No 8x8 matrix has ever been plugged into openDash's test machine.** The flag box profile is
+  generated against the format read out of SimHub's own assemblies, its pictures are checked by
+  tests and rendered into `build/flag-box.svg`, and the whole catalogue can be driven in the
+  emulator — but nobody has yet watched it run on a real panel. If you own one, saying what it
+  actually does is the most useful thing you could report.
+- The flag box draws iRacing only, and several things a comparable box draws are deliberately
+  absent because iRacing does not publish them: sector yellows, a virtual safety car, a countdown
+  to your pit box, and the fourth spotter state. Each is listed with its reason in the guide.
 
 ## 0.1.0-rc.4 (2026-09-13)
 

@@ -43,6 +43,9 @@ namespace IrsdkEmulator
         public HashSet<string> PinnedVars = new HashSet<string>(StringComparer.Ordinal);
         public List<Dictionary<string, object>> DriverSpecs = new List<Dictionary<string, object>>();
         public List<TimelineEvent> Timeline = new List<TimelineEvent>();
+
+        /// <summary>Seconds after which the timeline starts again, or 0 to run it once.</summary>
+        public double LoopSeconds;
         public List<string> Warnings = new List<string>();
 
         public static Scenario Load(string path)
@@ -207,6 +210,10 @@ namespace IrsdkEmulator
                 Timeline.Add(ev);
             }
             Timeline = Timeline.OrderBy(x => x.At).ToList();
+            // A scenario that walks a catalogue wants to keep walking it, so that somebody can watch
+            // the whole thing twice without restarting the emulator. `loop` is the period in seconds;
+            // 0, the default, runs the timeline once.
+            LoopSeconds = Json.GetDouble(d, "loop", 0);
         }
 
         /// <summary>Creates the live variable table with initial values and pins applied.</summary>

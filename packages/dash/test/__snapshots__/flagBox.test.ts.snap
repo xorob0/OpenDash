@@ -1,0 +1,1478 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`the emitted file the tree 1`] = `
+"brightnessFormula Brightness
+  gameRunning Racing
+    when Ignition off
+      animation Standby
+    when Ignition on
+      when Matrix 1
+        when Flags
+          group Flags
+            when red
+              animation red glyph
+            when disqualify
+              animation disqualify glyph
+            when black
+              animation black glyph
+            when furled
+              animation furled glyph
+            when meatball
+              animation meatball glyph
+            when chequered
+              animation chequered glyph
+            when caution
+              animation caution glyph
+            when yellowWaving
+              animation yellowWaving glyph
+            when yellow
+              animation yellow glyph
+            when debris
+              animation debris glyph
+            when blue
+              animation blue glyph
+            when white
+              animation white glyph
+            when green
+              animation green glyph
+            when startSet
+              animation startSet glyph
+            when startReady
+              animation startReady glyph
+        when Below the flags
+          when Pit
+            when Pit speeding
+              animation Pit speeding glyph
+            when Pit limiterOutOfLane
+              animation Pit limiterOutOfLane glyph
+            when Pit limiterInLane
+              animation Pit limiterInLane glyph
+          when Spotter
+            when Spotter carBoth
+              animation Spotter carBoth glyph
+            when Spotter carLeft
+              animation Spotter carLeft glyph
+            when Spotter carRight
+              animation Spotter carRight glyph
+          when Warnings
+            when Warning oilHot
+              animation Warning oilHot glyph
+            when Warning waterHot
+              animation Warning waterHot glyph
+            when Warning lowFuel
+              animation Warning lowFuel glyph
+          when Resting
+            when Gear
+              when Gear redline
+                when Gear R redline
+                  animation Gear R redline glyph
+                when Gear N redline
+                  animation Gear N redline glyph
+                when Gear 1 redline
+                  animation Gear 1 redline glyph
+                when Gear 2 redline
+                  animation Gear 2 redline glyph
+                when Gear 3 redline
+                  animation Gear 3 redline glyph
+                when Gear 4 redline
+                  animation Gear 4 redline glyph
+                when Gear 5 redline
+                  animation Gear 5 redline glyph
+                when Gear 6 redline
+                  animation Gear 6 redline glyph
+                when Gear 7 redline
+                  animation Gear 7 redline glyph
+                when Gear 8 redline
+                  animation Gear 8 redline glyph
+                when Gear 9 redline
+                  animation Gear 9 redline glyph
+              when Gear stage2
+                when Gear R stage2
+                  animation Gear R stage2 glyph
+                when Gear N stage2
+                  animation Gear N stage2 glyph
+                when Gear 1 stage2
+                  animation Gear 1 stage2 glyph
+                when Gear 2 stage2
+                  animation Gear 2 stage2 glyph
+                when Gear 3 stage2
+                  animation Gear 3 stage2 glyph
+                when Gear 4 stage2
+                  animation Gear 4 stage2 glyph
+                when Gear 5 stage2
+                  animation Gear 5 stage2 glyph
+                when Gear 6 stage2
+                  animation Gear 6 stage2 glyph
+                when Gear 7 stage2
+                  animation Gear 7 stage2 glyph
+                when Gear 8 stage2
+                  animation Gear 8 stage2 glyph
+                when Gear 9 stage2
+                  animation Gear 9 stage2 glyph
+              when Gear stage1
+                when Gear R stage1
+                  animation Gear R stage1 glyph
+                when Gear N stage1
+                  animation Gear N stage1 glyph
+                when Gear 1 stage1
+                  animation Gear 1 stage1 glyph
+                when Gear 2 stage1
+                  animation Gear 2 stage1 glyph
+                when Gear 3 stage1
+                  animation Gear 3 stage1 glyph
+                when Gear 4 stage1
+                  animation Gear 4 stage1 glyph
+                when Gear 5 stage1
+                  animation Gear 5 stage1 glyph
+                when Gear 6 stage1
+                  animation Gear 6 stage1 glyph
+                when Gear 7 stage1
+                  animation Gear 7 stage1 glyph
+                when Gear 8 stage1
+                  animation Gear 8 stage1 glyph
+                when Gear 9 stage1
+                  animation Gear 9 stage1 glyph
+              when Gear rest
+                when Gear R rest
+                  animation Gear R rest glyph
+                when Gear N rest
+                  animation Gear N rest glyph
+                when Gear 1 rest
+                  animation Gear 1 rest glyph
+                when Gear 2 rest
+                  animation Gear 2 rest glyph
+                when Gear 3 rest
+                  animation Gear 3 rest glyph
+                when Gear 4 rest
+                  animation Gear 4 rest glyph
+                when Gear 5 rest
+                  animation Gear 5 rest glyph
+                when Gear 6 rest
+                  animation Gear 6 rest glyph
+                when Gear 7 rest
+                  animation Gear 7 rest glyph
+                when Gear 8 rest
+                  animation Gear 8 rest glyph
+                when Gear 9 rest
+                  animation Gear 9 rest glyph
+      when Matrix 2 -> matrix 2
+        when Flags
+          group Flags
+            when red
+              animation red glyph
+            when disqualify
+              animation disqualify glyph
+            when black
+              animation black glyph
+            when furled
+              animation furled glyph
+            when meatball
+              animation meatball glyph
+            when chequered
+              animation chequered glyph
+            when caution
+              animation caution glyph
+            when yellowWaving
+              animation yellowWaving glyph
+            when yellow
+              animation yellow glyph
+            when debris
+              animation debris glyph
+            when blue
+              animation blue glyph
+            when white
+              animation white glyph
+            when green
+              animation green glyph
+            when startSet
+              animation startSet glyph
+            when startReady
+              animation startReady glyph
+        when Below the flags
+          when Pit
+            when Pit speeding
+              animation Pit speeding glyph
+            when Pit limiterOutOfLane
+              animation Pit limiterOutOfLane glyph
+            when Pit limiterInLane
+              animation Pit limiterInLane glyph
+          when Spotter
+            when Spotter carBoth
+              animation Spotter carBoth glyph
+            when Spotter carLeft
+              animation Spotter carLeft glyph
+            when Spotter carRight
+              animation Spotter carRight glyph
+          when Warnings
+            when Warning oilHot
+              animation Warning oilHot glyph
+            when Warning waterHot
+              animation Warning waterHot glyph
+            when Warning lowFuel
+              animation Warning lowFuel glyph
+          when Resting
+            when Gear
+              when Gear redline
+                when Gear R redline
+                  animation Gear R redline glyph
+                when Gear N redline
+                  animation Gear N redline glyph
+                when Gear 1 redline
+                  animation Gear 1 redline glyph
+                when Gear 2 redline
+                  animation Gear 2 redline glyph
+                when Gear 3 redline
+                  animation Gear 3 redline glyph
+                when Gear 4 redline
+                  animation Gear 4 redline glyph
+                when Gear 5 redline
+                  animation Gear 5 redline glyph
+                when Gear 6 redline
+                  animation Gear 6 redline glyph
+                when Gear 7 redline
+                  animation Gear 7 redline glyph
+                when Gear 8 redline
+                  animation Gear 8 redline glyph
+                when Gear 9 redline
+                  animation Gear 9 redline glyph
+              when Gear stage2
+                when Gear R stage2
+                  animation Gear R stage2 glyph
+                when Gear N stage2
+                  animation Gear N stage2 glyph
+                when Gear 1 stage2
+                  animation Gear 1 stage2 glyph
+                when Gear 2 stage2
+                  animation Gear 2 stage2 glyph
+                when Gear 3 stage2
+                  animation Gear 3 stage2 glyph
+                when Gear 4 stage2
+                  animation Gear 4 stage2 glyph
+                when Gear 5 stage2
+                  animation Gear 5 stage2 glyph
+                when Gear 6 stage2
+                  animation Gear 6 stage2 glyph
+                when Gear 7 stage2
+                  animation Gear 7 stage2 glyph
+                when Gear 8 stage2
+                  animation Gear 8 stage2 glyph
+                when Gear 9 stage2
+                  animation Gear 9 stage2 glyph
+              when Gear stage1
+                when Gear R stage1
+                  animation Gear R stage1 glyph
+                when Gear N stage1
+                  animation Gear N stage1 glyph
+                when Gear 1 stage1
+                  animation Gear 1 stage1 glyph
+                when Gear 2 stage1
+                  animation Gear 2 stage1 glyph
+                when Gear 3 stage1
+                  animation Gear 3 stage1 glyph
+                when Gear 4 stage1
+                  animation Gear 4 stage1 glyph
+                when Gear 5 stage1
+                  animation Gear 5 stage1 glyph
+                when Gear 6 stage1
+                  animation Gear 6 stage1 glyph
+                when Gear 7 stage1
+                  animation Gear 7 stage1 glyph
+                when Gear 8 stage1
+                  animation Gear 8 stage1 glyph
+                when Gear 9 stage1
+                  animation Gear 9 stage1 glyph
+              when Gear rest
+                when Gear R rest
+                  animation Gear R rest glyph
+                when Gear N rest
+                  animation Gear N rest glyph
+                when Gear 1 rest
+                  animation Gear 1 rest glyph
+                when Gear 2 rest
+                  animation Gear 2 rest glyph
+                when Gear 3 rest
+                  animation Gear 3 rest glyph
+                when Gear 4 rest
+                  animation Gear 4 rest glyph
+                when Gear 5 rest
+                  animation Gear 5 rest glyph
+                when Gear 6 rest
+                  animation Gear 6 rest glyph
+                when Gear 7 rest
+                  animation Gear 7 rest glyph
+                when Gear 8 rest
+                  animation Gear 8 rest glyph
+                when Gear 9 rest
+                  animation Gear 9 rest glyph
+      when Matrix 3 -> matrix 3
+        when Flags
+          group Flags
+            when red
+              animation red glyph
+            when disqualify
+              animation disqualify glyph
+            when black
+              animation black glyph
+            when furled
+              animation furled glyph
+            when meatball
+              animation meatball glyph
+            when chequered
+              animation chequered glyph
+            when caution
+              animation caution glyph
+            when yellowWaving
+              animation yellowWaving glyph
+            when yellow
+              animation yellow glyph
+            when debris
+              animation debris glyph
+            when blue
+              animation blue glyph
+            when white
+              animation white glyph
+            when green
+              animation green glyph
+            when startSet
+              animation startSet glyph
+            when startReady
+              animation startReady glyph
+        when Below the flags
+          when Pit
+            when Pit speeding
+              animation Pit speeding glyph
+            when Pit limiterOutOfLane
+              animation Pit limiterOutOfLane glyph
+            when Pit limiterInLane
+              animation Pit limiterInLane glyph
+          when Spotter
+            when Spotter carBoth
+              animation Spotter carBoth glyph
+            when Spotter carLeft
+              animation Spotter carLeft glyph
+            when Spotter carRight
+              animation Spotter carRight glyph
+          when Warnings
+            when Warning oilHot
+              animation Warning oilHot glyph
+            when Warning waterHot
+              animation Warning waterHot glyph
+            when Warning lowFuel
+              animation Warning lowFuel glyph
+          when Resting
+            when Gear
+              when Gear redline
+                when Gear R redline
+                  animation Gear R redline glyph
+                when Gear N redline
+                  animation Gear N redline glyph
+                when Gear 1 redline
+                  animation Gear 1 redline glyph
+                when Gear 2 redline
+                  animation Gear 2 redline glyph
+                when Gear 3 redline
+                  animation Gear 3 redline glyph
+                when Gear 4 redline
+                  animation Gear 4 redline glyph
+                when Gear 5 redline
+                  animation Gear 5 redline glyph
+                when Gear 6 redline
+                  animation Gear 6 redline glyph
+                when Gear 7 redline
+                  animation Gear 7 redline glyph
+                when Gear 8 redline
+                  animation Gear 8 redline glyph
+                when Gear 9 redline
+                  animation Gear 9 redline glyph
+              when Gear stage2
+                when Gear R stage2
+                  animation Gear R stage2 glyph
+                when Gear N stage2
+                  animation Gear N stage2 glyph
+                when Gear 1 stage2
+                  animation Gear 1 stage2 glyph
+                when Gear 2 stage2
+                  animation Gear 2 stage2 glyph
+                when Gear 3 stage2
+                  animation Gear 3 stage2 glyph
+                when Gear 4 stage2
+                  animation Gear 4 stage2 glyph
+                when Gear 5 stage2
+                  animation Gear 5 stage2 glyph
+                when Gear 6 stage2
+                  animation Gear 6 stage2 glyph
+                when Gear 7 stage2
+                  animation Gear 7 stage2 glyph
+                when Gear 8 stage2
+                  animation Gear 8 stage2 glyph
+                when Gear 9 stage2
+                  animation Gear 9 stage2 glyph
+              when Gear stage1
+                when Gear R stage1
+                  animation Gear R stage1 glyph
+                when Gear N stage1
+                  animation Gear N stage1 glyph
+                when Gear 1 stage1
+                  animation Gear 1 stage1 glyph
+                when Gear 2 stage1
+                  animation Gear 2 stage1 glyph
+                when Gear 3 stage1
+                  animation Gear 3 stage1 glyph
+                when Gear 4 stage1
+                  animation Gear 4 stage1 glyph
+                when Gear 5 stage1
+                  animation Gear 5 stage1 glyph
+                when Gear 6 stage1
+                  animation Gear 6 stage1 glyph
+                when Gear 7 stage1
+                  animation Gear 7 stage1 glyph
+                when Gear 8 stage1
+                  animation Gear 8 stage1 glyph
+                when Gear 9 stage1
+                  animation Gear 9 stage1 glyph
+              when Gear rest
+                when Gear R rest
+                  animation Gear R rest glyph
+                when Gear N rest
+                  animation Gear N rest glyph
+                when Gear 1 rest
+                  animation Gear 1 rest glyph
+                when Gear 2 rest
+                  animation Gear 2 rest glyph
+                when Gear 3 rest
+                  animation Gear 3 rest glyph
+                when Gear 4 rest
+                  animation Gear 4 rest glyph
+                when Gear 5 rest
+                  animation Gear 5 rest glyph
+                when Gear 6 rest
+                  animation Gear 6 rest glyph
+                when Gear 7 rest
+                  animation Gear 7 rest glyph
+                when Gear 8 rest
+                  animation Gear 8 rest glyph
+                when Gear 9 rest
+                  animation Gear 9 rest glyph
+      when Matrix 4 -> matrix 4
+        when Flags
+          group Flags
+            when red
+              animation red glyph
+            when disqualify
+              animation disqualify glyph
+            when black
+              animation black glyph
+            when furled
+              animation furled glyph
+            when meatball
+              animation meatball glyph
+            when chequered
+              animation chequered glyph
+            when caution
+              animation caution glyph
+            when yellowWaving
+              animation yellowWaving glyph
+            when yellow
+              animation yellow glyph
+            when debris
+              animation debris glyph
+            when blue
+              animation blue glyph
+            when white
+              animation white glyph
+            when green
+              animation green glyph
+            when startSet
+              animation startSet glyph
+            when startReady
+              animation startReady glyph
+        when Below the flags
+          when Pit
+            when Pit speeding
+              animation Pit speeding glyph
+            when Pit limiterOutOfLane
+              animation Pit limiterOutOfLane glyph
+            when Pit limiterInLane
+              animation Pit limiterInLane glyph
+          when Spotter
+            when Spotter carBoth
+              animation Spotter carBoth glyph
+            when Spotter carLeft
+              animation Spotter carLeft glyph
+            when Spotter carRight
+              animation Spotter carRight glyph
+          when Warnings
+            when Warning oilHot
+              animation Warning oilHot glyph
+            when Warning waterHot
+              animation Warning waterHot glyph
+            when Warning lowFuel
+              animation Warning lowFuel glyph
+          when Resting
+            when Gear
+              when Gear redline
+                when Gear R redline
+                  animation Gear R redline glyph
+                when Gear N redline
+                  animation Gear N redline glyph
+                when Gear 1 redline
+                  animation Gear 1 redline glyph
+                when Gear 2 redline
+                  animation Gear 2 redline glyph
+                when Gear 3 redline
+                  animation Gear 3 redline glyph
+                when Gear 4 redline
+                  animation Gear 4 redline glyph
+                when Gear 5 redline
+                  animation Gear 5 redline glyph
+                when Gear 6 redline
+                  animation Gear 6 redline glyph
+                when Gear 7 redline
+                  animation Gear 7 redline glyph
+                when Gear 8 redline
+                  animation Gear 8 redline glyph
+                when Gear 9 redline
+                  animation Gear 9 redline glyph
+              when Gear stage2
+                when Gear R stage2
+                  animation Gear R stage2 glyph
+                when Gear N stage2
+                  animation Gear N stage2 glyph
+                when Gear 1 stage2
+                  animation Gear 1 stage2 glyph
+                when Gear 2 stage2
+                  animation Gear 2 stage2 glyph
+                when Gear 3 stage2
+                  animation Gear 3 stage2 glyph
+                when Gear 4 stage2
+                  animation Gear 4 stage2 glyph
+                when Gear 5 stage2
+                  animation Gear 5 stage2 glyph
+                when Gear 6 stage2
+                  animation Gear 6 stage2 glyph
+                when Gear 7 stage2
+                  animation Gear 7 stage2 glyph
+                when Gear 8 stage2
+                  animation Gear 8 stage2 glyph
+                when Gear 9 stage2
+                  animation Gear 9 stage2 glyph
+              when Gear stage1
+                when Gear R stage1
+                  animation Gear R stage1 glyph
+                when Gear N stage1
+                  animation Gear N stage1 glyph
+                when Gear 1 stage1
+                  animation Gear 1 stage1 glyph
+                when Gear 2 stage1
+                  animation Gear 2 stage1 glyph
+                when Gear 3 stage1
+                  animation Gear 3 stage1 glyph
+                when Gear 4 stage1
+                  animation Gear 4 stage1 glyph
+                when Gear 5 stage1
+                  animation Gear 5 stage1 glyph
+                when Gear 6 stage1
+                  animation Gear 6 stage1 glyph
+                when Gear 7 stage1
+                  animation Gear 7 stage1 glyph
+                when Gear 8 stage1
+                  animation Gear 8 stage1 glyph
+                when Gear 9 stage1
+                  animation Gear 9 stage1 glyph
+              when Gear rest
+                when Gear R rest
+                  animation Gear R rest glyph
+                when Gear N rest
+                  animation Gear N rest glyph
+                when Gear 1 rest
+                  animation Gear 1 rest glyph
+                when Gear 2 rest
+                  animation Gear 2 rest glyph
+                when Gear 3 rest
+                  animation Gear 3 rest glyph
+                when Gear 4 rest
+                  animation Gear 4 rest glyph
+                when Gear 5 rest
+                  animation Gear 5 rest glyph
+                when Gear 6 rest
+                  animation Gear 6 rest glyph
+                when Gear 7 rest
+                  animation Gear 7 rest glyph
+                when Gear 8 rest
+                  animation Gear 8 rest glyph
+                when Gear 9 rest
+                  animation Gear 9 rest glyph"
+`;
+
+exports[`the emitted file the glyphs 1`] = `
+"Standby
+........
+........
+........
+...AA...
+...AA...
+........
+........
+........
+
+red
+BBBBBBBB
+BBBBBBBB
+BBBBBBBB
+BBBBBBBB
+BBBBBBBB
+BBBBBBBB
+BBBBBBBB
+BBBBBBBB
+
+disqualify
+C......C
+.C....C.
+..C..C..
+...CC...
+...CC...
+..C..C..
+.C....C.
+C......C
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+black
+CCCCCCCC
+C......C
+C......C
+C......C
+C......C
+C......C
+C......C
+CCCCCCCC
+
+furled
+........
+........
+........
+CCCCCCCC
+CCCCCCCC
+........
+........
+........
+
+meatball
+..DDDD..
+.DDDDDD.
+DDDDDDDD
+DDDDDDDD
+DDDDDDDD
+DDDDDDDD
+.DDDDDD.
+..DDDD..
+
+chequered
+CC..CC..
+CC..CC..
+..CC..CC
+..CC..CC
+CC..CC..
+CC..CC..
+..CC..CC
+..CC..CC
+
+caution
+EEEEEEEE
+EEEEEEEE
+........
+EEEEEEEE
+EEEEEEEE
+........
+EEEEEEEE
+EEEEEEEE
+
+yellowWaving
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+yellow
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+EEEEEEEE
+
+debris
+EEEBEEEB
+EEBEEEBE
+EBEEEBEE
+BEEEBEEE
+EEEBEEEB
+EEBEEEBE
+EBEEEBEE
+BEEEBEEE
+
+blue
+FFFFFFFF
+FFFFFFFF
+FFF.FFFF
+FFFF.FFF
+F......F
+FFFF.FFF
+FFF.FFFF
+FFFFFFFF
+  --
+FFFFFFFF
+FFFFFFFF
+FFFF.FFF
+FFFFF.FF
+FF......
+FFFFF.FF
+FFFF.FFF
+FFFFFFFF
+
+white
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+
+green
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+
+startSet
+........
+........
+........
+BBBBBBBB
+BBBBBBBB
+........
+BBBBBBBB
+BBBBBBBB
+
+startReady
+........
+........
+........
+........
+........
+BBBBBBBB
+BBBBBBBB
+........
+
+Pit speeding
+BB....BB
+BBB..BBB
+.BBBBBB.
+..BBBB..
+BB....BB
+BBB..BBB
+.BBBBBB.
+..BBBB..
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Pit limiterOutOfLane
+..GGGG..
+..GGGG..
+..GGGG..
+..GGGG..
+..GGGG..
+........
+..GGGG..
+..GGGG..
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Pit limiterInLane
+GGGGGGGG
+GGGGGGGG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GGGGGGGG
+GGGGGGGG
+
+Spotter carBoth
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+
+Spotter carLeft
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+
+Spotter carRight
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
+
+Warning oilHot
+...DD...
+..DDDD..
+.DDDDDD.
+DDDDDDDD
+DDDDDDDD
+.DDDDDD.
+..DDDD..
+...DD...
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Warning waterHot
+..DD..DD
+.D..DD..
+D....DD.
+........
+..DD..DD
+.D..DD..
+D....DD.
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Warning lowFuel
+.EEEEEE.
+.E....E.
+.E....E.
+.E....E.
+.E....E.
+.E....E.
+.EEEEEE.
+.EEEEEE.
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear R redline
+.BBBB...
+.B...B..
+.B...B..
+.BBBB...
+.B.B....
+.B..B...
+.B...B..
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear N redline
+.B...B..
+.BB..B..
+.BB..B..
+.B.B.B..
+.B.BBB..
+.B..BB..
+.B...B..
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 1 redline
+...B....
+..BB....
+.B.B....
+...B....
+...B....
+...B....
+.BBBBB..
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 2 redline
+..BBB...
+.B...B..
+.....B..
+....B...
+...B....
+..B.....
+.BBBBB..
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 3 redline
+.BBBBB..
+....B...
+...B....
+....B...
+.....B..
+.B...B..
+..BBB...
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 4 redline
+....B...
+...BB...
+..B.B...
+.B..B...
+.BBBBB..
+....B...
+....B...
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 5 redline
+.BBBBB..
+.B......
+.BBBB...
+.....B..
+.....B..
+.B...B..
+..BBB...
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 6 redline
+...BB...
+..B.....
+.B......
+.BBBB...
+.B...B..
+.B...B..
+..BBB...
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 7 redline
+.BBBBB..
+.....B..
+....B...
+...B....
+..B.....
+..B.....
+..B.....
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 8 redline
+..BBB...
+.B...B..
+.B...B..
+..BBB...
+.B...B..
+.B...B..
+..BBB...
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear 9 redline
+..BBB...
+.B...B..
+.B...B..
+..BBBB..
+.....B..
+....B...
+..BB....
+........
+  --
+........
+........
+........
+........
+........
+........
+........
+........
+
+Gear R stage2
+.DDDD...
+.D...D..
+.D...D..
+.DDDD...
+.D.D....
+.D..D...
+.D...D..
+........
+
+Gear N stage2
+.D...D..
+.DD..D..
+.DD..D..
+.D.D.D..
+.D.DDD..
+.D..DD..
+.D...D..
+........
+
+Gear 1 stage2
+...D....
+..DD....
+.D.D....
+...D....
+...D....
+...D....
+.DDDDD..
+........
+
+Gear 2 stage2
+..DDD...
+.D...D..
+.....D..
+....D...
+...D....
+..D.....
+.DDDDD..
+........
+
+Gear 3 stage2
+.DDDDD..
+....D...
+...D....
+....D...
+.....D..
+.D...D..
+..DDD...
+........
+
+Gear 4 stage2
+....D...
+...DD...
+..D.D...
+.D..D...
+.DDDDD..
+....D...
+....D...
+........
+
+Gear 5 stage2
+.DDDDD..
+.D......
+.DDDD...
+.....D..
+.....D..
+.D...D..
+..DDD...
+........
+
+Gear 6 stage2
+...DD...
+..D.....
+.D......
+.DDDD...
+.D...D..
+.D...D..
+..DDD...
+........
+
+Gear 7 stage2
+.DDDDD..
+.....D..
+....D...
+...D....
+..D.....
+..D.....
+..D.....
+........
+
+Gear 8 stage2
+..DDD...
+.D...D..
+.D...D..
+..DDD...
+.D...D..
+.D...D..
+..DDD...
+........
+
+Gear 9 stage2
+..DDD...
+.D...D..
+.D...D..
+..DDDD..
+.....D..
+....D...
+..DD....
+........
+
+Gear R stage1
+.HHHH...
+.H...H..
+.H...H..
+.HHHH...
+.H.H....
+.H..H...
+.H...H..
+........
+
+Gear N stage1
+.H...H..
+.HH..H..
+.HH..H..
+.H.H.H..
+.H.HHH..
+.H..HH..
+.H...H..
+........
+
+Gear 1 stage1
+...H....
+..HH....
+.H.H....
+...H....
+...H....
+...H....
+.HHHHH..
+........
+
+Gear 2 stage1
+..HHH...
+.H...H..
+.....H..
+....H...
+...H....
+..H.....
+.HHHHH..
+........
+
+Gear 3 stage1
+.HHHHH..
+....H...
+...H....
+....H...
+.....H..
+.H...H..
+..HHH...
+........
+
+Gear 4 stage1
+....H...
+...HH...
+..H.H...
+.H..H...
+.HHHHH..
+....H...
+....H...
+........
+
+Gear 5 stage1
+.HHHHH..
+.H......
+.HHHH...
+.....H..
+.....H..
+.H...H..
+..HHH...
+........
+
+Gear 6 stage1
+...HH...
+..H.....
+.H......
+.HHHH...
+.H...H..
+.H...H..
+..HHH...
+........
+
+Gear 7 stage1
+.HHHHH..
+.....H..
+....H...
+...H....
+..H.....
+..H.....
+..H.....
+........
+
+Gear 8 stage1
+..HHH...
+.H...H..
+.H...H..
+..HHH...
+.H...H..
+.H...H..
+..HHH...
+........
+
+Gear 9 stage1
+..HHH...
+.H...H..
+.H...H..
+..HHHH..
+.....H..
+....H...
+..HH....
+........
+
+Gear R rest
+.CCCC...
+.C...C..
+.C...C..
+.CCCC...
+.C.C....
+.C..C...
+.C...C..
+........
+
+Gear N rest
+.C...C..
+.CC..C..
+.CC..C..
+.C.C.C..
+.C.CCC..
+.C..CC..
+.C...C..
+........
+
+Gear 1 rest
+...C....
+..CC....
+.C.C....
+...C....
+...C....
+...C....
+.CCCCC..
+........
+
+Gear 2 rest
+..CCC...
+.C...C..
+.....C..
+....C...
+...C....
+..C.....
+.CCCCC..
+........
+
+Gear 3 rest
+.CCCCC..
+....C...
+...C....
+....C...
+.....C..
+.C...C..
+..CCC...
+........
+
+Gear 4 rest
+....C...
+...CC...
+..C.C...
+.C..C...
+.CCCCC..
+....C...
+....C...
+........
+
+Gear 5 rest
+.CCCCC..
+.C......
+.CCCC...
+.....C..
+.....C..
+.C...C..
+..CCC...
+........
+
+Gear 6 rest
+...CC...
+..C.....
+.C......
+.CCCC...
+.C...C..
+.C...C..
+..CCC...
+........
+
+Gear 7 rest
+.CCCCC..
+.....C..
+....C...
+...C....
+..C.....
+..C.....
+..C.....
+........
+
+Gear 8 rest
+..CCC...
+.C...C..
+.C...C..
+..CCC...
+.C...C..
+.C...C..
+..CCC...
+........
+
+Gear 9 rest
+..CCC...
+.C...C..
+.C...C..
+..CCCC..
+.....C..
+....C...
+..CC....
+........
+
+legend
+A #33383F
+B #FF2D46
+C #F5F7FA
+D #FFB300
+E #FFD400
+F #2E7BFF
+G #FFFFFF
+H #00D96A"
+`;
