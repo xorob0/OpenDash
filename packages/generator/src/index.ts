@@ -1,6 +1,7 @@
 /** Public surface of @opendash/generator. */
 export * from './model.ts';
 export * as ncalc from './ncalc.ts';
+export * as leds from './leds/index.ts';
 export * from './ids.ts';
 export * from './bounds.ts';
 export * from './color.ts';
