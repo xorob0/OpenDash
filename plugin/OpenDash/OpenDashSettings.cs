@@ -95,6 +95,83 @@ namespace OpenDashPlugin
         /// <summary>Address of the web view zone page; empty until the user sets one.</summary>
         public string WebViewUrl { get; set; } = Contract.DefaultWebViewUrl;
 
+        // --- The lights ------------------------------------------------------------------------
+        //
+        // Brightness and night mode are the rig's, not this box's: a driver who owns a flag box
+        // probably owns other lights. The rest are the flag box's own. ADR 0013.
+
+        public int LightsBrightness { get; set; } = Contract.DefaultLightsBrightness;
+
+        public int LightsNightBrightness { get; set; } = Contract.DefaultLightsNightBrightness;
+
+        public bool LightsNightMode { get; set; } = Contract.DefaultLightsNightMode;
+
+        public bool FlagBoxCriticalOnly { get; set; } = Contract.DefaultFlagBoxCriticalOnly;
+
+        public bool FlagBoxGear { get; set; } = Contract.DefaultFlagBoxGear;
+
+        public int FlagBoxLowFuelLaps { get; set; } = Contract.DefaultFlagBoxLowFuelLaps;
+
+        /// <summary>Zero means "not set", so that the profile's own per-unit default applies. A driver in
+        /// Fahrenheit who has never opened this page must not get a Celsius number.</summary>
+        public int FlagBoxOilTemp { get; set; }
+
+        public int FlagBoxWaterTemp { get; set; }
+
+        /// <summary>Per matrix, index 0 is matrix 1. Always four long after Normalise().</summary>
+        public string[] FlagBoxRest { get; set; } = Contract.DefaultFlagBoxRests();
+
+        public bool[] FlagBoxFlags { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public bool[] FlagBoxSpotter { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public bool[] FlagBoxWarnings { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public string[] FlagBoxSide { get; set; } = Contract.DefaultFlagBoxSides();
+
+        /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
+        public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
+
+        public bool MatrixFlags(int matrix) => Pick(FlagBoxFlags, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public bool MatrixSpotter(int matrix) => Pick(FlagBoxSpotter, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public bool MatrixWarnings(int matrix) => Pick(FlagBoxWarnings, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public string MatrixSide(int matrix) => Pick(FlagBoxSide, matrix, Contract.DefaultFlagBoxSide);
+
+        private static T Pick<T>(T[] values, int matrix, T fallback)
+        {
+            if (values == null || matrix < 1 || matrix > values.Length) return fallback;
+            var value = values[matrix - 1];
+            return value == null ? fallback : value;
+        }
+
+        /// <summary>Repairs the per-matrix arrays, whatever came back from disk.</summary>
+        private void NormaliseLights()
+        {
+            LightsBrightness = Contract.NormaliseBrightness(LightsBrightness);
+            LightsNightBrightness = Contract.NormaliseBrightness(LightsNightBrightness);
+            if (FlagBoxLowFuelLaps < 0) FlagBoxLowFuelLaps = Contract.DefaultFlagBoxLowFuelLaps;
+            if (FlagBoxOilTemp < 0) FlagBoxOilTemp = 0;
+            if (FlagBoxWaterTemp < 0) FlagBoxWaterTemp = 0;
+            FlagBoxRest = Resize(FlagBoxRest, Contract.DefaultFlagBoxRests(), v => Array.IndexOf(Contract.FlagBoxRests, v) >= 0);
+            FlagBoxSide = Resize(FlagBoxSide, Contract.DefaultFlagBoxSides(), v => Array.IndexOf(Contract.FlagBoxSides, v) >= 0);
+            FlagBoxFlags = Resize(FlagBoxFlags, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxSpotter = Resize(FlagBoxSpotter, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
+        }
+
+        private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)
+        {
+            var result = (T[])defaults.Clone();
+            if (values == null) return result;
+            for (var i = 0; i < result.Length && i < values.Length; i++)
+            {
+                if (values[i] != null && valid(values[i])) result[i] = values[i];
+            }
+            return result;
+        }
         // --- The rig ------------------------------------------------------------------------------
 
         /// <summary>
@@ -166,6 +243,7 @@ namespace OpenDashPlugin
             PositionMode = Contract.NormaliseChoice(PositionMode, Contract.PositionModes, Contract.DefaultPositionMode);
             DeltaReference = Contract.NormaliseChoice(DeltaReference, Contract.DeltaReferences, Contract.DefaultDeltaReference);
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
+            NormaliseLights();
 
             var normalised = Contract.DefaultSlots();
             if (Slots != null)

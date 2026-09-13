@@ -12,6 +12,8 @@ import {
   build,
   BuildError,
   DEFAULT_OUT_DIR,
+  FLAG_BOX_FILE,
+  FLAG_BOX_SHEET_FILE,
   main,
   MANIFEST_FILE,
   PANEL_FONTS_DIR,
@@ -124,7 +126,7 @@ describe('widget build on disk', () => {
     }
     expect(listFiles(join(widget.out, REFERENCE_CARD_FACE))).toEqual(EXPECTED_FILES);
     expect(existsSync(join(widget.out, MANIFEST_FILE))).toBe(true);
-    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
+    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
     // The panel's fonts sit beside the packages rather than in one, because the plugin embeds them
     // and its build never runs this one; see plugin/OpenDash/OpenDash.csproj.
     expect(readdirSync(join(widget.out, PANEL_FONTS_DIR)).sort()).toEqual([...fontsForPanel().map((f) => basename(f)), FONT_LICENCE.name].sort());
@@ -149,7 +151,9 @@ describe('widget build on disk', () => {
     // A zone face records no slots and no rung. A zone is not a slot, and reporting one as twelve
     // would tell the plugin to draw twelve dropdowns for a face that has four zones.
     const zoneEntry = (f: ZoneLayout): JsonItem => ({ folder: f.folder, kind: 'dash', width: f.width, height: f.height, slots: 0, file: zipName(f.folder) });
-    expect(manifest).toEqual({ version: readVersion(), simHubVersion: '9.12.6', packages: [...LAYOUTS.map(entry), ...ZONE_FACES.map(zoneEntry)] });
+    // The profile is listed apart from the packages because it is not one: the plugin extracts it
+    // and the user imports it, which is ADR 0013.
+    expect(manifest).toEqual({ version: readVersion(), simHubVersion: '9.12.6', packages: [...LAYOUTS.map(entry), ...ZONE_FACES.map(zoneEntry)], ledProfiles: [FLAG_BOX_FILE] });
     for (const face of ZONE_FACES) {
       const row = (manifest.packages as JsonItem[]).find((p) => p.folder === face.folder)!;
       expect(row).toMatchObject({ slots: 0 });
@@ -192,7 +196,7 @@ describe('widget build on disk', () => {
     ]);
     expect((manifest.packages as JsonItem[]).map((p) => p.folder).slice(10)).toEqual(ZONE_FACES.map((f) => f.folder));
     expect(manifest).toEqual(widget.manifest as unknown as JsonItem);
-    expect(Object.keys(manifest)).toEqual(['version', 'simHubVersion', 'packages']);
+    expect(Object.keys(manifest)).toEqual(['version', 'simHubVersion', 'packages', 'ledProfiles']);
     // Every card face carries a rung; a zone face does not, because it has no cards to size.
     for (const p of manifest.packages as JsonItem[]) {
       const keys = ['folder', 'kind', 'width', 'height', 'slots', ...(p.rung === undefined ? [] : ['rung']), 'file'];
@@ -266,7 +270,7 @@ describe('widget build on disk', () => {
   });
 
   test('the build log names every file written', () => {
-    const files = [...FOLDERS.flatMap((folder) => expectedFiles(folder).map((f) => `${folder}/${f}`)), ...FOLDERS.map(zipName), MANIFEST_FILE];
+    const files = [...FOLDERS.flatMap((folder) => expectedFiles(folder).map((f) => `${folder}/${f}`)), ...FOLDERS.map(zipName), FLAG_BOX_FILE, MANIFEST_FILE];
     for (const rel of files) expect({ rel, logged: log.some((line) => line.startsWith('wrote ') && line.includes(rel)) }).toEqual({ rel, logged: true });
     expect(log.some((line) => line.startsWith('warning '))).toBe(false);
   });
@@ -403,7 +407,9 @@ describe('second screens on disk', () => {
   test('writes a folder and a zip per companion and pit wall', () => {
     expect(second.packages.map((p) => p.pkg.folderName)).toEqual(SCREEN_PACKAGES.map((s) => s.folder));
     expect(readdirSync(second.out).sort()).toEqual(
-      [MANIFEST_FILE, PANEL_FONTS_DIR, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
+      // The profile is written by every build, not only the one that builds the faces: it is not
+      // tied to a package and there is nothing to select it out of.
+      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
     );
   });
 

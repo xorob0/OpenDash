@@ -10,7 +10,7 @@
 import { describe, expect, test } from 'bun:test';
 import { statSync } from 'node:fs';
 import { propertiesRead } from '../packages/dash/src/properties.ts';
-import { scenarios } from './emulator.ts';
+import { scenarios, tracedScenarioNames, UNTRACED_SCENARIOS } from './emulator.ts';
 import { PROVENANCE_PROPERTIES } from './record.ts';
 import { TRACE_VERSION, formatTrace, frame, parseTrace, propertiesOf, readTrace, traceFile, tracedScenarios, type Trace } from './trace.ts';
 
@@ -93,7 +93,13 @@ describe('the committed traces', () => {
   const required = propertiesRead();
 
   test('there is one for every scenario the emulator ships', () => {
-    expect(tracedScenarios()).toEqual(scenarios());
+    // Every scenario except the ones that drive lights rather than a dashboard; see
+    // UNTRACED_SCENARIOS for why the flag box has no trace and is not going to get one.
+    expect(tracedScenarios()).toEqual(tracedScenarioNames());
+    for (const name of UNTRACED_SCENARIOS) {
+      expect({ name, runnable: scenarios().includes(name) }).toEqual({ name, runnable: true });
+      expect({ name, traced: tracedScenarios().includes(name) }).toEqual({ name, traced: false });
+    }
   });
 
   for (const scenario of tracedScenarios()) {

@@ -20,15 +20,20 @@ import type { Rung } from './design/rung.ts';
 import {
   formatIssues,
   PACKAGE_EXTENSION,
+  PROFILE_EXTENSION,
+  serializeProfile,
   validatePackage,
+  validateProfile,
   writePackage,
   zipPackage,
   type DashPackage,
+  type MatrixProfile,
   type ValidationIssue,
   type WrittenPackage,
   type ZippedPackage,
 } from './generator.ts';
 import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
+import { buildFlagBoxProfile, contactSheet, FLAG_BOX_PROFILE_NAME } from './leds/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './screens/index.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
@@ -41,6 +46,13 @@ export const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
 export const MANIFEST_FILE = 'manifest.json';
 /** Where the build leaves the fonts the plugin embeds, relative to the output directory. */
 export const PANEL_FONTS_DIR = 'fonts';
+/** The flag box profile, relative to the output directory. Not a package: see ADR 0013. */
+export const FLAG_BOX_FILE = `${FLAG_BOX_PROFILE_NAME}${PROFILE_EXTENSION}`;
+/**
+ * Every glyph the flag box draws, as one SVG. A pull request that changes the chequered flag shows
+ * the chequered flag; nothing else in a generated profile is reviewable by looking at it.
+ */
+export const FLAG_BOX_SHEET_FILE = 'flag-box.svg';
 /** Environment fallback for `--strategy`, as the spec's `SLOT_STRATEGY=inline` build flag. */
 export const STRATEGY_ENV = 'SLOT_STRATEGY';
 
@@ -154,6 +166,16 @@ export function validateOrThrow(pkg: DashPackage, screen?: string): ValidationIs
   return result.warnings;
 }
 
+/** Validates the flag box profile against the same contract; throws a BuildError on errors. */
+export function validateProfileOrThrow(profile: MatrixProfile): ValidationIssue[] {
+  const result = validateProfile(profile, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
+  if (!result.ok) {
+    const n = result.errors.length;
+    throw new BuildError(`profile ${profile.name} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
+  }
+  return result.warnings;
+}
+
 /** What a package is: the dash face, or one of the two second screens. */
 export type PackageKind = 'dash' | 'companion' | 'pitwall';
 
@@ -178,6 +200,12 @@ export interface Manifest {
   version: string;
   simHubVersion: string;
   packages: ManifestEntry[];
+  /**
+   * The flag box profile, relative to the output directory. It is listed apart from `packages`
+   * because it is not one: the plugin extracts it and the user imports it, rather than the plugin
+   * installing it. ADR 0013 is why.
+   */
+  ledProfiles: string[];
 }
 
 export interface BuildOptions {
@@ -193,6 +221,8 @@ export interface BuildOptions {
   zoneFaces?: readonly ZoneLayout[];
   /** Default: every second screen in src/screens. Pass an empty list to build the faces alone. */
   screens?: readonly ScreenPackageDef[];
+  /** Default: the flag box profile in src/leds. */
+  ledProfile?: MatrixProfile;
   /** Progress and warnings, one line at a time. Default: console.log. */
   log?: (line: string) => void;
 }
@@ -220,6 +250,8 @@ export interface BuildResult {
   version: string;
   simHubVersion: string;
   packages: BuiltPackage[];
+  /** The flag box profile and where it was written. */
+  ledProfile: { profile: MatrixProfile; warnings: ValidationIssue[]; path: string };
   manifest: Manifest;
   manifestPath: string;
 }
@@ -288,9 +320,13 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const log = opts.log ?? ((line: string): void => console.log(line));
   const staged = composePackages({ ...opts, version, simHubVersion, strategy, log });
 
+  const ledProfile = opts.ledProfile ?? buildFlagBoxProfile();
+  const ledWarnings = validateProfileOrThrow(ledProfile);
+  for (const w of ledWarnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
+
   mkdirSync(out, { recursive: true });
   const packages: BuiltPackage[] = [];
-  const manifest: Manifest = { version, simHubVersion, packages: [] };
+  const manifest: Manifest = { version, simHubVersion, packages: [], ledProfiles: [] };
   for (const { layout, zoneFace, screen, kind, pkg, warnings } of staged) {
     // Derived here rather than by each builder, so that a package cannot be assembled anywhere in
     // this file without the licences for what it carries.
@@ -327,10 +363,21 @@ export function build(opts: BuildOptions = {}): BuildResult {
     log(`wrote ${relative(target)}`);
   }
 
+  // Not zipped and not in `packages`: a profile is a single file the user imports by hand, and
+  // wrapping it in an archive would only add a step. ADR 0013.
+  const ledProfilePath = path.join(out, FLAG_BOX_FILE);
+  writeFileSync(ledProfilePath, serializeProfile(ledProfile), 'utf8');
+  log(`wrote ${relative(ledProfilePath)}`);
+  manifest.ledProfiles.push(FLAG_BOX_FILE);
+
+  const sheetPath = path.join(out, FLAG_BOX_SHEET_FILE);
+  writeFileSync(sheetPath, contactSheet(), 'utf8');
+  log(`wrote ${relative(sheetPath)}`);
+
   const manifestPath = path.join(out, MANIFEST_FILE);
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   log(`wrote ${relative(manifestPath)}`);
-  return { out, strategy, version, simHubVersion, packages, manifest, manifestPath };
+  return { out, strategy, version, simHubVersion, packages, ledProfile: { profile: ledProfile, warnings: ledWarnings, path: ledProfilePath }, manifest, manifestPath };
 }
 
 const describe = (e: unknown): string => (e instanceof Error ? e.message : String(e));

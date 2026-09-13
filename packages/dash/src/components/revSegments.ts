@@ -26,6 +26,35 @@ const pad2 = (k: number): string => String(k + 1).padStart(2, '0');
 /** `if(lit, colour, unlit)` */
 const litColor = (lit: Expr, color: Hex): Expr => iff(lit, str(color), str(ds.purpose.shift.unlit));
 
+/**
+ * One band of the shift model, highest first. The rev bar lights its segments *within* a band;
+ * anything that has only one thing to colour — the gear on the flag box — asks which band the
+ * engine is in, and that question is answered here so there is one shift model rather than two.
+ *
+ * The thresholds are the band boundaries the bar already uses: a band is entered the moment its
+ * first segment lights, which for stage 1 and 2 is their progress value leaving zero (ADR 0004:
+ * these are progress values, not bar percentages). `rest` is the state below all of them and is
+ * always raised, so ranking the list always lands somewhere.
+ */
+export interface ShiftBand {
+  id: 'redline' | 'stage2' | 'stage1' | 'rest';
+  colour: Hex;
+  /** True when the engine is in this band or above it. */
+  raised: Expr;
+  /** The redline band flashes; the others do not. */
+  blink: boolean;
+}
+
+export function shiftBands(): ShiftBand[] {
+  return [
+    { id: 'redline', colour: ds.purpose.shift.stage3, raised: eq(game('CarSettings_RPMRedLineReached'), num(1)), blink: true },
+    { id: 'stage2', colour: ds.purpose.shift.stage2, raised: gt(game('CarSettings_RPMShiftLight2'), num(0)), blink: false },
+    { id: 'stage1', colour: ds.purpose.shift.stage1, raised: gt(game('CarSettings_RPMShiftLight1'), num(0)), blink: false },
+    // Below the first band there is nothing to report, so the digit is simply readable.
+    { id: 'rest', colour: ds.color.text.primary, raised: 'true', blink: false },
+  ];
+}
+
 /** Where segment k of `count` goes: its rect, and for a segment on a circle its rotation. */
 export interface RevSegmentPlacement {
   rect: Rect;
