@@ -15,7 +15,16 @@
     "RaceSessionLaps": "30",
     "RaceSessionTime": "2700.0000 sec",
     "TcSetting": "3 (TC)",
-    "AbsSetting": "2 (ABS)"
+    "AbsSetting": "2 (ABS)",
+    // The car's own shift lights. Placeholders rather than literals since XOR-250, so that a
+    // scenario can hand the mirror a different car mid-run; these are the values every other
+    // scenario inherits and the ones race-session.yaml carried before.
+    "DriverCarRedLine": "9000.000",
+    "DriverCarGearNumForward": "6",
+    "DriverCarSLFirstRPM": "7800.000",
+    "DriverCarSLShiftRPM": "8400.000",
+    "DriverCarSLLastRPM": "8800.000",
+    "DriverCarSLBlinkRPM": "9000.000"
   },
 
   // All variables of the built-in catalogue are present (with their defaults); the entries below
