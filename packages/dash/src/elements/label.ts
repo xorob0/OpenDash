@@ -14,6 +14,8 @@ export interface LabelOptions {
   /** Font size; ds.size.label by default. */
   size?: number;
   color?: Hex;
+  /** TextColor binding, for a label whose ink says something: a telltale lit or unlit. */
+  colorBind?: Expr;
   hAlign?: HAlign;
   /** Text binding. `text` is then the design-time sample and is not upper-cased. */
   bind?: Expr;
@@ -40,7 +42,7 @@ export function label(name: string, text: string, x: number, y: number, width: n
     vAlign: 'top',
     backgroundColor: TRANSPARENT,
     ...(opts.widest ? { widest: opts.widest } : {}),
-    ...withBindings({ Text: opts.bind, Visible: opts.visibleBind, Left: opts.leftBind }),
+    ...withBindings({ Text: opts.bind, TextColor: opts.colorBind, Visible: opts.visibleBind, Left: opts.leftBind }),
   };
 }
 

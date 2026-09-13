@@ -18,6 +18,7 @@ import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
+import { rank } from './rank.ts';
 
 /** A small text that follows a value on its baseline: a unit ("L", "km/h") or a denominator ("/ 24"). */
 export interface Follower {
@@ -44,6 +45,11 @@ export interface FieldValue {
 export interface FieldSpec {
   /** Item name prefix, unique within the screen. */
   name: string;
+  /**
+   * What the field is called in its page's shedding order, which is the name without the screen's
+   * prefix. `modules/shedding.ts` is the table it is looked up in.
+   */
+  id?: string;
   /** Label text. Empty draws no label, which is how a bare value joins a row of fields. */
   label: string;
   labelBind?: Expr;
@@ -114,8 +120,11 @@ export const rowHeight = (specs: readonly FieldSpec[], density: Density): number
 /**
  * One field, its value's line box bottom on `bottom`. `maxWidth` caps the value's box, which
  * matters at the right edge of a module where the box would otherwise leave the screen.
+ *
+ * `leftAt` is the rank's: when the row closes over a field the sim does not publish, every item of
+ * every field left has to move, and the unit after a value has to move with its own offset kept.
  */
-export function field(spec: FieldSpec, x: number, bottom: number, density: Density, maxWidth?: number): Item[] {
+export function field(spec: FieldSpec, x: number, bottom: number, density: Density, maxWidth?: number, leftAt?: (dx?: number) => Expr | undefined): Item[] {
   const d = densityOf(density);
   const items: Item[] = [];
   const valueY = bottom - spec.value.fs;
@@ -127,6 +136,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
         size: d.label,
         bind: spec.labelBind,
         visibleBind: spec.visibleBind,
+        leftBind: leftAt?.(),
       }),
     );
   }
@@ -139,6 +149,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
       colorBind: spec.value.colorBind,
       visibleBind: spec.visibleBind,
       maxWidth: width,
+      leftBind: leftAt?.(),
     }),
   );
   const follower = spec.value.follower;
@@ -151,6 +162,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
         bind: follower.bind,
         color: follower.color,
         visibleBind: follower.visibleBind ?? spec.visibleBind,
+        leftBind: leftAt?.(followerX - x),
       }),
     );
   }
@@ -194,13 +206,18 @@ export function fieldRowFitted(
   const total = widths.reduce((sum, w) => sum + w, 0);
   const gaps = Math.max(0, specs.length - 1);
   const gap = gaps === 0 ? 0 : Math.max(minGap, Math.min(preferred, Math.floor((width - total) / gaps)));
-  const items: Item[] = [];
-  let cursor = x;
-  specs.forEach((spec, i) => {
-    const w = widths[i] ?? 0;
-    items.push(...field(spec, cursor, bottom, density, w));
-    cursor += w + gap;
-  });
+  // Placed as a rank so that a field the sim does not publish takes its space with it rather than
+  // leaving a hole in the row. `atLeast` is every field: what this row keeps was decided by the
+  // page's shedding order before it got here, and the gap above is how it answers a narrow box.
+  const { items } = rank(
+    specs.map((spec, i) => ({
+      id: spec.id ?? spec.name,
+      width: widths[i] ?? 0,
+      present: spec.visibleBind,
+      draw: (at) => field(spec, at.x, bottom, density, widths[i] ?? 0, at.leftAt),
+    })),
+    { left: x, width, gap, when: 'close', align: 'left', atLeast: specs.length },
+  );
   const used = gaps === 0 ? total : total + gap * gaps;
   return { items, width: used, fits: used <= width };
 }
