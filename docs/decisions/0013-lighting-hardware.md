@@ -143,3 +143,62 @@ plugin register its own container, which would put openDash's drawing code in C#
 profile a thin reference to it. It is rejected for now because the profile then only works where
 the plugin is installed, which contradicts the rule above — but it is the obvious answer if the
 generated tree ever gets too large to read.
+
+---
+
+## Amended, 2026-09-13: the plugin installs it after all, from a button
+
+**What moved.** The decision above says "the plugin **extracts it to a folder and stops there**",
+and the reason given is that a matrix profile lives inside
+`PluginsData/Common/ArduinoRGBMatrixSettings.json`, which `RGBMatrixDriver` rewrites whenever
+anything changes, so a write we cannot sequence against would lose the user's other profiles.
+
+That reasoning was correct **about the file** and wrong about the conclusion, because it assumed the
+only way in was the file. It is not. SimHub exposes the whole chain publicly, and every type is in
+`SimHub.Plugins.dll`, which the plugin already references:
+
+```csharp
+PluginManager.GetInstance()                     // PluginManager.cs:1274, public static
+  .GetPlugin<SerialDashPlugin>()                // PluginManager.cs:2579, public
+  .Settings.RGBMatrixDriver                     // SerialDashPluginSettings.cs:271, public
+  .Settings                                     // RGBMatrixDriver.cs:137, public MatrixSettings
+  .AddProfile(profile)                          // ProfileSettingsBase.cs:825, public
+driver.SaveSettings()                           // RGBMatrixDriver.cs:312, public
+```
+
+No reflection, no internals, and **openDash never opens the settings file**. It hands SimHub a
+profile object; SimHub serialises its own in-memory collection to its own file, exactly as it does
+when the user imports one through its UI. The clobbering problem does not arise, because there is no
+second writer.
+
+The claim that this compiles is not an argument from reading decompiled source: the chain above was
+written into the plugin and built against `plugin/lib/SimHub.Plugins.dll` before this amendment was
+written.
+
+**What did not move.** The consent half of the original decision stands, and it was always the better
+half of it. A profile paints hardware the user owns, and installing one because they installed a
+dashboard is a larger liberty than installing a dashboard. So:
+
+* the plugin still does **not** install anything at startup;
+* it installs when the user presses **Install into SimHub** on the Lights page, and not before;
+* it matches its own profile by `ProfileId` and touches nothing else in the list, so a profile the
+  user made is never at risk;
+* an update is offered only when the version differs, is labelled **Update in SimHub**, and the panel
+  says in words that updating replaces the copy in SimHub including any changes made to it there.
+
+**What this costs.** Matching by `ProfileId` means a copy of ours that the user has since edited in
+SimHub keeps our id, so pressing Update discards their edits. The dashboards can tell an edited
+folder from an untouched one and hold it back; a profile inside a settings blob gives us nothing to
+fingerprint, so the panel warns instead. That is weaker, and it is the reason the button never
+presses itself.
+
+**The file is still written.** Extraction to `SimHub/OpenDash/` stays, for three reasons: it is the
+fallback when the matrix driver cannot be reached (an older SimHub, or the serial dash plugin absent),
+it is what a user copies to a second machine, and it is what somebody inspects when they want to see
+what openDash is asking their hardware to do.
+
+**The strongest argument against this amendment** is that it puts openDash inside another plugin's
+object graph, which is a larger surface to break on a SimHub update than a file whose format we had
+already reverse-engineered. That is true. It is mitigated by every call being null-checked and
+wrapped, by the failure mode being "the button says SimHub's matrix settings are not available, here
+is the file" rather than an exception, and by the file path remaining the documented fallback.

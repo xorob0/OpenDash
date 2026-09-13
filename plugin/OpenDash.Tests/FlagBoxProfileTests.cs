@@ -42,6 +42,48 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void ReadsTheProfilesOwnFieldsAndNotAContainersOwn()
+        {
+            // The bug this exists for: every container in the tree has a Description of its own, and
+            // they appear BEFORE the profile's in the file, so a first-match search returns a
+            // container's and the version marker silently disappears.
+            const string json = @"{
+  ""LedContainers"": [
+    { ""Description"": ""Brightness"", ""LedContainers"": [ { ""Description"": ""Racing"", ""Name"": ""nope"" } ] }
+  ],
+  ""Name"": ""openDash Flag box"",
+  ""Author"": ""openDash"",
+  ""Description"": ""Built by openDash 9.9.9; do not edit here.""
+}";
+            Assert.Equal("openDash Flag box", FlagBoxProfile.ProfileNameOf(json));
+            Assert.Equal("openDash", FlagBoxProfile.AuthorOf(json));
+            Assert.Equal("Built by openDash 9.9.9; do not edit here.", FlagBoxProfile.DescriptionOf(json));
+        }
+
+        [Fact]
+        public void ReadingAFieldSurvivesBracesAndQuotesInsideStrings()
+        {
+            // An NCalc expression or a description could carry a brace; counting depth without
+            // tracking strings would then lose the top level entirely.
+            const string json = @"{
+  ""LedContainers"": [ { ""TriggerFormula"": { ""Expression"": ""isnull([X], 1) = {weird}"" } } ],
+  ""Description"": ""Built by openDash 1.2.3; a \""quoted\"" word and a } brace.""
+}";
+            Assert.Equal(@"Built by openDash 1.2.3; a ""quoted"" word and a } brace.", FlagBoxProfile.DescriptionOf(json));
+        }
+
+        [Fact]
+        public void AMissingOrMalformedFieldReadsAsNullRatherThanThrowing()
+        {
+            Assert.Null(FlagBoxProfile.DescriptionOf("{}"));
+            Assert.Null(FlagBoxProfile.DescriptionOf(null));
+            Assert.Null(FlagBoxProfile.DescriptionOf(""));
+            Assert.Null(FlagBoxProfile.DescriptionOf(@"{ ""Description"": 42 }"));
+            Assert.Null(FlagBoxProfile.DescriptionOf(@"{ ""Description"": "));
+            Assert.Null(FlagBoxProfile.AuthorOf(@"{ ""LedContainers"": [ { ""Author"": ""someone else"" } ] }"));
+        }
+
+        [Fact]
         public void WritesTheProfileIntoItsOwnFolder()
         {
             using (var root = new TempDir())
@@ -125,14 +167,13 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void TheSummaryCarriesTheManualStep()
+        public void TheSummaryPointsAtTheButtonThatInstallsIt()
         {
-            // A user who is not told to import it will wait for something that is never going to happen.
+            // A user who is not told where to go will wait for something that never happens.
             using (var root = new TempDir())
             {
                 var summary = FlagBoxProfile.Summary(FlagBoxProfile.Extract(root.Path, Self));
-                Assert.Contains("Import it", summary, StringComparison.Ordinal);
-                Assert.Contains("does not install it", summary, StringComparison.Ordinal);
+                Assert.Contains("Lights", summary, StringComparison.Ordinal);
                 Assert.Contains("openDash Flag box.ledsprofile", summary, StringComparison.Ordinal);
             }
         }
