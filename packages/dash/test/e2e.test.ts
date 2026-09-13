@@ -13,6 +13,7 @@ import {
   BuildError,
   DEFAULT_OUT_DIR,
   FLAG_BOX_FILE,
+  FLAG_BOX_SHEET_FILE,
   main,
   MANIFEST_FILE,
   PANEL_FONTS_DIR,
@@ -125,7 +126,7 @@ describe('widget build on disk', () => {
     }
     expect(listFiles(join(widget.out, REFERENCE_CARD_FACE))).toEqual(EXPECTED_FILES);
     expect(existsSync(join(widget.out, MANIFEST_FILE))).toBe(true);
-    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
+    expect(readdirSync(widget.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...FOLDERS, ...ZONE_FOLDERS, ...FOLDERS.map(zipName), ...ZONE_FOLDERS.map(zipName)].sort());
     // The panel's fonts sit beside the packages rather than in one, because the plugin embeds them
     // and its build never runs this one; see plugin/OpenDash/OpenDash.csproj.
     expect(readdirSync(join(widget.out, PANEL_FONTS_DIR)).sort()).toEqual([...fontsForPanel().map((f) => basename(f)), FONT_LICENCE.name].sort());
@@ -408,7 +409,7 @@ describe('second screens on disk', () => {
     expect(readdirSync(second.out).sort()).toEqual(
       // The profile is written by every build, not only the one that builds the faces: it is not
       // tied to a package and there is nothing to select it out of.
-      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
+      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...SCREEN_PACKAGES.map((s) => s.folder), ...SCREEN_PACKAGES.map((s) => zipName(s.folder))].sort(),
     );
   });
 

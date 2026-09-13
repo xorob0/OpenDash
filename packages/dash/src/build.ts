@@ -33,7 +33,7 @@ import {
   type ZippedPackage,
 } from './generator.ts';
 import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
-import { buildFlagBoxProfile, FLAG_BOX_PROFILE_NAME } from './leds/index.ts';
+import { buildFlagBoxProfile, contactSheet, FLAG_BOX_PROFILE_NAME } from './leds/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './screens/index.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
@@ -48,6 +48,11 @@ export const MANIFEST_FILE = 'manifest.json';
 export const PANEL_FONTS_DIR = 'fonts';
 /** The flag box profile, relative to the output directory. Not a package: see ADR 0013. */
 export const FLAG_BOX_FILE = `${FLAG_BOX_PROFILE_NAME}${PROFILE_EXTENSION}`;
+/**
+ * Every glyph the flag box draws, as one SVG. A pull request that changes the chequered flag shows
+ * the chequered flag; nothing else in a generated profile is reviewable by looking at it.
+ */
+export const FLAG_BOX_SHEET_FILE = 'flag-box.svg';
 /** Environment fallback for `--strategy`, as the spec's `SLOT_STRATEGY=inline` build flag. */
 export const STRATEGY_ENV = 'SLOT_STRATEGY';
 
@@ -338,6 +343,10 @@ export function build(opts: BuildOptions = {}): BuildResult {
   writeFileSync(ledProfilePath, serializeProfile(ledProfile), 'utf8');
   log(`wrote ${relative(ledProfilePath)}`);
   manifest.ledProfiles.push(FLAG_BOX_FILE);
+
+  const sheetPath = path.join(out, FLAG_BOX_SHEET_FILE);
+  writeFileSync(sheetPath, contactSheet(), 'utf8');
+  log(`wrote ${relative(sheetPath)}`);
 
   const manifestPath = path.join(out, MANIFEST_FILE);
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
