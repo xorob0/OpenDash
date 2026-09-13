@@ -209,7 +209,7 @@ Three of the nine still stand. Each is restated above with the record that would
 |---|---|
 | Theming and colour customisation | ADR 0011, and this line moving with it. The Personalisation project is unmergeable until it does |
 | Idle and pit screens | XOR-62 and XOR-53, behind the same record |
-| Computed telemetry of our own | ADR 0009, owed before zones B and C |
+| Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
 falls under one of these lines is declined however well it is written**; the line moves first, in
