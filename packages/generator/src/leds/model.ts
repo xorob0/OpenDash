@@ -96,13 +96,26 @@ export interface LedConditionalGroup extends LedContainerBase {
 
 /**
  * Reorders physical LED positions into logical ones, which is how one effect tree drives strips
- * that are wired differently. `positions` is 1-based and in logical order.
+ * that are wired differently. `positions` is 1-based: `positions[i]` is the physical LED that
+ * logical LED `i` paints.
+ *
+ * It is serialised as `[{ "Position": n }, ...]` rather than as a list of numbers, because
+ * `RemapGroupContainer.Positions` is an `ObservableCollection<LedPosition>`. And it must be at
+ * least as long as the run it covers: `SetResultBase` indexes `Positions[i]` for every lit LED up
+ * to 64, so a short list throws once per frame rather than failing quietly. SimHub's own
+ * `LoadDefaultSettings` fills all {@link REMAP_POSITIONS} of them, and so does the writer.
  */
 export interface LedRemapGroup extends LedContainerBase {
   kind: 'remapGroup';
   positions: readonly number[];
   children: readonly LedContainer[];
 }
+
+/**
+ * How many entries a `Groups.RemapGroup` carries. `SetResultBase` guards its lookup with
+ * `if (i < 64)`, and `LoadDefaultSettings` writes exactly this many.
+ */
+export const REMAP_POSITIONS = 64;
 
 /** A run of LEDs in one colour. */
 export interface LedStaticColor extends LedContainerBase {
