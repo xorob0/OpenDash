@@ -78,6 +78,14 @@
     <EmbeddedResource Include="Resources/*.simhubdash" Exclude="Resources/openDash slots *.simhubdash" />
   </ItemGroup>
 
+  <!-- The LED profiles, which are NOT installed the way the packages are. ADR 0013: a dashboard is a file in a folder
+       and the worst case is a dashboard somebody can close, but a device profile changes what hardware they own does.
+       So these are embedded, offered in the panel, and written out only when a person asks (LedProfiles.Core.cs).
+       The dash build writes build/*.ledsprofile and scripts/package.sh copies them in beside the packages. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/*.ledsprofile" />
+  </ItemGroup>
+
   <!-- The faces the settings panel draws in, extracted to a private folder at runtime (PanelFonts.cs).
        They come from the dash build rather than from fonts/ directly: the condensed ones are renamed on the
        way out of it, because WPF folds a family whose name carries a width word into the unadorned one and

@@ -63,7 +63,7 @@ namespace OpenDashPlugin
             DockPanel.SetDock(header, Dock.Top);
             var footer = BuildFooter();
             DockPanel.SetDock(footer, Dock.Bottom);
-            var body = Ui.VStack(0, BuildGeneral(), BuildData(), BuildZones(), BuildButtons(), BuildLayout(), BuildCompanion(), BuildPitWall(), BuildDashboard());
+            var body = Ui.VStack(0, BuildGeneral(), BuildData(), BuildZones(), BuildButtons(), BuildLayout(), BuildCompanion(), BuildPitWall(), BuildLights(), BuildDashboard());
             body.Margin = new Thickness(PagePadding, 0, PagePadding, 0);
             body.VerticalAlignment = VerticalAlignment.Top;
             page.Children.Add(header);
@@ -1309,6 +1309,74 @@ namespace OpenDashPlugin
             updateLine.Text = line ?? string.Empty;
             updateLine.Visibility = updateStatus.IsVisible && line != null ? Visibility.Visible : Visibility.Collapsed;
             updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Lights
+
+        private TextBlock lightsLine;
+
+        /// <summary>
+        /// The LED profiles, offered rather than installed.
+        ///
+        /// ADR 0013 is the whole of this section's shape. A dashboard package is a file in a folder and the worst case
+        /// is a dashboard somebody can close; a device profile changes what hardware they own does, in a dark room, at
+        /// speed. So there is a button per device family and no automatic anything — and the button writes the files to
+        /// a folder rather than into the RGB driver's settings, because that file is rewritten by the driver on change
+        /// and a profile added underneath a running SimHub does not survive.
+        /// </summary>
+        private FrameworkElement BuildLights()
+        {
+            var source = new AssemblyLedProfileSource(typeof(SettingsControl).Assembly);
+            var families = LedProfiles.FamiliesIn(source);
+
+            var title = Ui.Body("LED profiles");
+            var caption = Ui.Caption(LedProfiles.Summary(source));
+            var text = Ui.VStack(4, title, caption);
+            text.MaxWidth = 460;
+            text.HorizontalAlignment = HorizontalAlignment.Left;
+
+            lightsLine = Ui.Caption(string.Empty);
+            lightsLine.Visibility = Visibility.Collapsed;
+            text.Children.Add(lightsLine);
+
+            if (families.Count == 0) return Ui.Section("Lights", Ui.Row(text, new Border()));
+
+            var buttons = new List<FrameworkElement>();
+            foreach (var family in families) buttons.Add(BuildExportButton(source, family));
+            var right = Ui.HStack(12, buttons.ToArray());
+            return Ui.Section("Lights", Ui.Row(text, right));
+        }
+
+        /// <summary>One button per device family: somebody with a wheel owns one strip, not nineteen.</summary>
+        private Button BuildExportButton(ILedProfileSource source, LedDeviceFamily family)
+        {
+            Button button;
+            try
+            {
+                button = new SHButtonPrimary();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("SHButtonPrimary is unavailable; using a plain button: " + ex.Message);
+                button = new Button();
+            }
+
+            button.Content = family.Label();
+            button.MinWidth = 110;
+            button.ToolTip = "Write the " + family.Label().ToLowerInvariant() +
+                " profiles to a folder, then import the one for your device in SimHub. openDash never writes to the device itself.";
+            button.Click += (sender, args) =>
+            {
+                var result = LedProfiles.Export(source, AppDomain.CurrentDomain.BaseDirectory, family);
+                var message = LedProfiles.ImportInstructions(result, family);
+                if (result.Ok) Log.Info(message); else Log.Warn(message);
+                if (lightsLine == null) return;
+                lightsLine.Text = result.Ok
+                    ? "Wrote " + result.Written.Count + " to " + result.Folder + ". Import it in SimHub to use it."
+                    : "Could not write the profiles: " + result.Error;
+                lightsLine.Visibility = Visibility.Visible;
+            };
+            return button;
         }
 
         /// <summary>SimHub's primary button (SHButtonPrimary); a plain button when the type cannot be created.</summary>
