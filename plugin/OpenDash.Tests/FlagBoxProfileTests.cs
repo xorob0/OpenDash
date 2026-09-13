@@ -77,7 +77,7 @@ namespace OpenDashPlugin.Tests
                 prefix + "openDash brow-25.ledsprofile",
             };
             Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(release));
-            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(release.Reverse()));
+            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(Enumerable.Reverse(release)));
 
             // Strips only: no flag box, rather than the nearest thing to one.
             Assert.Null(FlagBoxProfile.SelectResource(new[] { prefix + "openDash 0-10-0.ledsprofile", prefix + "openDash brow-9.ledsprofile" }));
