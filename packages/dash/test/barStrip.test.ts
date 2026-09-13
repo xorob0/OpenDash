@@ -167,7 +167,7 @@ describe('the strip closes over what the game does not publish', () => {
   }
 
   test('a narrow face closes its shorter strip the same way', () => {
-    // 850 by 480 keeps three cells, so the arithmetic is a different one and worth its own case.
+    // 850 by 480 keeps two cells, so the arithmetic is a different one and worth its own case.
     const narrow = stripValues('openDash 850x480');
     expect(narrow.length).toBeGreaterThan(0);
     expect(narrow.length).toBeLessThan(values.length);
@@ -176,4 +176,63 @@ describe('the strip closes over what the game does not publish', () => {
     const withoutFirst = narrow.slice(1).map((v) => evaluate(leftOf(v), [exprOf(cellIdOf(narrow[0]!))]));
     expect(withoutFirst[0]! + withoutFirst[withoutFirst.length - 1]!).toBe(full[0]! + full[full.length - 1]!);
   });
+});
+
+/**
+ * The strip is a row of values, drawn as the bar's end fields are.
+ *
+ * Both of these were silently wrong for as long as the strip measured its cells for a label-sized
+ * numeral and drew one: a cell wide enough for "BIAS" but holding "54.5" at the value's size
+ * overlapped the cell beside it, and the whole suite stayed green, because the only fit check that
+ * sees the bar compares the strip against the two ends and never a cell against its neighbour.
+ */
+describe('the strip is drawn in the bar value type', () => {
+  for (const face of ZONE_FACES.filter((f) => stripValues(f.folder).length > 0)) {
+    describe(face.folder, () => {
+      const values = stripValues(face.folder);
+
+      test('a cell value is the same type, ink and line as a bar end field', () => {
+        const end = [...walkItems(buildZoneFace(face, OPTS).main.screens[0]!.items)].find(
+          (i): i is TextItem => i.kind === 'text' && /^bar\.(Left|Right)1\..*\.value$/.test(i.name),
+        )!;
+        for (const value of values) {
+          expect({
+            cell: cellIdOf(value),
+            size: value.fontSize,
+            color: value.textColor,
+            top: value.rect.top,
+            height: value.rect.height,
+          }).toMatchObject({ size: end.fontSize, color: end.textColor, top: end.rect.top, height: end.rect.height });
+        }
+      });
+
+      test('no cell is drawn over the one beside it', () => {
+        // Measured on the boxes rather than the pitch: a cell measured for a smaller numeral than
+        // it draws keeps its pitch and grows its box, which is exactly the failure this is for.
+        const ordered = [...values].sort((a, b) => a.rect.left - b.rect.left);
+        for (const [i, value] of ordered.slice(1).entries()) {
+          const before = ordered[i]!;
+          const clear = value.rect.left >= before.rect.left + before.rect.width;
+          expect({ cell: cellIdOf(value), after: cellIdOf(before), left: value.rect.left, ends: before.rect.left + before.rect.width, clear }).toMatchObject({ clear: true });
+        }
+      });
+
+      test('every cell sits on a whole pixel, closed as well as full', () => {
+        // `rank` centres on (width - total) / 2 in the static rect and again in the `Left` binding,
+        // which nothing rounds. Even cell widths are what keep the two agreeing, and they have to
+        // agree for every subset the closing can produce rather than only the all-present one.
+        const ids = values.map(cellIdOf);
+        for (let mask = 0; mask < 1 << ids.length; mask += 1) {
+          const absent = ids.filter((_, i) => (mask & (1 << i)) !== 0);
+          if (absent.length === ids.length) continue;
+          const missing = absent.map(exprOf);
+          for (const value of values) {
+            if (absent.includes(cellIdOf(value))) continue;
+            const left = evaluate(leftOf(value), missing);
+            expect({ absent, cell: cellIdOf(value), left, whole: Number.isInteger(left) }).toMatchObject({ whole: true });
+          }
+        }
+      });
+    });
+  }
 });
