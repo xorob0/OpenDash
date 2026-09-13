@@ -22,8 +22,9 @@ import {
   shapeOf,
   widthBandOf,
 } from '../src/second/shape.ts';
+import { densityOf, nextOnRamp, rampOf } from '../src/second/density.ts';
 import { cellOverruns } from './monoGlyphs.ts';
-import type { TextItem } from '../src/generator.ts';
+import type { Item, TextItem } from '../src/generator.ts';
 
 describe('shape is a pair of bands, not a ratio', () => {
   test('the four the catalogue draws land on four distinct shapes', () => {
@@ -138,7 +139,68 @@ describe('shedding comes before shrinking', () => {
     const biggest = (items: readonly unknown[]): number => Math.max(...sizesOf(items as never), 0);
     // The tight box holds fewer things...
     expect(tight.length).toBeLessThan(roomy.length);
-    // ...and what it does hold is drawn at the size the roomy box drew it.
-    expect({ roomy: biggest(roomy), tight: biggest(tight) }).toMatchObject({ tight: biggest(roomy) });
+    // ...and what it does hold is drawn at the size the ramp names it, never below. This used to
+    // compare the two boxes to each other and cannot any more: under rule 20 the roomy box grows
+    // past its ramp size, which is the other half of the same rule rather than a violation of this
+    // one. What matters is still that the tight box shed instead of shrinking.
+    expect(biggest(tight)).toBe(densityOf('zone').big);
+    expect(biggest(roomy)).toBeGreaterThanOrEqual(biggest(tight));
+  });
+});
+
+/**
+ * Rule 20: a rank fills the box it is given, and meets one of three edges doing it.
+ *
+ * The mechanism rather than a module. What every module does at every real box is
+ * `secondScreens.test.ts` and `textFit.test.ts`, which measure the drawn items; these are the four
+ * promises the growing itself makes.
+ */
+describe('a rank fills the box it is given', () => {
+  const lapTimes = (): (typeof MODULES)[number] => MODULES.find((m) => m.id === 'lapTimes')!;
+  const valuesOf = (items: readonly Item[]): TextItem[] => items.flatMap((i) => [...walkItems([i])]).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'));
+
+  test('a zone with height to spare draws its values larger than the ramp names them', () => {
+    // The base face's zone B: 274 x 328 of face, 254 x 292 of body once the title bar is off it.
+    const grown = valuesOf(lapTimes().build({ frame: rect(0, 0, 254, 292), density: 'compact', prefix: 'b.' }));
+    const lead = Math.max(...grown.map((i) => i.fontSize));
+    expect(lead).toBeGreaterThan(densityOf('compact').big);
+    // One column: two lap times fit side by side at 34 px and do not at 46, so growing wraps them.
+    expect(new Set(grown.map((i) => i.rect.left)).size).toBe(1);
+  });
+
+  test('and never past the next size up its ramp', () => {
+    for (const density of ['compact', 'zone', 'companion'] as const) {
+      // A box far larger than any zone, so neither the height nor the width is what stops it.
+      const items = valuesOf(lapTimes().build({ frame: rect(0, 0, 4000, 4000), density, prefix: 'b.' }));
+      const lead = Math.max(...items.map((i) => i.fontSize));
+      const big = densityOf(density).big;
+      // It grew, and it stopped at the ramp. Not *on* the next size: the ceiling is the smallest
+      // step in the stack, so lap times over a 34 px delta stop when the delta reaches 46 and the
+      // times are at 62 rather than 64. A rank grows by one factor or its sizes stop meaning what
+      // they meant.
+      expect({ density, grew: lead > big, past: lead > nextOnRamp(big, density) }).toEqual({ density, grew: true, past: false });
+    }
+  });
+
+  test('and keeps the order of its sizes while it grows', () => {
+    const sizes = (height: number): number[] => {
+      const items = valuesOf(lapTimes().build({ frame: rect(0, 0, 600, height), density: 'zone', prefix: 'b.' }));
+      return items.map((i) => i.fontSize);
+    };
+    // The six values are three lap times over three smaller ones at every height that holds them.
+    for (const height of [280, 340, 400, 470]) {
+      const drawn = sizes(height);
+      if (drawn.length < 6) continue;
+      expect({ height, ordered: Math.min(...drawn.slice(0, 3)) > Math.max(...drawn.slice(3)) }).toEqual({ height, ordered: true });
+    }
+  });
+
+  test('and a stack it cannot grow whole it does not grow at all', () => {
+    // Sectors is three drawn sector deltas over a rank of lap times. The drawing cannot grow, so
+    // neither may the rank: times grown to the size of the sectors above them are a page with no
+    // hierarchy left.
+    const sectors = MODULES.find((m) => m.id === 'sectors')!;
+    const items = valuesOf(sectors.build({ frame: rect(0, 0, 737, 270), density: 'zone', prefix: 'b.' }));
+    for (const item of items) expect({ name: item.name, onRamp: rampOf('zone').includes(item.fontSize) }).toEqual({ name: item.name, onRamp: true });
   });
 });

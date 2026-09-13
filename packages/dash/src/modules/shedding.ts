@@ -70,7 +70,7 @@ export const SHEDDING: Record<string, Shedding> = {
   lapTimes: fields({
     wide: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
     grid: ['last', 'sessionBest', 'yourBest', 'delta'],
-    tallNarrow: ['last', 'sessionBest'],
+    tallNarrow: ['last', 'sessionBest', 'yourBest', 'delta'],
     tall: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
   }),
   // One value and a bar it is drawn against; there is nothing secondary to lose. The catalogue

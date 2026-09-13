@@ -10,7 +10,7 @@
 import type { Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { moduleMeta, type ModuleMeta } from '../contract.ts';
-import { drawFieldBlock, fieldBlockHeight, wrapFields, type FieldSpec, type FieldValue } from '../second/field.ts';
+import { drawFieldBlock, fieldBlockHeight, fieldWidth, fieldsTail, growthCeiling, leadSize, raggedness, scaleFields, wrapFields, type FieldSpec, type FieldValue } from '../second/field.ts';
 import { densityOf } from '../second/density.ts';
 import { fixedRow, type StackRow } from '../second/layout.ts';
 import type { Density } from '../second/density.ts';
@@ -84,10 +84,33 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, gap?:
   const lineGap = Math.round(densityOf(ctx.density).gapY / 2);
   const kept = keptAt(specs, ctx.page, shapeIn(ctx));
   if (kept.length === 0) return fixedRow(0, () => []);
-  const lines = wrapFields(kept, ctx.frame.width, ctx.density, gap);
-  return fixedRow(fieldBlockHeight(lines, ctx.density, lineGap), (bottom) =>
-    drawFieldBlock(lines, ctx.frame.left, bottom, ctx.frame.width, ctx.density, { gap, lineGap }),
-  );
+  const rowOf = (at: readonly FieldSpec[], evenness: number): StackRow => {
+    const lines = wrapFields(at, ctx.frame.width, ctx.density, gap);
+    return {
+      height: fieldBlockHeight(lines, ctx.density, lineGap),
+      draw: (bottom) => drawFieldBlock(lines, ctx.frame.left, bottom, ctx.frame.width, ctx.density, { gap, lineGap }),
+      fill: {
+        ceiling: growthCeiling(at, ctx.density),
+        lead: leadSize(at),
+        tail: fieldsTail(at),
+        at: (factor) => {
+          const grown = scaleFields(kept, factor);
+          // A field wider than the whole box is where growing stops. `wrapFields` would give it a
+          // line of its own and `fieldRowFitted` would draw it from the left edge and off the right
+          // one, which is the clip this whole file exists to avoid.
+          if (grown.some((spec) => fieldWidth(spec, ctx.density) > ctx.frame.width)) return undefined;
+          // And a rank may not grow itself into a worse shape than it started in. Growing may turn
+          // two lines of two and one into three of one, which is the narrow zone stacking itself
+          // and is the point; it may not turn one line of three into two and one, which is the
+          // companion's lap times and looks like a bug.
+          if (raggedness(wrapFields(grown, ctx.frame.width, ctx.density, gap)) > evenness) return undefined;
+          return rowOf(grown, evenness);
+        },
+      },
+    };
+  };
+
+  return rowOf(kept, raggedness(wrapFields(kept, ctx.frame.width, ctx.density, gap)));
 }
 
 /**
