@@ -25,8 +25,17 @@ const VENV_PYTHON = `${WINVM_DIR}/mcp/.venv/bin/python`;
 const MENU = { x: 100, dashStudio: 248 } as const;
 /** Where things in the centred content column sit, as a fraction of the screen width. */
 const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
-/** The first dashboard row, and the step between rows, in pixels of a 100% DPI guest. */
-const LIST = { firstRow: 336, rowHeight: 84, quickRunOffset: 86 } as const;
+/**
+ * The first dashboard row, and the step between rows, in pixels of a 100% DPI guest.
+ *
+ * `lastUsedBand` is the second first row. Dash Studio draws a "Last used" strip above the list
+ * holding the dashboards recently opened, and it appears only when one of them matches what is in
+ * the search box, so the list starts 221 px lower in some searches and not others. It went
+ * unnoticed for as long as every search was a package's full name, which no other dashboard
+ * matches; the face is now called plainly "openDash", every other package name begins with it, and
+ * the band turned up.
+ */
+const LIST = { firstRow: 336, lastUsedBand: 221, rowHeight: 84, quickRunOffset: 86 } as const;
 /**
  * SimHub 9.12.6 offers prebuilt track layouts at the top of the Dash Studio page, and the offer
  * pushes the dashboard list sixty-one pixels down. It is dismissed before anything is measured from
@@ -368,9 +377,14 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
 
   const searchX = Math.round(size.width * CONTENT.searchX);
   const rowX = Math.round(size.width * CONTENT.rowX);
-  const rowY = LIST.firstRow + (opts.index ?? 0) * LIST.rowHeight;
+  const row = opts.index ?? 0;
 
-  for (const attempt of [1, 2]) {
+  // Whether the "Last used" band is there cannot be read off the screen from here, so both places
+  // the first row can be are tried. The plain one first: it is the one that is right when the
+  // search names a single package, which is every call but the face's.
+  const offsets = [0, LIST.lastUsedBand];
+  for (const [attempt, bandOffset] of offsets.map((o, i) => [i + 1, o] as const)) {
+    const rowY = LIST.firstRow + bandOffset + row * LIST.rowHeight;
     maximiseSimHub(host);
     sleep(2);
     click(host, MENU.x, MENU.dashStudio);
@@ -394,8 +408,16 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
     sleep(3);
     click(host, rowX + 49, rowY + LIST.quickRunOffset, HOVER_SECONDS);
     sleep(14);
-    if (openDashboards(host).includes(opts.name)) {
+    const open = openDashboards(host);
+    if (open.includes(opts.name)) {
       return { ok: true, code: 0, stdout: `opened ${opts.name}${attempt > 1 ? ` (on attempt ${attempt})` : ''}`, stderr: '' };
+    }
+    // A guess at the wrong offset lands on another row and opens the wrong dashboard. Close what
+    // this opened before guessing again, so a failure leaves the rig as it found it.
+    const strays = open.filter((n) => !already.includes(n));
+    if (strays.length > 0) {
+      closeDashboards(host);
+      sleep(2);
     }
   }
 

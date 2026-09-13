@@ -2,6 +2,7 @@
 // extract, find <folder>/<folder>.djson, replace DashTemplates/<folder>, copy missing fonts to DashFonts.
 // Framework-only IO with an injected log, so that the tests exercise it on Linux against a fake SimHub root.
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -17,6 +18,9 @@ namespace OpenDashPlugin
         public const string DashExtension = ".djson";
         public const string MetadataExtension = ".djson.metadata";
         public const string BackupSuffix = "_backup.zip";
+
+        /// <summary>Prefix of the copy kept when a folder somebody edited is replaced; never reclaimed.</summary>
+        public const string EditedSuffix = "_yours_";
 
         public static string InstalledFolder(string simHubRoot, string folderName)
         {
@@ -76,12 +80,16 @@ namespace OpenDashPlugin
 
         /// <summary>Extracts the package into DashTemplates, replacing an existing folder (kept as <folder>_backup.zip),
         /// and copies the package fonts that DashFonts does not have yet. Throws on failure; the caller logs and reports.</summary>
-        public static InstallResult Install(Stream package, string simHubRoot, IInstallLog log)
+        /// <param name="holdsAuthoredWork">
+        /// True when the folder being replaced is one somebody has edited, so the copy set aside must outlive the
+        /// next install rather than being reclaimed by it.
+        /// </param>
+        public static InstallResult Install(Stream package, string simHubRoot, IInstallLog log, bool holdsAuthoredWork = false)
         {
             log = log ?? NullInstallLog.Instance;
             var templates = Path.Combine(simHubRoot, DashTemplates);
             Directory.CreateDirectory(templates);
-            var staging = Path.Combine(templates, "_openDash_staging_" + Guid.NewGuid().ToString("N"));
+            var staging = Path.Combine(templates, StagingPrefix + Guid.NewGuid().ToString("N"));
             try
             {
                 string folderName;
@@ -105,7 +113,15 @@ namespace OpenDashPlugin
 
                 if (Directory.Exists(target))
                 {
-                    result.BackupPath = Backup(target, Path.Combine(templates, folderName + BackupSuffix), log);
+                    // Where the copy goes decides whether it survives. The routine backup is reclaimed by the next
+                    // install of the same folder, which is the ordinary one-deep undo. Work somebody authored is not
+                    // ordinary: it is kept under a name no later install can claim, because the consent to replace
+                    // it was given on the promise that a copy is kept, and a promise the next upgrade quietly breaks
+                    // is worse than no promise.
+                    var backupPath = holdsAuthoredWork
+                        ? Path.Combine(templates, folderName + EditedSuffix + Stamp() + ".zip")
+                        : Path.Combine(templates, folderName + BackupSuffix);
+                    result.BackupPath = Backup(target, backupPath, log);
                     DeleteDirectory(target);
                 }
                 Directory.Move(extracted, target);
@@ -113,6 +129,110 @@ namespace OpenDashPlugin
 
                 result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
                 return result;
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(staging)) Directory.Delete(staging, true);
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("Could not remove the staging folder " + staging + ": " + ex.Message);
+                }
+            }
+        }
+
+        /// <summary>Puts back the copy Install set aside, and reports whether there was one to put back.</summary>
+        /// <remarks>
+        /// Install writes <folder>_backup.zip before it replaces a folder, and until this existed nothing read it,
+        /// so "the previous package survives" was true and "it can be put back" was not. The backup stores entries
+        /// relative to the folder rather than under it, which is what ZipFile.CreateFromDirectory writes and the
+        /// opposite of a .simhubdash, so it extracts straight into the target.
+        ///
+        /// The folder being restored over is not backed up in its turn. A restore is the undo, and an undo that
+        /// leaves its own thing to undo is a worse answer than one that does not.
+        /// </remarks>
+        /// <summary>Prefix of the folder an install extracts into before moving it into place.</summary>
+        public const string StagingPrefix = "_OpenDash_staging_";
+
+        /// <summary>
+        /// Removes staging folders an earlier install did not clean up, and reports how many.
+        /// </summary>
+        /// <remarks>
+        /// Install extracts into DashTemplates/_OpenDash_staging_&lt;guid&gt; and removes it in a finally. That finally
+        /// does not run when the process exits, because a thread-pool thread is a background thread the CLR
+        /// terminates without unwinding, so every update abandoned by a SimHub that closed mid-install leaves a
+        /// complete extracted dashboard behind. They accumulate, they are invisible, and nothing else would ever
+        /// remove them. A folder with this prefix is OpenDash's own working space and is never a user's dashboard.
+        /// </remarks>
+        public static int RemoveOrphanedStaging(string simHubRoot, IInstallLog log)
+        {
+            log = log ?? NullInstallLog.Instance;
+            var templates = Path.Combine(simHubRoot ?? string.Empty, DashTemplates);
+            if (!Directory.Exists(templates)) return 0;
+            var removed = 0;
+            foreach (var folder in Directory.GetDirectories(templates, StagingPrefix + "*"))
+            {
+                try
+                {
+                    Directory.Delete(folder, true);
+                    removed++;
+                    log.Info("Removed a staging folder an interrupted install left behind: " + Path.GetFileName(folder));
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("Could not remove " + folder + ": " + ex.Message);
+                }
+            }
+            return removed;
+        }
+
+        /// <summary>
+        /// Every copy of this folder that could be put back, newest first: the copies kept when somebody's edited
+        /// work was replaced, and then the ordinary one-deep backup.
+        /// </summary>
+        public static IReadOnlyList<string> KeptCopies(string simHubRoot, string folderName)
+        {
+            var templates = Path.Combine(simHubRoot, DashTemplates);
+            if (string.IsNullOrEmpty(folderName) || !Directory.Exists(templates)) return new string[0];
+            var kept = Directory
+                .GetFiles(templates, folderName + EditedSuffix + "*.zip")
+                .OrderByDescending(path => path, StringComparer.Ordinal)
+                .ToList();
+            var ordinary = Path.Combine(templates, folderName + BackupSuffix);
+            if (File.Exists(ordinary)) kept.Add(ordinary);
+            return kept;
+        }
+
+        /// <param name="from">Which copy to put back; the newest kept one when omitted.</param>
+        public static bool Restore(string simHubRoot, string folderName, IInstallLog log, string from = null)
+        {
+            log = log ?? NullInstallLog.Instance;
+            var templates = Path.Combine(simHubRoot, DashTemplates);
+            var backupPath = from ?? KeptCopies(simHubRoot, folderName).FirstOrDefault() ?? Path.Combine(templates, folderName + BackupSuffix);
+            if (!File.Exists(backupPath))
+            {
+                log.Warn("No previous copy of " + folderName + " was kept, so there is nothing to put back.");
+                return false;
+            }
+
+            var target = Path.Combine(templates, folderName);
+            var staging = Path.Combine(templates, "_OpenDash_restore_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                using (var zip = ZipFile.OpenRead(backupPath))
+                {
+                    ExtractSafely(zip, staging);
+                }
+                if (!File.Exists(Path.Combine(staging, folderName + DashExtension)))
+                {
+                    throw new InvalidDataException("The kept copy of " + folderName + " has no " + folderName + DashExtension + ".");
+                }
+                if (Directory.Exists(target)) DeleteDirectory(target);
+                Directory.Move(staging, target);
+                log.Info("Put back the previous copy of " + folderName + " from " + backupPath);
+                return true;
             }
             finally
             {
@@ -158,6 +278,15 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// Sets the existing folder aside. Throws when it cannot, which stops the install.
+        /// </summary>
+        /// <remarks>
+        /// It used to warn and return null, and the caller deleted the folder regardless, so the one case the backup
+        /// exists for, a disk that is full or a file that is locked, was also the case where it silently did nothing
+        /// and the dashboard went anyway. Failing here leaves the installed dashboard where it is, which is the whole
+        /// point of taking a copy first.
+        /// </remarks>
         private static string Backup(string folder, string backupPath, IInstallLog log)
         {
             try
@@ -169,10 +298,13 @@ namespace OpenDashPlugin
             }
             catch (Exception ex)
             {
-                log.Warn("Could not back up " + folder + ": " + ex.Message);
-                return null;
+                log.Error("Could not set aside the copy of " + folder + ", so it was left as it is: " + ex.Message);
+                throw new IOException("Could not set aside the existing " + Path.GetFileName(folder) + ": " + ex.Message, ex);
             }
         }
+
+        /// <summary>A stamp that sorts, so a person can tell which copy is which without opening them.</summary>
+        private static string Stamp() => DateTime.Now.ToString("yyyyMMdd-HHmmss");
 
         /// <summary>Deletes recursively, retrying once: SimHub may still hold a file of a dashboard it just released.</summary>
         private static void DeleteDirectory(string folder)

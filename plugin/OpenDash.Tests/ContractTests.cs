@@ -1,5 +1,6 @@
 // ContractTests.cs: the card catalogue and the property names, and their agreement with contract.ts when present.
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -63,8 +64,8 @@ namespace OpenDashPlugin.Tests
             // Four settings, twelve slots, the zone face (four pages, four masks, four starts, four
             // bar fields and the glance), twenty-one companion modules, four pit wall zones, the
             // wide zone and the URL.
-            const int zoneFace = 4 + 4 + 4 + 4 + 1;
-            Assert.Equal(4 + 12 + zoneFace + 21 + 4 + 2, names.Count);
+            const int perFace = 4 + 4 + 4 + 4 + 1;
+            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -73,17 +74,47 @@ namespace OpenDashPlugin.Tests
 
             // The zone face, declared beside the slots rather than instead of them: ten faces still
             // read Slot01 to Slot12, and README publishes them as properties an LED profile may read.
-            Assert.Equal(new[] { "ZoneA", "ZoneB", "ZoneC", "ZoneD" }, names.Skip(16).Take(4));
-            Assert.Equal(new[] { "ZoneAPages", "ZoneBPages", "ZoneCPages", "ZoneDPages" }, names.Skip(20).Take(4));
-            Assert.Equal(new[] { "ZoneAStart", "ZoneBStart", "ZoneCStart", "ZoneDStart" }, names.Skip(24).Take(4));
-            Assert.Equal(new[] { "BarLeft1", "BarLeft2", "BarRight1", "BarRight2" }, names.Skip(28).Take(4));
-            Assert.Equal("QuickGlance", names[32]);
+            // The zone face's groups follow, one per face that ships, each naming its own screen so
+            // that two faces on a rig are configured apart.
+            var p = Contract.FacePrefix(Contract.ReferenceFace);
+            Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(16).Take(4));
+            Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(20).Take(4));
+            Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(24).Take(4));
+            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(28).Take(4));
+            Assert.Equal(p + "QuickGlance", names[32]);
+            // And no name without a face, which is the promise: a bare ZoneA would be one screen's
+            // settings silently shared with every other.
+            Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
 
+            var afterFaces = 16 + Contract.FaceSizes.Count * perFace;
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
-            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(33).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(54));
+            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(afterFaces + 21));
             Assert.Equal("OpenDash", Contract.Prefix);
+        }
+
+        [Fact]
+        public void Every_property_belongs_to_one_screen_or_to_every_screen()
+        {
+            // The rule the build enforces over a package is a partition of the contract: a name is one
+            // screen's or it is shared by all of them, and never both. Without that, attaching a rig's
+            // properties would either drop a name no screen claims or attach one twice.
+            var all = Contract.PropertyNames().ToList();
+            var owned = Contract.ScreenPrefixes().SelectMany(Contract.ScreenPropertyNames).ToList();
+            Assert.Equal(owned.Count, owned.Distinct().Count());
+            Assert.Empty(owned.Except(all));
+            Assert.Equal(Contract.SharedPropertyNames(), all.Except(owned));
+
+            // The web view address is the pit wall's although its name carries no prefix: it was named
+            // before the idiom, and no other screen has a browser page to point anywhere.
+            Assert.Contains(Contract.WebViewUrl, Contract.ScreenPropertyNames(Contract.PitWallPrefix));
+            Assert.Equal(Modules.Count, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
+            Assert.Equal(Contract.FacePropertyNames(Contract.ReferenceFace), Contract.ScreenPropertyNames(Contract.FacePrefix(Contract.ReferenceFace)));
+
+            Assert.True(Contract.IsKnownScreen(Contract.FacePrefix(Contract.ReferenceFace)));
+            Assert.False(Contract.IsKnownScreen("Face1x1"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ScreenPropertyNames("Face1x1").ToList());
         }
 
         [Fact]
@@ -273,14 +304,92 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void Zone_property_names_refuse_a_letter_that_is_not_a_zone()
+        public void Zone_property_names_carry_their_face_and_refuse_a_letter_that_is_not_a_zone()
         {
-            Assert.Equal("ZoneB", Contract.ZonePageProperty("B"));
-            Assert.Equal("ZoneBPages", Contract.ZoneMaskProperty("B"));
-            Assert.Equal("ZoneBStart", Contract.ZoneStartProperty("B"));
-            Assert.Equal("BarRight2", Contract.BarFieldProperty("Right2"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty("E"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty("Middle"));
+            var face = Contract.ReferenceFace;
+            Assert.Equal("Face1920x480ZoneB", Contract.ZonePageProperty(face, "B"));
+            Assert.Equal("Face1920x480ZoneBPages", Contract.ZoneMaskProperty(face, "B"));
+            Assert.Equal("Face1920x480ZoneBStart", Contract.ZoneStartProperty(face, "B"));
+            Assert.Equal("Face1920x480BarRight2", Contract.BarFieldProperty(face, "Right2"));
+            Assert.Equal("Face1920x480QuickGlance", Contract.QuickGlanceProperty(face));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty(face, "E"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty(face, "Middle"));
+        }
+
+        [Fact]
+        public void Every_face_has_its_own_group_and_no_two_faces_share_a_property()
+        {
+            var all = new List<string>(Contract.PropertyNames());
+            Assert.Equal(all.Count, new HashSet<string>(all, StringComparer.Ordinal).Count);
+            foreach (var face in Contract.FaceSizes)
+            {
+                foreach (var name in Contract.FacePropertyNames(face))
+                {
+                    Assert.Contains(name, all);
+                    Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
+                }
+            }
+            // Seventeen each: four zones times page, mask and start, four bar fields, and the glance.
+            Assert.Equal(17, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+        }
+
+        [Fact]
+        public void A_face_prefix_round_trips_and_an_unknown_one_is_refused()
+        {
+            foreach (var face in Contract.FaceSizes)
+            {
+                Assert.Equal(face.Width, Contract.FaceForPrefix(Contract.FacePrefix(face)).Width);
+                Assert.Equal(face.Height, Contract.FaceForPrefix(Contract.FacePrefix(face)).Height);
+                Assert.True(Contract.IsKnownFacePrefix(Contract.FacePrefix(face)));
+            }
+            Assert.False(Contract.IsKnownFacePrefix("Face1x1"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.FaceForPrefix("Face1x1"));
+        }
+
+        [Fact]
+        public void The_face_sizes_are_the_ones_the_generator_ships()
+        {
+            // FACE_SIZES in contract.ts is the list the build walks; a face there and not here would
+            // ship with no properties at all, and the reverse would attach properties nothing reads.
+            var path = RepoPaths.ContractTs();
+            if (!File.Exists(path)) return; // the dash package is built separately; nothing to compare yet
+            var source = File.ReadAllText(path);
+            // Captured to the closing "];" on its own line rather than to the first "]", because each
+            // entry now carries a parts array of its own.
+            var match = Regex.Match(source, @"FACE_SIZES[^=]*=\s*\[(?<items>.*?)\r?\n\];", RegexOptions.Singleline);
+            Assert.True(match.Success, "FACE_SIZES not found in contract.ts");
+            var sizes = Regex.Matches(
+                match.Groups["items"].Value,
+                @"width:\s*(?<w>\d+),\s*height:\s*(?<h>\d+),\s*body:\s*'(?<body>row|column)',\s*parts:\s*\[(?<parts>[^\]]*)\],\s*hasBar:\s*(?<bar>true|false),\s*barFieldsPerEnd:\s*(?<per>\d+)");
+            Assert.Equal(Contract.FaceSizes.Count, sizes.Count);
+            for (var i = 0; i < sizes.Count; i++)
+            {
+                var face = Contract.FaceSizes[i];
+                Assert.Equal(face.Width, int.Parse(sizes[i].Groups["w"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.Height, int.Parse(sizes[i].Groups["h"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.Body == Contract.FaceBody.Column ? "column" : "row", sizes[i].Groups["body"].Value);
+                Assert.Equal(face.HasBar, sizes[i].Groups["bar"].Value == "true");
+                Assert.Equal(face.BarFieldsPerEnd, int.Parse(sizes[i].Groups["per"].Value, CultureInfo.InvariantCulture));
+                var parts = sizes[i].Groups["parts"].Value.Split(',').Select(v => int.Parse(v.Trim(), CultureInfo.InvariantCulture)).ToArray();
+                Assert.Equal(face.Parts, parts);
+            }
+            // The nano is the one face with no bar, and the portrait the one with a stacked body and a
+            // single field per end. Stated here because both are what the panel has to draw differently.
+            Assert.Single(Contract.FaceSizes.Where(f => !f.HasBar));
+            Assert.Single(Contract.FaceSizes.Where(f => f.Body == Contract.FaceBody.Column));
+            Assert.Single(Contract.FaceSizes.Where(f => f.BarFieldsPerEnd == 1));
+        }
+
+        [Fact]
+        public void Every_action_names_the_face_it_moves()
+        {
+            var actions = new List<string>(Contract.ActionNames());
+            Assert.Equal(Contract.FaceSizes.Count * 5, actions.Count);
+            Assert.Equal(actions.Count, new HashSet<string>(actions, StringComparer.Ordinal).Count);
+            Assert.Contains("Face1920x480CycleZoneA", actions);
+            Assert.Contains("Face600x686HoldQuickGlance", actions);
+            // Nothing unprefixed: one action moving every face is what the prefix exists to prevent.
+            Assert.DoesNotContain(actions, a => a.StartsWith("CycleZone", StringComparison.Ordinal));
         }
 
         /// <summary>The `id` fields of the page list that follows the given declaration.</summary>

@@ -36,6 +36,120 @@ namespace OpenDashPlugin.Tests
 
         private string Templates(string folder) => Path.Combine(root, "DashTemplates", folder);
 
+        /// <summary>
+        /// The promise made when somebody consents to replacing their own work is that a copy is kept. A copy the
+        /// next routine install reclaims is not kept, so an edited folder's copy goes somewhere no install claims.
+        /// </summary>
+        [Fact]
+        public void A_copy_of_somebody_elses_work_outlives_the_next_install()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0", ("openDash/mine.djson", "my work")), root, null);
+            PackageExtractor.Install(Package("openDash", "0.2.0"), root, null, holdsAuthoredWork: true);
+
+            var kept = PackageExtractor.KeptCopies(root, "openDash");
+            Assert.NotEmpty(kept);
+            Assert.Contains(PackageExtractor.EditedSuffix, kept[0]);
+
+            // The ordinary upgrade that follows reclaims only the ordinary backup.
+            PackageExtractor.Install(Package("openDash", "0.3.0"), root, null);
+            Assert.Contains(PackageExtractor.KeptCopies(root, "openDash"), path => path.Contains(PackageExtractor.EditedSuffix));
+
+            Assert.True(PackageExtractor.Restore(root, "openDash", null, kept[0]));
+            Assert.Equal("my work", File.ReadAllText(Path.Combine(Templates("openDash"), "mine.djson")));
+        }
+
+        /// <summary>
+        /// The one case a backup exists for, a disk that is full or a file that is locked, used to be the one case
+        /// where it silently did nothing and the dashboard was deleted anyway.
+        /// </summary>
+        [Fact]
+        public void A_copy_that_cannot_be_taken_stops_the_install_rather_than_proceeding()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0"), root, null);
+            var backup = Path.Combine(root, "DashTemplates", "openDash" + PackageExtractor.BackupSuffix);
+
+            // A directory where the zip must go: creating the file fails, as a full disk or a lock would.
+            Directory.CreateDirectory(backup);
+            Directory.CreateDirectory(Path.Combine(backup, "in the way"));
+
+            Assert.Throws<IOException>(() => PackageExtractor.Install(Package("openDash", "0.2.0"), root, null));
+            // The installed dashboard is still there and still the old one, which is the point.
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+        }
+
+        /// <summary>
+        /// A staging folder is a complete extracted dashboard sitting in DashTemplates. Install removes its own in a
+        /// finally, and that finally does not run when the process exits, so every update abandoned by a SimHub that
+        /// closed mid-install left one behind and nothing ever removed it.
+        /// </summary>
+        [Fact]
+        public void Staging_folders_an_interrupted_install_left_behind_are_removed()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0"), root, null);
+            var templates = Path.Combine(root, "DashTemplates");
+
+            var orphan = Path.Combine(templates, PackageExtractor.StagingPrefix + "deadbeef");
+            Directory.CreateDirectory(Path.Combine(orphan, "openDash"));
+            File.WriteAllText(Path.Combine(orphan, "openDash", "openDash.djson"), "{}");
+            Directory.CreateDirectory(Path.Combine(templates, PackageExtractor.StagingPrefix + "cafe"));
+
+            Assert.Equal(2, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.Empty(Directory.GetDirectories(templates, PackageExtractor.StagingPrefix + "*"));
+
+            // The dashboards themselves are not staging folders and are left alone.
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+        }
+
+        [Fact]
+        public void Removing_staging_folders_is_safe_when_there_are_none_and_when_there_is_no_root()
+        {
+            Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(Path.Combine(root, "absent"), null));
+            Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(null, null));
+        }
+
+        [Fact]
+        public void Restore_puts_back_the_copy_Install_set_aside()
+        {
+            var first = PackageExtractor.Install(Package("openDash 480 round", "0.1.0", ("openDash 480 round/extra.txt", "one")), root, null);
+            Assert.Null(first.BackupPath);
+
+            var second = PackageExtractor.Install(Package("openDash 480 round", "0.2.0"), root, null);
+            Assert.NotNull(second.BackupPath);
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash 480 round"));
+            Assert.False(File.Exists(Path.Combine(Templates("openDash 480 round"), "extra.txt")));
+
+            Assert.True(PackageExtractor.Restore(root, "openDash 480 round", null));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash 480 round"));
+            Assert.Equal("one", File.ReadAllText(Path.Combine(Templates("openDash 480 round"), "extra.txt")));
+        }
+
+        [Fact]
+        public void Restore_reports_when_there_is_nothing_to_put_back()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0"), root, null);
+            var log = new ListLog();
+            Assert.False(PackageExtractor.Restore(root, "openDash", log));
+            // Still installed: a restore with no backup changes nothing rather than removing the folder.
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Contains(log.Lines, line => line.StartsWith("warn: No previous copy of openDash"));
+        }
+
+        [Fact]
+        public void Restore_leaves_the_installed_copy_alone_when_the_backup_is_not_a_package()
+        {
+            PackageExtractor.Install(Package("openDash", "0.1.0"), root, null);
+            PackageExtractor.Install(Package("openDash", "0.2.0"), root, null);
+            var backup = Path.Combine(root, "DashTemplates", "openDash" + PackageExtractor.BackupSuffix);
+            File.Delete(backup);
+            using (var zip = ZipFile.Open(backup, ZipArchiveMode.Create))
+            {
+                Add(zip, "not-a-dashboard.txt", "nothing useful");
+            }
+            Assert.Throws<InvalidDataException>(() => PackageExtractor.Restore(root, "openDash", null));
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+        }
+
         [Fact]
         public void ReadPackageVersion_reads_folder_and_version_without_extracting()
         {
@@ -58,7 +172,17 @@ namespace OpenDashPlugin.Tests
             using (var package = File.OpenRead(RepoPaths.BuildPackage()))
             {
                 string folder;
-                Assert.Equal(RepoPaths.Version(), PackageExtractor.ReadPackageVersion(package, out folder));
+                var built = PackageExtractor.ReadPackageVersion(package, out folder);
+                var expected = RepoPaths.Version();
+                // Checking out another branch rewrites VERSION and leaves build/ untouched, so a mismatch here is
+                // far more often a package older than the checkout than a regression in whatever writes the version.
+                // A bare Assert.Equal names neither the cause nor the remedy, and the misreading costs a diagnosis
+                // every time.
+                Assert.True(expected == built,
+                    "build/openDash.simhubdash carries version " + built + ", whereas VERSION says " + expected +
+                    ". That package is build output which a branch switch does not refresh, so the likely cause is " +
+                    "a stale build rather than a regression: run `bun run build` and try again. Should the two " +
+                    "still disagree after a fresh build, then the version written into the package is genuinely wrong.");
                 Assert.Equal("openDash", folder);
             }
         }

@@ -14,7 +14,7 @@
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withBindings } from '../bind.ts';
-import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot } from '../contract.ts';
+import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot, type FaceSize } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
 import { cells, monoWidth } from '../design/metrics.ts';
@@ -156,6 +156,8 @@ function fieldWidth(spec: BarFieldSpec, valueFs: number, labelFs: number, smallF
 export interface BarOptions {
   /** Two fields per end on a wide face, one in portrait. */
   fieldsPerEnd: 1 | 2;
+  /** The face this bar is drawn on, which is what its settings are named after. */
+  face: FaceSize;
 }
 
 /**
@@ -199,7 +201,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         ? frame.left + padX + withinEnd * (widest + d.gapX)
         : frame.left + frame.width - padX - endWidth + withinEnd * (widest + d.gapX);
     for (const spec of BAR_FIELD_SPECS) {
-      const visible = eq(zoneSetting.barField(slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
+      const visible = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
       const name = `${prefix}${slot}.${spec.id}`;
       items.push({
         ...label(`${name}.label`, spec.label.toUpperCase(), x, top, widest, { size: labelFs }),
