@@ -21,6 +21,7 @@ the thing that is wrong when the two disagree.
 | 0011 | [How far personalisation reaches](0011-personalisation.md) | Colour is a runtime setting, geometry is a build input, and nothing regenerates a package locally |
 | 0012 | [Update checks, and what leaves the user's machine](0012-update-checks.md) | openDash asks GitHub what the newest release is, sends nothing about the user, and never installs without being told |
 | 0013 | [openDash lights hardware, and the flag box is where it starts](0013-lighting-hardware.md) | An 8x8 matrix profile is build output like a package, but the user imports it rather than the plugin installing it |
+| 0014 | [The shift model is the car's own](0014-the-shift-model.md) | iRacing publishes the car's shift-light RPMs and SimHub ignores them; one definition drives the bar, the arc, the flag box and the strip. Amends 0004 |
 
 ## Reserved
 
@@ -28,11 +29,19 @@ Three tickets claimed 0006 at once, which is how these came to be assigned in on
 is taken when the ticket is opened, not when the record is written, so that two records cannot
 collide.
 
+It happened again on 2026-09-13, and worse: four tickets, two numbers. XOR-142 and XOR-225 both
+claimed 0013, and XOR-146 and XOR-230 both claimed 0014, all four opened within an afternoon of
+each other. The two lighting records keep the numbers, because they were the pair actually being
+written when the collision was found; the two Car themes records move to 0015 and 0016. Any ticket
+body still naming the old number is amended rather than rewritten, which is why a reader may find
+"ADR 0014" in XOR-146 and XOR-147 meaning the record now numbered 0016.
+
 | | | |
 |---|---|---|
 | 0007 | The second screens, written down after the fact | XOR-67 |
 | 0010 | Where alert priority is decided | XOR-56 |
-| 0014 | The shift model is the sim's own, not SimHub's | XOR-230 |
+| 0015 | What a car theme is, and the scope line it has to move | XOR-142 |
+| 0016 | How several hundred themed packages reach the user | XOR-146 |
 
 ## Writing one
 

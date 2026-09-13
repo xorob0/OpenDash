@@ -5,12 +5,19 @@ The plugin embeds every `*.simhubdash` found in this folder and installs it into
 committed (`plugin/OpenDash/Resources/*.simhubdash` is gitignored) and CI copies them here from
 the dash job before building the plugin.
 
-`*.ledsprofile` is embedded the same way but is **not installed**: the plugin writes it into
-`SimHub/OpenDash/` and stops there, and the user imports it themselves. SimHub keeps matrix
-profiles inside a settings file it rewrites on every change, so merging into that file would lose
-the user's other profiles, and painting hardware somebody owns is not something a dashboard should
-do unasked. [ADR 0013](../../../docs/decisions/0013-lighting-hardware.md) is the reasoning;
+`*.ledsprofile` is embedded the same way but is **not installed**: the plugin writes the flag box
+profile into `SimHub/OpenDash/` and stops there, and the user imports it themselves. SimHub keeps
+matrix profiles inside a settings file it rewrites on every change, so merging into that file would
+lose the user's other profiles, and painting hardware somebody owns is not something a dashboard
+should do unasked. [ADR 0013](../../../docs/decisions/0013-lighting-hardware.md) is the reasoning;
 `FlagBoxProfile.cs` is the code.
+
+The extension is shared by SimHub's two lighting families, so most of the profiles here are not the
+flag box: one is the 8x8 matrix and the rest are the RPM strips, one per hardware shape. The flag
+box is picked out by its file name, `openDash Flag box.ledsprofile`, which is `FlagBoxProfile.FileName`
+in the plugin and `FLAG_BOX_PROFILE_NAME` in `packages/dash/src/leds/profile.ts`. Nothing may pick it
+out by sort order: `openDash 0-10-0.ledsprofile` sorts first, and taking that one would hand SimHub's
+matrix driver a ten-LED strip.
 
 `fonts/` is build output too, and for the same reason. The settings panel draws in the faces the
 dash face draws in, and the condensed ones are renamed as they leave the dash build, so embedding

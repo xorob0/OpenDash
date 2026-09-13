@@ -211,18 +211,18 @@ DriverInfo:
  DriverHeadPosZ: 0.507
  DriverCarIsElectric: 0
  DriverCarIdleRPM: 1500.000
- DriverCarRedLine: 9000.000
+ DriverCarRedLine: {{DriverCarRedLine}}
  DriverCarEngCylinderCount: 6
  DriverCarFuelKgPerLtr: 0.750
  DriverCarFuelMaxLtr: 100.000
  DriverCarMaxFuelPct: 1.000
- DriverCarGearNumForward: 6
+ DriverCarGearNumForward: {{DriverCarGearNumForward}}
  DriverCarGearNeutral: 1
  DriverCarGearReverse: 1
- DriverCarSLFirstRPM: 7800.000
- DriverCarSLShiftRPM: 8400.000
- DriverCarSLLastRPM: 8800.000
- DriverCarSLBlinkRPM: 9000.000
+ DriverCarSLFirstRPM: {{DriverCarSLFirstRPM}}
+ DriverCarSLShiftRPM: {{DriverCarSLShiftRPM}}
+ DriverCarSLLastRPM: {{DriverCarSLLastRPM}}
+ DriverCarSLBlinkRPM: {{DriverCarSLBlinkRPM}}
  DriverCarVersion: 2025.06.10.01
  DriverPitTrkPct: 0.985000
  DriverCarEstLapTime: 97.5000

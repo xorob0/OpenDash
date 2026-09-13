@@ -19,7 +19,7 @@ import {
   walkContainers,
   type MatrixContainer,
   type MatrixProfile,
-} from '../src/leds.ts';
+} from '../src/leds/matrix.ts';
 import type { Hex } from '../src/model.ts';
 
 const RED = '#FF0000';

@@ -102,7 +102,7 @@ namespace OpenDashPlugin
             SaveSettings();
         }
 
-        /// <summary>The lights, which no dashboard reads and the flag box profile does. A profile the user
+        /// <summary>The lights, which no dashboard reads and the lighting profiles do. A profile the user
         /// has not imported costs nothing here: a property nobody reads is one delegate.</summary>
         private void AttachLightsProperties()
         {
@@ -126,6 +126,11 @@ namespace OpenDashPlugin
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
             }
+            // The strips, last, in the order Contract.LightsPropertyNames() declares them. Every
+            // generated .ledsprofile reads exactly these two, so a strip with neither attached can only
+            // ever draw the defaults its isnull() carries.
+            this.AttachDelegate(Contract.LedCentre, () => Settings.LedCentre);
+            this.AttachDelegate(Contract.LedRpmStyle, () => Settings.LedRpmStyle);
         }
 
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>

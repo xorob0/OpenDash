@@ -1,7 +1,12 @@
 # ADR 0004: The rev bar is SimHub's shift-light model, and a plain RPM bar when shift lights are off
 
 **Date:** 2026-09-10
-**Status:** Accepted
+**Status:** Accepted, and amended by [ADR 0014](0014-the-shift-model.md). What this record says
+about SimHub's three properties is correct and its rendering is unchanged — but those properties
+turned out to be SimHub's *idea* of the car's shift lights, computed from its own per-car settings,
+rather than the car's. iRacing publishes the car's own and SimHub reads none of them. Since 0014
+this behaviour is the fallback, drawn for a car that publishes no ladder of its own, and the
+default is the car's.
 
 ## Context
 
@@ -45,3 +50,22 @@ is what `RevBar` falls back through. The two states above are unchanged and are 
 selects a second arrangement of the whole screen, with the well's room given back to the zones; on
 everything that has no such arrangement — the rev arc, the companion's speedo module — it falls back
 to the plain RPM bar rather than going dark. The plugin copy no longer says "the rev bar stays".
+
+**Amended again the same day (XOR-230).** [ADR 0014](0014-the-shift-model.md) made the shift model
+the car's own four RPMs, with the bands above as the fallback, and the count of layers moved with
+it: a rev surface now emits **three**, not two. The amendment above is still right about the thing
+it was about, and the two statements are easy to read as a contradiction, so they are reconciled
+here.
+
+`off` is **still not a layer**, for the reason given above: drawing nothing is not a layer. What
+changed is the other end. The `shift` state, which was one layer, is now **two** — `shiftLights`
+for a car that publishes its own ladder and `shiftLightsSimHub` for one that does not — because the
+choice between them is made per frame and the honest way to show a per-frame choice is two layers
+whose visibility is bound to it. `rpmBar` is the third, and is what `rpm` and `off` both fall to.
+So: three layers, two of which are the ladder and one the plain bar, and none of which is `off`.
+
+The rendering of the fallback layer is untouched: it is the segments this record describes, lit by
+the same three properties. One expression was tidied when the gear on the flag box came to ask the
+same question — the first segment of a band, which compared `progress * n > 0`, now compares
+`progress > 0`, which is the same test written the way anything with a single thing to colour has
+to ask it. The `.djson` diff is two lines per rev surface and the bar does not move.

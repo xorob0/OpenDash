@@ -12,6 +12,11 @@ import {
   CARD_CATALOGUE,
   cardMeta,
   declaredProperties,
+  ledProperties,
+  LED_CENTRES,
+  LED_CENTRE_SETTING,
+  LED_RPM_STYLES,
+  LED_RPM_STYLE_SETTING,
   flagBoxProperties,
   FLAG_BOX_MATRICES,
   PIT_WALL_DEFAULT_WIDE_ZONE_PAGE,
@@ -70,12 +75,19 @@ describe('settings', () => {
     // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
     // page, mask, start and the class filter -- plus the bar's ends and the glance.
     const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 1;
-    // The last term is the flag box, which is not a screen but whose settings are properties for
-    // the same reason: ADR 0003, and ADR 0013 for why the box is here at all. Eight global and
-    // five per matrix, the way every face carries its own group.
+    // The last two terms are the lights, which are not screens but whose settings are properties for
+    // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is eight
+    // global and six per matrix, the way every face carries its own group; the strips are the two
+    // that decide what a strip shows.
     expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 6);
+    expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle']);
     // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
-    expect(props).toHaveLength(4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length);
+    expect(props).toHaveLength(
+      4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length + ledProperties().length,
+    );
+    // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
+    // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
+    expect(props).toHaveLength(246);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -93,10 +105,11 @@ describe('settings', () => {
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance)/.test(p))).toEqual([]);
-    expect(props.slice(-(flagBoxProperties().length + 6), -flagBoxProperties().length)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
-    // The flag box comes last, after the screens, because it is the one artefact the plugin does
-    // not install; see ADR 0013.
-    expect(props.slice(-flagBoxProperties().length)).toEqual(flagBoxProperties());
+    const lights = flagBoxProperties().length + ledProperties().length;
+    expect(props.slice(-(lights + 6), -lights)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
+    // The lights come last, after the screens, because they are the artefacts the plugin does not
+    // install; see ADR 0013. The flag box first, then the strips.
+    expect(props.slice(-lights)).toEqual([...flagBoxProperties(), ...ledProperties()]);
   });
 
   test('every face that ships has a group, and every group is complete', () => {
@@ -122,9 +135,9 @@ describe('settings', () => {
 
     // What is left over is what a rig shares and what its lights read. The four modes and the
     // twelve slots mean the same thing on the wheel, on the rim and on the pit wall, so they carry
-    // no screen's name; the flag box's settings belong to no screen either, because a matrix is not
-    // one. Three parts of one partition rather than two parts and an exception.
-    const lights = flagBoxProperties();
+    // no screen's name; the lights' settings belong to no screen either, because neither a matrix
+    // nor a strip is one. Three parts of one partition rather than two parts and an exception.
+    const lights = [...flagBoxProperties(), ...ledProperties()];
     for (const name of lights) expect({ name, owned: owned.includes(name) }).toMatchObject({ owned: false });
     const shared = declared.filter((name) => !owned.includes(name) && !lights.includes(name));
     const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
@@ -181,7 +194,49 @@ describe('settings', () => {
 const pluginSource = (file: string): string => readFileSync(path.resolve(import.meta.dir, '../../../plugin/OpenDash', file), 'utf8');
 const csArray = (values: readonly string[]): string => `{ ${values.map((v) => `"${v}"`).join(', ')} }`;
 
+/** The pinned list, without its header. `declared-properties.txt` says what it is for. */
+const pinnedProperties = (): string[] =>
+  readFileSync(path.resolve(import.meta.dir, 'declared-properties.txt'), 'utf8')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'));
+
 describe('plugin mirror', () => {
+  test('the declared list is the pinned one, which the plugin is checked against too', () => {
+    // The gap this closes: each side built its own list and nothing compared them, so LedCentre and
+    // LedRpmStyle could be declared here, read by every generated .ledsprofile, attached by nothing,
+    // and leave both suites green. The pin is the third party the two are measured against;
+    // ContractTests.cs reads the same file. A name added on one side alone fails here or there.
+    //
+    // In order on this side, because the file is written in the order the properties are declared and
+    // a reader should be able to follow it. The C# check is by set: the two sides emit a face's
+    // twenty-one names in different orders -- contract.ts groups them by zone, Contract.cs by
+    // property across the zones -- which predates this test and is not settled by it.
+    expect(declaredProperties()).toEqual(pinnedProperties());
+    expect(new Set(pinnedProperties()).size).toBe(pinnedProperties().length);
+    // Named, so that the two the plugin never attached cannot go missing again in silence.
+    expect(pinnedProperties()).toContain('OpenDash.LedCentre');
+    expect(pinnedProperties()).toContain('OpenDash.LedRpmStyle');
+  });
+
+  test('Contract.cs declares the strips, with their value sets and their defaults', () => {
+    // The C# list itself is checked against the pin by ContractTests.cs, which can enumerate it; what
+    // is checked here is the half a regex can see, the same way the modes above are.
+    const source = pluginSource('Contract.cs');
+    for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING]) expect(source).toContain(`public const string ${name} = "${name}";`);
+    expect(source).toContain(`LedCentres = ${csArray(LED_CENTRES)};`);
+    expect(source).toContain(`LedRpmStyles = ${csArray(LED_RPM_STYLES)};`);
+    expect(source).toContain(`public const string DefaultLedCentre = "${DEFAULTS.LedCentre}";`);
+    expect(source).toContain(`public const string DefaultLedRpmStyle = "${DEFAULTS.LedRpmStyle}";`);
+    // Attached, and offered on the panel. A property the plugin declares and never attaches is a
+    // profile stuck on its isnull() default, which is exactly how these two shipped.
+    const attach = pluginSource('OpenDash.cs');
+    for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
+    const panel = pluginSource('SettingsControl.cs');
+    expect(panel).toContain('Contract.LedCentres');
+    expect(panel).toContain('Contract.LedRpmStyles');
+  });
+
   test('Cards.cs lists the catalogue: number, id, label and display name, in order', () => {
     const source = pluginSource('Cards.cs');
     const cards = [...source.matchAll(/new Card\((\d+), "([^"]*)", "([^"]*)", "([^"]*)", "[^"]*"\)/g)].map((m) => ({

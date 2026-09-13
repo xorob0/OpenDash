@@ -102,8 +102,10 @@ Dash Studio like any other.
 
 ## The dashboard
 
-The face is five parts: a fifteen segment rev bar with SimHub's per-car shift lights in a
-recessed well, a bar of settled values, a body of three zones, and a band across the foot. The rev
+The face is five parts: a fifteen segment rev bar with the car's own shift lights in a
+recessed well, a bar of settled values, a body of three zones, and a band across the foot. The bar
+lights at the RPMs the sim publishes for the car being driven, and falls back to SimHub's per-car
+bands for a car that publishes none. The rev
 bar can also show a plain RPM bar, or be switched off entirely, in which case the well goes with it:
 the bar rises into its room and the body grows by what it gained, while the band keeps its place at
 the foot.

@@ -19,11 +19,26 @@ export type RevBarMode = 'shift' | 'rpm' | 'off';
 export type PositionMode = 'overall' | 'class';
 export type DeltaReference = 'session' | 'alltime';
 export type SessionProgress = 'auto' | 'laps' | 'time';
+/**
+ * What the middle of an RGB strip shows. The sides carry brake in the default, which is what the
+ * hardware makers put there and what DNR puts on the same LEDs.
+ */
+export type LedCentre = 'rpm' | 'rpmOnly' | 'brake' | 'throttleBrake' | 'fuel';
+/**
+ * How the rev ladder fills the strip. It decides the *look*, never the *when*: the thresholds are
+ * the car's own either way (ADR 0014), and a style only chooses which LED takes which rung and
+ * what colour it is.
+ */
+export type LedRpmStyle = 'leftToRight' | 'meetInMiddle' | 'f1';
 
 /**
- * What the top of a rectangular face carries: SimHub's shift lights, a plain RPM bar, or nothing
+ * What the top of a rectangular face carries: the shift lights, a plain RPM bar, or nothing
  * at all. A mode rather than a second boolean, because the three are one decision -- what is at
  * the top of the face -- and two booleans would have a fourth state that means nothing.
+ *
+ * `shift` names the state and not the source. Which ladder lights it is the car's business rather
+ * than a setting: the car's own RPMs where it publishes them, SimHub's bands where it does not
+ * (ADR 0014). There is no fourth value for that and there should not be one.
  *
  * `ShiftLights` is not retired with it. It has shipped, it is one of the four names the plugin
  * attaches first, and README publishes it as a property an LED profile may read; XOR-119 is the
@@ -38,6 +53,8 @@ export const REV_BAR_SETTING = 'RevBar';
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
+export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'rpmOnly', 'brake', 'throttleBrake', 'fuel'];
+export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['leftToRight', 'meetInMiddle', 'f1'];
 
 export const DEFAULTS = {
   ShiftLights: true,
@@ -45,6 +62,8 @@ export const DEFAULTS = {
   PositionMode: 'overall' as PositionMode,
   DeltaReference: 'session' as DeltaReference,
   SessionProgress: 'auto' as SessionProgress,
+  LedCentre: 'rpm' as LedCentre,
+  LedRpmStyle: 'leftToRight' as LedRpmStyle,
 } as const;
 
 /** `Slot01` .. `Slot12` for a 1-based slot index. */
@@ -87,6 +106,17 @@ export function dashProperties(): string[] {
   return [...[...fixed, ...slots, REV_BAR_SETTING].map(propertyName), ...zoneProperties()];
 }
 
+/** The properties only a generated LED profile reads. ADR 0013. */
+export function ledProperties(): string[] {
+  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING].map(propertyName);
+}
+
+/** The name of the setting choosing what the middle of a strip shows. */
+export const LED_CENTRE_SETTING = 'LedCentre';
+
+/** The name of the setting choosing how the rev ladder fills the strip. */
+export const LED_RPM_STYLE_SETTING = 'LedRpmStyle';
+
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
   const modules = MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
@@ -96,7 +126,9 @@ export function secondScreenProperties(): string[] {
 
 /** Every property the plugin exposes, in the order the plugin attaches them. */
 export function declaredProperties(): string[] {
-  return [...dashProperties(), ...secondScreenProperties(), ...flagBoxProperties()];
+  // The flag box's settings and the strips' are both here: they are one set of lights with two
+  // kinds of hardware behind them, and a profile of either kind reads from this one list.
+  return [...dashProperties(), ...secondScreenProperties(), ...flagBoxProperties(), ...ledProperties()];
 }
 
 function assertSlot(slot: number): void {
@@ -131,6 +163,10 @@ export const setting = {
   sessionProgress: (): Expr => isnull(prop(propertyName('SessionProgress')), str(DEFAULTS.SessionProgress)),
   /** `isnull([OpenDash.Slot0i], default card number)` for a 1-based slot. */
   slot: (slot: number): Expr => isnull(prop(propertyName(slotSettingName(slot))), num(defaultCardForSlot(slot))),
+  /** `isnull([OpenDash.LedCentre], 'rpm')` */
+  ledCentre: (): Expr => isnull(prop(propertyName(LED_CENTRE_SETTING)), str(DEFAULTS.LedCentre)),
+  /** `isnull([OpenDash.LedRpmStyle], 'leftToRight')` */
+  ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
 };
 
 

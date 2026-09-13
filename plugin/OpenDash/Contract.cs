@@ -47,13 +47,31 @@ namespace OpenDashPlugin
         public const string FlagBoxOilTemp = "FlagBoxOilTemp";
         public const string FlagBoxWaterTemp = "FlagBoxWaterTemp";
 
+        /// <summary>The RGB strips. Every generated .ledsprofile reads these two and nothing else of its
+        /// own, so they are the whole of what a driver can say about a strip: what its middle shows, and
+        /// how its rev ladder fills. Named Led* rather than Strip* because the family they configure is
+        /// the LED strip driver's, which is what SimHub calls it.
+        ///
+        /// Not per device, unlike the flag box's matrix groups. openDash generates one profile per strip
+        /// shape rather than per box, a driver selects the one that matches the hardware, and every
+        /// shape reads the same two names; a per-device group would be a group per LED count, which is
+        /// a number rather than a thing somebody owns.</summary>
+        public const string LedCentre = "LedCentre";
+        public const string LedRpmStyle = "LedRpmStyle";
+
         public const bool DefaultShiftLights = true;
 
         /// <summary>
-        /// What the top of a rectangular face carries: SimHub's shift lights, a plain RPM bar, or
-        /// nothing at all -- in which case the face is drawn in its second arrangement, with the
-        /// well's room given back to the zones. A mode rather than a second boolean, because the
-        /// three are one decision and two booleans would have a fourth state that means nothing.
+        /// What the top of a rectangular face carries: the shift lights, a plain RPM bar, or nothing
+        /// at all -- in which case the face is drawn in its second arrangement, with the well's room
+        /// given back to the zones. A mode rather than a second boolean, because the three are one
+        /// decision and two booleans would have a fourth state that means nothing.
+        ///
+        /// <para>"shift" names the state and not the source. Which ladder lights it is the car's
+        /// business rather than a setting: the car's own RPMs where it publishes them, SimHub's bands
+        /// where it does not (ADR 0014). There is no fourth value for that and there should not be
+        /// one. The other half of this comment is REV_BAR_MODES in packages/dash/src/contract.ts,
+        /// and the two are kept saying the same thing.</para>
         /// </summary>
         public static readonly string[] RevBarModes = { "shift", "rpm", "off" };
         public const string RevBarShift = "shift";
@@ -170,6 +188,20 @@ namespace OpenDashPlugin
         /// <summary>Off. A box that stays dark through a chequered flag is a surprise, and a surprise is
         /// a worse default than a busy one.</summary>
         public const bool DefaultFlagBoxCriticalOnly = false;
+
+        /// <summary>What the middle of a strip shows: the revs, the revs with the sides left dark, the
+        /// brake, throttle and brake from the middle outwards, or the fuel. Mirrors LED_CENTRES in
+        /// contract.ts.</summary>
+        public static readonly string[] LedCentres = { "rpm", "rpmOnly", "brake", "throttleBrake", "fuel" };
+
+        /// <summary>The revs, with brake on the sides. What the hardware makers put there.</summary>
+        public const string DefaultLedCentre = "rpm";
+
+        /// <summary>How the rev ladder fills the strip. It decides the look and never the when: the
+        /// thresholds are the car's own either way (ADR 0014). Mirrors LED_RPM_STYLES in contract.ts.</summary>
+        public static readonly string[] LedRpmStyles = { "leftToRight", "meetInMiddle", "f1" };
+
+        public const string DefaultLedRpmStyle = "leftToRight";
 
 
         // --- The zone face ---------------------------------------------------------------------
@@ -644,11 +676,20 @@ namespace OpenDashPlugin
 
         /// <summary>The lights, which belong to the rig rather than to any screen: brightness and night
         /// mode for every light openDash drives, then the flag box's own settings and one group per
-        /// matrix. They come after the screens so that this list and contract.ts agree end to end.
+        /// matrix, then the strips'. They come after the screens so that this list and contract.ts
+        /// agree end to end.
         ///
-        /// A rig with no matrix still declares them, unlike a screen it does not have: the profile is
-        /// not installed by openDash (ADR 0013), so there is nothing to detect, and thirteen names is
-        /// not the hundred and thirty-six that made the screens worth narrowing.</summary>
+        /// The strips are here and not in a group of their own because they are the same kind of thing:
+        /// one set of lights with two kinds of hardware behind it, declared for a rig whatever it owns.
+        /// A second group would also have to be a fourth part of the partition every property belongs
+        /// to -- a screen's, shared, or the lights' -- for no gain; contract.ts keeps them apart only as
+        /// two functions whose results it concatenates, which is a spelling and not a category.
+        ///
+        /// A rig with no matrix and no strip still declares all of them, unlike a screen it does not
+        /// have: openDash installs neither profile by itself (ADR 0013), so there is nothing to detect,
+        /// and thirty-four names is not the hundred and thirty-six that made the screens worth
+        /// narrowing. (Thirteen, this said before the matrices had a group each; it is counted here
+        /// rather than guessed at.)</summary>
         public static IEnumerable<string> LightsPropertyNames()
         {
             yield return LightsBrightness;
@@ -663,6 +704,16 @@ namespace OpenDashPlugin
             {
                 foreach (var name in FlagBoxMatrixProperties(matrix)) yield return name;
             }
+            foreach (var name in LedPropertyNames()) yield return name;
+        }
+
+        /// <summary>The two a generated .ledsprofile reads, last, as ledProperties() is last in
+        /// contract.ts. Named apart so that the strips can be pointed at, not so that they are a
+        /// category of their own.</summary>
+        public static IEnumerable<string> LedPropertyNames()
+        {
+            yield return LedCentre;
+            yield return LedRpmStyle;
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a

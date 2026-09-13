@@ -40,8 +40,16 @@
     <EmbeddedResource Include="Fixtures/resource name with spaces.txt" />
     <EmbeddedResource Include="Fixtures/github-releases.json" />
     <!-- Under Resources/ and named with a space on purpose: both are what the plugin ships, and
-         FlagBoxProfile.FileNameOf reads the name back out of the manifest name MSBuild gives it. -->
+         FlagBoxProfile.FileNameOf reads the name back out of the manifest name MSBuild gives it.
+
+         The strip beside it is the pin on FlagBoxProfile.ResourceName and is embedded for no other
+         reason. A release carries nineteen RPM strips next to the one matrix profile, they all end
+         in .ledsprofile, and "openDash 0-10-0" sorts ahead of "openDash Flag box" because '0' is
+         0x30 and 'F' is 0x46, so an extractor that takes the first resource in sort order takes a
+         ten-LED RPM strip and hands it to SimHub's MATRIX driver. Keep a decoy here that sorts
+         first, or the tests below pass on the order of the list rather than on the selection. -->
     <EmbeddedResource Include="Resources/openDash Flag box.ledsprofile" />
+    <EmbeddedResource Include="Resources/openDash 0-10-0.ledsprofile" />
   </ItemGroup>
 
   <ItemGroup>

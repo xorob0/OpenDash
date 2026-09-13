@@ -9,6 +9,16 @@
 // SimHub's RGBMatrixDriver, which rewrites it whenever anything changes. See the amendment to
 // ADR 0013 for why the install goes through the object model instead.
 //
+// WHICH of the embedded profiles this is about is decided by name, and that is the whole of the
+// discriminator. SimHub gives both of its lighting families the same ".ledsprofile" extension: the
+// RGB LED strips the build now emits nineteen of, and the 8x8 matrix the flag box is. So the
+// extension says nothing about which driver a file belongs to, and "the first .ledsprofile in the
+// assembly" -- which is what this used to take -- became a ten-LED RPM strip the moment the strips
+// were embedded, and would have been handed to RGBMatrixDriver.Settings.AddProfile as the flag box.
+// The file name is the identity: `FLAG_BOX_PROFILE_NAME` in packages/dash/src/leds/profile.ts is the
+// profile's name, its file stem and this constant, and FlagBoxProfileTests embeds a decoy that sorts
+// ahead of it so that going back to sort order fails rather than shipping.
+//
 // No SimHub or WPF types here, so this compiles into the tests.
 using System;
 using System.Collections.Generic;
@@ -51,7 +61,20 @@ namespace OpenDashPlugin
     /// <summary>Extracts the embedded flag box profile beside SimHub, and never further than that.</summary>
     public static class FlagBoxProfile
     {
+        /// <summary>The extension SimHub gives BOTH of its lighting families, the LED strips and the
+        /// matrix. It says a file is a profile; it does not say which driver the profile is for, so it
+        /// is never on its own enough to pick the flag box out. <see cref="FileName"/> is.</summary>
         public const string ProfileExtension = ".ledsprofile";
+
+        /// <summary>The profile's Name, its file stem and the folder-free half of its resource name.
+        /// One contract in two halves with FLAG_BOX_PROFILE_NAME in packages/dash/src/leds/profile.ts,
+        /// the way the version marker is one with flagBoxVersion(); a rename on either side has to move
+        /// both, and FlagBoxInstallPlanTests reads the built file to see that it did.</summary>
+        public const string ProfileName = "openDash Flag box";
+
+        /// <summary>The file the build writes and the plugin embeds, and the only one of the embedded
+        /// profiles that is the flag box.</summary>
+        public const string FileName = ProfileName + ProfileExtension;
 
         /// <summary>Where the profile is left: SimHub/OpenDash/. Its own folder rather than PluginsData,
         /// because PluginsData is where SimHub keeps files it owns and this one is for the user to pick up.</summary>
@@ -66,10 +89,42 @@ namespace OpenDashPlugin
             return Path.Combine(simHubRoot, FolderName);
         }
 
-        /// <summary>The embedded profile resources, in name order. Empty when the build embedded none.</summary>
+        /// <summary>EVERY embedded profile resource, in name order: the flag box and the nineteen LED
+        /// strips alike. Empty when the build embedded none. This is a census, not a choice -- it is how
+        /// the panel can say how many profiles a build carries -- and nothing should read an entry of it
+        /// positionally. <see cref="ResourceName"/> is how the flag box is found.</summary>
         public static IReadOnlyList<string> ResourceNames(Assembly assembly)
         {
             return AssemblyPackageSource.ResourceNames(assembly, ProfileExtension);
+        }
+
+        /// <summary>
+        /// The flag box's own resource, or null when this build embeds no such file.
+        ///
+        /// Found by <see cref="FileName"/> rather than by position. An exact spelling wins; a
+        /// case-only variant is accepted only when nothing spells it exactly, which is the trap a
+        /// case-insensitive filesystem sets -- copying "openDash Flag box.ledsprofile" over an older
+        /// "openDash flag box.ledsprofile" replaces the bytes on Windows and keeps the old casing, so
+        /// an exact-only match would embed the profile and then fail to find it.
+        /// </summary>
+        public static string ResourceName(Assembly assembly)
+        {
+            return SelectResource(ResourceNames(assembly));
+        }
+
+        /// <summary>The selection itself, over the names alone, so that it can be shown to do the right
+        /// thing on lists no build of ours would produce.</summary>
+        internal static string SelectResource(IEnumerable<string> names)
+        {
+            if (names == null) return null;
+            string variant = null;
+            foreach (var name in names)
+            {
+                var file = FileNameOf(name);
+                if (string.Equals(file, FileName, StringComparison.Ordinal)) return name;
+                if (variant == null && string.Equals(file, FileName, StringComparison.OrdinalIgnoreCase)) variant = name;
+            }
+            return variant;
         }
 
         /// <summary>The file name a resource is written under: everything after the last ".Resources."
@@ -194,14 +249,19 @@ namespace OpenDashPlugin
         public static FlagBoxResult Extract(string simHubRoot, Assembly assembly, IInstallLog log = null)
         {
             log = log ?? NullInstallLog.Instance;
-            var names = ResourceNames(assembly);
-            if (names.Count == 0)
+            string resource = ResourceName(assembly);
+            if (resource == null)
             {
-                log.Warn("No " + ProfileExtension + " is embedded in this build; the flag box profile is not available (see plugin/OpenDash/Resources/README.md).");
+                // Two different builds, and saying "none embedded" for the second would send somebody
+                // looking for a missing copy step when the profiles are all there under other names.
+                var embedded = ResourceNames(assembly).Count;
+                log.Warn((embedded == 0
+                        ? "No " + ProfileExtension + " is embedded in this build"
+                        : "None of the " + embedded + " embedded " + ProfileExtension + " resources is " + FileName)
+                    + "; the flag box profile is not available (see plugin/OpenDash/Resources/README.md).");
                 return new FlagBoxResult { Status = FlagBoxStatus.NotEmbedded, Message = "No profile embedded" };
             }
 
-            string resource = names[0];
             string fileName = FileNameOf(resource);
             string folder = FolderPath(simHubRoot);
             string path = Path.Combine(folder, fileName);
@@ -268,7 +328,7 @@ namespace OpenDashPlugin
             {
                 return new FlagBoxResult { Status = FlagBoxStatus.Failed, Message = "No Documents folder" };
             }
-            var name = FileNameOf(extracted.Path == null ? null : Path.GetFileName(extracted.Path)) ?? "openDash Flag box" + ProfileExtension;
+            var name = FileNameOf(extracted.Path == null ? null : Path.GetFileName(extracted.Path)) ?? FileName;
             var path = Path.Combine(folder, Path.GetFileName(extracted.Path ?? name));
             try
             {

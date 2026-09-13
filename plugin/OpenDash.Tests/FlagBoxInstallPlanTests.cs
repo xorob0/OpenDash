@@ -13,6 +13,14 @@ namespace OpenDashPlugin.Tests
 {
     public class FlagBoxInstallPlanTests
     {
+        /// <summary>Whether this run is CI, where the dash job's artifact has already been downloaded
+        /// into plugin/OpenDash/Resources/ and its absence is the contract having parted company rather
+        /// than an unbuilt checkout. GitHub Actions sets both of these; either alone is enough, and any
+        /// other runner that sets CI gets the strict path too, which is the right way round.</summary>
+        private static bool OnCI =>
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"))
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
+
         private static readonly Guid Ours = new Guid("11111111-1111-5111-8111-111111111111");
         private static readonly Guid Theirs = new Guid("22222222-2222-5222-8222-222222222222");
 
@@ -158,20 +166,91 @@ namespace OpenDashPlugin.Tests
         public void The_version_marker_matches_the_one_the_build_writes()
         {
             // The two halves of one contract: flagBoxVersion() in packages/dash/src/leds/profile.ts
-            // writes it, this reads it. A rename on either side breaks installing silently, so the
-            // built profile itself is the fixture whenever one has been built.
-            var built = Path.Combine(RepoPaths.Root(), "build");
-            if (!Directory.Exists(built)) return;
-            var profile = Directory.GetFiles(built, "*.ledsprofile").FirstOrDefault();
-            if (profile == null) return;
+            // writes it, this reads it. A rename on either side breaks installing silently.
+            //
+            // It reads plugin/OpenDash/Resources/ -- the copy the plugin EMBEDS -- rather than build/,
+            // and that is the whole point of this version of the test. The plugin job in
+            // .github/workflows/ci.yml never creates build/: it downloads the dash artifact straight
+            // into Resources/ and then runs `dotnet test`. Looking in build/ meant the test returned on
+            // its first line in every CI run it has ever had, so the contract it names was pinned
+            // nowhere. build/ is still consulted, second, for a checkout that has run `bun run build`
+            // and not yet copied the files across.
+            //
+            // Named rather than globbed. The build writes nineteen RPM strip profiles beside the flag
+            // box and they share its extension, so "the first .ledsprofile" is a strip -- which has no
+            // Author and no top-level Description, and used to fail this test for the right reason.
+            // Naming it is not the test looking somewhere convenient: FlagBoxProfile.FileName is the
+            // discriminator the plugin itself selects by, so reading it here reads the same contract the
+            // runtime does. Single() rather than FirstOrDefault(): once lighting profiles are present, a
+            // folder with no file under that name means the two sides have parted company, and that is
+            // the thing this test exists to catch.
+            var profile = TheBuiltFlagBoxProfile();
+            if (profile == null)
+            {
+                // The skip that is left, and the only one: a local checkout that has built nothing at
+                // all. On CI the download step has already run before `dotnet test`, so there is always
+                // a profile here and returning without asserting would be the silent skip this test
+                // spent its whole life doing. Fail instead, naming both folders that were looked in.
+                Assert.False(
+                    OnCI,
+                    "no " + FlagBoxProfile.FileName + " in " + RepoPaths.EmbeddedResources() + " or " + RepoPaths.BuildOutput()
+                        + ". CI downloads the dash artifact into Resources/ before `dotnet test`, so an empty folder here means the artifact moved.");
+                return;
+            }
 
             var json = File.ReadAllText(profile);
+            Assert.Equal(FlagBoxProfile.ProfileName, FlagBoxProfile.ProfileNameOf(json));
             var description = FlagBoxProfile.DescriptionOf(json);
             Assert.NotNull(description);
             var version = FlagBoxInstallPlan.VersionOf(description);
             Assert.False(string.IsNullOrEmpty(version));
             Assert.Matches(@"^\d+\.\d+\.\d+", version);
+            // The same string VERSION holds, because that is what the dash build stamps in. This is the
+            // cross-language half of the contract and the reason the test has to actually run.
+            Assert.Equal(RepoPaths.Version(), version);
             Assert.Equal(FlagBoxInstallPlan.Author, FlagBoxProfile.AuthorOf(json));
+        }
+
+        [Fact]
+        public void The_embedded_resources_are_where_CI_puts_them()
+        {
+            // The guard on the test above. If the artifact ever lands somewhere else, that test starts
+            // skipping again and says nothing; this one says which folder was looked in and what was
+            // found, so a silent skip is visible in the failure rather than invisible in a pass.
+            //
+            // It used to open with `if (!Directory.Exists(resources)) return;` and `if (profiles.Length
+            // == 0) return;`, which is to say it returned before asserting anything in exactly the
+            // scenario the paragraph above says it exists to catch. On CI it asserts unconditionally
+            // now. The one case still tolerated is a local checkout that has not copied the dash build
+            // into Resources/ -- `bun run package` does it, a bare `bun install && dotnet test` does
+            // not -- and nothing beyond that.
+            var resources = RepoPaths.EmbeddedResources();
+            var profiles = Directory.Exists(resources)
+                ? Directory.GetFiles(resources, "*" + FlagBoxProfile.ProfileExtension)
+                : new string[0];
+            if (!OnCI && profiles.Length == 0) return;
+
+            Assert.True(Directory.Exists(resources), resources + " does not exist. CI downloads the dash artifact into it before `dotnet test`.");
+            Assert.True(
+                profiles.Length > 0,
+                "no *" + FlagBoxProfile.ProfileExtension + " in " + resources + ", which holds: " + string.Join(", ", Directory.GetFiles(resources).Select(Path.GetFileName)));
+            Assert.Contains(profiles, p => string.Equals(Path.GetFileName(p), FlagBoxProfile.FileName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>The built flag box profile, from the folder the plugin embeds if it is there and
+        /// from the dash build output otherwise, or null when nothing has been built in this checkout
+        /// at all. A folder that holds lighting profiles but not this one throws rather than returning
+        /// null: that is the contract parting company, not an unbuilt tree.</summary>
+        private static string TheBuiltFlagBoxProfile()
+        {
+            foreach (var folder in new[] { RepoPaths.EmbeddedResources(), RepoPaths.BuildOutput() })
+            {
+                if (!Directory.Exists(folder)) continue;
+                var profiles = Directory.GetFiles(folder, "*" + FlagBoxProfile.ProfileExtension);
+                if (profiles.Length == 0) continue;
+                return profiles.Single(p => string.Equals(Path.GetFileName(p), FlagBoxProfile.FileName, StringComparison.OrdinalIgnoreCase));
+            }
+            return null;
         }
     }
 }

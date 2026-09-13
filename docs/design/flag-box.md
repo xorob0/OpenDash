@@ -157,10 +157,22 @@ between a 6 and an 8 on a box read in peripheral vision. `R` and `N` have glyphs
 
 The colour is the shift model: `shiftBands()` in `components/revSegments.ts` is the one place the
 three bands are defined, and the rev bar and the gear both read it, so a driver with both learns
-one relationship and reads it in two places. The redline band **blinks the digit** rather than
-filling the panel behind it: a filled panel is a flag's vocabulary and the box has to keep those
-apart. When [XOR-230](https://linear.app/xorob/issue/XOR-230) replaces SimHub's per-car bands with
-the sim's own `DriverCarSL*` values it changes that one function, not this file.
+one relationship and reads it in two places. Over-rev **blinks the digit** rather than filling the
+panel behind it: a filled panel is a flag's vocabulary and the box has to keep those apart.
+
+What it blinks on is not the redline band. The band is *entered* at `Last` and the flash begins at
+`max(Blink, Last)`, and it stops in the last gear, where asking for a shift that does not exist is
+noise; this file used to say the band did the blinking, and while it said so the digit strobed
+against a solid bar and went on strobing in top gear. The threshold is `overRevEither` in
+`shift.ts`, carried on the band model as `ShiftBand.blink` — an expression saying *when* rather
+than a boolean saying *that* — and `flagBox.test.ts` compares the digit's emitted flash against the
+rev bar's top segment's, string for string.
+
+[XOR-230](https://linear.app/xorob/issue/XOR-230) had earlier replaced SimHub's per-car bands
+with the sim's own `DriverCarSL*` values, and it changed that one function and not this file: a band
+is now entered on the car's own ladder where the car publishes one and on SimHub's bands where it
+does not ([ADR 0014](../decisions/0014-the-shift-model.md)). The digit, a rev segment and an LED on
+a strip therefore change colour on the same frame for the same reason, and flash on the same one.
 
 There is no gear colour theme. Theming is refused in [scope.md](../scope.md) until ADR 0011 says
 otherwise, and the argument there — two states a driver cannot tell apart is a bug whoever chose
@@ -242,15 +254,23 @@ shifted onto the right panel.
 
 **The subtree is repeated once per matrix, and that is the whole of the file's size.** SimHub has
 no way to bind which matrix a container paints — the position is a static property — so there is no
-alternative to writing it four times. The profile is about 757 KB and 600 containers, roughly 16%
-of the plugin DLL and about 40 KB once the release zip compresses it.
+alternative to writing it four times. Measured on a clean `bun run package` of 0.2.0-rc.1, the
+profile is **941,382 bytes (919 KiB) and 697 containers**, which is **12.6%** of the 7,457,280-byte
+plugin DLL that embeds it and about **43 KB** once deflated into the release zip.
+
+Those numbers moved when the gear's flash was corrected, and the correction is why. `Gear redline`
+used to hold the eleven gear glyphs directly; it now holds two groups, `Gear redline over-rev` and
+`Gear redline steady`, and the eleven glyphs are written under each — the two-frame set that blinks
+and the one-frame set that does not. That is 46 containers per matrix where there were 22, which
+across the four matrices is 96 more: the profile went from 601 containers and about 757 KB to the
+697 and 919 KiB above.
 
 **It does cost frames, and an earlier version of this file claimed otherwise.** The claim was that a
 group whose condition is false is not descended into. It is: `MatrixContainerBase.GetResult` calls
 `GetGroupResult` unconditionally and passes its own truth down as `parentEnabled`, so children are
 walked and their conditions evaluated every frame whether the parent is active or not — only the
-*painting* is skipped. Six hundred containers means six hundred `IsActive` calls a frame, on all
-four matrices, including the three nobody switched on.
+*painting* is skipped. Six hundred and ninety-seven containers means six hundred and ninety-seven
+`IsActive` calls a frame, on all four matrices, including the three nobody switched on.
 
 That has not been measured on real hardware, and it is the first thing to measure. If it is too
 slow, the fix is the one this file rejected on size grounds: fewer containers, by moving the gear's

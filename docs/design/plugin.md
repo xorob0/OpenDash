@@ -60,6 +60,18 @@ Lights
       Warnings                                                                  (  on )
       Mounted                                                 [ Both | Left | Right ]
   Matrix 2 … 4      the same, all off, at rest Dark
+
+  An RGB LED strip across the wheel or the rim. Install the profile that matches your strip,
+  then these two decide what it shows.
+
+  Strip centre                                                        [ RPM          v ]
+    What the middle of the strip shows. RPM keeps
+    the brake on the sides; RPM only leaves them dark.
+
+  Rev style                                    [ Left to right | Meet in middle |  F1  ]
+    How the ladder fills. Meet in middle works
+    inwards from both ends; F1 is a formula wheel's
+    colours, and flashes whole.
 ```
 
 ### Why the page is shaped this way
@@ -83,6 +95,18 @@ has to be configurable without either box guessing.
 **"Mounted" is asked rather than inferred.** A box to the left of the wheel that lights for a car
 on the right is worse than no box, so the side is a setting with no clever default: `Both` is the
 single-box answer and shows both edges of the panel.
+
+**The strips get two rows and no group per device.** A matrix is a box somebody owns and so has a
+group of its own; a strip is a length, and openDash generates one profile per strip shape rather
+than per box. What a driver picks is therefore the profile, and `OpenDash.LedCentre` and
+`OpenDash.LedRpmStyle` say what whichever profile they picked shows. They are the only two
+properties a generated `.ledsprofile` reads that are not the flag box's, and they went a whole pull
+request declared by the TypeScript and attached by nothing, which is a strip permanently on its
+defaults; `packages/dash/test/declared-properties.txt` is the pin that now fails when the two
+halves of the contract disagree.
+
+The centre is a drop-down and the style a segmented bar, because five options is past the two or
+three `Segmented.cs` is drawn for and a `ComboBox` is the panel's control for a choice from a list.
 
 **Rotation and serpentine are not on this page.** They are SimHub device settings, decided by the
 corner the data cable enters, and duplicating them here would produce two places that disagree.

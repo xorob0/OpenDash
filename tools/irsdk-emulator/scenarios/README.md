@@ -18,6 +18,16 @@ capture from the next.
 | `pit` | In the stall with the limiter on and the service order set to four tyres, fuel and a tear-off. The car is stationary, so the rev sweep, the gear model, the lap timer and the fuel burn are all off. Three other cars are put in the pit lane so the table has PIT chips in it. |
 | `quali` | A timed qualifying run in a car with no in-car TC or ABS, so the settings strip has to close over two cells that are simply not there, and the session counts time rather than laps. |
 
+## The scenario that moves on purpose
+
+| | What it does |
+|---|---|
+| `shiftlights` | One slow RPM sweep, 1200 to 9600 over twenty seconds, against a 7800 / 8400 / 8800 / 9000 ladder — slow enough to see which LED changes at which threshold. At forty seconds the car changes to one with a much lower ladder and five gears, and at eighty it changes back. That swap is the point: it is what tells a mirror (ADR 0014) apart from arithmetic over the redline, and it is what the generated `.ledsprofile` files are verified against. Nothing else moves — the flag is held green, the limiter is off, and the pedals are pinned — because a strip that is also cycling flags says nothing about its revs. |
+
+The four shift RPMs, the redline and the forward-gear count are `{{placeholders}}` in
+`race-session.yaml` rather than literals, so a scenario can hand the mirror a different car mid-run.
+`race.json` carries the defaults every other scenario inherits.
+
 `bun run dev --scenario green` is the usual way to reach one, and `bun run shots` walks all four.
 
 ## The other scenarios

@@ -171,10 +171,17 @@ the face, which is a driver's instrument and not a billboard.
 
 ## Open questions
 
-Shift-light thresholds are settled: they are SimHub's per-car values
-(`CarSettings_RPMShiftLight1`, `CarSettings_RPMShiftLight2` and the current gear redline),
-which users already tune in SimHub, and the on-dash shift lights can be switched off from the
-plugin for DDUs with physical LEDs.
+Shift-light thresholds are settled, and no longer the way this section first said. They are the
+four RPMs **the sim publishes for the car** — `DriverCarSLFirstRPM`, `DriverCarSLShiftRPM`,
+`DriverCarSLLastRPM` and `DriverCarSLBlinkRPM` — and SimHub's own per-car values
+(`CarSettings_RPMShiftLight1`, `CarSettings_RPMShiftLight2` and the current gear redline) are the
+fallback for a car that publishes none. [ADR 0014](../decisions/0014-the-shift-model.md) is why:
+nothing in SimHub reads the car's own, so its bands are its idea of the car's lights rather than the
+car's. The on-dash shift lights can still be switched off from the plugin for DDUs with physical
+LEDs, and the same thresholds light those, since the generated LED profiles read the one model.
+
+Thresholds are mirrored and **colour never is**: the sim publishes when a light comes on and no
+sequence at all, so the three band colours stay in `design/tokens.json` with everything else.
 
 Whether tyre temperature uses a continuous colour ramp or discrete bands remains open. Bands
 are more glanceable, ramps carry more information, and the current leaning is bands. The

@@ -34,10 +34,14 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
 
 A face is **five parts**, and every rectangular size is the same five.
 
-- The **rev bar** across the top, with its shift lights, in a recessed well. It can show a plain
-  RPM bar instead, or nothing at all: switched off, the well goes with it, the bar rises into its
-  room and the body grows by what it gained. The band keeps its place, because it is measured from
-  the bottom edge.
+- The **rev bar** across the top, with its shift lights, in a recessed well. The lights come on at
+  the RPMs **your sim publishes for the car you are driving**, so a car released this morning is
+  right with nothing to set up; for a car that publishes none, the bar falls back to SimHub's own
+  per-car bands, the ones you tune on SimHub's Car Settings page. Nothing in the plugin chooses
+  between the two and there is no setting for it: the bar asks the car, every frame. It can show a
+  plain RPM bar instead, or nothing at all: switched off, the well goes with it, the bar rises into
+  its room and the body grows by what it gained. The band keeps its place, because it is measured
+  from the bottom edge.
 - The **bar** below it, carrying what does not change during a lap: two fields at each end,
   chosen from a catalogue of ten, and between them the car settings your sim publishes.
 - The **body**, which is **zone B, zone A and zone C** side by side. Zone A is the narrow middle
@@ -182,7 +186,7 @@ nothing to save and no restart.
 
 | Section | Setting | Values |
 |---|---|---|
-| General | The rev bar | Shift lights, RPM bar, Off (off gives the bar's room back to the zones on a zone face; pick it if your DDU has LEDs of its own) |
+| General | The rev bar | Shift lights (the car's own, SimHub's bands where the car publishes none), RPM bar, Off (off gives the bar's room back to the zones on a zone face; pick it if your DDU has LEDs of its own) |
 | Data | Position | Overall, Class |
 | Data | Delta reference | Session best, All-time best |
 | Data | Session progress | Auto, Laps, Time |
