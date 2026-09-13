@@ -31,8 +31,17 @@ namespace OpenDashPlugin.Tests
         /// <summary>A fetcher that answers from a script and counts what it was asked for.</summary>
         private sealed class Fetcher : IReleaseSource
         {
-            public string Listing { get; set; }
+            /// <summary>The whole listing, for a test whose feed is one page.</summary>
+            public string Listing { set { Pages.Clear(); Pages.Add(value); } }
+
+            /// <summary>One body per page, in the order GitHub would answer them.</summary>
+            public List<string> Pages { get; } = new List<string>();
+
             public string ListingFailure { get; set; }
+
+            /// <summary>The page number beyond which the fetch fails, for a feed that goes unreachable part way.</summary>
+            public int FailFromPage { get; set; } = int.MaxValue;
+
             public Dictionary<string, byte[]> Assets { get; } = new Dictionary<string, byte[]>(StringComparer.Ordinal);
             public List<string> Requested { get; } = new List<string>();
 
@@ -40,7 +49,16 @@ namespace OpenDashPlugin.Tests
             {
                 Requested.Add(url);
                 if (ListingFailure != null) return FetchResult.Failed(ListingFailure);
-                return new FetchResult { Ok = true, Body = Listing };
+                var page = PageOf(url);
+                if (page >= FailFromPage) return FetchResult.Failed("NameResolutionFailure");
+                // Past the last page GitHub answers the empty listing, so the script does too.
+                return new FetchResult { Ok = true, Body = page <= Pages.Count ? Pages[page - 1] : "[]" };
+            }
+
+            private static int PageOf(string url)
+            {
+                var marker = url.IndexOf("&page=", StringComparison.Ordinal);
+                return marker < 0 ? 1 : int.Parse(url.Substring(marker + "&page=".Length));
             }
 
             public FetchResult GetBytes(string url)
@@ -57,6 +75,16 @@ namespace OpenDashPlugin.Tests
             var assets = folders.Select(f => "{\"name\":\"" + f.Replace(' ', '.') + ".simhubdash\",\"browser_download_url\":\"https://example.invalid/" + f.Replace(' ', '.') + "\",\"size\":1}");
             return "[{\"tag_name\":\"" + tag + "\",\"prerelease\":false,\"draft\":false,\"body\":\"notes\",\"assets\":[" + string.Join(",", assets) + "]}]";
         }
+
+        /// <summary>A page of releases carrying no assets, in the order GitHub answers them. A hyphen in the tag
+        /// makes it a pre-release, which is the rule release.yml applies when it cuts one.</summary>
+        private static string PageOf(IEnumerable<string> tags) =>
+            "[" + string.Join(",", tags.Select(t =>
+                "{\"tag_name\":\"" + t + "\",\"prerelease\":" + (t.Contains("-") ? "true" : "false") + ",\"draft\":false,\"body\":\"notes\",\"assets\":[]}")) + "]";
+
+        /// <summary>Candidate tags for one version, newest first.</summary>
+        private static IEnumerable<string> Candidates(string version, int newest, int count) =>
+            Enumerable.Range(0, count).Select(i => "v" + version + "-rc." + (newest - i));
 
         // Asking
 
@@ -122,6 +150,93 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(now.Ticks, ticks);
             Assert.Single(service.LastReleases);
             Assert.Equal(UpdateCheck.ReleasesUrl, fetcher.Requested.Single());
+        }
+
+        // Reading past the first page
+
+        [Fact]
+        public void A_stable_release_behind_a_page_of_candidates_is_still_offered()
+        {
+            // Eleven candidates were cut after 0.3.0, so the first page of ten holds candidates and nothing else,
+            // every one of which is discarded for a user on a stable version. Concluding on that page alone would
+            // tell them they have the newest release while the one they should be offered sits on the next page.
+            var fetcher = new Fetcher();
+            fetcher.Pages.Add(PageOf(Candidates("0.4.0", newest: 11, count: 10)));
+            fetcher.Pages.Add(PageOf(new[] { "v0.4.0-rc.1", "v0.3.0", "v0.2.0" }));
+            long ticks = 0;
+            var now = new DateTime(2026, 9, 12, 12, 0, 0, DateTimeKind.Utc);
+            var service = new UpdateService(fetcher);
+
+            var status = service.Check("0.2.0", true, ref ticks, now, manual: true);
+
+            Assert.Equal(UpdateState.UpdateAvailable, status.State);
+            Assert.Equal("0.3.0", status.LatestVersion);
+            Assert.Equal(now.Ticks, ticks);
+            // Both pages are kept, since applying reads the release back out of them by version.
+            Assert.Equal(13, service.LastReleases.Count);
+            Assert.Equal(new[] { UpdateCheck.ReleasesUrl, UpdateCheck.ReleasesPage(2) }, fetcher.Requested);
+        }
+
+        [Fact]
+        public void A_user_on_a_candidate_is_answered_by_the_first_page_alone()
+        {
+            var fetcher = new Fetcher();
+            fetcher.Pages.Add(PageOf(Candidates("0.4.0", newest: 11, count: 10)));
+            fetcher.Pages.Add(PageOf(new[] { "v0.4.0-rc.1", "v0.3.0", "v0.2.0" }));
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+
+            var status = service.Check("0.4.0-rc.1", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            Assert.Equal(UpdateState.UpdateAvailable, status.State);
+            Assert.Equal("0.4.0-rc.11", status.LatestVersion);
+            Assert.Equal(UpdateCheck.ReleasesUrl, fetcher.Requested.Single());
+        }
+
+        [Fact]
+        public void A_listing_that_runs_out_is_up_to_date_and_costs_one_request()
+        {
+            // Every release this repository has cut is a candidate, and a page shorter than ten is the last one,
+            // so a user on a stable version is answered by it rather than walking pages that do not exist.
+            var fetcher = new Fetcher { Listing = PageOf(Candidates("0.1.0", newest: 3, count: 3)) };
+            long ticks = 0;
+            var status = new UpdateService(fetcher).Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            Assert.Equal(UpdateState.UpToDate, status.State);
+            Assert.Equal(UpdateCheck.ReleasesUrl, fetcher.Requested.Single());
+        }
+
+        [Fact]
+        public void A_page_that_did_not_arrive_is_unreachable_rather_than_up_to_date()
+        {
+            // The first page arrived and settled nothing, so what the second one would have held is unknown, and
+            // reporting up to date on the strength of the first is the wrong answer this whole path avoids.
+            var fetcher = new Fetcher { FailFromPage = 2 };
+            fetcher.Pages.Add(PageOf(Candidates("0.4.0", newest: 11, count: 10)));
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+
+            var status = service.Check("0.2.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            Assert.Equal(UpdateState.Unreachable, status.State);
+            Assert.Equal(0, ticks);
+            Assert.Empty(service.LastReleases);
+        }
+
+        [Fact]
+        public void A_run_of_candidates_longer_than_the_bound_stops_rather_than_walking_the_history()
+        {
+            var fetcher = new Fetcher();
+            for (var page = 0; page < UpdateCheck.MaxPages + 2; page++)
+            {
+                fetcher.Pages.Add(PageOf(Candidates("0.4.0", newest: 200 - page * UpdateCheck.PageSize, count: UpdateCheck.PageSize)));
+            }
+            long ticks = 0;
+            var status = new UpdateService(fetcher).Check("0.2.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            Assert.Equal(UpdateState.Unreachable, status.State);
+            Assert.Equal(UpdateCheck.MaxPages, fetcher.Requested.Count);
+            Assert.Equal(0, ticks);
         }
 
         // Applying

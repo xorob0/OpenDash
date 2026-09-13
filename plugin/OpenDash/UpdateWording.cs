@@ -27,10 +27,21 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Taken verbatim from design/canvas/Plugin.dc.html, where the author wrote it. The canvas is the design
         /// source and is not edited from code, so when the two disagree this is what moves. It is here rather than
-        /// in the panel because it is copy, and because the whole of what openDash discloses ought to be readable
+        /// in the panel because it is copy, and because the whole of what OpenDash discloses ought to be readable
         /// in one sentence beside the switch that turns it off.
         /// </remarks>
         public const string CheckCaption = "Asks GitHub for the newest release once a day. Nothing else leaves your machine.";
+
+        /// <summary>
+        /// What a press of Update says when there is no release behind it.
+        /// </summary>
+        /// <remarks>
+        /// Such a press ought not to be possible, since the button is drawn only while a release is on offer, and it
+        /// is said out loud precisely because it ought not to be possible: a button that answers a click with no
+        /// line, no log and no request reads as a panel that has broken, whereas a sentence naming the button that
+        /// would fetch an answer leaves the user with something to do.
+        /// </remarks>
+        public const string NothingToApply = "There is no release to install. Press \"Check now\" to ask GitHub again.";
 
         /// <summary>The one line the Dashboard section shows, or null when it shows nothing.</summary>
         public static string Line(UpdateStatus status)

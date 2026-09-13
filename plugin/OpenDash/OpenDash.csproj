@@ -7,7 +7,7 @@
     <OutputType>Library</OutputType>
     <AssemblyName>OpenDash</AssemblyName>
     <RootNamespace>OpenDashPlugin</RootNamespace>
-    <Description>openDash: an open-source SimHub dashboard and the plugin that installs it and exposes its settings.</Description>
+    <Description>OpenDash: an open-source SimHub dashboard and the plugin that installs it and exposes its settings.</Description>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <DebugType>portable</DebugType>
@@ -64,12 +64,18 @@
        these "OpenDashPlugin.Resources.<file name>" and keeps the spaces of names like "openDash 1280x480.simhubdash";
        the dashboard folder is read from the zip itself (PackageExtractor.PackageFolderName). -->
   <ItemGroup>
-    <!-- Except the zone faces. They are built for review and are not ready to install: the plugin installs
-         everything it embeds, so embedding one would put a half-finished face into the dashboard list of a
-         user who asked for none. They come in under XOR-118, when they take the shipped names. The exclusion
-         lives here rather than in the copy step because CI copies the whole dash artefact in, and a rule that
-         only scripts/package.sh applied would hold locally and not in a release. -->
-    <EmbeddedResource Include="Resources/*.simhubdash" Exclude="Resources/openDash zones *.simhubdash" />
+    <!-- Except the card faces, which since XOR-118 are the ones named "openDash slots ...". The zone faces
+         now carry the shipped names and are what a user gets; the card faces are still built so that the two
+         can be compared on a rig before XOR-95 deletes the card path, and they must not be installed beside
+         their replacements.
+
+         This exclusion was the other way round until the rename, and it is the line that has to move with it:
+         a stale pattern here excludes nothing and the plugin silently embeds every package, which is exactly
+         the shape of XOR-123. e2e.test.ts asserts which folders a release embeds, so the two cannot part
+         company unnoticed. The exclusion lives here rather than in the copy step because CI copies the whole
+         dash artefact in, and a rule that only scripts/package.sh applied would hold locally and not in a
+         release. -->
+    <EmbeddedResource Include="Resources/*.simhubdash" Exclude="Resources/openDash slots *.simhubdash" />
   </ItemGroup>
 
   <!-- The faces the settings panel draws in, extracted to a private folder at runtime (PanelFonts.cs).

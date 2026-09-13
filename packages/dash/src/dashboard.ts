@@ -12,7 +12,7 @@ import { rule } from './elements/rule.ts';
 import { CARDS_DASHBOARD_NAME, cardScreens, DEFAULT_STRATEGY, inlineSlotItems, widgetSlotItems, type SlotStrategy } from './slots.ts';
 
 export const DEFAULT_SIMHUB_VERSION = '9.12.6';
-export const DEFAULT_AUTHOR = 'openDash contributors';
+export const DEFAULT_AUTHOR = 'OpenDash contributors';
 export const MAIN_SCREEN_NAME = 'Main';
 
 export interface BuildOptions {
