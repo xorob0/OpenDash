@@ -14,7 +14,20 @@ import { LINE_SPACING } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
-import { ZONE_FACES, buildZoneFace, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
+import {
+  FACE_SCREEN_NAME,
+  FACE_SCREEN_NAME_NO_REV_BAR,
+  ZONE_FACES,
+  buildZoneFace,
+  faceItems,
+  kindOf,
+  layoutWithoutRevBar,
+  rectOf,
+  revBarReclaim,
+  zoneDashboardName,
+  zoneFace1920x480,
+} from '../src/zones/index.ts';
+import { setting } from '../src/contract.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -65,7 +78,8 @@ describe('the reference face is the artboard', () => {
 
 describe('every zone cycles its own catalogue', () => {
   const main = reference.built.main;
-  const widgets = itemsOf(main).filter((i): i is WidgetItem => i.kind === 'widget');
+  const mainScreen = main.screens.find((s) => s.name === FACE_SCREEN_NAME)!;
+  const widgets = itemsOf({ ...main, screens: [mainScreen] }).filter((i): i is WidgetItem => i.kind === 'widget');
 
   test('four zones, four widgets', () => {
     expect(widgets.map((w) => w.name)).toEqual(['zoneA', 'zoneB', 'zoneC', 'zoneD']);
@@ -93,8 +107,10 @@ describe('every zone cycles its own catalogue', () => {
     const b = widgets.find((w) => w.name === 'zoneB')!;
     const c = widgets.find((w) => w.name === 'zoneC')!;
     expect(b.fileName).toBe(c.fileName);
-    // Which is also why a face carries three zone dashboards rather than four.
-    expect(reference.built.zones).toHaveLength(3);
+    // Which is also why each arrangement of the face needs three zone dashboards rather than four:
+    // three for the face as drawn, and two more for the rectangles the rev-bar-off arrangement
+    // grows. Band D is the same rectangle in both, so it is not built twice.
+    expect(reference.built.zones).toHaveLength(5);
   });
 
   test('the catalogues are the sizes the contract declares', () => {
@@ -325,4 +341,112 @@ describe('the bar keeps its three blocks apart', () => {
       expect(right!.right).toBeLessThanOrEqual(bar.left + bar.width);
     });
   }
+});
+
+/**
+ * XOR-138: the rev bar off entirely.
+ *
+ * Unlike every other geometry assertion in this file, the rectangles here are **derived** rather
+ * than read off an artboard -- the canvas has not answered what the top of a face without a rev bar
+ * looks like, and `docs/design/zones.md` §10 records that. So these tests check the rule rather than
+ * a table: what is given back, what does not move, and that both arrangements still fit.
+ */
+describe('the rev bar can be off entirely', () => {
+  const screensOf = (built: (typeof BUILT)[number]['built']): { on: (typeof BUILT)[number]['built']['main']['screens'][number]; off: (typeof BUILT)[number]['built']['main']['screens'][number] } => ({
+    on: built.main.screens.find((s) => s.name === FACE_SCREEN_NAME)!,
+    off: built.main.screens.find((s) => s.name === FACE_SCREEN_NAME_NO_REV_BAR)!,
+  });
+
+  test('a face is two screens, and exactly one of them is ever enabled', () => {
+    for (const { face, built } of BUILT) {
+      expect({ face: face.folder, screens: built.main.screens.map((s) => s.name) }).toMatchObject({
+        screens: [FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR],
+      });
+      const { on, off } = screensOf(built);
+      // Complementary, so SimHub's screen-role pass always has exactly one to choose.
+      expect(off.enabledExpression).toBe(setting.revBarIs('off'));
+      expect(on.enabledExpression).toBe(`!(${setting.revBarIs('off')})`);
+    }
+  });
+
+  test('the shift lights and the plain RPM bar are untouched, and only reachable on the first screen', () => {
+    for (const { face, built } of BUILT) {
+      const { on, off } = screensOf(built);
+      const names = (screen: typeof on): string[] => [...walkItems(screen.items)].map((i) => i.name);
+      // Both layers still there, still one setting apart: ADR 0004's two states are not what changed.
+      expect({ face: face.folder, shift: names(on).includes('revBar.shiftLights'), rpm: names(on).includes('revBar.rpmBar') }).toMatchObject({ shift: true, rpm: true });
+      // And the well goes with them: hiding the segments and keeping the recess is the hole the
+      // ticket is about.
+      expect({ face: face.folder, drawn: names(off).filter((n) => n === 'well' || n.startsWith('revBar')) }).toMatchObject({ drawn: [] });
+    }
+  });
+
+  test('what it gives back is the well and the gap under it, and not the face’s top margin', () => {
+    for (const { face } of BUILT) {
+      const z = face.zones;
+      const firstBelow = z.bar?.top ?? Math.min(z.zoneA.top, z.zoneB.top, z.zoneC.top);
+      expect({ face: face.folder, reclaim: revBarReclaim(z) }).toMatchObject({ reclaim: firstBelow - z.revBarWell.top });
+      // Which is the whole recess plus its gap, and nothing above it.
+      expect(revBarReclaim(z)).toBe(z.revBarWell.height + (firstBelow - (z.revBarWell.top + z.revBarWell.height)));
+    }
+  });
+
+  test('the body grows by exactly that, and nothing measured from the bottom edge moves', () => {
+    for (const { face } of BUILT) {
+      const z = face.zones;
+      const o = layoutWithoutRevBar(face).zones;
+      const reclaim = revBarReclaim(z);
+      expect({ face: face.folder, width: o.zoneB.width, band: o.band }).toMatchObject({ band: z.band });
+      if (z.bar) expect({ face: face.folder, bar: o.bar }).toMatchObject({ bar: { ...z.bar, top: z.bar.top - reclaim } });
+
+      const bodyTop = Math.min(z.zoneA.top, z.zoneB.top, z.zoneC.top);
+      for (const key of ['zoneA', 'zoneB', 'zoneC'] as const) {
+        const before = z[key];
+        const after = o[key];
+        const grew = before.top === bodyTop;
+        // A zone that starts the body keeps its bottom edge and gains the room above it; one that
+        // does not -- zones B and C in portrait, which sit under zone A -- is untouched.
+        expect({ face: face.folder, key, after }).toMatchObject({
+          after: grew ? { ...before, top: before.top - reclaim, height: before.height + reclaim } : before,
+        });
+        expect({ face: face.folder, key, bottom: after.top + after.height }).toMatchObject({ bottom: before.top + before.height });
+      }
+      // The limiter is drawn over zone A and nowhere else, so it moves with it.
+      expect({ face: face.folder, offset: o.pitLimiter.top - o.zoneA.top }).toMatchObject({ offset: z.pitLimiter.top - z.zoneA.top });
+    }
+  });
+
+  test('the reference face gives back 44 of its 480 rows', () => {
+    const o = layoutWithoutRevBar(zoneFace1920x480).zones;
+    expect(revBarReclaim(zoneFace1920x480.zones)).toBe(44);
+    expect(o.bar).toEqual({ left: 0, top: 4, width: 1920, height: 56 });
+    expect(o.zoneB).toEqual({ left: 0, top: 61, width: 769, height: 358 });
+    expect(o.zoneA).toEqual({ left: 770, top: 61, width: 380, height: 358 });
+    expect(o.zoneC).toEqual({ left: 1151, top: 61, width: 769, height: 358 });
+    expect(o.band).toEqual({ left: 0, top: 420, width: 1920, height: 60 });
+  });
+
+  test('the nano gets a ninth of its screen back, which is what makes the setting worth having', () => {
+    const nano = ZONE_FACES.find((f) => f.folder === 'openDash zones 800x286')!;
+    const o = layoutWithoutRevBar(nano).zones;
+    // The one face with no bar: the body starts straight under the well, so it is the body that
+    // rises to the top margin.
+    expect(nano.zones.bar).toBeUndefined();
+    expect(revBarReclaim(nano.zones)).toBe(32);
+    expect(o.zoneB).toEqual({ left: 0, top: 1, width: 269, height: 226 });
+    expect(o.zoneA).toEqual({ left: 270, top: 1, width: 260, height: 226 });
+  });
+
+  test('every zone the second arrangement needs has a dashboard drawn for it', () => {
+    for (const { face, built } of BUILT) {
+      const names = new Set(built.zones.map((d) => d.name));
+      for (const layout of [face, layoutWithoutRevBar(face)]) {
+        for (const zone of FACE_ZONE_LETTERS) {
+          const r = rectOf(layout, zone);
+          const name = zoneDashboardName(kindOf(zone), { width: r.width, height: r.height });
+          expect({ face: face.folder, zone, name, drawn: names.has(name) }).toMatchObject({ drawn: true });
+        }
+      }
+    }
+  });
 });

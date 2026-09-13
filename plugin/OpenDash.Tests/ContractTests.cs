@@ -61,10 +61,10 @@ namespace OpenDashPlugin.Tests
         {
             var names = Contract.PropertyNames().ToList();
             // Four settings, twelve slots, the zone face (four pages, four masks, four starts, four
-            // bar fields and the glance), twenty-one companion modules, four pit wall zones, the
-            // wide zone and the URL.
+            // bar fields and the glance), the rev bar mode, twenty-one companion modules, four pit
+            // wall zones, the wide zone and the URL.
             const int zoneFace = 4 + 4 + 4 + 4 + 1;
-            Assert.Equal(4 + 12 + zoneFace + 21 + 4 + 2, names.Count);
+            Assert.Equal(4 + 12 + zoneFace + 1 + 21 + 4 + 2, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -79,10 +79,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "BarLeft1", "BarLeft2", "BarRight1", "BarRight2" }, names.Skip(28).Take(4));
             Assert.Equal("QuickGlance", names[32]);
 
+            // Appended after the zone face, not inserted beside ShiftLights: the four names above
+            // have shipped and this test asserts them by index. XOR-119, XOR-138.
+            Assert.Equal("RevBar", names[33]);
+
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
-            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(33).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(54));
+            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(34).Take(21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(55));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 
@@ -167,6 +171,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DeltaReferences, ListOf(source, "DELTA_REFERENCES"));
             Assert.Equal(Contract.SessionProgressModes, ListOf(source, "SESSION_PROGRESS_MODES"));
             Assert.Contains("ShiftLights: " + Contract.DefaultShiftLights.ToString().ToLowerInvariant(), source);
+            Assert.Equal(Contract.RevBarModes, ListOf(source, "REV_BAR_MODES"));
+            Assert.Contains("RevBar: '" + Contract.DefaultRevBar + "'", source);
             Assert.Contains("PositionMode: '" + Contract.DefaultPositionMode + "'", source);
             Assert.Contains("DeltaReference: '" + Contract.DefaultDeltaReference + "'", source);
             Assert.Contains("SessionProgress: '" + Contract.DefaultSessionProgress + "'", source);

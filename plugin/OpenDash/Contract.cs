@@ -14,6 +14,7 @@ namespace OpenDashPlugin
         public const int SlotCount = 12;
 
         public const string ShiftLights = "ShiftLights";
+        public const string RevBar = "RevBar";
         public const string PositionMode = "PositionMode";
         public const string DeltaReference = "DeltaReference";
         public const string SessionProgress = "SessionProgress";
@@ -21,6 +22,18 @@ namespace OpenDashPlugin
         public const string WebViewUrl = "WebViewUrl";
 
         public const bool DefaultShiftLights = true;
+
+        /// <summary>
+        /// What the top of a rectangular face carries: SimHub's shift lights, a plain RPM bar, or
+        /// nothing at all -- in which case the face is drawn in its second arrangement, with the
+        /// well's room given back to the zones. A mode rather than a second boolean, because the
+        /// three are one decision and two booleans would have a fourth state that means nothing.
+        /// </summary>
+        public static readonly string[] RevBarModes = { "shift", "rpm", "off" };
+        public const string RevBarShift = "shift";
+        public const string RevBarRpm = "rpm";
+        public const string RevBarOff = "off";
+        public const string DefaultRevBar = RevBarShift;
 
         public static readonly string[] PositionModes = { "overall", "class" };
         public const string DefaultPositionMode = "overall";
@@ -253,10 +266,27 @@ namespace OpenDashPlugin
             foreach (var letter in FaceZoneLetters) yield return ZoneStartProperty(letter);
             foreach (var slot in BarSlots) yield return BarFieldProperty(slot);
             yield return QuickGlance;
+            // Appended, not inserted: ShiftLights is one of the four names this list has always
+            // opened with and the tests assert them by index. XOR-119, XOR-138.
+            yield return RevBar;
             for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(module);
             foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
             yield return PitWallWide;
             yield return WebViewUrl;
+        }
+
+        /// <summary>
+        /// The rev bar mode a settings file means.
+        ///
+        /// `null` is the shape an rc.2 file has -- it was written before the mode existed -- and it
+        /// resolves through the deprecated alias, so that a user who had turned the shift lights off
+        /// finds the plain RPM bar rather than the shift lights back on. Anything unrecognised
+        /// resolves the same way. XOR-119 is the rule this keeps.
+        /// </summary>
+        public static string NormaliseRevBar(string value, bool shiftLights)
+        {
+            var alias = shiftLights ? RevBarShift : RevBarRpm;
+            return string.IsNullOrWhiteSpace(value) ? alias : NormaliseChoice(value, RevBarModes, alias);
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>
