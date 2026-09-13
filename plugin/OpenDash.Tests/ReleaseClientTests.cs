@@ -55,15 +55,26 @@ namespace OpenDashPlugin.Tests
                 try { context = listener.GetContext(); }
                 catch { return; }
 
-                var record = new NameValueCollection2();
-                foreach (string key in context.Request.Headers) record.Headers[key] = context.Request.Headers[key];
-                lock (seen) seen.Add(record);
+                try
+                {
+                    var record = new NameValueCollection2();
+                    foreach (string key in context.Request.Headers) record.Headers[key] = context.Request.Headers[key];
+                    lock (seen) seen.Add(record);
 
-                context.Response.StatusCode = status;
-                var body = answerBytes ?? Encoding.UTF8.GetBytes(answer);
-                context.Response.ContentLength64 = body.Length;
-                context.Response.OutputStream.Write(body, 0, body.Length);
-                context.Response.OutputStream.Close();
+                    context.Response.StatusCode = status;
+                    var body = answerBytes ?? Encoding.UTF8.GetBytes(answer);
+                    context.Response.ContentLength64 = body.Length;
+                    context.Response.OutputStream.Write(body, 0, body.Length);
+                    context.Response.OutputStream.Close();
+                }
+                catch
+                {
+                    // Dispose closes the listener at the end of every test, and a request still being
+                    // answered here then throws ObjectDisposedException on this thread. Nothing catches
+                    // it, so it does not fail a test: it takes the test host down with it, and the run
+                    // is reported aborted after every test has already passed. The thread ends instead.
+                    return;
+                }
             }
         }
 
