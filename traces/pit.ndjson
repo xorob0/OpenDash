@@ -208,6 +208,7 @@
 {"p":"OpenDash.PitWallZoneC","v":4}
 {"p":"OpenDash.PitWallZoneD","v":2}
 {"p":"OpenDash.PositionMode","v":"overall"}
+{"p":"OpenDash.RevBar","v":"shift"}
 {"p":"OpenDash.SessionProgress","v":"auto"}
 {"p":"OpenDash.ShiftLights","v":true}
 {"p":"OpenDash.Slot01","v":12}
