@@ -108,9 +108,9 @@ const liftedBy = (r: Rect, by: number): Rect => ({ ...r, top: r.top - by });
  * The same rectangles with the rev bar's room given back.
  *
  * One rule: the bar rises to where the well began, the zones that start the body rise with it and
- * grow by what they gained, and everything else stays exactly where the artboard put it. Band D does not
- * move, because it is measured from the bottom edge and the bottom edge has not changed; the
- * limiter moves with zone A, because it is drawn over zone A and nowhere else.
+ * grow by what they gained, and everything else stays exactly where the artboard put it. Band D
+ * does not move, because it is measured from the bottom edge and the bottom edge has not changed;
+ * the limiter moves with zone A, because it is drawn over zone A and nowhere else.
  *
  * In landscape B, A and C all start the body, so all three grow. In portrait only zone A does, and
  * B and C keep both their rectangles and their zone dashboards -- which is why a portrait package
@@ -120,13 +120,14 @@ export function zonesWithoutRevBar(zones: ZoneRects): ZoneRects {
   const reclaim = revBarReclaim(zones);
   const top = bodyTop(zones);
   const grown = (r: Rect): Rect => (r.top === top ? { ...r, top: r.top - reclaim, height: r.height + reclaim } : r);
+  const zoneA = grown(zones.zoneA);
   return {
     ...zones,
     ...(zones.bar ? { bar: liftedBy(zones.bar, reclaim) } : {}),
-    zoneA: grown(zones.zoneA),
+    zoneA,
     zoneB: grown(zones.zoneB),
     zoneC: grown(zones.zoneC),
-    pitLimiter: liftedBy(zones.pitLimiter, zones.zoneA.top - grown(zones.zoneA).top),
+    pitLimiter: liftedBy(zones.pitLimiter, zones.zoneA.top - zoneA.top),
   };
 }
 
