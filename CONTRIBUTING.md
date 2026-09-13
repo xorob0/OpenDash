@@ -1,6 +1,6 @@
-# Contributing to openDash
+# Contributing to OpenDash
 
-Thank you for looking at this. The whole point of openDash is that a dashboard change is a
+Thank you for looking at this. The whole point of OpenDash is that a dashboard change is a
 readable pull request, so most of this file is about keeping that true.
 
 ## The one rule
@@ -55,7 +55,7 @@ and the pit wall at once.
 - `packages/dash/src/contract.ts` is the settings contract shared with the plugin. Every read of
   an `OpenDash.*` property goes through it, and the validator rejects a build that reads a
   property the contract does not declare.
-- `packages/generator` knows nothing about openDash. It is the typed model of SimHub's scene
+- `packages/generator` knows nothing about OpenDash. It is the typed model of SimHub's scene
   graph, the NCalc helpers, the serialiser, the validator and the package writer, and it could
   serve any other dashboard project.
 - `plugin/OpenDash` is the C# plugin. `Contract.cs` mirrors `contract.ts` and a test keeps the
@@ -63,7 +63,7 @@ and the pit wall at once.
 
 ## Before you start
 
-[docs/scope.md](docs/scope.md) says what openDash is, what ships, and what is deliberately not
+[docs/scope.md](docs/scope.md) says what OpenDash is, what ships, and what is deliberately not
 built. The last of those is a list of refusals rather than a backlog, so a change that falls
 under one of its lines will be declined however well it is written. Should you believe a line
 ought to move, argue that first, in an issue or a decision record, and the code afterwards.

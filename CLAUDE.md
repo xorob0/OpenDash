@@ -1,7 +1,7 @@
-# Working on openDash
+# Working on OpenDash
 
 Notes for an AI assistant working in this repository. Read [docs/scope.md](docs/scope.md) for
-what openDash is and what it refuses to be, and [CONTRIBUTING.md](CONTRIBUTING.md) for the
+what OpenDash is and what it refuses to be, and [CONTRIBUTING.md](CONTRIBUTING.md) for the
 engineering conventions; this file is about how to work here. Note that
 [docs/scope-mvp.md](docs/scope-mvp.md) is closed: it describes the MVP and several of its
 refusals have since been reversed, so do not take its scope lines as current.

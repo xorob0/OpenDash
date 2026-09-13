@@ -329,6 +329,22 @@ describe('plugin properties', () => {
     const e = validatePackage(pkg, OPTS).errors.filter((x) => x.code === 'property/undeclared').map((x) => x.path);
     expect(e).toEqual(['openDash/openDash/Main#enabledExpression', 'openDash/openDash/Main/r#Bindings.Visible']);
   });
+
+  test('a screen enabled expression naming a function SimHub does not dispatch is an error', () => {
+    // The XOR-83 failure, moved to the one expression where it costs a whole screen rather than
+    // one item's text: SimHub evaluates the expression to nothing, nothing reads as false, and the
+    // screen never appears with no message anywhere saying so.
+    const pkg = single([rect('r')]);
+    pkg.dashboards[0]!.screens[0]!.enabledExpression = 'left([DataCorePlugin.GameData.CarModel], 4) = \'Merc\'';
+    const e = validatePackage(pkg, OPTS).errors.filter((x) => x.code === 'expression/arity');
+    expect(e.map((x) => x.path)).toEqual(['openDash/openDash/Main#enabledExpression']);
+
+    const unknown = single([rect('r')]);
+    unknown.dashboards[0]!.screens[0]!.enabledExpression = 'nosuchfunction([DataCorePlugin.GameData.Gear])';
+    expect(validatePackage(unknown, OPTS).errors.filter((x) => x.code === 'expression/unknown-function').map((x) => x.path)).toEqual([
+      'openDash/openDash/Main#enabledExpression',
+    ]);
+  });
 });
 
 describe('fonts', () => {
