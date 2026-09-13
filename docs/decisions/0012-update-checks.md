@@ -49,9 +49,10 @@ disk.
 **The comparison already exists and is already tested.** `Versioning.VersionCompare` implements
 semver precedence including pre-release ordering, and `Versioning.Decide` turns a pair of versions
 into an `InstallStatus`. One sharp edge was found while reading it: an undotted numeric identifier
-is compared ordinally rather than numerically, so `0.2.0-rc10` is reported as older than
-`0.2.0-rc2`. Pre-release tags must therefore be cut in the dotted form `rc.10`, or that comparison
-fixed, before an eleventh candidate exists.
+was compared ordinally rather than numerically, so `0.2.0-rc10` was reported as older than
+`0.2.0-rc2`. XOR-122 has since closed it, since an identifier is now compared run by run with a
+run of digits weighed by value, so that a tag cut in either form orders correctly and the dotted
+form is no longer a rule anybody has to remember.
 
 **The repository has to be public, and now is.** This was measured rather than assumed, after an
 anonymous request returned 404 while an authenticated one returned the releases: `xorob0/OpenDash`
