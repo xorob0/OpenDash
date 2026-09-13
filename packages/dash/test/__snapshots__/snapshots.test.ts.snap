@@ -1838,7 +1838,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
             },
             "Mode": 2
           }
@@ -1866,7 +1866,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
             },
             "Mode": 2
           }
@@ -1894,7 +1894,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
             },
             "Mode": 2
           }
@@ -1922,7 +1922,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
             },
             "Mode": 2
           }
@@ -1950,7 +1950,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
             },
             "Mode": 2
           }
@@ -1978,7 +1978,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
             },
             "Mode": 2
           }
@@ -2006,7 +2006,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
             },
             "Mode": 2
           }
@@ -2034,7 +2034,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
             },
             "Mode": 2
           }
@@ -2062,7 +2062,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
             },
             "Mode": 2
           }
@@ -2090,7 +2090,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+              "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
             },
             "Mode": 2
           }
@@ -2119,13 +2119,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+              "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
             },
             "Mode": 2
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+              "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
             },
             "Mode": 2
           }
@@ -2154,13 +2154,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+              "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
             },
             "Mode": 2
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+              "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
             },
             "Mode": 2
           }
@@ -2189,13 +2189,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+              "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
             },
             "Mode": 2
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+              "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
             },
             "Mode": 2
           }
@@ -2224,13 +2224,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+              "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
             },
             "Mode": 2
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+              "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
             },
             "Mode": 2
           }
@@ -2259,13 +2259,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "BackgroundColor": {
             "Formula": {
-              "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+              "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
             },
             "Mode": 2
           },
           "BlinkEnabled": {
             "Formula": {
-              "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+              "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
             },
             "Mode": 2
           }
@@ -5260,7 +5260,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5288,7 +5288,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5316,7 +5316,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5344,7 +5344,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5372,7 +5372,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5400,7 +5400,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5428,7 +5428,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5456,7 +5456,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5484,7 +5484,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5512,7 +5512,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -5541,13 +5541,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -5576,13 +5576,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -5611,13 +5611,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -5646,13 +5646,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -5681,13 +5681,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -10826,7 +10826,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -10854,7 +10854,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -10882,7 +10882,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -10910,7 +10910,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -10938,7 +10938,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -10966,7 +10966,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -10994,7 +10994,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -11022,7 +11022,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -11050,7 +11050,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -11078,7 +11078,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -11107,13 +11107,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -11142,13 +11142,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -11177,13 +11177,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -11212,13 +11212,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -11247,13 +11247,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -15796,7 +15796,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -15824,7 +15824,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -15852,7 +15852,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -15880,7 +15880,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -15908,7 +15908,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -15936,7 +15936,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -15964,7 +15964,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -15992,7 +15992,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -16020,7 +16020,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -16048,7 +16048,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -16077,13 +16077,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -16112,13 +16112,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -16147,13 +16147,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -16182,13 +16182,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -16217,13 +16217,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -21006,7 +21006,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21034,7 +21034,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21062,7 +21062,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21090,7 +21090,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21118,7 +21118,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21146,7 +21146,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21174,7 +21174,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21202,7 +21202,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21230,7 +21230,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21258,7 +21258,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -21287,13 +21287,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -21322,13 +21322,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -21357,13 +21357,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -21392,13 +21392,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -21427,13 +21427,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -25603,7 +25603,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25631,7 +25631,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25659,7 +25659,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25687,7 +25687,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25715,7 +25715,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25743,7 +25743,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25771,7 +25771,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25799,7 +25799,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25827,7 +25827,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25855,7 +25855,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -25884,13 +25884,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -25919,13 +25919,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -25954,13 +25954,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -25989,13 +25989,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -26024,13 +26024,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -30185,7 +30185,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30213,7 +30213,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30241,7 +30241,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30269,7 +30269,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30297,7 +30297,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30325,7 +30325,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30353,7 +30353,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30381,7 +30381,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30409,7 +30409,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30437,7 +30437,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -30466,13 +30466,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -30501,13 +30501,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -30536,13 +30536,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -30571,13 +30571,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -30606,13 +30606,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -35241,7 +35241,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35269,7 +35269,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35297,7 +35297,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35325,7 +35325,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35353,7 +35353,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35381,7 +35381,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35409,7 +35409,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35437,7 +35437,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35465,7 +35465,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35493,7 +35493,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -35522,13 +35522,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -35557,13 +35557,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -35592,13 +35592,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -35627,13 +35627,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -35662,13 +35662,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -40995,7 +40995,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41023,7 +41023,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41051,7 +41051,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41079,7 +41079,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41107,7 +41107,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41135,7 +41135,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41163,7 +41163,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41191,7 +41191,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41219,7 +41219,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41247,7 +41247,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -41276,13 +41276,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -41311,13 +41311,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -41346,13 +41346,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -41381,13 +41381,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -41416,13 +41416,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -45307,7 +45307,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45336,7 +45336,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45365,7 +45365,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45394,7 +45394,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45423,7 +45423,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45452,7 +45452,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45481,7 +45481,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45509,7 +45509,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45538,7 +45538,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45567,7 +45567,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -45597,13 +45597,13 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -45633,13 +45633,13 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -45669,13 +45669,13 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -45705,13 +45705,13 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -45741,13 +45741,13 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -49332,7 +49332,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (0), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49361,7 +49361,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (1), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (1), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49390,7 +49390,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (2), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (2), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49419,7 +49419,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (3), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (3), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49448,7 +49448,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)) * (5)) > (4), '#00D96A', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49477,7 +49477,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (0), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49506,7 +49506,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (1), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (1), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49534,7 +49534,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (2), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (2), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49563,7 +49563,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (3), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (3), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49592,7 +49592,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (4), '#FFB300', '#33383F')"
+                    "Expression": "if(((isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight2], 0)) * (5)) > (4), '#FFB300', '#33383F')"
                   },
                   "Mode": 2
                 }
@@ -49622,13 +49622,13 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -49658,13 +49658,13 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -49694,13 +49694,13 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -49730,13 +49730,13 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }
@@ -49766,13 +49766,13 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Bindings": {
                 "BackgroundColor": {
                   "Formula": {
-                    "Expression": "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')"
+                    "Expression": "if((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1), '#FF2D46', '#33383F')"
                   },
                   "Mode": 2
                 },
                 "BlinkEnabled": {
                   "Formula": {
-                    "Expression": "([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)"
+                    "Expression": "(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)"
                   },
                   "Mode": 2
                 }

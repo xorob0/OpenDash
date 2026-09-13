@@ -229,8 +229,19 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
  * of numbers rather than a second profile.
  */
 export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedProfile {
-  const tree = treeFor(shape);
   const length = deviceLength(shape);
+  // Everything is inside a GameRunningGroup, and that is a correctness fix rather than tidiness.
+  // Every native Status.* container tests GameRunning itself; CustomStatusContainer does not, and
+  // its IsActiveBase catches a throwing expression and returns its default of 1.0 — so with the sim
+  // closed, where the properties are null, a bare CustomStatus lights up. One native group gates
+  // the lot. What the strip does when the game is NOT running is XOR-249.
+  const running: leds.LedContainer = {
+    kind: 'raw',
+    containerType: 'Groups.GameRunningGroup',
+    description: 'only while the sim is running',
+    children: treeFor(shape),
+  };
+  const tree = [running];
   return {
     name: rpmStripProfileName(shape),
     profileId,

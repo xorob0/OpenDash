@@ -111,10 +111,20 @@ export const mirrorOverRev = (): Expr => and(ge(rpms(), blinkRpm()), not(lastGea
  */
 export const simhubStageLit = (stage: number, local: number, count: number): Expr =>
   stage === 0
-    ? gt(mul(game('CarSettings_RPMShiftLight1'), num(count)), num(local))
+    ? gt(mul(band(1), num(count)), num(local))
     : stage === 1
-      ? gt(mul(game('CarSettings_RPMShiftLight2'), num(count)), num(local))
+      ? gt(mul(band(2), num(count)), num(local))
       : simhubRedline();
 
+/**
+ * One of SimHub's two band progress values, null-safe.
+ *
+ * The `isnull()` is not decoration. With no sim running these are null, and an expression that
+ * throws is caught by `CustomStatusContainer.IsActiveBase`, which then returns its default of
+ * `1.0` — so an LED reading a bare band lights up when the sim is closed. On a screen the same
+ * failure is merely an unlit segment, which is why it went unnoticed until the strip.
+ */
+const band = (which: 1 | 2): Expr => isnull(game(`CarSettings_RPMShiftLight${which}`), num(0));
+
 /** Redline reached, under SimHub's own bands. The flash of ADR 0004. */
-export const simhubRedline = (): Expr => eq(game('CarSettings_RPMRedLineReached'), num(1));
+export const simhubRedline = (): Expr => eq(isnull(game('CarSettings_RPMRedLineReached'), num(0)), num(1));

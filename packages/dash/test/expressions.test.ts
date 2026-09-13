@@ -174,11 +174,15 @@ describe('hero expressions', () => {
     const [, simhub, rpm] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
     if (simhub?.kind !== 'layer' || rpm?.kind !== 'layer') throw new Error('layers');
     const seg = (k: number) => segOf(simhub, k);
-    expect(expressionsOf(seg(0))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (0), '#00D96A', '#33383F')"]);
-    expect(expressionsOf(seg(4))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) * (5)) > (4), '#00D96A', '#33383F')"]);
-    expect(expressionsOf(seg(5))).toEqual(["if((([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) * (5)) > (0), '#FFB300', '#33383F')"]);
-    expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: "if(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1), '#FF2D46', '#33383F')" });
-    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: '([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1)' });
+    // Null-safe: with no sim these are null, and an LED reading a bare band lights up, because
+    // CustomStatusContainer catches the throw and falls back to 1.0. ADR 0003's rule, applied late.
+    const B = (n: 1 | 2) => `isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight${n}], 0)`;
+    const REDLINE = '(isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)';
+    expect(expressionsOf(seg(0))).toEqual([`if(((${B(1)}) * (5)) > (0), '#00D96A', '#33383F')`]);
+    expect(expressionsOf(seg(4))).toEqual([`if(((${B(1)}) * (5)) > (4), '#00D96A', '#33383F')`]);
+    expect(expressionsOf(seg(5))).toEqual([`if(((${B(2)}) * (5)) > (0), '#FFB300', '#33383F')`]);
+    expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if(${REDLINE}, '#FF2D46', '#33383F')` });
+    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: REDLINE });
     expect(seg(14).blink).toEqual({ delayMs: 62 });
 
     expect(expressionsOf(segOf(rpm, 3))).toEqual(["if(([DataCorePlugin.GameData.CarSettings_CurrentDisplayedRPMPercent]) > (20), '#8A9099', '#33383F')"]);
