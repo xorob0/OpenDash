@@ -21,7 +21,7 @@ namespace OpenDashPlugin
     public sealed class ReleaseAsset
     {
         /// <summary>The name GitHub published, which is not the name on disk: every space becomes a period, so
-        /// "openDash Pit wall.simhubdash" is published as "openDash.Pit.wall.simhubdash".</summary>
+        /// "openDash Pit wall.simhubdash" is published as "OpenDash.Pit.wall.simhubdash".</summary>
         public string Name { get; set; }
 
         /// <summary>Answers 302 to a signed URL on another host that expires within the hour, so it is followed
@@ -34,7 +34,7 @@ namespace OpenDashPlugin
         public string Digest { get; set; }
     }
 
-    /// <summary>One release, reduced to what openDash reads.</summary>
+    /// <summary>One release, reduced to what OpenDash reads.</summary>
     public sealed class ReleaseInfo
     {
         public string Tag { get; set; }
@@ -76,7 +76,7 @@ namespace OpenDashPlugin
         public const string PackageSuffix = ".simhubdash";
 
         /// <summary>
-        /// Reads a releases listing. False when the body is not a listing openDash can act on, which includes an
+        /// Reads a releases listing. False when the body is not a listing OpenDash can act on, which includes an
         /// empty array and includes GitHub's own error shape.
         /// </summary>
         /// <remarks>

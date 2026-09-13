@@ -9,7 +9,7 @@ namespace OpenDashPlugin
     {
         /// <summary>Installed version reported for a dashboard folder whose sidecar is missing, malformed or has no
         /// DashboardVersion. Decide ranks it below every embedded version, so such a folder is reinstalled. The panel
-        /// shows it as it is ("openDash (unknown version)").</summary>
+        /// shows it as it is ("OpenDash (unknown version)").</summary>
         public const string UnknownVersion = "(unknown version)";
 
         private static readonly Regex DashboardVersionPattern =

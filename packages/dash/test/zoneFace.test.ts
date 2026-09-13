@@ -19,7 +19,8 @@ import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
-const reference = BUILT.find((b) => b.face.folder === 'openDash zones 1920x480')!;
+// Looked up by identity rather than by folder name, which moved to plain "openDash" in XOR-118.
+const reference = BUILT.find((b) => b.face === zoneFace1920x480)!;
 
 describe('the reference face is the artboard', () => {
   const z = zoneFace1920x480.zones;
