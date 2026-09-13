@@ -3,16 +3,17 @@
  * PositionMode. The row set fits the box, so the same module is seven rows on a companion page and
  * four in a short zone.
  *
- * Columns drop as the box narrows, longest-tail first: the class chip and the last lap go before
- * the gap does, because a leaderboard without a gap is a list of names.
+ * Columns drop as the box narrows, in the order `shedding.ts` declares: the lap times go first,
+ * then the chip and the number. The gap outlives both, because a leaderboard without a gap is a
+ * list of names.
  */
 import { measureText } from '../design/advances.ts';
 import { densityOf } from '../second/density.ts';
 import { columnWidths, table, type ColumnId } from '../second/table.ts';
-import { defineModule } from './module.ts';
+import { defineModule, pageColumns } from './module.ts';
 import type { Density } from '../second/density.ts';
 
-/** Columns in importance order; the table keeps the longest prefix that fits. */
+/** Every column this page has, in drawing order. Which of them a shape keeps is `shedding.ts`. */
 export const LEADERBOARD_COLUMNS: readonly ColumnId[] = ['pos', 'num', 'name', 'class', 'gap', 'best', 'last'];
 
 /**
@@ -48,7 +49,7 @@ export const leaderboard = defineModule('leaderboard', (ctx) =>
   table({
     name: `${ctx.prefix}table`,
     frame: ctx.frame,
-    columns: fittingColumns(LEADERBOARD_COLUMNS, ctx.frame.width, ctx.density),
+    columns: fittingColumns(pageColumns(LEADERBOARD_COLUMNS, ctx), ctx.frame.width, ctx.density),
     mode: 'full',
     density: ctx.density,
   }),

@@ -44,6 +44,11 @@ export interface FieldValue {
 export interface FieldSpec {
   /** Item name prefix, unique within the screen. */
   name: string;
+  /**
+   * What the field is called in its page's shedding order, which is the name without the screen's
+   * prefix. `modules/shedding.ts` is the table it is looked up in.
+   */
+  id?: string;
   /** Label text. Empty draws no label, which is how a bare value joins a row of fields. */
   label: string;
   labelBind?: Expr;

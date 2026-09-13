@@ -57,7 +57,9 @@ export function rowsThatFit(rows: readonly StackRow[], height: number, gap: numb
  */
 export function stack(frame: Rect, rows: readonly StackRow[], density: Density, gap?: number): Item[] {
   const step = gap ?? densityOf(density).gapY;
-  const kept = rowsThatFit(rows, frame.height, step);
+  // A row of no height is a rank the page shed entirely. It is dropped rather than drawn, so the
+  // rows under it move up instead of sitting below a gap with nothing above it.
+  const kept = rowsThatFit(rows.filter((row) => row.height > 0), frame.height, step);
   const total = stackHeight(kept, step);
   let y = Math.round(frame.top + (frame.height - total) / 2);
   const items: Item[] = [];
@@ -70,7 +72,7 @@ export function stack(frame: Rect, rows: readonly StackRow[], density: Density, 
 
 /** Draws rows from the top of `frame` instead of centring them; tables fill downwards. */
 export function stackFromTop(frame: Rect, rows: readonly StackRow[], gap: number): Item[] {
-  const kept = rowsThatFit(rows, frame.height, gap);
+  const kept = rowsThatFit(rows.filter((row) => row.height > 0), frame.height, gap);
   let y = frame.top;
   const items: Item[] = [];
   for (const row of kept) {
