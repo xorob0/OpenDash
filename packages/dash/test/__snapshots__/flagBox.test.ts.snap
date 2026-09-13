@@ -1050,6 +1050,1724 @@ exports[`the emitted file the profile 1`] = `
                       ]
                     }
                   ]
+                },
+                {
+                  "ContainerType": "CustomConditionalGroupContainer",
+                  "Description": "Resting",
+                  "ContainerId": "f33c6b5f-5489-5b96-b15a-6ab0f1e2641a",
+                  "IsEnabled": true,
+                  "StartPositionMatrix": 1,
+                  "StartPositionXEx": 1,
+                  "StartPositionYEx": 1,
+                  "DeviceKind": 2,
+                  "TriggerFormula": {
+                    "Expression": "(((isnull([OpenDash.FlagBoxCriticalOnly], false)) = (true)) and ((!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))))) or ((!((isnull([OpenDash.FlagBoxCriticalOnly], false)) = (true))) and ((!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdisqualify]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblack]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isfurled]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isrepair]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Ischeckered]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iscaution]) = (1)) or (([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IscautionWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsyellowWaving]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isdebris]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isblue]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Iswhite]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isgreen]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsstartSet]) = (1)))) and (!((([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.IsstartReady]) = (1))))))"
+                  },
+                  "LedContainers": [
+                    {
+                      "ContainerType": "CustomConditionalGroupContainer",
+                      "Description": "Gear",
+                      "ContainerId": "8b969d65-1318-57d1-8c3f-3bb0b323c88f",
+                      "IsEnabled": true,
+                      "StartPositionMatrix": 1,
+                      "StartPositionXEx": 1,
+                      "StartPositionYEx": 1,
+                      "DeviceKind": 2,
+                      "TriggerFormula": {
+                        "Expression": "(isnull([OpenDash.FlagBoxGear], true)) = (true)"
+                      },
+                      "LedContainers": [
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "Gear redline",
+                          "ContainerId": "1065c5e8-03f0-5b87-bcd4-4ac13286a1c5",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear R",
+                              "ContainerId": "51c84ad3-0589-5ec4-a834-ca82e4684d30",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('R')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear R glyph",
+                                  "ContainerId": "f598d9ef-b874-5489-ac9d-83655c23556d",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FF2D46;0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;1,1,#FF2D46;1,5,#FF2D46;2,1,#FF2D46;2,5,#FF2D46;3,1,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;4,1,#FF2D46;4,3,#FF2D46;5,1,#FF2D46;5,4,#FF2D46;6,1,#FF2D46;6,5,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear N",
+                              "ContainerId": "3e17e3bb-983e-5b48-bc25-9896be5d636b",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('N')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear N glyph",
+                                  "ContainerId": "a3746f45-8cc8-5c31-99cf-8676c3a863e3",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FF2D46;0,5,#FF2D46;1,1,#FF2D46;1,2,#FF2D46;1,5,#FF2D46;2,1,#FF2D46;2,2,#FF2D46;2,5,#FF2D46;3,1,#FF2D46;3,3,#FF2D46;3,5,#FF2D46;4,1,#FF2D46;4,3,#FF2D46;4,4,#FF2D46;4,5,#FF2D46;5,1,#FF2D46;5,4,#FF2D46;5,5,#FF2D46;6,1,#FF2D46;6,5,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 1",
+                              "ContainerId": "ea72b75e-f96c-59c8-8038-5ef1f9975672",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('1')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 1 glyph",
+                                  "ContainerId": "135ed426-f372-5b10-aa73-228138fa1c70",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,3,#FF2D46;1,2,#FF2D46;1,3,#FF2D46;2,1,#FF2D46;2,3,#FF2D46;3,3,#FF2D46;4,3,#FF2D46;5,3,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 2",
+                              "ContainerId": "3c710b05-a456-545a-93e7-803903fc6fc2",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('2')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 2 glyph",
+                                  "ContainerId": "e8853c03-38be-5482-8cd6-90027a74c577",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;1,1,#FF2D46;1,5,#FF2D46;2,5,#FF2D46;3,4,#FF2D46;4,3,#FF2D46;5,2,#FF2D46;6,1,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46;6,5,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 3",
+                              "ContainerId": "569d5133-2155-58a5-8085-847fb928352a",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('3')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 3 glyph",
+                                  "ContainerId": "eade0db1-e89e-5423-af99-99aa80369742",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FF2D46;0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;0,5,#FF2D46;1,4,#FF2D46;2,3,#FF2D46;3,4,#FF2D46;4,5,#FF2D46;5,1,#FF2D46;5,5,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 4",
+                              "ContainerId": "75f2f34d-3d68-5b42-b1f3-812ca172f50c",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('4')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 4 glyph",
+                                  "ContainerId": "ee4ed0fd-f5e8-596e-b049-cc3718c16966",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,4,#FF2D46;1,3,#FF2D46;1,4,#FF2D46;2,2,#FF2D46;2,4,#FF2D46;3,1,#FF2D46;3,4,#FF2D46;4,1,#FF2D46;4,2,#FF2D46;4,3,#FF2D46;4,4,#FF2D46;4,5,#FF2D46;5,4,#FF2D46;6,4,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 5",
+                              "ContainerId": "1b064933-6d0b-5b7a-8455-5ec1ded18821",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('5')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 5 glyph",
+                                  "ContainerId": "e4ba9152-4aa0-55a0-a4fa-81426eb40f43",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FF2D46;0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;0,5,#FF2D46;1,1,#FF2D46;2,1,#FF2D46;2,2,#FF2D46;2,3,#FF2D46;2,4,#FF2D46;3,5,#FF2D46;4,5,#FF2D46;5,1,#FF2D46;5,5,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 6",
+                              "ContainerId": "790de892-e863-577f-a995-a7ddcc9c4227",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('6')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 6 glyph",
+                                  "ContainerId": "ab7fdf86-7a47-5828-9b87-eb056f71e599",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,3,#FF2D46;0,4,#FF2D46;1,2,#FF2D46;2,1,#FF2D46;3,1,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;4,1,#FF2D46;4,5,#FF2D46;5,1,#FF2D46;5,5,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 7",
+                              "ContainerId": "829ff5a8-762e-5790-a77b-9fda1c798423",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('7')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 7 glyph",
+                                  "ContainerId": "c2a3e6ff-c1d5-5c43-9065-0b06f5c72a0f",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FF2D46;0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;0,5,#FF2D46;1,5,#FF2D46;2,4,#FF2D46;3,3,#FF2D46;4,2,#FF2D46;5,2,#FF2D46;6,2,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 8",
+                              "ContainerId": "fbe62fcc-0e8d-557c-8b11-83e6d3484606",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('8')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 8 glyph",
+                                  "ContainerId": "c86237e1-fc32-5ef5-a772-61d9fe43d0ec",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;1,1,#FF2D46;1,5,#FF2D46;2,1,#FF2D46;2,5,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;4,1,#FF2D46;4,5,#FF2D46;5,1,#FF2D46;5,5,#FF2D46;6,2,#FF2D46;6,3,#FF2D46;6,4,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 9",
+                              "ContainerId": "35ec93c7-51d8-57a2-b215-1f33f7064490",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('9')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 9 glyph",
+                                  "ContainerId": "226fbaeb-832f-593b-837a-6ea75c40aced",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#FF2D46;0,3,#FF2D46;0,4,#FF2D46;1,1,#FF2D46;1,5,#FF2D46;2,1,#FF2D46;2,5,#FF2D46;3,2,#FF2D46;3,3,#FF2D46;3,4,#FF2D46;3,5,#FF2D46;4,5,#FF2D46;5,4,#FF2D46;6,2,#FF2D46;6,3,#FF2D46",
+                                        "FrameDuration": 63
+                                      },
+                                      {
+                                        "Colors": "",
+                                        "FrameDuration": 63
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "Gear stage2",
+                          "ContainerId": "48d2ed77-28bd-5174-b35c-6c91c2eee966",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1))) and (([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) > (0))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear R",
+                              "ContainerId": "54b89daf-5093-554b-99e6-35dd4d00d6de",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('R')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear R glyph",
+                                  "ContainerId": "2bcefd54-44d7-513e-a442-9a5c14a7788f",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FFB300;0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;1,1,#FFB300;1,5,#FFB300;2,1,#FFB300;2,5,#FFB300;3,1,#FFB300;3,2,#FFB300;3,3,#FFB300;3,4,#FFB300;4,1,#FFB300;4,3,#FFB300;5,1,#FFB300;5,4,#FFB300;6,1,#FFB300;6,5,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear N",
+                              "ContainerId": "5acf0981-ec4a-524a-a7f0-1e9fc80f4b83",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('N')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear N glyph",
+                                  "ContainerId": "ad7e2f49-c4be-59c7-8f82-38ef13570df5",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FFB300;0,5,#FFB300;1,1,#FFB300;1,2,#FFB300;1,5,#FFB300;2,1,#FFB300;2,2,#FFB300;2,5,#FFB300;3,1,#FFB300;3,3,#FFB300;3,5,#FFB300;4,1,#FFB300;4,3,#FFB300;4,4,#FFB300;4,5,#FFB300;5,1,#FFB300;5,4,#FFB300;5,5,#FFB300;6,1,#FFB300;6,5,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 1",
+                              "ContainerId": "fa63460e-83f5-5df4-ae73-ceb62bd93a2c",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('1')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 1 glyph",
+                                  "ContainerId": "9ee70689-1e56-57da-a65d-9e9304361405",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,3,#FFB300;1,2,#FFB300;1,3,#FFB300;2,1,#FFB300;2,3,#FFB300;3,3,#FFB300;4,3,#FFB300;5,3,#FFB300;6,1,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300;6,5,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 2",
+                              "ContainerId": "67633d67-6ec7-56c2-847e-684affdcb241",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('2')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 2 glyph",
+                                  "ContainerId": "e95c1957-e9b8-513f-a67f-e2b141c1b84b",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;1,1,#FFB300;1,5,#FFB300;2,5,#FFB300;3,4,#FFB300;4,3,#FFB300;5,2,#FFB300;6,1,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300;6,5,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 3",
+                              "ContainerId": "b6f3a271-4566-552d-9832-6259baf98bc9",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('3')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 3 glyph",
+                                  "ContainerId": "027ad1f9-4c7e-5e09-a7f9-1af34021f601",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FFB300;0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;0,5,#FFB300;1,4,#FFB300;2,3,#FFB300;3,4,#FFB300;4,5,#FFB300;5,1,#FFB300;5,5,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 4",
+                              "ContainerId": "9b600cb4-c159-53b3-ad88-0db1455ddea8",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('4')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 4 glyph",
+                                  "ContainerId": "874e2d16-14e8-52a3-bb2a-33ca8b994455",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,4,#FFB300;1,3,#FFB300;1,4,#FFB300;2,2,#FFB300;2,4,#FFB300;3,1,#FFB300;3,4,#FFB300;4,1,#FFB300;4,2,#FFB300;4,3,#FFB300;4,4,#FFB300;4,5,#FFB300;5,4,#FFB300;6,4,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 5",
+                              "ContainerId": "d32e56a8-221b-5ae2-a5ba-574545a18c4d",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('5')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 5 glyph",
+                                  "ContainerId": "7d723e45-ea8f-5e5d-8835-34c9a5db651f",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FFB300;0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;0,5,#FFB300;1,1,#FFB300;2,1,#FFB300;2,2,#FFB300;2,3,#FFB300;2,4,#FFB300;3,5,#FFB300;4,5,#FFB300;5,1,#FFB300;5,5,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 6",
+                              "ContainerId": "3ab210af-b051-598e-a982-b1e471a74991",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('6')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 6 glyph",
+                                  "ContainerId": "6ca30bf0-e1d4-5d66-ad97-9b42d12ae577",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,3,#FFB300;0,4,#FFB300;1,2,#FFB300;2,1,#FFB300;3,1,#FFB300;3,2,#FFB300;3,3,#FFB300;3,4,#FFB300;4,1,#FFB300;4,5,#FFB300;5,1,#FFB300;5,5,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 7",
+                              "ContainerId": "b534f262-e3e4-5df3-8480-9f7146872c31",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('7')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 7 glyph",
+                                  "ContainerId": "e398b61e-e1fd-58f1-9354-c3120260a9ea",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#FFB300;0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;0,5,#FFB300;1,5,#FFB300;2,4,#FFB300;3,3,#FFB300;4,2,#FFB300;5,2,#FFB300;6,2,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 8",
+                              "ContainerId": "90a2bf11-8f0f-5506-9b23-d143a7ca93b3",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('8')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 8 glyph",
+                                  "ContainerId": "61b5413f-7b8d-5c3a-82f2-c5930dc70066",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;1,1,#FFB300;1,5,#FFB300;2,1,#FFB300;2,5,#FFB300;3,2,#FFB300;3,3,#FFB300;3,4,#FFB300;4,1,#FFB300;4,5,#FFB300;5,1,#FFB300;5,5,#FFB300;6,2,#FFB300;6,3,#FFB300;6,4,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 9",
+                              "ContainerId": "753b663d-095c-5c68-b8c8-8295d6e08acf",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('9')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 9 glyph",
+                                  "ContainerId": "bc25f261-5d18-537c-af48-ffb24db0ece6",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#FFB300;0,3,#FFB300;0,4,#FFB300;1,1,#FFB300;1,5,#FFB300;2,1,#FFB300;2,5,#FFB300;3,2,#FFB300;3,3,#FFB300;3,4,#FFB300;3,5,#FFB300;4,5,#FFB300;5,4,#FFB300;6,2,#FFB300;6,3,#FFB300",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "Gear stage1",
+                          "ContainerId": "ad75ebf7-0e0e-53ba-92c8-b260bad01dbf",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1))) and (!(([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) > (0))) and (([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) > (0))"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear R",
+                              "ContainerId": "a8fc650e-6be4-5c89-83e0-b166428d0b4b",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('R')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear R glyph",
+                                  "ContainerId": "2a1054e3-9a76-59a8-8eed-5d8dd6b64768",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#00D96A;0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;1,1,#00D96A;1,5,#00D96A;2,1,#00D96A;2,5,#00D96A;3,1,#00D96A;3,2,#00D96A;3,3,#00D96A;3,4,#00D96A;4,1,#00D96A;4,3,#00D96A;5,1,#00D96A;5,4,#00D96A;6,1,#00D96A;6,5,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear N",
+                              "ContainerId": "382c7804-b25e-574d-8240-5eedab5cd3f7",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('N')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear N glyph",
+                                  "ContainerId": "9f7f9c98-73b3-5229-8ce3-4e5f3f7b31e2",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#00D96A;0,5,#00D96A;1,1,#00D96A;1,2,#00D96A;1,5,#00D96A;2,1,#00D96A;2,2,#00D96A;2,5,#00D96A;3,1,#00D96A;3,3,#00D96A;3,5,#00D96A;4,1,#00D96A;4,3,#00D96A;4,4,#00D96A;4,5,#00D96A;5,1,#00D96A;5,4,#00D96A;5,5,#00D96A;6,1,#00D96A;6,5,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 1",
+                              "ContainerId": "aa5f63f9-cc88-5fce-8046-0218da8ce476",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('1')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 1 glyph",
+                                  "ContainerId": "20b7ccf8-3252-5918-bae1-1811e210bfdd",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,3,#00D96A;1,2,#00D96A;1,3,#00D96A;2,1,#00D96A;2,3,#00D96A;3,3,#00D96A;4,3,#00D96A;5,3,#00D96A;6,1,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A;6,5,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 2",
+                              "ContainerId": "eef86cb5-c650-50fb-93dc-e6d6126f0382",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('2')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 2 glyph",
+                                  "ContainerId": "3dd087e4-fc45-537d-9e66-12e5514f2aca",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;1,1,#00D96A;1,5,#00D96A;2,5,#00D96A;3,4,#00D96A;4,3,#00D96A;5,2,#00D96A;6,1,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A;6,5,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 3",
+                              "ContainerId": "e51e0499-8f1d-5346-97cc-31f1deba558e",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('3')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 3 glyph",
+                                  "ContainerId": "f0e2e938-6601-5478-afda-e0f74b562747",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#00D96A;0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;0,5,#00D96A;1,4,#00D96A;2,3,#00D96A;3,4,#00D96A;4,5,#00D96A;5,1,#00D96A;5,5,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 4",
+                              "ContainerId": "c94a86e8-5a57-53df-a7d9-4ffbecd6c0ef",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('4')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 4 glyph",
+                                  "ContainerId": "cf95ef42-c248-5786-a58f-c55be6336949",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,4,#00D96A;1,3,#00D96A;1,4,#00D96A;2,2,#00D96A;2,4,#00D96A;3,1,#00D96A;3,4,#00D96A;4,1,#00D96A;4,2,#00D96A;4,3,#00D96A;4,4,#00D96A;4,5,#00D96A;5,4,#00D96A;6,4,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 5",
+                              "ContainerId": "d2a4a813-bcde-50b6-8e4b-ddd8aba5d560",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('5')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 5 glyph",
+                                  "ContainerId": "7fc10d59-25cb-5fd7-8917-b4b2b35ac60b",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#00D96A;0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;0,5,#00D96A;1,1,#00D96A;2,1,#00D96A;2,2,#00D96A;2,3,#00D96A;2,4,#00D96A;3,5,#00D96A;4,5,#00D96A;5,1,#00D96A;5,5,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 6",
+                              "ContainerId": "111d0350-8fc2-5998-98c2-668d3b63afc8",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('6')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 6 glyph",
+                                  "ContainerId": "5637900e-9e2e-5068-8821-d41e28fd1c3b",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,3,#00D96A;0,4,#00D96A;1,2,#00D96A;2,1,#00D96A;3,1,#00D96A;3,2,#00D96A;3,3,#00D96A;3,4,#00D96A;4,1,#00D96A;4,5,#00D96A;5,1,#00D96A;5,5,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 7",
+                              "ContainerId": "d93bca0f-7abc-54ec-b2d1-124ab9f9620a",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('7')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 7 glyph",
+                                  "ContainerId": "edee4775-b9e0-541b-a26b-b0752fd13577",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#00D96A;0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;0,5,#00D96A;1,5,#00D96A;2,4,#00D96A;3,3,#00D96A;4,2,#00D96A;5,2,#00D96A;6,2,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 8",
+                              "ContainerId": "d1de27d7-b292-5432-9d16-6fc5a344d889",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('8')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 8 glyph",
+                                  "ContainerId": "db47428e-37c7-5b21-9f26-e5b731dabd7b",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;1,1,#00D96A;1,5,#00D96A;2,1,#00D96A;2,5,#00D96A;3,2,#00D96A;3,3,#00D96A;3,4,#00D96A;4,1,#00D96A;4,5,#00D96A;5,1,#00D96A;5,5,#00D96A;6,2,#00D96A;6,3,#00D96A;6,4,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 9",
+                              "ContainerId": "10a7bde2-0a91-5a0b-9e5a-4ff676d589d6",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('9')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 9 glyph",
+                                  "ContainerId": "379eee1a-252d-5430-9dae-dd300feebff4",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#00D96A;0,3,#00D96A;0,4,#00D96A;1,1,#00D96A;1,5,#00D96A;2,1,#00D96A;2,5,#00D96A;3,2,#00D96A;3,3,#00D96A;3,4,#00D96A;3,5,#00D96A;4,5,#00D96A;5,4,#00D96A;6,2,#00D96A;6,3,#00D96A",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "ContainerType": "CustomConditionalGroupContainer",
+                          "Description": "Gear rest",
+                          "ContainerId": "3dadcdac-1595-5bae-b687-23b234d093c6",
+                          "IsEnabled": true,
+                          "StartPositionMatrix": 1,
+                          "StartPositionXEx": 1,
+                          "StartPositionYEx": 1,
+                          "DeviceKind": 2,
+                          "TriggerFormula": {
+                            "Expression": "(!(([DataCorePlugin.GameData.CarSettings_RPMRedLineReached]) = (1))) and (!(([DataCorePlugin.GameData.CarSettings_RPMShiftLight2]) > (0))) and (!(([DataCorePlugin.GameData.CarSettings_RPMShiftLight1]) > (0))) and (true)"
+                          },
+                          "LedContainers": [
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear R",
+                              "ContainerId": "7f65c50d-d7ae-5d01-872d-3d134fcdadae",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('R')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear R glyph",
+                                  "ContainerId": "97f3683b-86c2-5f26-88b0-d520deef3457",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#F5F7FA;0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;1,1,#F5F7FA;1,5,#F5F7FA;2,1,#F5F7FA;2,5,#F5F7FA;3,1,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;4,1,#F5F7FA;4,3,#F5F7FA;5,1,#F5F7FA;5,4,#F5F7FA;6,1,#F5F7FA;6,5,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear N",
+                              "ContainerId": "62d68a95-d907-55ed-a9c8-13d10588f2c3",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('N')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear N glyph",
+                                  "ContainerId": "c63c7f08-ee3f-5089-907a-7d3eaf837038",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#F5F7FA;0,5,#F5F7FA;1,1,#F5F7FA;1,2,#F5F7FA;1,5,#F5F7FA;2,1,#F5F7FA;2,2,#F5F7FA;2,5,#F5F7FA;3,1,#F5F7FA;3,3,#F5F7FA;3,5,#F5F7FA;4,1,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;4,5,#F5F7FA;5,1,#F5F7FA;5,4,#F5F7FA;5,5,#F5F7FA;6,1,#F5F7FA;6,5,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 1",
+                              "ContainerId": "dabaee45-c444-5707-be7b-a3b83745cf18",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('1')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 1 glyph",
+                                  "ContainerId": "b96f8a93-c8b1-5b09-bbfe-47f7cec46d29",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,3,#F5F7FA;1,2,#F5F7FA;1,3,#F5F7FA;2,1,#F5F7FA;2,3,#F5F7FA;3,3,#F5F7FA;4,3,#F5F7FA;5,3,#F5F7FA;6,1,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA;6,4,#F5F7FA;6,5,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 2",
+                              "ContainerId": "28fc5251-8456-56e8-9d6a-3596572aae2e",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('2')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 2 glyph",
+                                  "ContainerId": "3b90d21e-fb98-5888-aadc-244d7cceb727",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;1,1,#F5F7FA;1,5,#F5F7FA;2,5,#F5F7FA;3,4,#F5F7FA;4,3,#F5F7FA;5,2,#F5F7FA;6,1,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA;6,4,#F5F7FA;6,5,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 3",
+                              "ContainerId": "9cfe7efe-866c-52ae-a872-8fff12dd5aeb",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('3')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 3 glyph",
+                                  "ContainerId": "a6285155-9fa8-527f-b4c9-e1e19bba58f3",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#F5F7FA;0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;1,4,#F5F7FA;2,3,#F5F7FA;3,4,#F5F7FA;4,5,#F5F7FA;5,1,#F5F7FA;5,5,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA;6,4,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 4",
+                              "ContainerId": "76ccfa62-39ef-5d8c-b288-fd9e76ec9b8c",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('4')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 4 glyph",
+                                  "ContainerId": "d177f4b0-7c1f-5e55-b7c4-53d81bd4df95",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,4,#F5F7FA;1,3,#F5F7FA;1,4,#F5F7FA;2,2,#F5F7FA;2,4,#F5F7FA;3,1,#F5F7FA;3,4,#F5F7FA;4,1,#F5F7FA;4,2,#F5F7FA;4,3,#F5F7FA;4,4,#F5F7FA;4,5,#F5F7FA;5,4,#F5F7FA;6,4,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 5",
+                              "ContainerId": "08eace13-3359-5c0e-847f-c49ef73df7a8",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('5')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 5 glyph",
+                                  "ContainerId": "0945f010-ce54-5af6-8106-7484b0e3febf",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#F5F7FA;0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;1,1,#F5F7FA;2,1,#F5F7FA;2,2,#F5F7FA;2,3,#F5F7FA;2,4,#F5F7FA;3,5,#F5F7FA;4,5,#F5F7FA;5,1,#F5F7FA;5,5,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA;6,4,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 6",
+                              "ContainerId": "dc53a0b6-68f3-526d-b81c-9f819daf07b4",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('6')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 6 glyph",
+                                  "ContainerId": "753f31bc-9253-5dc8-9c65-782283a8845a",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,3,#F5F7FA;0,4,#F5F7FA;1,2,#F5F7FA;2,1,#F5F7FA;3,1,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;4,1,#F5F7FA;4,5,#F5F7FA;5,1,#F5F7FA;5,5,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA;6,4,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 7",
+                              "ContainerId": "a55c913d-7ce3-589c-8ea3-300e6f11b537",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('7')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 7 glyph",
+                                  "ContainerId": "fd04ffe5-f5db-58bd-9b56-ae41922eb077",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,1,#F5F7FA;0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;0,5,#F5F7FA;1,5,#F5F7FA;2,4,#F5F7FA;3,3,#F5F7FA;4,2,#F5F7FA;5,2,#F5F7FA;6,2,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 8",
+                              "ContainerId": "f1a504e6-ee0c-5cef-9204-b63a5c98d0c6",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('8')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 8 glyph",
+                                  "ContainerId": "250f73e4-e411-53ce-8aca-b6fcfd985ef4",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;1,1,#F5F7FA;1,5,#F5F7FA;2,1,#F5F7FA;2,5,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;4,1,#F5F7FA;4,5,#F5F7FA;5,1,#F5F7FA;5,5,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA;6,4,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "ContainerType": "CustomConditionalGroupContainer",
+                              "Description": "Gear 9",
+                              "ContainerId": "51746a31-05b8-542c-bda9-cbafed15b832",
+                              "IsEnabled": true,
+                              "StartPositionMatrix": 1,
+                              "StartPositionXEx": 1,
+                              "StartPositionYEx": 1,
+                              "DeviceKind": 2,
+                              "TriggerFormula": {
+                                "Expression": "([DataCorePlugin.GameData.Gear]) = ('9')"
+                              },
+                              "LedContainers": [
+                                {
+                                  "ContainerType": "AnimationContainer",
+                                  "Description": "Gear 9 glyph",
+                                  "ContainerId": "da929545-c5af-578f-ac53-b25e62d6cb72",
+                                  "IsEnabled": true,
+                                  "StartPositionMatrix": 1,
+                                  "StartPositionX": 1,
+                                  "StartPositionY": 1,
+                                  "DeviceKind": 2,
+                                  "Animation": {
+                                    "Columns": 8,
+                                    "Rows": 8,
+                                    "PenColor": "#FFFFFFFF",
+                                    "Frames": [
+                                      {
+                                        "Colors": "0,2,#F5F7FA;0,3,#F5F7FA;0,4,#F5F7FA;1,1,#F5F7FA;1,5,#F5F7FA;2,1,#F5F7FA;2,5,#F5F7FA;3,2,#F5F7FA;3,3,#F5F7FA;3,4,#F5F7FA;3,5,#F5F7FA;4,5,#F5F7FA;5,4,#F5F7FA;6,2,#F5F7FA;6,3,#F5F7FA",
+                                        "FrameDuration": 1000
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }

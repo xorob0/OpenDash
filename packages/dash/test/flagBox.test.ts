@@ -12,8 +12,10 @@ import { FLAG_PRIORITY } from '../src/components/flagStrip.ts';
 import { declaredProperties, flagBoxProperties, PROPERTY_PREFIX } from '../src/contract.ts';
 import { FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, type SessionFlagBit } from '../src/flags.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type MatrixContainer } from '../src/generator.ts';
+import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
+import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { flagFrames, FLAG_PALETTE, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
-import { buildFlagBoxProfile, drawnFlags, flagBoxTree, flagContainers, pruneEmpty } from '../src/leds/profile.ts';
+import { buildFlagBoxProfile, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, restingCondition } from '../src/leds/profile.ts';
 import { ds } from '../src/tokens.ts';
 
 /** Every colour `ds` resolves, so "is this a token" is a question about tokens.json rather than
@@ -302,7 +304,13 @@ describe('what the box does when nobody is racing', () => {
 
 describe('brightness', () => {
   test('day, night and the switch are all contract properties', () => {
-    expect(flagBoxProperties()).toEqual(['OpenDash.LightsBrightness', 'OpenDash.LightsNightBrightness', 'OpenDash.LightsNightMode', 'OpenDash.FlagBoxCriticalOnly']);
+    expect(flagBoxProperties()).toEqual([
+      'OpenDash.LightsBrightness',
+      'OpenDash.LightsNightBrightness',
+      'OpenDash.LightsNightMode',
+      'OpenDash.FlagBoxCriticalOnly',
+      'OpenDash.FlagBoxGear',
+    ]);
   });
 
   test('they are named for the rig, not for this box', () => {
@@ -322,6 +330,95 @@ describe('brightness', () => {
   test('one brightness answers for everything, because it is the root', () => {
     expect(profile.containers[0]?.kind).toBe('brightnessFormula');
     expect(all.filter((c) => c.kind === 'brightnessFormula' || c.kind === 'brightness')).toHaveLength(1);
+  });
+});
+
+describe('the gear, as the resting state', () => {
+  test('every gear iRacing reports has a glyph, reverse and neutral included', () => {
+    expect(GEARS).toEqual(['R', 'N', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    for (const gear of GEARS) {
+      const grid = gearGrid(gear);
+      expect(grid).toHaveLength(8);
+      for (const row of grid) expect(row).toHaveLength(8);
+    }
+  });
+
+  test('no two gears draw the same glyph, and 6 and 8 differ in more than one place', () => {
+    const seen = new Map<string, string>();
+    for (const gear of GEARS) {
+      const key = gearGrid(gear).join('|');
+      expect({ gear, clash: seen.get(key) }).toEqual({ gear, clash: undefined });
+      seen.set(key, gear);
+    }
+    const six = gearGrid('6').join('');
+    const eight = gearGrid('8').join('');
+    const differences = [...six].filter((ch, i) => ch !== eight[i]).length;
+    expect(differences).toBeGreaterThan(1);
+  });
+
+  test('the colour is the shift model, taken from the rev bar', () => {
+    // One relationship learned once and read in two places. When XOR-230 replaces SimHub's
+    // per-car bands with the sim's own DriverCarSL* values, it changes shiftBands() alone.
+    const bands = shiftBands();
+    expect(bands.map((b) => b.id)).toEqual(['redline', 'stage2', 'stage1', 'rest']);
+    expect(bands.map((b) => b.colour)).toEqual([ds.purpose.shift.stage3, ds.purpose.shift.stage2, ds.purpose.shift.stage1, ds.color.text.primary]);
+    const text = serializeProfile(profile);
+    expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMRedLineReached]');
+    expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMShiftLight1]');
+    expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMShiftLight2]');
+  });
+
+  test('the bands the gear uses are the ones the rev bar segments light at', () => {
+    // revSegmentOptions lights the first segment of stage 0 when RPMShiftLight1 leaves zero and
+    // the first of stage 1 when RPMShiftLight2 does; shiftBands says the same thing for a digit.
+    const bands = shiftBands();
+    const first = revSegmentOptions(0, 15);
+    const stage1Entry = bands.find((b) => b.id === 'stage1');
+    expect(first.shift.colorBind).toInclude(ds.purpose.shift.stage1);
+    expect(stage1Entry?.raised).toInclude('CarSettings_RPMShiftLight1');
+  });
+
+  test('the redline band blinks the digit rather than filling the panel', () => {
+    // A filled panel is a flag's vocabulary, and the box has to keep the two apart.
+    const redline = all.find((c) => c.description === 'Gear redline');
+    expect(redline).toBeDefined();
+    const glyph = [...walkContainers(redline ? [redline] : [])].find((c) => c.kind === 'animation');
+    expect(glyph?.kind === 'animation' ? glyph.frames : []).toHaveLength(2);
+    const lit = glyph?.kind === 'animation' ? (glyph.frames[0]?.pixels.flat().filter((x) => x !== null) ?? []) : [];
+    expect(lit.length).toBeLessThan(64);
+    expect(new Set(lit)).toEqual(new Set([ds.purpose.shift.stage3]));
+  });
+
+  test('every flag outranks it, so the panel is never two things at once', () => {
+    // With any flag raised the resting condition is false, whichever way the switch is set.
+    for (const condition of FLAG_CATALOGUE) {
+      expect(evaluate(restingCondition(), condition.bits, false)).toBe(false);
+      if (condition.critical) expect(evaluate(restingCondition(), condition.bits, true)).toBe(false);
+    }
+    expect(evaluate(restingCondition(), [], false)).toBe(true);
+  });
+
+  test('a flag the switch has silenced stops suppressing the gear', () => {
+    // The chequer is not critical: with the switch on it is not shown, so it must not hold the
+    // panel dark either.
+    expect(evaluate(restingCondition(), ['checkered'], false)).toBe(false);
+    expect(evaluate(restingCondition(), ['checkered'], true)).toBe(true);
+  });
+
+  test('the gear switch is a contract property, and off means dark', () => {
+    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxGear');
+    const text = serializeProfile(profile);
+    expect(text).toInclude('isnull([OpenDash.FlagBoxGear], true)');
+    // Off leaves the panel dark rather than showing something else: the switch is the gear
+    // group's own condition, and there is no sibling to take its place.
+    const gear = all.find((c) => c.description === 'Gear');
+    expect(gear?.kind).toBe('when');
+    const resting = all.find((c) => c.description === 'Resting');
+    expect(resting && 'children' in resting ? resting.children.map((c) => c.description) : []).toEqual(['Gear']);
+  });
+
+  test('it is written once, not once per branch of the critical-flags switch', () => {
+    expect(all.filter((c) => c.description === 'Gear')).toHaveLength(1);
   });
 });
 
