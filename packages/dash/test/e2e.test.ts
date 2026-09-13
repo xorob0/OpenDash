@@ -14,6 +14,7 @@ import {
   DEFAULT_OUT_DIR,
   main,
   MANIFEST_FILE,
+  MANIFEST_SCHEMA_VERSION,
   PANEL_FONTS_DIR,
   parseArgs,
   readVersion,
@@ -147,7 +148,7 @@ describe('widget build on disk', () => {
     // A zone face records no slots and no rung. A zone is not a slot, and reporting one as twelve
     // would tell the plugin to draw twelve dropdowns for a face that has four zones.
     const zoneEntry = (f: ZoneLayout): JsonItem => ({ folder: f.folder, kind: 'dash', width: f.width, height: f.height, slots: 0, file: zipName(f.folder) });
-    expect(manifest).toEqual({ version: readVersion(), simHubVersion: '9.12.6', packages: [...LAYOUTS.map(entry), ...ZONE_FACES.map(zoneEntry)] });
+    expect(manifest).toEqual({ schemaVersion: MANIFEST_SCHEMA_VERSION, version: readVersion(), simHubVersion: '9.12.6', packages: [...LAYOUTS.map(entry), ...ZONE_FACES.map(zoneEntry)] });
     for (const face of ZONE_FACES) {
       const row = (manifest.packages as JsonItem[]).find((p) => p.folder === face.folder)!;
       expect(row).toMatchObject({ slots: 0 });
@@ -179,7 +180,10 @@ describe('widget build on disk', () => {
       ...ZONE_FACES.map((f) => f.folder),
     ]);
     expect(manifest).toEqual(widget.manifest as unknown as JsonItem);
-    expect(Object.keys(manifest)).toEqual(['version', 'simHubVersion', 'packages']);
+    expect(Object.keys(manifest)).toEqual(['schemaVersion', 'version', 'simHubVersion', 'packages']);
+    // First, because a reader that cannot read this shape should be able to say so before parsing
+    // the rest of it.
+    expect(manifest.schemaVersion).toBe(MANIFEST_SCHEMA_VERSION);
     // Every card face carries a rung; a zone face does not, because it has no cards to size.
     for (const p of manifest.packages as JsonItem[]) {
       const keys = ['folder', 'kind', 'width', 'height', 'slots', ...(p.rung === undefined ? [] : ['rung']), 'file'];
