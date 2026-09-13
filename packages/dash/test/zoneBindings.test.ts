@@ -18,8 +18,18 @@
  * plugin action rather than something a dashboard reads.
  */
 import { describe, expect, test } from 'bun:test';
-import { FACE_SIZES, FACE_ZONE_LETTERS, PROPERTY_PREFIX, declaredProperties, facePrefix, facePropertyNames, pagesForZone } from '../src/contract.ts';
-import { fontsForPackage } from '../src/dashboard.ts';
+import {
+  COMPANION_PREFIX,
+  FACE_ZONE_LETTERS,
+  PIT_WALL_PREFIX,
+  PROPERTY_PREFIX,
+  declaredProperties,
+  facePrefix,
+  foreignProperties,
+  pagesForZone,
+} from '../src/contract.ts';
+import { buildPackage, fontsForPackage } from '../src/dashboard.ts';
+import { LAYOUTS } from '../src/layouts/index.ts';
 import { buildScreenPackage, SCREEN_PACKAGES } from '../src/screens/index.ts';
 import { validatePackage, type DashPackage, type WidgetItem } from '../src/generator.ts';
 import { walkItems } from '../src/walk.ts';
@@ -28,14 +38,26 @@ import { ZONE_FACES, buildZoneFace, sizeOf } from '../src/zones/index.ts';
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const VALIDATE = { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX };
 
-/** Every package the build produces on the zone path, rebuilt for each test that breaks one. */
-const packages = (): DashPackage[] => [
-  ...ZONE_FACES.map((face) => {
-    const built = buildZoneFace(face, OPTS);
-    return { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
-  }),
-  ...SCREEN_PACKAGES.map((screen) => buildScreenPackage(screen, OPTS)),
+/** A package and the screen whose settings it owns. A card face owns none: it reads the modes and the slots. */
+interface OwnedPackage {
+  pkg: DashPackage;
+  screen?: string;
+}
+
+const zoneFacePackage = (face: (typeof ZONE_FACES)[number]): DashPackage => {
+  const built = buildZoneFace(face, OPTS);
+  return { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+};
+
+/** Every package the build produces, rebuilt for each test that breaks one. */
+const everyPackage = (): OwnedPackage[] => [
+  ...LAYOUTS.map((layout) => ({ pkg: buildPackage(layout, { version: OPTS.version, simHubVersion: OPTS.simHubVersion, strategy: 'widget' as const }) })),
+  ...ZONE_FACES.map((face) => ({ pkg: zoneFacePackage(face), screen: facePrefix(sizeOf(face)) })),
+  ...SCREEN_PACKAGES.map((screen) => ({ pkg: buildScreenPackage(screen, OPTS), screen: screen.kind === 'pitwall' ? PIT_WALL_PREFIX : COMPANION_PREFIX })),
 ];
+
+/** The zone path alone, which is what the assertions about zones measure. */
+const packages = (): DashPackage[] => everyPackage().filter((owned) => owned.screen !== undefined).map((owned) => owned.pkg);
 
 const widgetsOf = (pkg: DashPackage): WidgetItem[] =>
   pkg.dashboards.flatMap((d) => d.screens.flatMap((s) => [...walkItems(s.items)])).filter((i): i is WidgetItem => i.kind === 'widget');
@@ -122,27 +144,38 @@ describe('the guards bite', () => {
     // The one a declared-property check cannot catch: every face's group is declared, so reading a
     // neighbour's validates cleanly and then moves when somebody configures the other screen.
     const face = ZONE_FACES[0]!;
-    const built = buildZoneFace(face, OPTS);
-    const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+    const pkg = zoneFacePackage(face);
     const widget = widgetsOf(pkg)[0]!;
     const other = sizeOf(ZONE_FACES[3]!);
     widget.bindings = { ...widget.bindings, InitialScreenIndex: { mode: 'formula', formula: `isnull([${PROPERTY_PREFIX}.${facePrefix(other)}ZoneA], 0)` } };
 
-    const own = { width: face.width, height: face.height };
-    const foreign = FACE_SIZES.filter((f) => f.width !== own.width || f.height !== own.height).flatMap(facePropertyNames);
-    const codes = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreign }).errors.map((e) => e.code);
+    const codes = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreignProperties(facePrefix(sizeOf(face))) }).errors.map((e) => e.code);
     expect(codes).toContain('property/another-screens');
     // And it is not merely undeclared: the name exists, which is what makes the rule necessary.
     expect(codes).not.toContain('property/undeclared');
   });
 
+  test('and a second screen reading another screen fails it the same way', () => {
+    // The rule is about screens and not about faces. A companion is one screen of a rig like any
+    // other, and the pit wall beside it is configured by somebody who is not driving.
+    const companion = SCREEN_PACKAGES.find((s) => s.kind === 'companion')!;
+    const pkg = buildScreenPackage(companion, OPTS);
+    // A companion page is a screen behind an enabled expression rather than a widget, so that is
+    // where the reading happens and where the rule has to bite.
+    const screen = pkg.dashboards[0]!.screens[0]!;
+    screen.enabledExpression = `isnull([${PROPERTY_PREFIX}.PitWallZoneA], 0) > 0`;
+
+    const codes = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreignProperties(COMPANION_PREFIX) }).errors.map((e) => e.code);
+    expect(codes).toContain('property/another-screens');
+    expect(codes).not.toContain('property/undeclared');
+  });
+
   test('every built package reads only its own screen', () => {
-    for (const face of ZONE_FACES) {
-      const built = buildZoneFace(face, OPTS);
-      const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
-      const foreign = FACE_SIZES.filter((f) => f.width !== face.width || f.height !== face.height).flatMap(facePropertyNames);
-      const result = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreign });
-      expect({ folder: face.folder, errors: result.errors }).toMatchObject({ errors: [] });
+    // Every package, and not the faces alone: a card face owns no screen at all, so the whole of
+    // every group is foreign to it, and the two second screens own one each.
+    for (const { pkg, screen } of everyPackage()) {
+      const result = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreignProperties(screen) });
+      expect({ folder: pkg.folderName, errors: result.errors }).toMatchObject({ errors: [] });
     }
   });
 

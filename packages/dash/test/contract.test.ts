@@ -24,6 +24,11 @@ import {
   PIT_WALL_ZONE_LETTERS,
   PIT_WALL_ZONE_PAGES,
   pitWallZoneSettingName,
+  COMPANION_PREFIX,
+  PIT_WALL_PREFIX,
+  foreignProperties,
+  screenPrefixes,
+  screenProperties,
   defaultCardForSlot,
   DEFAULT_SLOT_CARDS,
   DEFAULTS,
@@ -88,6 +93,36 @@ describe('settings', () => {
     for (const face of FACE_SIZES) expect(facePrefix(face)).toMatch(/^Face\d+x\d+$/);
     expect(faceForPrefix('Face1920x480')).toMatchObject({ width: 1920, height: 480 });
     expect(faceForPrefix('Face1x1')).toBeUndefined();
+  });
+
+  test('every property belongs to one screen or to every screen', () => {
+    // The rule the build enforces is a partition of the contract: a name is one screen's or it is
+    // shared by all of them, and never both. Without that a package could be told it may read
+    // something no screen owns, or be denied one of its own.
+    const declared = declaredProperties();
+    const owned = screenPrefixes().flatMap(screenProperties);
+    expect(new Set(owned).size).toBe(owned.length);
+    for (const name of owned) expect({ name, declared: declared.includes(name) }).toMatchObject({ declared: true });
+
+    // What is left over is what a rig shares: the four modes and the twelve slots mean the same
+    // thing on the wheel, on the rim and on the pit wall, so they carry no screen's name.
+    const shared = declared.filter((name) => !owned.includes(name));
+    const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
+    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1))].map((n) => `${PROPERTY_PREFIX}.${n}`));
+
+    // The web view address is the pit wall's although its name carries no prefix: it was named
+    // before the idiom, and no other screen has a browser page to point anywhere.
+    expect(screenProperties(PIT_WALL_PREFIX)).toContain('OpenDash.WebViewUrl');
+    expect(screenProperties(COMPANION_PREFIX)).toHaveLength(MODULE_COUNT);
+
+    const own = facePrefix(FACE_SIZES[0]!);
+    expect(foreignProperties(own)).not.toContain('OpenDash.Face1920x480ZoneA');
+    expect(foreignProperties(own)).toContain('OpenDash.Face850x480ZoneA');
+    expect(foreignProperties(own)).toContain('OpenDash.PitWallZoneA');
+    // A card face owns nothing and every group is foreign to it.
+    expect(foreignProperties()).toHaveLength(owned.length);
+    expect(() => screenProperties('Face1x1')).toThrow(RangeError);
+    expect(() => foreignProperties('Face1x1')).toThrow(RangeError);
   });
 
   test('slot names and defaults', () => {
