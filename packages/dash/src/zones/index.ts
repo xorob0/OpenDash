@@ -16,8 +16,8 @@ import { zoneFace600x686 } from './faces/600x686.ts';
 import type { ZoneLayout } from './layout.ts';
 
 export type { ZoneLayout, ZoneRects } from './layout.ts';
-export { rectOf, zoneLayoutDescription } from './layout.ts';
-export { buildZoneFace, faceItems, zonesOf, sizeOf, FACE_SCREEN_NAME, type BuiltFace, type FaceBuildOptions } from './face.ts';
+export { layoutWithoutRevBar, rectOf, revBarReclaim, zoneLayoutDescription, zonesWithoutRevBar } from './layout.ts';
+export { buildZoneFace, faceItems, zonesOf, sizeOf, FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR, type BuiltFace, type FaceBuildOptions } from './face.ts';
 export { zoneDashboard, zoneDashboardName, zoneDashboardsFor, zonePageScreen, zoneWidget, kindOf, type ZoneKind } from './pages.ts';
 export { bar, BAR_FIELD_SPECS, STRIP_CELLS } from './bar.ts';
 export { zoneAPage, gearSizeIn } from './zoneAPages.ts';

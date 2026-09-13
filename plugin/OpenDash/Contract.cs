@@ -14,6 +14,7 @@ namespace OpenDashPlugin
         public const int SlotCount = 12;
 
         public const string ShiftLights = "ShiftLights";
+        public const string RevBar = "RevBar";
         public const string PositionMode = "PositionMode";
         public const string DeltaReference = "DeltaReference";
         public const string SessionProgress = "SessionProgress";
@@ -47,6 +48,18 @@ namespace OpenDashPlugin
         public const string FlagBoxWaterTemp = "FlagBoxWaterTemp";
 
         public const bool DefaultShiftLights = true;
+
+        /// <summary>
+        /// What the top of a rectangular face carries: SimHub's shift lights, a plain RPM bar, or
+        /// nothing at all -- in which case the face is drawn in its second arrangement, with the
+        /// well's room given back to the zones. A mode rather than a second boolean, because the
+        /// three are one decision and two booleans would have a fourth state that means nothing.
+        /// </summary>
+        public static readonly string[] RevBarModes = { "shift", "rpm", "off" };
+        public const string RevBarShift = "shift";
+        public const string RevBarRpm = "rpm";
+        public const string RevBarOff = "off";
+        public const string DefaultRevBar = RevBarShift;
 
         public static readonly string[] PositionModes = { "overall", "class" };
         public const string DefaultPositionMode = "overall";
@@ -329,10 +342,21 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The properties every screen of a rig shares: the four modes and the twelve slots. A lap time
-        /// compares against the same lap on the rim as it does on the pit wall, so these carry no
-        /// screen's name and are attached whatever the rig is.
+        /// The properties every screen of a rig shares: the four modes, the twelve slots and the rev
+        /// bar. A lap time compares against the same lap on the rim as it does on the pit wall, so
+        /// these carry no screen's name and are attached whatever the rig is.
         /// </summary>
+        /// <remarks>
+        /// RevBar is shared and not a face's, although only a rectangular face has the second
+        /// arrangement: the segments themselves are drawn by the round faces' rev arc and by the
+        /// companion's speedo page as well, and a screen that may not read a property cannot draw
+        /// them. It is also the alias of ShiftLights, which has always been shared, and the two
+        /// cannot sit on opposite sides of the partition.
+        ///
+        /// It is yielded after the twelve slots rather than beside the mode it supersedes: the four
+        /// fixed names have shipped and the tests assert them by index, so a new setting is appended
+        /// to this group and never inserted into it. XOR-119, XOR-138.
+        /// </remarks>
         public static IEnumerable<string> SharedPropertyNames()
         {
             yield return ShiftLights;
@@ -340,6 +364,7 @@ namespace OpenDashPlugin
             yield return DeltaReference;
             yield return SessionProgress;
             for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
+            yield return RevBar;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
@@ -646,6 +671,20 @@ namespace OpenDashPlugin
         {
             if (percent < 0) return 0;
             return percent > 100 ? 100 : percent;
+        }
+
+        /// <summary>
+        /// The rev bar mode a settings file means.
+        ///
+        /// `null` is the shape an rc.2 file has -- it was written before the mode existed -- and it
+        /// resolves through the deprecated alias, so that a user who had turned the shift lights off
+        /// finds the plain RPM bar rather than the shift lights back on. Anything unrecognised
+        /// resolves the same way. XOR-119 is the rule this keeps.
+        /// </summary>
+        public static string NormaliseRevBar(string value, bool shiftLights)
+        {
+            var alias = shiftLights ? RevBarShift : RevBarRpm;
+            return string.IsNullOrWhiteSpace(value) ? alias : NormaliseChoice(value, RevBarModes, alias);
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>

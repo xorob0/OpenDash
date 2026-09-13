@@ -1,11 +1,16 @@
 /**
  * What the rev bar and the rev arc share: fifteen segments in two layers that never show
- * together. `shiftLights` (OpenDash.ShiftLights true, the default) lights three colour bands
+ * together. `shiftLights` (OpenDash.RevBar `shift`, the default) lights three colour bands
  * from SimHub's per-car shift progress values and flashes the last band at redline; `rpmBar`
- * (setting false) shows the same segments as a plain RPM bar in text.secondary. The components
+ * (any other mode) shows the same segments as a plain RPM bar in text.secondary. The components
  * only differ in where the segments go: a row of snapped spans, or a circle with a rotation
  * per segment. ADR 0004: SimHub exposes the shift bands as progress values, not as bar
  * percentages, so this is the honest per-car rendering.
+ *
+ * There is no third layer for `off`. Drawing nothing is not a layer: a face that carries no rev
+ * bar is a different arrangement of the whole screen, which `zones/face.ts` builds as a second
+ * screen, and the surfaces that have no such arrangement -- the rev arc, the companion's speedo
+ * -- fall back to the plain RPM bar rather than going dark. XOR-138.
  */
 import type { Hex, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -106,13 +111,13 @@ export function revLayers(prefix: string, placements: readonly RevSegmentPlaceme
     kind: 'layer',
     name: `${prefix}.shiftLights`,
     children: build('shift'),
-    ...withBindings({ Visible: setting.shiftLights() }),
+    ...withBindings({ Visible: setting.revBarIs('shift') }),
   };
   const rpmBar: LayerItem = {
     kind: 'layer',
     name: `${prefix}.rpmBar`,
     children: build('rpm'),
-    ...withBindings({ Visible: not(setting.shiftLights()) }),
+    ...withBindings({ Visible: not(setting.revBarIs('shift')) }),
   };
   return [shiftLights, rpmBar];
 }

@@ -100,13 +100,17 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildGeneral()
         {
-            var toggle = BuildToggle(Settings.ShiftLights, on =>
+            // Three states in one control rather than a toggle and a second toggle under it: what the
+            // top of the face carries is one decision, and a driver whose wheel already has LEDs
+            // across it wants the third of them. Off redraws the face without the well, so the zones
+            // start where the recess did. XOR-138.
+            var revBar = BuildSegmented(Contract.RevBarModes, new[] { "Shift lights", "RPM bar", "Off" }, Settings.RevBarMode(), value =>
             {
-                Settings.ShiftLights = on;
+                Settings.SetRevBar(value);
                 plugin.SaveSettings();
             });
             return Ui.Section("General",
-                Ui.Row("Shift lights on the dash", "Turn off if your DDU has physical LEDs. The rev bar stays.", toggle));
+                Ui.Row("The rev bar", "Shift lights, a plain RPM bar, or off entirely if your DDU has LEDs of its own. Off gives its room back to the zones.", revBar));
         }
 
         /// <summary>SimHub's own switch (SHToggleButton), so that it looks like every other toggle in SimHub.</summary>

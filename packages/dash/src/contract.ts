@@ -15,9 +15,25 @@ export const PROPERTY_PREFIX = 'OpenDash';
 /** The largest slot count any layout declares; the plugin exposes exactly this many slot settings. */
 export const SLOT_MAX = 12;
 
+export type RevBarMode = 'shift' | 'rpm' | 'off';
 export type PositionMode = 'overall' | 'class';
 export type DeltaReference = 'session' | 'alltime';
 export type SessionProgress = 'auto' | 'laps' | 'time';
+
+/**
+ * What the top of a rectangular face carries: SimHub's shift lights, a plain RPM bar, or nothing
+ * at all. A mode rather than a second boolean, because the three are one decision -- what is at
+ * the top of the face -- and two booleans would have a fourth state that means nothing.
+ *
+ * `ShiftLights` is not retired with it. It has shipped, it is one of the four names the plugin
+ * attaches first, and README publishes it as a property an LED profile may read; XOR-119 is the
+ * rule that an rc.2 user's properties do not vanish without a release of warning. It stays as the
+ * deprecated alias that {@link setting.revBar} falls back to.
+ */
+export const REV_BAR_MODES: readonly RevBarMode[] = ['shift', 'rpm', 'off'];
+
+/** Appended to the group every screen shares rather than folded into the four fixed names, which have shipped. */
+export const REV_BAR_SETTING = 'RevBar';
 
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
@@ -25,6 +41,7 @@ export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps
 
 export const DEFAULTS = {
   ShiftLights: true,
+  RevBar: 'shift' as RevBarMode,
   PositionMode: 'overall' as PositionMode,
   DeltaReference: 'session' as DeltaReference,
   SessionProgress: 'auto' as SessionProgress,
@@ -55,11 +72,19 @@ export function defaultCardForSlot(slot: number): number {
 /** `OpenDash.<name>`, the full SimHub property name. */
 export const propertyName = (name: string): string => `${PROPERTY_PREFIX}.${name}`;
 
-/** The properties the dash face reads: the four modes, the twelve slots and the zones. */
+/**
+ * The properties the dash face reads: the four modes, the twelve slots, the rev bar and the zones.
+ *
+ * `RevBar` comes after the slots rather than beside the mode it supersedes. The four fixed names
+ * have shipped and the plugin's own tests assert them by index, so a new setting is appended to the
+ * group every screen shares and never inserted into it. That group is where it belongs rather than
+ * with one face's zones: the round faces' rev arc and the companion's speedo draw the same segments
+ * and read the same setting, and `foreignProperties` would deny them a face's property.
+ */
 export function dashProperties(): string[] {
   const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
-  return [...[...fixed, ...slots].map(propertyName), ...zoneProperties()];
+  return [...[...fixed, ...slots, REV_BAR_SETTING].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
@@ -83,8 +108,21 @@ function assertSlot(slot: number): void {
  * dashboard behaves without the plugin.
  */
 export const setting = {
-  /** `isnull([OpenDash.ShiftLights], true)` */
+  /** `isnull([OpenDash.ShiftLights], true)`. Deprecated; {@link setting.revBar} is the one to read. */
   shiftLights: (): Expr => isnull(prop(propertyName('ShiftLights')), String(DEFAULTS.ShiftLights)),
+  /**
+   * `isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))`: what the
+   * top of the face carries.
+   *
+   * Two fallbacks deep, and both of them earn their place. The inner one is the default without the
+   * plugin, which is what ADR 0003 requires of every read; the outer one is the deprecated alias, so
+   * that a package installed beside an rc.2 plugin -- which attaches `ShiftLights` and not `RevBar`
+   * -- still honours the switch that user set. `off` is reachable only through `RevBar`, which is
+   * correct: a plugin that has never heard of the mode cannot have been asked for it.
+   */
+  revBar: (): Expr => isnull(prop(propertyName(REV_BAR_SETTING)), iff(setting.shiftLights(), str('shift'), str('rpm'))),
+  /** `isnull([OpenDash.RevBar], ...) = 'off'`: whether the face is in the given rev bar mode. */
+  revBarIs: (mode: RevBarMode): Expr => eq(setting.revBar(), str(mode)),
   /** `isnull([OpenDash.PositionMode], 'overall')` */
   positionMode: (): Expr => isnull(prop(propertyName('PositionMode')), str(DEFAULTS.PositionMode)),
   /** `isnull([OpenDash.DeltaReference], 'session')` */
@@ -415,7 +453,8 @@ export function screenProperties(prefix: string): string[] {
 
 /**
  * Everything the package of one screen may not read: every property another screen owns. A card
- * face owns no screen and passes nothing, which leaves it the four modes and the twelve slots.
+ * face owns no screen and passes nothing, which leaves it the four modes, the twelve slots and the
+ * rev bar.
  */
 export function foreignProperties(owner?: string): string[] {
   const screens = screenPrefixes();

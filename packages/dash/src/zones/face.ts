@@ -1,16 +1,20 @@
 /**
- * A zone face: the five parts composed into one screen.
+ * A zone face: the five parts composed into a screen, twice.
  *
  * The rev bar in its well, the bar of settled values, zones B, A and C across the body, and band D
  * across the foot. Every zone is a widget pointing at a dashboard of its catalogue, with its screen
  * index bound to a plugin property, so a wheel button that increments that property changes the
  * page and nothing in the scene graph has to know.
  *
+ * Twice, because `OpenDash.RevBar` `off` is not a hidden rev bar but a differently arranged screen:
+ * the two arrangements are built here and SimHub shows whichever the setting enables. XOR-138.
+ *
  * What this file does *not* do is decide any geometry. Every rectangle comes from the layout, which
  * read it off an artboard; see `docs/design/zones.md`.
  */
-import type { Dashboard, DashboardMetadata, Item, Rect } from '../generator.ts';
-import { FACE_SIZES, FACE_ZONE_LETTERS, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
+import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
+import { ncalc } from '../generator.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, setting, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
@@ -18,13 +22,23 @@ import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { pitLimiter } from '../components/pitLimiter.ts';
 import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
-import { rectOf, type ZoneLayout } from './layout.ts';
+import { layoutWithoutRevBar, rectOf, type ZoneLayout } from './layout.ts';
 import { label } from '../elements/label.ts';
 import { densityForBox, densityOf } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
 import { widestCounter, zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
+const { not } = ncalc;
+
 export const FACE_SCREEN_NAME = 'Main';
+/**
+ * The same face with the rev bar's room given back to the body, shown when `OpenDash.RevBar` is
+ * `off`. Two screens rather than two packages: a driver flips a switch in the panel and the face in
+ * front of them changes, which is what every other setting here does, and SimHub picks the screen
+ * for them -- `EditorModel.CheckGameModeScreen` re-evaluates every `ScreenEnabledExpression` each
+ * frame and moves off a screen that has stopped being enabled (verified against SimHub 9.12.6).
+ */
+export const FACE_SCREEN_NAME_NO_REV_BAR = 'Main, rev bar off';
 
 /**
  * The contract's entry for a layout, which is what names its settings.
@@ -46,14 +60,22 @@ export const zonesOf = (layout: ZoneLayout): { zone: FaceZone; size: { width: nu
     return { zone, size: { width: r.width, height: r.height }, corners: zone === 'D' && layout.bandCorners };
   });
 
-/** The items of a zone face's one screen. */
-export function faceItems(layout: ZoneLayout): Item[] {
+/**
+ * The items of one arrangement of a zone face.
+ *
+ * `revBar` false leaves out the well and the segments entirely rather than hiding them: the layout
+ * it is given has already moved the rest of the face up into the room they were taking, so there is
+ * nothing left to hide them in.
+ */
+export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { revBar?: boolean } = {}): Item[] {
   const z = layout.zones;
   const items: Item[] = [];
 
-  // The well the rev bar has sat in since the first token file named it, and which was never drawn.
-  items.push(band('well', z.revBarWell, ds.purpose.block.well));
-  items.push(...revBar({ left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: ds.space[2] }, 'revBar'));
+  if (withRevBar) {
+    // The well the rev bar has sat in since the first token file named it, and which was never drawn.
+    items.push(band('well', z.revBarWell, ds.purpose.block.well));
+    items.push(...revBar({ left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: ds.space[2] }, 'revBar'));
+  }
 
   if (z.bar) {
     items.push(band('bar.ground', z.bar, ds.purpose.block.well));
@@ -124,8 +146,30 @@ export interface FaceBuildOptions {
 
 export interface BuiltFace {
   main: Dashboard;
-  /** One per distinct rectangle and catalogue: zone A's four pages, the modules, band D's eight. */
+  /**
+   * One per distinct rectangle and catalogue: zone A's four pages, the modules, band D's eight --
+   * and again for the rectangles the rev-bar-off arrangement grows, which is two more on a
+   * landscape face and one on a portrait one.
+   */
   zones: Dashboard[];
+}
+
+/**
+ * One arrangement of the face, with the expression that decides when SimHub shows it.
+ *
+ * The name follows the flag rather than being passed beside it, so a screen cannot end up named for
+ * one arrangement and drawn as the other.
+ */
+function faceScreen(layout: ZoneLayout, withRevBar: boolean): Screen {
+  return {
+    name: withRevBar ? FACE_SCREEN_NAME : FACE_SCREEN_NAME_NO_REV_BAR,
+    inGame: true,
+    idle: true,
+    pit: true,
+    backgroundColor: layout.background,
+    items: faceItems(layout, { revBar: withRevBar }),
+    enabledExpression: withRevBar ? not(setting.revBarIs('off')) : setting.revBarIs('off'),
+  };
 }
 
 /** A zone face and the dashboards its zones cycle. */
@@ -137,22 +181,16 @@ export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions): Built
     version: opts.version,
     simHubVersion: opts.simHubVersion,
   };
+  const off = layoutWithoutRevBar(layout);
   const main: Dashboard = {
     name: layout.folder,
     width: layout.width,
     height: layout.height,
     backgroundColor: layout.background,
-    screens: [
-      {
-        name: FACE_SCREEN_NAME,
-        inGame: true,
-        idle: true,
-        pit: true,
-        backgroundColor: layout.background,
-        items: faceItems(layout),
-      },
-    ],
+    screens: [faceScreen(layout, true), faceScreen(off, false)],
     metadata,
   };
-  return { main, zones: zoneDashboardsFor(sizeOf(layout), zonesOf(layout), metadata) };
+  // Both arrangements' rectangles, deduplicated by zoneDashboardsFor: the zones the rev bar's room
+  // does not reach keep the one dashboard they already had.
+  return { main, zones: zoneDashboardsFor(sizeOf(layout), [...zonesOf(layout), ...zonesOf(off)], metadata) };
 }

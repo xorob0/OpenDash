@@ -34,7 +34,10 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
 
 A face is **five parts**, and every rectangular size is the same five.
 
-- The **rev bar** across the top, with its shift lights, in a recessed well.
+- The **rev bar** across the top, with its shift lights, in a recessed well. It can show a plain
+  RPM bar instead, or nothing at all: switched off, the well goes with it, the bar rises into its
+  room and the body grows by what it gained. The band keeps its place, because it is measured from
+  the bottom edge.
 - The **bar** below it, carrying what does not change during a lap: two fields at each end,
   chosen from a catalogue of ten, and between them the car settings your sim publishes.
 - The **body**, which is **zone B, zone A and zone C** side by side. Zone A is the narrow middle
@@ -172,7 +175,7 @@ nothing to save and no restart.
 
 | Section | Setting | Values |
 |---|---|---|
-| General | Shift lights on the dash | on, off (the rev bar stays; turn off if your DDU has physical LEDs) |
+| General | The rev bar | Shift lights, RPM bar, Off (off gives the bar's room back to the zones on a zone face; pick it if your DDU has LEDs of its own) |
 | Data | Position | Overall, Class |
 | Data | Delta reference | Session best, All-time best |
 | Data | Session progress | Auto, Laps, Time |
@@ -200,9 +203,13 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `Face1920x480ZoneAStart` the one it opens on, `Face1920x480BarLeft1` a bar field and
 `Face1920x480QuickGlance` the glance, with the same set for every other size. Alongside them are
 `OpenDash.ShiftLights`, `OpenDash.PositionMode`, `OpenDash.DeltaReference`,
-`OpenDash.SessionProgress`, `OpenDash.Slot01` to `OpenDash.Slot12` for the round faces,
-`OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallZoneA` to `PitWallZoneD`,
-`OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
+`OpenDash.SessionProgress`, `OpenDash.RevBar`, `OpenDash.Slot01` to `OpenDash.Slot12` for the
+round faces, `OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallZoneA` to
+`PitWallZoneD`, `OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
+
+`OpenDash.RevBar` is `shift`, `rpm` or `off`, and it is what the General section's control writes.
+`OpenDash.ShiftLights` is the deprecated alias kept beside it, true only in the `shift` state, so a
+dashboard or an LED profile written against it still reads.
 
 ## Update
 

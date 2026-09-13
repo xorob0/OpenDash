@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { ncalc } from '../src/generator.ts';
 import { revBar, REDLINE_BLINK_MS } from '../src/components/revBar.ts';
 import { flagVisible } from '../src/components/flagStrip.ts';
+import { setting } from '../src/contract.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
@@ -127,8 +128,11 @@ describe('hero expressions', () => {
   test('shift lights light per band and flash the last band at redline', () => {
     const [shift, rpm] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
     if (shift?.kind !== 'layer' || rpm?.kind !== 'layer') throw new Error('revBar returns two layers');
-    expect(shift.bindings?.Visible).toEqual({ mode: 'formula', formula: 'isnull([OpenDash.ShiftLights], true)' });
-    expect(rpm.bindings?.Visible).toEqual({ mode: 'formula', formula: '!(isnull([OpenDash.ShiftLights], true))' });
+    // Two layers and not three: `off` is a differently arranged screen rather than a hidden layer,
+    // so everything that is not the shift lights -- including a face that has no `off` arrangement,
+    // like the rev arc -- falls back to the plain RPM bar. XOR-138.
+    expect(shift.bindings?.Visible).toEqual({ mode: 'formula', formula: setting.revBarIs('shift') });
+    expect(rpm.bindings?.Visible).toEqual({ mode: 'formula', formula: `!(${setting.revBarIs('shift')})` });
     const seg = (layer: typeof shift, k: number) => {
       const s = layer.children[k];
       if (!s || s.kind !== 'rect') throw new Error('segment');

@@ -37,6 +37,8 @@ import {
   DELTA_REFERENCES,
   POSITION_MODES,
   PROPERTY_PREFIX,
+  REV_BAR_MODES,
+  REV_BAR_SETTING,
   SESSION_PROGRESS_MODES,
   setting,
   SLOT_MAX,
@@ -72,13 +74,16 @@ describe('settings', () => {
     // the same reason: ADR 0003, and ADR 0013 for why the box is here at all. Eight global and
     // five per matrix, the way every face carries its own group.
     expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 6);
-    expect(props).toHaveLength(4 + SLOT_MAX + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length);
+    // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
+    expect(props).toHaveLength(4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
     expect(props[15]).toBe('OpenDash.Slot12');
     // The zones are declared here and read by the face from XOR-85. Slot01 to Slot12 stay beside
     // them until the card path is retired, because ten faces still read them.
+    // Appended to the shared group rather than beside ShiftLights, which has shipped at index 0.
+    expect(props[4 + SLOT_MAX]).toBe('OpenDash.RevBar');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -123,7 +128,10 @@ describe('settings', () => {
     for (const name of lights) expect({ name, owned: owned.includes(name) }).toMatchObject({ owned: false });
     const shared = declared.filter((name) => !owned.includes(name) && !lights.includes(name));
     const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
-    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1))].map((n) => `${PROPERTY_PREFIX}.${n}`));
+    // RevBar is shared too, and has to be: only a rectangular face has a second arrangement, but the
+    // round faces' rev arc and the companion's speedo draw the same segments and read the same
+    // setting, and a screen may not read a property another screen owns.
+    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)), REV_BAR_SETTING].map((n) => `${PROPERTY_PREFIX}.${n}`));
 
     // The web view address is the pit wall's although its name carries no prefix: it was named
     // before the idiom, and no other screen has a browser page to point anywhere.
@@ -155,6 +163,12 @@ describe('settings', () => {
 
   test('every read falls back to the default without the plugin', () => {
     expect(setting.shiftLights()).toBe('isnull([OpenDash.ShiftLights], true)');
+    // Two fallbacks: the deprecated alias, and through it the default a package without the plugin
+    // shows. An rc.2 plugin attaches ShiftLights and not RevBar, and its user's switch still works.
+    expect(setting.revBar()).toBe("isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))");
+    expect(setting.revBarIs('off')).toBe("(isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('off')");
+    expect(REV_BAR_MODES).toEqual(['shift', 'rpm', 'off']);
+    expect(DEFAULTS.RevBar).toBe('shift');
     expect(setting.positionMode()).toBe("isnull([OpenDash.PositionMode], 'overall')");
     expect(setting.deltaReference()).toBe("isnull([OpenDash.DeltaReference], 'session')");
     expect(setting.sessionProgress()).toBe("isnull([OpenDash.SessionProgress], 'auto')");
@@ -184,7 +198,13 @@ describe('plugin mirror', () => {
     const source = pluginSource('Contract.cs');
     expect(source).toContain(`public const string Prefix = "${PROPERTY_PREFIX}";`);
     expect(source).toContain(`public const int SlotCount = ${SLOT_MAX};`);
-    for (const name of ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress']) expect(source).toContain(`public const string ${name} = "${name}";`);
+    for (const name of ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress', 'RevBar']) expect(source).toContain(`public const string ${name} = "${name}";`);
+    expect(source).toContain(`RevBarModes = ${csArray(REV_BAR_MODES)};`);
+    // The plugin names each mode, because it compares against them in four places; the mirror is
+    // that the names spell the modes this file declares and that the default points at one of them.
+    const revBarConst = (mode: string): string => `RevBar${mode[0]!.toUpperCase()}${mode.slice(1)}`;
+    for (const mode of REV_BAR_MODES) expect(source).toContain(`public const string ${revBarConst(mode)} = "${mode}";`);
+    expect(source).toContain(`public const string DefaultRevBar = ${revBarConst(DEFAULTS.RevBar)};`);
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);
