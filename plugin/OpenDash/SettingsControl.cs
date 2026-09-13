@@ -1388,7 +1388,7 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Title "openDash <installed version> · <n> dashboards" and the status pill: a 6 px dot and a tracked
+        /// <summary>Title "OpenDash <installed version> · <n> dashboards" and the status pill: a 6 px dot and a tracked
         /// label showing the worst status across the packages; the tooltip lists every dashboard with its own status.</summary>
         private void RefreshStatus()
         {

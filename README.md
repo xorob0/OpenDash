@@ -20,12 +20,12 @@ copy.
 OpenDash treats the dashboard as compiled output. The source of truth is TypeScript together
 with a set of design tokens; a generator emits the `.djson` scene graph that SimHub renders and
 packs it into a `.simhubdash`. A small SimHub plugin installs that package and exposes a
-handful of settings, so that the user can choose which card sits in which slot without touching
+handful of settings, so that the user can choose what each zone of the face shows without touching
 the dashboard itself.
 
 That buys three things. Contributors can actually contribute, because a pull request is a
 TypeScript diff rather than an opaque blob. A feature change reaches every screen size at once,
-because cards are shared components and a size is only a layout that arranges them. Finally,
+because a page is a shared component and a size is only a set of rectangles to draw them in. Finally,
 one set of design tokens drives the dashboard and the plugin panel, so colours cannot drift
 between them.
 
@@ -66,17 +66,27 @@ Dash Studio like any other.
 
 ## The dashboard
 
-The face is a fixed hero zone and a grid of equal slots, twelve of them at 1920 by 480 and
-fewer on a smaller screen. The hero holds what a driver reads by reflex: the gear, a fifteen
-segment rev bar with SimHub's per-car shift lights, the flag strip and the pit limiter. Every
-other field is a card, and any card can be placed in any slot from the plugin: speed, current,
-last and best lap, delta, position, session progress, fuel, fuel laps, TC, ABS, tyre
-temperatures and tyre pressures.
+The face is five parts: a fifteen segment rev bar with SimHub's per-car shift lights in a
+recessed well, a bar of settled values, a body of three zones, and a band across the foot.
 
-The plugin settings are SimHub properties (`OpenDash.ShiftLights`, `OpenDash.PositionMode`,
-`OpenDash.DeltaReference`, `OpenDash.SessionProgress`, `OpenDash.Slot01` to `Slot12`), so
-other dashboards and LED profiles can read them too. Every change applies to the running
-dashboard immediately.
+**Each zone shows one page at a time and a wheel button cycles it.** Zone A is the narrow middle
+column and holds the gear, because the gear is read by reflex; zones B and C flank it and choose
+among the same twenty-one pages the companion has; the band chooses among eight that suit a wide,
+short strip, and a flag takes the band over while one is out. The bar does not cycle, which is what
+earns it the space: it carries what does not change during a lap, two fields at each end and the
+car settings your sim publishes between them.
+
+A page is never scaled. It is laid out for the shape of the box it is given and sheds its secondary
+rows before it shrinks its numerals, so a bigger screen shows more in each zone rather than the
+same thing larger.
+
+The plugin settings are SimHub properties, so other dashboards and LED profiles can read them too,
+and every change applies to the running dashboard immediately. Each screen keeps its own, named for
+it: `OpenDash.Face1920x480ZoneA` is the page zone A of the reference face is showing, and a face
+beside it has its own set, so two screens on one rig are configured apart.
+
+The two round faces are still the twelve-slot design of 0.1.x, because what a round face does with
+zones is not decided; they are the only ones `OpenDash.Slot01` to `Slot12` still drive.
 
 ## The second screens
 
