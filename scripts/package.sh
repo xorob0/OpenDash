@@ -5,12 +5,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bun run build
-rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/fonts
+rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/*.ledsprofile plugin/OpenDash/Resources/fonts
 # Everything is copied and the csproj decides what is embedded, which is how CI works too: it hands
 # the whole dash artefact over. The card faces are excluded there, for the reason written there.
 cp build/*.simhubdash plugin/OpenDash/Resources/
+cp build/*.ledsprofile plugin/OpenDash/Resources/
 cp -R build/fonts plugin/OpenDash/Resources/fonts
 dotnet build plugin/OpenDash -c Release --no-incremental
 bash plugin/scripts/package-plugin.sh
 embedded=$(ls plugin/OpenDash/Resources/*.simhubdash | grep -vc '/openDash slots ' || true)
-echo "packaged: ${embedded} embedded of $(ls build/*.simhubdash | wc -l) built, build/OpenDash-plugin.zip"
+profiles=$(ls plugin/OpenDash/Resources/*.ledsprofile | wc -l)
+echo "packaged: ${embedded} embedded of $(ls build/*.simhubdash | wc -l) built, ${profiles} LED profile(s), build/OpenDash-plugin.zip"

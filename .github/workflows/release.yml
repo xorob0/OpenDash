@@ -58,6 +58,8 @@ jobs:
           name: opendash-dash
           path: |
             build/*.simhubdash
+            build/*.ledsprofile
+            build/flag-box.svg
             build/manifest.json
             build/fonts/*.ttf
             build/fonts/OFL.txt
@@ -151,6 +153,7 @@ jobs:
         with:
           files: |
             build/*.simhubdash
+            build/*.ledsprofile
             build/OpenDash-plugin.zip
             build/fonts/OFL.txt
           body_path: release-body.md

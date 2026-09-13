@@ -51,7 +51,8 @@ until somebody has actually driven them. Concerning that audit, see XOR-51.
 
 ## What ships
 
-Three kinds of screen, built from one set of parts and installed by one plugin.
+Three kinds of screen, built from one set of parts and installed by one plugin, and one profile
+for a box of lights that is not a screen at all.
 
 ### The face
 
@@ -128,6 +129,22 @@ driver's own lap beside it, and data zones whose contents are plugin settings.
 [second-screens.md](second-screens.md) describes the module model and both second screens in
 full, including every case where a module is off by default because iRacing publishes none of
 its data.
+
+### The flag box
+
+An 8x8 LED matrix in a printed box, beside the screen rather than on it, showing the flag that is
+out, the gear, the pit state, a car alongside and the warnings a driver would otherwise miss —
+each as a 64-pixel picture, ranked in the same order the face ranks them and coloured from the
+same `purpose.flag.*` tokens.
+
+One profile ships, `openDash Flag box.ledsprofile`, built by `bun run build` like everything else
+and embedded in the plugin like everything else. It is the one artefact **the plugin does not
+install**: SimHub keeps matrix profiles inside a settings file it rewrites itself, and painting
+hardware somebody owns is not something a dashboard should do without being asked. The plugin
+extracts the file and the lights page says what to import.
+[ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning, [flag-box.md](flag-box.md) is
+the guide, and the rest of the LED families — strips, brows, wheel buttons, ambient lighting — are
+deliberately not claimed.
 
 ## The plugin
 
@@ -245,7 +262,11 @@ The stream overlay is neither built nor refused. Nobody has asked for it.
 
 A change is done when `bun run check` passes, when `dotnet test plugin/OpenDash.Tests` passes if
 the plugin changed, when the snapshot diff has been read rather than merely refreshed, and when
-whatever the change draws has been seen on the Windows VM in real SimHub. The last condition is
+whatever the change draws has been seen on the Windows VM in real SimHub. The flag box is the one
+exception, and it is a stated one: no 8x8 panel is plugged into the VM and CI owns no hardware, so
+a profile is done when it loads in real SimHub and its glyphs were read in SimHub's own matrix
+preview. That is weaker than seeing a panel light, which is why it is written here rather than
+assumed. The last condition is
 the one that catches what the tests cannot: WPF clips silently, and a box measured from the
 wrong face or from a sample narrower than the runtime value loses glyphs without failing
 anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
@@ -255,7 +276,8 @@ anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
 
 [architecture.md](architecture.md) is how source becomes a `.simhubdash` and how a setting
 reaches a running dashboard. [second-screens.md](second-screens.md) is the companion and the pit
-wall. [decisions/](decisions/) holds the records that this document summarises, and a record
+wall. [flag-box.md](flag-box.md) is the 8x8 matrix, and [design/flag-box.md](design/flag-box.md)
+is what each of its sixty-four-pixel pictures means. [decisions/](decisions/) holds the records that this document summarises, and a record
 wins over this summary wherever the two disagree. [research/](research/) holds the format notes
 verified against SimHub 9.12.6, which are the place to check before guessing at a property name.
 [scope-mvp.md](scope-mvp.md) is closed, and is of historical interest only.

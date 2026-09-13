@@ -35,6 +35,9 @@ namespace OpenDashPlugin
         public DashboardInstaller Installer =>
             installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
 
+        /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
+        public FlagBoxResult FlagBox { get; private set; }
+
         public string LeftMenuTitle => "OpenDash";
 
         public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create(this));
@@ -76,11 +79,46 @@ namespace OpenDashPlugin
             {
                 Log.Error("Dashboard installation failed", ex);
             }
+            try
+            {
+                // Extracted, not installed: ADR 0013. The user imports it, and the panel says so.
+                FlagBox = FlagBoxProfile.Extract(Installer.SimHubRoot, typeof(OpenDash).Assembly, new SimHubInstallLog());
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Writing the flag box profile failed", ex);
+            }
             AttachProperties();
             AttachActions(pluginManager);
             Log.Info("Dashboard status: " + Installer.Status);
+            Log.Info(FlagBoxProfile.Summary(FlagBox));
             // The installer records what it wrote into each folder but never saves; this is the safe moment.
             SaveSettings();
+        }
+
+        /// <summary>The lights, which no dashboard reads and the flag box profile does. A profile the user
+        /// has not imported costs nothing here: a property nobody reads is one delegate.</summary>
+        private void AttachLightsProperties()
+        {
+            this.AttachDelegate(Contract.LightsBrightness, () => Settings.LightsBrightness);
+            this.AttachDelegate(Contract.LightsNightBrightness, () => Settings.LightsNightBrightness);
+            this.AttachDelegate(Contract.LightsNightMode, () => Settings.LightsNightMode);
+            this.AttachDelegate(Contract.FlagBoxCriticalOnly, () => Settings.FlagBoxCriticalOnly);
+            this.AttachDelegate(Contract.FlagBoxGear, () => Settings.FlagBoxGear);
+            this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
+            // Zero means "not set": the profile then applies its own default, which is per unit, so a
+            // driver in Fahrenheit who has never opened this page does not get a Celsius number.
+            this.AttachDelegate(Contract.FlagBoxOilTemp, () => Settings.FlagBoxOilTemp == 0 ? (int?)null : Settings.FlagBoxOilTemp);
+            this.AttachDelegate(Contract.FlagBoxWaterTemp, () => Settings.FlagBoxWaterTemp == 0 ? (int?)null : Settings.FlagBoxWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                var m = matrix;
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Rest"), () => Settings.MatrixRest(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Flags"), () => Settings.MatrixFlags(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixSpotter(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
+            }
         }
 
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
@@ -170,6 +208,7 @@ namespace OpenDashPlugin
         private void AttachProperties()
         {
             this.AttachDelegate(Contract.ShiftLights, () => Settings.ShiftLights);
+            AttachLightsProperties();
             this.AttachDelegate(Contract.PositionMode, () => Settings.PositionMode);
             this.AttachDelegate(Contract.DeltaReference, () => Settings.DeltaReference);
             this.AttachDelegate(Contract.SessionProgress, () => Settings.SessionProgress);

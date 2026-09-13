@@ -36,6 +36,19 @@ const GUEST_STOP = `${GUEST_DIR}\\stop.txt`;
 const SHARE_UNC = '\\\\host.lan\\Data';
 
 /** The scenarios shipped beside the emulator, which is what `--scenario` may name. */
+/**
+ * Scenarios that drive lights rather than a dashboard, and so are not expected to have a recorded
+ * trace.
+ *
+ * A trace exists so that every binding of every package can be replayed without SimHub. The flag
+ * box is not a package — it is a `.ledsprofile` the user imports, and no `.djson` binding reads
+ * anything it sets — so a trace of `flagbox` would carry properties nothing replays, and would
+ * still have to be recorded from a real SimHub. Listed by name rather than skipped by a rule, so
+ * that adding a scenario without a trace stays a decision somebody made.
+ */
+export const UNTRACED_SCENARIOS: readonly string[] = ['flagbox'];
+
+/** Every scenario a run may name. */
 export function scenarios(): string[] {
   const dir = path.join(SOURCE_DIR, 'scenarios');
   if (!existsSync(dir)) return [];
@@ -43,6 +56,11 @@ export function scenarios(): string[] {
     .filter((f) => f.endsWith('.json'))
     .map((f) => f.replace(/\.json$/, ''))
     .sort();
+}
+
+/** The scenarios a committed trace is expected for. */
+export function tracedScenarioNames(): string[] {
+  return scenarios().filter((name) => !UNTRACED_SCENARIOS.includes(name));
 }
 
 /** The emulator's process id on the VM, or null when none is running. */
