@@ -102,7 +102,7 @@ nothing to save and no restart.
 
 | Section | Setting | Values |
 |---|---|---|
-| General | Shift lights on the dash | on, off (the rev bar stays; turn off if your DDU has physical LEDs) |
+| General | The rev bar | Shift lights, RPM bar, Off (off gives the bar's room back to the zones on a zone face; pick it if your DDU has LEDs of its own) |
 | Data | Position | Overall, Class |
 | Data | Delta reference | Session best, All-time best |
 | Data | Session progress | Auto, Laps, Time |
@@ -116,10 +116,12 @@ nothing to save and no restart.
 The same card may be assigned to several slots. The page says so in amber and does not stop you.
 
 The settings are stored by SimHub in `PluginsData\Common\OpenDash.GeneralSettings.json` and
-are also visible to any dashboard or LED profile as the properties `OpenDash.ShiftLights`,
+are also visible to any dashboard or LED profile as the properties `OpenDash.RevBar`,
 `OpenDash.PositionMode`, `OpenDash.DeltaReference`, `OpenDash.SessionProgress`,
 `OpenDash.Slot01` to `OpenDash.Slot12`, `OpenDash.CompanionModule01` to `CompanionModule21`,
 `OpenDash.PitWallZoneA` to `PitWallZoneD`, `OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
+`OpenDash.ShiftLights` is still there too: it is the deprecated alias of `OpenDash.RevBar` and is
+true only in the Shift lights state.
 
 ## Update
 

@@ -70,10 +70,12 @@ other field is a card, and any card can be placed in any slot from the plugin: s
 last and best lap, delta, position, session progress, fuel, fuel laps, TC, ABS, tyre
 temperatures and tyre pressures.
 
-The plugin settings are SimHub properties (`OpenDash.ShiftLights`, `OpenDash.PositionMode`,
+The plugin settings are SimHub properties (`OpenDash.RevBar`, `OpenDash.PositionMode`,
 `OpenDash.DeltaReference`, `OpenDash.SessionProgress`, `OpenDash.Slot01` to `Slot12`), so
 other dashboards and LED profiles can read them too. Every change applies to the running
-dashboard immediately.
+dashboard immediately. `OpenDash.RevBar` is `shift`, `rpm` or `off`: a wheel with LEDs of its own
+can have the screen's rev bar gone entirely, and a zone face then gives its room to the zones.
+`OpenDash.ShiftLights` is still attached as the deprecated alias of the first two.
 
 ## The second screens
 
