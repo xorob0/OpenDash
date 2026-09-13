@@ -141,14 +141,21 @@ const car: readonly BandField[] = [
   { id: 'oil', label: 'Oil', sample: '104', bind: fmt(isnull(game('OilTemperature'), num(0)), '0'), chars: CHARS.temperature, after: '°' },
   // The three gauges below the temperatures are the ones a sim either wires or does not. They are
   // removed rather than zeroed: 0.0 bar of oil pressure is a reading, and a wrong one.
-  { id: 'oilPressure', label: 'Oil pressure', sample: '4.2', bind: fmt(game('OilPressure'), '0.0'), chars: CHARS.consumption, present: present(game('OilPressure')) },
-  { id: 'fuelPressure', label: 'Fuel pressure', sample: '3.8', bind: fmt(raw('FuelPress'), '0.0'), chars: CHARS.consumption, present: present(raw('FuelPress')) },
-  { id: 'voltage', label: 'Voltage', sample: '13.8', bind: fmt(raw('Voltage'), '0.0'), chars: CHARS.consumption, present: present(raw('Voltage')) },
+  { id: 'oilPressure', label: 'Oil pressure', sample: '4.2', ...optional(game('OilPressure'), '0.0'), chars: CHARS.consumption },
+  { id: 'fuelPressure', label: 'Fuel pressure', sample: '3.8', ...optional(raw('FuelPress'), '0.0'), chars: CHARS.consumption },
+  { id: 'voltage', label: 'Voltage', sample: '13.8', ...optional(raw('Voltage'), '0.0'), chars: CHARS.consumption },
 ];
 
-/** True while the game publishes the property: what a removable field is guarded by. */
-function present(expr: string): string {
-  return ncalc.not(ncalc.isNull(expr));
+/**
+ * A reading the sim may not publish at all: what it draws, and what says it is there.
+ *
+ * The text is guarded as well as hidden. A hidden item's bindings are still evaluated every frame,
+ * so formatting a null would put an error in SimHub's log once per frame for a car that simply has
+ * no such sensor.
+ */
+function optional(expr: string, pattern: string): { bind: string; present: string } {
+  const there = ncalc.not(ncalc.isNull(expr));
+  return { bind: iff(there, fmt(expr, pattern), str('')), present: there };
 }
 
 /** `--` when the sim publishes nothing, rather than a zero that reads as a reading. */

@@ -237,7 +237,9 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         ],
       } satisfies RankMember;
     }),
-    { left: stripLeft, width: stripWidth, gap: d.gapX, when: 'close', shedOrder: STRIP_PRIORITY },
+    // `atLeast: 0`: a bar with no room between its ends draws no strip at all, rather than one cell
+    // over a field. The two ends are the settled values and they win the space.
+    { left: stripLeft, width: stripWidth, gap: d.gapX, when: 'close', shedOrder: STRIP_PRIORITY, atLeast: 0 },
   );
   items.push(...strip.items);
 

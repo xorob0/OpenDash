@@ -156,6 +156,9 @@ describe('a rank is packed and centred, with nothing spread to fill', () => {
 
   test('and never sheds its last member, which would draw nothing', () => {
     expect(rankThatFits([member('only', 900)], 100, 10)).toHaveLength(1);
+    // Unless the caller has somewhere else for the space to go: the bar's strip rather than a page.
+    expect(rankThatFits([member('only', 900)], 100, 10, undefined, 0)).toHaveLength(0);
+    expect(rank([member('only', 900)], { ...BOX, width: 10, atLeast: 0 }).items).toHaveLength(0);
   });
 });
 
@@ -192,8 +195,10 @@ describe('close: a field the sim does not publish is removed and the rank closes
   test('a rank laid out from the left closes over the hole without moving its first member', () => {
     const { items } = rank(members, { ...BOX, align: 'left' });
     expect(leftOf(items, 'a')).toBe(100);
-    expect(evaluate(formula(items, 'a', 'Left')!, { '[PA]': true, '[PB]': false })).toBe(100);
+    // Nothing can move the first member of a left-aligned rank, so it carries no Left at all.
+    expect(formula(items, 'a', 'Left')).toBeUndefined();
     expect(evaluate(formula(items, 'c', 'Left')!, { '[PA]': true, '[PB]': false })).toBe(100 + 100 + 10);
+    expect(evaluate(formula(items, 'c', 'Left')!, { '[PA]': false, '[PB]': false })).toBe(100);
   });
 
   test('an item inside a member moves with it, its offset kept', () => {
