@@ -34,18 +34,20 @@ Every capture below is the package itself, photographed through SimHub's own ren
 size while the telemetry emulator replayed a green flag lap at Spa, the car lying third of
 twenty-four. None of them is a mock-up, and no value in them was typed by hand.
 
-**The reference face, 1920 x 480.** The rev bar along the top, the bar of settled values beneath
-it, the gear between the two zones that flank it, here showing lap times and the relative, and the
-band across the foot.
+**The face, 850 x 480.** The base size, and the one to start from. The rev bar along the top, the
+bar of settled values beneath it, the gear between the two zones that flank it, here showing lap
+times and the relative, and the band across the foot.
 
-![The OpenDash face at 1920 by 480](media/readme/face-1920x480.png)
+![The OpenDash face at 850 by 480](media/readme/face-850x480.png)
 
-**A narrow face, 800 x 286.** The same parts without the bar, for which this height has no room. A
-page is laid out for the box it is given rather than scaled into it, so each zone here carries
-fewer rows rather than smaller ones: two fields of lap times where the reference face has six, and
-seven cars in the relative where it has nine.
+**The large face, 1280 x 480.** The same five parts and 430 px more width, which the page spends
+rather than stretches. A page is laid out for the box it is given rather than scaled into it, so
+the wider zone shows more of the page at the same size: the relative carries the car number and
+the class beside every driver here, and the lap times page adds your best and the delta to it. The
+base spends what it saves on rows instead, listing thirteen cars in the relative where this lists
+nine.
 
-![The OpenDash face at 800 by 286](media/readme/face-800x286.png)
+![The OpenDash face at 1280 by 480](media/readme/face-1280x480.png)
 
 **The companion, 850 x 480.** A phone or a tablet beside the wheel, showing one of twenty-one
 modules at a time and paged with a wheel button.
@@ -75,7 +77,8 @@ changed.
 
 - **Dashboard only.** Double-click the `.simhubdash` for your screen; SimHub imports it. You get
   the default layout and the default modes, and no settings page. Nothing else is needed, so this
-  is the shortest way to see OpenDash on a display.
+  is the shortest way to see OpenDash on a display. `openDash 850x480` is the base size and the one
+  to take if nothing matches your display exactly; `openDash 1280x480` is the large one.
 - **Dashboard and plugin.** `OpenDash-plugin.zip` is the only file to download, since the fourteen
   dashboards it installs are embedded in it. Close SimHub, unzip the archive and copy `OpenDash.dll`
   into
@@ -117,8 +120,8 @@ same thing larger.
 
 The plugin settings are SimHub properties, so other dashboards and LED profiles can read them too,
 and every change applies to the running dashboard immediately. Each screen keeps its own, named for
-it: `OpenDash.Face1920x480ZoneA` is the page zone A of the reference face is showing, and a face
-beside it has its own set, so two screens on one rig are configured apart.
+it: `OpenDash.Face850x480ZoneA` is the page zone A of the base face is showing, and a face beside
+it has its own set, so two screens on one rig are configured apart.
 
 What every screen shares carries no such name: `OpenDash.RevBar`, `OpenDash.PositionMode`,
 `OpenDash.DeltaReference` and `OpenDash.SessionProgress`. `OpenDash.RevBar` is `shift`, `rpm` or
