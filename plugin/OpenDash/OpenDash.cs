@@ -96,6 +96,31 @@ namespace OpenDashPlugin
             SaveSettings();
         }
 
+        /// <summary>The lights, which no dashboard reads and the flag box profile does. A profile the user
+        /// has not imported costs nothing here: a property nobody reads is one delegate.</summary>
+        private void AttachLightsProperties()
+        {
+            this.AttachDelegate(Contract.LightsBrightness, () => Settings.LightsBrightness);
+            this.AttachDelegate(Contract.LightsNightBrightness, () => Settings.LightsNightBrightness);
+            this.AttachDelegate(Contract.LightsNightMode, () => Settings.LightsNightMode);
+            this.AttachDelegate(Contract.FlagBoxCriticalOnly, () => Settings.FlagBoxCriticalOnly);
+            this.AttachDelegate(Contract.FlagBoxGear, () => Settings.FlagBoxGear);
+            this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
+            // Zero means "not set": the profile then applies its own default, which is per unit, so a
+            // driver in Fahrenheit who has never opened this page does not get a Celsius number.
+            this.AttachDelegate(Contract.FlagBoxOilTemp, () => Settings.FlagBoxOilTemp == 0 ? (int?)null : Settings.FlagBoxOilTemp);
+            this.AttachDelegate(Contract.FlagBoxWaterTemp, () => Settings.FlagBoxWaterTemp == 0 ? (int?)null : Settings.FlagBoxWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                var m = matrix;
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Rest"), () => Settings.MatrixRest(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Flags"), () => Settings.MatrixFlags(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixSpotter(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
+            }
+        }
+
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
         /// <remarks>
         /// Long enough for fourteen packages, short enough that a user closing SimHub does not think it has hung.
@@ -170,6 +195,7 @@ namespace OpenDashPlugin
         private void AttachProperties()
         {
             this.AttachDelegate(Contract.ShiftLights, () => Settings.ShiftLights);
+            AttachLightsProperties();
             this.AttachDelegate(Contract.PositionMode, () => Settings.PositionMode);
             this.AttachDelegate(Contract.DeltaReference, () => Settings.DeltaReference);
             this.AttachDelegate(Contract.SessionProgress, () => Settings.SessionProgress);
