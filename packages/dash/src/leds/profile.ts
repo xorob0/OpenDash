@@ -9,18 +9,23 @@
  *       when the game is running
  *         flags                       the alert catalogue, in priority order
  *
- * The order inside `flags` is `FLAG_PRIORITY` from components/flagStrip.ts, and it is imported
- * rather than restated on purpose: the box and the face rank the same conditions, and two lists
- * would eventually disagree about which of two live flags wins.
+ * The order inside `flags` is `FLAG_CATALOGUE` from flags.ts, the one ordered list the face ranks
+ * from too: the box and the face rank the same conditions, and two lists would eventually
+ * disagree about which of two live flags wins.
+ *
+ * The catalogue appears twice, under the two halves of the critical-flags-only switch. That is
+ * the shape DNR's profiles use for dark mode and it is worth copying: each branch then carries a
+ * clean ranking of its own list, instead of every flag's condition growing a guard for every
+ * higher flag that might be suppressed. A suppressed flag stops outranking the ones below it, so
+ * with the switch on the box shows the next critical flag down rather than going dark.
  *
  * Colour comes from `design/tokens.json` through `ds`, resolved to a literal here the way the
  * .djson resolves it. A hex value typed into this file is a bug.
  */
 import { flagBox } from '../contract.ts';
-import { FLAG_PRIORITY, flagVisible, type FlagProperty } from '../components/flagStrip.ts';
-import type { Hex, MatrixContainer, MatrixFrame, MatrixProfile } from '../generator.ts';
-import { ds } from '../tokens.ts';
-import { still } from './glyph.ts';
+import { conditionVisible, flagsShown, type FlagCondition } from '../flags.ts';
+import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
+import { flagFrames } from './glyphs.ts';
 
 /** The package name, the profile name and the file stem. Spaces are fine: the packages have them. */
 export const FLAG_BOX_PROFILE_NAME = 'openDash Flag box';
@@ -29,33 +34,39 @@ export const FLAG_BOX_PROFILE_NAME = 'openDash Flag box';
 export const ROWS = 8;
 export const COLUMNS = 8;
 
-/** A solid 8x8 field of one colour: the simplest honest picture of a flag. */
-export const solid = (colour: Hex, name: string): MatrixFrame[] =>
-  still(Array.from({ length: ROWS }, () => 'X'.repeat(COLUMNS)), { X: colour }, name);
+/**
+ * The conditions of a list that have a glyph. A condition without one is not drawn, and is listed
+ * in docs/design/flag-box.md with the reason: a drawn alert that never fires is worse than an
+ * absent one, because nobody finds out until a race.
+ */
+export const drawnFlags = (criticalOnly: boolean): FlagCondition[] => flagsShown(criticalOnly).filter((c) => flagFrames(c.id) !== undefined);
 
 /**
- * One flag as an effect. Only the green flag is drawn today; XOR-227 draws the catalogue, and
- * until it does the others are deliberately absent rather than approximated, because a drawn
- * alert that never fires is worse than an absent one.
+ * The flag effects of one list, highest priority first, each shown only when no higher flag in
+ * that same list is out.
  */
-const FLAG_GLYPHS: Partial<Record<FlagProperty, Hex>> = {
-  Flag_Green: ds.purpose.flag.green,
-};
+export function flagContainers(criticalOnly: boolean): MatrixContainer[] {
+  const shown = drawnFlags(criticalOnly);
+  return shown.map((condition) => ({
+    kind: 'when' as const,
+    description: condition.id,
+    formula: conditionVisible(condition, shown),
+    children: [{ kind: 'animation' as const, description: `${condition.id} glyph`, frames: flagFrames(condition.id) ?? [] }],
+  }));
+}
 
-/** The flag effects, highest priority first, each shown only when no higher flag is out. */
-export function flagContainers(): MatrixContainer[] {
-  const out: MatrixContainer[] = [];
-  for (const flag of FLAG_PRIORITY) {
-    const colour = FLAG_GLYPHS[flag];
-    if (colour === undefined) continue;
-    out.push({
-      kind: 'when',
-      description: flag,
-      formula: flagVisible(flag),
-      children: [{ kind: 'animation', description: `${flag} glyph`, frames: solid(colour, flag) }],
-    });
-  }
-  return out;
+/** The two branches of the critical-flags-only switch, the whole catalogue first. */
+export function flagsGroup(): MatrixContainer {
+  const { eq, not } = ncalc;
+  const quiet = eq(flagBox.criticalOnly(), 'true');
+  return {
+    kind: 'group',
+    description: 'Flags',
+    children: [
+      { kind: 'when', description: 'Critical flags only', formula: quiet, children: flagContainers(true) },
+      { kind: 'when', description: 'Every flag', formula: not(quiet), children: flagContainers(false) },
+    ],
+  };
 }
 
 /**
@@ -94,11 +105,7 @@ export function flagBoxTree(): MatrixContainer[] {
         // The box at rest is XOR-229. It exists as a branch here so the shape is settled before
         // anything has to be drawn into it, and an empty group paints nothing.
         { kind: 'gameNotRunning', description: 'Not racing', children: [] },
-        {
-          kind: 'gameRunning',
-          description: 'Racing',
-          children: [{ kind: 'group', description: 'Flags', children: flagContainers() }],
-        },
+        { kind: 'gameRunning', description: 'Racing', children: [flagsGroup()] },
       ],
     },
   ];

@@ -134,6 +134,16 @@ export const ds = {
       black: hex('purpose.flag.black'),
       chequer: hex('purpose.flag.chequer'),
       onFlag: hex('purpose.flag.onFlag'),
+      /**
+       * The three the band on the face does not draw and the 8x8 box does. iRacing publishes them
+       * (red, and the meatball as `repair`); the face folds them away because `Flag_Black` and
+       * `Flag_Yellow` are lossy. `debris` is the yellow field and `debrisStripe` the danger stripe
+       * over it, which is one token with two halves in tokens.json.
+       */
+      red: hex('purpose.flag.red'),
+      orange: hex('purpose.flag.orange'),
+      debris: hex('purpose.flag.debris'),
+      debrisStripe: hex('purpose.flag.debris.stripe'),
     },
     pitLimiter: hex('purpose.pitLimiter'),
     /**
