@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using System.Threading;
 
 namespace OpenDashPlugin.Tests
 {
@@ -74,11 +75,30 @@ namespace OpenDashPlugin.Tests
         public void Set(string folderName, string fingerprint) => Entries[folderName ?? string.Empty] = fingerprint;
     }
 
+    /// <summary>
+    /// A log that keeps its lines. Work handed to UpdateService.InBackground writes here from a thread-pool thread
+    /// while the test thread reads it, so the list is guarded and Lines hands out a copy: enumerating the live list
+    /// while an Add is in flight throws "Collection was modified", which would be a red run with nothing wrong.
+    /// </summary>
     internal sealed class ListLog : IInstallLog
     {
-        public List<string> Lines { get; } = new List<string>();
-        public void Info(string message) => Lines.Add("info: " + message);
-        public void Warn(string message) => Lines.Add("warn: " + message);
-        public void Error(string message) => Lines.Add("error: " + message);
+        private readonly object gate = new object();
+        private readonly List<string> lines = new List<string>();
+
+        /// <summary>Set once a line has been written, so a test can wait for the log rather than for the work that
+        /// produces it: work that throws finishes before the catch that logs the failure has run.</summary>
+        public ManualResetEventSlim Written { get; } = new ManualResetEventSlim();
+
+        public IReadOnlyList<string> Lines { get { lock (gate) { return lines.ToArray(); } } }
+
+        public void Info(string message) => Write("info: " + message);
+        public void Warn(string message) => Write("warn: " + message);
+        public void Error(string message) => Write("error: " + message);
+
+        private void Write(string line)
+        {
+            lock (gate) { lines.Add(line); }
+            Written.Set();
+        }
     }
 }
