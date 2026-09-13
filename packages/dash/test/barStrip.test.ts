@@ -89,7 +89,17 @@ const evaluate = (expression: string, absent: readonly string[]): number => {
 };
 
 const leftOf = (item: Item): string => String(item.bindings?.Left?.formula);
-const exprOf = (id: string): string => STRIP_CELLS.find((c) => c.id === id)!.expr;
+/**
+ * The property that says the car has the setting, which is what the strip asks about.
+ *
+ * For five of the seven it is the value's own property. For TC and ABS it is the raw iRacing field
+ * behind the normalised reading, because SimHub reports 0 rather than null for a car with no such
+ * control, and for the brake bias it is the reading before the isnull default is wrapped round it.
+ */
+const exprOf = (id: string): string => {
+  const cell = STRIP_CELLS.find((c) => c.id === id)!;
+  return cell.present ?? cell.expr;
+};
 
 describe('the strip closes over what the game does not publish', () => {
   const FOLDER = 'openDash';

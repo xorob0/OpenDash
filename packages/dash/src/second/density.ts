@@ -1,7 +1,7 @@
 /**
  * How large a second-screen module draws. The same module code makes a companion page (a whole
- * 850 x 480 screen) and a pit wall zone (a 639 x 240 panel), so every size a module uses comes
- * from this table rather than from a literal.
+ * 850 x 480 screen) and a pit wall zone (a panel as small as 639 x 202), so every size a module
+ * uses comes from this table rather than from a literal.
  *
  * The numbers are the design canvas's two ramps: the companion's 116 / 64 / 46 / 34 / 24 and the
  * pit wall zone's 64 / 46 / 34 / 24 / 16, with 15 px labels on the companion and 13 px on the pit

@@ -60,6 +60,10 @@ and the pit wall at once.
   serve any other dashboard project.
 - `plugin/OpenDash` is the C# plugin. `Contract.cs` mirrors `contract.ts` and a test keeps the
   two card catalogues identical.
+- `traces/` holds one recorded telemetry trace per emulator scenario, taken from a real SimHub on
+  the Windows VM and committed so that everything downstream replays a file rather than needing a
+  VM. A package that starts reading a property no trace carries fails `bun run check` and is
+  answered with `bun run record <scenario>`; see [traces/README.md](traces/README.md).
 
 ## Before you start
 
@@ -110,6 +114,18 @@ A page has to fit every shape it can be given: `wide`, `grid`, `tall narrow` and
 pit wall's strips. It sheds its secondary rows before it shrinks its numerals, and it never scales.
 The test builds every module into every box the build actually produces, so a page that does not
 fit fails rather than overlapping its neighbour.
+
+**Declare what it sheds.** Which fields a page keeps at each of the four shapes is a design
+decision read off the catalogue artboard, not something the code works out from widths: add an
+entry to `packages/dash/src/modules/shedding.ts` and the same row to the table in
+[docs/design/zones.md](docs/design/zones.md). A page with nothing to shed — a drawing, or a page
+that says it has no data — says so and why. `shedding.test.ts` fails on a page with no entry, on a
+row the code and the document disagree about, and on an id no longer drawn.
+
+A field that can be **missing** rather than shed is a different question: a value the sim does not
+publish is removed and its rank closes over the hole, a telltale that is unlit keeps its place and
+goes dim. Both are modes of `packages/dash/src/second/rank.ts`; §11 of the zones document says
+which to reach for.
 
 **Adding a card is not a thing to do any more.** `packages/dash/src/cards` is the slot model and
 is retired once every face is drawn from zones.

@@ -14,7 +14,9 @@ import { LINE_SPACING } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
-import { ZONE_FACES, buildZoneFace, sizeOf, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
+import { MODULES } from '../src/modules/index.ts';
+import { rect } from '../src/design/geometry.ts';
+import { ZONE_FACES, bandCorners, bandPageItems, bar, buildZoneFace, sizeOf, faceItems, kindOf, rectOf, zoneDashboardName, zoneFace1920x480 } from '../src/zones/index.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -330,6 +332,78 @@ describe('what the first photograph of the face showed', () => {
     expect(bind(below)).toContain("if(([DataCorePlugin.GameData.Gear]) = ('3'), '2'");
     // Neutral and reverse match nothing and draw nothing, and so does the gear below first.
     expect(bind(below)).not.toContain("= ('1'), '0'");
+  });
+});
+
+/**
+ * A field the game does not publish is removed and the rank closes over the hole; a telltale that
+ * is unlit keeps its place and goes dim. Both rules live in `second/rank.ts`, and these are the
+ * three places on the face that ask for one of them.
+ */
+describe('what the face does with a field that is not there', () => {
+  const band = { left: 0, top: 420, width: 1920, height: 60 };
+  const textsIn = (items: readonly ReturnType<typeof bandPageItems>[number][]): TextItem[] => items.filter((i): i is TextItem => i.kind === 'text');
+  const bound = (item: TextItem, target: 'Left' | 'Visible' | 'TextColor' | 'Text'): string | undefined => {
+    const b = item.bindings?.[target];
+    return b && b.mode === 'formula' && typeof b.formula === 'string' ? b.formula : undefined;
+  };
+
+  test("the bar's strip closes over a setting the car does not have", () => {
+    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480) })).filter((i) => i.name.startsWith('bar.strip.'));
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) {
+      // Hidden when the sim has no property for it, and everything moves when one goes.
+      expect({ name: item.name, hides: bound(item, 'Visible') !== undefined, moves: bound(item, 'Left') !== undefined }).toEqual({
+        name: item.name,
+        hides: true,
+        moves: true,
+      });
+    }
+    // The cell that goes first is the one a driver would give up first, not the last drawn.
+    expect(bound(items.find((i) => i.name === 'bar.strip.diff.value')!, 'Left')).toContain('dcTractionControl2');
+  });
+
+  test("band D's car page removes a gauge the sim does not wire, and keeps the temperatures", () => {
+    const items = textsIn(bandPageItems('car', band, 'car.'));
+    const water = items.find((i) => i.name === 'car.water.value')!;
+    const voltage = items.find((i) => i.name === 'car.voltage.value')!;
+    expect(bound(voltage, 'Visible')).toContain('Voltage');
+    expect(bound(water, 'Visible')).toBeUndefined();
+    // The temperature does not vanish, but it does move: the rank recentres on what is left.
+    expect(bound(water, 'Left')).toContain('Voltage');
+  });
+
+  test("the strip asks the property that says the car has the setting, not the one it reads", () => {
+    // SimHub reports TCLevel 0 for a car with no traction control at all, which is what a driver
+    // who has turned it off also sees. The raw dc field is absent on the car that has none, and
+    // that is the difference between a cell drawn as OFF and a cell that is not there.
+    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480) }));
+    const tc = items.find((i) => i.name === 'bar.strip.tc.value')!;
+    expect(bound(tc, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))');
+    expect(bound(tc, 'Text')).toContain('[DataCorePlugin.GameData.TCLevel]');
+  });
+
+  test('a module rank closes over a setting the car does not have', () => {
+    // Zones B and C draw the modules, so the same contract has to hold inside a page: the car
+    // settings grid hid a field the sim does not publish and left its gap where it had been.
+    const settings = MODULES.find((m) => m.id === 'carSettings')!;
+    const items = textsIn(settings.build({ frame: rect(0, 0, 600, 280), density: 'zone', prefix: '' }));
+    const abs = items.find((i) => i.name === 'abs.value')!;
+    expect(bound(abs, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))');
+    expect(bound(abs, 'Left')).toContain('dcTractionControl');
+  });
+
+  test('the corner lamps dim in place rather than vanishing', () => {
+    const items = textsIn(bandCorners(band, 'corner.'));
+    for (const id of ['drs', 'p2p', 'spt']) {
+      const lamp = items.find((i) => i.name === `corner.${id}`)!;
+      expect({ id, colour: bound(lamp, 'TextColor') !== undefined, hides: bound(lamp, 'Visible') !== undefined, moves: bound(lamp, 'Left') !== undefined }).toEqual({
+        id,
+        colour: true,
+        hides: false,
+        moves: false,
+      });
+    }
   });
 });
 
