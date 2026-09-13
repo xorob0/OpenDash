@@ -11,6 +11,10 @@
  *   - A group writes its position as `StartPositionXEx`/`StartPositionYEx`. A leaf writes
  *     `StartPositionX`/`StartPositionY`. A group that writes the leaf spelling lands at the origin
  *     without complaining.
+ *   - Siblings compose painter's-algorithm: `MultiMatrixResult.Merge` runs in list order, so the
+ *     LATER sibling paints over the earlier one. Every group openDash emits has mutually exclusive
+ *     children, so order does not decide anything here — but it would if that ever stopped being
+ *     true, and the opposite assumption is the natural one to make.
  */
 
 import { isHex, normaliseHex } from '../color.ts';
@@ -106,10 +110,15 @@ export interface GameRunningGroupContainer extends MatrixContainerBase {
   clearBackground?: boolean;
 }
 
-/** "After the car is started", for `seconds` seconds. */
+/**
+ * "After the car is started", for `durationMs` **milliseconds**, not seconds: SimHub's
+ * `GameCarStatedGroupContainer.IsActive` does `CarStartedTime.AddMilliseconds(Duration)` and the
+ * property defaults to 1000. Modelling it as seconds would have made every such group a thousand
+ * times too short.
+ */
 export interface CarStartedGroupContainer extends MatrixContainerBase {
   kind: 'carStarted';
-  seconds: number;
+  durationMs: number;
   children: readonly MatrixContainer[];
   clearBackground?: boolean;
 }
@@ -253,7 +262,10 @@ export const buildContainerObject = (container: MatrixContainer, path: string, d
   const yKey = isGroup(container) ? 'StartPositionYEx' : 'StartPositionY';
   o[xKey] = positiveInt('x', container.x ?? 1, columns);
   o[yKey] = positiveInt('y', container.y ?? 1, rows);
-  o.DeviceKind = DEVICE_KIND[deviceKind];
+  // `DeviceKind` is deliberately NOT written. MatrixContainerBase declares it with a private setter
+  // and no [JsonProperty], so Json.NET marks it non-writable and drops it on load; SimHub sets it
+  // itself from the driver when the profile is opened. Emitting it added one dead field per
+  // container -- six hundred of them in the shipped profile -- that no reader ever sees.
 
   switch (container.kind) {
     case 'animation':
@@ -269,10 +281,10 @@ export const buildContainerObject = (container: MatrixContainer, path: string, d
       o.BrightnessFormula = buildFormulaObject(container.formula);
       break;
     case 'carStarted':
-      if (!Number.isInteger(container.seconds) || container.seconds < 0) {
-        throw new RangeError(`carStarted seconds must be a non-negative integer, got ${container.seconds}`);
+      if (!Number.isInteger(container.durationMs) || container.durationMs < 0) {
+        throw new RangeError(`carStarted durationMs must be a non-negative integer, got ${container.durationMs}`);
       }
-      o.Duration = container.seconds;
+      o.Duration = container.durationMs;
       break;
     case 'group':
       if (container.stackLeftToRight === true) o.StackLeftToRight = true;
@@ -296,7 +308,10 @@ export const buildProfileObject = (profile: MatrixProfile): JsonObject => {
     CarChoices: [],
     CarChoice: null,
     GameCode: null,
-    UseStrictJSIsolation: false,
+    // SimHub's own default, declared [DefaultValue(true)] with DefaultValueHandling.Populate on
+    // RGBMatrixProfile. Writing false would flip a behaviour switch for no reason -- inert while the
+    // profile carries no JavaScript, and a trap for the first one that does.
+    UseStrictJSIsolation: true,
     EmbeddedJavascript: null,
     GlobalBrightness: brightness,
     GlobalBrightnessPreset: { CurrentMode: 0, Brightness: brightness },

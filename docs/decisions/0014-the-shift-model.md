@@ -162,7 +162,9 @@ The fallback is the one that will rot quietly, because a developer with iRacing 
 it.
 
 A third layer per face is emitted where there were two, so every face grew by fifteen rects that
-are hidden most of the time.
+are hidden most of the time. The three are `shiftLights`, `shiftLightsSimHub` and `rpmBar`: the
+shift state is what became two, and `off` is still not a layer. [ADR 0004](0004-rev-bar-model.md)
+carries the reconciliation, because it is that record's count that moved.
 
 ### Unresolved
 
@@ -212,7 +214,8 @@ redline when the user has turned it on by hand (`CarSettings_RPMRedLinePerGearOv
 `CarSettings_CurrentGearRedLineRPM` then does vary with the gear — their numbers, not ours); then
 the car's own published ladder; then SimHub's bands. A profile carries one conditional group per car
 and gear the table covers, composed over the derived ladder, so an empty table costs nothing at all:
-no entries, no containers, no change to any profile.
+no entries, no containers, no change to any profile. **Two of those four rungs are built; the
+second is not, and the first is built on the strips alone. The correction below says which.**
 
 **The table ships empty, and that is the honest state rather than an unfinished one.** openDash does
 not carry measurements it has not made. A competitor's tables are theirs and will not be copied, and
@@ -226,3 +229,75 @@ mirrors correctly with no table, no release and nobody measuring anything — is
 car not in the table, which is every car today. What is given up is the claim that openDash *never*
 needs one. It does, for a minority of cars, and the table is bounded by what somebody has actually
 driven and written down.
+
+---
+
+## Corrected, 2026-09-13: which of this is built, and which of it was only written down
+
+A review of XOR-233 read the two amendments above against the code and found three statements in
+the present tense that nothing implemented. Nothing is being decided here and no behaviour changes:
+this section replaces description with fact, so that the next reader is not misled the same way.
+Where a rung is not built, it says so plainly rather than describing it as though it were.
+
+**The four-rung precedence, as built.**
+
+| Rung | Where | Built? |
+| --- | --- | --- |
+| 1. The per-gear table | `packages/dash/src/leds/shiftPoints.ts` | **Yes, on the RPM strips only.** `tabledStageLit` and `tabledOverRev` have exactly one caller in the build, `leds/rpmStrip.ts`; `packages/dash/test/leds.test.ts` calls them too, which is a test rather than a surface. No screen surface and not the flag box reads the table. |
+| 2. SimHub's per-gear redline override | `simhubPerGear` | **No.** `simhubPerGear` is written and nothing calls it, and `CarSettings_RPMRedLinePerGearOverride` appears in no generated `.ledsprofile` and no generated `.simhubdash`. The rung's other property, `CarSettings_CurrentGearRedLineRPM`, **is** in the build — see the paragraph below — but not as this rung. |
+| 3. The car's own published ladder | `packages/dash/src/shift.ts` | **Yes, on every surface.** |
+| 4. SimHub's bands | `packages/dash/src/shift.ts` | **Yes, on every surface**, as the other half of the same per-frame choice. |
+
+**"One definition, read by the rev bar, the rev arc and every generated LED profile" holds for
+rungs 3 and 4 and for nothing else.** It is the claim in the Decision above, and it is still the
+claim: rungs 3 and 4 are one module and every surface reads it. Rung 1 is the exception and is a
+strip-only rung until somebody extends it; rung 2 does not exist. A car measured into
+`data/shift-points.json` today would move a strip and leave the face, the arc, the companion's
+speedo and the flag box on the derived ladder.
+
+**`CarSettings_CurrentGearRedLineRPM` is in the build, and it is not rung 2.** The row above used
+to say the property appeared in nothing the build writes, and that was false on the day it was
+written: the companion's speedo printed it, unconditionally, in a field labelled *Redline*, under a
+rev bar whose top band lights at `DriverCarSLLastRPM`. Two answers to one question, side by side, of
+exactly the kind this record exists to prevent. That is fixed: `redlineRpm` in
+`packages/dash/src/shift.ts` prints the rung-3 number, `Last`, wherever the car publishes a ladder,
+and falls back to `CarSettings_CurrentGearRedLineRPM` only where it does not — because rung 4 is two
+band *progress* values and a `RedLineReached` flag, and has no RPM to print. So the property is
+still emitted, as the fallback half of one shared definition, in two of the twenty-two packages a
+clean `bun run build` writes: `openDash.simhubdash` and `openDash Companion.simhubdash`, the two
+that give the speedo page a `wide` box. The other shapes do not carry it at all, because
+`modules/shedding.ts` makes the Redline field the first thing that page drops. It is never gated on `CarSettings_RPMRedLinePerGearOverride`, so it is never per gear,
+which is the whole of what rung 2 would have added. `simhubRedlineRpm` in `shift.ts` is its one
+body; `leds/shiftPoints.ts` carried a byte-identical second one, `simhubGearRedline`, and that is
+the duplicate the speedo was reading.
+
+**The speedo reads rungs 3 and 4, with one honest seam.** Its bar is rungs 3 and 4 exactly as the
+face's is. Its printed number is rung 3 where the car publishes a ladder, and SimHub's redline
+where it does not, because rung 4 publishes no such number. The seam is a property of what SimHub
+exposes rather than a second model.
+
+**Nothing diverges today, and that is exactly why this went unnoticed.** `data/shift-points.json`
+ships empty, so rung 1 emits no containers anywhere and every surface in the build is on rungs 3
+and 4 — the same expressions, on the same frame. The first measured car is also the first divergence,
+and closing it is work rather than a property of the model.
+
+**The ladder clause was not being honoured by the flag box, and now is.** The Decision says the top
+band "flashes at `Blink` (except in the last gear)". The box's gear digit flashed on the *band*
+instead — the moment `Rpms >= LastRPM`, and in the last gear too — because the shared band model
+carried a boolean saying *that* the band flashes rather than an expression saying *when*. The model
+now carries the expression (`ShiftBand.blink` in `components/revSegments.ts`, from `overRevEither`
+in `shift.ts`), the digit reads it, and a test in `packages/dash/test/flagBox.test.ts` compares the
+digit's emitted flash expression against the rev bar's top segment's, string for string.
+
+**One definition means one definition.** `leds/shiftPoints.ts` also carried a second, byte-identical
+copy of the rung-3 gate, exported under another name with a doc claiming callers and a test that did
+not exist. It is deleted; `mirrorAvailable` in `shift.ts` is the only spelling of that condition.
+
+It carried a second one of those, and that one was not dead. `simhubGearRedline` there and
+`gearRedline` in `second/values.ts` serialised to the identical string under two names; the first
+was documented as unread, the second was what the companion's speedo printed. Both are deleted, and
+`simhubRedlineRpm` in `shift.ts` is the only spelling of that number. The readout that prints it
+asks `redlineRpm`, which is the same question the rev bar's top band asks and gets the same answer;
+`packages/dash/test/expressions.test.ts` compares the two, string for string, the way the flag box's
+flash is compared above. `tabledCars` in `shiftPoints.ts` went the same way for a smaller reason: it
+was an export with no caller anywhere at all.

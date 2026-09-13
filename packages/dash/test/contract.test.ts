@@ -13,6 +13,10 @@ import {
   cardMeta,
   declaredProperties,
   ledProperties,
+  LED_CENTRES,
+  LED_CENTRE_SETTING,
+  LED_RPM_STYLES,
+  LED_RPM_STYLE_SETTING,
   flagBoxProperties,
   FLAG_BOX_MATRICES,
   PIT_WALL_DEFAULT_WIDE_ZONE_PAGE,
@@ -38,6 +42,8 @@ import {
   DELTA_REFERENCES,
   POSITION_MODES,
   PROPERTY_PREFIX,
+  REV_BAR_MODES,
+  REV_BAR_SETTING,
   SESSION_PROGRESS_MODES,
   setting,
   SLOT_MAX,
@@ -71,19 +77,25 @@ describe('settings', () => {
     const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 1;
     // The last two terms are the lights, which are not screens but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is eight
-    // global and five per matrix, the way every face carries its own group; the strips are the two
+    // global and six per matrix, the way every face carries its own group; the strips are the two
     // that decide what a strip shows.
-    expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 5);
+    expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 6);
     expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle']);
+    // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
-      4 + SLOT_MAX + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length + ledProperties().length,
+      4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length + ledProperties().length,
     );
+    // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
+    // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
+    expect(props).toHaveLength(246);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
     expect(props[15]).toBe('OpenDash.Slot12');
     // The zones are declared here and read by the face from XOR-85. Slot01 to Slot12 stay beside
     // them until the card path is retired, because ten faces still read them.
+    // Appended to the shared group rather than beside ShiftLights, which has shipped at index 0.
+    expect(props[4 + SLOT_MAX]).toBe('OpenDash.RevBar');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -129,7 +141,10 @@ describe('settings', () => {
     for (const name of lights) expect({ name, owned: owned.includes(name) }).toMatchObject({ owned: false });
     const shared = declared.filter((name) => !owned.includes(name) && !lights.includes(name));
     const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
-    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1))].map((n) => `${PROPERTY_PREFIX}.${n}`));
+    // RevBar is shared too, and has to be: only a rectangular face has a second arrangement, but the
+    // round faces' rev arc and the companion's speedo draw the same segments and read the same
+    // setting, and a screen may not read a property another screen owns.
+    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)), REV_BAR_SETTING].map((n) => `${PROPERTY_PREFIX}.${n}`));
 
     // The web view address is the pit wall's although its name carries no prefix: it was named
     // before the idiom, and no other screen has a browser page to point anywhere.
@@ -161,6 +176,12 @@ describe('settings', () => {
 
   test('every read falls back to the default without the plugin', () => {
     expect(setting.shiftLights()).toBe('isnull([OpenDash.ShiftLights], true)');
+    // Two fallbacks: the deprecated alias, and through it the default a package without the plugin
+    // shows. An rc.2 plugin attaches ShiftLights and not RevBar, and its user's switch still works.
+    expect(setting.revBar()).toBe("isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))");
+    expect(setting.revBarIs('off')).toBe("(isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('off')");
+    expect(REV_BAR_MODES).toEqual(['shift', 'rpm', 'off']);
+    expect(DEFAULTS.RevBar).toBe('shift');
     expect(setting.positionMode()).toBe("isnull([OpenDash.PositionMode], 'overall')");
     expect(setting.deltaReference()).toBe("isnull([OpenDash.DeltaReference], 'session')");
     expect(setting.sessionProgress()).toBe("isnull([OpenDash.SessionProgress], 'auto')");
@@ -173,7 +194,49 @@ describe('settings', () => {
 const pluginSource = (file: string): string => readFileSync(path.resolve(import.meta.dir, '../../../plugin/OpenDash', file), 'utf8');
 const csArray = (values: readonly string[]): string => `{ ${values.map((v) => `"${v}"`).join(', ')} }`;
 
+/** The pinned list, without its header. `declared-properties.txt` says what it is for. */
+const pinnedProperties = (): string[] =>
+  readFileSync(path.resolve(import.meta.dir, 'declared-properties.txt'), 'utf8')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'));
+
 describe('plugin mirror', () => {
+  test('the declared list is the pinned one, which the plugin is checked against too', () => {
+    // The gap this closes: each side built its own list and nothing compared them, so LedCentre and
+    // LedRpmStyle could be declared here, read by every generated .ledsprofile, attached by nothing,
+    // and leave both suites green. The pin is the third party the two are measured against;
+    // ContractTests.cs reads the same file. A name added on one side alone fails here or there.
+    //
+    // In order on this side, because the file is written in the order the properties are declared and
+    // a reader should be able to follow it. The C# check is by set: the two sides emit a face's
+    // twenty-one names in different orders -- contract.ts groups them by zone, Contract.cs by
+    // property across the zones -- which predates this test and is not settled by it.
+    expect(declaredProperties()).toEqual(pinnedProperties());
+    expect(new Set(pinnedProperties()).size).toBe(pinnedProperties().length);
+    // Named, so that the two the plugin never attached cannot go missing again in silence.
+    expect(pinnedProperties()).toContain('OpenDash.LedCentre');
+    expect(pinnedProperties()).toContain('OpenDash.LedRpmStyle');
+  });
+
+  test('Contract.cs declares the strips, with their value sets and their defaults', () => {
+    // The C# list itself is checked against the pin by ContractTests.cs, which can enumerate it; what
+    // is checked here is the half a regex can see, the same way the modes above are.
+    const source = pluginSource('Contract.cs');
+    for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING]) expect(source).toContain(`public const string ${name} = "${name}";`);
+    expect(source).toContain(`LedCentres = ${csArray(LED_CENTRES)};`);
+    expect(source).toContain(`LedRpmStyles = ${csArray(LED_RPM_STYLES)};`);
+    expect(source).toContain(`public const string DefaultLedCentre = "${DEFAULTS.LedCentre}";`);
+    expect(source).toContain(`public const string DefaultLedRpmStyle = "${DEFAULTS.LedRpmStyle}";`);
+    // Attached, and offered on the panel. A property the plugin declares and never attaches is a
+    // profile stuck on its isnull() default, which is exactly how these two shipped.
+    const attach = pluginSource('OpenDash.cs');
+    for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
+    const panel = pluginSource('SettingsControl.cs');
+    expect(panel).toContain('Contract.LedCentres');
+    expect(panel).toContain('Contract.LedRpmStyles');
+  });
+
   test('Cards.cs lists the catalogue: number, id, label and display name, in order', () => {
     const source = pluginSource('Cards.cs');
     const cards = [...source.matchAll(/new Card\((\d+), "([^"]*)", "([^"]*)", "([^"]*)", "[^"]*"\)/g)].map((m) => ({
@@ -190,7 +253,13 @@ describe('plugin mirror', () => {
     const source = pluginSource('Contract.cs');
     expect(source).toContain(`public const string Prefix = "${PROPERTY_PREFIX}";`);
     expect(source).toContain(`public const int SlotCount = ${SLOT_MAX};`);
-    for (const name of ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress']) expect(source).toContain(`public const string ${name} = "${name}";`);
+    for (const name of ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress', 'RevBar']) expect(source).toContain(`public const string ${name} = "${name}";`);
+    expect(source).toContain(`RevBarModes = ${csArray(REV_BAR_MODES)};`);
+    // The plugin names each mode, because it compares against them in four places; the mirror is
+    // that the names spell the modes this file declares and that the default points at one of them.
+    const revBarConst = (mode: string): string => `RevBar${mode[0]!.toUpperCase()}${mode.slice(1)}`;
+    for (const mode of REV_BAR_MODES) expect(source).toContain(`public const string ${revBarConst(mode)} = "${mode}";`);
+    expect(source).toContain(`public const string DefaultRevBar = ${revBarConst(DEFAULTS.RevBar)};`);
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);

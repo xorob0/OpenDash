@@ -2,10 +2,19 @@
  * The RPM strip profile: the first `.ledsprofile` openDash emits, and the one that proves the
  * approach. ADR 0013 for why it is generated at all, ADR 0014 for what makes it light.
  *
- * The centre is the mirror. It is built from the *same* expressions the rev bar is built from —
- * `mirrorStageLit`, `simhubStageLit` and their two-ladder choice in `../shift.ts` — so the strip
- * and the screen do not merely agree, they cannot disagree: there is one definition and both read
- * it. That is what ADR 0014 was settled before this ticket for.
+ * The centre is the mirror. Its two derived ladders are built from the *same* expressions the rev
+ * bar is built from — `mirrorStageLit`, `simhubStageLit` and their two-ladder choice in
+ * `../shift.ts` — so on those two rungs the strip and the screen do not merely agree, they cannot
+ * disagree: there is one definition and both read it. That is what ADR 0014 was settled before this
+ * ticket for.
+ *
+ * The per-gear table is the one thing here that the screen does not read. `tabledOverrides` below
+ * is its only caller in the build — `test/leds.test.ts` reads the table too, which is a test rather
+ * than a surface — so a car measured into `data/shift-points.json` would move this strip and leave
+ * the face, the arc and the flag box on the derived ladder. That is not a property of the model and
+ * it is not visible today, because the table ships empty and emits no containers at all; it is
+ * recorded here, and in the header of `shiftPoints.ts`, so that the first measured car is not the
+ * thing that discovers it.
  *
  * One LED is one `CustomStatus` container rather than one `ScriptedContent` for the whole run.
  * `ScriptedContent` was the obvious route — one Javascript formula returning a colour array — and
@@ -102,8 +111,10 @@ const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[]
 
 /**
  * The centre, as the shift ladder: one conditional group per style, and inside each the two
- * ladders — exactly as the rev bar is two layers. Whichever is active is the ladder the car is on,
- * which is how the strip is debugged.
+ * ladders — exactly as the rev bar draws its `shift` state as two layers. (The bar has a third,
+ * the plain RPM bar; a strip has no equivalent, because a strip that is not showing revs is
+ * showing one of the other centres.) Whichever is active is the ladder the car is on, which is how
+ * the strip is debugged.
  */
 const revCentre = (count: number): leds.LedContainer[] =>
   LED_RPM_STYLES.map((style) => ({

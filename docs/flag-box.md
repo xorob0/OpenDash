@@ -36,25 +36,35 @@ ones the hardware actually obeys.
 Get a solid colour showing on the panel through SimHub's own test before going further. If that is
 wrong, nothing below will be right.
 
-## 2. Load the profile
+## 2. Install the profile
 
-openDash **does not install this for you.** SimHub keeps matrix profiles inside a settings file it
-rewrites whenever anything changes, so writing into it underneath a running SimHub would lose the
-other profiles you have. Painting hardware you own is also not something a dashboard should do
-without being asked.
+Open SimHub's left menu, find **OpenDash**, scroll to **Lights**, and press **Install into SimHub**.
 
-So the plugin writes the file where you can find it and stops:
+That adds openDash's profile to SimHub's matrix profiles. Then pick it on your matrix device, the
+same way you would pick any profile. It never touches a profile you made yourself: openDash only
+recognises its own, by the id it stamps into it.
+
+The button says what it will do before you press it — *Install*, *Update*, or *Reinstall* — and the
+line beside it says what SimHub holds now. **openDash never installs it on its own.** A profile
+paints hardware you own, and that is a thing to be asked about rather than assumed; the reasoning is
+in [ADR 0013](decisions/0013-lighting-hardware.md).
+
+When openDash updates, the button offers **Update in SimHub**. Updating replaces the copy in SimHub,
+**including any changes you made to it there** — openDash cannot tell an edited copy from an
+untouched one, so if you have customised it in SimHub's LED editor, copy it under a new name first.
+
+### If the button is greyed out
+
+It says why beside it. The usual cause is that SimHub's matrix settings could not be reached — an
+older SimHub, or the serial dash plugin not loaded. openDash also writes the profile to a file:
 
 ```
 SimHub\OpenDash\openDash Flag box.ledsprofile
 ```
 
-The plugin's **Lights** page shows the exact path. Then, in SimHub's matrix device settings, use
-its own profile import and pick that file. Once. After that every setting on the Lights page
-reaches the box while you drive, without restarting anything.
-
-When openDash updates, the plugin refreshes that file and the Lights page says so. Importing the
-new one is the same step again; it will not reach in and change a profile you have edited.
+The path is shown under the button. Import that file through SimHub's own profile import on your
+matrix device, and everything below works the same way. That file is also what you copy to a second
+machine, and what to open if you want to read what openDash is asking your hardware to do.
 
 ## 3. Say which box is which
 
@@ -67,6 +77,7 @@ Out of the box, matrix 1 does everything and 2 to 4 are off, which is the right 
 |---|---|
 | **At rest** | `Gear` or `Dark`: what this panel shows when nothing has taken it over. |
 | **Flags** | Let the flag catalogue take this panel. |
+| **Pit** | Let the limiter, the lane and speeding take this panel. |
 | **Spotter** | Let a car alongside take this panel. |
 | **Warnings** | Let low fuel, oil and water take this panel. |
 | **Mounted** | `Both`, `Left` or `Right`. |
@@ -149,7 +160,7 @@ reasoning is in [scope.md](scope.md).
 
 | | |
 |---|---|
-| Nothing at all, ever | The profile is not loaded. Step 2. |
+| Nothing at all, ever | The profile is not installed, or not selected on the device. Step 2. |
 | A single dim dot in the middle | The box is working and the car's ignition is off. That mark exists so this is not confused with a broken profile. |
 | Everything sideways, mirrored or shredded | Rotation or serpentine on the *device*. Step 1, not the openDash panel. |
 | The gear is dark but flags work | **Show the gear** is off, or that matrix's **At rest** is `Dark`. |

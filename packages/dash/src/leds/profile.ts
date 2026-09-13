@@ -100,7 +100,9 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
   const warnings = warningStates();
   const on = (setting: Expr): Expr => eq(setting, 'true');
   return [
-    { kind: 'when', description: 'Pit', formula: on(m.flags()), children: stateContainers(pit, 'Pit') },
+    // Its own switch, not the flags'. A driver who turns flags off on a panel has not asked to lose
+    // the pit limiter warning, and reading m.flags() here was a copy of the line below it.
+    { kind: 'when', description: 'Pit', formula: on(m.pit()), children: stateContainers(pit, 'Pit') },
     {
       kind: 'when',
       description: 'Spotter',
@@ -135,10 +137,14 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
 export function matrixGroup(matrix: FlagBoxMatrix): MatrixContainer | undefined {
   const { and, eq, not, or } = ncalc;
   const m = flagBoxMatrix(matrix);
-  const doesSomething = or(eq(m.flags(), 'true'), eq(m.spotter(), 'true'), eq(m.warnings(), 'true'), eq(m.rest(), "'gear'"));
+  const doesSomething = or(eq(m.flags(), 'true'), eq(m.pit(), 'true'), eq(m.spotter(), 'true'), eq(m.warnings(), 'true'), eq(m.rest(), "'gear'"));
+  // "No flag is holding THIS panel": a flag only suppresses what is under it on a panel that is
+  // actually showing flags. Gating on noFlagShowing() alone blacked out the spotter, the warnings
+  // and the gear on a panel with Flags switched off, for the whole time a flag was out.
+  const flagsFree = or(not(eq(m.flags(), 'true')), noFlagShowing());
   const children: MatrixContainer[] = [
     { kind: 'when', description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup()] },
-    { kind: 'when', description: 'Below the flags', formula: noFlagShowing(), children: belowFlags(matrix) },
+    { kind: 'when', description: 'Below the flags', formula: flagsFree, children: belowFlags(matrix) },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
   if (children.length === 0) return undefined;
   return { kind: 'when', description: `Matrix ${matrix}`, matrix, formula: doesSomething, children };
@@ -206,12 +212,34 @@ export function flagBoxTree(): MatrixContainer[] {
   ];
 }
 
+/**
+ * Stamped into the profile's `Author`, which SimHub shows in its profile list and round-trips
+ * untouched. It is how the plugin tells its own profile from one the user made.
+ */
+export const FLAG_BOX_AUTHOR = 'openDash';
+
+/**
+ * `openDash 0.2.0-rc.1` inside the description. The plugin reads the version back out of an
+ * installed profile to decide whether it is current, so this is a machine-read string as well as a
+ * human-read one; `flagBoxVersion()` is the other half and the two are tested together.
+ */
+export const flagBoxDescription = (version: string): string =>
+  `The alert catalogue on an 8x8 matrix, ranked the way the face ranks it. Built by openDash ${version}; do not edit here, it is replaced on update.`;
+
+/** The version stamped into a description, or null when it carries none. */
+export function flagBoxVersion(description: string | null | undefined): string | null {
+  if (typeof description !== 'string') return null;
+  const found = /Built by openDash ([0-9A-Za-z.+-]+)/.exec(description);
+  return found?.[1] ?? null;
+}
+
 /** The profile the build writes. */
-export function buildFlagBoxProfile(): MatrixProfile {
+export function buildFlagBoxProfile(version = '0.0.0'): MatrixProfile {
   return {
     name: FLAG_BOX_PROFILE_NAME,
     deviceKind: 'matrix8x8',
-    description: 'openDash flag box: the alert catalogue on an 8x8 matrix, ranked the way the face ranks it.',
+    author: FLAG_BOX_AUTHOR,
+    description: flagBoxDescription(version),
     containers: flagBoxContainers(),
   };
 }

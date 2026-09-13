@@ -72,7 +72,20 @@ namespace OpenDashPlugin
 
     public class OpenDashSettings
     {
+        /// <summary>Whether the segments are SimHub's shift lights. Deprecated by <see cref="RevBar"/>,
+        /// kept as its alias and kept attached, because it has shipped and README publishes it as a
+        /// property an LED profile may read. Normalise() keeps the two agreeing.</summary>
         public bool ShiftLights { get; set; } = Contract.DefaultShiftLights;
+
+        /// <summary>
+        /// What the top of a rectangular face carries: "shift", "rpm" or "off".
+        ///
+        /// Null rather than defaulted, so that a settings file written before the mode existed is
+        /// recognisable as one: an initialiser here would make an rc.2 file that says
+        /// <c>ShiftLights: false</c> indistinguishable from one that asked for the shift lights, and
+        /// that user would find them switched back on. Normalise() fills it in.
+        /// </summary>
+        public string RevBar { get; set; }
 
         public string PositionMode { get; set; } = Contract.DefaultPositionMode;
 
@@ -98,7 +111,8 @@ namespace OpenDashPlugin
         // --- The lights ------------------------------------------------------------------------
         //
         // Brightness and night mode are the rig's, not this box's: a driver who owns a flag box
-        // probably owns other lights. The rest are the flag box's own. ADR 0013.
+        // probably owns other lights. Then the flag box's own, then the two an RGB strip reads.
+        // ADR 0013.
 
         public int LightsBrightness { get; set; } = Contract.DefaultLightsBrightness;
 
@@ -123,16 +137,30 @@ namespace OpenDashPlugin
 
         public bool[] FlagBoxFlags { get; set; } = Contract.DefaultFlagBoxOn();
 
+        /// <summary>The limiter, the lane and speeding. Its own switch, not the flags'.</summary>
+        public bool[] FlagBoxPit { get; set; } = Contract.DefaultFlagBoxOn();
+
         public bool[] FlagBoxSpotter { get; set; } = Contract.DefaultFlagBoxOn();
 
         public bool[] FlagBoxWarnings { get; set; } = Contract.DefaultFlagBoxOn();
 
         public string[] FlagBoxSide { get; set; } = Contract.DefaultFlagBoxSides();
 
+        /// <summary>What the middle of an RGB strip shows: "rpm", "rpmOnly", "brake", "throttleBrake" or
+        /// "fuel". One value for the rig and not an array, because openDash generates one profile per
+        /// strip shape rather than per device and every shape reads this one name.</summary>
+        public string LedCentre { get; set; } = Contract.DefaultLedCentre;
+
+        /// <summary>How the rev ladder fills a strip: "leftToRight", "meetInMiddle" or "f1". The look
+        /// only; the thresholds are the car's own whichever is set (ADR 0014).</summary>
+        public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
+
         /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
 
         public bool MatrixFlags(int matrix) => Pick(FlagBoxFlags, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public bool MatrixPit(int matrix) => Pick(FlagBoxPit, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
 
         public bool MatrixSpotter(int matrix) => Pick(FlagBoxSpotter, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
 
@@ -158,8 +186,14 @@ namespace OpenDashPlugin
             FlagBoxRest = Resize(FlagBoxRest, Contract.DefaultFlagBoxRests(), v => Array.IndexOf(Contract.FlagBoxRests, v) >= 0);
             FlagBoxSide = Resize(FlagBoxSide, Contract.DefaultFlagBoxSides(), v => Array.IndexOf(Contract.FlagBoxSides, v) >= 0);
             FlagBoxFlags = Resize(FlagBoxFlags, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxPit = Resize(FlagBoxPit, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxSpotter = Resize(FlagBoxSpotter, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
+            // No array to repair: the strips carry one value each for the whole rig. A profile reads
+            // both through isnull() with its own default, so an unrecognised spelling has to become a
+            // legal one here rather than reaching the strip as itself.
+            LedCentre = Contract.NormaliseChoice(LedCentre, Contract.LedCentres, Contract.DefaultLedCentre);
+            LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
         }
 
         private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)
@@ -240,6 +274,8 @@ namespace OpenDashPlugin
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
         public void Normalise()
         {
+            RevBar = RevBarMode();
+            ShiftLights = RevBar == Contract.RevBarShift;
             PositionMode = Contract.NormaliseChoice(PositionMode, Contract.PositionModes, Contract.DefaultPositionMode);
             DeltaReference = Contract.NormaliseChoice(DeltaReference, Contract.DeltaReferences, Contract.DefaultDeltaReference);
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
@@ -400,6 +436,21 @@ namespace OpenDashPlugin
                 Faces[prefix] = state;
             }
             return state;
+        }
+
+        /// <summary>What the top of the face carries, resolving a file written before the mode existed
+        /// through the deprecated ShiftLights alias. Safe to call before Normalise().</summary>
+        public string RevBarMode()
+        {
+            return Contract.NormaliseRevBar(RevBar, ShiftLights);
+        }
+
+        /// <summary>Sets the mode, and the alias with it: a dashboard or an LED profile still reading
+        /// ShiftLights should see the switch the driver just moved.</summary>
+        public void SetRevBar(string mode)
+        {
+            RevBar = Contract.NormaliseChoice(mode, Contract.RevBarModes, Contract.DefaultRevBar);
+            ShiftLights = RevBar == Contract.RevBarShift;
         }
 
         /// <summary>Page a face zone is showing, by its letter. Safe to call before Normalise().</summary>
@@ -573,6 +624,7 @@ namespace OpenDashPlugin
         {
             if (other == null) return;
             ShiftLights = other.ShiftLights;
+            RevBar = other.RevBar;
             PositionMode = other.PositionMode;
             DeltaReference = other.DeltaReference;
             SessionProgress = other.SessionProgress;
@@ -582,6 +634,25 @@ namespace OpenDashPlugin
             Zones = other.Zones == null ? null : (int[])other.Zones.Clone();
             WideZone = other.WideZone;
             WebViewUrl = other.WebViewUrl;
+            // The lights, which were not carried at all before the strips were added: a copy that drops
+            // them hands the panel a rig with the brightness back at 100 and matrix 1 back on flags.
+            // The per-matrix arrays are cloned for the same reason the slots above are.
+            LightsBrightness = other.LightsBrightness;
+            LightsNightBrightness = other.LightsNightBrightness;
+            LightsNightMode = other.LightsNightMode;
+            FlagBoxCriticalOnly = other.FlagBoxCriticalOnly;
+            FlagBoxGear = other.FlagBoxGear;
+            FlagBoxLowFuelLaps = other.FlagBoxLowFuelLaps;
+            FlagBoxOilTemp = other.FlagBoxOilTemp;
+            FlagBoxWaterTemp = other.FlagBoxWaterTemp;
+            FlagBoxRest = other.FlagBoxRest == null ? null : (string[])other.FlagBoxRest.Clone();
+            FlagBoxFlags = other.FlagBoxFlags == null ? null : (bool[])other.FlagBoxFlags.Clone();
+            FlagBoxPit = other.FlagBoxPit == null ? null : (bool[])other.FlagBoxPit.Clone();
+            FlagBoxSpotter = other.FlagBoxSpotter == null ? null : (bool[])other.FlagBoxSpotter.Clone();
+            FlagBoxWarnings = other.FlagBoxWarnings == null ? null : (bool[])other.FlagBoxWarnings.Clone();
+            FlagBoxSide = other.FlagBoxSide == null ? null : (string[])other.FlagBoxSide.Clone();
+            LedCentre = other.LedCentre;
+            LedRpmStyle = other.LedRpmStyle;
             // Cloned rather than shared, so that the panel writing into its copy does not reach back
             // into the settings the plugin is reading from.
             Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);

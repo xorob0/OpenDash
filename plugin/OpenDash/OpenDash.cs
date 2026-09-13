@@ -38,6 +38,12 @@ namespace OpenDashPlugin
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
 
+        /// <summary>The embedded profile as JSON, which the lights page installs into SimHub.</summary>
+        public string FlagBoxJson
+        {
+            get { return FlagBox?.Json; }
+        }
+
         public string LeftMenuTitle => "OpenDash";
 
         public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create(this));
@@ -96,7 +102,7 @@ namespace OpenDashPlugin
             SaveSettings();
         }
 
-        /// <summary>The lights, which no dashboard reads and the flag box profile does. A profile the user
+        /// <summary>The lights, which no dashboard reads and the lighting profiles do. A profile the user
         /// has not imported costs nothing here: a property nobody reads is one delegate.</summary>
         private void AttachLightsProperties()
         {
@@ -115,10 +121,16 @@ namespace OpenDashPlugin
                 var m = matrix;
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Rest"), () => Settings.MatrixRest(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Flags"), () => Settings.MatrixFlags(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Pit"), () => Settings.MatrixPit(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixSpotter(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
             }
+            // The strips, last, in the order Contract.LightsPropertyNames() declares them. Every
+            // generated .ledsprofile reads exactly these two, so a strip with neither attached can only
+            // ever draw the defaults its isnull() carries.
+            this.AttachDelegate(Contract.LedCentre, () => Settings.LedCentre);
+            this.AttachDelegate(Contract.LedRpmStyle, () => Settings.LedRpmStyle);
         }
 
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
@@ -217,6 +229,10 @@ namespace OpenDashPlugin
                 var captured = slot;
                 this.AttachDelegate(Contract.SlotProperty(captured), () => Settings.Slot(captured));
             }
+            // Shared rather than one face's, because the round faces' rev arc and the companion's
+            // speedo read it too, and attached last of the shared group because ShiftLights is one of
+            // the names this list has always opened with. XOR-119, XOR-138.
+            this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
             foreach (var face in Settings.RigFaces())
             {
                 var capturedFace = face;

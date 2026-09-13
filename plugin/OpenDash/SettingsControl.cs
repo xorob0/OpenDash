@@ -100,13 +100,17 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildGeneral()
         {
-            var toggle = BuildToggle(Settings.ShiftLights, on =>
+            // Three states in one control rather than a toggle and a second toggle under it: what the
+            // top of the face carries is one decision, and a driver whose wheel already has LEDs
+            // across it wants the third of them. Off redraws the face without the well, so the zones
+            // start where the recess did. XOR-138.
+            var revBar = BuildSegmented(Contract.RevBarModes, new[] { "Shift lights", "RPM bar", "Off" }, Settings.RevBarMode(), value =>
             {
-                Settings.ShiftLights = on;
+                Settings.SetRevBar(value);
                 plugin.SaveSettings();
             });
             return Ui.Section("General",
-                Ui.Row("Shift lights on the dash", "Turn off if your DDU has physical LEDs. The rev bar stays.", toggle));
+                Ui.Row("The rev bar", "Shift lights, a plain RPM bar, or off entirely if your DDU has LEDs of its own. Off gives its room back to the zones.", revBar));
         }
 
         /// <summary>SimHub's own switch (SHToggleButton), so that it looks like every other toggle in SimHub.</summary>
@@ -970,11 +974,11 @@ namespace OpenDashPlugin
             var rows = new List<UIElement>
             {
                 Ui.Caption(
-                    "An 8x8 LED matrix beside the screen. openDash builds the profile and puts it where you can find it, "
-                        + "but does not install it: SimHub keeps matrix profiles in a file it rewrites itself. Import it once, "
-                        + "and everything on this page reaches it while you drive.",
+                    "An 8x8 LED matrix beside the screen. Install the profile below, then select it on your matrix "
+                        + "device; everything on this page then reaches it while you drive. openDash adds the profile "
+                        + "through SimHub's own settings and never touches a profile you made yourself.",
                     846),
-                Ui.Row("Profile", FlagBoxLine(), FlagBoxPathBox()),
+                BuildFlagBoxRow(),
                 Ui.Row("Brightness", "Percent, for every light openDash drives. SimHub's own device brightness applies on top.", BuildPercentBox(Settings.LightsBrightness, v => { Settings.LightsBrightness = v; plugin.SaveSettings(); })),
                 Ui.Row("Night brightness", "Used while night mode is on. 64 LEDs at full output beside a wheel in a dark room is too bright.", BuildPercentBox(Settings.LightsNightBrightness, v => { Settings.LightsNightBrightness = v; plugin.SaveSettings(); })),
                 Ui.Row("Night mode", "A switch you flip, not a time of day we guess at.", BuildToggle(Settings.LightsNightMode, on => { Settings.LightsNightMode = on; plugin.SaveSettings(); })),
@@ -986,7 +990,60 @@ namespace OpenDashPlugin
                 Ui.Caption("SimHub composes up to four matrix contents. Matrix 1 does everything by default; switch on a second only if you own a second box.", 846),
             };
             foreach (var matrix in Contract.FlagBoxMatrices) rows.Add(BuildMatrixRow(matrix));
+            foreach (var row in BuildStripRows()) rows.Add(row);
             return Ui.Section("Lights", rows.ToArray());
+        }
+
+        /// <summary>
+        /// The RGB strips: the two settings every generated .ledsprofile reads.
+        ///
+        /// No group per device, unlike the matrices. openDash builds one profile per strip shape rather
+        /// than per box, so the thing a driver picks is the profile; these two then say what whichever
+        /// profile they picked shows. Without them the strips are stuck on their defaults, because a
+        /// profile reads them through isnull() and nothing else writes them.
+        /// </summary>
+        private IEnumerable<UIElement> BuildStripRows()
+        {
+            // A drop-down and not a segmented bar: five options is past the two or three Segmented.cs is
+            // drawn for, and a ComboBox is the panel's control for a choice from a list.
+            var centre = BuildChoice(
+                Contract.LedCentres,
+                new[] { "RPM", "RPM only", "Brake", "Throttle and brake", "Fuel" },
+                Settings.LedCentre,
+                220,
+                value => { Settings.LedCentre = value; plugin.SaveSettings(); });
+            var style = BuildSegmented(Contract.LedRpmStyles, new[] { "Left to right", "Meet in middle", "F1" }, Settings.LedRpmStyle, value =>
+            {
+                Settings.LedRpmStyle = value;
+                plugin.SaveSettings();
+            });
+            yield return Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip, then these two decide what it shows.", 846);
+            yield return Ui.Row("Strip centre", "What the middle of the strip shows. RPM keeps the brake on the sides; RPM only leaves them dark.", centre);
+            yield return Ui.Row("Rev style", "How the ladder fills. Meet in middle works inwards from both ends; F1 is a formula wheel's colours, and flashes whole.", style);
+        }
+
+        /// <summary>One value of a value set, as a drop-down: the control for a list longer than the two
+        /// or three options Segmented.cs is drawn for. The labels are positional, so values[i] is what
+        /// labels[i] names.</summary>
+        private static ComboBox BuildChoice(string[] values, string[] labels, string selected, double width, Action<string> changed)
+        {
+            var box = new ComboBox
+            {
+                Width = width,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+            };
+            foreach (var label in labels) box.Items.Add(label);
+            var index = Array.IndexOf(values, selected);
+            box.SelectedIndex = index >= 0 ? index : 0;
+            box.SelectionChanged += (sender, args) =>
+            {
+                if (box.SelectedIndex < 0 || box.SelectedIndex >= values.Length) return;
+                changed(values[box.SelectedIndex]);
+            };
+            return box;
         }
 
         /// <summary>One matrix: what it shows at rest, what may take it over, and which side it is on.</summary>
@@ -1007,6 +1064,7 @@ namespace OpenDashPlugin
                 4,
                 Ui.Row("At rest", "What this panel shows when nothing has taken it over.", rest),
                 Ui.Row("Flags", "Let the flag catalogue take this panel.", BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; plugin.SaveSettings(); })),
+                Ui.Row("Pit", "Let the limiter, the lane and speeding take this panel.", BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[m - 1] = on; plugin.SaveSettings(); })),
                 Ui.Row("Spotter", "Let a car alongside take this panel.", BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; plugin.SaveSettings(); })),
                 Ui.Row("Warnings", "Let low fuel, oil and water take this panel.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; plugin.SaveSettings(); })),
                 // Which side the box is physically on. One to the left of the wheel lighting for a car on
@@ -1016,17 +1074,91 @@ namespace OpenDashPlugin
             return Ui.VStack(0, Ui.Caption("Matrix " + m, 846), stack);
         }
 
-        /// <summary>What became of the profile at startup, and where it went.</summary>
-        private string FlagBoxLine()
+        private TextBlock flagBoxLine;
+        private Button flagBoxButton;
+        private Button flagBoxCopyButton;
+        private TextBox flagBoxPath;
+
+        /// <summary>
+        /// The install row: what SimHub holds now, and one button that changes it.
+        ///
+        /// openDash hands SimHub a profile object through its own public API and SimHub writes its own
+        /// settings file (FlagBoxInstaller.cs); nothing here edits that file. It is a button rather
+        /// than something that happens at startup because a profile paints hardware the user owns, and
+        /// that is a thing to be asked about once rather than assumed -- ADR 0013.
+        /// </summary>
+        private FrameworkElement BuildFlagBoxRow()
         {
-            var result = plugin.FlagBox;
-            if (result == null) return "Not checked yet.";
-            switch (result.Status)
+            flagBoxLine = Ui.Caption("", 460);
+            flagBoxButton = BuildSecondaryButton("Install into SimHub", "Adds openDash's profile to SimHub's matrix profiles. It never changes a profile you made yourself.");
+            flagBoxButton.Click += (sender, args) => InstallFlagBox();
+
+            var text = Ui.VStack(4, Ui.Body("Flag box profile"), flagBoxLine);
+            text.MaxWidth = 460;
+            text.HorizontalAlignment = HorizontalAlignment.Left;
+            flagBoxCopyButton = BuildSecondaryButton("Copy where SimHub looks", "Puts a copy in Documents\\SimHub, which is the folder SimHub's own profile import opens in.");
+            flagBoxCopyButton.Click += (sender, args) => CopyFlagBoxForImport();
+            var right = Ui.VStack(4, flagBoxButton, flagBoxCopyButton, FlagBoxPathBox());
+            RefreshFlagBox();
+            return Ui.Row(text, right);
+        }
+
+        /// <summary>Re-reads SimHub's matrix profiles and repaints the row.</summary>
+        private void RefreshFlagBox()
+        {
+            if (flagBoxLine == null) return;
+            var plan = SafePlan();
+            flagBoxLine.Text = FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path);
+            if (flagBoxButton == null) return;
+            flagBoxButton.Content = FlagBoxInstallPlan.ButtonLabel(plan);
+            // Nothing to press when there is no profile to install or nowhere to put it.
+            var usable = plan != null && plan.State != FlagBoxInstallState.NotEmbedded && plan.State != FlagBoxInstallState.Unavailable;
+            flagBoxButton.IsEnabled = usable;
+            // The by-hand route, offered only when the one-click one is not there. SimHub's import
+            // dialog opens in Documents\SimHub, which is not where the profile was written.
+            if (flagBoxCopyButton != null)
             {
-                case FlagBoxStatus.NotEmbedded: return "No profile is embedded in this build.";
-                case FlagBoxStatus.Failed: return "Could not be written: " + result.Message;
-                default: return "Import this file in SimHub's matrix device settings. openDash does not install it.";
+                flagBoxCopyButton.Visibility = plan != null && plan.State == FlagBoxInstallState.Unavailable
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
             }
+        }
+
+        private void CopyFlagBoxForImport()
+        {
+            var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());
+            if (flagBoxPath != null && copied?.Path != null) flagBoxPath.Text = copied.Path;
+            if (flagBoxLine == null) return;
+            flagBoxLine.Text = copied != null && copied.Status == FlagBoxStatus.Failed
+                ? "Could not copy the profile: " + copied.Message
+                : "Copied to " + copied?.Path + ". In SimHub, open your matrix device's profiles and press Import; "
+                    + "the dialog opens in that folder.";
+        }
+
+        private FlagBoxPlan SafePlan()
+        {
+            try
+            {
+                return FlagBoxInstaller.Plan(plugin.FlagBoxJson);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Reading SimHub's matrix profiles failed: " + ex.Message);
+                return new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
+            }
+        }
+
+        private void InstallFlagBox()
+        {
+            try
+            {
+                FlagBoxInstaller.Install(plugin.FlagBoxJson);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Installing the flag box profile failed", ex);
+            }
+            RefreshFlagBox();
         }
 
         private FrameworkElement FlagBoxPathBox()
@@ -1040,8 +1172,9 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Right,
                 IsReadOnly = true,
                 Text = plugin.FlagBox?.Path ?? string.Empty,
-                ToolTip = "Where openDash left the profile. Read-only: copy it, then import it in SimHub.",
+                ToolTip = "Where openDash left the profile.",
             };
+            flagBoxPath = box;
             return box;
         }
 

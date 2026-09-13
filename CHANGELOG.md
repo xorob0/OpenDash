@@ -9,6 +9,56 @@ Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashbo
 to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
 including any that the plugin does not install.
 
+## Unreleased
+
+### Added
+
+- The rev bar can be turned **off entirely**, for a wheel or DDU that already has LEDs across its
+  top. `OpenDash.RevBar` carries the three states — `shift`, `rpm`, `off` — and the General row in
+  the plugin panel is now a three-way choice rather than a toggle. `OpenDash.ShiftLights` stays
+  attached as its deprecated alias for a release, so a settings file and a dashboard written before
+  the mode existed both still say what their owner meant.
+- With the rev bar off, a rectangular zone face draws a **second arrangement** rather than a hole
+  where the well was: the bar rises to the top margin and the zones take the room back, which is 44
+  rows of 480 on the reference face and a ninth of the nano. Both arrangements are built into the
+  same package as two screens, so the setting changes the face in front of the driver with no
+  reinstall. Their rectangles are derived rather than drawn and
+  [docs/design/zones.md](docs/design/zones.md) §10 records what the canvas owes.
+- **The shift lights are the car's own.** The bar, the arc and the companion's speedo now light at
+  the four RPMs your sim publishes for the car you are driving, rather than at SimHub's idea of
+  them. `Shift` reaches the bar for the first time: the point at which the sim is actually telling
+  you to shift had no equivalent in the old model, whose two bands were both derived from the
+  redline. A car released this morning is right with nothing to set up and no table to wait for.
+  For a car that publishes no ladder, and for any sim but iRacing, the bar falls back to the bands
+  you tune on SimHub's Car Settings page and looks exactly as it did. Nothing is configured either
+  way: the bar asks the car, every frame. **In the last gear the top band stays lit but stops
+  flashing**, because a flash asking for a shift there is an instruction that cannot be followed.
+  The gear on the flag box is coloured *and flashed* by the same model, down to that last-gear
+  exception, so a digit, a rev segment and an LED on a strip change colour and begin flashing on the
+  same frame for the same reason.
+  [ADR 0014](docs/decisions/0014-the-shift-model.md) is the whole of the reasoning, including why
+  openDash mirrors thresholds and never colour.
+- **Which ladder your car is on is visible.** The shift state is drawn as two layers,
+  `revBar.shiftLights` and `revBar.shiftLightsSimHub`, and whichever is visible in Dash Studio is
+  the one in use, so a car that lights oddly can be diagnosed without reading an expression. The
+  plain RPM bar is the third layer and is unchanged; `off` is still not a layer. Nothing moved on
+  the face and no setting gained a value.
+- **openDash lights RGB strips as well as the flag box.** The build now writes a `.ledsprofile` for
+  nineteen strip shapes beside the flag box's — wheel rims from 3/9/3 to 5/10/5, bare runs of eight
+  to sixteen, and brows of nine to twenty-five — and every release carries them. Import one through
+  SimHub's own LED profile import and pick it on your device; a strip wired from the far end has a
+  profile of its own rather than needing rewiring. The rev ladder on a strip is built from the
+  *same expressions* the rev bar is, so a strip and a screen in one rig cannot disagree about when
+  a light comes on. The sides carry brake, and the run carries the flags, the pit states, a car
+  alongside, ABS and traction control, DRS, low fuel and the temperature warnings, ranked the way
+  the face ranks them.
+- Two settings for the strips, in the plugin panel's **Lights** section. **Strip centre** chooses
+  what the middle of the run shows: revs, revs with the sides left dark, brake, throttle and brake
+  from the middle out, or fuel. **Rev style** chooses how the ladder fills: left to right, meeting
+  in the middle, or the F1 look that flashes the whole bar. A style never changes *when* a light
+  comes on, only which LED takes which rung and what colour it is, so your car's own shift points
+  survive whichever look you pick.
+
 ## 0.2.0-rc.1 (2026-09-13)
 
 The candidate that replaces your dashboard with a different one rather than a newer version.
@@ -56,12 +106,17 @@ puts the old face back under a name of its own, beside the new one rather than o
   water, and the gear underneath all of it — one picture at a time, ranked the way the face ranks
   the same conditions, coloured from the same tokens.
 
-  **It is the one thing the plugin does not install for you.** SimHub keeps matrix profiles inside
-  a settings file it rewrites whenever anything changes, so writing into it would lose the other
-  profiles you have made, and painting hardware you own is not something a dashboard should do
-  unasked. The plugin writes `SimHub\OpenDash\openDash Flag box.ledsprofile`, the new **Lights**
-  page says where it is, and you import it once in SimHub's own matrix settings. After that every
-  setting on that page reaches the box while you drive.
+  **Installing it is one button.** Open the OpenDash page, scroll to **Lights**, press
+  **Install into SimHub**, then pick the profile on your matrix device. openDash adds it through
+  SimHub's own matrix-profile API, so SimHub writes its own settings and nothing of yours is
+  touched — openDash only ever recognises its own profile. It **never installs on its own**: a
+  profile paints hardware you own, so it is asked about once rather than assumed.
+
+  When openDash updates, the button offers **Update in SimHub**. Updating replaces the copy in
+  SimHub, including any changes you made to it there, so copy it under a new name first if you have
+  customised it. The profile is also written to `SimHub\OpenDash\openDash Flag box.ledsprofile`,
+  shown under the button, as the fallback when SimHub's matrix settings cannot be reached and as the
+  thing you copy to a second machine.
 
   Set the matrix's **rotation and serpentine on the device in SimHub first.** They belong to SimHub
   because the right values depend on which corner your data cable enters, and if they are wrong the

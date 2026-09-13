@@ -1,20 +1,44 @@
 /**
- * The per-gear shift table, and the three places a ladder can come from.
+ * The per-gear shift table, and where it sits among the places a ladder can come from.
  *
  * ADR 0014 settled that openDash mirrors the car rather than carrying a table, and XOR-233 amended
- * it: derived by default, a table overriding where one exists. This module is the table half and
- * the precedence between them.
+ * it: derived by default, a table overriding where one exists. This module is the table half.
  *
- * The precedence, highest first:
+ * **The precedence, highest first, and what of it is built.** This is a description of the code as
+ * it stands, not of the design:
  *
- *   1. **This table**, per car and per gear, for a car somebody has measured.
+ *   1. **This table**, per car and per gear, for a car somebody has measured. *Built, on the RPM
+ *      strips only.* `tabledStageLit` and `tabledOverRev` have exactly one caller in the build,
+ *      `rpmStrip.ts`, which emits one conditional group per car and gear the table covers
+ *      (`test/leds.test.ts` calls them too, which is a test and not a surface). No screen surface
+ *      and not the flag box reads the table: the rev bar, the rev arc, the companion's speedo and
+ *      the box's gear are all on rung 3 or 4 unconditionally.
  *   2. **SimHub's own per-gear redline**, when the user has turned it on by hand —
  *      `CarSettings_RPMRedLinePerGearOverride` is 1 and `CarSettings_CurrentGearRedLineRPM` then
- *      varies with the gear. Their numbers, not ours.
- *   3. **The car's own ladder** from iRacing's four `DriverCarSL*` RPMs — one set for the car.
- *   4. **SimHub's bands**, for a car that publishes no ladder at all (ADR 0004).
+ *      varies with the gear. Their numbers, not ours. **Not built.** `simhubPerGear` below is the
+ *      switch, nothing calls it, and `CarSettings_RPMRedLinePerGearOverride` appears in no
+ *      generated `.ledsprofile` and no generated `.simhubdash`. It is kept as the worked-out form
+ *      of a rung somebody may add, and is dead until something does.
  *
- * What is *not* in that list is a derived per-gear source, because there is not one. iRacing
+ *      `CarSettings_CurrentGearRedLineRPM` is a different matter and **does** appear in the build —
+ *      in `openDash.simhubdash` and `openDash Companion.simhubdash`, the two packages that draw the
+ *      speedo page at a `wide` box and so keep its Redline field. `simhubRedlineRpm` in
+ *      `../shift.ts` is its one body, and `redlineRpm` there prints it as the fallback for a car
+ *      that publishes no ladder of its own. That is rung 4's world, not this rung: it is read as a
+ *      plain redline, never gated on the override, and so never per gear.
+ *   3. **The car's own ladder** from iRacing's four `DriverCarSL*` RPMs — one set for the car.
+ *      *Built, everywhere.* It lives in `../shift.ts`; `mirrorAvailable` there is the gate, and is
+ *      the only definition of it.
+ *   4. **SimHub's bands**, for a car that publishes no ladder at all (ADR 0004). *Built,
+ *      everywhere*, as the other half of the same per-frame choice.
+ *
+ * **Nothing diverges today, and that is why the gap is easy to miss.** `data/shift-points.json`
+ * ships empty (see its own `$meta.empty`), so rung 1 emits no containers, rung 2 does not exist,
+ * and every surface in the build is reading rungs 3 and 4 — the same two expressions, on the same
+ * frame. The first measured car put into the table is also the first time a strip and a screen in
+ * one rig will say different things, and closing that is work rather than a property of the model.
+ *
+ * What is *not* in the list at all is a derived per-gear source, because there is not one. iRacing
  * publishes no per-gear shift data of any kind, and SimHub's learned table is unreachable from an
  * expression and is seeded identically for every gear on iRacing anyway. The evidence is in
  * docs/research/simhub-led-sources.md.
@@ -22,7 +46,7 @@
 import table from '../../../../data/shift-points.json';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { firstRpm, lastRpm, rpms, shiftRpm } from '../shift.ts';
+import { rpms } from '../shift.ts';
 
 const { and, eq, game, gt, ge, isnull, num, raw, str } = ncalc;
 
@@ -51,9 +75,6 @@ const data = table as unknown as ShiftTable;
 
 /** Every car in the table, in the order the file lists them. */
 export const SHIFT_TABLE: Record<string, CarShiftPoints> = data.cars ?? {};
-
-/** The cars the table covers. Empty is a legitimate state: see the file's own `$meta.empty`. */
-export const tabledCars = (): string[] => Object.keys(SHIFT_TABLE);
 
 /** What is wrong with the table, or an empty list. Errors here fail `bun run check`. */
 export function validateShiftTable(t: Record<string, CarShiftPoints> = SHIFT_TABLE): string[] {
@@ -86,21 +107,23 @@ const gearNumber = (): Expr => isnull(raw('Gear'), num(0));
 /** The car SimHub says we are in, which is what a table entry is keyed by. */
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
 
-/** Whether the user has turned SimHub's own per-gear redline on for this car. */
+/**
+ * Whether the user has turned SimHub's own per-gear redline on for this car.
+ *
+ * Rung 2 of the header's precedence, and **nothing calls this**: `CarSettings_RPMRedLinePerGearOverride`
+ * appears in nothing the build writes. It is written out rather than described so that adding the
+ * rung is a wiring job rather than a research one.
+ *
+ * The other half of the rung — SimHub's redline RPM itself — is not written out here, because it is
+ * not dead: `simhubRedlineRpm` in `../shift.ts` reads it as the fallback half of `redlineRpm`, and
+ * that is its one body. This file used to carry a byte-identical second one under the name
+ * `simhubGearRedline`, which is how the companion's speedo came to print SimHub's number beside a
+ * bar reading the car's.
+ */
 export const simhubPerGear = (): Expr => eq(isnull(game('CarSettings_RPMRedLinePerGearOverride'), num(0)), num(1));
-
-/** SimHub's redline for the gear we are in, which varies per gear only under {@link simhubPerGear}. */
-export const simhubGearRedline = (): Expr => isnull(game('CarSettings_CurrentGearRedLineRPM'), num(0));
 
 /** Whether this car and gear have a measured entry: the condition a table override is gated on. */
 export const tabledGear = (model: string, gear: string): Expr => and(eq(carModel(), str(model)), eq(gearNumber(), num(Number(gear))));
-
-/**
- * Whether the car's own published ladder is in use — i.e. nothing above it in the precedence
- * applies. Exported so the rev bar and the strip can agree about which rung of the precedence they
- * are on, and so a test can prove they do.
- */
-export const usingPublishedLadder = (): Expr => and(gt(firstRpm(), num(0)), gt(lastRpm(), firstRpm()), ge(shiftRpm(), firstRpm()), ge(lastRpm(), shiftRpm()));
 
 /**
  * Rung `local` of `count` in a band, against absolute RPMs from a table entry. The thresholds are

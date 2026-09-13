@@ -113,8 +113,10 @@ describe('the device kinds', () => {
     expect(DEVICE_SIZE.matrix8x8).toEqual({ rows: 8, columns: 8 });
   });
 
-  test('the kind is written on every container', () => {
-    expect(buildContainerObject(animation(), 'p/0', 'matrix8x8').DeviceKind).toBe(2);
+  test('the kind is NOT written on a container, because SimHub drops it', () => {
+    // MatrixContainerBase.DeviceKind has a private setter and no [JsonProperty], so Json.NET marks
+    // it non-writable and skips it on load. Emitting it was six hundred dead fields in the file.
+    expect(buildContainerObject(animation(), 'p/0', 'matrix8x8').DeviceKind).toBeUndefined();
   });
 });
 
@@ -175,6 +177,13 @@ describe('the file', () => {
     expect(text).not.toInclude('$id');
     expect(text).not.toInclude('$ref');
     expect(text).not.toInclude('$type');
+  });
+
+  test('does not flip a SimHub default it has no reason to touch', () => {
+    // RGBMatrixProfile declares UseStrictJSIsolation [DefaultValue(true)] with
+    // DefaultValueHandling.Populate. We carry no JavaScript, so false was inert -- and a trap for
+    // the first profile that does.
+    expect(buildProfileObject(profileOf([animation()])).UseStrictJSIsolation).toBe(true);
   });
 
   test('carries the fields RGBMatrixProfile reads back', () => {

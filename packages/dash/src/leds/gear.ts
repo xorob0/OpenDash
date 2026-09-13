@@ -12,9 +12,18 @@
  *
  * **The colour is the shift model**, the same three bands the rev bar climbs: `shiftBands()` in
  * components/revSegments.ts is where the thresholds live, and the gear reads that rather than
- * restating them, so a driver with both learns one relationship and reads it in two places. When
- * XOR-230 replaces SimHub's per-car bands with the sim's own `DriverCarSL*` values, it changes
- * that one function.
+ * restating them, so a driver with both learns one relationship and reads it in two places.
+ *
+ * XOR-230 replaced SimHub's per-car bands with the sim's own `DriverCarSL*` values, and it changed
+ * that one function: a band is now entered on the car's own ladder where the car publishes one and
+ * on SimHub's bands where it does not (ADR 0014). The gear did not have to know, which is the
+ * property the single function was for. What it does mean is that a digit and a rev segment and an
+ * LED on a strip all change colour on the same frame for the same reason.
+ *
+ * **The flash is a threshold of its own, not a property of the top band**, and reading it as one was
+ * the defect XOR-233's review found here. `ShiftBand.blink` now carries the over-rev expression the
+ * rev bar and the strip flash on — `max(Blink, Last)`, and never in the last gear — and the digit
+ * reads that rather than flashing the moment the top band is entered.
  */
 import { shiftBands, type ShiftBand } from '../components/revSegments.ts';
 import { flagBox } from '../contract.ts';
@@ -77,8 +86,15 @@ export const gearPixels = (gear: string, colour: Hex): ReturnType<typeof pixelsO
 /** `[Gear] = 'R'`. SimHub reports the gear as a string, `R` and `N` included. */
 export const gearIs = (gear: string): string => eq(ncalc.game('Gear'), str(gear));
 
-/** The eleven gear glyphs at one shift band, each shown when the car is in that gear. */
-function gearsAtBand(band: ShiftBand): MatrixContainer[] {
+/**
+ * The eleven gear glyphs at one shift band, each shown when the car is in that gear, drawn either
+ * flashing or steady.
+ *
+ * A matrix animation has no blink formula of its own — an `AnimationContainer` simply loops its
+ * frames — so "flashes only while over-revving" is two sets of glyphs under two conditions rather
+ * than one set with a binding. {@link gearGroup} is where that condition is applied.
+ */
+function gearsAtBand(band: ShiftBand, flashing: boolean): MatrixContainer[] {
   return GEARS.map((gear) => ({
     kind: 'when' as const,
     description: `Gear ${gear} ${band.id}`,
@@ -86,17 +102,36 @@ function gearsAtBand(band: ShiftBand): MatrixContainer[] {
     children: [
       {
         // Named with the band as well as the gear: the same digit exists in four colours, and the
-        // contact sheet and the fit test both address them by this name.
+        // contact sheet and the fit test both address them by this name. The flashing and steady
+        // copies share it, because they are one picture drawn at two rates.
         kind: 'animation' as const,
         description: `Gear ${gear} ${band.id} glyph`,
         // The redline band blinks the digit rather than filling the panel behind it: a filled
         // panel is a flag's vocabulary, and the box has to keep those two apart.
-        frames: band.blink
+        frames: flashing
           ? blinkFrames(gearGrid(gear), DARK_PANEL, paletteFor(band.colour), ds.shiftLights.flashHz, `gear ${gear}`)
           : still(gearGrid(gear), paletteFor(band.colour), `gear ${gear}`),
       },
     ],
   }));
+}
+
+/**
+ * One band's glyphs, split by its flash if it has one.
+ *
+ * The band says *when* it flashes rather than merely *that* it does, and the digit has to honour
+ * the difference: the redline band is entered at `Last` and flashes at `max(Blink, Last)`, and it
+ * stops flashing in the last gear. Before XOR-233's review the digit flashed on the band, so on a
+ * rig with a box and a screen the digit strobed while the bar's top band sat solid, and went on
+ * strobing in top gear where the bar deliberately does not. Two conditional groups, over-rev first,
+ * is the matrix's way of saying what `blinkBind` says on a screen segment.
+ */
+function bandChildren(band: ShiftBand): MatrixContainer[] {
+  if (band.blink === null) return gearsAtBand(band, false);
+  return [
+    { kind: 'when', description: `Gear ${band.id} over-rev`, formula: band.blink, children: gearsAtBand(band, true) },
+    { kind: 'when', description: `Gear ${band.id} steady`, formula: not(band.blink), children: gearsAtBand(band, false) },
+  ];
 }
 
 /**
@@ -112,7 +147,7 @@ export function gearGroup(): MatrixContainer {
       kind: 'when' as const,
       description: `Gear ${band.id}`,
       formula: and(...bands.slice(0, i).map((higher) => not(higher.raised)), band.raised),
-      children: gearsAtBand(band),
+      children: bandChildren(band),
     })),
   };
 }
