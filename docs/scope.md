@@ -93,6 +93,12 @@ notice as one. A user could end up with either spelling depending on what create
 user with both would see two entries in Dash Studio. The cost of the inconsistency is one reader
 raising an eyebrow; the cost of the rename is somebody's dashboard list.
 
+The same reasoning covers the other names only a machine reads. The condensed faces ship under the
+family name `openDash Display`, which every `.djson` asks for by that exact string and which the
+build writes into the font files themselves, so the spelling is a key rather than a word; dashboard
+titles are the same kind of key. Changing one of those is changing an identifier, and it is worth
+doing only when something breaks without it.
+
 `packages/dash/src/contract.ts` holds the catalogues and the defaults, and
 `plugin/OpenDash/Contract.cs` mirrors it, with a test on each side reading the other file so
 that the two cannot drift.

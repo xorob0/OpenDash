@@ -97,7 +97,7 @@ recorded in `font.cell`. **Only what fits a cell may be drawn in one**, which is
 belongs to the label. That is rule 19 on the canvas.
 
 One more thing the renderer decides rather than taste: the condensed faces ship under the family
-name `OpenDash Display`. WPF reads the width word out of a family name and files "Barlow
+name `openDash Display`. WPF reads the width word out of a family name and files "Barlow
 Condensed" as a *stretch* of Barlow, which a `.djson` has no way to ask back, so every numeral
 came out about a fifth too wide. Same outlines, renamed on the way into a package; the vendored
 files are untouched.
