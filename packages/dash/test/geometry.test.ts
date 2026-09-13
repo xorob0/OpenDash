@@ -60,7 +60,8 @@ describe('1920x480 slots', () => {
     expect(hero.pitLimiter).toEqual({ left: 824, top: 75, width: 272, height: 36 });
     expect(hero.flags).toEqual({ kind: 'flagStrip', rect: { left: 0, top: 440, width: 1920, height: 40 } });
     expect(layout1920x480.shape).toBe('rect');
-    expect(layout1920x480.folder).toBe('openDash');
+    // The zone face took the plain "openDash" in XOR-118, so the card reference face says so.
+    expect(layout1920x480.folder).toBe('openDash slots 1920x480');
     expect(layout1920x480.description).toBe('1920 x 480, 12 slots');
     expect(rungOf(layout1920x480)).toBe('L');
     expect(LAYOUTS).toContain(layout1920x480);
