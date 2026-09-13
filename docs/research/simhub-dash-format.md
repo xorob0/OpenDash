@@ -253,11 +253,18 @@ the item's `Owner` setter assigns their `Owner` and `ParentItem` as it is set. S
 `PaddingTop`/`Bottom`/`Left`/`Right` are all bindable **there**. None of them is bindable on the
 item, for the reflection reason above.
 
-**`Font` and `CharWidth` carry `[NoBinding]`.** The attribute is read in one place,
-`PropertyItemWrapper`, which is the editor's property grid, and never by `ApplyBindings`. So the
-runtime does not enforce what the editor refuses to offer. Treat these as unsupported whatever the
-runtime does with them: they are the only two properties on a `TextItem` SimHub marks this way, and
-both are exactly the properties a text box was measured from.
+**`Font` and `CharWidth` carry `[NoBinding]`, and both bind anyway.** The attribute is read in one
+place, `PropertyItemWrapper`, which is the editor's property grid, and never by `ApplyBindings`. A
+binding written into the JSON by hand is therefore applied: on the VM a bound `Font` redrew its text
+in Courier New and a bound `CharWidth` widened the monospace cells. Treat them as unsupported all
+the same. They are the only two properties on a `TextItem` SimHub marks this way, both are exactly
+the properties a text box was measured from, and a behaviour that survives only because nothing
+enforces the attribute is one update away from disappearing without a message.
+
+Every claim in this section was run on the VM as `openDash Probe`
+([tools/binding-probe](../../tools/binding-probe/probe.ts)), twelve rows each drawing a literal that
+reads FAIL beside a binding that reads PASS. The capture is
+[media/xor-73/binding-probe.png](../../media/xor-73/binding-probe.png).
 
 **`ImageFromFileItem.ImagePath` is an ordinary bindable string**, unattributed, which is the path to
 an image outside the package. `ImageFromUrlItem.ImageUrl` likewise.
