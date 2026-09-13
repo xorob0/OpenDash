@@ -26,8 +26,9 @@ contributor or an agent should read first, and the one that has to be amended wh
 
 OpenDash is an open-source dashboard package for [SimHub](https://www.simhubdash.com/),
 released under the MIT licence. It consists of fourteen dashboards covering three kinds of
-screen, together with a SimHub plugin that installs them and exposes the settings which decide
-what they show. It is free, and bounties or donations may follow later.
+screen and the LED profiles that light the hardware around them, together with a SimHub plugin
+that installs them and exposes the settings which decide what they show. It is free, and
+bounties or donations may follow later.
 
 The dashboards are generated from TypeScript and design tokens rather than drawn in SimHub's
 editor. A generator emits the `.djson` scene graph, the build packs it into a `.simhubdash`, and
@@ -41,6 +42,7 @@ and [ADR 0002](decisions/0002-djson-generated-from-source.md); the pipeline is i
 | Telemetry | SimHub; the user supplies their own install |
 | Supported sim | iRacing |
 | Screens | ten dash faces, two companions, two pit walls |
+| Lights | LED profiles for the hardware beside the screen; the 8x8 flag box first |
 | Plugin | .NET Framework 4.8, code-only WPF, builds on Linux |
 | Licence | MIT |
 
@@ -51,7 +53,8 @@ until somebody has actually driven them. Concerning that audit, see XOR-51.
 
 ## What ships
 
-Three kinds of screen, built from one set of parts and installed by one plugin.
+Three kinds of screen and the lights beside them, built from one set of parts and installed by
+one plugin.
 
 ### The face
 
@@ -128,6 +131,30 @@ driver's own lap beside it, and data zones whose contents are plugin settings.
 [second-screens.md](second-screens.md) describes the module model and both second screens in
 full, including every case where a module is off by default because iRacing publishes none of
 its data.
+
+### The lights
+
+The hardware around the screen: an 8x8 matrix flag box, an RPM strip, a brow strip above the
+monitor, the LEDs in a wheel or button box, and ambient lights behind the rig. SimHub drives all of
+them out of profile files, and openDash generates those profiles the same way it generates the
+scene graph — from TypeScript and `design/tokens.json`, so that a flag is the same colour on the
+box as it is on the face, and a shift light comes on at the same instant on the strip as it does on
+the rev bar.
+
+[ADR 0013](decisions/0013-lighting-hardware.md) is the record, and it settles three things worth
+repeating here. A profile is **build output**, so nobody edits one in SimHub's LED editor and
+brings it back. A profile is **never written to a device without being asked**: the choice is per
+device family, off by default, remembered and reversible, because a profile changes what hardware
+someone owns does. And a profile is a **complete product on its own**, every property read wrapped
+in `isnull()` with its default, so a user who imports one without the plugin gets the default
+behaviour rather than an unlit strip.
+
+[research/simhub-leds-format.md](research/simhub-leds-format.md) is the format, verified against
+SimHub 9.12.6.
+
+The flag box ships first, because it is the one whose content openDash already owns: the flag
+colours are in `design/tokens.json` and the alert catalogue is one ordered list for the face, the
+companion and the pit wall. A 64-pixel box is that list with a different renderer.
 
 ## The plugin
 
@@ -240,6 +267,13 @@ the one that catches what the tests cannot: WPF clips silently, and a box measur
 wrong face or from a sample narrower than the runtime value loses glyphs without failing
 anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
 [testing-vm.md](testing-vm.md) explains the VM.
+
+**For a change that lights hardware, that last condition cannot be met and something weaker takes
+its place**, because nobody in CI owns an 8x8 matrix or an RPM strip. A generated profile is done
+when it loads through SimHub's own deserializer without becoming an `UnknownContainer`, when the
+preview renderer draws what it should draw, and when the pull request says plainly that the pixels
+were not seen lit. That is a weaker bar than the screens are held to, and it is stated here rather
+than left to be discovered, so that a reviewer knows which of the two they are reading.
 
 ## Related documents
 
