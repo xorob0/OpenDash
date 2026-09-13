@@ -1,21 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="OpenDash">
   <title>OpenDash</title>
   <!--
-    The mark is the rev bar, which is the one shape OpenDash owns: five segments lit left to right
-    as the revs rise. It is drawn as five rounded bars of increasing height on a common baseline,
-    so that it reads as a sweep at any size and as a shape rather than as a colour when it is
-    monochrome. Nothing here is thinner than 4 units of 32, which is what keeps it legible at 16 px.
+    The mark is the rev bar: three segments sweeping up and to the right, and a fourth, set apart
+    and heavier, which is the shift point a driver acts on.
 
-    The single colour is design/tokens.json's purpose.ui.accent, which Theme.Accent mirrors. A mark with a hex of its own
-    would be a second palette; anything that draws this in another colour should set `fill` on the
-    group rather than edit the bars.
+    Three progressions run together, which is what makes it a sweep rather than a chart. Each
+    segment starts 6 units higher than the one before, ends 4 units higher, and is 2 units taller.
+    No segment sits on a shared baseline: a common baseline is what makes bars read as data, and
+    this is an instrument, not a measurement.
+
+    Hard edges, radius 0, as `radius.none` says race dashes are. The shift point is the widest and
+    tallest thing here and stands off a 5 unit gap where the others are spaced 3, so the break is
+    a real break rather than a claimed one.
+
+    Nothing is narrower than 5 units of 32, which is 2.5 px at the 16 px of a browser tab, and no
+    gap is narrower than 3, so the segments never merge into a blob at that size either.
+
+    The single colour is design/tokens.json's purpose.ui.accent, which Theme.Accent mirrors. A mark
+    with a hex of its own would be a second palette; anything that draws this in another colour
+    should set `fill` on the group rather than edit the segments.
   -->
   <g fill="#33D9F2">
-    <rect x="1"  y="20" width="5" height="8"  rx="2" />
-    <rect x="8"  y="16" width="5" height="12" rx="2" />
-    <rect x="15" y="12" width="5" height="16" rx="2" />
-    <rect x="22" y="7"  width="5" height="21" rx="2" />
+    <rect x="0"  y="20" width="5" height="10" />
+    <rect x="8"  y="14" width="5" height="12" />
+    <rect x="16" y="8"  width="5" height="14" />
+    <rect x="26" y="2"  width="6" height="16" />
   </g>
-  <!-- The fifth segment is separated and squarer: it is the shift point, the one a driver acts on. -->
-  <rect x="29" y="2" width="2" height="26" rx="1" fill="#33D9F2" />
 </svg>

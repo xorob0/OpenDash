@@ -1,6 +1,6 @@
 # Brand and visual direction
 
-**Last updated:** 2026-09-10
+**Last updated:** 2026-09-13
 **Status:** direction agreed; layouts in progress on the design canvas.
 
 Token values live in [`design/tokens.json`](../../design/tokens.json), which is the source of
@@ -117,18 +117,38 @@ files are untouched.
 Wordmark: `Open` in a light weight, `Dash` in bold. Condensed, technical. The two weights are the
 whole of it; there is no second typeface and no letter spacing.
 
-The mark is **the rev bar**, which is the one shape OpenDash owns: four rising segments and a
-separated fifth, which is the shift point a driver acts on. It is `media/logo.svg`, drawn in a 32
-unit square in `purpose.ui.accent` and nothing else.
+The mark is **the rev bar**, which is the one shape OpenDash owns: three segments sweeping up and
+to the right, and a fourth, set apart and heavier, which is the shift point a driver acts on. It is
+`media/logo.svg`, drawn in a 32 unit square in `purpose.ui.accent` and nothing else.
 
-Two constraints decided its shape rather than taste. It is seen at 16 px in a browser tab, so
-nothing in it is thinner than four units of thirty-two, which is two pixels there. And it is seen
-monochrome on a dark panel, so it reads as a shape and not as a colour: take the fill away and the
-sweep is still a sweep.
+**No shared baseline.** This is the rule the mark turns on. Segments standing on a common baseline
+read as a measurement whatever else is done to them, which is why the first drawing of this mark
+was indistinguishable from a signal-strength icon. Here three progressions run at once and none of
+them is a baseline: each segment starts 6 units higher than the one before, ends 4 units higher,
+and is 2 units taller. The eye gets a sweep instead of a chart.
+
+**The shift point is the loudest thing in it**, because it is the loudest thing on a dash. It is
+the widest and the tallest segment and it stands off a 5 unit gap where the others are spaced 3.
+The first drawing had this backwards — it made the shift point a two unit hairline and spaced it
+exactly like the four segments it was meant to be separated from, so the one element carrying the
+meaning was the one hardest to see.
+
+**Hard edges**, radius 0, as `radius.none` says race dashes are. Rounding was the other thing
+wrong with the first drawing: the SVG asked for `rx="2"` and the panel drew `RadiusX = width / 2`,
+so the mark shipped as soft capsules on one surface and half-rounded bars on the other.
+
+Two constraints then fix the sizes rather than taste. It is seen at 16 px in a browser tab, so
+nothing in it is thinner than five units of thirty-two and no gap is narrower than three, which is
+2.5 px and 1.5 px there: at that size a mark can die by losing a segment or by merging into a blob,
+and both are tested. And it is seen monochrome on a dark panel, so it reads as a shape and not as a
+colour: take the fill away and the sweep is still a sweep.
 
 It is drawn twice, because WPF cannot render an SVG and Markdown cannot render a `Canvas`. The SVG
 is the source; `MarkShape.Bars` in the plugin mirrors it and `MarkTests` reads the file and checks
-the numbers against each other, so the copies cannot drift. Change the SVG first.
+the numbers against each other, so the copies cannot drift. Change the SVG first. The corner radius
+is checked too now, since comparing positions and sizes alone is exactly how the capsules went
+unnoticed, and so are the three rules above, so that the mark cannot quietly become a bar chart
+again.
 
 Where it goes: the settings panel's header beside the wordmark, and the top of `README.md`. Not on
 the face, which is a driver's instrument and not a billboard.
