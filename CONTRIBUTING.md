@@ -60,6 +60,10 @@ and the pit wall at once.
   serve any other dashboard project.
 - `plugin/OpenDash` is the C# plugin. `Contract.cs` mirrors `contract.ts` and a test keeps the
   two card catalogues identical.
+- `traces/` holds one recorded telemetry trace per emulator scenario, taken from a real SimHub on
+  the Windows VM and committed so that everything downstream replays a file rather than needing a
+  VM. A package that starts reading a property no trace carries fails `bun run check` and is
+  answered with `bun run record <scenario>`; see [traces/README.md](traces/README.md).
 
 ## Before you start
 
