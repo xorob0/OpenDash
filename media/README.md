@@ -23,8 +23,8 @@ path is rendered by GitHub at whatever commit the reader is looking at, so a rea
 sees the dashboard of that tag, whereas a link to a release asset shows today's picture whatever
 the reader checked out, and it breaks outright if the release is deleted. The cost is history
 weight, since a replaced PNG leaves the old one in the object store for ever; that cost is bounded
-because there are four of them, they come to a little over three hundred kilobytes together, and a
-face is not redrawn often.
+because there are four of them, they come to under four hundred kilobytes together, and a face is
+not redrawn often.
 
 Regenerating them is one command, and the scenario matters: `green` pins every value, so the only
 difference between one capture and the next is the change being shown.
@@ -36,10 +36,10 @@ bun run shots --packages "openDash,openDash 800x286,openDash Companion,openDash 
 Then copy the four PNGs over the ones in `media/readme/`, keeping the names, and say in the commit
 message what moved.
 
-Three of those four cannot be opened by that command today. Dash Studio draws a "Last used" band
-above the list once a dashboard has been run, the band pushes every row down by about 220 px, and
-`openDashboard` measures its rows from a constant, so the click lands on a neighbour: filtering by
-`openDash` opened `openDash zones 1920x480` rather than `openDash`. Until the opener measures the
+Three of those four cannot be opened by that command today, which is XOR-252. Dash Studio draws a
+"Last used" band above the list once a dashboard has been run, the band pushes every row down by
+about 220 px, and `openDashboard` measures its rows from a constant, so the click lands on a
+neighbour: filtering by `openDash` opened the face one row below it. Until the opener measures the
 list rather than assuming it, open those three in Dash Studio by hand (Start, then Windowed) and
 run `bun run dev '<package>' --no-build --keep`, which finds the window already open, skips the
 clicking and photographs it into `build/dev.png` at its own size.
