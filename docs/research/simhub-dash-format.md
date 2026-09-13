@@ -422,6 +422,50 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   flag only for a short time after it is raised; a steady green flag in the sim is not a steady
   `Flag_Green`. The other flags are reported for as long as the sim shows them. The blue flag is
   suppressed while the green flag is up.
+- **The six `Flag_*` properties are a lossy summary of what iRacing publishes.** `IRacingManager`
+  folds `yellow`, `yellowWaving`, `caution` and `cautionWaving` into one `Flag_Yellow`, and
+  `Flag_Black` is only the `black` bit, so a furled black, a disqualification and a meatball are
+  all invisible through the normalised properties. The whole bitfield is published separately; see
+  below.
+
+### Every iRacing flag bit is a property of its own (2026-09-13, XOR-227)
+
+iRacing's telemetry carries one `SessionFlags` bitfield, and SimHub does not leave it as a number
+to be masked. `DataSampleEx` exposes it through `ExposableObject.EnumerateEnum<SessionFlags>`,
+which emits one boolean per enum member named `<name>.Is<member>`:
+
+```csharp
+new ExposableObject(name + ".Is" + ((T)enumvalue).ToString(), value)   // ExposableObject.cs
+```
+
+`DataCorePlugin` declares raw data under `GameRawData`, concatenating `currentName + "." + i.Name`,
+so each bit is readable as
+
+```
+[DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Is<member>]
+```
+
+The member spelling is the enum's own, which is camel case and **not** what the rest of SimHub's
+property names look like: `Isdebris`, `Isred`, `IsyellowWaving`, `IsoneLapToGreen`, `IsstartReady`.
+
+The twenty-five members, from `iRacingSDK.SessionFlags`:
+
+| | |
+|---|---|
+| Race control | `checkered`, `white`, `green`, `yellow`, `red`, `blue`, `debris`, `crossed`, `yellowWaving`, `randomWaving` |
+| Caution | `caution`, `cautionWaving`, `oneLapToGreen`, `greenHeld` |
+| To go | `tenToGo`, `fiveToGo` |
+| Addressed to you | `black`, `disqualify`, `servicible`, `furled`, `repair` |
+| Start | `startHidden`, `startReady`, `startSet`, `startGo` |
+
+This is what lets a flag box draw more than the six normalised flags, and it is a boolean per bit
+rather than a mask, so no bitwise operator is needed — which matters, because whether SimHub's
+NCalc exposes one is not established.
+
+Not verified on a running sim: that every one of these fires when the sim raises it. `servicible`
+is spelt that way in the SDK, and `randomWaving` and `crossed` have no documented meaning in
+iRacing's own reference. Anything openDash draws from this table is drawn only where the meaning
+is certain; see `docs/design/flag-box.md`.
 
 Still open: whether `Version` gates anything (every sample says 2, and 2 is what we write), and
 verification of the plugin-driven slot switch with the real plugin, which follows the plugin

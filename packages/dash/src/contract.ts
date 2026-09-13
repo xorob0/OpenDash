@@ -505,17 +505,27 @@ export const FLAG_BOX_MATRICES = [1, 2, 3, 4] as const;
 export type FlagBoxMatrix = (typeof FLAG_BOX_MATRICES)[number];
 
 export const FLAG_BOX_BRIGHTNESS_SETTING = 'FlagBoxBrightness';
+export const FLAG_BOX_CRITICAL_ONLY_SETTING = 'FlagBoxCriticalOnly';
 
 /** Percent. SimHub's own global brightness applies on top of this. */
 export const DEFAULT_FLAG_BOX_BRIGHTNESS = 100;
+
+/**
+ * Off, so the box shows the whole catalogue until the driver asks for quiet. The default is the
+ * one that tells a driver the most; a box that stays dark through a chequered flag is a surprise,
+ * and a surprise is a worse default than a busy one.
+ */
+export const DEFAULT_FLAG_BOX_CRITICAL_ONLY = false;
 
 /** Reads of the flag box settings, each defaulted so the profile works without the plugin. */
 export const flagBox = {
   /** `isnull([OpenDash.FlagBoxBrightness], 100)`: the brightness every effect is drawn at. */
   brightness: (): Expr => isnull(prop(propertyName(FLAG_BOX_BRIGHTNESS_SETTING)), num(DEFAULT_FLAG_BOX_BRIGHTNESS)),
+  /** `isnull([OpenDash.FlagBoxCriticalOnly], false)`: quiet until something matters. */
+  criticalOnly: (): Expr => isnull(prop(propertyName(FLAG_BOX_CRITICAL_ONLY_SETTING)), String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
 };
 
 /** Every property the flag box profile reads. */
 export function flagBoxProperties(): string[] {
-  return [FLAG_BOX_BRIGHTNESS_SETTING].map(propertyName);
+  return [FLAG_BOX_BRIGHTNESS_SETTING, FLAG_BOX_CRITICAL_ONLY_SETTING].map(propertyName);
 }

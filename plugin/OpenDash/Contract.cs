@@ -24,6 +24,10 @@ namespace OpenDashPlugin
         /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.</summary>
         public const string FlagBoxBrightness = "FlagBoxBrightness";
 
+        /// <summary>Quiet until something matters: the box shows only the flags that mean slow down or
+        /// are addressed to this car.</summary>
+        public const string FlagBoxCriticalOnly = "FlagBoxCriticalOnly";
+
         public const bool DefaultShiftLights = true;
 
         public static readonly string[] PositionModes = { "overall", "class" };
@@ -50,6 +54,10 @@ namespace OpenDashPlugin
 
         /// <summary>Percent. SimHub's own global brightness for the device applies on top of this.</summary>
         public const int DefaultFlagBoxBrightness = 100;
+
+        /// <summary>Off. A box that stays dark through a chequered flag is a surprise, and a surprise is
+        /// a worse default than a busy one.</summary>
+        public const bool DefaultFlagBoxCriticalOnly = false;
 
 
         // --- The zone face ---------------------------------------------------------------------
@@ -402,6 +410,7 @@ namespace OpenDashPlugin
             yield return PitWallWide;
             yield return WebViewUrl;
             yield return FlagBoxBrightness;
+            yield return FlagBoxCriticalOnly;
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a

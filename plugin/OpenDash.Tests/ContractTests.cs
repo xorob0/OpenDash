@@ -65,7 +65,7 @@ namespace OpenDashPlugin.Tests
             // bar fields and the glance), twenty-one companion modules, four pit wall zones, the
             // wide zone, the URL, and the flag box brightness.
             const int perFace = 4 + 4 + 4 + 4 + 1;
-            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 1, names.Count);
+            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 2, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -90,7 +90,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "FlagBoxBrightness" }, names.Skip(afterFaces + 21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "FlagBoxBrightness", "FlagBoxCriticalOnly" }, names.Skip(afterFaces + 21));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 
@@ -298,8 +298,10 @@ namespace OpenDashPlugin.Tests
         {
             // Last because it is the one artefact the plugin does not install (ADR 0013); declared at
             // all because a profile reads it, and an undeclared read fails the dash build.
-            Assert.Equal(Contract.FlagBoxBrightness, Contract.PropertyNames().Last());
+            Assert.Equal(Contract.FlagBoxCriticalOnly, Contract.PropertyNames().Last());
             Assert.Equal(100, Contract.DefaultFlagBoxBrightness);
+            // Off: the box shows the whole catalogue until the driver asks for quiet.
+            Assert.False(Contract.DefaultFlagBoxCriticalOnly);
             Assert.Equal(0, Contract.NormaliseBrightness(-5));
             Assert.Equal(100, Contract.NormaliseBrightness(101));
             Assert.Equal(60, Contract.NormaliseBrightness(60));
