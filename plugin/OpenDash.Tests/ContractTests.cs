@@ -63,9 +63,10 @@ namespace OpenDashPlugin.Tests
             var names = Contract.PropertyNames().ToList();
             // Four settings, twelve slots, the zone face (four pages, four masks, four starts, four
             // bar fields and the glance), twenty-one companion modules, four pit wall zones, the
-            // wide zone and the URL.
+            // wide zone, the URL, and the flag box brightness.
             const int perFace = 4 + 4 + 4 + 4 + 1;
-            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2, names.Count);
+            // Eight global flag box settings and five per matrix, the way every face carries its own group.
+            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 5, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -90,7 +91,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(afterFaces + 21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LightsBrightness", "LightsNightBrightness", "LightsNightMode", "FlagBoxCriticalOnly", "FlagBoxGear",
+                "FlagBoxLowFuelLaps", "FlagBoxOilTemp", "FlagBoxWaterTemp" }, names.Skip(afterFaces + 21).Take(14));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 
@@ -100,11 +102,19 @@ namespace OpenDashPlugin.Tests
             // The rule the build enforces over a package is a partition of the contract: a name is one
             // screen's or it is shared by all of them, and never both. Without that, attaching a rig's
             // properties would either drop a name no screen claims or attach one twice.
+            //
+            // The lights are a third part of that partition rather than an exception to it. They belong
+            // to no screen -- a matrix is not one -- and they are not the screens' shared settings
+            // either, so folding them into SharedPropertyNames would make "shared" mean two things.
             var all = Contract.PropertyNames().ToList();
             var owned = Contract.ScreenPrefixes().SelectMany(Contract.ScreenPropertyNames).ToList();
+            var lights = Contract.LightsPropertyNames().ToList();
             Assert.Equal(owned.Count, owned.Distinct().Count());
             Assert.Empty(owned.Except(all));
-            Assert.Equal(Contract.SharedPropertyNames(), all.Except(owned));
+            Assert.Empty(lights.Except(all));
+            Assert.Empty(lights.Intersect(owned));
+            Assert.Empty(lights.Intersect(Contract.SharedPropertyNames()));
+            Assert.Equal(Contract.SharedPropertyNames(), all.Except(owned).Except(lights));
 
             // The web view address is the pit wall's although its name carries no prefix: it was named
             // before the idiom, and no other screen has a browser page to point anywhere.
@@ -314,6 +324,43 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Face1920x480QuickGlance", Contract.QuickGlanceProperty(face));
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty(face, "E"));
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty(face, "Middle"));
+        }
+
+        [Fact]
+        public void The_flag_box_is_declared_last_and_clamps_its_brightness()
+        {
+            // Last because it is the one artefact the plugin does not install (ADR 0013); declared at
+            // all because a profile reads it, and an undeclared read fails the dash build.
+            Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Last());
+            Assert.True(Contract.DefaultFlagBoxGear);
+            // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
+            Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
+            Assert.False(Contract.DefaultFlagBoxMatrixOn(2));
+            Assert.Equal("gear", Contract.DefaultFlagBoxMatrixRest(1));
+            Assert.Equal("dark", Contract.DefaultFlagBoxMatrixRest(4));
+            Assert.Equal("both", Contract.DefaultFlagBoxSide);
+            Assert.Equal("FlagBoxMatrix2Spotter", Contract.FlagBoxMatrixProperty(2, "Spotter"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.FlagBoxMatrixProperty(5, "Rest"));
+            // Rotation and serpentine are SimHub device settings, not ours.
+            foreach (var name in Contract.PropertyNames())
+            {
+                Assert.DoesNotContain("Rotation", name, StringComparison.Ordinal);
+                Assert.DoesNotContain("Serpentine", name, StringComparison.Ordinal);
+            }
+            // The defaults are right in every unit SimHub reports, not only in Celsius.
+            Assert.Equal(120, Contract.DefaultOilTemp["Celcius"]);
+            Assert.Equal(248, Contract.DefaultOilTemp["Fahrenheit"]);
+            Assert.Equal(110, Contract.DefaultWaterTemp["Celcius"]);
+            Assert.Equal(2, Contract.DefaultFlagBoxLowFuelLaps);
+            Assert.Equal(100, Contract.DefaultLightsBrightness);
+            // Dimmer at night: 64 LEDs at full output beside a wheel in a dark room is too bright.
+            Assert.True(Contract.DefaultLightsNightBrightness < Contract.DefaultLightsBrightness);
+            Assert.False(Contract.DefaultLightsNightMode);
+            // Off: the box shows the whole catalogue until the driver asks for quiet.
+            Assert.False(Contract.DefaultFlagBoxCriticalOnly);
+            Assert.Equal(0, Contract.NormaliseBrightness(-5));
+            Assert.Equal(100, Contract.NormaliseBrightness(101));
+            Assert.Equal(60, Contract.NormaliseBrightness(60));
         }
 
         [Fact]

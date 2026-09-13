@@ -20,6 +20,32 @@ namespace OpenDashPlugin
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
 
+        /// <summary>The lights. Not a screen, but their settings are properties for the same reason the
+        /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.
+        ///
+        /// Named Lights* rather than FlagBox* on purpose: a driver who owns a flag box probably owns
+        /// other lights, and "how bright, and is it night" is one answer for a rig rather than one per
+        /// device. A property name is a public interface, so the rename would have to happen later.</summary>
+        public const string LightsBrightness = "LightsBrightness";
+        public const string LightsNightBrightness = "LightsNightBrightness";
+        public const string LightsNightMode = "LightsNightMode";
+
+        /// <summary>Quiet until something matters: the box shows only the flags that mean slow down or
+        /// are addressed to this car. Flag-box-specific, because it is about flags rather than lights.</summary>
+        public const string FlagBoxCriticalOnly = "FlagBoxCriticalOnly";
+
+        /// <summary>The gear as the box's resting state. Off leaves the panel dark rather than showing
+        /// something else.</summary>
+        public const string FlagBoxGear = "FlagBoxGear";
+
+        /// <summary>Laps, not litres: a litre threshold means nothing without knowing the car.</summary>
+        public const string FlagBoxLowFuelLaps = "FlagBoxLowFuelLaps";
+
+        /// <summary>Degrees in SimHub's own unit. A driver in Fahrenheit who sets 120 and gets a Celsius
+        /// threshold has been given a broken feature.</summary>
+        public const string FlagBoxOilTemp = "FlagBoxOilTemp";
+        public const string FlagBoxWaterTemp = "FlagBoxWaterTemp";
+
         public const bool DefaultShiftLights = true;
 
         public static readonly string[] PositionModes = { "overall", "class" };
@@ -43,6 +69,93 @@ namespace OpenDashPlugin
 
         /// <summary>The web view page shows nothing until the user sets an address.</summary>
         public const string DefaultWebViewUrl = "";
+
+        /// <summary>Percent. SimHub's own global brightness for the device applies on top of this.</summary>
+        public const int DefaultLightsBrightness = 100;
+
+        /// <summary>Percent, at night. Sixty-four LEDs at full output beside a wheel in a dark room is
+        /// genuinely too bright, and no amount of good colour choice fixes it.</summary>
+        public const int DefaultLightsNightBrightness = 25;
+
+        /// <summary>Off. A switch the driver flips, not a time of day we guess at.</summary>
+        public const bool DefaultLightsNightMode = false;
+
+        /// <summary>On: the gear is what the box shows when nothing is happening.</summary>
+        public const bool DefaultFlagBoxGear = true;
+
+        public const int DefaultFlagBoxLowFuelLaps = 2;
+
+        /// <summary>120 C and 110 C, and their equivalents, so a default is right in whatever unit is set.
+        /// Indexed by SimHub's TemperatureUnit spelling, "Celcius" included.</summary>
+        public static readonly IReadOnlyDictionary<string, int> DefaultOilTemp =
+            new Dictionary<string, int> { { "Celcius", 120 }, { "Fahrenheit", 248 }, { "Kelvin", 393 } };
+
+        public static readonly IReadOnlyDictionary<string, int> DefaultWaterTemp =
+            new Dictionary<string, int> { { "Celcius", 110 }, { "Fahrenheit", 230 }, { "Kelvin", 383 } };
+
+        /// <summary>The four matrix contents SimHub composes. A device is the same shape of thing as a
+        /// screen, so it owns its settings as one group (XOR-124), prefixed, exactly as a face does.
+        ///
+        /// Rotation and serpentine wiring are deliberately absent: they are SimHub device settings decided
+        /// by the corner the data cable enters, and a second place to set them is a second place to
+        /// disagree. Presets are absent too -- openDash has no store, and a setting *is* a property.</summary>
+        public static readonly IReadOnlyList<int> FlagBoxMatrices = new[] { 1, 2, 3, 4 };
+
+        /// <summary>What a matrix shows when nothing has taken it over.</summary>
+        public static readonly string[] FlagBoxRests = { "dark", "gear" };
+
+        /// <summary>Which side of the rig a box is on. Getting this wrong is worse than having no box:
+        /// one to the left of the wheel lighting for a car on the right is actively dangerous.</summary>
+        public static readonly string[] FlagBoxSides = { "both", "left", "right" };
+
+        /// <summary>`FlagBoxMatrix1Rest` and its siblings.</summary>
+        public static string FlagBoxMatrixProperty(int matrix, string name)
+        {
+            if (matrix < 1 || matrix > 4) throw new ArgumentOutOfRangeException(nameof(matrix), matrix, "matrix must be 1..4");
+            return "FlagBoxMatrix" + matrix + name;
+        }
+
+        /// <summary>The five names of one matrix, in attachment order.</summary>
+        public static IEnumerable<string> FlagBoxMatrixProperties(int matrix)
+        {
+            yield return FlagBoxMatrixProperty(matrix, "Rest");
+            yield return FlagBoxMatrixProperty(matrix, "Flags");
+            yield return FlagBoxMatrixProperty(matrix, "Spotter");
+            yield return FlagBoxMatrixProperty(matrix, "Warnings");
+            yield return FlagBoxMatrixProperty(matrix, "Side");
+        }
+
+        /// <summary>Matrix 1 does everything, 2 to 4 are off: one box works out of the box.</summary>
+        public static bool DefaultFlagBoxMatrixOn(int matrix) => matrix == 1;
+
+        public static string DefaultFlagBoxMatrixRest(int matrix) => matrix == 1 ? "gear" : "dark";
+
+        public const string DefaultFlagBoxSide = "both";
+
+        public static string[] DefaultFlagBoxRests()
+        {
+            var rests = new string[FlagBoxMatrices.Count];
+            for (var i = 0; i < rests.Length; i++) rests[i] = DefaultFlagBoxMatrixRest(i + 1);
+            return rests;
+        }
+
+        public static bool[] DefaultFlagBoxOn()
+        {
+            var on = new bool[FlagBoxMatrices.Count];
+            for (var i = 0; i < on.Length; i++) on[i] = DefaultFlagBoxMatrixOn(i + 1);
+            return on;
+        }
+
+        public static string[] DefaultFlagBoxSides()
+        {
+            var sides = new string[FlagBoxMatrices.Count];
+            for (var i = 0; i < sides.Length; i++) sides[i] = DefaultFlagBoxSide;
+            return sides;
+        }
+
+        /// <summary>Off. A box that stays dark through a chequered flag is a surprise, and a surprise is
+        /// a worse default than a busy one.</summary>
+        public const bool DefaultFlagBoxCriticalOnly = false;
 
 
         // --- The zone face ---------------------------------------------------------------------
@@ -465,11 +578,14 @@ namespace OpenDashPlugin
         public static IEnumerable<string> PropertyNames(IEnumerable<string> screens)
         {
             foreach (var name in SharedPropertyNames()) yield return name;
-            if (screens == null) yield break;
-            foreach (var screen in screens)
+            if (screens != null)
             {
-                foreach (var name in ScreenPropertyNames(screen)) yield return name;
+                foreach (var screen in screens)
+                {
+                    foreach (var name in ScreenPropertyNames(screen)) yield return name;
+                }
             }
+            foreach (var name in LightsPropertyNames()) yield return name;
         }
 
         /// <summary>Every property of every screen OpenDash ships, which is what contract.ts declares
@@ -477,6 +593,37 @@ namespace OpenDashPlugin
         public static IEnumerable<string> PropertyNames()
         {
             return PropertyNames(ScreenPrefixes());
+        }
+
+        /// <summary>The lights, which belong to the rig rather than to any screen: brightness and night
+        /// mode for every light openDash drives, then the flag box's own settings and one group per
+        /// matrix. They come after the screens so that this list and contract.ts agree end to end.
+        ///
+        /// A rig with no matrix still declares them, unlike a screen it does not have: the profile is
+        /// not installed by openDash (ADR 0013), so there is nothing to detect, and thirteen names is
+        /// not the hundred and thirty-six that made the screens worth narrowing.</summary>
+        public static IEnumerable<string> LightsPropertyNames()
+        {
+            yield return LightsBrightness;
+            yield return LightsNightBrightness;
+            yield return LightsNightMode;
+            yield return FlagBoxCriticalOnly;
+            yield return FlagBoxGear;
+            yield return FlagBoxLowFuelLaps;
+            yield return FlagBoxOilTemp;
+            yield return FlagBoxWaterTemp;
+            foreach (var matrix in FlagBoxMatrices)
+            {
+                foreach (var name in FlagBoxMatrixProperties(matrix)) yield return name;
+            }
+        }
+
+        /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a
+        /// value the panel never wrote still has to be one SimHub can use.</summary>
+        public static int NormaliseBrightness(int percent)
+        {
+            if (percent < 0) return 0;
+            return percent > 100 ? 100 : percent;
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>
