@@ -85,9 +85,9 @@ describe('contract', () => {
       expect(used.length).toBeGreaterThan(0);
       for (const p of used) expect({ p, declared: declared.has(p) }).toEqual({ p, declared: true });
     }
-    // The card face reads the four modes and the twelve slots, and nothing else. The zone
-    // properties are declared beside them and are read by the zone face, which arrives in XOR-85;
-    // the module switches and the pit wall's zone pages belong to the second screens.
+    // The card face reads the four modes and the twelve slots, and nothing else. The zone properties are declared
+    // beside them and are read by the zone face from XOR-85; the module switches and the pit wall's zone pages
+    // belong to the second screens.
     const all = new Set([...propertiesIn(main), ...propertiesIn(cards)].filter((p) => p.startsWith('OpenDash.')));
     const zoneProps = new Set(zoneProperties());
     expect([...all].sort()).toEqual([...dashProperties()].filter((p) => !zoneProps.has(p)).sort());
