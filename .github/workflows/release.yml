@@ -35,6 +35,11 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
+      # Before anything is built, because a tag with no notes is a mistake to catch while it is
+      # still only a tag. The release body is this section; see scripts/changelog.ts.
+      - name: Check the changelog has a section for the tag
+        run: bun scripts/changelog.ts "${GITHUB_REF_NAME}" > /dev/null
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -53,8 +58,11 @@ jobs:
           name: opendash-dash
           path: |
             build/*.simhubdash
+            build/*.ledsprofile
+            build/flag-box.svg
             build/manifest.json
             build/fonts/*.ttf
+            build/fonts/OFL.txt
           if-no-files-found: error
 
   plugin:
@@ -109,6 +117,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      # This job builds nothing, and checks out only so that CHANGELOG.md is here to read.
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
       # The dash artifact is rooted at build/ (its paths share that ancestor), so it lands as
       # build/openDash.simhubdash. The plugin artifact is rooted at the repository, so downloading
       # it into the workspace restores build/OpenDash-plugin.zip.
@@ -127,12 +142,20 @@ jobs:
       - name: List release files
         run: ls -l build/
 
+      # The release body is the changelog's own section for this tag, rather than GitHub's list of
+      # pull request titles: CHANGELOG.md is written for a driver, and it is what README.md points
+      # a reader at. The step before the build already refused a tag that has no section.
+      - name: Take the release notes from the changelog
+        run: bun scripts/changelog.ts "${GITHUB_REF_NAME}" --out release-body.md
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             build/*.simhubdash
+            build/*.ledsprofile
             build/OpenDash-plugin.zip
-          generate_release_notes: true
+            build/fonts/OFL.txt
+          body_path: release-body.md
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref_name, '-') }}

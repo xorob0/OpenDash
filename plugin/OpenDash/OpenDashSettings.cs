@@ -6,6 +6,70 @@ using System.Linq;
 
 namespace OpenDashPlugin
 {
+    /// <summary>
+    /// The folder record, over the settings, which is where it is persisted.
+    /// </summary>
+    /// <remarks>
+    /// It records but never saves. Applying an update reaches this from a thread-pool thread, and saving there would
+    /// run Normalise and serialise the whole settings object while the settings page mutates the same object on the
+    /// UI thread: two writers to one file, an enumeration racing an insertion, and arrays replaced under SimHub's own
+    /// data thread. Whoever owns the moment saves instead, on a thread where that is safe. The cost of a SimHub that
+    /// is killed before that happens is a forgotten fingerprint, and a forgotten fingerprint asks rather than
+    /// destroys, which is the direction to fail in.
+    /// </remarks>
+    public sealed class SettingsFolderRecord : IFolderRecord
+    {
+        private readonly Func<OpenDashSettings> settings;
+
+        /// <param name="settings">Read each time, since the panel replaces the object when the user changes one.</param>
+        public SettingsFolderRecord(Func<OpenDashSettings> settings)
+        {
+            this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        }
+
+        /// <summary>
+        /// Guards the dictionary and the save.
+        /// </summary>
+        /// <remarks>
+        /// Applying an update reaches this from a thread-pool thread while the settings page is live on the UI
+        /// thread, and Dictionary is not safe for concurrent writers: the classic symptom on .NET Framework is a
+        /// later lookup spinning for ever, which a user sees as SimHub hung with nothing in the log. The lock also
+        /// keeps a save from serialising the dictionary while another thread is inserting into it.
+        /// </remarks>
+        private readonly object gate = new object();
+
+        public string Get(string folderName)
+        {
+            if (string.IsNullOrEmpty(folderName)) return null;
+            lock (gate)
+            {
+                var map = settings()?.FolderFingerprints;
+                if (map == null) return null;
+                return map.TryGetValue(folderName, out var value) ? value : null;
+            }
+        }
+
+        public void Set(string folderName, string fingerprint)
+        {
+            lock (gate)
+            {
+                SetLocked(folderName, fingerprint);
+            }
+        }
+
+        private void SetLocked(string folderName, string fingerprint)
+        {
+            var current = settings();
+            if (current == null || string.IsNullOrEmpty(folderName)) return;
+            if (current.FolderFingerprints == null) current.FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            // A fingerprint that could not be computed is not a reason to forget the one we had. Erasing it turned
+            // "cannot vouch for this folder" into "this folder is not ours", which is the opposite bias, and the
+            // adoption branch would then have recorded whatever was on disk as OpenDash's own work.
+            if (string.IsNullOrWhiteSpace(fingerprint)) return;
+            current.FolderFingerprints[folderName] = fingerprint;
+        }
+    }
+
     public class OpenDashSettings
     {
         /// <summary>Whether the segments are SimHub's shift lights. Deprecated by <see cref="RevBar"/>,
@@ -44,25 +108,146 @@ namespace OpenDashPlugin
         /// <summary>Address of the web view zone page; empty until the user sets one.</summary>
         public string WebViewUrl { get; set; } = Contract.DefaultWebViewUrl;
 
+        // --- The lights ------------------------------------------------------------------------
+        //
+        // Brightness and night mode are the rig's, not this box's: a driver who owns a flag box
+        // probably owns other lights. The rest are the flag box's own. ADR 0013.
+
+        public int LightsBrightness { get; set; } = Contract.DefaultLightsBrightness;
+
+        public int LightsNightBrightness { get; set; } = Contract.DefaultLightsNightBrightness;
+
+        public bool LightsNightMode { get; set; } = Contract.DefaultLightsNightMode;
+
+        public bool FlagBoxCriticalOnly { get; set; } = Contract.DefaultFlagBoxCriticalOnly;
+
+        public bool FlagBoxGear { get; set; } = Contract.DefaultFlagBoxGear;
+
+        public int FlagBoxLowFuelLaps { get; set; } = Contract.DefaultFlagBoxLowFuelLaps;
+
+        /// <summary>Zero means "not set", so that the profile's own per-unit default applies. A driver in
+        /// Fahrenheit who has never opened this page must not get a Celsius number.</summary>
+        public int FlagBoxOilTemp { get; set; }
+
+        public int FlagBoxWaterTemp { get; set; }
+
+        /// <summary>Per matrix, index 0 is matrix 1. Always four long after Normalise().</summary>
+        public string[] FlagBoxRest { get; set; } = Contract.DefaultFlagBoxRests();
+
+        public bool[] FlagBoxFlags { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public bool[] FlagBoxSpotter { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public bool[] FlagBoxWarnings { get; set; } = Contract.DefaultFlagBoxOn();
+
+        public string[] FlagBoxSide { get; set; } = Contract.DefaultFlagBoxSides();
+
+        /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
+        public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
+
+        public bool MatrixFlags(int matrix) => Pick(FlagBoxFlags, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public bool MatrixSpotter(int matrix) => Pick(FlagBoxSpotter, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public bool MatrixWarnings(int matrix) => Pick(FlagBoxWarnings, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
+
+        public string MatrixSide(int matrix) => Pick(FlagBoxSide, matrix, Contract.DefaultFlagBoxSide);
+
+        private static T Pick<T>(T[] values, int matrix, T fallback)
+        {
+            if (values == null || matrix < 1 || matrix > values.Length) return fallback;
+            var value = values[matrix - 1];
+            return value == null ? fallback : value;
+        }
+
+        /// <summary>Repairs the per-matrix arrays, whatever came back from disk.</summary>
+        private void NormaliseLights()
+        {
+            LightsBrightness = Contract.NormaliseBrightness(LightsBrightness);
+            LightsNightBrightness = Contract.NormaliseBrightness(LightsNightBrightness);
+            if (FlagBoxLowFuelLaps < 0) FlagBoxLowFuelLaps = Contract.DefaultFlagBoxLowFuelLaps;
+            if (FlagBoxOilTemp < 0) FlagBoxOilTemp = 0;
+            if (FlagBoxWaterTemp < 0) FlagBoxWaterTemp = 0;
+            FlagBoxRest = Resize(FlagBoxRest, Contract.DefaultFlagBoxRests(), v => Array.IndexOf(Contract.FlagBoxRests, v) >= 0);
+            FlagBoxSide = Resize(FlagBoxSide, Contract.DefaultFlagBoxSides(), v => Array.IndexOf(Contract.FlagBoxSides, v) >= 0);
+            FlagBoxFlags = Resize(FlagBoxFlags, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxSpotter = Resize(FlagBoxSpotter, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
+        }
+
+        private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)
+        {
+            var result = (T[])defaults.Clone();
+            if (values == null) return result;
+            for (var i = 0; i < result.Length && i < values.Length; i++)
+            {
+                if (values[i] != null && valid(values[i])) result[i] = values[i];
+            }
+            return result;
+        }
+        // --- The rig ------------------------------------------------------------------------------
+
+        /// <summary>
+        /// The screens the rig has, by the prefix each one's properties carry: "Face1920x480",
+        /// "Face850x480", "Companion", "PitWall". The plugin attaches the properties of these and of no
+        /// other screen, so the property list is proportional to the rig rather than to the catalogue.
+        /// </summary>
+        /// <remarks>
+        /// Null until Normalise() fills it, and deliberately not initialised here: Json.NET's default
+        /// ObjectCreationHandling adds to a collection a property already holds rather than replacing
+        /// it, so a rig of two screens read into a list that already named ten would come back as
+        /// twelve. Null therefore means "this file has never named a rig", which is what a file written
+        /// before the rig existed looks like, and what Normalise() reads as every screen OpenDash ships.
+        /// </remarks>
+        public List<string> Screens { get; set; }
+
         // --- The dash face ---------------------------------------------------------------------
 
-        /// <summary>Page each face zone is showing, index 0 is zone A. The wheel button that cycles a
-        /// zone writes this; so does the panel, because a driver who picks a start page expects the
-        /// face in front of them to follow rather than to wait for the next session.</summary>
-        public int[] FaceZones { get; set; } = Contract.DefaultFaceZones();
+        /// <summary>
+        /// What each face is set to, keyed by the prefix its properties carry ("Face1920x480").
+        ///
+        /// One entry per face rather than one set shared by all of them, because a rig can have a face
+        /// on the wheel and another beside it: cycling zone C on one used to move zone C on the other,
+        /// and there was no way to give the second screen a different catalogue.
+        /// </summary>
+        public Dictionary<string, FaceSettings> Faces { get; set; } = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
 
-        /// <summary>Which pages of each face zone are enabled, as a bit mask, index 0 is zone A. This is
-        /// what decides how long a driver's cycle is, which makes it the most consequential setting here.</summary>
-        public int[] FaceZoneMasks { get; set; } = Contract.DefaultFaceZoneMasks();
+        // --- Read from a settings file written before the faces were separate ---------------------
+        //
+        // These were the whole of the face state when there could only be one face. They are still read
+        // so that a driver who configured the zone face in rc.3 does not find it reset, and they are
+        // migrated into the reference face and cleared on the first Normalise. Nothing writes them.
 
-        /// <summary>Page each face zone opens on, index 0 is zone A.</summary>
-        public int[] FaceZoneStarts { get; set; } = Contract.DefaultFaceZones();
+        /// <summary>Pre-face page of each zone. Migrated into the reference face, then null.</summary>
+        public int[] FaceZones { get; set; }
 
-        /// <summary>Field each end of the bar shows, in Contract.BarSlots order.</summary>
-        public int[] BarFields { get; set; } = Contract.DefaultBarSlots();
+        /// <summary>Pre-face mask of each zone. Migrated into the reference face, then null.</summary>
+        public int[] FaceZoneMasks { get; set; }
 
-        /// <summary>The zone and page a held button shows, encoded as zoneIndex * 100 + page.</summary>
-        public int QuickGlance { get; set; } = Contract.DefaultQuickGlance;
+        /// <summary>Pre-face start page of each zone. Migrated into the reference face, then null.</summary>
+        public int[] FaceZoneStarts { get; set; }
+
+        /// <summary>Pre-face bar fields. Migrated into the reference face, then null.</summary>
+        public int[] BarFields { get; set; }
+
+        /// <summary>Pre-face quick glance. Migrated into the reference face, then zero.</summary>
+        public int QuickGlance { get; set; }
+
+        /// <summary>Whether OpenDash may ask GitHub what the newest release is. Plugin-local rather than an
+        /// [OpenDash.*] property: a dashboard cannot react to it, so ADR 0003's reason for making a setting a
+        /// property does not apply. It is read before a request is constructed, so off means nothing is
+        /// fetched at all rather than fetched and discarded. On by default; see ADR 0012.</summary>
+        public bool CheckForUpdates { get; set; } = true;
+
+        /// <summary>When the last answer came back, as UTC ticks, so that a check is not repeated within the
+        /// interval ADR 0012 sets. Zero means never. Persisted so the interval survives a restart.</summary>
+        public long LastUpdateCheckTicks { get; set; }
+
+        /// <summary>Fingerprint of each dashboard folder as OpenDash last wrote it, keyed by folder name. An entry
+        /// that no longer matches what is on disk is somebody's Dash Studio work; see FolderFingerprint. Kept here
+        /// rather than beside the dashboard so that nothing OpenDash writes into DashTemplates can confuse SimHub's
+        /// own scanner.</summary>
+        public Dictionary<string, string> FolderFingerprints { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Clamps every value into its contract: unknown modes and card numbers fall back to the defaults,
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
@@ -73,6 +258,7 @@ namespace OpenDashPlugin
             PositionMode = Contract.NormaliseChoice(PositionMode, Contract.PositionModes, Contract.DefaultPositionMode);
             DeltaReference = Contract.NormaliseChoice(DeltaReference, Contract.DeltaReferences, Contract.DefaultDeltaReference);
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
+            NormaliseLights();
 
             var normalised = Contract.DefaultSlots();
             if (Slots != null)
@@ -103,52 +289,132 @@ namespace OpenDashPlugin
 
             WideZone = Contract.NormaliseWideZonePage(WideZone);
             WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
+            NormaliseScreens();
             NormaliseFace();
         }
 
         /// <summary>
-        /// Repairs the face settings, which are four parallel arrays and a packed pair. Three rules,
-        /// in this order: a page number outside its zone's catalogue becomes the default, a mask is
-        /// trimmed to the pages that exist and an empty one is refilled, and a page that the mask has
-        /// turned off is snapped forward to the next one that is on.
-        ///
-        /// The last rule is the one that matters in use: turning off the page a zone is sitting on
-        /// would otherwise leave the zone showing something its own cycle can never return to.
+        /// The rig, repaired: a prefix no screen carries is dropped, a screen named twice is kept once,
+        /// and a file that has never named a rig is read as every screen OpenDash ships.
         /// </summary>
+        /// <remarks>
+        /// Every screen rather than none, because nothing outside this file knows the rig yet: the
+        /// installer installs everything the plugin embeds, and the panel that adds a screen and removes
+        /// one is XOR-125. So an old settings file attaches exactly what it attached before the rig
+        /// existed, and a driver who updates finds nothing reset; what the rig adds today is that the
+        /// list can shrink at all.
+        /// </remarks>
+        private void NormaliseScreens()
+        {
+            if (Screens == null)
+            {
+                Screens = new List<string>(Contract.ScreenPrefixes());
+                return;
+            }
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var kept = new List<string>();
+            foreach (var screen in Screens)
+            {
+                if (screen != null && Contract.IsKnownScreen(screen) && seen.Add(screen)) kept.Add(screen);
+            }
+            Screens = kept;
+        }
+
+        /// <summary>
+        /// The rig, readable before Normalise() has filled it: a settings object that has never named one
+        /// reads as every screen OpenDash ships, which is the same thing NormaliseScreens() writes.
+        /// </summary>
+        private IEnumerable<string> Rig()
+        {
+            return Screens ?? Contract.ScreenPrefixes();
+        }
+
+        /// <summary>Whether the rig has a screen, by the prefix its properties carry. Safe to call before Normalise().</summary>
+        public bool HasScreen(string screen)
+        {
+            if (screen == null) return false;
+            foreach (var known in Rig())
+            {
+                if (string.Equals(known, screen, StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The faces the rig has, in the order the settings name them. Safe to call before Normalise().</summary>
+        public IEnumerable<Contract.FaceSize> RigFaces()
+        {
+            foreach (var screen in Rig())
+            {
+                if (Contract.IsKnownFacePrefix(screen)) yield return Contract.FaceForPrefix(screen);
+            }
+        }
+
+        /// <summary>Every property the plugin attaches for this rig, in attachment order. OpenDash.cs
+        /// attaches exactly these, in this order, and ContractTests holds the two together.</summary>
+        public IEnumerable<string> DeclaredProperties()
+        {
+            return Contract.PropertyNames(Rig());
+        }
+
+        /// <summary>
+        /// Repairs every face's settings, and adopts anything a pre-face settings file carried.
+        /// </summary>
+        /// <remarks>
+        /// The migration runs once and only when the reference face has no entry of its own, so a
+        /// driver who configured the zone face before the faces were separate keeps what they set,
+        /// and a later save never overwrites the new state with the stale legacy fields.
+        ///
+        /// A prefix the settings file names that no face ships at is dropped rather than kept: it is
+        /// either a face that was removed or a file from a newer version, and in both cases carrying
+        /// it forward would attach properties for a face nobody has.
+        /// </remarks>
         private void NormaliseFace()
         {
-            var zones = Contract.DefaultFaceZones();
-            var masks = Contract.DefaultFaceZoneMasks();
-            var starts = Contract.DefaultFaceZones();
-            for (var i = 0; i < zones.Length; i++)
+            if (Faces == null) Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
+
+            var reference = Contract.FacePrefix(Contract.ReferenceFace);
+            var legacy = FaceZones != null || FaceZoneMasks != null || FaceZoneStarts != null || BarFields != null || QuickGlance != 0;
+            if (legacy && !Faces.ContainsKey(reference))
             {
-                var pages = Contract.FaceZonePageCounts[i];
-                var all = Contract.DefaultZoneMask(i);
-
-                if (FaceZoneMasks != null && i < FaceZoneMasks.Length) masks[i] = FaceZoneMasks[i] & all;
-                if (masks[i] == 0) masks[i] = all;
-
-                if (FaceZoneStarts != null && i < FaceZoneStarts.Length) starts[i] = Contract.NormalisePage(FaceZoneStarts[i], pages, Contract.DefaultFaceZonePages[i]);
-                starts[i] = Contract.FirstEnabledFrom(starts[i], masks[i], pages);
-
-                if (FaceZones != null && i < FaceZones.Length) zones[i] = Contract.NormalisePage(FaceZones[i], pages, starts[i]);
-                zones[i] = Contract.FirstEnabledFrom(zones[i], masks[i], pages);
-            }
-            FaceZones = zones;
-            FaceZoneMasks = masks;
-            FaceZoneStarts = starts;
-
-            var bar = Contract.DefaultBarSlots();
-            if (BarFields != null)
-            {
-                for (var i = 0; i < bar.Length && i < BarFields.Length; i++)
+                Faces[reference] = new FaceSettings
                 {
-                    bar[i] = Contract.NormalisePage(BarFields[i], Contract.BarFieldCount, Contract.DefaultBarFields[i]);
-                }
+                    Zones = FaceZones,
+                    Masks = FaceZoneMasks,
+                    Starts = FaceZoneStarts,
+                    BarFields = BarFields,
+                    QuickGlance = QuickGlance == 0 ? Contract.DefaultQuickGlance : QuickGlance,
+                };
             }
-            BarFields = bar;
+            FaceZones = null;
+            FaceZoneMasks = null;
+            FaceZoneStarts = null;
+            BarFields = null;
+            QuickGlance = 0;
 
-            QuickGlance = Contract.NormaliseQuickGlance(QuickGlance);
+            foreach (var prefix in new List<string>(Faces.Keys))
+            {
+                if (!Contract.IsKnownFacePrefix(prefix) || Faces[prefix] == null) Faces.Remove(prefix);
+            }
+            // A face the rig has gained since the last save gets its group here, which is what makes a
+            // screen added later start from the defaults rather than from nothing. A group belonging to
+            // a face the rig no longer has is repaired and kept rather than deleted: removing a screen
+            // is something a user asks for, and Normalise() runs on every save.
+            foreach (var face in RigFaces()) Face(face);
+            foreach (var state in Faces.Values) state.Normalise();
+        }
+
+        /// <summary>What one face is set to, created with its defaults the first time it is asked for.</summary>
+        public FaceSettings Face(Contract.FaceSize face)
+        {
+            if (Faces == null) Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
+            var prefix = Contract.FacePrefix(face);
+            FaceSettings state;
+            if (!Faces.TryGetValue(prefix, out state) || state == null)
+            {
+                state = new FaceSettings();
+                Faces[prefix] = state;
+            }
+            return state;
         }
 
         /// <summary>What the top of the face carries, resolving a file written before the mode existed
@@ -167,170 +433,118 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Page a face zone is showing, by its letter. Safe to call before Normalise().</summary>
-        public int FaceZone(string letter)
+        public int FaceZone(Contract.FaceSize face, string letter)
         {
-            var index = FaceZoneIndex(letter);
-            if (FaceZones == null || index >= FaceZones.Length) return Contract.DefaultFaceZonePages[index];
-            return Contract.NormalisePage(FaceZones[index], Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
+            return Face(face).Zone(letter);
         }
 
         /// <summary>Page a face zone opens on, by its letter. Safe to call before Normalise().</summary>
-        public int FaceZoneStart(string letter)
+        public int FaceZoneStart(Contract.FaceSize face, string letter)
         {
-            var index = FaceZoneIndex(letter);
-            if (FaceZoneStarts == null || index >= FaceZoneStarts.Length) return Contract.DefaultFaceZonePages[index];
-            return Contract.NormalisePage(FaceZoneStarts[index], Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
+            return Face(face).Start(letter);
         }
 
-        /// <summary>Sets the page a zone opens on, and the page it is showing with it: the panel is in
-        /// front of a running dash, and a start page that only takes effect next time reads as broken.</summary>
-        public void SetFaceZoneStart(string letter, int page)
+        public void SetFaceZoneStart(Contract.FaceSize face, string letter, int page)
         {
-            var index = FaceZoneIndex(letter);
-            EnsureFaceArrays();
-            var clamped = Contract.NormalisePage(page, Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
-            FaceZoneStarts[index] = clamped;
-            FaceZones[index] = clamped;
-            SetFaceZonePageEnabled(letter, clamped, true);
+            Face(face).SetStart(letter, page);
         }
 
         /// <summary>The enabled-page mask of a face zone, by its letter.</summary>
-        public int FaceZoneMask(string letter)
+        public int FaceZoneMask(Contract.FaceSize face, string letter)
         {
-            var index = FaceZoneIndex(letter);
-            if (FaceZoneMasks == null || index >= FaceZoneMasks.Length) return Contract.DefaultZoneMask(index);
-            var mask = FaceZoneMasks[index] & Contract.DefaultZoneMask(index);
-            return mask == 0 ? Contract.DefaultZoneMask(index) : mask;
+            return Face(face).Mask(letter);
         }
 
-        public bool FaceZonePageEnabled(string letter, int page)
+        /// <summary>Whether a face zone's list pages show the player's own class, by its letter.</summary>
+        public bool FaceZoneIsClassOnly(Contract.FaceSize face, string letter)
         {
-            var index = FaceZoneIndex(letter);
-            if (page < 0 || page >= Contract.FaceZonePageCounts[index]) return false;
-            return (FaceZoneMask(letter) & (1 << page)) != 0;
+            return Face(face).IsClassOnly(letter);
         }
 
-        /// <summary>
-        /// Turns one page of a zone on or off. Turning off the last enabled page is refused rather than
-        /// obeyed: a zone with an empty cycle has nothing to draw, and the panel would have to invent a
-        /// page to show anyway.
-        /// </summary>
-        public void SetFaceZonePageEnabled(string letter, int page, bool enabled)
+        /// <summary>Sets a face zone's class filter.</summary>
+        public void SetFaceZoneClassOnly(Contract.FaceSize face, string letter, bool classOnly)
         {
-            var index = FaceZoneIndex(letter);
-            if (page < 0 || page >= Contract.FaceZonePageCounts[index]) throw new ArgumentOutOfRangeException(nameof(page));
-            EnsureFaceArrays();
-            var mask = FaceZoneMask(letter);
-            var next = enabled ? mask | (1 << page) : mask & ~(1 << page);
-            if (next == 0) return;
-            FaceZoneMasks[index] = next;
-            FaceZoneStarts[index] = Contract.FirstEnabledFrom(FaceZoneStarts[index], next, Contract.FaceZonePageCounts[index]);
-            FaceZones[index] = Contract.FirstEnabledFrom(FaceZones[index], next, Contract.FaceZonePageCounts[index]);
+            Face(face).SetClassOnly(letter, classOnly);
+        }
+
+        public bool FaceZonePageEnabled(Contract.FaceSize face, string letter, int page)
+        {
+            return Face(face).PageEnabled(letter, page);
+        }
+
+        public void SetFaceZonePageEnabled(Contract.FaceSize face, string letter, int page, bool enabled)
+        {
+            Face(face).SetPageEnabled(letter, page, enabled);
         }
 
         /// <summary>Field an end of the bar shows, by its slot name. Safe to call before Normalise().</summary>
-        public int BarField(string slot)
+        public int BarField(Contract.FaceSize face, string slot)
         {
-            var index = Array.IndexOf(Contract.BarSlots, slot);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(slot));
-            if (BarFields == null || index >= BarFields.Length) return Contract.DefaultBarFields[index];
-            return Contract.NormalisePage(BarFields[index], Contract.BarFieldCount, Contract.DefaultBarFields[index]);
+            return Face(face).BarField(slot);
         }
 
-        public void SetBarField(string slot, int field)
+        public void SetBarField(Contract.FaceSize face, string slot, int field)
         {
-            var index = Array.IndexOf(Contract.BarSlots, slot);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(slot));
-            if (BarFields == null || BarFields.Length != Contract.BarSlots.Length) Normalise();
-            BarFields[index] = Contract.NormalisePage(field, Contract.BarFieldCount, Contract.DefaultBarFields[index]);
+            Face(face).SetBarField(slot, field);
         }
 
-        private static int FaceZoneIndex(string letter)
+        /// <summary>The zone and page a held button shows on this face.</summary>
+        public int QuickGlanceOf(Contract.FaceSize face)
         {
-            var index = Array.IndexOf(Contract.FaceZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            return index;
+            return Contract.NormaliseQuickGlance(Face(face).QuickGlance);
         }
 
-        private void EnsureFaceArrays()
+        public void SetQuickGlance(Contract.FaceSize face, int value)
         {
-            var zones = Contract.FaceZoneLetters.Length;
-            if (FaceZones == null || FaceZones.Length != zones
-                || FaceZoneMasks == null || FaceZoneMasks.Length != zones
-                || FaceZoneStarts == null || FaceZoneStarts.Length != zones)
+            Face(face).QuickGlance = Contract.NormaliseQuickGlance(value);
+        }
+
+        /// <summary>Puts every zone of every face the rig has on the page it opens on, once, when the plugin starts.</summary>
+        public void OpenOnStartPages()
+        {
+            foreach (var face in RigFaces()) Face(face).OpenOnStartPages();
+        }
+
+        /// <summary>Advances one zone of one face to its next enabled page and returns it.</summary>
+        public int CycleFaceZone(Contract.FaceSize face, string letter)
+        {
+            return Face(face).Cycle(letter);
+        }
+
+        /// <summary>Whether a glance is being held on any face.</summary>
+        public bool GlanceHeld
+        {
+            get
             {
-                Normalise();
+                foreach (var face in RigFaces())
+                {
+                    if (Face(face).GlanceHeld) return true;
+                }
+                return false;
             }
         }
 
-        /// <summary>Zones showing the same page as another zone, which the panel says and allows.</summary>
-        public IReadOnlyList<FacePageClash> FaceClashes() => FacePageClash.Find(this);
-
-        // --- What a wheel button does ----------------------------------------------------------
-
         /// <summary>
-        /// Puts every zone on the page it opens on. Called once when the plugin starts, because that
-        /// is what "the page the zone opens on" means: a session begins where the driver set it to,
-        /// not where they happened to leave it three races ago.
-        ///
-        /// Cycling therefore does not save. The page a zone is showing is live state, and the only
-        /// restart it has to survive is the dashboard window's -- which it does, because the page
-        /// lives in the plugin and not in the dash.
+        /// Begins the glance on every face at once.
         /// </summary>
-        public void OpenOnStartPages()
-        {
-            EnsureFaceArrays();
-            for (var i = 0; i < FaceZones.Length; i++) FaceZones[i] = FaceZoneStarts[i];
-        }
-
-        /// <summary>
-        /// Advances a zone to its next enabled page and returns it. The mask is what sets the length
-        /// of the cycle, so a zone with one page enabled stays where it is rather than flickering.
-        /// </summary>
-        public int CycleFaceZone(string letter)
-        {
-            var index = FaceZoneIndex(letter);
-            EnsureFaceArrays();
-            var count = Contract.FaceZonePageCounts[index];
-            var next = Contract.FirstEnabledFrom((FaceZone(letter) + 1) % count, FaceZoneMask(letter), count);
-            FaceZones[index] = next;
-            return next;
-        }
-
-        /// <summary>Whether a glance is being held; a second press while one is does nothing.</summary>
-        public bool GlanceHeld => glanceZone >= 0;
-
-        private int glanceZone = -1;
-        private int glanceRestore = -1;
-
-        /// <summary>
-        /// Shows the glance page in its zone, remembering what was there.
-        ///
-        /// The page does not have to be one the mask enables. A glance is an explicit thing a driver
-        /// asked for by holding a button, and the mask is about what the cycle steps through; the
-        /// two are different questions, and the track map is exactly the page somebody would want
-        /// held and not cycled to.
-        /// </summary>
+        /// <remarks>
+        /// One button, every face: a driver holding the glance button is looking at one screen, but
+        /// which one is not knowable from here, and moving only the reference face would leave the
+        /// screen they were actually looking at unchanged. Each face glances to its own configured
+        /// zone and page, so a second screen can be set to glance at something else entirely.
+        /// </remarks>
         public void BeginQuickGlance()
         {
-            if (GlanceHeld) return;
-            EnsureFaceArrays();
-            var glance = Contract.NormaliseQuickGlance(QuickGlance);
-            var zone = Contract.QuickGlanceZone(glance);
-            glanceZone = zone;
-            glanceRestore = FaceZones[zone];
-            FaceZones[zone] = Contract.QuickGlancePage(glance);
+            foreach (var face in RigFaces()) Face(face).BeginQuickGlance();
         }
 
-        /// <summary>Puts the zone back where it was. A release with no press does nothing.</summary>
         public void EndQuickGlance()
         {
-            if (!GlanceHeld) return;
-            EnsureFaceArrays();
-            FaceZones[glanceZone] = glanceRestore;
-            glanceZone = -1;
-            glanceRestore = -1;
+            foreach (var face in RigFaces()) Face(face).EndQuickGlance();
         }
+
+        /// <summary>Zones of one face showing the same page as another, which the panel says and allows.</summary>
+        public IReadOnlyList<FacePageClash> FaceClashes(Contract.FaceSize face) => FacePageClash.Find(Face(face));
 
         /// <summary>Whether a companion module is enabled, 1-based. Safe to call before Normalise().</summary>
         public bool Module(int module)
@@ -393,11 +607,22 @@ namespace OpenDashPlugin
             PositionMode = other.PositionMode;
             DeltaReference = other.DeltaReference;
             SessionProgress = other.SessionProgress;
+            Screens = other.Screens == null ? null : new List<string>(other.Screens);
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
             Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();
             Zones = other.Zones == null ? null : (int[])other.Zones.Clone();
             WideZone = other.WideZone;
             WebViewUrl = other.WebViewUrl;
+            // Cloned rather than shared, so that the panel writing into its copy does not reach back
+            // into the settings the plugin is reading from.
+            Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
+            if (other.Faces != null)
+            {
+                foreach (var entry in other.Faces)
+                {
+                    if (entry.Value != null) Faces[entry.Key] = entry.Value.Clone();
+                }
+            }
             FaceZones = other.FaceZones == null ? null : (int[])other.FaceZones.Clone();
             FaceZoneMasks = other.FaceZoneMasks == null ? null : (int[])other.FaceZoneMasks.Clone();
             FaceZoneStarts = other.FaceZoneStarts == null ? null : (int[])other.FaceZoneStarts.Clone();
@@ -442,15 +667,15 @@ namespace OpenDashPlugin
             return char.ToUpperInvariant(list[0]) + list.Substring(1) + verb + PageName + ".";
         }
 
-        public static IReadOnlyList<FacePageClash> Find(OpenDashSettings settings)
+        public static IReadOnlyList<FacePageClash> Find(FaceSettings face)
         {
             var result = new List<FacePageClash>();
-            if (settings == null) return result;
+            if (face == null) return result;
             var order = new List<string>();
             var byPage = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             foreach (var letter in Contract.FaceZoneLetters)
             {
-                var id = FacePages.IdOf(letter, settings.FaceZoneStart(letter));
+                var id = FacePages.IdOf(letter, face.Start(letter));
                 if (id == null) continue;
                 List<string> zones;
                 if (!byPage.TryGetValue(id, out zones))
@@ -465,15 +690,15 @@ namespace OpenDashPlugin
             {
                 var zones = byPage[id];
                 if (zones.Count < 2) continue;
-                result.Add(new FacePageClash(id, FacePages.NameOf(zones[0], settings.FaceZoneStart(zones[0])), zones.ToArray()));
+                result.Add(new FacePageClash(id, FacePages.NameOf(zones[0], face.Start(zones[0])), zones.ToArray()));
             }
             return result;
         }
 
         /// <summary>All messages, one per line; empty when every zone shows something different.</summary>
-        public static string Warning(OpenDashSettings settings)
+        public static string Warning(FaceSettings face)
         {
-            return string.Join(Environment.NewLine, Find(settings).Select(c => c.Message()));
+            return string.Join(Environment.NewLine, Find(face).Select(c => c.Message()));
         }
     }
 

@@ -3,23 +3,28 @@
 **Status:** current. Supersedes [scope-mvp.md](scope-mvp.md), which is closed and kept as the
 record of what the MVP was.
 
-This document describes what openDash is: what it ships, what is deliberately not built, and
+This document describes what OpenDash is: what it ships, what is deliberately not built, and
 which of the MVP's refusals have since been reversed and by what. It is the document a
 contributor or an agent should read first, and the one that has to be amended when the answer to
-"what is openDash" changes.
+"what is OpenDash" changes.
 
-> **The face is being rebuilt.** The zone model described below is the settled design
-> ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)) and it is what
-> the next release ships. **0.1.0 shipped the twelve-slot face**, and until the rename in 0.2.0
-> that is what a user has installed. `README.md` and `plugin/INSTALL.md` describe that installed
-> product and stay accurate to it; this document describes the product.
+> **The face has been rebuilt.** The zone model described below is the settled design
+> ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)), and since
+> 0.2.0-rc.1 it is what the names in the table below install: the eight rectangular faces are zone
+> faces, and the twelve-slot ones they replaced are published as `openDash slots <size>` for anyone
+> who wants the old design back. The two round faces are still the card model, because what a round
+> face does with zones is not decided (XOR-94).
+>
+> `README.md` and `plugin/INSTALL.md` still describe the twelve-slot face and are now wrong about
+> the product a user installs; correcting them is XOR-99, and until it lands this document is the
+> one to trust.
 >
 > The distinction matters because of the rule at the end of the refusals: a line has to move here
 > before the code that crosses it may be written. That is the reason this document changed first.
 
 ## Product
 
-openDash is an open-source dashboard package for [SimHub](https://www.simhubdash.com/),
+OpenDash is an open-source dashboard package for [SimHub](https://www.simhubdash.com/),
 released under the MIT licence. It consists of fourteen dashboards covering three kinds of
 screen, together with a SimHub plugin that installs them and exposes the settings which decide
 what they show. It is free, and bounties or donations may follow later.
@@ -46,7 +51,8 @@ until somebody has actually driven them. Concerning that audit, see XOR-51.
 
 ## What ships
 
-Three kinds of screen, built from one set of parts and installed by one plugin.
+Three kinds of screen, built from one set of parts and installed by one plugin, and one profile
+for a box of lights that is not a screen at all.
 
 ### The face
 
@@ -80,6 +86,20 @@ decided and are noted below.
 | `openDash 800 round` | 800 x 800 | still on the card model; see below |
 | `openDash 480 round` | 480 x 480 | still on the card model; see below |
 
+**The package folders keep the small o**, and that is deliberate rather than an oversight. The
+product is OpenDash, and everything a person reads says so; a folder name is a path on somebody's
+disk, and Windows file names are case-insensitive but case-preserving, so renaming
+`DashTemplates/openDash` to `DashTemplates/OpenDash` is not a rename the installer or SimHub would
+notice as one. A user could end up with either spelling depending on what created the folder, and a
+user with both would see two entries in Dash Studio. The cost of the inconsistency is one reader
+raising an eyebrow; the cost of the rename is somebody's dashboard list.
+
+The same reasoning covers the other names only a machine reads. The condensed faces ship under the
+family name `openDash Display`, which every `.djson` asks for by that exact string and which the
+build writes into the font files themselves, so the spelling is a key rather than a word; dashboard
+titles are the same kind of key. Changing one of those is changing an identifier, and it is worth
+doing only when something breaks without it.
+
 `packages/dash/src/contract.ts` holds the catalogues and the defaults, and
 `plugin/OpenDash/Contract.cs` mirrors it, with a test on each side reading the other file so
 that the two cannot drift.
@@ -110,6 +130,22 @@ driver's own lap beside it, and data zones whose contents are plugin settings.
 full, including every case where a module is off by default because iRacing publishes none of
 its data.
 
+### The flag box
+
+An 8x8 LED matrix in a printed box, beside the screen rather than on it, showing the flag that is
+out, the gear, the pit state, a car alongside and the warnings a driver would otherwise miss —
+each as a 64-pixel picture, ranked in the same order the face ranks them and coloured from the
+same `purpose.flag.*` tokens.
+
+One profile ships, `openDash Flag box.ledsprofile`, built by `bun run build` like everything else
+and embedded in the plugin like everything else. It is the one artefact **the plugin does not
+install**: SimHub keeps matrix profiles inside a settings file it rewrites itself, and painting
+hardware somebody owns is not something a dashboard should do without being asked. The plugin
+extracts the file and the lights page says what to import.
+[ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning, [flag-box.md](flag-box.md) is
+the guide, and the rest of the LED families — strips, brows, wheel buttons, ambient lighting — are
+deliberately not claimed.
+
 ## The plugin
 
 The plugin installs the embedded packages when one is missing or older than the embedded copy,
@@ -135,7 +171,7 @@ own.
 This list is a set of refusals, not a backlog. Work that falls under one of these lines does not
 belong in a pull request until the line is removed from this document.
 
-**Our own renderer.** openDash renders through SimHub and will continue to.
+**Our own renderer.** OpenDash renders through SimHub and will continue to.
 [ADR 0001](decisions/0001-simhub-native-rendering.md) settled it, and reversing it would discard
 everything SimHub already does for DDUs, USB screens, phones and the seventeen sims it reads.
 
@@ -156,26 +192,37 @@ The line moves if a derivation is shared widely enough to need a name, or if som
 needs memory between frames. The first is a JavaScript binding before it is a plugin, because the
 standalone package is the property worth defending.
 
-**Theming and colour customisation.** openDash ships one opinionated look, resolved at build time
-into literal values in the `.djson`. Nothing a user can change reaches a colour, a typeface or a
-size. How far personalisation could ever reach into a generated package is
-[ADR 0011](decisions/0011-personalisation.md), and it has to be written before any of it is built,
-because the one line the product holds is that two states a driver cannot tell apart is a bug
-whoever chose the colours.
+**Personalisation that changes the layout.** Colour is no longer refused:
+[ADR 0011](decisions/0011-personalisation.md) settled how far personalisation reaches, and the
+colours, the frames and the idle screen are settings read through bindings like every other setting.
+What stays refused is anything a binding cannot reach without giving up the guarantee that a glyph
+is never clipped. A typeface, a font size, a spacing and a position are consumed by a layout
+decision in TypeScript, and a value that arrives after the build cannot re-run it. Those are build
+inputs, and a package built from a user's own tokens is XOR-81.
+
+The one line the product holds underneath all of it is unchanged: two states a driver cannot tell
+apart is a bug whoever chose the colours. A user may choose any colours they like, and OpenDash
+says so when a choice collides rather than quietly shipping it.
 
 **Idle and pit screens.** Every screen already declares `IdleScreen`, so SimHub shows the racing
 face with no data in it between sessions, which is arguably worse than SimHub's own default. A
-screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan.
+screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan. What
+a user may then do to it is no longer the open question:
+[ADR 0011](decisions/0011-personalisation.md) puts the idle screen in the runtime bucket, so XOR-53
+waits on the screen existing rather than on a record.
 
-**Licensing, activation or accounts.** openDash is MIT and there is nothing to unlock.
+**Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
 
-**Telemetry about the user.** Nothing leaves the user's machine. The update check contemplated
-by XOR-29 and XOR-31 is an exception that has to be argued for in its own decision record,
-stating exactly what is sent, and it has to be possible to switch off.
+**Telemetry about the user.** Nothing about the user leaves their machine: no identifier, no
+installation id, no usage counting, no error reporting. The one exception is the update check, and
+it is argued for in [ADR 0012](decisions/0012-update-checks.md), which states in full what is sent.
+What is sent is an anonymous request to GitHub asking what the newest release is, carrying the
+user's IP address, which reaches GitHub and not us, and a `User-Agent` naming the product. It can
+be switched off, and switching it off means nothing is fetched at all.
 
-**Copying Lovely's visual design.** Lovely's licence forbids reuse of its UI design. openDash's
+**Copying Lovely's visual design.** Lovely's licence forbids reuse of its UI design. OpenDash's
 design is independently derived: do not copy its layouts, and do not use its screenshots in any
-openDash material.
+OpenDash material.
 
 **Sims other than iRacing, as a supported claim.** They may work, and they are welcome to, but
 nothing is advertised as supported before somebody has driven it and the bindings have been
@@ -183,7 +230,7 @@ audited.
 
 ## What the MVP refused and what reversed it
 
-The MVP scope listed nine things as explicitly out of scope. Five of them have since been built,
+The MVP scope listed nine things as explicitly out of scope. Seven of them have since been reversed,
 and each reversal is recorded here so that a reader of the old document is not misled.
 
 | The MVP refused | Reversed by | What is true now |
@@ -193,15 +240,17 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Round DDUs | XOR-6 | 480 and 800 round faces ship |
 | Phone and tablet layouts | XOR-8 | Two companion packages ship |
 | Page navigation | XOR-8, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
+| Network update checks | XOR-29, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
+| Theming and colour customisation | XOR-73, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
 
-Four of the nine still stand. Each is restated above with the record that would have to move it:
+Two of the nine still stand, and ADR 0011 left a narrower line behind the one it moved. Each is
+restated above with the record that would have to move it:
 
 | Still refused | What would have to happen first |
 |---|---|
-| Theming and colour customisation | ADR 0011, and this line moving with it. The Personalisation project is unmergeable until it does |
-| Idle and pit screens | XOR-62 and XOR-53, behind the same record |
-| Network update checks | ADR 0012, stating exactly what is sent and how it is switched off |
-| Computed telemetry of our own | ADR 0009, owed before zones B and C |
+| Personalisation that changes the layout | XOR-81: a package built from the user's own tokens. Nothing at runtime re-measures a text box |
+| Idle and pit screens | XOR-62. The screen has to exist before XOR-53 can hand it to the user |
+| Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
 falls under one of these lines is declined however well it is written**; the line moves first, in
@@ -213,7 +262,11 @@ The stream overlay is neither built nor refused. Nobody has asked for it.
 
 A change is done when `bun run check` passes, when `dotnet test plugin/OpenDash.Tests` passes if
 the plugin changed, when the snapshot diff has been read rather than merely refreshed, and when
-whatever the change draws has been seen on the Windows VM in real SimHub. The last condition is
+whatever the change draws has been seen on the Windows VM in real SimHub. The flag box is the one
+exception, and it is a stated one: no 8x8 panel is plugged into the VM and CI owns no hardware, so
+a profile is done when it loads in real SimHub and its glyphs were read in SimHub's own matrix
+preview. That is weaker than seeing a panel light, which is why it is written here rather than
+assumed. The last condition is
 the one that catches what the tests cannot: WPF clips silently, and a box measured from the
 wrong face or from a sample narrower than the runtime value loses glyphs without failing
 anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
@@ -223,7 +276,8 @@ anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
 
 [architecture.md](architecture.md) is how source becomes a `.simhubdash` and how a setting
 reaches a running dashboard. [second-screens.md](second-screens.md) is the companion and the pit
-wall. [decisions/](decisions/) holds the records that this document summarises, and a record
+wall. [flag-box.md](flag-box.md) is the 8x8 matrix, and [design/flag-box.md](design/flag-box.md)
+is what each of its sixty-four-pixel pictures means. [decisions/](decisions/) holds the records that this document summarises, and a record
 wins over this summary wherever the two disagree. [research/](research/) holds the format notes
 verified against SimHub 9.12.6, which are the place to check before guessing at a property name.
 [scope-mvp.md](scope-mvp.md) is closed, and is of historical interest only.

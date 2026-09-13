@@ -10,8 +10,8 @@ namespace OpenDashPlugin
     public sealed partial class DashboardInstaller
     {
         /// <summary>SimHub's working directory is its install directory; DashTemplates and DashFonts are relative to it.</summary>
-        public DashboardInstaller()
-            : this(AppDomain.CurrentDomain.BaseDirectory, new SimHubInstallLog(), new AssemblyPackageSource(typeof(DashboardInstaller).Assembly))
+        public DashboardInstaller(IFolderRecord record = null)
+            : this(AppDomain.CurrentDomain.BaseDirectory, new SimHubInstallLog(), new AssemblyPackageSource(typeof(DashboardInstaller).Assembly), record)
         {
         }
 

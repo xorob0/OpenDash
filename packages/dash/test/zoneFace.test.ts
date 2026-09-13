@@ -7,18 +7,39 @@
  * be a second opinion about the design rather than a check on the code.
  */
 import { describe, expect, test } from 'bun:test';
-import { BAND_D_PAGES, FACE_ZONE_LETTERS, MODULE_COUNT, ZONE_A_PAGES, pagesForZone, zoneProperties } from '../src/contract.ts';
-import { validatePackage, type TextItem, type WidgetItem } from '../src/generator.ts';
+import {
+  BAND_D_PAGES,
+  FACE_SIZES,
+  FACE_ZONE_LETTERS,
+  MODULE_CATALOGUE,
+  MODULE_COUNT,
+  ZONE_A_PAGES,
+  bodyOrder,
+  facePrefix,
+  pagesForZone,
+  setting,
+  zoneCounterReadings,
+  zoneProperties,
+} from '../src/contract.ts';
+import { validatePackage, type Dashboard, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
+import { MODULES } from '../src/modules/index.ts';
+import { rect } from '../src/design/geometry.ts';
+import { shapeOf } from '../src/second/shape.ts';
+import { zoneFrame } from '../src/second/header.ts';
 import {
   FACE_SCREEN_NAME,
   FACE_SCREEN_NAME_NO_REV_BAR,
   ZONE_FACES,
+  bandCorners,
+  bandPageItems,
+  bar,
   buildZoneFace,
+  sizeOf,
   faceItems,
   kindOf,
   layoutWithoutRevBar,
@@ -26,13 +47,20 @@ import {
   revBarReclaim,
   zoneDashboardName,
   zoneFace1920x480,
+  zoneFace600x686,
+  zoneFace800x286,
 } from '../src/zones/index.ts';
-import { setting } from '../src/contract.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
+import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
-const reference = BUILT.find((b) => b.face.folder === 'openDash zones 1920x480')!;
+/** The companion and the pit walls, to check the face's new options stay off their screens. */
+const SECOND_SCREENS = SCREEN_PACKAGES.map((def) => buildScreenPackage(def, OPTS));
+// Looked up by identity rather than by folder name, which moved to plain "openDash" in XOR-118.
+const reference = BUILT.find((b) => b.face === zoneFace1920x480)!;
+/** Every zone property carries its face's prefix, so a test that names one has to say whose. */
+const REFERENCE = facePrefix(sizeOf(zoneFace1920x480));
 
 describe('the reference face is the artboard', () => {
   const z = zoneFace1920x480.zones;
@@ -78,6 +106,8 @@ describe('the reference face is the artboard', () => {
 
 describe('every zone cycles its own catalogue', () => {
   const main = reference.built.main;
+  // The face as drawn with the rev bar. The second arrangement carries the same four widgets, so
+  // reading both screens would count every zone twice.
   const mainScreen = main.screens.find((s) => s.name === FACE_SCREEN_NAME)!;
   const widgets = itemsOf({ ...main, screens: [mainScreen] }).filter((i): i is WidgetItem => i.kind === 'widget');
 
@@ -99,7 +129,7 @@ describe('every zone cycles its own catalogue', () => {
       const widget = widgets.find((w) => w.name === `zone${zone}`)!;
       const formula = widget.bindings?.InitialScreenIndex?.formula;
       expect({ zone, bound: formula !== undefined }).toMatchObject({ bound: true });
-      expect(String(formula)).toContain(`${PROPERTY_PREFIX}.Zone${zone}`);
+      expect(String(formula)).toContain(`${PROPERTY_PREFIX}.${facePrefix(sizeOf(reference.face))}Zone${zone}`);
     }
   });
 
@@ -123,6 +153,47 @@ describe('every zone cycles its own catalogue', () => {
   });
 });
 
+/**
+ * The contract carries a little of each face's shape, because the plugin draws a plan of the face in
+ * its panel and cannot read a layout file. A plan drawn to one face's proportions for every face is
+ * how the nano at 800 x 286 came to be offered bar fields for a bar it does not have, so the two
+ * descriptions have to agree.
+ */
+describe('the contract describes the shape each face really has', () => {
+  test('every layout is named by FACE_SIZES, and named once', () => {
+    expect(FACE_SIZES).toHaveLength(ZONE_FACES.length);
+    const named = FACE_SIZES.map((f) => `${f.width}x${f.height}`);
+    expect(new Set(named).size).toBe(named.length);
+    for (const layout of ZONE_FACES) expect(named).toContain(`${layout.width}x${layout.height}`);
+  });
+
+  for (const layout of ZONE_FACES) {
+    test(`${layout.folder} is described as it is drawn`, () => {
+      const face = sizeOf(layout);
+      const z = layout.zones;
+      expect({ folder: layout.folder, hasBar: face.hasBar }).toMatchObject({ hasBar: z.bar !== undefined });
+      expect({ folder: layout.folder, per: face.barFieldsPerEnd }).toMatchObject({ per: layout.barFieldsPerEnd });
+
+      // A body whose three zones share a left edge is stacked; one that does not is a row.
+      const stacked = z.zoneA.left === z.zoneB.left && z.zoneB.left === z.zoneC.left;
+      expect({ folder: layout.folder, body: face.body }).toMatchObject({ body: stacked ? 'column' : 'row' });
+
+      // The parts are the sizes along whichever axis the body runs, in drawing order.
+      const order = bodyOrder(face).map((letter) => (letter === 'A' ? z.zoneA : letter === 'B' ? z.zoneB : z.zoneC));
+      const drawn = order.map((r) => (stacked ? r.height : r.width));
+      expect({ folder: layout.folder, parts: [...face.parts] }).toMatchObject({ parts: drawn });
+    });
+  }
+
+  test('and the drawing order is the one the design settled on', () => {
+    // B, A, C across a wide face, because zone A holds the gear and the gear is read by reflex; A
+    // over B over C in portrait, for the same reason with the axis turned.
+    expect(bodyOrder(sizeOf(zoneFace1920x480))).toEqual(['B', 'A', 'C']);
+    const portrait = ZONE_FACES.find((f) => f.width === 600)!;
+    expect(bodyOrder(sizeOf(portrait))).toEqual(['A', 'B', 'C']);
+  });
+});
+
 describe('the face reads what it declares and nothing else', () => {
   test('every package validates with no error and no warning', () => {
     for (const { face, built } of BUILT) {
@@ -137,8 +208,12 @@ describe('the face reads what it declares and nothing else', () => {
     const used = new Set(
       [reference.built.main, ...reference.built.zones].flatMap((d) => propertiesIn(d)).filter((p) => p.startsWith(`${PROPERTY_PREFIX}.`)),
     );
-    for (const zone of FACE_ZONE_LETTERS) expect(used).toContain(`${PROPERTY_PREFIX}.Zone${zone}`);
-    for (const p of zoneProperties().filter((n) => n.includes('.Bar'))) expect(used).toContain(p);
+    for (const zone of FACE_ZONE_LETTERS) expect(used).toContain(`${PROPERTY_PREFIX}.${facePrefix(sizeOf(reference.face))}Zone${zone}`);
+    for (const p of zoneProperties().filter((n) => n.includes(`${facePrefix(sizeOf(reference.face))}Bar`))) expect(used).toContain(p);
+    // And nothing belonging to another face, which is the point of the prefix: this package must
+    // not move when somebody configures the 850 beside it.
+    const others = zoneProperties().filter((n) => !n.includes(facePrefix(sizeOf(reference.face))));
+    expect([...used].filter((p) => others.includes(p))).toEqual([]);
     // And no slot, because a zone is not a slot.
     expect([...used].some((p) => p.includes('.Slot'))).toBe(false);
   });
@@ -304,6 +379,116 @@ describe('what the first photograph of the face showed', () => {
 });
 
 /**
+ * A field the game does not publish is removed and the rank closes over the hole; a telltale that
+ * is unlit keeps its place and goes dim. Both rules live in `second/rank.ts`, and these are the
+ * three places on the face that ask for one of them.
+ */
+describe('what the face does with a field that is not there', () => {
+  const band = { left: 0, top: 420, width: 1920, height: 60 };
+  const textsIn = (items: readonly ReturnType<typeof bandPageItems>[number][]): TextItem[] => items.filter((i): i is TextItem => i.kind === 'text');
+  const bound = (item: TextItem, target: 'Left' | 'Visible' | 'TextColor' | 'Text'): string | undefined => {
+    const b = item.bindings?.[target];
+    return b && b.mode === 'formula' && typeof b.formula === 'string' ? b.formula : undefined;
+  };
+
+  test("the bar's strip closes over a setting the car does not have", () => {
+    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480) })).filter((i) => i.name.startsWith('bar.strip.'));
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) {
+      // Hidden when the sim has no property for it, and everything moves when one goes.
+      expect({ name: item.name, hides: bound(item, 'Visible') !== undefined, moves: bound(item, 'Left') !== undefined }).toEqual({
+        name: item.name,
+        hides: true,
+        moves: true,
+      });
+    }
+    // The cell that goes first is the one a driver would give up first, not the last drawn.
+    expect(bound(items.find((i) => i.name === 'bar.strip.diff.value')!, 'Left')).toContain('dcTractionControl2');
+  });
+
+  test("band D's car page removes a gauge the sim does not wire, and keeps the temperatures", () => {
+    const items = textsIn(bandPageItems('car', band, 'car.'));
+    const water = items.find((i) => i.name === 'car.water.value')!;
+    const voltage = items.find((i) => i.name === 'car.voltage.value')!;
+    expect(bound(voltage, 'Visible')).toContain('Voltage');
+    expect(bound(water, 'Visible')).toBeUndefined();
+    // The temperature does not vanish, but it does move: the rank recentres on what is left.
+    expect(bound(water, 'Left')).toContain('Voltage');
+  });
+
+  test("the strip asks the property that says the car has the setting, not the one it reads", () => {
+    // SimHub reports TCLevel 0 for a car with no traction control at all, which is what a driver
+    // who has turned it off also sees. The raw dc field is absent on the car that has none, and
+    // that is the difference between a cell drawn as OFF and a cell that is not there.
+    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480) }));
+    const tc = items.find((i) => i.name === 'bar.strip.tc.value')!;
+    expect(bound(tc, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))');
+    expect(bound(tc, 'Text')).toContain('[DataCorePlugin.GameData.TCLevel]');
+  });
+
+  test('a module rank closes over a setting the car does not have', () => {
+    // Zones B and C draw the modules, so the same contract has to hold inside a page: the car
+    // settings grid hid a field the sim does not publish and left its gap where it had been.
+    const settings = MODULES.find((m) => m.id === 'carSettings')!;
+    const items = textsIn(settings.build({ frame: rect(0, 0, 600, 280), density: 'zone', prefix: '' }));
+    const abs = items.find((i) => i.name === 'abs.value')!;
+    expect(bound(abs, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))');
+    expect(bound(abs, 'Left')).toContain('dcTractionControl');
+  });
+
+  test('the corner lamps dim in place rather than vanishing', () => {
+    const items = textsIn(bandCorners(band, 'corner.'));
+    for (const id of ['drs', 'p2p', 'spt']) {
+      const lamp = items.find((i) => i.name === `corner.${id}`)!;
+      expect({ id, colour: bound(lamp, 'TextColor') !== undefined, hides: bound(lamp, 'Visible') !== undefined, moves: bound(lamp, 'Left') !== undefined }).toEqual({
+        id,
+        colour: true,
+        hides: false,
+        moves: false,
+      });
+    }
+  });
+});
+
+/**
+ * Band D is the same three blocks as the bar, on every face that draws its corners: the left
+ * corner, the page rank, the right corner. The bar got this test when BIAS was found sitting on
+ * POSITION; the band never did, and page D6 Sectors was six pixels into the DRS lamp at 1280.
+ */
+describe('band D keeps its rank clear of its corners', () => {
+  for (const { face, built } of BUILT) {
+    if (!face.bandCorners) continue;
+    const band = face.zones.band;
+    const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
+
+    for (const screen of dashboard.screens) {
+      test(`${face.folder} draws no field of ${screen.name} over a corner block`, () => {
+        const items = [...walkItems(screen.items)].filter((i): i is TextItem => i.kind === 'text');
+        const extent = (of: (name: string) => boolean): { left: number; right: number } | null => {
+          const group = items.filter((i) => of(i.name));
+          if (group.length === 0) return null;
+          return { left: Math.min(...group.map((i) => i.rect.left)), right: Math.max(...group.map((i) => i.rect.left + i.rect.width)) };
+        };
+        // A corner item is named "<page>.corner.<field>"; everything else on the screen is the rank.
+        const corner = (name: string): boolean => name.includes('.corner.');
+        const leftNames = ['incidents', 'trackState'];
+        const left = extent((n) => corner(n) && leftNames.some((f) => n.includes(`.corner.${f}`)));
+        const right = extent((n) => corner(n) && !leftNames.some((f) => n.includes(`.corner.${f}`)));
+        const rank = extent((n) => !corner(n));
+
+        expect({ screen: screen.name, left: left !== null, right: right !== null }).toMatchObject({ left: true, right: true });
+        if (rank) {
+          expect({ screen: screen.name, clearOfLeft: rank.left >= left!.right }).toMatchObject({ clearOfLeft: true });
+          expect({ screen: screen.name, clearOfRight: rank.right <= right!.left }).toMatchObject({ clearOfRight: true });
+          expect(rank.left).toBeGreaterThanOrEqual(0);
+          expect(rank.right).toBeLessThanOrEqual(band.width);
+        }
+      });
+    }
+  }
+});
+
+/**
  * The bar is three blocks on one line -- the left end, the car settings strip, the right end -- and
  * every text-fits check in the suite is satisfied by three blocks drawn on top of one another. At
  * 850 by 480 they were: BIAS sat on POSITION and ABS on the slash of "3 / 24".
@@ -342,6 +527,197 @@ describe('the bar keeps its three blocks apart', () => {
     });
   }
 });
+
+describe('the twenty-one pages reach the face', () => {
+  const size = { width: 769, height: 314 };
+  const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', size))!;
+
+  test('zones B and C cycle the module catalogue, and it is the catalogue the companion cycles', () => {
+    expect(shared.screens.map((s) => s.name)).toEqual(MODULE_CATALOGUE.map((m) => m.id));
+    for (const zone of ['B', 'C'] as const) {
+      const r = rectOf(zoneFace1920x480, zone);
+      expect({ zone, width: r.width, height: r.height }).toEqual({ zone, ...size });
+    }
+  });
+
+  test('every page of the catalogue draws, and draws inside a 769 by 314 zone at shape wide', () => {
+    // The ticket's own measure. The zone is 769 by 314; what a page is handed is the body under the
+    // header, and the shape model is asked what that body is before anything is drawn into it.
+    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: MODULE_COUNT } });
+    expect(shapeOf(body).width).toBe('wide');
+
+    for (const screen of shared.screens) {
+      const items = [...walkItems(screen.items)].filter((i) => i.kind !== 'layer');
+      expect({ page: screen.name, drew: items.length > 0 }).toMatchObject({ drew: true });
+      for (const item of items) {
+        const r = item.rect;
+        const inside = r.left >= 0 && r.top >= -2 && r.left + r.width <= size.width && r.top + r.height <= size.height + 2;
+        expect({ page: screen.name, item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+      }
+    }
+  });
+});
+
+/**
+ * Evaluates the counter's arithmetic by turning it into the JavaScript it already almost is.
+ *
+ * This is not an NCalc interpreter and is not trying to be one -- that is XOR-20. The counter uses
+ * six things (a property, `isnull`, `truncate`, `if`, `format` and arithmetic), every one of which
+ * has a JavaScript spelling, so substituting the two properties and renaming three calls is enough
+ * to ask the real expression what it answers. The point is that the arithmetic is checked against a
+ * plain count rather than against itself.
+ */
+function readCounter(expression: string, zone: 'B' | 'C', page: number, mask: number): string {
+  const js = expression
+    .replace(new RegExp(`isnull\\(\\[OpenDash\\.${REFERENCE}Zone${zone}Pages\\], \\d+\\)`, 'g'), String(mask))
+    .replace(new RegExp(`isnull\\(\\[OpenDash\\.${REFERENCE}Zone${zone}\\], \\d+\\)`, 'g'), String(page))
+    .replace(/\bif\(/g, 'iff(')
+    .replace(/\btruncate\(/g, 'Math.trunc(')
+    .replace(/\bformat\(/g, 'fmt(');
+  expect(js).not.toContain('OpenDash.');
+  const iff = (c: boolean, a: unknown, b: unknown): unknown => (c ? a : b);
+  const fmt = (v: number): string => String(Math.round(v));
+  return new Function('iff', 'fmt', `return ${js};`)(iff, fmt) as string;
+}
+
+describe('a zone counts its cycle, not its catalogue', () => {
+  const texts = faceItems(zoneFace1920x480).filter((i): i is TextItem => i.kind === 'text');
+
+  test('the counter comes from the face too, because only the face knows whose mask is deciding', () => {
+    for (const zone of ['B', 'C'] as const) {
+      const counter = texts.find((t) => t.name === `zone${zone}.counter`)!;
+      expect(counter).toBeDefined();
+      const formula = counter.bindings?.Text;
+      expect(formula).toBeDefined();
+      const expression = (formula as { formula: string }).formula;
+      expect(expression).toContain(`OpenDash.${REFERENCE}Zone${zone}Pages`);
+      expect(expression).toContain(`OpenDash.${REFERENCE}Zone${zone}`);
+      // Bound text is measured by its widest reading, not by the sample it was written with.
+      expect(counter.widest).toBeDefined();
+    }
+    expect(texts.some((t) => t.name === 'zoneA.counter' || t.name === 'zoneD.counter')).toBe(false);
+  });
+
+  test('and no page of the shared dashboard counts for itself, which would count to twenty-one', () => {
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    const counters = itemsOf(shared).filter((i) => i.name.endsWith('.zone.counter'));
+    expect(counters).toEqual([]);
+  });
+
+  test('a mask of any length reads as that length, and the page reads as its place in it', () => {
+    const expression = ((texts.find((t) => t.name === 'zoneB.counter')!.bindings!.Text as { formula: string }).formula);
+    const all = (1 << MODULE_COUNT) - 1;
+
+    // Everything on: the counter is the catalogue, which is what it always used to say.
+    expect(readCounter(expression, 'B', 0, all)).toBe(`1 / ${MODULE_COUNT}`);
+    expect(readCounter(expression, 'B', MODULE_COUNT - 1, all)).toBe(`${MODULE_COUNT} / ${MODULE_COUNT}`);
+
+    // Three pages on -- lap times, fuel and the relative -- is a cycle of three whichever of them
+    // is showing, and the twenty-one is nowhere on the screen.
+    const three = (1 << 0) | (1 << 4) | (1 << 14);
+    expect(readCounter(expression, 'B', 0, three)).toBe('1 / 3');
+    expect(readCounter(expression, 'B', 4, three)).toBe('2 / 3');
+    expect(readCounter(expression, 'B', 14, three)).toBe('3 / 3');
+
+    // One page on is a cycle of one, which is a zone that does not move when the button is pressed.
+    expect(readCounter(expression, 'B', 6, 1 << 6)).toBe('1 / 1');
+
+    // And every mask of every length agrees with a plain count of the bits below the page.
+    for (const mask of [all, three, 0b101010101010101010101, 0b11, 1 << 20]) {
+      for (let page = 0; page < MODULE_COUNT; page++) {
+        if ((mask & (1 << page)) === 0) continue;
+        const before = [...Array(page).keys()].filter((i) => (mask & (1 << i)) !== 0).length;
+        const length = [...Array(MODULE_COUNT).keys()].filter((i) => (mask & (1 << i)) !== 0).length;
+        expect({ mask, page, read: readCounter(expression, 'B', page, mask) }).toMatchObject({ read: `${before + 1} / ${length}` });
+      }
+    }
+  });
+
+  test('every reading of the counter fits the box it is measured for', () => {
+    // Per screen, because a face is two arrangements of itself and the rev-bar-off one hands its
+    // zones a taller box: two counters on each, and every reading has to fit on both.
+    for (const { face, built } of BUILT) {
+      for (const screen of built.main.screens) {
+        const items = itemsOf({ ...built.main, screens: [screen] }).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.counter'));
+        expect({ face: face.folder, screen: screen.name, counters: items.length }).toMatchObject({ counters: 2 });
+        for (const item of items) {
+          const zone = item.name.startsWith('zoneB') ? 'B' : 'C';
+          for (const reading of zoneCounterReadings(zone)) {
+            const width = measureText('BarlowMedium', reading, item.fontSize);
+            expect({ face: face.folder, screen: screen.name, item: item.name, reading, fits: width <= item.rect.width }).toMatchObject({ fits: true });
+          }
+        }
+      }
+    }
+  });
+});
+
+describe('a zone may list the class a driver is racing in', () => {
+  /** The row lookup a table's cells address their car through, which is what the filter changes. */
+  const rowLookups = (dashboard: Dashboard, page: string): string[] => {
+    const screen = dashboard.screens.find((s) => s.name === page)!;
+    return itemsOf({ ...dashboard, screens: [screen] })
+      .flatMap((item) => Object.values(item.bindings ?? {}))
+      .map((b) => (b as { formula?: string }).formula ?? '')
+      .filter((f) => f.includes('repeatindex()'));
+  };
+
+  test('the leaderboard and the relative in zone B or C ask whose zone is showing them', () => {
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    for (const page of ['leaderboard', 'relative']) {
+      const lookups = rowLookups(shared, page);
+      expect({ page, found: lookups.length > 0 }).toMatchObject({ found: true });
+      for (const lookup of lookups) {
+        // Both zones, because one file serves both and a page in it cannot know which is showing it.
+        expect({ page, lookup }).toMatchObject({ lookup: expect.stringContaining(`OpenDash.${REFERENCE}ZoneBClassOnly`) });
+        expect({ page, lookup }).toMatchObject({ lookup: expect.stringContaining(`OpenDash.${REFERENCE}ZoneCClassOnly`) });
+        // And the class-only twin of the lookup it would otherwise use.
+        expect(lookup).toContain('playerclassonly');
+      }
+    }
+  });
+
+  test('a page with nobody to list does not read the setting at all', () => {
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    for (const page of ['fuel', 'tyres', 'sectors', 'gear']) {
+      const screen = shared.screens.find((s) => s.name === page)!;
+      const used = propertiesIn({ ...shared, screens: [screen] });
+      expect({ page, used: used.filter((p) => p.endsWith('ClassOnly')) }).toMatchObject({ used: [] });
+    }
+  });
+
+  test('a portrait face gives B and C a file each, and neither reads the other zone', () => {
+    // 600 x 686 stacks A over B over C, so the two are different rectangles and cannot share.
+    const portrait = BUILT.find((b) => b.face === zoneFace600x686)!;
+    const prefix = facePrefix(sizeOf(zoneFace600x686));
+    const b = rectOf(portrait.face, 'B');
+    const c = rectOf(portrait.face, 'C');
+    expect({ b: b.height, c: c.height }).not.toMatchObject({ b: c.height });
+
+    for (const [zone, r, other] of [
+      ['B', b, 'C'],
+      ['C', c, 'B'],
+    ] as const) {
+      const file = portrait.built.zones.find((d) => d.name === zoneDashboardName('module', { width: r.width, height: r.height }))!;
+      const lookups = rowLookups(file, 'leaderboard');
+      expect({ zone, found: lookups.length > 0 }).toMatchObject({ found: true });
+      for (const lookup of lookups) {
+        expect({ zone, lookup }).toMatchObject({ lookup: expect.stringContaining(`OpenDash.${prefix}Zone${zone}ClassOnly`) });
+        expect(lookup).not.toContain(`OpenDash.${prefix}Zone${other}ClassOnly`);
+      }
+    }
+  });
+
+  test('the companion and the pit wall list everybody, as they always have', () => {
+    for (const pkg of SECOND_SCREENS) {
+      for (const dashboard of pkg.dashboards) {
+        const used = propertiesIn(dashboard).filter((p) => p.endsWith('ClassOnly'));
+        expect({ dashboard: dashboard.name, used }).toMatchObject({ used: [] });
+      }
+    }
+  });
+});
+
 
 /**
  * XOR-138: the rev bar off entirely.
@@ -427,7 +803,10 @@ describe('the rev bar can be off entirely', () => {
   });
 
   test('the nano gets a ninth of its screen back, which is what makes the setting worth having', () => {
-    const nano = ZONE_FACES.find((f) => f.folder === 'openDash zones 800x286')!;
+    // By identity rather than by folder name, the way `reference` is: the folders were renamed in
+    // XOR-118 and a string here would have gone on compiling and stopped finding anything.
+    const nano = zoneFace800x286;
+    expect(ZONE_FACES).toContain(nano);
     const o = layoutWithoutRevBar(nano).zones;
     // The one face with no bar: the body starts straight under the well, so it is the body that
     // rises to the top margin.

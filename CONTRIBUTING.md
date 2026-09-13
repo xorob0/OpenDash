@@ -1,6 +1,6 @@
-# Contributing to openDash
+# Contributing to OpenDash
 
-Thank you for looking at this. The whole point of openDash is that a dashboard change is a
+Thank you for looking at this. The whole point of OpenDash is that a dashboard change is a
 readable pull request, so most of this file is about keeping that true.
 
 ## The one rule
@@ -55,15 +55,19 @@ and the pit wall at once.
 - `packages/dash/src/contract.ts` is the settings contract shared with the plugin. Every read of
   an `OpenDash.*` property goes through it, and the validator rejects a build that reads a
   property the contract does not declare.
-- `packages/generator` knows nothing about openDash. It is the typed model of SimHub's scene
+- `packages/generator` knows nothing about OpenDash. It is the typed model of SimHub's scene
   graph, the NCalc helpers, the serialiser, the validator and the package writer, and it could
   serve any other dashboard project.
 - `plugin/OpenDash` is the C# plugin. `Contract.cs` mirrors `contract.ts` and a test keeps the
   two card catalogues identical.
+- `traces/` holds one recorded telemetry trace per emulator scenario, taken from a real SimHub on
+  the Windows VM and committed so that everything downstream replays a file rather than needing a
+  VM. A package that starts reading a property no trace carries fails `bun run check` and is
+  answered with `bun run record <scenario>`; see [traces/README.md](traces/README.md).
 
 ## Before you start
 
-[docs/scope.md](docs/scope.md) says what openDash is, what ships, and what is deliberately not
+[docs/scope.md](docs/scope.md) says what OpenDash is, what ships, and what is deliberately not
 built. The last of those is a list of refusals rather than a backlog, so a change that falls
 under one of its lines will be declined however well it is written. Should you believe a line
 ought to move, argue that first, in an issue or a decision record, and the code afterwards.
@@ -80,6 +84,12 @@ measured from the wrong face or from a sample narrower than the runtime value lo
 without failing anything. `bun run dev` puts one package on the VM with live telemetry and
 photographs it; `bun run shots` does the same for several at once. If you cannot run SimHub, say
 so in the pull request rather than leaving it unsaid.
+
+Which packages to photograph is not a matter of judgement, because a card is shared and an edit to
+one of them reaches every face it appears on. `bun run affected` builds the branch and the commit
+it forked from, compares the packages the two builds wrote, and prints the `bun run shots` command
+that captures exactly those. CI runs the same comparison on every pull request and keeps the answer
+in one comment, so a reviewer sees the reach of a change without running anything.
 
 The pull request template asks for exactly this and nothing else.
 
@@ -104,6 +114,18 @@ A page has to fit every shape it can be given: `wide`, `grid`, `tall narrow` and
 pit wall's strips. It sheds its secondary rows before it shrinks its numerals, and it never scales.
 The test builds every module into every box the build actually produces, so a page that does not
 fit fails rather than overlapping its neighbour.
+
+**Declare what it sheds.** Which fields a page keeps at each of the four shapes is a design
+decision read off the catalogue artboard, not something the code works out from widths: add an
+entry to `packages/dash/src/modules/shedding.ts` and the same row to the table in
+[docs/design/zones.md](docs/design/zones.md). A page with nothing to shed — a drawing, or a page
+that says it has no data — says so and why. `shedding.test.ts` fails on a page with no entry, on a
+row the code and the document disagree about, and on an id no longer drawn.
+
+A field that can be **missing** rather than shed is a different question: a value the sim does not
+publish is removed and its rank closes over the hole, a telltale that is unlit keeps its place and
+goes dim. Both are modes of `packages/dash/src/second/rank.ts`; §11 of the zones document says
+which to reach for.
 
 **Adding a card is not a thing to do any more.** `packages/dash/src/cards` is the slot model and
 is retired once every face is drawn from zones.

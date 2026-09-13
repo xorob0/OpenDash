@@ -2,32 +2,38 @@
  * The build: `bun run build [--out <dir>] [--strategy widget|inline]`.
  *
  * For every layout in src/layouts it composes the package, validates it against the settings
- * contract (every `[OpenDash.X]` read must be a declared property, plus the generator's own
- * checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
+ * contract (every `[OpenDash.X]` read must be a declared property, and one this package's own
+ * screen owns or every screen shares, plus the generator's own checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
  * zips that folder into `<out>/<folder>.simhubdash` and records `{ folder, width, height,
  * slots, rung, file }` in `<out>/manifest.json`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { declaredProperties, PROPERTY_PREFIX } from './contract.ts';
+import { COMPANION_PREFIX, declaredProperties, facePrefix, foreignProperties, PIT_WALL_PREFIX, PROPERTY_PREFIX } from './contract.ts';
 import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
-import { buildZoneFace, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
+import { buildZoneFace, sizeOf, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
 import { fontsForPackage } from './dashboard.ts';
 import { fontsForPanel } from './design/fontFiles.ts';
+import { noticesForPackage, PANEL_NOTICES } from './design/notices.ts';
 import type { Rung } from './design/rung.ts';
 import {
   formatIssues,
   PACKAGE_EXTENSION,
+  PROFILE_EXTENSION,
+  serializeProfile,
   validatePackage,
+  validateProfile,
   writePackage,
   zipPackage,
   type DashPackage,
+  type MatrixProfile,
   type ValidationIssue,
   type WrittenPackage,
   type ZippedPackage,
 } from './generator.ts';
 import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
+import { buildFlagBoxProfile, contactSheet, FLAG_BOX_PROFILE_NAME } from './leds/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './screens/index.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
@@ -40,6 +46,13 @@ export const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
 export const MANIFEST_FILE = 'manifest.json';
 /** Where the build leaves the fonts the plugin embeds, relative to the output directory. */
 export const PANEL_FONTS_DIR = 'fonts';
+/** The flag box profile, relative to the output directory. Not a package: see ADR 0013. */
+export const FLAG_BOX_FILE = `${FLAG_BOX_PROFILE_NAME}${PROFILE_EXTENSION}`;
+/**
+ * Every glyph the flag box draws, as one SVG. A pull request that changes the chequered flag shows
+ * the chequered flag; nothing else in a generated profile is reviewable by looking at it.
+ */
+export const FLAG_BOX_SHEET_FILE = 'flag-box.svg';
 /** Environment fallback for `--strategy`, as the spec's `SLOT_STRATEGY=inline` build flag. */
 export const STRATEGY_ENV = 'SLOT_STRATEGY';
 
@@ -130,12 +143,35 @@ export function readVersion(file: string = VERSION_FILE): string {
   return version;
 }
 
-/** Validates against the contract's declared properties; throws a BuildError on errors, returns the warnings. */
-export function validateOrThrow(pkg: DashPackage): ValidationIssue[] {
-  const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
+/**
+ * Validates against the contract's declared properties; throws a BuildError on errors, returns the
+ * warnings.
+ *
+ * `screen` is the prefix of the screen this package is, and what it may read follows from it: its
+ * own group and the settings every screen shares, never another screen's. Every group is declared,
+ * so being declared proves nothing here; without this rule a package could read the screen beside
+ * it and only a rig with two screens would ever show it. A card face passes nothing, because it
+ * owns no group and reads the modes and the slots alone.
+ */
+export function validateOrThrow(pkg: DashPackage, screen?: string): ValidationIssue[] {
+  const result = validatePackage(pkg, {
+    declaredProperties: declaredProperties(),
+    propertyPrefix: PROPERTY_PREFIX,
+    foreignProperties: foreignProperties(screen),
+  });
   if (!result.ok) {
     const n = result.errors.length;
     throw new BuildError(`package ${pkg.folderName} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
+  }
+  return result.warnings;
+}
+
+/** Validates the flag box profile against the same contract; throws a BuildError on errors. */
+export function validateProfileOrThrow(profile: MatrixProfile): ValidationIssue[] {
+  const result = validateProfile(profile, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
+  if (!result.ok) {
+    const n = result.errors.length;
+    throw new BuildError(`profile ${profile.name} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
   }
   return result.warnings;
 }
@@ -164,6 +200,12 @@ export interface Manifest {
   version: string;
   simHubVersion: string;
   packages: ManifestEntry[];
+  /**
+   * The flag box profile, relative to the output directory. It is listed apart from `packages`
+   * because it is not one: the plugin extracts it and the user imports it, rather than the plugin
+   * installing it. ADR 0013 is why.
+   */
+  ledProfiles: string[];
 }
 
 export interface BuildOptions {
@@ -179,11 +221,13 @@ export interface BuildOptions {
   zoneFaces?: readonly ZoneLayout[];
   /** Default: every second screen in src/screens. Pass an empty list to build the faces alone. */
   screens?: readonly ScreenPackageDef[];
+  /** Default: the flag box profile in src/leds. */
+  ledProfile?: MatrixProfile;
   /** Progress and warnings, one line at a time. Default: console.log. */
   log?: (line: string) => void;
 }
 
-export interface BuiltPackage {
+export interface ComposedPackage {
   /** The layout a card face was built from; absent for anything else. */
   layout?: Layout;
   /** The layout a zone face was built from; absent for anything else. */
@@ -193,6 +237,9 @@ export interface BuiltPackage {
   kind: PackageKind;
   pkg: DashPackage;
   warnings: ValidationIssue[];
+}
+
+export interface BuiltPackage extends ComposedPackage {
   written: WrittenPackage;
   zipped: ZippedPackage;
 }
@@ -203,6 +250,8 @@ export interface BuildResult {
   version: string;
   simHubVersion: string;
   packages: BuiltPackage[];
+  /** The flag box profile and where it was written. */
+  ledProfile: { profile: MatrixProfile; warnings: ValidationIssue[]; path: string };
   manifest: Manifest;
   manifestPath: string;
 }
@@ -214,14 +263,14 @@ const relative = (file: string): string => {
 };
 
 /**
- * Builds every layout. Composes and validates all packages first, so that an error in any of
- * them leaves the output directory untouched; then writes, zips and records the manifest.
+ * Every package, composed and validated, with nothing written. This is the whole of the build that
+ * is a pure function of the sources, which is what lets a test ask what the packages read without
+ * putting twenty zip files on disk to find out.
  */
-export function build(opts: BuildOptions = {}): BuildResult {
-  const out = path.resolve(opts.out ?? DEFAULT_OUT_DIR);
-  const strategy = opts.strategy ?? DEFAULT_STRATEGY;
+export function composePackages(opts: BuildOptions = {}): ComposedPackage[] {
   const version = opts.version ?? readVersion();
   const simHubVersion = opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION;
+  const strategy = opts.strategy ?? DEFAULT_STRATEGY;
   const layouts = opts.layouts ?? LAYOUTS;
   const zoneFaces = opts.zoneFaces ?? ZONE_FACES;
   const screens = opts.screens ?? SCREEN_PACKAGES;
@@ -229,7 +278,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
   if (layouts.length === 0 && screens.length === 0) throw new BuildError('there is no layout to build');
 
   const folders = new Set<string>();
-  const staged: { layout?: Layout; zoneFace?: ZoneLayout; screen?: ScreenPackageDef; kind: PackageKind; pkg: DashPackage; warnings: ValidationIssue[] }[] = [];
+  const staged: ComposedPackage[] = [];
   const claim = (folder: string): void => {
     if (folders.has(folder)) throw new BuildError(`two packages use the folder ${JSON.stringify(folder)}`);
     folders.add(folder);
@@ -245,22 +294,43 @@ export function build(opts: BuildOptions = {}): BuildResult {
     claim(face.folder);
     const built = buildZoneFace(face, { version, simHubVersion, author: DEFAULT_AUTHOR });
     const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
-    const warnings = validateOrThrow(pkg);
+    const warnings = validateOrThrow(pkg, facePrefix(sizeOf(face)));
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ zoneFace: face, kind: 'dash', pkg, warnings });
   }
   for (const screen of screens) {
     claim(screen.folder);
     const pkg = buildScreenPackage(screen, { version, simHubVersion });
-    const warnings = validateOrThrow(pkg);
+    const warnings = validateOrThrow(pkg, screen.kind === 'pitwall' ? PIT_WALL_PREFIX : COMPANION_PREFIX);
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ screen, kind: screen.kind, pkg, warnings });
   }
+  return staged;
+}
+
+/**
+ * Builds every layout. Composes and validates all packages first, so that an error in any of
+ * them leaves the output directory untouched; then writes, zips and records the manifest.
+ */
+export function build(opts: BuildOptions = {}): BuildResult {
+  const out = path.resolve(opts.out ?? DEFAULT_OUT_DIR);
+  const strategy = opts.strategy ?? DEFAULT_STRATEGY;
+  const version = opts.version ?? readVersion();
+  const simHubVersion = opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION;
+  const log = opts.log ?? ((line: string): void => console.log(line));
+  const staged = composePackages({ ...opts, version, simHubVersion, strategy, log });
+
+  const ledProfile = opts.ledProfile ?? buildFlagBoxProfile();
+  const ledWarnings = validateProfileOrThrow(ledProfile);
+  for (const w of ledWarnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
 
   mkdirSync(out, { recursive: true });
   const packages: BuiltPackage[] = [];
-  const manifest: Manifest = { version, simHubVersion, packages: [] };
+  const manifest: Manifest = { version, simHubVersion, packages: [], ledProfiles: [] };
   for (const { layout, zoneFace, screen, kind, pkg, warnings } of staged) {
+    // Derived here rather than by each builder, so that a package cannot be assembled anywhere in
+    // this file without the licences for what it carries.
+    pkg.notices = noticesForPackage(pkg);
     const written = writePackage(pkg, out);
     for (const file of written.files) log(`wrote ${relative(file)}`);
     const zipped = zipPackage(out, pkg.folderName);
@@ -287,11 +357,27 @@ export function build(opts: BuildOptions = {}): BuildResult {
     copyFileSync(font, target);
     log(`wrote ${relative(target)}`);
   }
+  for (const notice of PANEL_NOTICES) {
+    const target = path.join(fontsOut, notice.name);
+    copyFileSync(notice.path, target);
+    log(`wrote ${relative(target)}`);
+  }
+
+  // Not zipped and not in `packages`: a profile is a single file the user imports by hand, and
+  // wrapping it in an archive would only add a step. ADR 0013.
+  const ledProfilePath = path.join(out, FLAG_BOX_FILE);
+  writeFileSync(ledProfilePath, serializeProfile(ledProfile), 'utf8');
+  log(`wrote ${relative(ledProfilePath)}`);
+  manifest.ledProfiles.push(FLAG_BOX_FILE);
+
+  const sheetPath = path.join(out, FLAG_BOX_SHEET_FILE);
+  writeFileSync(sheetPath, contactSheet(), 'utf8');
+  log(`wrote ${relative(sheetPath)}`);
 
   const manifestPath = path.join(out, MANIFEST_FILE);
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   log(`wrote ${relative(manifestPath)}`);
-  return { out, strategy, version, simHubVersion, packages, manifest, manifestPath };
+  return { out, strategy, version, simHubVersion, packages, ledProfile: { profile: ledProfile, warnings: ledWarnings, path: ledProfilePath }, manifest, manifestPath };
 }
 
 const describe = (e: unknown): string => (e instanceof Error ? e.message : String(e));

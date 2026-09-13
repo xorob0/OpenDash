@@ -12,6 +12,7 @@ import { withBindings, type Expr } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
+import { FACE_FLAG_PRIORITY, type FaceFlag } from '../flags.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { game, eq, and, num } = ncalc;
@@ -36,9 +37,17 @@ export const FLAG_STRIP_STYLES = {
 /** Half period of the yellow flag's flash in ms (250 at 2 Hz). */
 export const FLAG_BLINK_MS = Math.round(1000 / ds.indicator.flagBand.flashHz / 2);
 
-/** SimHub flag properties in priority order. */
-export const FLAG_PRIORITY = ['Flag_Black', 'Flag_Checkered', 'Flag_Yellow', 'Flag_Blue', 'Flag_White', 'Flag_Green'] as const;
-export type FlagProperty = (typeof FLAG_PRIORITY)[number];
+/**
+ * SimHub flag properties in priority order, taken from `FLAG_CATALOGUE` rather than restated: the
+ * face and the flag box rank the same conditions, and two lists would eventually disagree about
+ * which of two live flags wins.
+ *
+ * The face draws the six SimHub normalises. The box draws the whole catalogue, because
+ * `Flag_Yellow` folds four iRacing bits together and `Flag_Black` hides a furled black; see
+ * flags.ts.
+ */
+export const FLAG_PRIORITY: readonly FaceFlag[] = FACE_FLAG_PRIORITY;
+export type FlagProperty = FaceFlag;
 
 /** `[Flag_X] = 1` and every higher-priority flag `= 0`. */
 export function flagVisible(flag: FlagProperty): Expr {
@@ -63,13 +72,26 @@ function solidFlag(frame: Rect, style: FlagStripStyle, prefix: string, id: strin
   };
 }
 
+/**
+ * The black flag, filled like the other five.
+ *
+ * It was transparent with only a border, which left band D's page fully readable underneath the
+ * most serious thing the band can say. A flag takes the band over, so it has to leave nothing of
+ * the page showing.
+ *
+ * The ground is `surface.base` and not `purpose.flag.black`, which is `#F5F7FA` and is the ink
+ * rather than the ground: a band filled with it would be indistinguishable from the white flag at
+ * `#FFFFFF`, and two states a driver cannot tell apart is a bug whoever chose the colours. So this
+ * flag is light on dark where the others are dark on light, which is also what a black flag looks
+ * like. The border stays, because a dark band on a dark dash needs an edge to read as a band.
+ */
 function blackFlag(frame: Rect, style: FlagStripStyle, prefix: string): LayerItem {
   return {
     kind: 'layer',
     name: `${prefix}.black`,
     children: [
-      band(`${prefix}.black.band`, frame, TRANSPARENT, { border: { color: ds.purpose.flag.black, width: style.blackBorder } }),
-      ...flagLabel(frame, style, `${prefix}.black.label`, 'BLACK FLAG', ds.color.text.primary),
+      band(`${prefix}.black.band`, frame, ds.color.surface.base, { border: { color: ds.purpose.flag.black, width: style.blackBorder } }),
+      ...flagLabel(frame, style, `${prefix}.black.label`, 'BLACK FLAG', ds.purpose.flag.black),
     ],
     ...withBindings({ Visible: flagVisible('Flag_Black') }),
   };

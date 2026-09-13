@@ -5,17 +5,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bun run build
-rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/fonts
-# Everything except the zone faces, which are built for review and are not ready to install: a
-# plugin that embedded one would put a half-finished face beside the dash a user already has. They
-# are copied in by XOR-118, when they take the shipped names.
-for pkg in build/*.simhubdash; do
-  case "$(basename "$pkg")" in
-    'openDash zones '*) continue ;;
-  esac
-  cp "$pkg" plugin/OpenDash/Resources/
-done
+rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/*.ledsprofile plugin/OpenDash/Resources/fonts
+# Everything is copied and the csproj decides what is embedded, which is how CI works too: it hands
+# the whole dash artefact over. The card faces are excluded there, for the reason written there.
+cp build/*.simhubdash plugin/OpenDash/Resources/
+cp build/*.ledsprofile plugin/OpenDash/Resources/
 cp -R build/fonts plugin/OpenDash/Resources/fonts
 dotnet build plugin/OpenDash -c Release --no-incremental
 bash plugin/scripts/package-plugin.sh
-echo "packaged: $(ls plugin/OpenDash/Resources/*.simhubdash | wc -l) embedded of $(ls build/*.simhubdash | wc -l) built, build/OpenDash-plugin.zip"
+embedded=$(ls plugin/OpenDash/Resources/*.simhubdash | grep -vc '/openDash slots ' || true)
+profiles=$(ls plugin/OpenDash/Resources/*.ledsprofile | wc -l)
+echo "packaged: ${embedded} embedded of $(ls build/*.simhubdash | wc -l) built, ${profiles} LED profile(s), build/OpenDash-plugin.zip"
