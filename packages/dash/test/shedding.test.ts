@@ -7,6 +7,7 @@
  * the page does not have is a line nobody will notice is dead.
  */
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { MODULE_CATALOGUE } from '../src/contract.ts';
 import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
@@ -99,6 +100,49 @@ describe('the two the ticket works through', () => {
     const narrow = namesAt('relative', 'tallNarrow');
     expect(narrow.some((n) => n.includes('head.class'))).toBe(false);
     expect(narrow.some((n) => n.includes('head.gap'))).toBe(true);
+  });
+});
+
+/**
+ * The written table and the code one, kept in step the way `contract.ts` and `Contract.cs` are.
+ *
+ * docs/design/zones.md is the specification a reader reaches for and the canvas is what both were
+ * read off, so a table in one and not the other is the drift every docs ticket in this repository
+ * has been about.
+ */
+describe('docs/design/zones.md carries the same table', () => {
+  const doc = readFileSync(new URL('../../../docs/design/zones.md', import.meta.url), 'utf8');
+  const section = doc.slice(doc.indexOf('### The table'), doc.indexOf('## 6. Band D'));
+  const cells = (text: string): string[] =>
+    text
+      .split('·')
+      .map((part) => part.trim().replace(/`/g, ''))
+      .filter((part) => part.length > 0);
+
+  test('every page that sheds has a row, and the row is the declaration', () => {
+    const rows = new Map<string, string[][]>();
+    for (const line of section.split('\n')) {
+      if (!line.startsWith('| ') || line.startsWith('| № ') || line.startsWith('|---')) continue;
+      const [, , page, ...rest] = line.split('|').map((c) => c.trim());
+      rows.set(page!, rest.slice(0, 4).map(cells));
+    }
+    const written = new Map(MODULE_CATALOGUE.filter((m) => SHEDDING[m.id]!.kind !== 'nothing').map((m) => [m.name, m.id]));
+    expect([...rows.keys()].sort()).toEqual([...written.keys()].sort());
+    for (const [name, id] of written) {
+      const entry = SHEDDING[id]!;
+      if (entry.kind === 'nothing') continue;
+      expect({ id, row: rows.get(name) }).toEqual({ id, row: [entry.keeps.wide, entry.keeps.grid, entry.keeps.tallNarrow, entry.keeps.tall].map((ids) => [...ids]) });
+    }
+  });
+
+  test('and lists the pages with nothing to shed, with the reason the code gives', () => {
+    const listed = new Map<string, string>();
+    for (const line of section.split('\n')) {
+      const match = /^- \*\*[^*]+\*\* \(`([^`]+)`\) — (.+)\.$/.exec(line);
+      if (match) listed.set(match[1]!, match[2]!);
+    }
+    const expected = new Map(Object.entries(SHEDDING).flatMap(([id, entry]) => (entry.kind === 'nothing' ? [[id, entry.why] as const] : [])));
+    expect(Object.fromEntries(listed)).toEqual(Object.fromEntries(expected));
   });
 });
 
