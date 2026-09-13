@@ -25,6 +25,7 @@ import { OVER_REV_BLINK_MS, ladderColors, ladderOrder, overRev, rungFlashes, run
 import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, effectContainer, type LedEffect } from './effects.ts';
+import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
 
 const { and, eq, gt, not, num, or, str } = ncalc;
@@ -57,6 +58,49 @@ const rungs = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContai
 };
 
 /**
+ * The measured overrides, one `Groups.CustomConditionalGroup` per car and gear the table covers.
+ *
+ * These come *after* the two derived ladders so that they compose over them: a car in the table
+ * gets its measured gear, and every other car and gear keeps the ladder iRacing publishes. That is
+ * the "derived by default, table overrides" of XOR-233, and it is why an empty table costs nothing
+ * — no entries, no containers, no change to any profile.
+ *
+ * A car keyed here is matched on `CarModel` rather than by a `Groups.GameCarModelGroup`, because
+ * the native group keys on SimHub's own car-choice model and the table keys on the model string a
+ * contributor can read off the property list.
+ */
+const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[] =>
+  Object.entries(SHIFT_TABLE).flatMap(([model, car]) =>
+    Object.entries(car.gears).map(([gear, points]) => {
+      const order = ladderOrder(style, count);
+      const colors = ladderColors(style);
+      return {
+        kind: 'conditionalGroup' as const,
+        description: `${car.name}, gear ${gear}`,
+        trigger: { expression: tabledGear(model, gear) },
+        clearBackgroundWhenActive: true,
+        children: Array.from({ length: count }, (_, k) => {
+          const rung = order.rungOf(k);
+          const band = Math.min(2, Math.floor((rung * 3) / order.rungs));
+          const bandStart = Array.from({ length: order.rungs }, (_, i) => i).findIndex((i) => Math.min(2, Math.floor((i * 3) / order.rungs)) === band);
+          const bandCount = Array.from({ length: order.rungs }, (_, i) => i).filter((i) => Math.min(2, Math.floor((i * 3) / order.rungs)) === band).length;
+          return {
+            kind: 'customStatus' as const,
+            description: `rev ${String(k + 1).padStart(2, '0')}`,
+            startPosition: k + 1,
+            ledCount: 1,
+            color: colors[band] ?? colors[2],
+            enabledFormula: { expression: tabledStageLit(points, band, rung - bandStart, bandCount) },
+            ...(rungFlashes(style, rung, order.rungs)
+              ? { blinkFormula: { expression: tabledOverRev(points) }, blinkColor: colors[2], blinkDelayMs: OVER_REV_BLINK_MS }
+              : {}),
+          };
+        }),
+      };
+    }),
+  );
+
+/**
  * The centre, as the shift ladder: one conditional group per style, and inside each the two
  * ladders — exactly as the rev bar is two layers. Whichever is active is the ladder the car is on,
  * which is how the strip is debugged.
@@ -79,6 +123,8 @@ const revCentre = (count: number): leds.LedContainer[] =>
         trigger: { expression: not(mirrorAvailable()) },
         children: rungs(count, style, 'simhub'),
       },
+      // Last, so a measured gear composes over whichever ladder was derived for the car.
+      ...tabledOverrides(count, style),
     ],
   }));
 

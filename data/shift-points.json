@@ -1,0 +1,16 @@
+{
+  "$meta": {
+    "version": 1,
+    "description": "Per-gear shift points, per car, for cars where one ladder for the whole car is wrong.",
+    "why": "iRacing publishes four shift-light RPMs per CAR and none per gear, and SimHub's own per-gear table is unreachable from an expression and is never learned from iRacing. ADR 0014 and docs/research/simhub-led-sources.md have the evidence. So a car whose useful upshift moves with the ratio can only be got right from a table, and this is it.",
+    "howToContribute": [
+      "One entry per car, keyed by the CarModel SimHub reports — read it off DataCorePlugin.GameData.CarModel in SimHub's property list while you are in the car.",
+      "Give every gear you measured. A gear you leave out falls back to the car's own published ladder, so a partial entry is useful and is better than a guessed one.",
+      "Say in `source` how you got the numbers. 'Measured on track, 2026-09-13' and 'from the car's manual, page 14' are both fine; 'copied from another product' is not, and will be refused.",
+      "first <= shift <= last <= blink, all in RPM. The build refuses an entry that is not ordered, so a typo fails the check rather than a race.",
+      "A car that is not here is not broken: it gets the ladder iRacing publishes for it, which is right for most cars."
+    ],
+    "empty": "There are no entries yet, and that is deliberate rather than unfinished. openDash does not carry measurements it has not made: a competitor's tables are theirs, and inventing numbers would put a shift light in the wrong place with total confidence. The mechanism ships so that a measured car can be added as a reviewable pull request."
+  },
+  "cars": {}
+}

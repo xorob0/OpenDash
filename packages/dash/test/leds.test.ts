@@ -12,6 +12,7 @@ import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/l
 import { bandOf, ladderColors, ladderOrder, rungFlashes } from '../src/leds/ladder.ts';
 import { ALL_EFFECTS, NOT_ON_IRACING, PIT_SPEEDING_MARGIN, SIDE_EFFECTS, SPOTTER_EFFECTS, flagEffects } from '../src/leds/effects.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
 
 const profileFor = (id: string): leds.LedProfile => {
@@ -254,5 +255,64 @@ describe('every generated profile', () => {
     expect(rpmStripProfileName(shapeById('4-14-4')!)).toBe('openDash 4/14/4');
     expect(rpmStripProfileName(shapeById('brow-25')!)).toBe('openDash brow 25');
     expect(rpmStripFileName(shapeById('4-14-4')!)).toBe('openDash 4-14-4');
+  });
+});
+
+describe('the per-gear shift table', () => {
+  test('the shipped table is valid, and being empty is a legitimate state', () => {
+    expect(validateShiftTable()).toEqual([]);
+    // Empty is deliberate: openDash does not carry measurements it has not made, and a competitor's
+    // tables are theirs. The mechanism ships so a measured car can arrive as a pull request.
+    expect(Object.keys(SHIFT_TABLE)).toEqual([]);
+  });
+
+  test('a contributed entry has to be traceable and ordered, or the build refuses it', () => {
+    const good: Record<string, CarShiftPoints> = {
+      examplecar: { name: 'Example', source: 'Measured on track, 2026-09-13', gears: { '1': { first: 6000, shift: 7000, last: 7500, blink: 7800 } } },
+    };
+    expect(validateShiftTable(good)).toEqual([]);
+
+    // No provenance: a number nobody can trace puts a shift light in the wrong place with confidence.
+    expect(validateShiftTable({ examplecar: { ...good.examplecar!, source: '  ' } })).toEqual([expect.stringContaining('needs a source')]);
+    // Out of order: the bands would invert and the ladder would run backwards.
+    expect(
+      validateShiftTable({ examplecar: { ...good.examplecar!, gears: { '1': { first: 7000, shift: 6000, last: 7500, blink: 7800 } } } }),
+    ).toEqual([expect.stringContaining('first <= shift <= last <= blink')]);
+    // A gear that is not a forward gear, and a car with no gears at all.
+    expect(validateShiftTable({ examplecar: { ...good.examplecar!, gears: { R: { first: 1, shift: 2, last: 3, blink: 4 } } } })).toEqual([
+      expect.stringContaining('not a forward gear'),
+    ]);
+    expect(validateShiftTable({ examplecar: { ...good.examplecar!, gears: {} } })).toEqual([expect.stringContaining('overrides nothing')]);
+  });
+
+  test('a measured gear folds to one comparison, because its thresholds are known at build time', () => {
+    const points = { first: 6000, shift: 7000, last: 7500, blink: 7800 };
+    const rpm = 'isnull([DataCorePlugin.GameData.Rpms], 0)';
+    // Band 0 runs 6000 to 7000 over five rungs: rung 0 at 6000, rung 2 at 6400.
+    expect(tabledStageLit(points, 0, 0, 5)).toBe(`(${rpm}) > (6000)`);
+    expect(tabledStageLit(points, 0, 2, 5)).toBe(`(${rpm}) > (6400)`);
+    // The top band lights together at `last`, and the flash is at `blink`.
+    expect(tabledStageLit(points, 2, 0, 5)).toBe(`(${rpm}) >= (7500)`);
+    expect(tabledOverRev(points)).toBe(`(${rpm}) >= (7800)`);
+  });
+
+  test('an entry reaches a profile as a gear-and-car override that composes over the derived ladder', () => {
+    // Proven by building with a stubbed table rather than by shipping a car, so that the mechanism
+    // is covered while the shipped table stays honestly empty.
+    const model = 'examplecar';
+    SHIFT_TABLE[model] = { name: 'Example', source: 'test', gears: { '3': { first: 6000, shift: 7000, last: 7500, blink: 7800 } } };
+    try {
+      const text = leds.serializeProfile(rpmStripProfile(shapeById('4-14-4')!, stableGuid('t/tabled')));
+      expect(text).toContain('Example, gear 3');
+      expect(text).toContain("(isnull([DataCorePlugin.GameData.CarModel], '')) = ('examplecar')");
+      expect(text).toContain('(isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) = (3)');
+      expect(text).toContain('(7500)');
+      // It blanks what is under it, so the derived ladder does not show through the measured one.
+      expect(text).toContain('"ClearBackgroundWhenActive": true');
+    } finally {
+      delete SHIFT_TABLE[model];
+    }
+    // ...and with the table empty again, nothing of it remains.
+    expect(leds.serializeProfile(rpmStripProfile(shapeById('4-14-4')!, stableGuid('t/empty')))).not.toContain('examplecar');
   });
 });

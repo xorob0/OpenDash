@@ -34,6 +34,7 @@ import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './screens/index.ts';
 import { ALL_SHAPES, deviceLength, type StripShape } from './leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from './leds/rpmStrip.ts';
+import { validateShiftTable } from './leds/shiftPoints.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
 /** The repository root: this file lives in packages/dash/src. */
@@ -317,6 +318,11 @@ export function build(opts: BuildOptions = {}): BuildResult {
 
   // Staged with the packages and before anything is written, so that a profile that would not
   // light leaves the output directory untouched exactly as a bad package does.
+  // A contributed shift point that is not traceable or not ordered fails here, before anything is
+  // written, rather than putting a shift light in the wrong place on somebody's rig.
+  const tableProblems = validateShiftTable();
+  if (tableProblems.length > 0) throw new BuildError(`data/shift-points.json has ${tableProblems.length} problem(s):\n${tableProblems.join('\n')}`);
+
   const stagedProfiles: { shape: StripShape; profile: leds.LedProfile; warnings: ValidationIssue[] }[] = [];
   for (const shape of ledProfiles) {
     const profile = rpmStripProfile(shape, stableGuid(`openDash/leds/${shape.id}`));

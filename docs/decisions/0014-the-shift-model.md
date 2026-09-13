@@ -104,12 +104,10 @@ RPMs, against iRacing's numeric `Telemetry.Gear` rather than `[Gear]`, which is 
 that does not publish a gear count keeps flashing exactly as before, because the test requires a
 count above zero.
 
-This is where a hand-measured table would beat the mirror, and it is worth saying so plainly: in a
-car whose power band moves with the ratio, the useful upshift is not the same in second as in
-fifth, and Daniel Newman Racing measures shift points per gear for six hundred cars. openDash does
-not, and will not. `CarSettings_CurrentGearRedLineRPM` and SimHub's learned
-`GearSettings[].UpshiftRpm` table are available if that judgement is ever reversed, and the answer
-would be SimHub's table rather than one of ours.
+This is where a hand-measured table beats the mirror: in a car whose power band moves with the
+ratio, the useful upshift is not the same in second as in fifth, and Daniel Newman Racing measures
+shift points per gear for six hundred cars. **This record first said openDash "does not, and will
+not" carry such a table. That was reversed the same day — see the amendment at the end.**
 
 **Thresholds are mirrored; colour never is.** The sim publishes when a light comes on and no
 colour sequence at all — there is none anywhere in the session string. So a mirror is a mirror of
@@ -179,3 +177,52 @@ is recorded here rather than quietly fixed.
 **Whether the flash should move to `Shift` rather than `Blink`.** `Blink` is over-rev, which is
 late; a driver who wants to be told to shift is told by the second band beginning. Both are
 defensible and the current choice mirrors what the sim itself does.
+
+
+---
+
+## Amended, 2026-09-13: a per-gear table, overriding a ladder that stays derived by default
+
+The paragraph above refused a per-car table outright. That is reversed, and it is recorded here
+rather than in a new record because it changes one clause of this one.
+
+**What changed.** openDash now carries `data/shift-points.json`, a per-car, per-gear table that
+**overrides** the derived ladder where an entry exists. Everything else stands: a car not in the
+table gets iRacing's own four RPMs exactly as before, and the table is empty on the day it ships.
+
+**Why the refusal did not survive.** The investigation behind it was incomplete in one direction. It
+established that the sim publishes the car's ladder, which is true. It did not establish that the
+sim publishes **nothing per gear**, which
+[simhub-led-sources.md](../research/simhub-led-sources.md) has since shown:
+
+* iRacing's `DriverInfo` block has seventeen `DriverCar*` keys and not one is per gear. There is no
+  `DriverCarGearRatio`, and the four `DriverCarSL*` values have no per-gear variant.
+* SimHub's `GearSettings[].UpshiftRpm` is unreachable from an expression — its parent `CarSettings`
+  carries `[DoNotExpose]`, and `DeclareObject` skips a `List<>` regardless — and on iRacing it is
+  never learned: `CarManager.EnsureCar` seeds every gear from `GD_Redline()`, which the iRacing
+  reader does not override, so every gear gets the same estimate.
+* `CarSettings_CurrentGearRedLineRPM` is, with stock settings, `DriverCarRedLine * 95/100` — one
+  number, identical in every gear.
+
+So "derive it rather than table it" was never an option. The choice was a table or nothing, and
+nothing means a car whose shift point moves with the ratio is wrong in most gears.
+
+**The precedence, highest first.** The table for this car and gear; then SimHub's own per-gear
+redline when the user has turned it on by hand (`CarSettings_RPMRedLinePerGearOverride` is 1, and
+`CarSettings_CurrentGearRedLineRPM` then does vary with the gear — their numbers, not ours); then
+the car's own published ladder; then SimHub's bands. A profile carries one conditional group per car
+and gear the table covers, composed over the derived ladder, so an empty table costs nothing at all:
+no entries, no containers, no change to any profile.
+
+**The table ships empty, and that is the honest state rather than an unfinished one.** openDash does
+not carry measurements it has not made. A competitor's tables are theirs and will not be copied, and
+inventing numbers would put a shift light in the wrong place with total confidence, which is worse
+than not having one. What ships is the mechanism, the schema, the validator and the contribution
+rules: an entry needs a traceable `source` and needs `first <= shift <= last <= blink`, and
+`bun run check` fails if it does not. A measured car is then a reviewable pull request.
+
+**What this costs.** The thing the original refusal protected — that a car released this morning
+mirrors correctly with no table, no release and nobody measuring anything — is still true for every
+car not in the table, which is every car today. What is given up is the claim that openDash *never*
+needs one. It does, for a minority of cars, and the table is bounded by what somebody has actually
+driven and written down.
