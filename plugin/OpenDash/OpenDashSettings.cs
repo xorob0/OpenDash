@@ -111,7 +111,8 @@ namespace OpenDashPlugin
         // --- The lights ------------------------------------------------------------------------
         //
         // Brightness and night mode are the rig's, not this box's: a driver who owns a flag box
-        // probably owns other lights. The rest are the flag box's own. ADR 0013.
+        // probably owns other lights. Then the flag box's own, then the two an RGB strip reads.
+        // ADR 0013.
 
         public int LightsBrightness { get; set; } = Contract.DefaultLightsBrightness;
 
@@ -144,6 +145,15 @@ namespace OpenDashPlugin
         public bool[] FlagBoxWarnings { get; set; } = Contract.DefaultFlagBoxOn();
 
         public string[] FlagBoxSide { get; set; } = Contract.DefaultFlagBoxSides();
+
+        /// <summary>What the middle of an RGB strip shows: "rpm", "rpmOnly", "brake", "throttleBrake" or
+        /// "fuel". One value for the rig and not an array, because openDash generates one profile per
+        /// strip shape rather than per device and every shape reads this one name.</summary>
+        public string LedCentre { get; set; } = Contract.DefaultLedCentre;
+
+        /// <summary>How the rev ladder fills a strip: "leftToRight", "meetInMiddle" or "f1". The look
+        /// only; the thresholds are the car's own whichever is set (ADR 0014).</summary>
+        public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
 
         /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
@@ -179,6 +189,11 @@ namespace OpenDashPlugin
             FlagBoxPit = Resize(FlagBoxPit, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxSpotter = Resize(FlagBoxSpotter, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
+            // No array to repair: the strips carry one value each for the whole rig. A profile reads
+            // both through isnull() with its own default, so an unrecognised spelling has to become a
+            // legal one here rather than reaching the strip as itself.
+            LedCentre = Contract.NormaliseChoice(LedCentre, Contract.LedCentres, Contract.DefaultLedCentre);
+            LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
         }
 
         private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)
@@ -619,6 +634,25 @@ namespace OpenDashPlugin
             Zones = other.Zones == null ? null : (int[])other.Zones.Clone();
             WideZone = other.WideZone;
             WebViewUrl = other.WebViewUrl;
+            // The lights, which were not carried at all before the strips were added: a copy that drops
+            // them hands the panel a rig with the brightness back at 100 and matrix 1 back on flags.
+            // The per-matrix arrays are cloned for the same reason the slots above are.
+            LightsBrightness = other.LightsBrightness;
+            LightsNightBrightness = other.LightsNightBrightness;
+            LightsNightMode = other.LightsNightMode;
+            FlagBoxCriticalOnly = other.FlagBoxCriticalOnly;
+            FlagBoxGear = other.FlagBoxGear;
+            FlagBoxLowFuelLaps = other.FlagBoxLowFuelLaps;
+            FlagBoxOilTemp = other.FlagBoxOilTemp;
+            FlagBoxWaterTemp = other.FlagBoxWaterTemp;
+            FlagBoxRest = other.FlagBoxRest == null ? null : (string[])other.FlagBoxRest.Clone();
+            FlagBoxFlags = other.FlagBoxFlags == null ? null : (bool[])other.FlagBoxFlags.Clone();
+            FlagBoxPit = other.FlagBoxPit == null ? null : (bool[])other.FlagBoxPit.Clone();
+            FlagBoxSpotter = other.FlagBoxSpotter == null ? null : (bool[])other.FlagBoxSpotter.Clone();
+            FlagBoxWarnings = other.FlagBoxWarnings == null ? null : (bool[])other.FlagBoxWarnings.Clone();
+            FlagBoxSide = other.FlagBoxSide == null ? null : (string[])other.FlagBoxSide.Clone();
+            LedCentre = other.LedCentre;
+            LedRpmStyle = other.LedRpmStyle;
             // Cloned rather than shared, so that the panel writing into its copy does not reach back
             // into the settings the plugin is reading from.
             Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);

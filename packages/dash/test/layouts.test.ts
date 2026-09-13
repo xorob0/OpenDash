@@ -686,7 +686,7 @@ const ROUND_ROWS: RoundRow[] = [
 ];
 
 /** The items of a round face's hero, in the order the main screen draws them (the ring last, so it is the outermost element). */
-const ROUND_HERO_NAMES = ['revArc.shiftLights', 'revArc.rpmBar', 'hero.gear', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green'];
+const ROUND_HERO_NAMES = ['revArc.shiftLights', 'revArc.shiftLightsSimHub', 'revArc.rpmBar', 'hero.gear', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green'];
 
 describe('the round faces, row by row of the spec table', () => {
   test('the table covers every round layout, each once', () => {
@@ -725,7 +725,7 @@ describe('the round faces, row by row of the spec table', () => {
       test('every rev arc segment centre lies on its circle within 1 px and is rotated by its angle', () => {
         const { rev } = row.hero;
         if (rev.kind !== 'revArc') throw new Error('rev arc');
-        for (const layer of ['revArc.shiftLights', 'revArc.rpmBar']) {
+        for (const layer of ['revArc.shiftLights', 'revArc.shiftLightsSimHub', 'revArc.rpmBar']) {
           const segments = layerNamed(items, layer).children;
           expect(segments).toHaveLength(15);
           segments.forEach((s, k) => {
@@ -813,9 +813,9 @@ describe('the round faces, row by row of the spec table', () => {
       });
 
       test('the rev arc ends above the slots and, with the chequered checks, stays clear of the slots, the pit limiter and the hero text (rotated footprints)', () => {
-        const segments = [...layerNamed(items, 'revArc.shiftLights').children, ...layerNamed(items, 'revArc.rpmBar').children].filter(hasRect);
+        const segments = [...layerNamed(items, 'revArc.shiftLights').children, ...layerNamed(items, 'revArc.shiftLightsSimHub').children, ...layerNamed(items, 'revArc.rpmBar').children].filter(hasRect);
         const checks = layerNamed(items, 'flag.chequered').children.filter(hasRect);
-        expect(segments).toHaveLength(30);
+        expect(segments).toHaveLength(45);
         expect(checks).toHaveLength(CHEQUER_COUNT);
         const heroBoxes = ['hero.gear', 'pitLimiter.band'].map((name) => {
           const item = [...walkItems(items)].find((i) => i.name === name);

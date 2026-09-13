@@ -894,6 +894,80 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void Normalise_repairs_a_strip_setting_it_does_not_recognise()
+        {
+            // A profile reads both through isnull() with its own default, so a value that reaches the
+            // strip unrecognised lights nothing at all: every gate inside compares against a spelling.
+            var settings = new OpenDashSettings { LedCentre = "sparkles", LedRpmStyle = null };
+            settings.Normalise();
+            Assert.Equal(Contract.DefaultLedCentre, settings.LedCentre);
+            Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedRpmStyle);
+
+            // Canonical casing, the way every other choice is normalised.
+            var typed = new OpenDashSettings { LedCentre = " ThrottleBrake ", LedRpmStyle = "MEETINMIDDLE" };
+            typed.Normalise();
+            Assert.Equal("throttleBrake", typed.LedCentre);
+            Assert.Equal("meetInMiddle", typed.LedRpmStyle);
+        }
+
+        [Fact]
+        public void CopyFrom_carries_the_lights()
+        {
+            // It carried none of them before the strips were added: the panel's copy handed back a rig
+            // with the brightness at 100 and matrix 1 back on flags, whatever the driver had set.
+            var source = new OpenDashSettings
+            {
+                LightsBrightness = 60,
+                LightsNightBrightness = 10,
+                LightsNightMode = true,
+                FlagBoxCriticalOnly = true,
+                FlagBoxGear = false,
+                FlagBoxLowFuelLaps = 5,
+                FlagBoxOilTemp = 130,
+                FlagBoxWaterTemp = 115,
+                LedCentre = "fuel",
+                LedRpmStyle = "f1",
+            };
+            source.Normalise();
+            source.FlagBoxRest[1] = "gear";
+            source.FlagBoxSide[0] = "left";
+            source.FlagBoxFlags[3] = true;
+
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(source);
+            Assert.Equal(60, copy.LightsBrightness);
+            Assert.Equal(10, copy.LightsNightBrightness);
+            Assert.True(copy.LightsNightMode);
+            Assert.True(copy.FlagBoxCriticalOnly);
+            Assert.False(copy.FlagBoxGear);
+            Assert.Equal(5, copy.FlagBoxLowFuelLaps);
+            Assert.Equal(130, copy.FlagBoxOilTemp);
+            Assert.Equal(115, copy.FlagBoxWaterTemp);
+            Assert.Equal("gear", copy.MatrixRest(2));
+            Assert.Equal("left", copy.MatrixSide(1));
+            Assert.True(copy.MatrixFlags(4));
+            Assert.Equal("fuel", copy.LedCentre);
+            Assert.Equal("f1", copy.LedRpmStyle);
+
+            // A clone, not the same array: editing one settings object must not edit the other.
+            copy.FlagBoxRest[1] = "dark";
+            Assert.Equal("gear", source.MatrixRest(2));
+        }
+
+        [Fact]
+        public void A_settings_file_written_before_the_strips_existed_comes_back_with_them_defaulted()
+        {
+            // The strips shipped their profiles before the plugin had either name, so every file
+            // written until now is one of these.
+            var json = "{\"LightsBrightness\":80}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+            Assert.Equal(80, settings.LightsBrightness);
+            Assert.Equal(Contract.DefaultLedCentre, settings.LedCentre);
+            Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedRpmStyle);
+        }
+
+        [Fact]
         public void The_defaults_are_a_working_single_box_setup()
         {
             var settings = new OpenDashSettings();

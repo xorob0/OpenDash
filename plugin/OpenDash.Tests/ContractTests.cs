@@ -66,8 +66,15 @@ namespace OpenDashPlugin.Tests
             // glance), twenty-one companion modules, four pit wall zones, the wide zone, the URL,
             // and the flag box.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
-            // Eight global flag box settings and five per matrix, the way every face carries its own group.
-            Assert.Equal(4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 6, names.Count);
+            // Eight global flag box settings and six per matrix, the way every face carries its own
+            // group, and then the two the strips read.
+            Assert.Equal(
+                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 6 + Contract.LedPropertyNames().Count(),
+                names.Count);
+            // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
+            // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
+            // LedRpmStyle were declared by one side only.
+            Assert.Equal(246, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -216,6 +223,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.SessionProgressModes, ListOf(source, "SESSION_PROGRESS_MODES"));
             Assert.Contains("ShiftLights: " + Contract.DefaultShiftLights.ToString().ToLowerInvariant(), source);
             Assert.Equal(Contract.RevBarModes, ListOf(source, "REV_BAR_MODES"));
+            Assert.Equal(Contract.LedCentres, ListOf(source, "LED_CENTRES"));
+            Assert.Equal(Contract.LedRpmStyles, ListOf(source, "LED_RPM_STYLES"));
+            Assert.Contains("LedCentre: '" + Contract.DefaultLedCentre + "'", source);
+            Assert.Contains("LedRpmStyle: '" + Contract.DefaultLedRpmStyle + "'", source);
             Assert.Contains("RevBar: '" + Contract.DefaultRevBar + "'", source);
             Assert.Contains("PositionMode: '" + Contract.DefaultPositionMode + "'", source);
             Assert.Contains("DeltaReference: '" + Contract.DefaultDeltaReference + "'", source);
@@ -339,9 +350,12 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_flag_box_is_declared_last_and_clamps_its_brightness()
         {
-            // Last because it is the one artefact the plugin does not install (ADR 0013); declared at
-            // all because a profile reads it, and an undeclared read fails the dash build.
-            Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Last());
+            // After the screens, because the lights are the artefacts the plugin does not install
+            // (ADR 0013); declared at all because a profile reads them, and an undeclared read fails
+            // the dash build. The strips follow the matrices, so the flag box's last name is the last
+            // before them rather than the last of all.
+            Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Except(Contract.LedPropertyNames()).Last());
+            Assert.Equal("LedRpmStyle", Contract.PropertyNames().Last());
             Assert.True(Contract.DefaultFlagBoxGear);
             // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
             Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
@@ -374,6 +388,65 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, Contract.NormaliseBrightness(-5));
             Assert.Equal(100, Contract.NormaliseBrightness(101));
             Assert.Equal(60, Contract.NormaliseBrightness(60));
+        }
+
+        [Fact]
+        public void The_strips_declare_the_two_names_every_generated_profile_reads()
+        {
+            // These two were the gap: contract.ts declared them, nineteen generated .ledsprofile files
+            // read them through isnull(), and the plugin had neither constant, delegate nor control, so
+            // every strip could only ever draw its defaults. Both suites were green throughout, which
+            // is why The_two_sides_declare_the_same_properties() exists below.
+            Assert.Equal(new[] { "LedCentre", "LedRpmStyle" }, Contract.LedPropertyNames());
+            Assert.Contains(Contract.LedCentre, Contract.LightsPropertyNames());
+            Assert.Contains(Contract.LedRpmStyle, Contract.LightsPropertyNames());
+            // A rig setting rather than a per-device group, unlike a matrix: openDash generates one
+            // profile per strip shape, and every shape reads the same two names.
+            Assert.DoesNotContain(Contract.LedPropertyNames(), n => n.Contains("1") || n.Contains("2"));
+
+            Assert.Equal(new[] { "rpm", "rpmOnly", "brake", "throttleBrake", "fuel" }, Contract.LedCentres);
+            Assert.Equal(new[] { "leftToRight", "meetInMiddle", "f1" }, Contract.LedRpmStyles);
+            // The defaults are members of their own sets, which is what makes an unrecognised value
+            // safe to fall back from.
+            Assert.Contains(Contract.DefaultLedCentre, Contract.LedCentres);
+            Assert.Contains(Contract.DefaultLedRpmStyle, Contract.LedRpmStyles);
+            Assert.Equal("rpm", Contract.DefaultLedCentre);
+            Assert.Equal("leftToRight", Contract.DefaultLedRpmStyle);
+            Assert.Equal("rpm", Contract.NormaliseChoice("sparkles", Contract.LedCentres, Contract.DefaultLedCentre));
+            Assert.Equal("f1", Contract.NormaliseChoice(" F1 ", Contract.LedRpmStyles, Contract.DefaultLedRpmStyle));
+        }
+
+        [Fact]
+        public void The_two_sides_declare_the_same_properties()
+        {
+            // The gap this closes: contract.ts and Contract.cs each build the list for themselves, and
+            // nothing compared the two, so a name could be added on one side alone and both suites stay
+            // green -- which is exactly what happened to LedCentre and LedRpmStyle. The pinned file is
+            // the third party they are both measured against; contract.test.ts checks the TypeScript
+            // against the same file, in order.
+            //
+            // By set and not in order. The two sides genuinely emit a face's twenty-one names in
+            // different orders -- contract.ts groups them zone by zone, Contract.cs groups them by
+            // property across the zones -- and that predates this test and is not settled by it. The
+            // orders that do matter are asserted by index elsewhere in this file.
+            var path = RepoPaths.DeclaredProperties();
+            // Not skipped when it is missing, unlike the tests that read the dash package's own source:
+            // a pin nobody can find is the state this test was written to end.
+            Assert.True(File.Exists(path), "declared-properties.txt not found at " + path);
+            var pinned = File.ReadAllLines(path)
+                .Select(line => line.Trim())
+                .Where(line => line.Length > 0 && !line.StartsWith("#", StringComparison.Ordinal))
+                .ToList();
+            var declared = Contract.PropertyNames().Select(name => Contract.Prefix + "." + name).ToList();
+
+            Assert.Equal(pinned.Count, pinned.Distinct().Count());
+            Assert.Equal(declared.Count, declared.Distinct().Count());
+            // Named rather than only counted, so the failure says which name moved.
+            Assert.Empty(declared.Except(pinned));
+            Assert.Empty(pinned.Except(declared));
+            Assert.Equal(pinned.Count, declared.Count);
+            Assert.Contains("OpenDash.LedCentre", declared);
+            Assert.Contains("OpenDash.LedRpmStyle", declared);
         }
 
         [Fact]

@@ -16,11 +16,80 @@ namespace OpenDashPlugin.Tests
         private static Assembly Self => typeof(FlagBoxProfileTests).Assembly;
 
         [Fact]
-        public void FindsTheEmbeddedProfile()
+        public void FindsTheEmbeddedProfileAmongTheOtherLightingProfiles()
         {
+            // The pin. A release embeds nineteen RPM strips beside the one matrix profile and SimHub
+            // gives both families the same extension, so ResourceNames is a census of two different
+            // kinds of file and its first entry means nothing. This assembly is arranged the same way:
+            // "openDash 0-10-0.ledsprofile" sorts ahead of the flag box ('0' is 0x30, 'F' is 0x46).
             var names = FlagBoxProfile.ResourceNames(Self);
-            Assert.Single(names);
-            Assert.EndsWith("openDash Flag box.ledsprofile", names[0], StringComparison.Ordinal);
+            Assert.Equal(2, names.Count);
+            Assert.EndsWith("openDash 0-10-0.ledsprofile", names[0], StringComparison.Ordinal);
+
+            // Taking names[0] would take the strip. Taking it by name takes the flag box.
+            var resource = FlagBoxProfile.ResourceName(Self);
+            Assert.EndsWith(FlagBoxProfile.FileName, resource, StringComparison.Ordinal);
+            Assert.NotEqual(names[0], resource);
+        }
+
+        [Fact]
+        public void AnRpmStripIsNeverMistakenForTheFlagBox()
+        {
+            // What the ordinal-first bug actually did: the plugin would deserialise a ten-LED strip
+            // as an RGBMatrixProfile and push it into SimHub's matrix profile collection. The name
+            // written out and the Name inside it both have to be the matrix profile's.
+            using (var root = new TempDir())
+            {
+                var result = FlagBoxProfile.Extract(root.Path, Self);
+
+                Assert.Equal(FlagBoxStatus.Extracted, result.Status);
+                Assert.Equal(FlagBoxProfile.FileName, Path.GetFileName(result.Path));
+                Assert.Equal(FlagBoxProfile.ProfileName, result.ProfileName);
+                Assert.Equal(FlagBoxProfile.ProfileName, FlagBoxProfile.ProfileNameOf(result.Json));
+                // And nothing else came out with it: the strips are embedded to be offered, not extracted.
+                Assert.Equal(new[] { FlagBoxProfile.FileName }, Directory.GetFiles(FlagBoxProfile.FolderPath(root.Path)).Select(Path.GetFileName).ToArray());
+            }
+        }
+
+        [Fact]
+        public void TheNameIsTheDiscriminatorAndTheExtensionIsNot()
+        {
+            // FileName is the whole of the identity, and it is the same string on both sides of the
+            // build: FLAG_BOX_PROFILE_NAME in packages/dash/src/leds/profile.ts writes the file, this
+            // reads it back. An assembly with profiles but not that one has no flag box, which is a
+            // different answer from an assembly with no profiles at all and a much better one than
+            // whichever profile happened to sort first.
+            Assert.Equal("openDash Flag box.ledsprofile", FlagBoxProfile.FileName);
+            Assert.Equal(FlagBoxProfile.ProfileName + FlagBoxProfile.ProfileExtension, FlagBoxProfile.FileName);
+            Assert.Null(FlagBoxProfile.ResourceName(typeof(string).Assembly));
+        }
+
+        [Fact]
+        public void TheSelectionIsBySpellingAndNotByOrder()
+        {
+            const string prefix = "OpenDashPlugin.Resources.";
+            // Every shape of list a release can hand it, with the flag box never first.
+            var release = new[]
+            {
+                prefix + "openDash 0-10-0.ledsprofile",
+                prefix + "openDash 4-14-4-reversed.ledsprofile",
+                prefix + "openDash Flag box.ledsprofile",
+                prefix + "openDash brow-25.ledsprofile",
+            };
+            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(release));
+            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(Enumerable.Reverse(release)));
+
+            // Strips only: no flag box, rather than the nearest thing to one.
+            Assert.Null(FlagBoxProfile.SelectResource(new[] { prefix + "openDash 0-10-0.ledsprofile", prefix + "openDash brow-9.ledsprofile" }));
+            Assert.Null(FlagBoxProfile.SelectResource(new string[0]));
+
+            // A case-only variant is taken when it is all there is, because copying the built file
+            // over an older "openDash flag box.ledsprofile" on Windows replaces the bytes and keeps
+            // the old casing; it loses to the exact spelling whenever both are present, whichever
+            // way round the list holds them.
+            var lower = prefix + "openDash flag box.ledsprofile";
+            Assert.Equal(lower, FlagBoxProfile.SelectResource(new[] { lower }));
+            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(new[] { lower, prefix + "openDash Flag box.ledsprofile" }));
         }
 
         [Fact]

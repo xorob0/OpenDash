@@ -990,7 +990,60 @@ namespace OpenDashPlugin
                 Ui.Caption("SimHub composes up to four matrix contents. Matrix 1 does everything by default; switch on a second only if you own a second box.", 846),
             };
             foreach (var matrix in Contract.FlagBoxMatrices) rows.Add(BuildMatrixRow(matrix));
+            foreach (var row in BuildStripRows()) rows.Add(row);
             return Ui.Section("Lights", rows.ToArray());
+        }
+
+        /// <summary>
+        /// The RGB strips: the two settings every generated .ledsprofile reads.
+        ///
+        /// No group per device, unlike the matrices. openDash builds one profile per strip shape rather
+        /// than per box, so the thing a driver picks is the profile; these two then say what whichever
+        /// profile they picked shows. Without them the strips are stuck on their defaults, because a
+        /// profile reads them through isnull() and nothing else writes them.
+        /// </summary>
+        private IEnumerable<UIElement> BuildStripRows()
+        {
+            // A drop-down and not a segmented bar: five options is past the two or three Segmented.cs is
+            // drawn for, and a ComboBox is the panel's control for a choice from a list.
+            var centre = BuildChoice(
+                Contract.LedCentres,
+                new[] { "RPM", "RPM only", "Brake", "Throttle and brake", "Fuel" },
+                Settings.LedCentre,
+                220,
+                value => { Settings.LedCentre = value; plugin.SaveSettings(); });
+            var style = BuildSegmented(Contract.LedRpmStyles, new[] { "Left to right", "Meet in middle", "F1" }, Settings.LedRpmStyle, value =>
+            {
+                Settings.LedRpmStyle = value;
+                plugin.SaveSettings();
+            });
+            yield return Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip, then these two decide what it shows.", 846);
+            yield return Ui.Row("Strip centre", "What the middle of the strip shows. RPM keeps the brake on the sides; RPM only leaves them dark.", centre);
+            yield return Ui.Row("Rev style", "How the ladder fills. Meet in middle works inwards from both ends; F1 is a formula wheel's colours, and flashes whole.", style);
+        }
+
+        /// <summary>One value of a value set, as a drop-down: the control for a list longer than the two
+        /// or three options Segmented.cs is drawn for. The labels are positional, so values[i] is what
+        /// labels[i] names.</summary>
+        private static ComboBox BuildChoice(string[] values, string[] labels, string selected, double width, Action<string> changed)
+        {
+            var box = new ComboBox
+            {
+                Width = width,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right,
+            };
+            foreach (var label in labels) box.Items.Add(label);
+            var index = Array.IndexOf(values, selected);
+            box.SelectedIndex = index >= 0 ? index : 0;
+            box.SelectionChanged += (sender, args) =>
+            {
+                if (box.SelectedIndex < 0 || box.SelectedIndex >= values.Length) return;
+                changed(values[box.SelectedIndex]);
+            };
+            return box;
         }
 
         /// <summary>One matrix: what it shows at rest, what may take it over, and which side it is on.</summary>

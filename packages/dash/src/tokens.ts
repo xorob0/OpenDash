@@ -108,6 +108,14 @@ export const ds = {
       label: hex('color.text.label'),
       dim: hex('color.text.dim'),
     },
+    // The semantic scale. The face reaches these through `purpose`, which is the right door for a
+    // readout; the LED profiles need them directly, because a strip has no readouts to name a
+    // colour after — a brake bar is the danger colour because it is a brake bar.
+    good: { primary: hex('color.good.primary') },
+    caution: { primary: hex('color.caution.primary') },
+    danger: { primary: hex('color.danger.primary') },
+    info: { primary: hex('color.info.primary') },
+    neutral: { primary: hex('color.neutral.primary') },
   },
   purpose: {
     delta: { faster: hex('purpose.delta.faster'), slower: hex('purpose.delta.slower'), zero: hex('purpose.delta.zero') },
@@ -146,6 +154,15 @@ export const ds = {
       debrisStripe: hex('purpose.flag.debris.stripe'),
     },
     pitLimiter: hex('purpose.pitLimiter'),
+    // The alert colours the face already uses, reached directly by the LED profiles for the same
+    // reason the semantic scale is: a strip has no readouts to name a colour after.
+    alert: {
+      penalty: hex('purpose.alert.penalty'),
+      incident: hex('purpose.alert.incident'),
+      power: hex('purpose.alert.power'),
+      safetyCar: hex('purpose.alert.safetyCar'),
+      p2p: hex('purpose.alert.p2p'),
+    },
     /**
      * A licence class is an ordered scale, so it is drawn as an ordered weight out of the greys
      * rather than in iRacing's five colours: every one of those steps is a state colour here, and

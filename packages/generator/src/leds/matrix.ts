@@ -17,12 +17,12 @@
  *     true, and the opposite assumption is the natural one to make.
  */
 
-import { isHex, normaliseHex } from './color.ts';
-import { stableGuid } from './ids.ts';
-import type { Formula, Hex } from './model.ts';
-import { unknownFunctions } from './ncalcFunctions.ts';
-import { buildFormulaObject, type JsonObject, type JsonValue } from './serialize.ts';
-import { propertyReferences, type ValidationIssue, type ValidationResult } from './validate.ts';
+import { isHex, normaliseHex } from '../color.ts';
+import { stableGuid } from '../ids.ts';
+import type { Formula, Hex } from '../model.ts';
+import { unknownFunctions } from '../ncalcFunctions.ts';
+import { buildFormulaObject, type JsonObject, type JsonValue } from '../serialize.ts';
+import { propertyReferences, type ValidationIssue, type ValidationResult } from '../validate.ts';
 
 export const PROFILE_EXTENSION = '.ledsprofile';
 

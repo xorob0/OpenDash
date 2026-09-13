@@ -21,18 +21,24 @@ import {
   parseArgs,
   readVersion,
   validateOrThrow,
+  validateProfileOrThrow,
+  validateStripProfileOrThrow,
   type BuildResult,
 } from '../src/build.ts';
 import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
 import { fontsForPanel, needsRename, renameFamily, renamedFileName } from '../src/design/fontFiles.ts';
 import { FONT_LICENCE } from '../src/design/notices.ts';
-import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, listFiles, PACKAGE_EXTENSION, readZip } from '../src/generator.ts';
+import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, leds, listFiles, PACKAGE_EXTENSION, readZip, stableGuid } from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
 import { SCREEN_PACKAGES } from '../src/screens/index.ts';
 import { ZONE_FACES, type ZoneLayout } from '../src/zones/index.ts';
 import { CARDS_FILE } from '../src/slots.ts';
+import { ALL_SHAPES, deviceLength } from '../src/leds/strip.ts';
+import { rpmStripFileName, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
+import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { ds } from '../src/tokens.ts';
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 interface JsonItem {
@@ -49,9 +55,9 @@ beforeAll(() => {
   root = mkdtempSync(join(tmpdir(), 'opendash-e2e-'));
   // The faces and the second screens are built into separate directories so each block can assert
   // on exactly what its own build wrote.
-  widget = build({ out: join(root, 'widget'), screens: [], log: (line) => log.push(line) });
-  inline = build({ out: join(root, 'inline'), strategy: 'inline', screens: [], zoneFaces: [], log: () => {} });
-  second = build({ out: join(root, 'second'), layouts: [], zoneFaces: [], log: () => {} });
+  widget = build({ out: join(root, 'widget'), screens: [], stripShapes: [], log: (line) => log.push(line) });
+  inline = build({ out: join(root, 'inline'), strategy: 'inline', screens: [], zoneFaces: [], stripShapes: [], log: () => {} });
+  second = build({ out: join(root, 'second'), layouts: [], zoneFaces: [], stripShapes: [], log: () => {} });
 });
 afterAll(() => {
   rmSync(root, { recursive: true, force: true });
@@ -152,8 +158,9 @@ describe('widget build on disk', () => {
     // A zone face records no slots and no rung. A zone is not a slot, and reporting one as twelve
     // would tell the plugin to draw twelve dropdowns for a face that has four zones.
     const zoneEntry = (f: ZoneLayout): JsonItem => ({ folder: f.folder, kind: 'dash', width: f.width, height: f.height, slots: 0, file: zipName(f.folder) });
-    // The profile is listed apart from the packages because it is not one: the plugin extracts it
-    // and the user imports it, which is ADR 0013.
+    // A profile is listed apart from the packages because it is not one: the plugin extracts it and
+    // the user imports it, which is ADR 0013. This fixture builds no strips, so the flag box is the
+    // only profile in it.
     expect(manifest).toEqual({ schemaVersion: MANIFEST_SCHEMA_VERSION, version: readVersion(), simHubVersion: '9.12.6', packages: [...LAYOUTS.map(entry), ...ZONE_FACES.map(zoneEntry)], ledProfiles: [FLAG_BOX_FILE] });
     for (const face of ZONE_FACES) {
       const row = (manifest.packages as JsonItem[]).find((p) => p.folder === face.folder)!;
@@ -197,6 +204,8 @@ describe('widget build on disk', () => {
     ]);
     expect((manifest.packages as JsonItem[]).map((p) => p.folder).slice(10)).toEqual(ZONE_FACES.map((f) => f.folder));
     expect(manifest).toEqual(widget.manifest as unknown as JsonItem);
+    // `ledProfiles` is its own list rather than a package kind: a profile has no width, no height
+    // and no slots, and the user imports it rather than the plugin installing it. ADR 0013.
     expect(Object.keys(manifest)).toEqual(['schemaVersion', 'version', 'simHubVersion', 'packages', 'ledProfiles']);
     // First, because a reader that cannot read this shape should be able to say so before parsing
     // the rest of it.
@@ -314,7 +323,8 @@ describe('the emitted JSON', () => {
       }
       const rotated = items.filter((i) => 'Rotation' in i);
       // 14 rev segments per layer (the one at the top is not rotated) and 23 checks (the one at the top is not).
-      expect(rotated).toHaveLength(14 * 2 + 23);
+      // Three rev layers since ADR 0014: the car's own ladder, SimHub's bands, and the plain RPM bar.
+      expect(rotated).toHaveLength(14 * 3 + 23);
       for (const r of rotated) {
         const keys = Object.keys(r);
         expect(keys.indexOf('Rotation')).toBe(keys.indexOf('Height') + 1);
@@ -391,16 +401,78 @@ describe('inline strategy', () => {
 
 describe('reproducibility', () => {
   test('two builds produce byte-identical packages', () => {
-    const again = build({ out: join(root, 'again'), screens: [], log: () => {} });
+    const again = build({ out: join(root, 'again'), screens: [], stripShapes: [], log: () => {} });
     expect(again.packages).toHaveLength(widget.packages.length);
     again.packages.forEach((p, i) => expect(Buffer.compare(p.zipped.bytes, widget.packages[i]!.zipped.bytes)).toBe(0));
     expect(readFileSync(again.manifestPath, 'utf8')).toBe(readFileSync(widget.manifestPath, 'utf8'));
   });
 
   test('the second screens are reproducible too', () => {
-    const again = build({ out: join(root, 'againSecond'), layouts: [], zoneFaces: [], log: () => {} });
+    const again = build({ out: join(root, 'againSecond'), layouts: [], zoneFaces: [], stripShapes: [], log: () => {} });
     expect(again.packages).toHaveLength(second.packages.length);
     again.packages.forEach((p, i) => expect(Buffer.compare(p.zipped.bytes, second.packages[i]!.zipped.bytes)).toBe(0));
+  });
+});
+
+describe('LED profiles on disk', () => {
+  // The strips on their own, because every other fixture in this file passes stripShapes: [].
+  // A build of lights with no packages is legitimate: they are outputs in their own right.
+  let lit: BuildResult;
+  beforeAll(() => {
+    lit = build({ out: join(root, 'leds'), layouts: [], zoneFaces: [], screens: [], log: () => {} });
+  });
+
+  test('writes one .ledsprofile per strip shape, and nothing that looks like a package', () => {
+    expect(lit.stripProfiles.map((p) => p.shape!.id)).toEqual(ALL_SHAPES.map((s) => s.id));
+    expect(readdirSync(lit.out).sort()).toEqual(
+      [MANIFEST_FILE, PANEL_FONTS_DIR, FLAG_BOX_FILE, FLAG_BOX_SHEET_FILE, ...ALL_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`)].sort(),
+    );
+    // A profile is not a dashboard: no folder, no .djson, no zip.
+    expect(readdirSync(lit.out).filter((f) => f.endsWith('.simhubdash'))).toEqual([]);
+  });
+
+  test('the manifest lists every profile the build wrote, strips then the flag box', () => {
+    const manifest = readJson(lit.manifestPath) as unknown as { ledProfiles: string[]; packages: JsonItem[] };
+    expect(manifest.packages).toEqual([]);
+    expect(manifest.ledProfiles).toEqual([...ALL_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`), FLAG_BOX_FILE]);
+    // Every one of them is on disk under the name the manifest gives it.
+    for (const name of manifest.ledProfiles) expect({ name, there: existsSync(join(lit.out, name)) }).toMatchObject({ there: true });
+  });
+
+  test('every profile is the JSON SimHub reads, and every ContainerType is one it resolves', () => {
+    // Built with flagBox: false, so every profile here is a strip and has a shape.
+    for (const { shape: maybe, path: file } of lit.stripProfiles) {
+      const shape = maybe!;
+      const doc = JSON.parse(readFileSync(file, 'utf8')) as { Name: string; ProfileId: string; LedContainers: unknown[] };
+      expect(doc.Name).toBe(rpmStripProfileName(shape));
+      expect(doc.ProfileId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      const types: string[] = [];
+      const walk = (c: Record<string, unknown>): void => {
+        types.push(c.ContainerType as string);
+        for (const k of (c.LedContainers as Record<string, unknown>[]) ?? []) walk(k);
+      };
+      for (const c of doc.LedContainers as Record<string, unknown>[]) walk(c);
+      expect(types.length).toBeGreaterThan(0);
+      for (const t of types) expect({ shape: shape.id, type: t, known: leds.KNOWN_CONTAINER_TYPES.has(t) }).toMatchObject({ known: true });
+    }
+  });
+
+  test('the strip reads the same shift thresholds the rev bar does, so the two cannot disagree', () => {
+    const text = readFileSync(lit.stripProfiles.find((p) => p.shape?.id === '4-14-4')!.path, 'utf8');
+    // The one definition in src/shift.ts reaches both artefacts; if it ever forked, this is what says so.
+    for (const name of Object.values(SHIFT_RPM_PROPERTIES)) expect({ name, inProfile: text.includes(name) }).toMatchObject({ inProfile: true });
+    // ...and every colour on the strip is a token rather than a copy of one.
+    expect(text).toContain(ds.purpose.shift.stage1);
+    expect(text).toContain(ds.purpose.shift.stage3);
+  });
+
+  test('a profile whose effect runs off the end of the strip fails the build rather than going dark', () => {
+    // The LED half of the text-fit rule: nothing complains at runtime, the light is simply not there.
+    // A generated shape always fits itself — deviceLength is derived from it — so this is the gate
+    // the build puts every profile through, exercised with a profile that does overrun.
+    const over = { name: 'too long', profileId: stableGuid('test/leds/over'), containers: [{ kind: 'staticColor' as const, ledCount: 9, color: '#FFFFFF', startPosition: 10 }] };
+    expect(() => validateStripProfileOrThrow(over, 15)).toThrow(/off-strip/);
+    expect(validateStripProfileOrThrow({ ...over, containers: [{ kind: 'staticColor', ledCount: 6, color: '#FFFFFF', startPosition: 10 }] }, 15)).toEqual([]);
   });
 });
 
