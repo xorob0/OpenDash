@@ -28,7 +28,7 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zones$
 export function zoneScreen(page: PitWallZonePageMeta, kind: ZoneKind, size: Size): Screen {
   const pages = pagesOf(kind);
   const frame = rect(0, 0, size.width, size.height);
-  const { items: chrome, body } = zoneFrame(page.id, { frame, title: page.name, page: page.number + 1, pages: pages.length });
+  const { items: chrome, body } = zoneFrame(page.id, { frame, title: page.name, counter: { kind: 'static', page: page.number + 1, pages: pages.length } });
   const density = kind === 'wide' ? 'wide' : 'zone';
   const items: Item[] = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.` })];
   return pageScreen(page.id, items);
