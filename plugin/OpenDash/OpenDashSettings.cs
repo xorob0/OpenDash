@@ -96,16 +96,23 @@ namespace OpenDashPlugin
         /// <summary>Card number per slot, index 0 is slot 1. Always Contract.SlotCount long after Normalise().</summary>
         public int[] Slots { get; set; } = Contract.DefaultSlots();
 
-        /// <summary>Whether each companion module is enabled, index 0 is module 1. Always Modules.Count long after Normalise().</summary>
+        // --- Read from a settings file written before a screen was an instance ------------------
+        //
+        // These were the whole of the companion's and the pit wall's state when there could be one of
+        // each. Since ADR 0017 they live on the screen that has them (ScreenInstance), and these are
+        // read once by MigratedRig() and never written again. They keep their initialisers so that a
+        // migration finds the defaults rather than nulls.
+
+        /// <summary>Pre-rig companion rotation. Migrated onto the companion screen.</summary>
         public bool[] Modules { get; set; } = Contract.DefaultModules();
 
-        /// <summary>Standard zone page per pit wall zone, index 0 is zone A. Always four long after Normalise().</summary>
+        /// <summary>Pre-rig pit wall zones. Migrated onto the pit wall screen.</summary>
         public int[] Zones { get; set; } = Contract.PitWallDefaultZones();
 
-        /// <summary>Wide zone page of the pit wall tower page.</summary>
+        /// <summary>Pre-rig wide zone. Migrated onto the pit wall screen.</summary>
         public int WideZone { get; set; } = Contract.DefaultWideZonePage;
 
-        /// <summary>Address of the web view zone page; empty until the user sets one.</summary>
+        /// <summary>Pre-rig web view address. Migrated onto the pit wall screen.</summary>
         public string WebViewUrl { get; set; } = Contract.DefaultWebViewUrl;
 
         // --- The lights ------------------------------------------------------------------------
@@ -864,40 +871,6 @@ namespace OpenDashPlugin
 
         /// <summary>Zones of one face showing the same page as another, which the panel says and allows.</summary>
         public IReadOnlyList<FacePageClash> FaceClashes(Contract.FaceSize face) => FacePageClash.Find(Face(face));
-
-        /// <summary>Whether a companion module is enabled, 1-based. Safe to call before Normalise().</summary>
-        public bool Module(int module)
-        {
-            var meta = OpenDashPlugin.Modules.ByNumber(module);
-            if (meta == null) return false;
-            var index = module - 1;
-            if (Modules == null || index >= Modules.Length) return meta.Enabled;
-            return Modules[index];
-        }
-
-        public void SetModule(int module, bool enabled)
-        {
-            if (!OpenDashPlugin.Modules.IsValidNumber(module)) throw new ArgumentOutOfRangeException(nameof(module));
-            if (Modules == null || Modules.Length != OpenDashPlugin.Modules.Count) Normalise();
-            Modules[module - 1] = enabled;
-        }
-
-        /// <summary>Page shown in a pit wall zone, by its letter. Safe to call before Normalise().</summary>
-        public int Zone(string letter)
-        {
-            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            if (Zones == null || index >= Zones.Length) return Contract.PitWallDefaultZonePages[index];
-            return Contract.NormaliseZonePage(Zones[index], Contract.PitWallDefaultZonePages[index]);
-        }
-
-        public void SetZone(string letter, int page)
-        {
-            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            if (Zones == null || Zones.Length != Contract.PitWallZoneLetters.Length) Normalise();
-            Zones[index] = Contract.NormaliseZonePage(page, Contract.PitWallDefaultZonePages[index]);
-        }
 
         /// <summary>Card number shown in a slot, 1-based. Safe to call before Normalise().</summary>
         public int Slot(int slot)

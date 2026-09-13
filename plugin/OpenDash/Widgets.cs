@@ -331,6 +331,184 @@ namespace OpenDashPlugin
             return host;
         }
 
+        // Tabs, cards and groups
+        //
+        // XOR-125 names panel.tabs, control.tab and control.screenCard as tokens. They are not in
+        // design/tokens.json, and design/ is the author's rather than something a build writes into, so
+        // these compose from the tokens that do exist and docs/design/plugin.md records that the three
+        // are still owed. Nothing here invents a colour: every value is a Theme constant.
+
+        public const double TabHeight = 40;
+        public const double TabUnderline = 2;
+        public const double CardWidth = 168;
+        public const double CardHeight = 66;
+
+        /// <summary>
+        /// One tab. Selected carries the accent underline and the primary ink; the rest are secondary.
+        /// </summary>
+        /// <remarks>
+        /// A button rather than a ToggleButton in a group: SimHub's ToggleButton style is a switch
+        /// (Widgets' drop button hit the same thing), and what is wanted here is a label with a rule
+        /// under it.
+        /// </remarks>
+        public static Button Tab(string text, bool selected, Action clicked)
+        {
+            var label = Text(text, Theme.SizeBody, selected ? FontWeights.SemiBold : FontWeights.Normal,
+                selected ? Theme.TextPrimary : Theme.TextSecondary);
+            label.Margin = new Thickness(0, 0, 0, 8);
+            var underline = new Rectangle
+            {
+                Height = TabUnderline,
+                Fill = Brush(selected ? Theme.Accent : Theme.SurfaceBase),
+                VerticalAlignment = VerticalAlignment.Bottom,
+            };
+            var stack = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(underline, Dock.Bottom);
+            stack.Children.Add(underline);
+            stack.Children.Add(label);
+
+            var button = new Button
+            {
+                Content = stack,
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0, 10, 0, 0),
+                Margin = new Thickness(0, 0, 28, 0),
+                Height = TabHeight,
+                Cursor = Cursors.Hand,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+            };
+            button.Template = BareButtonTemplate();
+            button.Click += (sender, args) => clicked();
+            return button;
+        }
+
+        /// <summary>
+        /// A screen's card: the name, the size and the kind, with a dot when something is wrong.
+        /// </summary>
+        /// <remarks>
+        /// The card says what a rig is made of and nothing more. Everything about the screen -- the
+        /// folder, the namespace, the zones -- is in the pane below it, because a row of cards is read
+        /// at a glance and a card carrying four facts is not.
+        /// </remarks>
+        public static Button Card(string name, string size, string kind, bool selected, string dot, Action clicked)
+        {
+            var title = Text(name, Theme.SizeBody, FontWeights.SemiBold, Theme.TextPrimary);
+            title.TextTrimming = TextTrimming.CharacterEllipsis;
+            title.TextWrapping = TextWrapping.NoWrap;
+            var rows = VStack(2, title, Text(size, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary));
+            rows.VerticalAlignment = VerticalAlignment.Top;
+
+            var foot = kind == null
+                ? (UIElement)new Border()
+                : (dot == null ? (UIElement)Label(kind) : HStack(6, Dot(dot), Label(kind)));
+            var dock = new DockPanel { LastChildFill = false };
+            DockPanel.SetDock(rows, Dock.Top);
+            DockPanel.SetDock(foot, Dock.Bottom);
+            dock.Children.Add(rows);
+            dock.Children.Add(foot);
+
+            return CardShell(dock, selected, clicked, Brush(selected ? Theme.SurfaceRaised : Theme.SurfaceZone), Brush(selected ? Theme.Accent : Theme.Border));
+        }
+
+        /// <summary>The add card: the one card that is an action rather than a thing.</summary>
+        public static Button AddCard(Action clicked)
+        {
+            var plus = Text("+", 20, FontWeights.Light, Theme.Accent);
+            plus.HorizontalAlignment = HorizontalAlignment.Center;
+            var text = Label("Add a screen", Theme.TextSecondary);
+            text.HorizontalAlignment = HorizontalAlignment.Center;
+            var stack = VStack(4, plus, text);
+            stack.VerticalAlignment = VerticalAlignment.Center;
+            return CardShell(stack, false, clicked, System.Windows.Media.Brushes.Transparent, Brush(Theme.Border));
+        }
+
+        private static Button CardShell(UIElement content, bool selected, Action clicked, Brush background, Brush border)
+        {
+            var button = new Button
+            {
+                Width = CardWidth,
+                Height = CardHeight,
+                Margin = new Thickness(0, 0, 10, 10),
+                Padding = new Thickness(12, 10, 12, 10),
+                Background = background,
+                BorderBrush = border,
+                BorderThickness = new Thickness(1, 1, 1, selected ? 2 : 1),
+                Cursor = Cursors.Hand,
+                Content = content,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+            };
+            button.Template = CardTemplate();
+            button.Click += (sender, args) => clicked();
+            return button;
+        }
+
+        /// <summary>A border around the content and nothing else, as the drop button's template is: SimHub's
+        /// button styles paint a chrome these do not want.</summary>
+        private static ControlTemplate CardTemplate()
+        {
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+            border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+            border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
+            border.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            border.AppendChild(presenter);
+            return new ControlTemplate(typeof(Button)) { VisualTree = border };
+        }
+
+        private static ControlTemplate BareButtonTemplate()
+        {
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(FrameworkElement.MarginProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            return new ControlTemplate(typeof(Button)) { VisualTree = presenter };
+        }
+
+        /// <summary>
+        /// A group that opens and shuts, for settings that are kept but rarely wanted.
+        /// </summary>
+        /// <remarks>
+        /// Matrix 2 to 4 is four groups of six rows for hardware almost nobody owns. The rule the panel
+        /// follows is that such a setting is kept and moved out of the way, never dropped: somebody owns
+        /// two flag boxes and their rig has to be configurable.
+        /// </remarks>
+        public static FrameworkElement Collapsible(string title, string caption, bool open, Func<FrameworkElement> build)
+        {
+            var chevron = Icon(ChevronIcon, Theme.TextSecondary);
+            var head = HStack(8, chevron, Text(title, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary));
+            if (caption != null) head.Children.Add(Text(caption, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel));
+
+            var button = new Button
+            {
+                Content = head,
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0, 6, 0, 6),
+                Cursor = Cursors.Hand,
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+            };
+            button.Template = BareButtonTemplate();
+
+            var host = new ContentControl { Margin = new Thickness(24, 0, 0, 8) };
+            Action apply = () =>
+            {
+                // Built on first open rather than built and hidden: twenty-four rows of controls that
+                // nobody has asked for still cost their construction on every visit to the page.
+                if (open && host.Content == null) host.Content = build();
+                host.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+                chevron.RenderTransform = open ? null : new RotateTransform(-90, Theme.IconSize / 2, Theme.IconSize / 2);
+            };
+            button.Click += (sender, args) =>
+            {
+                open = !open;
+                apply();
+            };
+            apply();
+            return VStack(0, button, host);
+        }
+
         // SimHub integration
 
         /// <summary>Applies a style from SimHub's application resources when it exists; false otherwise.</summary>
