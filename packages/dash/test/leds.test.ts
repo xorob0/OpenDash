@@ -1,0 +1,258 @@
+/**
+ * The LED profiles openDash generates: the strip shapes, the rev ladder and its styles, and the
+ * effect catalogue. The rule under most of this is that a light which cannot come on is worse than
+ * one that is absent — a dark LED reads as "not happening" rather than "not known" — so several of
+ * these tests exist to prove openDash refuses to draw something rather than to prove it draws it.
+ */
+import { describe, expect, test } from 'bun:test';
+import { stableGuid, leds } from '../src/generator.ts';
+import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES } from '../src/contract.ts';
+import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
+import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
+import { bandOf, ladderColors, ladderOrder, rungFlashes } from '../src/leds/ladder.ts';
+import { ALL_EFFECTS, NOT_ON_IRACING, PIT_SPEEDING_MARGIN, SIDE_EFFECTS, SPOTTER_EFFECTS, flagEffects } from '../src/leds/effects.ts';
+import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { ds } from '../src/tokens.ts';
+
+const profileFor = (id: string): leds.LedProfile => {
+  const shape = shapeById(id);
+  if (!shape) throw new Error(`no shape ${id}`);
+  return rpmStripProfile(shape, stableGuid(`test/leds/${id}`));
+};
+
+/** Every container in a profile, depth first, with the text of every expression it carries. */
+const walk = (cs: readonly leds.LedContainer[]): leds.LedContainer[] => cs.flatMap((c) => [c, ...walk(leds.childrenOf(c))]);
+const textOf = (p: leds.LedProfile): string => leds.serializeProfile(p);
+
+describe('the strip shapes', () => {
+  test('every shape has a unique id, a sane geometry and a file name with no path separator in it', () => {
+    const ids = ALL_SHAPES.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const s of ALL_SHAPES) {
+      expect({ id: s.id, ok: s.left >= 0 && s.centre > 0 && s.right >= 0 }).toMatchObject({ ok: true });
+      expect(stripLength(s)).toBe(s.left + s.centre + s.right);
+      expect(centreStart(s)).toBe(s.left + 1);
+      expect(rightStart(s)).toBe(s.left + s.centre + 1);
+      // The label may carry slashes (4/14/4); the file name may not, on any platform the build runs on.
+      expect(rpmStripFileName(s)).not.toContain('/');
+      expect(rpmStripFileName(s)).not.toContain('\\');
+    }
+  });
+
+  test('the named device families are the shapes people actually own', () => {
+    expect(shapeById('3-9-3')?.devices).toContain('Fanatec ClubSport / Podium wheels');
+    expect(shapeById('4-14-4')?.devices).toContain('SimRep Engineering MLD');
+    expect(shapeById('3-10-3')?.extraRuns).toEqual({ count: 2, length: 9 });
+    // A brow is a strip with no sides, which is why it needs no module of its own.
+    for (const b of BROW_SHAPES) expect({ id: b.id, left: b.left, right: b.right, placement: b.placement }).toMatchObject({ left: 0, right: 0, placement: 'brow' });
+    expect(BROW_SHAPES.map((b) => b.centre)).toEqual([9, 12, 15, 16, 18, 20, 25]);
+  });
+
+  test('an extra run counts towards the device length, so the fit rule measures the whole device', () => {
+    expect(deviceLength(shapeById('3-10-3')!)).toBe(16 + 18);
+    expect(deviceLength(shapeById('4-14-4')!)).toBe(22);
+    expect(stripLength(shapeById('3-10-3')!)).toBe(16);
+  });
+
+  test('reversed wiring is a remap, not a second profile', () => {
+    expect(reversedPositions(4)).toEqual([4, 3, 2, 1]);
+    const p = profileFor('4-14-4-reversed');
+    expect(p.containers).toHaveLength(1);
+    expect(leds.containerTypeOf(p.containers[0]!)).toBe('Groups.RemapGroup');
+    // ...and the un-reversed sibling is the same tree without the wrapper.
+    expect(leds.containerTypeOf(profileFor('4-14-4').containers[0]!)).toBe('Groups.GameRunningGroup');
+  });
+});
+
+describe('the rev ladder and its styles', () => {
+  test('leftToRight is one rung per LED; meetInMiddle lights both ends and halves the rungs', () => {
+    const l2r = ladderOrder('leftToRight', 14);
+    expect(l2r.rungs).toBe(14);
+    expect([0, 6, 13].map(l2r.rungOf)).toEqual([0, 6, 13]);
+
+    const mid = ladderOrder('meetInMiddle', 14);
+    expect(mid.rungs).toBe(7);
+    // The outermost pair is rung 0 and the innermost pair is the last rung: they meet in the middle.
+    expect([0, 13].map(mid.rungOf)).toEqual([0, 0]);
+    expect([6, 7].map(mid.rungOf)).toEqual([6, 6]);
+    // An odd centre gives the middle LED a rung of its own rather than dropping it.
+    expect(ladderOrder('meetInMiddle', 9).rungs).toBe(5);
+    expect([0, 4, 8].map(ladderOrder('meetInMiddle', 9).rungOf)).toEqual([0, 4, 0]);
+  });
+
+  test('f1 is the same order in different colours, and flashes the whole bar rather than the top band', () => {
+    expect(ladderOrder('f1', 14).rungOf(5)).toBe(ladderOrder('leftToRight', 14).rungOf(5));
+    expect(ladderColors('f1')).toEqual([ds.color.good.primary, ds.color.danger.primary, ds.color.info.primary]);
+    expect(ladderColors('leftToRight')).toEqual([ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3]);
+    // Every rung flashes under f1; only the top band does otherwise.
+    expect([0, 5, 13].map((r) => rungFlashes('f1', r, 14))).toEqual([true, true, true]);
+    expect([0, 5, 13].map((r) => rungFlashes('leftToRight', r, 14))).toEqual([false, false, true]);
+  });
+
+  test('the bands are thirds with the last taking the remainder', () => {
+    expect([0, 4, 5, 9, 10, 13].map((r) => bandOf(r, 14))).toEqual([0, 0, 1, 1, 2, 2]);
+    expect([0, 1, 2].map((r) => bandOf(r, 3))).toEqual([0, 1, 2]);
+  });
+
+  test('a style decides the look and never the when: every style reads the same four thresholds', () => {
+    const text = textOf(profileFor('4-14-4'));
+    for (const style of LED_RPM_STYLES) expect({ style, present: text.includes(`style: ${style}`) }).toMatchObject({ present: true });
+    for (const name of Object.values(SHIFT_RPM_PROPERTIES)) expect({ name, present: text.includes(name) }).toMatchObject({ present: true });
+  });
+
+  test('both ladders are present, so a car that publishes none still lights', () => {
+    const text = textOf(profileFor('3-9-3'));
+    expect(text).toContain("the car's own shift lights");
+    expect(text).toContain("SimHub's bands, for a car that publishes no ladder");
+    // The fallback is null-safe: a bare read lights every LED when the sim is closed, because
+    // CustomStatusContainer swallows the throw and falls back to 1.0.
+    expect(text).toContain('isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)');
+    expect(text).not.toMatch(/"Expression": "[^"]*\[DataCorePlugin\.GameData\.CarSettings_RPMShiftLight1\](?!,)/);
+  });
+});
+
+describe('the effect catalogue', () => {
+  test('every effect names the property it reads, and every one of those is a real SimHub property', () => {
+    for (const e of ALL_EFFECTS()) {
+      expect({ id: e.id, source: e.source }).toMatchObject({ source: expect.any(String) });
+      expect(e.source.length).toBeGreaterThan(0);
+      // A source is either a full property path or a stated composition of them.
+      expect({ id: e.id, ok: /DataCorePlugin\.|SimHub publishes no/.test(e.source) }).toMatchObject({ ok: true });
+    }
+  });
+
+  test('the flags are ranked exactly as the face ranks them, so the two cannot disagree', () => {
+    // flagEffects composes highest priority last, which on a strip is what wins a tie.
+    expect(flagEffects().map((e) => e.id)).toEqual(['flag.green', 'flag.white', 'flag.blue', 'flag.yellow', 'flag.checkered', 'flag.black']);
+    // ...and each carries the face's own flagVisible, which is what makes "the same ranking" true
+    // rather than merely intended: black beating yellow is one expression shared by both.
+    const yellow = flagEffects().find((e) => e.id === 'flag.yellow')!;
+    expect(yellow.when).toContain('[DataCorePlugin.GameData.Flag_Black]) = (0)');
+    expect(yellow.when).toContain('[DataCorePlugin.GameData.Flag_Yellow]) = (1)');
+    expect(yellow.blinkWhen).toBeTruthy();
+    for (const e of flagEffects()) expect({ id: e.id, exclusive: e.exclusive }).toMatchObject({ exclusive: true });
+  });
+
+  test('the spotters light the side the car is actually on', () => {
+    const [left, right] = SPOTTER_EFFECTS;
+    expect(left!.placement).toBe('left');
+    expect(right!.placement).toBe('right');
+    expect(left!.when).toContain('SpotterCarLeft');
+    expect(right!.when).toContain('SpotterCarRight');
+    // Both sides at once is the conjunction, because SimHub publishes no "both" of any kind.
+    expect(left!.blinkWhen).toContain('SpotterCarLeft');
+    expect(left!.blinkWhen).toContain('SpotterCarRight');
+  });
+
+  test('pit speeding is composed, because SimHub publishes no speeding property', () => {
+    const speeding = ALL_EFFECTS().find((e) => e.id === 'pit.speeding')!;
+    expect(speeding.when).toContain('IsInPitLane');
+    expect(speeding.when).toContain('PitLimiterSpeed');
+    expect(speeding.when).toContain('SpeedLocal');
+    expect(speeding.when).toContain(`(${PIT_SPEEDING_MARGIN})`);
+    expect(speeding.source).toContain('SimHub publishes no speeding property');
+  });
+
+  test('the TC light is the dial, not the intervention, because the intervention is always zero', () => {
+    const tc = SIDE_EFFECTS.find((e) => e.id === 'tc')!;
+    expect(tc.when).toContain('TCLevel');
+    expect(tc.when).not.toContain('TCActive');
+    expect(NOT_ON_IRACING.map((n) => n.effect)).toContain('TC intervening');
+  });
+
+  test('what iRacing does not publish is refused rather than shipped dark, and says why', () => {
+    const refused = NOT_ON_IRACING.map((n) => n.effect);
+    expect(refused).toEqual(
+      expect.arrayContaining(['TC intervening', 'Turn indicators', 'ERS and battery charge', 'KERS', 'Headlights on/off and beam', 'Water pressure']),
+    );
+    for (const n of NOT_ON_IRACING) expect({ effect: n.effect, hasReason: n.reason.length > 20 }).toMatchObject({ hasReason: true });
+    // ...and none of them reaches a profile.
+    const text = textOf(profileFor('4-14-4'));
+    for (const dead of ['TCActive', 'TurnIndicatorLeft', 'TurnIndicatorRight', 'ERSPercent', 'ERSStored', 'ERSMax']) {
+      expect({ dead, inProfile: text.includes(dead) }).toMatchObject({ inProfile: false });
+    }
+  });
+
+  test('a sides effect is dropped on a shape with no sides rather than moved onto the rev LEDs', () => {
+    const brow = textOf(profileFor('brow-25'));
+    // The spotters and the assists have nowhere to go on a brow...
+    expect(brow).not.toContain('Car alongside, left');
+    expect(brow).not.toContain('ABS active');
+    // ...but a whole-strip effect still applies, because a brow has a whole strip.
+    expect(brow).toContain('Yellow flag');
+    expect(brow).toContain('Pit limiter on');
+  });
+});
+
+describe('every generated profile', () => {
+  test('validates against the contract, with the fit rule measuring the whole device', () => {
+    for (const shape of ALL_SHAPES) {
+      const result = leds.validateProfile(rpmStripProfile(shape, stableGuid(`test/leds/${shape.id}`)), {
+        declaredProperties: declaredProperties(),
+        propertyPrefix: PROPERTY_PREFIX,
+        ledCount: deviceLength(shape),
+      });
+      expect({ shape: shape.id, errors: result.errors.map((e) => `${e.code} ${e.path}`) }).toMatchObject({ errors: [] });
+    }
+  });
+
+  test('uses only ContainerTypes SimHub 9.12.6 resolves', () => {
+    for (const shape of ALL_SHAPES) {
+      for (const c of walk(rpmStripProfile(shape, stableGuid(`t/${shape.id}`)).containers)) {
+        const type = leds.containerTypeOf(c);
+        expect({ shape: shape.id, type, known: leds.KNOWN_CONTAINER_TYPES.has(type) }).toMatchObject({ known: true });
+      }
+    }
+  });
+
+  test('is gated on the sim running, because a CustomStatus that throws is ON rather than off', () => {
+    for (const shape of ALL_SHAPES) {
+      const p = rpmStripProfile(shape, stableGuid(`t/${shape.id}`));
+      const outer = shape.reversed ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
+      expect({ shape: shape.id, type: leds.containerTypeOf(outer) }).toMatchObject({ type: 'Groups.GameRunningGroup' });
+    }
+  });
+
+  test('takes every colour from a token and never from a literal of its own', () => {
+    const tokens = new Set<string>([
+      ...Object.values(ds.purpose.shift),
+      ...Object.values(ds.purpose.flag),
+      ...Object.values(ds.purpose.fuel),
+      ...Object.values(ds.purpose.alert),
+      ds.purpose.pitLimiter,
+      ds.color.good.primary,
+      ds.color.caution.primary,
+      ds.color.danger.primary,
+      ds.color.info.primary,
+      ds.color.neutral.primary,
+    ]);
+    for (const shape of ALL_SHAPES) {
+      for (const c of walk(rpmStripProfile(shape, stableGuid(`t/${shape.id}`)).containers)) {
+        for (const key of ['color', 'blinkColor'] as const) {
+          const value = (c as unknown as Record<string, unknown>)[key];
+          if (typeof value !== 'string') continue;
+          expect({ shape: shape.id, key, value, fromTokens: tokens.has(value) }).toMatchObject({ fromTokens: true });
+        }
+      }
+    }
+  });
+
+  test('offers every centre function and carries a stable id', () => {
+    const text = textOf(profileFor('4-14-4'));
+    for (const centre of LED_CENTRES) {
+      if (centre === 'rpm' || centre === 'rpmOnly') continue;
+      expect({ centre, present: text.includes(`centre: ${centre}`) }).toMatchObject({ present: true });
+    }
+    expect(text).toContain('centre: rpm or rpmOnly');
+    // Ids are stableGuid of a path, so a rebuild never churns them and SimHub never sees a duplicate.
+    const ids = ALL_SHAPES.map((s) => rpmStripProfile(s, stableGuid(`openDash/leds/${s.id}`)).profileId);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(rpmStripProfile(STRIP_SHAPES[0]!, stableGuid('openDash/leds/3-9-3')).profileId).toBe(stableGuid('openDash/leds/3-9-3'));
+  });
+
+  test('names itself after the shape, in the form SimHub lists', () => {
+    expect(rpmStripProfileName(shapeById('4-14-4')!)).toBe('openDash 4/14/4');
+    expect(rpmStripProfileName(shapeById('brow-25')!)).toBe('openDash brow 25');
+    expect(rpmStripFileName(shapeById('4-14-4')!)).toBe('openDash 4-14-4');
+  });
+});

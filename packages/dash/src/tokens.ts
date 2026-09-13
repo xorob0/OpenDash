@@ -144,6 +144,15 @@ export const ds = {
       onFlag: hex('purpose.flag.onFlag'),
     },
     pitLimiter: hex('purpose.pitLimiter'),
+    // The alert colours the face already uses, reached directly by the LED profiles for the same
+    // reason the semantic scale is: a strip has no readouts to name a colour after.
+    alert: {
+      penalty: hex('purpose.alert.penalty'),
+      incident: hex('purpose.alert.incident'),
+      power: hex('purpose.alert.power'),
+      safetyCar: hex('purpose.alert.safetyCar'),
+      p2p: hex('purpose.alert.p2p'),
+    },
     /**
      * A licence class is an ordered scale, so it is drawn as an ordered weight out of the greys
      * rather than in iRacing's five colours: every one of those steps is a state colour here, and
