@@ -27,9 +27,20 @@ bun run dev --keep                            # leave the emulator running and t
 | [`bun run vm`](../scripts/vm.ts) | the VM and SimHub: `status`, `up`, `down`, `wait`, `install`, `plugin`, `logs`, `shot`, `claim`, `release` |
 | [`bun run emulator`](../scripts/emulator.ts) | the telemetry: `start <scenario> [--follow]`, `stop`, `status`, `tail` |
 | [`scripts/gui.ts`](../scripts/gui.ts) | the clicking, which is how a dashboard gets opened |
+| [`bun run record`](../scripts/record.ts) | the telemetry traces: one recording of a scenario, committed under `traces/` |
 
 [testing-vm.md](testing-vm.md) describes the VM itself and is what to read when something in it
 breaks.
+
+## Recording a trace is the one thing that has to happen here
+
+Everything else in this loop is a convenience, since a dashboard can be read in the JSON and
+measured by the tests. A telemetry trace cannot: the values a dashboard reads are SimHub's
+normalised view of the sim rather than the variables the emulator writes, and only a running SimHub
+knows the mapping. So `bun run record` runs each scenario past a recorder plugin once and commits
+what SimHub saw, and the preview renderer, the per-pull-request video and the goldens replay that
+file instead of claiming the VM. [traces/README.md](../traces/README.md) is the format and when to
+re-record.
 
 ## There is one VM
 

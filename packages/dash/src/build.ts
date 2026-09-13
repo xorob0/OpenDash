@@ -197,7 +197,7 @@ export interface BuildOptions {
   log?: (line: string) => void;
 }
 
-export interface BuiltPackage {
+export interface ComposedPackage {
   /** The layout a card face was built from; absent for anything else. */
   layout?: Layout;
   /** The layout a zone face was built from; absent for anything else. */
@@ -207,6 +207,9 @@ export interface BuiltPackage {
   kind: PackageKind;
   pkg: DashPackage;
   warnings: ValidationIssue[];
+}
+
+export interface BuiltPackage extends ComposedPackage {
   written: WrittenPackage;
   zipped: ZippedPackage;
 }
@@ -228,14 +231,14 @@ const relative = (file: string): string => {
 };
 
 /**
- * Builds every layout. Composes and validates all packages first, so that an error in any of
- * them leaves the output directory untouched; then writes, zips and records the manifest.
+ * Every package, composed and validated, with nothing written. This is the whole of the build that
+ * is a pure function of the sources, which is what lets a test ask what the packages read without
+ * putting twenty zip files on disk to find out.
  */
-export function build(opts: BuildOptions = {}): BuildResult {
-  const out = path.resolve(opts.out ?? DEFAULT_OUT_DIR);
-  const strategy = opts.strategy ?? DEFAULT_STRATEGY;
+export function composePackages(opts: BuildOptions = {}): ComposedPackage[] {
   const version = opts.version ?? readVersion();
   const simHubVersion = opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION;
+  const strategy = opts.strategy ?? DEFAULT_STRATEGY;
   const layouts = opts.layouts ?? LAYOUTS;
   const zoneFaces = opts.zoneFaces ?? ZONE_FACES;
   const screens = opts.screens ?? SCREEN_PACKAGES;
@@ -243,7 +246,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
   if (layouts.length === 0 && screens.length === 0) throw new BuildError('there is no layout to build');
 
   const folders = new Set<string>();
-  const staged: { layout?: Layout; zoneFace?: ZoneLayout; screen?: ScreenPackageDef; kind: PackageKind; pkg: DashPackage; warnings: ValidationIssue[] }[] = [];
+  const staged: ComposedPackage[] = [];
   const claim = (folder: string): void => {
     if (folders.has(folder)) throw new BuildError(`two packages use the folder ${JSON.stringify(folder)}`);
     folders.add(folder);
@@ -270,6 +273,20 @@ export function build(opts: BuildOptions = {}): BuildResult {
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ screen, kind: screen.kind, pkg, warnings });
   }
+  return staged;
+}
+
+/**
+ * Builds every layout. Composes and validates all packages first, so that an error in any of
+ * them leaves the output directory untouched; then writes, zips and records the manifest.
+ */
+export function build(opts: BuildOptions = {}): BuildResult {
+  const out = path.resolve(opts.out ?? DEFAULT_OUT_DIR);
+  const strategy = opts.strategy ?? DEFAULT_STRATEGY;
+  const version = opts.version ?? readVersion();
+  const simHubVersion = opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION;
+  const log = opts.log ?? ((line: string): void => console.log(line));
+  const staged = composePackages({ ...opts, version, simHubVersion, strategy, log });
 
   mkdirSync(out, { recursive: true });
   const packages: BuiltPackage[] = [];
