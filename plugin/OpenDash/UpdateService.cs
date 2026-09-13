@@ -40,7 +40,7 @@ namespace OpenDashPlugin
                     // What did land still has to be said, or a person cannot tell what state they are in.
                     return Updated.Count == 0 ? failure : failure + " " + Updated.Count + " of them were replaced before it stopped. " + UpdateWording.Reopen;
                 }
-                if (Updated.Count == 0 && HeldBack.Count > 0) return "Nothing was replaced, because every dashboard has been edited since openDash wrote it.";
+                if (Updated.Count == 0 && HeldBack.Count > 0) return "Nothing was replaced, because every dashboard has been edited since OpenDash wrote it.";
                 if (Updated.Count == 0) return "There was nothing to replace.";
                 var line = Updated.Count == 1 ? "Updated 1 dashboard. " : "Updated " + Updated.Count + " dashboards. ";
                 if (HeldBack.Count > 0) line += (HeldBack.Count == 1 ? "1 was left alone because it has been edited. " : HeldBack.Count + " were left alone because they have been edited. ");
@@ -81,22 +81,41 @@ namespace OpenDashPlugin
                 return null;
             }
 
-            var fetched = source.GetString(UpdateCheck.ReleasesUrl);
-            if (!fetched.Ok)
+            var collected = new List<ReleaseInfo>();
+            var settled = false;
+            for (var page = 1; page <= UpdateCheck.MaxPages && !settled; page++)
             {
-                log.Info("Update check: " + fetched.Reason);
-                return new UpdateStatus { State = UpdateState.Unreachable, InstalledVersion = installedVersion, Manual = manual };
+                var fetched = source.GetString(UpdateCheck.ReleasesPage(page));
+                if (!fetched.Ok)
+                {
+                    log.Info("Update check: " + fetched.Reason);
+                    break;
+                }
+                // Past the last page GitHub answers "[]", which the parser reports as nothing to act on exactly as
+                // it reports GitHub's error shape, and the two cannot be told apart. Both therefore end the reading
+                // unsettled: calling an empty page the end of the listing would mean reporting up to date on an
+                // answer nothing verified, whereas the reverse costs at worst one "could not check", and only to a
+                // user whose stable version no release of this repository ever carried.
+                if (!ReleaseFeed.TryParse(fetched.Body, out var onThisPage))
+                {
+                    log.Info("Update check: the answer was not a release listing this can act on.");
+                    break;
+                }
+                collected.AddRange(onThisPage);
+                // A short page is the last one, so the listing is exhausted and nothing further can be hidden.
+                settled = UpdateCheck.Settles(collected, installedVersion) || onThisPage.Count < UpdateCheck.PageSize;
             }
-            if (!ReleaseFeed.TryParse(fetched.Body, out var releases))
+            if (!settled)
             {
-                log.Info("Update check: the answer was not a release listing this can act on.");
+                // Everything that lands here read either nothing or a run of releases this user may not be offered,
+                // and in both cases what exists beyond is unknown. Never up to date on the strength of that.
                 return new UpdateStatus { State = UpdateState.Unreachable, InstalledVersion = installedVersion, Manual = manual };
             }
 
-            LastReleases = releases;
+            LastReleases = collected;
             // Only a real answer moves the clock, so a day of failures does not silence tomorrow's check.
             lastCheckTicks = nowUtc.Ticks;
-            var status = UpdateCheck.Conclude(installedVersion, releases, manual);
+            var status = UpdateCheck.Conclude(installedVersion, collected, manual);
             log.Info("Update check: " + UpdateWording.Line(status));
             return status;
         }
@@ -105,7 +124,7 @@ namespace OpenDashPlugin
         /// Downloads what the release carries for the dashboards installed here and installs it.
         /// </summary>
         /// <param name="replaceEdited">
-        /// Whether to replace a dashboard somebody has edited since openDash wrote it. False unless a person has
+        /// Whether to replace a dashboard somebody has edited since OpenDash wrote it. False unless a person has
         /// been shown what that means and said yes.
         /// </param>
         public UpdateOutcome Apply(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited)

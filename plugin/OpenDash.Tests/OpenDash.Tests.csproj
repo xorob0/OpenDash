@@ -22,6 +22,7 @@
     <Compile Include="../OpenDash/PackageExtractor.cs" Link="Plugin/PackageExtractor.cs" />
     <Compile Include="../OpenDash/DashboardInstaller.Core.cs" Link="Plugin/DashboardInstaller.Core.cs" />
     <Compile Include="../OpenDash/Theme.cs" Link="Plugin/Theme.cs" />
+    <Compile Include="../OpenDash/Mark.cs" Link="Plugin/Mark.cs" />
     <Compile Include="../OpenDash/ReleaseFeed.cs" Link="Plugin/ReleaseFeed.cs" />
     <Compile Include="../OpenDash/UpdateCheck.cs" Link="Plugin/UpdateCheck.cs" />
     <Compile Include="../OpenDash/UpdateWording.cs" Link="Plugin/UpdateWording.cs" />

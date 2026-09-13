@@ -24,7 +24,7 @@ Real race dashes are white numerals on black, where the only chroma is functiona
 lights, warnings, flags. A driver at 200 km/h reads colour as state, instantly and without
 parsing, and every decorative use of colour erodes that reflex.
 
-This is why openDash's accent is `#33D9F2` ice cyan and never appears on the dash face. An
+This is why OpenDash's accent is `#33D9F2` ice cyan and never appears on the dash face. An
 amber accent would collide with shift stage 2, and green or red would collide with flags and
 alarms. Cyan sits outside the functional palette entirely, so it can be the identity colour in
 the logo, the plugin panel and the documentation without ever being misread at speed. It is a
@@ -65,7 +65,7 @@ be distinctive would cost drivers real recognition time.
 
 | | Token | Value |
 |---|---|---|
-| openDash cyan | `color.brand.primary` | `#33D9F2` |
+| OpenDash cyan | `color.brand.primary` | `#33D9F2` |
 
 Logo, plugin panel, documentation, website. Never on the dash face.
 
@@ -114,8 +114,24 @@ files are untouched.
 
 ## Logo
 
-Wordmark: `open` in a light weight, `Dash` in bold. Lowercase, condensed, technical. An
-alternate monogram is a single rev-bar segment sweep. Not yet designed.
+Wordmark: `Open` in a light weight, `Dash` in bold. Condensed, technical. The two weights are the
+whole of it; there is no second typeface and no letter spacing.
+
+The mark is **the rev bar**, which is the one shape OpenDash owns: four rising segments and a
+separated fifth, which is the shift point a driver acts on. It is `media/logo.svg`, drawn in a 32
+unit square in `purpose.ui.accent` and nothing else.
+
+Two constraints decided its shape rather than taste. It is seen at 16 px in a browser tab, so
+nothing in it is thinner than four units of thirty-two, which is two pixels there. And it is seen
+monochrome on a dark panel, so it reads as a shape and not as a colour: take the fill away and the
+sweep is still a sweep.
+
+It is drawn twice, because WPF cannot render an SVG and Markdown cannot render a `Canvas`. The SVG
+is the source; `MarkShape.Bars` in the plugin mirrors it and `MarkTests` reads the file and checks
+the numbers against each other, so the copies cannot drift. Change the SVG first.
+
+Where it goes: the settings panel's header beside the wordmark, and the top of `README.md`. Not on
+the face, which is a driver's instrument and not a billboard.
 
 ## Open questions
 

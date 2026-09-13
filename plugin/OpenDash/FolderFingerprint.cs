@@ -1,6 +1,6 @@
-// FolderFingerprint.cs: whether an installed dashboard is still the one openDash wrote.
+// FolderFingerprint.cs: whether an installed dashboard is still the one OpenDash wrote.
 //
-// Dash Studio edits a dashboard in place, and openDash replaces a folder by deleting it. Until this existed there
+// Dash Studio edits a dashboard in place, and OpenDash replaces a folder by deleting it. Until this existed there
 // was no way to tell the two apart, so an update destroyed a person's work without anyone being asked. A hash taken
 // when the folder is written, and compared before it is replaced, is enough to ask first.
 //
@@ -17,6 +17,13 @@ namespace OpenDashPlugin
 {
     public static class FolderFingerprint
     {
+        /// <summary>One authored file, with the path that goes into the hash beside the one that is read.</summary>
+        private sealed class FileEntry
+        {
+            public string Relative { get; set; }
+            public string Path { get; set; }
+        }
+
         /// <summary>The extensions that carry what a person can edit.</summary>
         private static readonly string[] Authored = { ".djson", ".metadata" };
 
@@ -32,12 +39,23 @@ namespace OpenDashPlugin
         {
             if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return null;
             var root = Path.GetFullPath(folder);
-            var files = Directory
-                .GetFiles(root, "*", SearchOption.AllDirectories)
-                .Where(IsAuthored)
-                .Select(path => new { Relative = Relative(root, path), Path = path })
-                .OrderBy(entry => entry.Relative, StringComparer.Ordinal)
-                .ToList();
+            List<FileEntry> files;
+            try
+            {
+                files = Directory
+                    .GetFiles(root, "*", SearchOption.AllDirectories)
+                    .Where(IsAuthored)
+                    .Select(path => new FileEntry { Relative = Relative(root, path), Path = path })
+                    .OrderBy(entry => entry.Relative, StringComparer.Ordinal)
+                    .ToList();
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                // The walk itself can fail, not only the reading: the .NET Framework enumerator throws on a
+                // subdirectory it may not list rather than skipping it. A folder we cannot even enumerate is one we
+                // cannot vouch for, which is the asking case.
+                return null;
+            }
 
             using (var hash = SHA256.Create())
             {
@@ -50,9 +68,12 @@ namespace OpenDashPlugin
                     {
                         content = File.ReadAllBytes(entry.Path);
                     }
-                    catch (IOException)
+                    catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
                     {
                         // A file we cannot read is a folder we cannot vouch for, which is the asking case.
+                        // UnauthorizedAccessException is named beside IOException because it does not derive from
+                        // it, and denied access is the likelier of the two on Windows: a folder written once by an
+                        // elevated process leaves files the account SimHub runs as cannot open.
                         return null;
                     }
                     hash.TransformBlock(content, 0, content.Length, null, 0);
@@ -63,7 +84,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Whether the folder still holds what openDash put there.
+        /// Whether the folder still holds what OpenDash put there.
         /// </summary>
         /// <remarks>
         /// Biased towards asking. No record, an unreadable folder, or a record that does not match all read as
