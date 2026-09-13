@@ -12,7 +12,7 @@
 import { densityOf } from '../second/density.ts';
 import { rowCapacity, table, type ColumnId } from '../second/table.ts';
 import { fittingColumns } from './leaderboard.ts';
-import { defineModule } from './module.ts';
+import { defineModule, pageColumns } from './module.ts';
 
 export const RELATIVE_COLUMNS: readonly ColumnId[] = ['pos', 'num', 'name', 'class', 'gap'];
 
@@ -22,7 +22,7 @@ export const relative = defineModule('relative', (ctx) => {
   return table({
     name: `${ctx.prefix}table`,
     frame: ctx.frame,
-    columns: fittingColumns(RELATIVE_COLUMNS, ctx.frame.width, ctx.density),
+    columns: fittingColumns(pageColumns(RELATIVE_COLUMNS, ctx), ctx.frame.width, ctx.density),
     mode: 'relative',
     density: ctx.density,
     rows,

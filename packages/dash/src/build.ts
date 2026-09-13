@@ -2,19 +2,20 @@
  * The build: `bun run build [--out <dir>] [--strategy widget|inline]`.
  *
  * For every layout in src/layouts it composes the package, validates it against the settings
- * contract (every `[OpenDash.X]` read must be a declared property, plus the generator's own
- * checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
+ * contract (every `[OpenDash.X]` read must be a declared property, and one this package's own
+ * screen owns or every screen shares, plus the generator's own checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
  * zips that folder into `<out>/<folder>.simhubdash` and records `{ folder, width, height,
  * slots, rung, file }` in `<out>/manifest.json`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { declaredProperties, PROPERTY_PREFIX } from './contract.ts';
+import { COMPANION_PREFIX, declaredProperties, facePrefix, foreignProperties, PIT_WALL_PREFIX, PROPERTY_PREFIX } from './contract.ts';
 import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
-import { buildZoneFace, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
+import { buildZoneFace, sizeOf, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
 import { fontsForPackage } from './dashboard.ts';
 import { fontsForPanel } from './design/fontFiles.ts';
+import { noticesForPackage, PANEL_NOTICES } from './design/notices.ts';
 import type { Rung } from './design/rung.ts';
 import {
   formatIssues,
@@ -130,9 +131,22 @@ export function readVersion(file: string = VERSION_FILE): string {
   return version;
 }
 
-/** Validates against the contract's declared properties; throws a BuildError on errors, returns the warnings. */
-export function validateOrThrow(pkg: DashPackage): ValidationIssue[] {
-  const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
+/**
+ * Validates against the contract's declared properties; throws a BuildError on errors, returns the
+ * warnings.
+ *
+ * `screen` is the prefix of the screen this package is, and what it may read follows from it: its
+ * own group and the settings every screen shares, never another screen's. Every group is declared,
+ * so being declared proves nothing here; without this rule a package could read the screen beside
+ * it and only a rig with two screens would ever show it. A card face passes nothing, because it
+ * owns no group and reads the modes and the slots alone.
+ */
+export function validateOrThrow(pkg: DashPackage, screen?: string): ValidationIssue[] {
+  const result = validatePackage(pkg, {
+    declaredProperties: declaredProperties(),
+    propertyPrefix: PROPERTY_PREFIX,
+    foreignProperties: foreignProperties(screen),
+  });
   if (!result.ok) {
     const n = result.errors.length;
     throw new BuildError(`package ${pkg.folderName} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
@@ -245,14 +259,14 @@ export function build(opts: BuildOptions = {}): BuildResult {
     claim(face.folder);
     const built = buildZoneFace(face, { version, simHubVersion, author: DEFAULT_AUTHOR });
     const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
-    const warnings = validateOrThrow(pkg);
+    const warnings = validateOrThrow(pkg, facePrefix(sizeOf(face)));
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ zoneFace: face, kind: 'dash', pkg, warnings });
   }
   for (const screen of screens) {
     claim(screen.folder);
     const pkg = buildScreenPackage(screen, { version, simHubVersion });
-    const warnings = validateOrThrow(pkg);
+    const warnings = validateOrThrow(pkg, screen.kind === 'pitwall' ? PIT_WALL_PREFIX : COMPANION_PREFIX);
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ screen, kind: screen.kind, pkg, warnings });
   }
@@ -261,6 +275,9 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const packages: BuiltPackage[] = [];
   const manifest: Manifest = { version, simHubVersion, packages: [] };
   for (const { layout, zoneFace, screen, kind, pkg, warnings } of staged) {
+    // Derived here rather than by each builder, so that a package cannot be assembled anywhere in
+    // this file without the licences for what it carries.
+    pkg.notices = noticesForPackage(pkg);
     const written = writePackage(pkg, out);
     for (const file of written.files) log(`wrote ${relative(file)}`);
     const zipped = zipPackage(out, pkg.folderName);
@@ -285,6 +302,11 @@ export function build(opts: BuildOptions = {}): BuildResult {
   for (const font of fontsForPanel()) {
     const target = path.join(fontsOut, path.basename(font));
     copyFileSync(font, target);
+    log(`wrote ${relative(target)}`);
+  }
+  for (const notice of PANEL_NOTICES) {
+    const target = path.join(fontsOut, notice.name);
+    copyFileSync(notice.path, target);
     log(`wrote ${relative(target)}`);
   }
 

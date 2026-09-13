@@ -4,7 +4,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   BAR_SLOTS,
+  FACE_SIZES,
   FACE_ZONE_LETTERS,
+  facePrefix,
+  facePropertyNames,
+  faceForPrefix,
   CARD_CATALOGUE,
   cardMeta,
   declaredProperties,
@@ -20,6 +24,11 @@ import {
   PIT_WALL_ZONE_LETTERS,
   PIT_WALL_ZONE_PAGES,
   pitWallZoneSettingName,
+  COMPANION_PREFIX,
+  PIT_WALL_PREFIX,
+  foreignProperties,
+  screenPrefixes,
+  screenProperties,
   defaultCardForSlot,
   DEFAULT_SLOT_CARDS,
   DEFAULTS,
@@ -53,22 +62,69 @@ describe('card catalogue', () => {
 describe('settings', () => {
   test('declares the dash, the zones, the companion and the pit wall', () => {
     const props = declaredProperties();
-    // Four per zone -- page, mask, start and the class filter -- plus the bar's ends and the glance.
-    const zoneCount = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 1;
-    expect(props).toHaveLength(4 + SLOT_MAX + zoneCount + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2);
+    // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
+    // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
+    // page, mask, start and the class filter -- plus the bar's ends and the glance.
+    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 1;
+    expect(props).toHaveLength(4 + SLOT_MAX + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
     expect(props[15]).toBe('OpenDash.Slot12');
     // The zones are declared here and read by the face from XOR-85. Slot01 to Slot12 stay beside
     // them until the card path is retired, because ten faces still read them.
-    expect(props).toContain('OpenDash.ZoneA');
-    expect(props).toContain('OpenDash.ZoneDPages');
-    expect(props).toContain('OpenDash.ZoneCStart');
-    expect(props).toContain('OpenDash.ZoneBClassOnly');
-    expect(props).toContain('OpenDash.BarLeft1');
-    expect(props).toContain('OpenDash.QuickGlance');
+    expect(props).toContain('OpenDash.Face1920x480ZoneA');
+    expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
+    expect(props).toContain('OpenDash.Face850x480ZoneCStart');
+    expect(props).toContain('OpenDash.Face1280x400ZoneBClassOnly');
+    expect(props).toContain('OpenDash.Face600x686BarLeft1');
+    expect(props).toContain('OpenDash.Face800x286QuickGlance');
+    // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
+    // settings silently shared with every other.
+    expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance)/.test(p))).toEqual([]);
     expect(props.slice(-6)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
+  });
+
+  test('every face that ships has a group, and every group is complete', () => {
+    const props = new Set(declaredProperties());
+    for (const face of FACE_SIZES) {
+      for (const name of facePropertyNames(face)) expect({ face: facePrefix(face), name, declared: props.has(`OpenDash.${name}`) }).toMatchObject({ declared: true });
+    }
+    // The prefix is concatenated and carries no dot of its own, because SimHub puts one in front
+    // of every name and whether its parser accepts a second inside the name is unverified.
+    for (const face of FACE_SIZES) expect(facePrefix(face)).toMatch(/^Face\d+x\d+$/);
+    expect(faceForPrefix('Face1920x480')).toMatchObject({ width: 1920, height: 480 });
+    expect(faceForPrefix('Face1x1')).toBeUndefined();
+  });
+
+  test('every property belongs to one screen or to every screen', () => {
+    // The rule the build enforces is a partition of the contract: a name is one screen's or it is
+    // shared by all of them, and never both. Without that a package could be told it may read
+    // something no screen owns, or be denied one of its own.
+    const declared = declaredProperties();
+    const owned = screenPrefixes().flatMap(screenProperties);
+    expect(new Set(owned).size).toBe(owned.length);
+    for (const name of owned) expect({ name, declared: declared.includes(name) }).toMatchObject({ declared: true });
+
+    // What is left over is what a rig shares: the four modes and the twelve slots mean the same
+    // thing on the wheel, on the rim and on the pit wall, so they carry no screen's name.
+    const shared = declared.filter((name) => !owned.includes(name));
+    const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
+    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1))].map((n) => `${PROPERTY_PREFIX}.${n}`));
+
+    // The web view address is the pit wall's although its name carries no prefix: it was named
+    // before the idiom, and no other screen has a browser page to point anywhere.
+    expect(screenProperties(PIT_WALL_PREFIX)).toContain('OpenDash.WebViewUrl');
+    expect(screenProperties(COMPANION_PREFIX)).toHaveLength(MODULE_COUNT);
+
+    const own = facePrefix(FACE_SIZES[0]!);
+    expect(foreignProperties(own)).not.toContain('OpenDash.Face1920x480ZoneA');
+    expect(foreignProperties(own)).toContain('OpenDash.Face850x480ZoneA');
+    expect(foreignProperties(own)).toContain('OpenDash.PitWallZoneA');
+    // A card face owns nothing and every group is foreign to it.
+    expect(foreignProperties()).toHaveLength(owned.length);
+    expect(() => screenProperties('Face1x1')).toThrow(RangeError);
+    expect(() => foreignProperties('Face1x1')).toThrow(RangeError);
   });
 
   test('slot names and defaults', () => {

@@ -7,20 +7,24 @@
  * one a 26 px body and it computes negative rectangles, which is exactly what happened the first
  * time this file reached for `pageBuilder`.
  *
- * So a band page is **one rank of fields**, read left to right, packed and centred, with nothing
- * spread to fill. The field count follows the width: seven at 1920, five at 850.
+ * So a band page is **one rank of fields**, read left to right, packed and centred between the
+ * corner blocks, with nothing spread to fill. A page sheds its last field when the rank will not
+ * fit, though no shipped page is wide enough for that to fire: the widest catalogue entry holds
+ * five fields and every one of them fits at 600, which is the narrowest band there is. A field the
+ * sim does not publish is a different matter and does fire: the rank closes over it, which is
+ * `when: 'close'` in `second/rank.ts`.
  *
  * The fields are read off `design/canvas/ZoneCatalogue.dc.html`, page by page.
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { cells, monoWidth, textBox } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
+import { dimUnless, rank, type RankMember } from '../second/rank.ts';
 import {
   CHARS,
   airTemperature,
@@ -54,6 +58,12 @@ export interface BandField {
   after?: string;
   color?: `#${string}`;
   colorBind?: string;
+  /**
+   * True while the game publishes the field. A field without one is always drawn; a field with one
+   * is removed when the game has nothing for it and the rank closes over the hole, which is band
+   * D's own rule and the reason the strip in the bar is narrower on a car that has fewer settings.
+   */
+  present?: string;
   /**
    * A word rather than a number, drawn as a proportional label.
    *
@@ -133,10 +143,24 @@ const relative: readonly BandField[] = [
 const car: readonly BandField[] = [
   { id: 'water', label: 'Water', sample: '92', bind: fmt(isnull(game('WaterTemperature'), num(0)), '0'), chars: CHARS.temperature, after: '°' },
   { id: 'oil', label: 'Oil', sample: '104', bind: fmt(isnull(game('OilTemperature'), num(0)), '0'), chars: CHARS.temperature, after: '°' },
-  { id: 'oilPressure', label: 'Oil pressure', sample: '4.2', bind: fmt(isnull(game('OilPressure'), num(0)), '0.0'), chars: CHARS.consumption },
-  { id: 'fuelPressure', label: 'Fuel pressure', sample: '3.8', bind: fmt(isnull(raw('FuelPress'), num(0)), '0.0'), chars: CHARS.consumption },
-  { id: 'voltage', label: 'Voltage', sample: '13.8', bind: fmt(isnull(raw('Voltage'), num(0)), '0.0'), chars: CHARS.consumption },
+  // The three gauges below the temperatures are the ones a sim either wires or does not. They are
+  // removed rather than zeroed: 0.0 bar of oil pressure is a reading, and a wrong one.
+  { id: 'oilPressure', label: 'Oil pressure', sample: '4.2', ...optional(game('OilPressure'), '0.0'), chars: CHARS.consumption },
+  { id: 'fuelPressure', label: 'Fuel pressure', sample: '3.8', ...optional(raw('FuelPress'), '0.0'), chars: CHARS.consumption },
+  { id: 'voltage', label: 'Voltage', sample: '13.8', ...optional(raw('Voltage'), '0.0'), chars: CHARS.consumption },
 ];
+
+/**
+ * A reading the sim may not publish at all: what it draws, and what says it is there.
+ *
+ * The text is guarded as well as hidden. A hidden item's bindings are still evaluated every frame,
+ * so formatting a null would put an error in SimHub's log once per frame for a car that simply has
+ * no such sensor.
+ */
+function optional(expr: string, pattern: string): { bind: string; present: string } {
+  const there = ncalc.not(ncalc.isNull(expr));
+  return { bind: iff(there, fmt(expr, pattern), str('')), present: there };
+}
 
 /** `--` when the sim publishes nothing, rather than a zero that reads as a reading. */
 function notAvailable(expr: string): string {
@@ -192,56 +216,81 @@ function fieldWidth(field: BandField, valueFs: number, labelFs: number): number 
 }
 
 /**
- * One band page drawn in `frame`: its fields as one rank, packed and centred.
+ * One field of a band page as a member of its rank: how wide it is, whether the game publishes it,
+ * and how it draws itself wherever the rank puts it.
+ */
+function bandMember(field: BandField, prefix: string, geometry: { valueFs: number; labelFs: number; top: number; valueTop: number }): RankMember {
+  const { valueFs, labelFs, top, valueTop } = geometry;
+  const w = fieldWidth(field, valueFs, labelFs);
+  const valueWidth = field.widest ? w : monoWidth(cells('SemiBold', valueFs), field.chars);
+  return {
+    id: field.id,
+    width: w,
+    present: field.present,
+    draw: (at) => {
+      const items: Item[] = [
+        label(`${prefix}${field.id}.label`, field.label.toUpperCase(), at.x, top, w, { size: labelFs, leftBind: at.leftAt(), visibleBind: at.visibleBind }),
+        field.widest
+          ? label(`${prefix}${field.id}.value`, field.sample, at.x, valueTop, w, {
+              size: valueFs,
+              color: field.color ?? ds.color.text.primary,
+              bind: field.bind,
+              widest: field.widest,
+              leftBind: at.leftAt(),
+              visibleBind: at.visibleBind,
+            })
+          : numeral(`${prefix}${field.id}.value`, field.sample, at.x, valueTop, valueFs, field.chars, {
+              bind: field.bind,
+              color: field.color,
+              colorBind: field.colorBind,
+              maxWidth: valueWidth + 4,
+              leftBind: at.leftAt(),
+              visibleBind: at.visibleBind,
+            }),
+      ];
+      if (field.after) {
+        items.push(
+          unit(`${prefix}${field.id}.unit`, field.after, at.x + valueWidth + ds.space[2], valueTop + (valueFs - labelFs), unitWidth(field, labelFs), {
+            size: labelFs,
+            leftBind: at.leftAt(valueWidth + ds.space[2]),
+            visibleBind: at.visibleBind,
+          }),
+        );
+      }
+      return items;
+    },
+  };
+}
+
+/**
+ * One band page drawn in `frame`: its fields as one rank, packed and centred in what the corner
+ * blocks leave.
  *
  * The rank sheds from the tail when the width is not there, because the fields are listed in
- * importance order. Nothing is spread to fill: a band with three fields in it is three fields in
- * the middle, not three fields stretched across 1920 px.
+ * importance order, and it closes over any field the game does not publish. Nothing is spread to
+ * fill: a band with three fields in it is three fields in the middle, not three fields stretched
+ * across 1920 px.
  */
-export function bandPageItems(id: string, frame: Rect, prefix: string): Item[] {
+export function bandPageItems(id: string, frame: Rect, prefix: string, corners = false): Item[] {
   const fields = BAND_PAGES[id];
   if (!fields) throw new RangeError(`band D has no page "${id}"`);
   const d = densityOf('zone');
   const labelFs = d.labelSm;
-  const gap = d.gapX;
   const valueFs = valueSizeFor(frame.height, d.mid, labelFs, d.fieldGap);
-
-  const kept = [...fields];
-  const widthOf = (list: readonly BandField[]): number =>
-    list.reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs), 0) + gap * Math.max(0, list.length - 1);
-  while (kept.length > 1 && widthOf(kept) > frame.width) kept.pop();
-
   const blockHeight = labelFs + d.fieldGap + valueFs;
   const top = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
-  const valueTop = top + labelFs + d.fieldGap;
-  let x = frame.left + Math.max(0, (frame.width - widthOf(kept)) / 2);
+  const geometry = { valueFs, labelFs, top, valueTop: top + labelFs + d.fieldGap };
 
-  const items: Item[] = [];
-  for (const field of kept) {
-    const w = fieldWidth(field, valueFs, labelFs);
-    const valueWidth = field.widest ? w : monoWidth(cells('SemiBold', valueFs), field.chars);
-    items.push(label(`${prefix}${field.id}.label`, field.label.toUpperCase(), x, top, w, { size: labelFs }));
-    items.push(
-      field.widest
-        ? label(`${prefix}${field.id}.value`, field.sample, x, valueTop, w, {
-            size: valueFs,
-            color: field.color ?? ds.color.text.primary,
-            bind: field.bind,
-            widest: field.widest,
-          })
-        : numeral(`${prefix}${field.id}.value`, field.sample, x, valueTop, valueFs, field.chars, {
-            bind: field.bind,
-            color: field.color,
-            colorBind: field.colorBind,
-            maxWidth: valueWidth + 4,
-          }),
-    );
-    if (field.after) {
-      items.push(unit(`${prefix}${field.id}.unit`, field.after, x + valueWidth + ds.space[2], valueTop + (valueFs - labelFs), unitWidth(field, labelFs), { size: labelFs }));
-    }
-    x += w + gap;
-  }
-  return items;
+  // The rank gets what the corner blocks leave, not the whole band. Centring in the whole band put
+  // the last field of D6 Sectors six pixels into the DRS lamp at 1280, where a page and a corner
+  // block drew over each other and only a photograph would have shown it.
+  const taken = corners ? bandCornerWidths(frame) : { left: 0, right: 0 };
+  const usable = { left: frame.left + taken.left, width: Math.max(0, frame.width - taken.left - taken.right) };
+
+  return rank(
+    fields.map((field) => bandMember(field, prefix, geometry)),
+    { left: usable.left, width: usable.width, gap: d.gapX, when: 'close' },
+  ).items;
 }
 
 /**
@@ -252,20 +301,57 @@ export function bandPageItems(id: string, frame: Rect, prefix: string): Item[] {
  * The threshold is those drawings rather than a round number, which is why the layout carries the
  * answer rather than this file computing one.
  */
+const CORNER_PAD_X = 20;
+
+/** The two fields in the left corner. */
+const leftCornerFields = (): BandField[] => [
+  { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.count },
+  { id: 'trackState', label: 'Track', sample: 'DRY', bind: ncalc.ucase(isnull(game('TrackGripStatus'), str('--'))), chars: { digits: 5, specials: 0 }, widest: 'MODERATE' },
+];
+
+/** The three lamps in the right corner. A lamp is a word, lit or dim; it never disappears. */
+const cornerLamps = (): { id: string; text: string; on: string; colour: `#${string}` }[] => [
+  { id: 'drs', text: 'DRS', on: eq(isnull(game('DRSAvailable'), num(0)), num(1)), colour: ds.purpose.flag.green },
+  { id: 'p2p', text: 'P2P', on: eq(isnull(raw('PushToPass'), num(0)), num(1)), colour: ds.purpose.flag.blue },
+  { id: 'spt', text: 'SPT', on: ncalc.ne(isnull(game('CarLeftRight'), num(0)), num(1)), colour: ds.purpose.flag.yellow },
+];
+
+/** The two clocks in the right corner. */
+const cornerClocks = (): BandField[] => [
+  { id: 'clock', label: 'Clock', sample: '13:11', bind: localClock(), chars: CHARS.clock },
+  { id: 'sim', label: 'Sim', sample: '19:26', bind: simClock(), chars: CHARS.clock },
+];
+
+/**
+ * How much of the band each corner block takes, padding included.
+ *
+ * Measured here rather than by the drawing code, because the page rank has to know it before it
+ * lays anything out: a rank centred in the whole band draws its last field over the DRS lamp at
+ * 1280, which is the same mistake the bar made at 850 before d839bd5, and the one thing a band
+ * page must never do is hide the field beside it.
+ */
+export function bandCornerWidths(frame: Rect): { left: number; right: number } {
+  const d = densityOf('zone');
+  const labelFs = d.labelSm;
+  const valueFs = valueSizeFor(frame.height, d.small, labelFs, d.fieldGap);
+  const left = leftCornerFields().reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs) + d.gapX, 0);
+  const clockWidth = cornerClocks().reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs), 0) + d.gapX;
+  const lampWidth = Math.ceil(measureText('BarlowMedium', 'DRS', labelFs)) + 8;
+  const right = cornerLamps().length * (lampWidth + d.gapX / 2) + clockWidth;
+  return { left: CORNER_PAD_X + left, right: CORNER_PAD_X + right };
+}
+
 export function bandCorners(frame: Rect, prefix: string): Item[] {
   const d = densityOf('zone');
   const labelFs = d.labelSm;
   const valueFs = valueSizeFor(frame.height, d.small, labelFs, d.fieldGap);
-  const padX = 20;
+  const padX = CORNER_PAD_X;
   const blockHeight = labelFs + d.fieldGap + valueFs;
   const top = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
   const valueTop = top + labelFs + d.fieldGap;
   const items: Item[] = [];
 
-  const left: BandField[] = [
-    { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.count },
-    { id: 'trackState', label: 'Track', sample: 'DRY', bind: ncalc.ucase(isnull(game('TrackGripStatus'), str('--'))), chars: { digits: 5, specials: 0 }, widest: 'MODERATE' },
-  ];
+  const left = leftCornerFields();
   let x = frame.left + padX;
   for (const field of left) {
     const w = fieldWidth(field, valueFs, labelFs);
@@ -278,30 +364,36 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
     x += w + d.gapX;
   }
 
-  // The right corner: three lamps, then the two clocks. A lamp is a word in its own colour when it
-  // is true and the dim ink when it is not, because a lamp that vanished would move the two beside
-  // it at the moment they matter.
-  const lamps: { id: string; text: string; on: string; colour: `#${string}` }[] = [
-    { id: 'drs', text: 'DRS', on: eq(isnull(game('DRSAvailable'), num(0)), num(1)), colour: ds.purpose.flag.green },
-    { id: 'p2p', text: 'P2P', on: eq(isnull(raw('PushToPass'), num(0)), num(1)), colour: ds.purpose.flag.blue },
-    { id: 'spt', text: 'SPT', on: ncalc.ne(isnull(game('CarLeftRight'), num(0)), num(1)), colour: ds.purpose.flag.yellow },
-  ];
-  const clocks: BandField[] = [
-    { id: 'clock', label: 'Clock', sample: '13:11', bind: localClock(), chars: CHARS.clock },
-    { id: 'sim', label: 'Sim', sample: '19:26', bind: simClock(), chars: CHARS.clock },
-  ];
-  const clockWidth = clocks.reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs), 0) + d.gapX;
+  // The right corner: three lamps, then the two clocks. A lamp is drawn dim rather than removed --
+  // `when: 'dim'`, the other half of the rank's contract -- because a lamp that vanished would move
+  // the two beside it at the moment they matter.
+  const lamps = cornerLamps();
+  const clocks = cornerClocks();
   const lampWidth = Math.ceil(measureText('BarlowMedium', 'DRS', labelFs)) + 8;
-  const rightWidth = lamps.length * (lampWidth + d.gapX / 2) + clockWidth;
 
-  x = frame.left + frame.width - padX - rightWidth;
-  for (const lamp of lamps) {
-    items.push({
-      ...label(`${prefix}${lamp.id}`, lamp.text, x, top + (blockHeight - labelFs) / 2, lampWidth, { size: labelFs, hAlign: 'center', color: ds.color.text.dim }),
-      ...withBindings({ TextColor: iff(lamp.on, str(lamp.colour), str(ds.color.text.dim)) }),
-    });
-    x += lampWidth + d.gapX / 2;
-  }
+  // The same measurement the page rank was centred in, so the lamps start exactly where the page
+  // was told to stop.
+  x = frame.left + frame.width - bandCornerWidths(frame).right;
+  const lampGap = d.gapX / 2;
+  items.push(
+    ...rank(
+      lamps.map((lamp) => ({
+        id: lamp.id,
+        width: lampWidth,
+        present: lamp.on,
+        draw: (at) => [
+          label(`${prefix}${lamp.id}`, lamp.text, at.x, top + (blockHeight - labelFs) / 2, lampWidth, {
+            size: labelFs,
+            hAlign: 'center',
+            color: ds.color.text.dim,
+            colorBind: dimUnless(at.litBind, lamp.colour),
+          }),
+        ],
+      })),
+      { left: x, width: lamps.length * (lampWidth + lampGap), gap: lampGap, when: 'dim', align: 'left' },
+    ).items,
+  );
+  x += lamps.length * (lampWidth + lampGap);
   for (const field of clocks) {
     const w = fieldWidth(field, valueFs, labelFs);
     items.push(label(`${prefix}${field.id}.label`, field.label.toUpperCase(), x, top, w, { size: labelFs }));
