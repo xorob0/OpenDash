@@ -21,7 +21,7 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
 4. Start SimHub. It notices the new plugin and asks whether to enable it; accept. If SimHub
    asks to restart, restart it.
 5. "OpenDash" now appears in SimHub's left menu. Open it: the Dashboard section at the bottom
-   should say "openDash <version> · 14 dashboards" and "Up to date", which means every dashboard
+   should say "OpenDash <version> · 14 dashboards" and "Up to date", which means every dashboard
    was extracted into its own folder under `DashTemplates` on that start (`openDash`,
    `openDash 1280x480` and so on, see Sizes below).
 6. Assign a dashboard to a display. Pick the size that matches the display from the Sizes table;

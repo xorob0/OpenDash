@@ -175,11 +175,11 @@ namespace OpenDashPlugin
         /// <summary>The first failure of the last run; null when every package went through.</summary>
         public string LastError { get; private set; }
 
-        /// <summary>The Dashboard section's title: "openDash 0.1.0 · 10 dashboards". Just "openDash 0.1.0" when nothing
+        /// <summary>The Dashboard section's title: "OpenDash 0.1.0 · 10 dashboards". Just "OpenDash 0.1.0" when nothing
         /// is embedded, so that a build without packages does not announce zero dashboards.</summary>
         public static string Summary(string version, int packageCount)
         {
-            var title = "openDash " + version;
+            var title = "OpenDash " + version;
             if (packageCount <= 0) return title;
             return title + " · " + packageCount + (packageCount == 1 ? " dashboard" : " dashboards");
         }

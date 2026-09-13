@@ -190,7 +190,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A folder openDash cannot read is one it cannot vouch for, which is the asking case rather than a failure.
+        /// A folder OpenDash cannot read is one it cannot vouch for, which is the asking case rather than a failure.
         /// It used to be a failure that never went away, since the fingerprint is taken where Edited is assigned: the
         /// exception an unreadable file raises landed in the blanket catch of Process, the package was reported Failed,
         /// and every later run reached the same line and did the same thing, so the dashboard was never installed
@@ -245,7 +245,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("openDash", installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
             Assert.Equal("0.2.0", installer.EmbeddedVersion);
-            Assert.Equal("openDash 0.2.0 · 2 dashboards", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
+            Assert.Equal("OpenDash 0.2.0 · 2 dashboards", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
 
             // Both packages carry the same fonts; the second install finds them in DashFonts already.
             Assert.Equal(2, Directory.GetFiles(Path.Combine(root, "DashFonts"), "*.ttf").Length);
@@ -379,7 +379,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(SmallFolder, installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
-            Assert.Equal("openDash 0.2.0 · 1 dashboard", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
+            Assert.Equal("OpenDash 0.2.0 · 1 dashboard", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
         }
 
         [Fact]
@@ -406,10 +406,10 @@ namespace OpenDashPlugin.Tests
         // The panel's texts
 
         [Theory]
-        [InlineData("0.1.0", 10, "openDash 0.1.0 · 10 dashboards")]
-        [InlineData("0.1.0", 1, "openDash 0.1.0 · 1 dashboard")]
-        [InlineData("0.1.0", 0, "openDash 0.1.0")]
-        [InlineData("(unknown version)", 2, "openDash (unknown version) · 2 dashboards")]
+        [InlineData("0.1.0", 10, "OpenDash 0.1.0 · 10 dashboards")]
+        [InlineData("0.1.0", 1, "OpenDash 0.1.0 · 1 dashboard")]
+        [InlineData("0.1.0", 0, "OpenDash 0.1.0")]
+        [InlineData("(unknown version)", 2, "OpenDash (unknown version) · 2 dashboards")]
         public void Summary_names_the_version_and_counts_the_dashboards(string version, int count, string expected)
         {
             Assert.Equal(expected, DashboardInstaller.Summary(version, count));
