@@ -58,12 +58,66 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void Nothing_in_it_merges_at_sixteen_pixels()
+        {
+            // The other way the mark dies small. A gap that closes turns four segments into one blob, which the
+            // bar-width rule alone does not catch: the first mark held its bars to five units and its gaps to two.
+            var gaps = Gaps();
+            var narrowest = gaps.Min();
+            Assert.True(narrowest * 16 / MarkShape.Box >= 1, "the narrowest gap is " + narrowest + " units and closes at 16 px");
+        }
+
+        [Fact]
+        public void The_shift_point_stands_off_a_wider_gap_than_the_segments_it_follows()
+        {
+            // The mark's one asymmetry, and the whole of what makes it a rev bar rather than a row of segments.
+            // The first mark claimed a "separated fifth" and spaced it exactly like the other four, so it read as
+            // a hairline on the end of the run rather than as the shift point.
+            var gaps = Gaps();
+            var separation = gaps.Last();
+            Assert.True(gaps.SkipLast(1).All(g => separation > g),
+                "the shift point is spaced " + separation + " and the segments " + string.Join(", ", gaps.SkipLast(1)));
+        }
+
+        [Fact]
+        public void It_sweeps_rather_than_charts()
+        {
+            // Three progressions, and none of them is a baseline. Bars standing on a shared baseline read as a
+            // measurement whatever else is done to them, so every segment starts higher, ends higher and is taller
+            // than the one before it.
+            foreach (var (a, b) in MarkShape.Bars.Zip(MarkShape.Bars.Skip(1)))
+            {
+                Assert.True(b[1] < a[1], "segment tops have to climb");
+                Assert.True(b[1] + b[3] < a[1] + a[3], "segment bottoms have to climb, or the mark is a bar chart");
+                Assert.True(b[3] > a[3], "segment heights have to grow");
+            }
+        }
+
+        [Fact]
+        public void It_is_hard_edged_in_both_copies()
+        {
+            // radius.none: race dashes are not rounded. This is also where the two copies had already drifted --
+            // the SVG asked for rx 2 and the panel drew RadiusX = width / 2, a capsule -- because the test above
+            // compares positions and sizes and a corner is neither.
+            var svg = File.ReadAllText(RepoPaths.LogoSvg());
+            Assert.DoesNotContain("rx=", svg);
+            Assert.DoesNotContain("ry=", svg);
+            Assert.Equal(4, MarkShape.Bars[0].Length); // x, y, width, height: there is no radius to draw.
+        }
+
+        [Fact]
         public void It_carries_one_colour_and_it_is_the_panel_accent()
         {
             // A mark with a hex of its own would be a second palette. Theme.Accent mirrors purpose.ui.accent.
             var svg = File.ReadAllText(RepoPaths.LogoSvg());
             var colours = Regex.Matches(svg, @"#[0-9A-Fa-f]{6}").Cast<Match>().Select(m => m.Value.ToUpperInvariant()).Distinct().ToArray();
             Assert.Equal(new[] { Theme.Accent.ToUpperInvariant() }, colours);
+        }
+
+        /// <summary>The horizontal gap between each segment and the next, in the SVG's units.</summary>
+        static double[] Gaps()
+        {
+            return MarkShape.Bars.Zip(MarkShape.Bars.Skip(1), (a, b) => b[0] - (a[0] + a[2])).ToArray();
         }
     }
 }

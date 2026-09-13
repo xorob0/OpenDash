@@ -177,12 +177,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The mark: the rev bar, which is the one shape OpenDash owns, as five segments lit left to right.
+        /// The mark: the rev bar, which is the one shape OpenDash owns, as a sweep of three segments and the
+        /// shift point set apart from them.
         /// </summary>
         /// <remarks>
         /// The geometry is MarkShape.Bars, which mirrors media/logo.svg; MarkTests checks the two against each
         /// other. WPF cannot render an SVG and Markdown cannot render a Canvas, so the shape is written twice and
         /// the test is what stops the copies drifting. Change the SVG first and the constants second.
+        /// The corners are square, which is radius.none and what the SVG draws. They were rounded to capsules
+        /// here for as long as the mark existed, because the test compared positions and sizes and nothing else;
+        /// it now compares the corners too.
         /// </remarks>
         public static FrameworkElement Mark(double size = 24)
         {
@@ -194,8 +198,6 @@ namespace OpenDashPlugin
                 {
                     Width = bar[2] * scale,
                     Height = bar[3] * scale,
-                    RadiusX = bar[2] * scale / 2,
-                    RadiusY = bar[2] * scale / 2,
                     Fill = Brush(Theme.Accent),
                 };
                 Canvas.SetLeft(rect, bar[0] * scale);
