@@ -88,13 +88,43 @@ describe('the real changelog', () => {
 });
 
 describe('the command', () => {
+  /**
+   * Collects what `main` would have printed instead of letting it print.
+   *
+   * Not tidiness: the failure path emits a `::error::` workflow command, and GitHub turns that into
+   * a red annotation on the run whatever the exit code is. Calling `main` for real put a red X on
+   * every green CI run, which is how a red mark stops meaning anything.
+   */
+  const collect = (): { io: { out: (l: string) => void; err: (l: string) => void }; out: string[]; err: string[] } => {
+    const out: string[] = [];
+    const err: string[] = [];
+    return { io: { out: (l) => out.push(l), err: (l) => err.push(l) }, out, err };
+  };
+
   test('a tag with no section fails, rather than publishing the wrong notes', () => {
-    expect(main(['v99.0.0'])).toBe(1);
+    const c = collect();
+    expect(main(['v99.0.0'], c.io)).toBe(1);
+    expect(c.err.join('\n')).toInclude('CHANGELOG.md has no section for 99.0.0');
+  });
+
+  test('the failure is annotated on the run, and only on a real failure', () => {
+    // The annotation has to exist -- it is how a release that would ship the wrong notes announces
+    // itself -- and it has to stay off every passing run.
+    const failing = collect();
+    main(['v99.0.0'], failing.io);
+    expect(failing.err.some((l) => l.startsWith('::error::'))).toBe(true);
+
+    const current = readFileSync(new URL('../VERSION', import.meta.url).pathname, 'utf8').trim();
+    const passing = collect();
+    main([current], passing.io);
+    expect(passing.err.some((l) => l.startsWith('::'))).toBe(false);
   });
 
   test('a version that exists succeeds', () => {
     const current = readFileSync(new URL('../VERSION', import.meta.url).pathname, 'utf8').trim();
-    expect(main([current])).toBe(0);
+    const c = collect();
+    expect(main([current], c.io)).toBe(0);
+    expect(c.out.join('\n')).not.toBe('');
   });
 
   test('no argument at all is a usage error, not a silent empty body', () => {
