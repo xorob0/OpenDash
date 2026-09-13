@@ -20,6 +20,7 @@ the thing that is wrong when the two disagree.
 | 0009 | [Does the plugin compute?](0009-does-the-plugin-compute.md) | No, and it turned out not to need to: SimHub already publishes almost all of it |
 | 0012 | [Update checks, and what leaves the user's machine](0012-update-checks.md) | openDash asks GitHub what the newest release is, sends nothing about the user, and never installs without being told |
 | 0013 | [openDash lights hardware](0013-lighting-hardware.md) | LED profiles are generated build output like the `.djson`; the flag box goes first, and nothing is written to a device unasked |
+| 0014 | [The shift model is the car's own](0014-the-shift-model.md) | iRacing publishes the car's shift-light RPMs and SimHub ignores them; one definition drives the bar, the arc and the strip. Amends 0004 |
 
 ## Reserved
 
@@ -39,7 +40,6 @@ body still naming the old number is amended rather than rewritten, which is why 
 | 0007 | The second screens, written down after the fact | XOR-67 |
 | 0010 | Where alert priority is decided | XOR-56 |
 | 0011 | How far personalisation reaches into a generated package | XOR-73 |
-| 0014 | The shift model is the sim's own, not SimHub's | XOR-230 |
 | 0015 | What a car theme is, and the scope line it has to move | XOR-142 |
 | 0016 | How several hundred themed packages reach the user | XOR-146 |
 
