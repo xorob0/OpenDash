@@ -7,10 +7,17 @@ rather than from the wiki. Where a value is called "always 0", the method that r
 
 [simhub-leds-format.md](simhub-leds-format.md) is the file format. This is what goes in it.
 
-The reason this file exists is the rule in [scope.md](../scope.md): a module that reads something
-iRacing does not publish **says so rather than drawing a zero**. On a screen that rule protects a
-readout; on a strip it matters more, because an LED that never lights reads as *"not happening"*
-rather than *"not known"*, and a driver cannot tell the two apart at 200km/h.
+The reason this file exists is that an effect is only as honest as the property under it, and half
+of what a competitor's LED profile shows is not published by every sim. Three answers are possible
+and this file keeps them apart: **drawn** (the property is filled on iRacing), **best effort** (the
+property exists and iRacing leaves it zero, so the light ships and stays dark there), and **no
+property at all** (nothing to bind, in either layer).
+
+The middle one is a deliberate departure from how a *readout* is treated. [scope.md](../scope.md)
+says a module reading something iRacing does not publish says so rather than **drawing a zero**, and
+that rule is about a screen: `0.00` asserts a measurement nobody took. An LED that stays dark asserts
+nothing, so an effect whose property exists is shipped and simply does not light — which is what
+makes it useful on a sim that does fill it.
 
 ## The trap that decides how every formula is written
 
@@ -45,11 +52,13 @@ Two related facts, both verified:
 | Fuel gauge | `GameData.FuelPercent` | 0..100 |
 | Low fuel | `GameData.CarSettings_FuelAlertActive` | What the native `Status.LowFuelRemainingLapsAlert` reads. SimHub computes it, so it works on iRacing |
 | ABS active | `GameData.ABSActive` | `(BrakeABSactive > 0)`. Real intervention, unlike TC |
-| TC set | `GameData.TCLevel` | The dial. **Not** `TCActive` — see below |
+| TC | `GameData.TCLevel`, `GameData.TCActive` | Steady on the dial, blinking on the intervention — see best effort |
 | DRS | `GameData.DRSAvailable`, `GameData.DRSEnabled` | Carry a stale `[NotAvailable]`, but the reader does fill them from `DRS_Status` |
 | Push to pass | `GameData.PushToPassActive`, `GameRawData.Telemetry.PlayerP2P_Count` | Injected per frame from `CarIdxP2P_*[playerCarIdx]` |
 | Headlight flash | `GameRawData.Telemetry.dcHeadlightFlash` | The only source. SimHub normalises nothing; absent entirely on a car without the control |
 | Spotters | `GameData.SpotterCarLeft` / `SpotterCarRight` | From iRacing's `CarLeftRight`. "Both sides" is the conjunction |
+| Turn indicators | `GameData.TurnIndicatorLeft` / `Right` | Best effort; dark on iRacing |
+| ERS charge | `GameData.ERSPercent` | Best effort; dark on iRacing. KERS folds in here |
 | Flags | `GameData.Flag_{Black,Checkered,Yellow,Blue,White,Green}` | Note SimHub's spelling: `Checkered` |
 | Pit lane, limiter | `GameData.IsInPitLane`, `GameData.PitLimiterOn` | The limiter is one bit of iRacing's `EngineWarnings` |
 | Pit speeding | composed | See below |
@@ -70,21 +79,35 @@ it is not a property.
 `values.ts` already tests `PitSvFlags`. **There is no oil-temperature bit and no water-pressure
 bit.** A lamp for either would have to threshold the temperature itself.
 
-## What openDash refuses to draw, and why
+## Best effort: the property exists, and iRacing does not fill it
 
-Each of these is a light a competitor shows. On iRacing every one of them could only ever be dark.
+These ship and are dark on iRacing. On a sim whose reader fills them they light, untested in the
+same sense the dashboards are untested on another sim.
 
-| Effect | Why not |
-|---|---|
-| TC intervening | `IRacingManager.GD_TCActive()` is `[NotAvailable] { return 0; }`. Always 0. The TC light shows the dial instead |
-| Turn indicators | `GD_TurnIndicatorLeft/Right()` are `[NotAvailable] { return 0; }` — **hard zero, not null**, so `isnull()` cannot even detect the absence. The native `Status.TurnIndicator*` containers are dead on iRacing |
-| ERS, battery charge | `ERSPercent`, `ERSStored`, `ERSMax` exist; the iRacing reader overrides neither `GD_ERSMax` nor `GD_ERSStored`, so all three are always 0. `LedsGameData` has no ERS member at all |
-| KERS | Does not exist in SimHub 9.12.6, in any sim, under any spelling |
-| Headlights on/off, beam | No SimHub field and no iRacing var. The only "Headlights" string in the assembly is a controller button role |
-| Water pressure | No SimHub property and no iRacing var. iRacing publishes oil pressure and water temperature, and no coolant pressure |
-| Distance or time to the pit box | No property and no var; any figure is an estimate rather than a reading |
-| Per-gear shift points | See below — nothing to derive from |
-| Red, black-and-white flags | No `Flag_Red`. iRacing's `SessionFlags.red` bit exists and SimHub never normalises it; reachable as `GameRawData.Telemetry.SessionFlagsDetails.Isred` |
+The judgement differs from the one a readout gets, and deliberately. `scope.md`'s rule is that a
+module reading something iRacing does not publish says so **rather than drawing a zero**, and that is
+about a readout: `0.00` on a screen asserts a measurement nobody took. **An LED that stays dark
+asserts nothing.**
+
+| Effect | Property | What iRacing does |
+|---|---|---|
+| TC intervening | `GameData.TCActive` | `GD_TCActive()` is `[NotAvailable] return 0`. openDash's TC light is steady on `TCLevel` and blinks on `TCActive`, so on iRacing it is a steady light that never blinks |
+| Turn indicators | `GameData.TurnIndicatorLeft` / `Right` | Both `[NotAvailable] return 0` — **hard zero, not null**, so `isnull()` cannot tell "off" from "not published" |
+| ERS charge, and KERS with it | `GameData.ERSPercent` | The reader overrides neither `GD_ERSMax` nor `GD_ERSStored`, so it is always 0. SimHub has no `KERS` member at all and normalises every hybrid store into this percentage |
+
+## What has no property at all
+
+Not a refusal so much as an absence: there is nothing to bind, in the normalised layer or iRacing's
+own. A grep of the decompiled `GameReaderCommon.dll` finds zero of each.
+
+| Effect | Why not | The nearest thing that does exist |
+|---|---|---|
+| Headlights on/off, beam | No headlight, light or beam member in `StatusDataBase`; no iRacing var. The only "Headlights" string in the assembly is a controller button role | `GameRawData.Telemetry.dcHeadlightFlash`, the flash-to-pass, which **is** shipped |
+| Water pressure | No SimHub property and no iRacing var. iRacing publishes oil pressure and water temperature, and no coolant pressure | The water-temperature warning bit, which is shipped, and the raw `WaterLevel` in litres |
+| Oil temperature warning | `EngineWarnings` has a water-temp bit and an oil-pressure bit and no oil-temp bit | `GameData.OilTemperature`, thresholded by whoever wants the lamp |
+| Distance or time to the pit box | No property and no var; any figure is an estimate rather than a reading | The pit lane and limiter effects, which say where the car is |
+| Per-gear shift points | See below — nothing to derive from | The table, `data/shift-points.json` |
+| Red, black-and-white flags | No `Flag_Red`; SimHub never normalises iRacing's red bit | `GameRawData.Telemetry.SessionFlagsDetails.Isred` |
 
 ## Per-gear shift points: there is nothing to derive
 

@@ -6,13 +6,22 @@
  * SimHub property, verified against the decompiled 9.12.6 assemblies and recorded in
  * docs/research/simhub-led-sources.md — and an honest note where iRacing does not publish it.
  *
- * **Effects openDash refuses to draw, because iRacing does not publish them.** `TCActive` is
- * `[NotAvailable] return 0` in the iRacing reader, so a "TC intervening" light would be dark for
- * ever; `TurnIndicatorLeft/Right` are the same, and are hard zero rather than null, so not even
- * `isnull()` can tell that they are missing; `ERSPercent`, `ERSStored` and `ERSMax` are always 0
- * because the reader never overrides them; `KERS` does not exist in SimHub at all, in any sim.
- * Each of those is listed in {@link NOT_ON_IRACING} rather than shipped as a light that never
- * comes on, which is the same rule the second screens follow for a module iRacing cannot feed.
+ * **Best effort, where SimHub has a property and iRacing does not fill it.** `TCActive`,
+ * `TurnIndicatorLeft`, `TurnIndicatorRight` and `ERSPercent` are real, exposed members of
+ * `StatusDataBase`, filled by whichever game reader is running. The iRacing reader overrides the
+ * first three with `[NotAvailable] return 0` and never overrides the ERS pair, so on iRacing they
+ * are dark — and on a sim that does fill them they light. They ship for that reason.
+ *
+ * That is a different judgement from the one the second screens make, and deliberately so. The rule
+ * in scope.md is that a module which reads something iRacing does not publish **says so rather than
+ * drawing a zero**, and it is about a readout: `0.00` on a screen asserts a measurement that was
+ * never taken. An LED that stays dark asserts nothing. So an effect whose property exists is shipped
+ * and simply does not light, and {@link BEST_EFFORT} records which those are and why.
+ *
+ * **What is not shipped is what has no property at all**, in any sim: there is no headlight or beam
+ * field in `StatusDataBase`, no `KERS` member anywhere in SimHub 9.12.6, and no water pressure. A
+ * grep of the decompiled `GameReaderCommon.dll` finds zero of each. {@link NO_PROPERTY} lists them
+ * with the nearest thing that does exist.
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
@@ -125,13 +134,33 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   },
   {
     id: 'tc',
-    label: 'Traction control set',
+    label: 'Traction control',
     placement: 'sides',
-    // Not "TC intervening": IRacingManager.GD_TCActive() is [NotAvailable] return 0, so the
-    // intervention light would never come on. This is the dial being set above zero, which is real.
+    // One light carrying both facts, so it degrades rather than going dark. Steady means the dial is
+    // set above zero, which every sim including iRacing fills; blinking means TC is actually cutting
+    // in, which iRacing does not publish (GD_TCActive() is [NotAvailable] return 0) and other readers
+    // do. On iRacing it is therefore a steady light that never blinks, which is the truth about
+    // iRacing rather than a gap.
     when: gt(g('TCLevel'), num(0)),
     color: ds.color.caution.primary,
-    source: 'DataCorePlugin.GameData.TCLevel',
+    blinkWhen: gt(g('TCActive'), num(0)),
+    blinkColor: ds.color.caution.primary,
+    blinkDelayMs: OVER_REV_BLINK_MS,
+    source: 'DataCorePlugin.GameData.TCLevel, TCActive',
+  },
+  {
+    id: 'ers',
+    label: 'ERS charge',
+    placement: 'sides',
+    // ERS is also where KERS lands: SimHub models no KERS of its own — the string does not occur in
+    // any of its assemblies — and normalises every hybrid store into this one percentage.
+    when: gt(g('ERSPercent'), num(0)),
+    color: ds.color.info.primary,
+    // Nearly spent, which is the part a driver acts on.
+    blinkWhen: and(gt(g('ERSPercent'), num(0)), gt(num(10), g('ERSPercent'))),
+    blinkColor: ds.color.danger.primary,
+    blinkDelayMs: OVER_REV_BLINK_MS * 2,
+    source: 'DataCorePlugin.GameData.ERSPercent',
   },
   {
     id: 'drs',
@@ -233,6 +262,41 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
   },
 ];
 
+/**
+ * The turn indicators, on the side being signalled — the same placement rule as the spotters, and
+ * for the same reason: a light about a side belongs on that side.
+ *
+ * Best effort. `TurnIndicatorLeft` and `TurnIndicatorRight` are real `StatusDataBase` members and
+ * the iRacing reader overrides both with `[NotAvailable] return 0`, so on iRacing these are dark and
+ * on a sim that fills them they light. Note they are hard zero rather than null, so `isnull()`
+ * cannot distinguish "off" from "not published" — which is why this is in {@link BEST_EFFORT}
+ * rather than something the profile could detect and report.
+ */
+export const TURN_EFFECTS: readonly LedEffect[] = [
+  {
+    id: 'turn.left',
+    label: 'Indicating left',
+    placement: 'left',
+    when: gt(g('TurnIndicatorLeft'), num(0)),
+    color: ds.color.caution.primary,
+    blinkWhen: gt(g('TurnIndicatorLeft'), num(0)),
+    blinkColor: ds.color.caution.primary,
+    blinkDelayMs: OVER_REV_BLINK_MS * 4,
+    source: 'DataCorePlugin.GameData.TurnIndicatorLeft',
+  },
+  {
+    id: 'turn.right',
+    label: 'Indicating right',
+    placement: 'right',
+    when: gt(g('TurnIndicatorRight'), num(0)),
+    color: ds.color.caution.primary,
+    blinkWhen: gt(g('TurnIndicatorRight'), num(0)),
+    blinkColor: ds.color.caution.primary,
+    blinkDelayMs: OVER_REV_BLINK_MS * 4,
+    source: 'DataCorePlugin.GameData.TurnIndicatorRight',
+  },
+];
+
 /** The pit family, which takes the whole strip because it is about where the car is, not what it is doing. */
 export const PIT_EFFECTS: readonly LedEffect[] = [
   {
@@ -272,23 +336,61 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
 ];
 
 /**
- * What openDash will not draw on iRacing, and why. Each of these is a light a competitor shows and
- * openDash deliberately does not, because on iRacing it could only ever be dark — which is worse
- * than absent, since a dark light reads as "not happening" rather than "not known".
+ * Effects that ship and are dark on iRacing, because the property exists and the iRacing reader does
+ * not fill it. On a sim that does, they light — untested there, in the same sense the dashboards are
+ * untested on another sim, and shipped on the same reasoning.
+ *
+ * An LED that stays dark asserts nothing, which is why this is a different judgement from the one a
+ * readout gets: `0.00` on a screen claims a measurement nobody took.
  */
-export const NOT_ON_IRACING: readonly { effect: string; reason: string }[] = [
-  { effect: 'TC intervening', reason: 'IRacingManager.GD_TCActive() is [NotAvailable] and returns 0. The TC light shows the dial instead.' },
-  { effect: 'Turn indicators', reason: 'GD_TurnIndicatorLeft/Right are [NotAvailable] and return 0 — hard zero, not null, so isnull() cannot even detect the absence.' },
-  { effect: 'ERS and battery charge', reason: 'ERSPercent, ERSStored and ERSMax exist but the iRacing reader never overrides them, so all three are always 0.' },
-  { effect: 'KERS', reason: 'Does not exist in SimHub 9.12.6 at all, in any sim.' },
-  { effect: 'Headlights on/off and beam', reason: 'No SimHub property and no iRacing variable. Only the flash-to-pass toggle exists.' },
-  { effect: 'Water pressure', reason: 'No SimHub property and no iRacing variable; iRacing publishes oil pressure and water temperature, not water pressure.' },
-  { effect: 'Oil temperature warning', reason: "iRacing's EngineWarnings word has a water-temp bit and an oil-pressure bit, and no oil-temp bit." },
-  { effect: 'Distance to the pit box', reason: 'No SimHub property and no iRacing variable; any figure would be an estimate rather than a reading.' },
+export const BEST_EFFORT: readonly { effect: string; property: string; reason: string }[] = [
+  {
+    effect: 'TC intervening',
+    property: 'DataCorePlugin.GameData.TCActive',
+    reason: 'IRacingManager.GD_TCActive() is [NotAvailable] and returns 0. The light is steady on the dial and blinks on the intervention, so on iRacing it is steady and never blinks.',
+  },
+  {
+    effect: 'Turn indicators',
+    property: 'DataCorePlugin.GameData.TurnIndicatorLeft / TurnIndicatorRight',
+    reason: 'GD_TurnIndicatorLeft/Right are [NotAvailable] and return 0 — hard zero rather than null, so isnull() cannot tell "off" from "not published".',
+  },
+  {
+    effect: 'ERS charge, and KERS with it',
+    property: 'DataCorePlugin.GameData.ERSPercent',
+    reason: 'The iRacing reader overrides neither GD_ERSMax nor GD_ERSStored, so ERSPercent is always 0 there. SimHub models no KERS of its own and normalises every hybrid store into this one percentage.',
+  },
+];
+
+/**
+ * What has no property at all, in any sim, with the nearest thing that does exist. These are not
+ * refusals so much as absences: there is nothing to bind, in either the normalised layer or
+ * iRacing's own.
+ */
+export const NO_PROPERTY: readonly { effect: string; reason: string; nearest: string }[] = [
+  {
+    effect: 'Headlights on, off, low or high beam',
+    reason: 'StatusDataBase has no headlight, light or beam member — a grep of the decompiled GameReaderCommon.dll finds zero — and iRacing publishes no such variable. The only "Headlights" string in SimHub.Plugins.dll is a controller button role.',
+    nearest: 'The flash-to-pass toggle, GameRawData.Telemetry.dcHeadlightFlash, which is shipped.',
+  },
+  {
+    effect: 'Water pressure',
+    reason: 'No StatusDataBase member and no iRacing variable. iRacing publishes oil pressure and water temperature, and no coolant pressure.',
+    nearest: "The water temperature warning bit of iRacing's EngineWarnings, which is shipped, and the raw WaterLevel in litres.",
+  },
+  {
+    effect: 'Oil temperature warning',
+    reason: "iRacing's EngineWarnings word has a water-temperature bit and an oil-pressure bit and no oil-temperature bit.",
+    nearest: 'GameData.OilTemperature, thresholded by whoever wants the lamp.',
+  },
+  {
+    effect: 'Distance or time to the pit box',
+    reason: 'No SimHub property and no iRacing variable; any figure would be an estimate rather than a reading.',
+    nearest: 'The pit lane and limiter effects, which say where the car is rather than how far it has to go.',
+  },
 ];
 
 /** Every effect the catalogue ships, in composition order: later shows over earlier. */
-export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...SPOTTER_EFFECTS, ...PIT_EFFECTS, ...flagEffects()];
+export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...TURN_EFFECTS, ...SPOTTER_EFFECTS, ...PIT_EFFECTS, ...flagEffects()];
 
 /** One effect as a container, over the run of LEDs its placement gives it. */
 export const effectContainer = (effect: LedEffect, startPosition: number, ledCount: number): leds.LedContainer => ({
