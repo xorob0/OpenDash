@@ -28,7 +28,8 @@ const GUEST_SSH_PORT = 2222;
 const SIMHUB_DIR = 'C:\\Program Files (x86)\\SimHub';
 const DASH_TEMPLATES = `${SIMHUB_DIR}\\DashTemplates`;
 /** SimHub's record of which plugins are enabled, read once at startup. */
-const SIMHUB_ACTIVATION = `${SIMHUB_DIR}\\PluginsData\\PluginsActivation.json`;
+const ACTIVATION_FILE = 'PluginsActivation.json';
+const SIMHUB_ACTIVATION = `${SIMHUB_DIR}\\PluginsData\\${ACTIVATION_FILE}`;
 /** The share that is `Z:\` in the interactive session and `\\host.lan\Data` from an SSH one. */
 const SHARE_UNC = '\\\\host.lan\\Data';
 const LOCK_PATH = `${WINVM_DIR}/shared/vm.lock`;
@@ -387,9 +388,13 @@ export function withPluginActivated(entries: readonly PluginActivation[], classN
  * anyway, SimHub keeps copies of the file under `PluginsData\\_Backups`.
  */
 function editActivation(host: Host, what: string, edit: (entries: PluginActivation[]) => PluginActivation[]): RunResult {
-  const name = path.basename(SIMHUB_ACTIVATION);
+  // The file name is written out rather than taken from the Windows path, which node's path module
+  // reads as one long file name on anything that is not Windows.
+  const name = ACTIVATION_FILE;
   const local = path.join(repoRoot, 'build', name);
-  const out = powershell(host, `Copy-Item ${psq(SIMHUB_ACTIVATION)} ${psq(`${SHARE_UNC}\\${name}`)} -Force; 'copied'`, 180);
+  const out = powershell(host, `$ErrorActionPreference = 'Stop'
+Copy-Item ${psq(SIMHUB_ACTIVATION)} ${psq(`${SHARE_UNC}\\${name}`)} -Force
+'copied'`, 180);
   if (!out.ok) return out;
   const back = fromShare(host, name, local);
   if (!back.ok) return back;
@@ -404,7 +409,9 @@ function editActivation(host: Host, what: string, edit: (entries: PluginActivati
 
   const sent = toShare(host, local, name);
   if (!sent.ok) return sent;
-  return powershell(host, `Copy-Item ${psq(`${SHARE_UNC}\\${name}`)} ${psq(SIMHUB_ACTIVATION)} -Force; "${what}"`, 180);
+  return powershell(host, `$ErrorActionPreference = 'Stop'
+Copy-Item ${psq(`${SHARE_UNC}\\${name}`)} ${psq(SIMHUB_ACTIVATION)} -Force
+"${what}"`, 180);
 }
 
 /**
