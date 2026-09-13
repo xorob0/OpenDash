@@ -9,7 +9,8 @@ the MIT licence.
 > 480 px round DDU, two companion screens and two pit wall screens, plus a SimHub plugin that
 > installs them all and exposes their settings. Everything below has been verified on
 > SimHub 9.12.6. See [docs/scope.md](docs/scope.md) for what OpenDash is and what it refuses to
-> be, and [docs/second-screens.md](docs/second-screens.md) for the companion and the pit wall.
+> be, [docs/second-screens.md](docs/second-screens.md) for the companion and the pit wall, and
+> [docs/flag-box.md](docs/flag-box.md) for the 8x8 LED matrix.
 
 ## What makes this different
 
@@ -147,6 +148,7 @@ docs/
   scope.md             What OpenDash is, what ships, and what is deliberately not built
   scope-mvp.md         The MVP contract, closed and superseded by scope.md
   second-screens.md    The companion and the pit wall, and what they deliberately do not show
+  flag-box.md          The 8x8 LED matrix: setting it up, what it shows, and what it will not
   architecture.md      How source becomes a .simhubdash, and how a setting reaches it
   decisions/           Architecture decision records
   research/            Format notes verified against SimHub 9.12.6, SDK notes, competitor analysis

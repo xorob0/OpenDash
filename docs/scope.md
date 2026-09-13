@@ -142,8 +142,9 @@ and embedded in the plugin like everything else. It is the one artefact **the pl
 install**: SimHub keeps matrix profiles inside a settings file it rewrites itself, and painting
 hardware somebody owns is not something a dashboard should do without being asked. The plugin
 extracts the file and the lights page says what to import.
-[ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning, and the rest of the LED families
-— strips, brows, wheel buttons, ambient lighting — are deliberately not claimed.
+[ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning, [flag-box.md](flag-box.md) is
+the guide, and the rest of the LED families — strips, brows, wheel buttons, ambient lighting — are
+deliberately not claimed.
 
 ## The plugin
 
@@ -265,7 +266,8 @@ anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
 
 [architecture.md](architecture.md) is how source becomes a `.simhubdash` and how a setting
 reaches a running dashboard. [second-screens.md](second-screens.md) is the companion and the pit
-wall. [decisions/](decisions/) holds the records that this document summarises, and a record
+wall. [flag-box.md](flag-box.md) is the 8x8 matrix, and [design/flag-box.md](design/flag-box.md)
+is what each of its sixty-four-pixel pictures means. [decisions/](decisions/) holds the records that this document summarises, and a record
 wins over this summary wherever the two disagree. [research/](research/) holds the format notes
 verified against SimHub 9.12.6, which are the place to check before guessing at a property name.
 [scope-mvp.md](scope-mvp.md) is closed, and is of historical interest only.

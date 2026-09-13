@@ -138,6 +138,32 @@ The leaderboard is one list with a class chip on each row rather than a block pe
 exposes per-class rows only for your own class, so class headings would be a picture of data
 that is not there.
 
+## The flag box
+
+If you have an **8x8 LED matrix** on an Arduino — the printed box a lot of people have beside the
+screen — openDash drives it too: the flag that is out, the gear, the pit state, a car alongside,
+and the warnings you would otherwise miss.
+
+It is the one thing openDash **does not install for you.** SimHub keeps matrix profiles inside a
+settings file it rewrites whenever anything changes, so writing into it underneath a running
+SimHub would lose the other profiles you have made. The plugin writes the file where you can find
+it and stops:
+
+```
+SimHub\OpenDash\openDash Flag box.ledsprofile
+```
+
+The exact path is on the OpenDash page under **Lights**. Import it once, in SimHub's own matrix
+device settings, and everything on that page then reaches the box while you drive.
+
+Before that, set the matrix's **rotation** and **serpentine** on the device in SimHub. Those two
+belong to SimHub rather than to openDash, because the right values depend on which corner your
+data cable enters — and if they are wrong, the picture comes out sideways or shredded and the
+profile looks broken when it is not.
+
+[docs/flag-box.md](../docs/flag-box.md) is the full guide: what every picture means, what the box
+does not do and why, and what to check when it looks wrong.
+
 ## Settings
 
 Every change on the OpenDash page takes effect immediately on a running dashboard; there is
