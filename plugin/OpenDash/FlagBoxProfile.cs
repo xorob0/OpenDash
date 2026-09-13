@@ -235,6 +235,55 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// Where SimHub's own profile import dialog opens: Documents\SimHub.
+        ///
+        /// ProfilesManager.importProfile_Click sets InitialDirectory to
+        /// Path.Combine(GetFolderPath(SpecialFolder.Personal), "SimHub") (ProfilesManager.cs:208-212),
+        /// so a copy put there is the file already in front of the user when the dialog opens. That
+        /// only matters on the fallback path -- normally the Lights page installs the profile without
+        /// a dialog at all -- which is why nothing writes here unless the user asks.
+        /// </summary>
+        public static string ImportFolder(string documents = null)
+        {
+            var root = documents ?? Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            return string.IsNullOrEmpty(root) ? null : Path.Combine(root, "SimHub");
+        }
+
+        /// <summary>
+        /// Copies the profile to where SimHub's import dialog opens, and returns the path.
+        ///
+        /// Deliberately on demand: this writes into the user's Documents, and a stray file there for
+        /// everybody who never needs it would be a poor trade for a case that is already the fallback.
+        /// </summary>
+        public static FlagBoxResult CopyForImport(FlagBoxResult extracted, string documents = null, IInstallLog log = null)
+        {
+            log = log ?? NullInstallLog.Instance;
+            if (extracted == null || string.IsNullOrEmpty(extracted.Json))
+            {
+                return new FlagBoxResult { Status = FlagBoxStatus.NotEmbedded, Message = "No profile embedded" };
+            }
+            var folder = ImportFolder(documents);
+            if (folder == null)
+            {
+                return new FlagBoxResult { Status = FlagBoxStatus.Failed, Message = "No Documents folder" };
+            }
+            var name = FileNameOf(extracted.Path == null ? null : Path.GetFileName(extracted.Path)) ?? "openDash Flag box" + ProfileExtension;
+            var path = Path.Combine(folder, Path.GetFileName(extracted.Path ?? name));
+            try
+            {
+                Directory.CreateDirectory(folder);
+                File.WriteAllText(path, extracted.Json, new UTF8Encoding(false));
+                log.Info("Copied the flag box profile to " + path + ", where SimHub's import dialog opens.");
+                return new FlagBoxResult { Status = FlagBoxStatus.Extracted, Path = path, ProfileName = extracted.ProfileName, Json = extracted.Json, Message = "Copied" };
+            }
+            catch (Exception e)
+            {
+                log.Error("Could not copy the flag box profile to " + path + ": " + e.Message);
+                return new FlagBoxResult { Status = FlagBoxStatus.Failed, Path = path, Message = e.Message };
+            }
+        }
+
         /// <summary>What the log says at startup. The panel says the rest, because only the panel knows
         /// whether SimHub already holds the profile; see FlagBoxInstallPlan.Summary.</summary>
         public static string Summary(FlagBoxResult result)

@@ -1018,6 +1018,8 @@ namespace OpenDashPlugin
 
         private TextBlock flagBoxLine;
         private Button flagBoxButton;
+        private Button flagBoxCopyButton;
+        private TextBox flagBoxPath;
 
         /// <summary>
         /// The install row: what SimHub holds now, and one button that changes it.
@@ -1036,7 +1038,9 @@ namespace OpenDashPlugin
             var text = Ui.VStack(4, Ui.Body("Flag box profile"), flagBoxLine);
             text.MaxWidth = 460;
             text.HorizontalAlignment = HorizontalAlignment.Left;
-            var right = Ui.VStack(4, flagBoxButton, FlagBoxPathBox());
+            flagBoxCopyButton = BuildSecondaryButton("Copy where SimHub looks", "Puts a copy in Documents\\SimHub, which is the folder SimHub's own profile import opens in.");
+            flagBoxCopyButton.Click += (sender, args) => CopyFlagBoxForImport();
+            var right = Ui.VStack(4, flagBoxButton, flagBoxCopyButton, FlagBoxPathBox());
             RefreshFlagBox();
             return Ui.Row(text, right);
         }
@@ -1052,6 +1056,25 @@ namespace OpenDashPlugin
             // Nothing to press when there is no profile to install or nowhere to put it.
             var usable = plan != null && plan.State != FlagBoxInstallState.NotEmbedded && plan.State != FlagBoxInstallState.Unavailable;
             flagBoxButton.IsEnabled = usable;
+            // The by-hand route, offered only when the one-click one is not there. SimHub's import
+            // dialog opens in Documents\SimHub, which is not where the profile was written.
+            if (flagBoxCopyButton != null)
+            {
+                flagBoxCopyButton.Visibility = plan != null && plan.State == FlagBoxInstallState.Unavailable
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+        }
+
+        private void CopyFlagBoxForImport()
+        {
+            var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());
+            if (flagBoxPath != null && copied?.Path != null) flagBoxPath.Text = copied.Path;
+            if (flagBoxLine == null) return;
+            flagBoxLine.Text = copied != null && copied.Status == FlagBoxStatus.Failed
+                ? "Could not copy the profile: " + copied.Message
+                : "Copied to " + copied?.Path + ". In SimHub, open your matrix device's profiles and press Import; "
+                    + "the dialog opens in that folder.";
         }
 
         private FlagBoxPlan SafePlan()
@@ -1091,8 +1114,9 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Right,
                 IsReadOnly = true,
                 Text = plugin.FlagBox?.Path ?? string.Empty,
-                ToolTip = "Where openDash left the profile. Read-only: copy it, then import it in SimHub.",
+                ToolTip = "Where openDash left the profile.",
             };
+            flagBoxPath = box;
             return box;
         }
 
