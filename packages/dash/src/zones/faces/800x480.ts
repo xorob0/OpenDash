@@ -20,7 +20,7 @@ const NARROWER = 25;
 const from = zoneFace850x480.zones;
 
 export const zoneFace800x480: ZoneLayout = {
-  folder: 'openDash zones 800x480',
+  folder: 'openDash 800x480',
   description: zoneLayoutDescription(WIDTH, HEIGHT),
   width: WIDTH,
   height: HEIGHT,

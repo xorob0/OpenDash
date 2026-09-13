@@ -70,6 +70,47 @@ namespace OpenDashPlugin.Tests
             Assert.NotNull(record.Get("openDash"));
         }
 
+        /// <summary>
+        /// The case XOR-118 creates, and the one it says can hurt somebody.
+        ///
+        /// A user on rc.2 has DashTemplates/openDash holding the twelve-slot card face, and their settings carry no
+        /// fingerprint for it, because fingerprints only began in rc.3. The rename puts the zone face under that
+        /// name, so the update replaces their dashboard with a different design rather than a newer version of the
+        /// same one. Nothing can ask them first, since no record exists to tell an edit from an untouched folder, so
+        /// the whole of the protection is that a copy is kept.
+        /// </summary>
+        [Fact]
+        public void A_folder_replaced_under_a_name_it_did_not_have_before_is_still_copied_first()
+        {
+            var record = new MemoryFolderRecord();
+            PackageExtractor.Install(SyntheticPackage.Zip("openDash", "0.1.0-rc.2"), root, null);
+            var theirs = Path.Combine(root, "DashTemplates", "openDash", "openDash.djson");
+            File.WriteAllText(theirs, "{\"theirs\":true}");
+            Assert.Empty(record.Entries);
+
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0-rc.1")), record: record);
+            installer.EnsureInstalled(false);
+
+            var entry = installer.Packages.Single();
+            Assert.True(entry.Extracted);
+            Assert.Equal("0.2.0-rc.1", entry.InstalledVersion);
+
+            // The copy exists, holds what they had, and is named so that a person can find it.
+            var backup = Path.Combine(root, "DashTemplates", "openDash" + PackageExtractor.BackupSuffix);
+            Assert.Equal(backup, entry.KeptCopy);
+            Assert.True(File.Exists(backup));
+            using (var zip = ZipFile.OpenRead(backup))
+            {
+                var djson = zip.Entries.Single(e => e.FullName.EndsWith("openDash.djson", StringComparison.Ordinal));
+                using (var reader = new StreamReader(djson.Open()))
+                {
+                    Assert.Equal("{\"theirs\":true}", reader.ReadToEnd());
+                }
+            }
+            // And what is installed now is the new one, not what was copied away.
+            Assert.NotEqual("{\"theirs\":true}", File.ReadAllText(theirs));
+        }
+
         [Fact]
         public void A_folder_that_is_current_is_still_adopted_so_the_next_run_can_tell()
         {
@@ -149,7 +190,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A folder openDash cannot read is one it cannot vouch for, which is the asking case rather than a failure.
+        /// A folder OpenDash cannot read is one it cannot vouch for, which is the asking case rather than a failure.
         /// It used to be a failure that never went away, since the fingerprint is taken where Edited is assigned: the
         /// exception an unreadable file raises landed in the blanket catch of Process, the package was reported Failed,
         /// and every later run reached the same line and did the same thing, so the dashboard was never installed
@@ -175,7 +216,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(entry.Edited);
             Assert.True(entry.HeldBack);
             Assert.False(entry.Extracted);
-            Assert.Contains(log.Lines, line => line.Contains("has changed since openDash wrote it"));
+            Assert.Contains(log.Lines, line => line.Contains("has changed since OpenDash wrote it"));
         }
 
         // The install run
@@ -204,7 +245,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("openDash", installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
             Assert.Equal("0.2.0", installer.EmbeddedVersion);
-            Assert.Equal("openDash 0.2.0 · 2 dashboards", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
+            Assert.Equal("OpenDash 0.2.0 · 2 dashboards", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
 
             // Both packages carry the same fonts; the second install finds them in DashFonts already.
             Assert.Equal(2, Directory.GetFiles(Path.Combine(root, "DashFonts"), "*.ttf").Length);
@@ -338,7 +379,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(SmallFolder, installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
-            Assert.Equal("openDash 0.2.0 · 1 dashboard", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
+            Assert.Equal("OpenDash 0.2.0 · 1 dashboard", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
         }
 
         [Fact]
@@ -365,10 +406,10 @@ namespace OpenDashPlugin.Tests
         // The panel's texts
 
         [Theory]
-        [InlineData("0.1.0", 10, "openDash 0.1.0 · 10 dashboards")]
-        [InlineData("0.1.0", 1, "openDash 0.1.0 · 1 dashboard")]
-        [InlineData("0.1.0", 0, "openDash 0.1.0")]
-        [InlineData("(unknown version)", 2, "openDash (unknown version) · 2 dashboards")]
+        [InlineData("0.1.0", 10, "OpenDash 0.1.0 · 10 dashboards")]
+        [InlineData("0.1.0", 1, "OpenDash 0.1.0 · 1 dashboard")]
+        [InlineData("0.1.0", 0, "OpenDash 0.1.0")]
+        [InlineData("(unknown version)", 2, "OpenDash (unknown version) · 2 dashboards")]
         public void Summary_names_the_version_and_counts_the_dashboards(string version, int count, string expected)
         {
             Assert.Equal(expected, DashboardInstaller.Summary(version, count));

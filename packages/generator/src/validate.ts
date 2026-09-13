@@ -47,7 +47,8 @@ export interface ValidationResult {
 }
 
 const GEOMETRY_TARGETS: BindingTarget[] = ['Left', 'Top', 'Width', 'Height'];
-/** `BorderColor` is not here: it lives on `BorderStyle`, so SimHub ignores it as an item binding. */
+/** `BorderColor` is not here: it lives on `BorderStyle`, so SimHub ignores it as an *item* binding.
+ *  It is bindable on the `BorderStyle` sub-object, which this model does not emit; see ADR 0011. */
 const DRAWABLE_TARGETS: BindingTarget[] = [...GEOMETRY_TARGETS, 'Visible', 'BackgroundColor', 'Opacity', 'BlinkEnabled'];
 
 /** Ellipse fill and stroke. `BackgroundColor` on an ellipse is the DrawableItem background, not the fill. */
