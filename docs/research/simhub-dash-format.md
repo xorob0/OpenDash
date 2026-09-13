@@ -383,7 +383,7 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   design, on the dash face, on the second screens and in the plugin's own settings panel. A `.djson`
   carries `Font` and `FontWeight` and nothing for stretch, and `usWidthClass` does not override the
   name, which was tried on the VM. What OpenDash ships is therefore Barlow Condensed with its family
-  renamed to one carrying no width word, "OpenDash Display", so that WPF has nothing to fold; see
+  renamed to one carrying no width word, "openDash Display", so that WPF has nothing to fold; see
   `packages/dash/src/design/fontFiles.ts` and XOR-108. The lesson generalises beyond this font: no
   family OpenDash asks for may contain Condensed, Narrow, Compressed, Extended, Expanded or Wide.
   Their digits are proportional and SimHub cannot request `tnum`, so numerals use
