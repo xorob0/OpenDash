@@ -51,9 +51,9 @@ beforeAll(() => {
   root = mkdtempSync(join(tmpdir(), 'opendash-e2e-'));
   // The faces and the second screens are built into separate directories so each block can assert
   // on exactly what its own build wrote.
-  widget = build({ out: join(root, 'widget'), screens: [], ledProfiles: [], log: (line) => log.push(line) });
-  inline = build({ out: join(root, 'inline'), strategy: 'inline', screens: [], zoneFaces: [], ledProfiles: [], log: () => {} });
-  second = build({ out: join(root, 'second'), layouts: [], zoneFaces: [], ledProfiles: [], log: () => {} });
+  widget = build({ out: join(root, 'widget'), screens: [], ledProfiles: [], flagBox: false, log: (line) => log.push(line) });
+  inline = build({ out: join(root, 'inline'), strategy: 'inline', screens: [], zoneFaces: [], ledProfiles: [], flagBox: false, log: () => {} });
+  second = build({ out: join(root, 'second'), layouts: [], zoneFaces: [], ledProfiles: [], flagBox: false, log: () => {} });
 });
 afterAll(() => {
   rmSync(root, { recursive: true, force: true });
@@ -391,14 +391,14 @@ describe('inline strategy', () => {
 
 describe('reproducibility', () => {
   test('two builds produce byte-identical packages', () => {
-    const again = build({ out: join(root, 'again'), screens: [], ledProfiles: [], log: () => {} });
+    const again = build({ out: join(root, 'again'), screens: [], ledProfiles: [], flagBox: false, log: () => {} });
     expect(again.packages).toHaveLength(widget.packages.length);
     again.packages.forEach((p, i) => expect(Buffer.compare(p.zipped.bytes, widget.packages[i]!.zipped.bytes)).toBe(0));
     expect(readFileSync(again.manifestPath, 'utf8')).toBe(readFileSync(widget.manifestPath, 'utf8'));
   });
 
   test('the second screens are reproducible too', () => {
-    const again = build({ out: join(root, 'againSecond'), layouts: [], zoneFaces: [], ledProfiles: [], log: () => {} });
+    const again = build({ out: join(root, 'againSecond'), layouts: [], zoneFaces: [], ledProfiles: [], flagBox: false, log: () => {} });
     expect(again.packages).toHaveLength(second.packages.length);
     again.packages.forEach((p, i) => expect(Buffer.compare(p.zipped.bytes, second.packages[i]!.zipped.bytes)).toBe(0));
   });
@@ -408,11 +408,11 @@ describe('LED profiles on disk', () => {
   // Built on its own, because every other fixture in this file passes ledProfiles: [].
   let lit: BuildResult;
   beforeAll(() => {
-    lit = build({ out: join(root, 'leds'), layouts: [], zoneFaces: [], screens: [], log: () => {} });
+    lit = build({ out: join(root, 'leds'), layouts: [], zoneFaces: [], screens: [], flagBox: false, log: () => {} });
   });
 
   test('writes one .ledsprofile per strip shape, and nothing that looks like a package', () => {
-    expect(lit.profiles.map((p) => p.shape.id)).toEqual(ALL_SHAPES.map((s) => s.id));
+    expect(lit.profiles.map((p) => p.shape!.id)).toEqual(ALL_SHAPES.map((s) => s.id));
     expect(readdirSync(lit.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, ...ALL_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`)].sort());
     // A profile is not a dashboard: no folder, no .djson, no zip.
     expect(readdirSync(lit.out).filter((f) => f.endsWith('.simhubdash'))).toEqual([]);
@@ -427,7 +427,9 @@ describe('LED profiles on disk', () => {
   });
 
   test('every profile is the JSON SimHub reads, and every ContainerType is one it resolves', () => {
-    for (const { shape, path: file } of lit.profiles) {
+    // Built with flagBox: false, so every profile here is a strip and has a shape.
+    for (const { shape: maybe, path: file } of lit.profiles) {
+      const shape = maybe!;
       const doc = JSON.parse(readFileSync(file, 'utf8')) as { Name: string; ProfileId: string; LedContainers: unknown[] };
       expect(doc.Name).toBe(rpmStripProfileName(shape));
       expect(doc.ProfileId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
@@ -443,7 +445,7 @@ describe('LED profiles on disk', () => {
   });
 
   test('the strip reads the same shift thresholds the rev bar does, so the two cannot disagree', () => {
-    const text = readFileSync(lit.profiles.find((p) => p.shape.id === '4-14-4')!.path, 'utf8');
+    const text = readFileSync(lit.profiles.find((p) => p.shape?.id === '4-14-4')!.path, 'utf8');
     // The one definition in src/shift.ts reaches both artefacts; if it ever forked, this is what says so.
     for (const name of Object.values(SHIFT_RPM_PROPERTIES)) expect({ name, inProfile: text.includes(name) }).toMatchObject({ inProfile: true });
     // ...and every colour on the strip is a token rather than a copy of one.
@@ -458,6 +460,37 @@ describe('LED profiles on disk', () => {
     const over = { name: 'too long', profileId: stableGuid('test/leds/over'), containers: [{ kind: 'staticColor' as const, ledCount: 9, color: '#FFFFFF', startPosition: 10 }] };
     expect(() => validateProfileOrThrow(over, 15)).toThrow(/off-strip/);
     expect(validateProfileOrThrow({ ...over, containers: [{ kind: 'staticColor', ledCount: 6, color: '#FFFFFF', startPosition: 10 }] }, 15)).toEqual([]);
+  });
+});
+
+describe('the flag box on disk', () => {
+  let box: BuildResult;
+  beforeAll(() => {
+    box = build({ out: join(root, 'flagbox'), layouts: [], zoneFaces: [], screens: [], ledProfiles: [], log: () => {} });
+  });
+
+  test('writes one matrix profile, in the matrix driver\'s own dialect', () => {
+    expect(box.profiles).toHaveLength(1);
+    const doc = JSON.parse(readFileSync(box.profiles[0]!.path, 'utf8')) as { Name: string; LedContainers: Record<string, unknown>[] };
+    expect(doc.Name).toBe('openDash flag box');
+    // The matrix driver spells ContainerType as the bare class name, not the strip's trimmed path.
+    // A strip name here would load as a disabled UnknownContainer and light nothing.
+    const types: string[] = [];
+    const walkDoc = (c: Record<string, unknown>): void => {
+      types.push(c.ContainerType as string);
+      for (const k of (c.LedContainers as Record<string, unknown>[]) ?? []) walkDoc(k);
+    };
+    for (const c of doc.LedContainers) walkDoc(c);
+    expect(types[0]).toBe('GameRunningGroupContainer');
+    expect(types).toContain('CustomConditionalGroupContainer');
+    expect(types).toContain('AnimationContainer');
+    expect(types).not.toContain('Groups.CustomConditionalGroup');
+    for (const t of types) expect({ t, known: leds.KNOWN_MATRIX_CONTAINER_TYPES.has(t) }).toMatchObject({ known: true });
+  });
+
+  test('the manifest calls it a matrix of sixty-four', () => {
+    const manifest = readJson(box.manifestPath) as unknown as { profiles: JsonItem[] };
+    expect(manifest.profiles).toEqual([{ name: 'openDash flag box', shape: 'matrix-8x8', leds: 64, file: 'openDash flag box.ledsprofile' }]);
   });
 });
 

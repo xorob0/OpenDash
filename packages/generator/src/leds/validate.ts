@@ -13,13 +13,14 @@ import { unknownFunctions } from '../ncalcFunctions.ts';
 import { propertyReferences, type ValidateOptions, type ValidationIssue, type ValidationResult } from '../validate.ts';
 import { isGuid } from '../ids.ts';
 import {
-  KNOWN_CONTAINER_TYPES,
   REMAP_POSITIONS,
   childrenOf,
   containerTypeOf,
   isLedColor,
+  knownContainerTypes,
   ledCountOf,
   type LedContainer,
+  type LedDialect,
   type LedExpression,
   type LedProfile,
 } from './model.ts';
@@ -32,6 +33,8 @@ export interface ValidateProfileOptions extends Partial<ValidateOptions> {
    * than a warning is that nothing else would ever tell you.
    */
   ledCount?: number;
+  /** Which driver's container catalogue to check against. Defaults to the strip's. */
+  dialect?: LedDialect;
 }
 
 const strip = (name: string, prefix: string): string => (name.startsWith(`${prefix}.`) ? name.slice(prefix.length + 1) : name);
@@ -77,11 +80,18 @@ const colorsOf = (c: LedContainer): { color: string; key: string }[] => {
  * groups' positions, which is what makes the fit rule below the real one rather than a guess.
  */
 const validateContainer = (c: LedContainer, path: string, offset: number, opts: ValidateProfileOptions, errors: ValidationIssue[], warnings: ValidationIssue[]): void => {
-  const type = containerTypeOf(c);
+  const dialect = opts.dialect ?? 'strip';
+  const type = containerTypeOf(c, dialect);
 
   // An unresolvable ContainerType becomes a disabled UnknownContainer: the effect vanishes quietly.
-  if (!KNOWN_CONTAINER_TYPES.has(type)) {
-    errors.push({ code: 'leds/container-type', path, message: `${type} is not a ContainerType SimHub 9.12.6 resolves; it would load as a disabled UnknownContainer` });
+  // The two dialects have different catalogues, and a strip name in a matrix profile resolves in
+  // neither — which is the failure that produces a profile of disabled containers.
+  if (!knownContainerTypes(dialect).has(type)) {
+    errors.push({
+      code: 'leds/container-type',
+      path,
+      message: `${type} is not a ContainerType SimHub 9.12.6's ${dialect} driver resolves; it would load as a disabled UnknownContainer`,
+    });
   }
 
   const start = c.startPosition ?? 1;
@@ -95,8 +105,9 @@ const validateContainer = (c: LedContainer, path: string, offset: number, opts: 
   }
 
   // The fit rule. An effect running off the end of the strip paints nothing and says nothing.
+  // A matrix is positioned in two dimensions, so the linear rule does not apply to it.
   const absolute = offset + start;
-  if (opts.ledCount !== undefined && count !== undefined && count >= 1 && start >= 1 && c.kind !== 'animation') {
+  if (dialect !== 'matrix' && opts.ledCount !== undefined && count !== undefined && count >= 1 && start >= 1 && c.kind !== 'animation') {
     const last = absolute + count - 1;
     if (last > opts.ledCount) {
       errors.push({
@@ -174,7 +185,7 @@ const validateContainer = (c: LedContainer, path: string, offset: number, opts: 
 
   // A remap group renumbers rather than offsets: its children address the remapped run from 1.
   const childOffset = c.kind === 'remapGroup' ? 0 : absolute - 1;
-  childrenOf(c).forEach((child, i) => validateContainer(child, `${path}/${containerTypeOf(child)}[${i}]`, childOffset, opts, errors, warnings));
+  childrenOf(c).forEach((child, i) => validateContainer(child, `${path}/${containerTypeOf(child, dialect)}[${i}]`, childOffset, opts, errors, warnings));
 };
 
 /** Whether a profile is fit to be written, and what is wrong with it if not. */
@@ -192,7 +203,8 @@ export const validateProfile = (profile: LedProfile, opts: ValidateProfileOption
   }
 
   const ledCount = opts.ledCount ?? profile.ledCount;
-  profile.containers.forEach((c, i) => validateContainer(c, `${root}/${containerTypeOf(c)}[${i}]`, 0, { ...opts, ledCount }, errors, warnings));
+  const dialect = opts.dialect ?? profile.dialect ?? 'strip';
+  profile.containers.forEach((c, i) => validateContainer(c, `${root}/${containerTypeOf(c, dialect)}[${i}]`, 0, { ...opts, ledCount, dialect }, errors, warnings));
 
   return { ok: errors.length === 0, errors, warnings };
 };

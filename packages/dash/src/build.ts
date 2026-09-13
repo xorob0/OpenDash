@@ -35,6 +35,7 @@ import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './sc
 import { ALL_SHAPES, deviceLength, type StripShape } from './leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from './leds/rpmStrip.ts';
 import { validateShiftTable } from './leds/shiftPoints.ts';
+import { FLAG_BOX_FILE_NAME, MATRIX_SIZE, flagBoxProfile } from './leds/flagBox.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
 /** The repository root: this file lives in packages/dash/src. */
@@ -156,8 +157,8 @@ export function validateOrThrow(pkg: DashPackage, face?: { width: number; height
  * length is passed so that the fit rule has something to measure against — an effect running off
  * the end of a strip is silent on the device, exactly as clipped text is silent on a screen.
  */
-export function validateProfileOrThrow(profile: leds.LedProfile, ledCount: number): ValidationIssue[] {
-  const result = leds.validateProfile(profile, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX, ledCount });
+export function validateProfileOrThrow(profile: leds.LedProfile, ledCount: number, dialect: leds.LedDialect = 'strip'): ValidationIssue[] {
+  const result = leds.validateProfile(profile, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX, ledCount, dialect });
   if (!result.ok) {
     const n = result.errors.length;
     throw new BuildError(`profile ${profile.name} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
@@ -224,6 +225,8 @@ export interface BuildOptions {
   screens?: readonly ScreenPackageDef[];
   /** Default: every strip shape in src/leds. Pass an empty list to build the packages alone. */
   ledProfiles?: readonly StripShape[];
+  /** Default: true. The 8x8 flag box profile, which is a matrix rather than a strip. */
+  flagBox?: boolean;
   /** Progress and warnings, one line at a time. Default: console.log. */
   log?: (line: string) => void;
 }
@@ -244,7 +247,8 @@ export interface BuiltPackage {
 
 /** A profile as it was written. */
 export interface BuiltProfile {
-  shape: StripShape;
+  /** The strip this was generated for; absent for the matrix flag box. */
+  shape?: StripShape;
   profile: leds.LedProfile;
   warnings: ValidationIssue[];
   path: string;
@@ -280,10 +284,11 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const zoneFaces = opts.zoneFaces ?? ZONE_FACES;
   const screens = opts.screens ?? SCREEN_PACKAGES;
   const ledProfiles = opts.ledProfiles ?? ALL_SHAPES;
+  const flagBox = opts.flagBox ?? true;
   const log = opts.log ?? ((line: string): void => console.log(line));
   // A build of LED profiles alone is legitimate now that they are a second kind of output, so the
   // guard asks whether there is anything to build at all rather than whether there is a dashboard.
-  if (layouts.length === 0 && screens.length === 0 && zoneFaces.length === 0 && ledProfiles.length === 0) {
+  if (layouts.length === 0 && screens.length === 0 && zoneFaces.length === 0 && ledProfiles.length === 0 && !flagBox) {
     throw new BuildError('there is nothing to build');
   }
 
@@ -323,12 +328,19 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const tableProblems = validateShiftTable();
   if (tableProblems.length > 0) throw new BuildError(`data/shift-points.json has ${tableProblems.length} problem(s):\n${tableProblems.join('\n')}`);
 
-  const stagedProfiles: { shape: StripShape; profile: leds.LedProfile; warnings: ValidationIssue[] }[] = [];
+  const stagedProfiles: { shape?: StripShape; fileName: string; profile: leds.LedProfile; warnings: ValidationIssue[] }[] = [];
   for (const shape of ledProfiles) {
     const profile = rpmStripProfile(shape, stableGuid(`openDash/leds/${shape.id}`));
     const warnings = validateProfileOrThrow(profile, deviceLength(shape));
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
-    stagedProfiles.push({ shape, profile, warnings });
+    stagedProfiles.push({ shape, fileName: rpmStripFileName(shape), profile, warnings });
+  }
+  // The 8x8 flag box, which is a different driver with a different container catalogue. ADR 0013.
+  if (flagBox) {
+    const profile = flagBoxProfile(stableGuid('openDash/leds/flag-box'));
+    const warnings = validateProfileOrThrow(profile, MATRIX_SIZE * MATRIX_SIZE, 'matrix');
+    for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
+    stagedProfiles.push({ fileName: FLAG_BOX_FILE_NAME, profile, warnings });
   }
 
   mkdirSync(out, { recursive: true });
@@ -354,15 +366,15 @@ export function build(opts: BuildOptions = {}): BuildResult {
       file: `${pkg.folderName}${PACKAGE_EXTENSION}`,
     });
   }
-  for (const { shape, profile, warnings } of stagedProfiles) {
-    const file = leds.writeLedsProfile(profile, out, rpmStripFileName(shape));
+  for (const { shape, fileName, profile, warnings } of stagedProfiles) {
+    const file = leds.writeLedsProfile(profile, out, fileName);
     log(`wrote ${relative(file)}`);
     profiles.push({ shape, profile, warnings, path: file });
     manifest.profiles.push({
       name: profile.name,
-      shape: shape.id,
-      leds: deviceLength(shape),
-      file: `${rpmStripFileName(shape)}${leds.LEDS_PROFILE_EXTENSION}`,
+      shape: shape?.id ?? 'matrix-8x8',
+      leds: shape ? deviceLength(shape) : MATRIX_SIZE * MATRIX_SIZE,
+      file: `${fileName}${leds.LEDS_PROFILE_EXTENSION}`,
     });
   }
 
