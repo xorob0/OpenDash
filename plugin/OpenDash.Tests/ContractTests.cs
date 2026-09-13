@@ -1,5 +1,6 @@
 // ContractTests.cs: the card catalogue and the property names, and their agreement with contract.ts when present.
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -60,11 +61,13 @@ namespace OpenDashPlugin.Tests
         public void Property_names_cover_the_dash_the_companion_and_the_pit_wall()
         {
             var names = Contract.PropertyNames().ToList();
-            // Four settings, twelve slots, the zone face (four pages, four masks, four starts, four
-            // bar fields and the glance), the rev bar mode, twenty-one companion modules, four pit
-            // wall zones, the wide zone and the URL.
-            const int zoneFace = 4 + 4 + 4 + 4 + 1;
-            Assert.Equal(4 + 12 + zoneFace + 1 + 21 + 4 + 2, names.Count);
+            // Four settings, twelve slots, the rev bar mode, the zone face of every face that ships
+            // (four pages, four masks, four starts, four class filters, four bar fields and the
+            // glance), twenty-one companion modules, four pit wall zones, the wide zone, the URL,
+            // and the flag box.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
+            // Eight global flag box settings and five per matrix, the way every face carries its own group.
+            Assert.Equal(4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 5, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -73,21 +76,62 @@ namespace OpenDashPlugin.Tests
 
             // The zone face, declared beside the slots rather than instead of them: ten faces still
             // read Slot01 to Slot12, and README publishes them as properties an LED profile may read.
-            Assert.Equal(new[] { "ZoneA", "ZoneB", "ZoneC", "ZoneD" }, names.Skip(16).Take(4));
-            Assert.Equal(new[] { "ZoneAPages", "ZoneBPages", "ZoneCPages", "ZoneDPages" }, names.Skip(20).Take(4));
-            Assert.Equal(new[] { "ZoneAStart", "ZoneBStart", "ZoneCStart", "ZoneDStart" }, names.Skip(24).Take(4));
-            Assert.Equal(new[] { "BarLeft1", "BarLeft2", "BarRight1", "BarRight2" }, names.Skip(28).Take(4));
-            Assert.Equal("QuickGlance", names[32]);
+            // The zone face's groups follow, one per face that ships, each naming its own screen so
+            // that two faces on a rig are configured apart.
+            // Appended to the shared group, not inserted beside ShiftLights: the four names above and
+            // the twelve slots have shipped and this test asserts them by index. XOR-119, XOR-138.
+            Assert.Equal("RevBar", names[16]);
+            Assert.Contains("RevBar", Contract.SharedPropertyNames());
 
-            // Appended after the zone face, not inserted beside ShiftLights: the four names above
-            // have shipped and this test asserts them by index. XOR-119, XOR-138.
-            Assert.Equal("RevBar", names[33]);
+            var p = Contract.FacePrefix(Contract.ReferenceFace);
+            Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(17).Take(4));
+            Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(21).Take(4));
+            Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(25).Take(4));
+            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(29).Take(4));
+            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(33).Take(4));
+            Assert.Equal(p + "QuickGlance", names[37]);
+            // And no name without a face, which is the promise: a bare ZoneA would be one screen's
+            // settings silently shared with every other.
+            Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
 
+            var afterFaces = 17 + Contract.FaceSizes.Count * perFace;
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
-            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(34).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl" }, names.Skip(55));
+            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LightsBrightness", "LightsNightBrightness", "LightsNightMode", "FlagBoxCriticalOnly", "FlagBoxGear",
+                "FlagBoxLowFuelLaps", "FlagBoxOilTemp", "FlagBoxWaterTemp" }, names.Skip(afterFaces + 21).Take(14));
             Assert.Equal("OpenDash", Contract.Prefix);
+        }
+
+        [Fact]
+        public void Every_property_belongs_to_one_screen_or_to_every_screen()
+        {
+            // The rule the build enforces over a package is a partition of the contract: a name is one
+            // screen's or it is shared by all of them, and never both. Without that, attaching a rig's
+            // properties would either drop a name no screen claims or attach one twice.
+            //
+            // The lights are a third part of that partition rather than an exception to it. They belong
+            // to no screen -- a matrix is not one -- and they are not the screens' shared settings
+            // either, so folding them into SharedPropertyNames would make "shared" mean two things.
+            var all = Contract.PropertyNames().ToList();
+            var owned = Contract.ScreenPrefixes().SelectMany(Contract.ScreenPropertyNames).ToList();
+            var lights = Contract.LightsPropertyNames().ToList();
+            Assert.Equal(owned.Count, owned.Distinct().Count());
+            Assert.Empty(owned.Except(all));
+            Assert.Empty(lights.Except(all));
+            Assert.Empty(lights.Intersect(owned));
+            Assert.Empty(lights.Intersect(Contract.SharedPropertyNames()));
+            Assert.Equal(Contract.SharedPropertyNames(), all.Except(owned).Except(lights));
+
+            // The web view address is the pit wall's although its name carries no prefix: it was named
+            // before the idiom, and no other screen has a browser page to point anywhere.
+            Assert.Contains(Contract.WebViewUrl, Contract.ScreenPropertyNames(Contract.PitWallPrefix));
+            Assert.Equal(Modules.Count, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
+            Assert.Equal(Contract.FacePropertyNames(Contract.ReferenceFace), Contract.ScreenPropertyNames(Contract.FacePrefix(Contract.ReferenceFace)));
+
+            Assert.True(Contract.IsKnownScreen(Contract.FacePrefix(Contract.ReferenceFace)));
+            Assert.False(Contract.IsKnownScreen("Face1x1"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ScreenPropertyNames("Face1x1").ToList());
         }
 
         [Fact]
@@ -279,14 +323,131 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void Zone_property_names_refuse_a_letter_that_is_not_a_zone()
+        public void Zone_property_names_carry_their_face_and_refuse_a_letter_that_is_not_a_zone()
         {
-            Assert.Equal("ZoneB", Contract.ZonePageProperty("B"));
-            Assert.Equal("ZoneBPages", Contract.ZoneMaskProperty("B"));
-            Assert.Equal("ZoneBStart", Contract.ZoneStartProperty("B"));
-            Assert.Equal("BarRight2", Contract.BarFieldProperty("Right2"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty("E"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty("Middle"));
+            var face = Contract.ReferenceFace;
+            Assert.Equal("Face1920x480ZoneB", Contract.ZonePageProperty(face, "B"));
+            Assert.Equal("Face1920x480ZoneBPages", Contract.ZoneMaskProperty(face, "B"));
+            Assert.Equal("Face1920x480ZoneBStart", Contract.ZoneStartProperty(face, "B"));
+            Assert.Equal("Face1920x480ZoneBClassOnly", Contract.ZoneClassOnlyProperty(face, "B"));
+            Assert.Equal("Face1920x480BarRight2", Contract.BarFieldProperty(face, "Right2"));
+            Assert.Equal("Face1920x480QuickGlance", Contract.QuickGlanceProperty(face));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty(face, "E"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty(face, "Middle"));
+        }
+
+        [Fact]
+        public void The_flag_box_is_declared_last_and_clamps_its_brightness()
+        {
+            // Last because it is the one artefact the plugin does not install (ADR 0013); declared at
+            // all because a profile reads it, and an undeclared read fails the dash build.
+            Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Last());
+            Assert.True(Contract.DefaultFlagBoxGear);
+            // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
+            Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
+            Assert.False(Contract.DefaultFlagBoxMatrixOn(2));
+            Assert.Equal("gear", Contract.DefaultFlagBoxMatrixRest(1));
+            Assert.Equal("dark", Contract.DefaultFlagBoxMatrixRest(4));
+            Assert.Equal("both", Contract.DefaultFlagBoxSide);
+            Assert.Equal("FlagBoxMatrix2Spotter", Contract.FlagBoxMatrixProperty(2, "Spotter"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.FlagBoxMatrixProperty(5, "Rest"));
+            // Rotation and serpentine are SimHub device settings, not ours.
+            foreach (var name in Contract.PropertyNames())
+            {
+                Assert.DoesNotContain("Rotation", name, StringComparison.Ordinal);
+                Assert.DoesNotContain("Serpentine", name, StringComparison.Ordinal);
+            }
+            // The defaults are right in every unit SimHub reports, not only in Celsius.
+            Assert.Equal(120, Contract.DefaultOilTemp["Celcius"]);
+            Assert.Equal(248, Contract.DefaultOilTemp["Fahrenheit"]);
+            Assert.Equal(110, Contract.DefaultWaterTemp["Celcius"]);
+            Assert.Equal(2, Contract.DefaultFlagBoxLowFuelLaps);
+            Assert.Equal(100, Contract.DefaultLightsBrightness);
+            // Dimmer at night: 64 LEDs at full output beside a wheel in a dark room is too bright.
+            Assert.True(Contract.DefaultLightsNightBrightness < Contract.DefaultLightsBrightness);
+            Assert.False(Contract.DefaultLightsNightMode);
+            // Off: the box shows the whole catalogue until the driver asks for quiet.
+            Assert.False(Contract.DefaultFlagBoxCriticalOnly);
+            Assert.Equal(0, Contract.NormaliseBrightness(-5));
+            Assert.Equal(100, Contract.NormaliseBrightness(101));
+            Assert.Equal(60, Contract.NormaliseBrightness(60));
+        }
+
+        [Fact]
+        public void Every_face_has_its_own_group_and_no_two_faces_share_a_property()
+        {
+            var all = new List<string>(Contract.PropertyNames());
+            Assert.Equal(all.Count, new HashSet<string>(all, StringComparer.Ordinal).Count);
+            foreach (var face in Contract.FaceSizes)
+            {
+                foreach (var name in Contract.FacePropertyNames(face))
+                {
+                    Assert.Contains(name, all);
+                    Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
+                }
+            }
+            // Twenty-one each: four zones times page, mask, start and class filter, four bar fields,
+            // and the glance.
+            Assert.Equal(21, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+        }
+
+        [Fact]
+        public void A_face_prefix_round_trips_and_an_unknown_one_is_refused()
+        {
+            foreach (var face in Contract.FaceSizes)
+            {
+                Assert.Equal(face.Width, Contract.FaceForPrefix(Contract.FacePrefix(face)).Width);
+                Assert.Equal(face.Height, Contract.FaceForPrefix(Contract.FacePrefix(face)).Height);
+                Assert.True(Contract.IsKnownFacePrefix(Contract.FacePrefix(face)));
+            }
+            Assert.False(Contract.IsKnownFacePrefix("Face1x1"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.FaceForPrefix("Face1x1"));
+        }
+
+        [Fact]
+        public void The_face_sizes_are_the_ones_the_generator_ships()
+        {
+            // FACE_SIZES in contract.ts is the list the build walks; a face there and not here would
+            // ship with no properties at all, and the reverse would attach properties nothing reads.
+            var path = RepoPaths.ContractTs();
+            if (!File.Exists(path)) return; // the dash package is built separately; nothing to compare yet
+            var source = File.ReadAllText(path);
+            // Captured to the closing "];" on its own line rather than to the first "]", because each
+            // entry now carries a parts array of its own.
+            var match = Regex.Match(source, @"FACE_SIZES[^=]*=\s*\[(?<items>.*?)\r?\n\];", RegexOptions.Singleline);
+            Assert.True(match.Success, "FACE_SIZES not found in contract.ts");
+            var sizes = Regex.Matches(
+                match.Groups["items"].Value,
+                @"width:\s*(?<w>\d+),\s*height:\s*(?<h>\d+),\s*body:\s*'(?<body>row|column)',\s*parts:\s*\[(?<parts>[^\]]*)\],\s*hasBar:\s*(?<bar>true|false),\s*barFieldsPerEnd:\s*(?<per>\d+)");
+            Assert.Equal(Contract.FaceSizes.Count, sizes.Count);
+            for (var i = 0; i < sizes.Count; i++)
+            {
+                var face = Contract.FaceSizes[i];
+                Assert.Equal(face.Width, int.Parse(sizes[i].Groups["w"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.Height, int.Parse(sizes[i].Groups["h"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.Body == Contract.FaceBody.Column ? "column" : "row", sizes[i].Groups["body"].Value);
+                Assert.Equal(face.HasBar, sizes[i].Groups["bar"].Value == "true");
+                Assert.Equal(face.BarFieldsPerEnd, int.Parse(sizes[i].Groups["per"].Value, CultureInfo.InvariantCulture));
+                var parts = sizes[i].Groups["parts"].Value.Split(',').Select(v => int.Parse(v.Trim(), CultureInfo.InvariantCulture)).ToArray();
+                Assert.Equal(face.Parts, parts);
+            }
+            // The nano is the one face with no bar, and the portrait the one with a stacked body and a
+            // single field per end. Stated here because both are what the panel has to draw differently.
+            Assert.Single(Contract.FaceSizes.Where(f => !f.HasBar));
+            Assert.Single(Contract.FaceSizes.Where(f => f.Body == Contract.FaceBody.Column));
+            Assert.Single(Contract.FaceSizes.Where(f => f.BarFieldsPerEnd == 1));
+        }
+
+        [Fact]
+        public void Every_action_names_the_face_it_moves()
+        {
+            var actions = new List<string>(Contract.ActionNames());
+            Assert.Equal(Contract.FaceSizes.Count * 5, actions.Count);
+            Assert.Equal(actions.Count, new HashSet<string>(actions, StringComparer.Ordinal).Count);
+            Assert.Contains("Face1920x480CycleZoneA", actions);
+            Assert.Contains("Face600x686HoldQuickGlance", actions);
+            // Nothing unprefixed: one action moving every face is what the prefix exists to prevent.
+            Assert.DoesNotContain(actions, a => a.StartsWith("CycleZone", StringComparison.Ordinal));
         }
 
         /// <summary>The `id` fields of the page list that follows the given declaration.</summary>

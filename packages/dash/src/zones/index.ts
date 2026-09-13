@@ -17,11 +17,11 @@ import type { ZoneLayout } from './layout.ts';
 
 export type { ZoneLayout, ZoneRects } from './layout.ts';
 export { layoutWithoutRevBar, rectOf, revBarReclaim, zoneLayoutDescription, zonesWithoutRevBar } from './layout.ts';
-export { buildZoneFace, faceItems, zonesOf, FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR, type BuiltFace, type FaceBuildOptions } from './face.ts';
+export { buildZoneFace, faceItems, zonesOf, sizeOf, FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR, type BuiltFace, type FaceBuildOptions } from './face.ts';
 export { zoneDashboard, zoneDashboardName, zoneDashboardsFor, zonePageScreen, zoneWidget, kindOf, type ZoneKind } from './pages.ts';
 export { bar, BAR_FIELD_SPECS, STRIP_CELLS } from './bar.ts';
 export { zoneAPage, gearSizeIn } from './zoneAPages.ts';
-export { bandPageItems, bandCorners, BAND_PAGES, BAND_PAGE_IDS } from './bandPages.ts';
+export { bandPageItems, bandCorners, bandCornerWidths, BAND_PAGES, BAND_PAGE_IDS } from './bandPages.ts';
 export { zoneFace1920x480, zoneFace1280x480, zoneFace1280x400, zoneFace850x480, zoneFace800x480, zoneFace1280x720, zoneFace800x286, zoneFace600x686 };
 
 /**

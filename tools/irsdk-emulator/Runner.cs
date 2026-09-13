@@ -134,7 +134,18 @@ namespace IrsdkEmulator
         private void ApplyTimeline()
         {
             var tl = Scenario.Timeline;
-            while (_nextEvent < tl.Count && tl[_nextEvent].At <= Ctx.Time)
+            // A looping scenario rewinds rather than ending: a catalogue walk is meant to be watched
+            // more than once, and restarting the emulator to see the second half again is the kind of
+            // friction that stops somebody checking.
+            if (Scenario.LoopSeconds > 0 && Ctx.Time >= _loopStart + Scenario.LoopSeconds)
+            {
+                _loopStart += Scenario.LoopSeconds;
+                _nextEvent = 0;
+                foreach (var e in tl) e.Fired = false;
+                Log("timeline: looping after " + Scenario.LoopSeconds.ToString("0.##", CultureInfo.InvariantCulture) + "s");
+            }
+            var elapsed = Ctx.Time - _loopStart;
+            while (_nextEvent < tl.Count && tl[_nextEvent].At <= elapsed)
             {
                 var ev = tl[_nextEvent++];
                 if (ev.Fired) continue;
@@ -142,6 +153,9 @@ namespace IrsdkEmulator
                 ApplyEvent(ev);
             }
         }
+
+        /// <summary>When the current pass through the timeline began; 0 unless the scenario loops.</summary>
+        private double _loopStart;
 
         public void ApplyEvent(TimelineEvent ev)
         {

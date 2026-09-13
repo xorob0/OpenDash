@@ -15,18 +15,32 @@
     <Compile Include="../OpenDash/Cards.cs" Link="Plugin/Cards.cs" />
     <Compile Include="../OpenDash/Modules.cs" Link="Plugin/Modules.cs" />
     <Compile Include="../OpenDash/FacePages.cs" Link="Plugin/FacePages.cs" />
+    <Compile Include="../OpenDash/FaceSettings.cs" Link="Plugin/FaceSettings.cs" />
     <Compile Include="../OpenDash/OpenDashSettings.cs" Link="Plugin/OpenDashSettings.cs" />
     <Compile Include="../OpenDash/Versioning.cs" Link="Plugin/Versioning.cs" />
     <Compile Include="../OpenDash/Installation.cs" Link="Plugin/Installation.cs" />
     <Compile Include="../OpenDash/PackageExtractor.cs" Link="Plugin/PackageExtractor.cs" />
     <Compile Include="../OpenDash/DashboardInstaller.Core.cs" Link="Plugin/DashboardInstaller.Core.cs" />
     <Compile Include="../OpenDash/Theme.cs" Link="Plugin/Theme.cs" />
+    <Compile Include="../OpenDash/Mark.cs" Link="Plugin/Mark.cs" />
+    <Compile Include="../OpenDash/ReleaseFeed.cs" Link="Plugin/ReleaseFeed.cs" />
+    <Compile Include="../OpenDash/UpdateCheck.cs" Link="Plugin/UpdateCheck.cs" />
+    <Compile Include="../OpenDash/UpdateWording.cs" Link="Plugin/UpdateWording.cs" />
+    <Compile Include="../OpenDash/ReleaseClient.cs" Link="Plugin/ReleaseClient.cs" />
+    <Compile Include="../OpenDash/FolderFingerprint.cs" Link="Plugin/FolderFingerprint.cs" />
+    <Compile Include="../OpenDash/UpdatePlan.cs" Link="Plugin/UpdatePlan.cs" />
+    <Compile Include="../OpenDash/UpdateService.cs" Link="Plugin/UpdateService.cs" />
+    <Compile Include="../OpenDash/FlagBoxProfile.cs" Link="Plugin/FlagBoxProfile.cs" />
   </ItemGroup>
 
   <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;
        DashboardInstallerTests pins the manifest name MSBuild gives it. -->
   <ItemGroup>
     <EmbeddedResource Include="Fixtures/resource name with spaces.txt" />
+    <EmbeddedResource Include="Fixtures/github-releases.json" />
+    <!-- Under Resources/ and named with a space on purpose: both are what the plugin ships, and
+         FlagBoxProfile.FileNameOf reads the name back out of the manifest name MSBuild gives it. -->
+    <EmbeddedResource Include="Resources/openDash Flag box.ledsprofile" />
   </ItemGroup>
 
   <ItemGroup>

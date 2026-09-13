@@ -16,7 +16,8 @@ import { fieldRowFitted, fieldsThatFit } from '../second/field.ts';
 import { stack } from '../second/layout.ts';
 import { CHARS, carClass, carLastLap, carName, carNumber, carPosition, carRating, carRelativeGap, neighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { blockRow, defineModule, fld } from './module.ts';
+import { blockRow, defineModule, fld, pageKeeps, shapeIn } from './module.ts';
+import { keptAt } from './shedding.ts';
 import type { Item } from '../generator.ts';
 import type { ModuleContext } from './module.ts';
 
@@ -39,18 +40,25 @@ function block(ctx: ModuleContext, id: string, offset: number, heading: string, 
     const valueBottom = bottom - detailHeight - d.fieldGap * 2;
     // The chip sits after the row, but never past the module's right edge: on a narrow page the
     // row already fills the box and the chip tucks against the edge instead of leaving it.
-    const chipW = chipWidth(ctx.density);
-    const room = ctx.frame.width - chipW - d.gapX / 2;
-    const row = fieldRowFitted(fieldsThatFit([gapField, nameField, numberField], room, ctx.density), ctx.frame.left, valueBottom, room, ctx.density);
+    const chipW = pageKeeps(`${id}.class`, ctx) ? chipWidth(ctx.density) : 0;
+    const room = ctx.frame.width - chipW - (chipW > 0 ? d.gapX / 2 : 0);
+    // The page's shedding order first -- a narrow zone keeps the gap and who it belongs to, and
+    // drops the car number -- and what fits the room second.
+    const declared = keptAt([gapField, nameField, numberField], ctx.page, shapeIn(ctx));
+    const row = fieldRowFitted(fieldsThatFit(declared, room, ctx.density), ctx.frame.left, valueBottom, room, ctx.density);
     const chipX = Math.min(ctx.frame.left + row.width + d.gapX / 2, ctx.frame.left + ctx.frame.width - chipW);
     items.push(...row.items);
-    items.push(...chip(`${ctx.prefix}${id}.class`, 'GT3', chipX, valueBottom - d.chipHeight, ctx.density, { bind: chipText(carClass(idx)), width: chipW }));
-    items.push(
-      label(`${ctx.prefix}${id}.detail`, 'LAST 1:43.234 · RATING 3.1K', ctx.frame.left, bottom - detailHeight, ctx.frame.width, {
-        size: d.labelSm,
-        bind: concat(str('LAST '), carLastLap(idx), str(' · RATING '), carRating(idx)),
-      }),
-    );
+    if (pageKeeps(`${id}.class`, ctx)) {
+      items.push(...chip(`${ctx.prefix}${id}.class`, 'GT3', chipX, valueBottom - d.chipHeight, ctx.density, { bind: chipText(carClass(idx)), width: chipW }));
+    }
+    if (pageKeeps(`${id}.detail`, ctx)) {
+      items.push(
+        label(`${ctx.prefix}${id}.detail`, 'LAST 1:43.234 · RATING 3.1K', ctx.frame.left, bottom - detailHeight, ctx.frame.width, {
+          size: d.labelSm,
+          bind: concat(str('LAST '), carLastLap(idx), str(' · RATING '), carRating(idx)),
+        }),
+      );
+    }
     return items;
   };
 }

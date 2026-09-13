@@ -5,6 +5,8 @@ export * from './ids.ts';
 export * from './bounds.ts';
 export * from './color.ts';
 export * from './fonts.ts';
+export * from './images.ts';
 export * from './serialize.ts';
 export * from './validate.ts';
 export * from './package.ts';
+export * from './leds.ts';

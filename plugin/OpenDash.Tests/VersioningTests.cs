@@ -34,6 +34,9 @@ namespace OpenDashPlugin.Tests
         [InlineData("0.2.0-beta", "0.2.0-rc1", -1)]
         [InlineData("0.2.0-alpha", "0.2.0-beta", -1)]
         [InlineData("0.2.0-rc.2", "0.2.0-rc.10", -1)]
+        [InlineData("0.2.0-rc2", "0.2.0-rc10", -1)]
+        [InlineData("0.2.0-rc9", "0.2.0-rc10", -1)]
+        [InlineData("0.2.0-rc10", "0.2.0-rc10", 0)]
         [InlineData("0.2.0-rc.1", "0.2.0-rc.alpha", -1)]
         [InlineData("0.2.0-rc", "0.2.0-rc.1", -1)]
         [InlineData("0.2.0-rc1", "0.1.9", 1)]
@@ -62,6 +65,7 @@ namespace OpenDashPlugin.Tests
         [InlineData("0.2.0", "0.2.0-rc1")]
         [InlineData("0.2.0-rc2", "0.2.0-rc1")]
         [InlineData("0.2.0-rc.10", "0.2.0-rc.2")]
+        [InlineData("0.2.0-rc10", "0.2.0-rc2")]
         [InlineData("0.0.1", null)]
         public void VersionCompare_is_antisymmetric(string newer, string older)
         {
