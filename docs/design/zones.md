@@ -185,7 +185,7 @@ race time · lap and total · time left · clock · simulated time · position �
 incidents · air temperature · track temperature
 
 Strength of field was the eleventh and is not built, because SimHub publishes it in no form at all
-and openDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
+and OpenDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
 named here only so that a reader of an older draft knows where it went.
 
 The default is Race and Lap on the left, Position and Class on the right.
@@ -400,7 +400,7 @@ a mistake in this document.
 
 ## Related
 
-[scope.md](../scope.md) is what openDash is and what it refuses to be.
+[scope.md](../scope.md) is what OpenDash is and what it refuses to be.
 [ADR 0006](../decisions/0006-the-zone-face.md) is why the model changed.
 [brand.md](brand.md) is the reasoning behind the colours and the type.
 [second-screens.md](../second-screens.md) is the companion and the pit wall, which share the

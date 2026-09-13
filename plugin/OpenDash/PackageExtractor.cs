@@ -154,17 +154,17 @@ namespace OpenDashPlugin
         /// leaves its own thing to undo is a worse answer than one that does not.
         /// </remarks>
         /// <summary>Prefix of the folder an install extracts into before moving it into place.</summary>
-        public const string StagingPrefix = "_openDash_staging_";
+        public const string StagingPrefix = "_OpenDash_staging_";
 
         /// <summary>
         /// Removes staging folders an earlier install did not clean up, and reports how many.
         /// </summary>
         /// <remarks>
-        /// Install extracts into DashTemplates/_openDash_staging_&lt;guid&gt; and removes it in a finally. That finally
+        /// Install extracts into DashTemplates/_OpenDash_staging_&lt;guid&gt; and removes it in a finally. That finally
         /// does not run when the process exits, because a thread-pool thread is a background thread the CLR
         /// terminates without unwinding, so every update abandoned by a SimHub that closed mid-install leaves a
         /// complete extracted dashboard behind. They accumulate, they are invisible, and nothing else would ever
-        /// remove them. A folder with this prefix is openDash's own working space and is never a user's dashboard.
+        /// remove them. A folder with this prefix is OpenDash's own working space and is never a user's dashboard.
         /// </remarks>
         public static int RemoveOrphanedStaging(string simHubRoot, IInstallLog log)
         {
@@ -218,7 +218,7 @@ namespace OpenDashPlugin
             }
 
             var target = Path.Combine(templates, folderName);
-            var staging = Path.Combine(templates, "_openDash_restore_" + Guid.NewGuid().ToString("N"));
+            var staging = Path.Combine(templates, "_OpenDash_restore_" + Guid.NewGuid().ToString("N"));
             try
             {
                 using (var zip = ZipFile.OpenRead(backupPath))

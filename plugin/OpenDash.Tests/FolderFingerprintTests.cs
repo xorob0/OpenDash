@@ -10,6 +10,7 @@ namespace OpenDashPlugin.Tests
     public class FolderFingerprintTests : IDisposable
     {
         private readonly string root;
+        private readonly DeniedPaths denied = new DeniedPaths();
 
         public FolderFingerprintTests()
         {
@@ -19,6 +20,7 @@ namespace OpenDashPlugin.Tests
 
         public void Dispose()
         {
+            denied.Dispose();
             try { Directory.Delete(root, true); } catch { }
         }
 
@@ -154,6 +156,45 @@ namespace OpenDashPlugin.Tests
             Assert.Null(FolderFingerprint.Of(Path.Combine(root, "absent")));
             Assert.Null(FolderFingerprint.Of(null));
             Assert.False(FolderFingerprint.LooksUntouched(Path.Combine(root, "absent"), recorded));
+        }
+
+        /// <summary>
+        /// A file the account may not read is the first of the two ways a dashboard folder becomes unreadable, and
+        /// both of them raise UnauthorizedAccessException on Windows rather than IOException. What is asserted is the
+        /// contract the remarks on LooksUntouched state, no fingerprint and therefore a folder that is asked about;
+        /// the exception type is deliberately not asserted, since which one a given platform raises is its own affair.
+        /// </summary>
+        [DeniedPathFact]
+        public void A_file_that_cannot_be_read_makes_the_folder_one_we_cannot_vouch_for()
+        {
+            var folder = Folder();
+            var recorded = FolderFingerprint.Of(folder);
+
+            var unreadable = Path.Combine(folder, "cards.djson");
+            File.WriteAllText(unreadable, "{\"Version\":2}");
+            denied.Deny(unreadable);
+
+            Assert.Null(FolderFingerprint.Of(folder));
+            Assert.False(FolderFingerprint.LooksUntouched(folder, recorded));
+        }
+
+        /// <summary>
+        /// The second way, and the one guarding the read alone does not cover: the walk descends into a subfolder it
+        /// may not list and throws there, before a single file has been read.
+        /// </summary>
+        [DeniedPathFact]
+        public void A_subfolder_that_cannot_be_listed_makes_the_folder_one_we_cannot_vouch_for()
+        {
+            var folder = Folder();
+            var recorded = FolderFingerprint.Of(folder);
+
+            var nested = Path.Combine(folder, "screens");
+            Directory.CreateDirectory(nested);
+            File.WriteAllText(Path.Combine(nested, "pit.djson"), "{\"Version\":2}");
+            denied.Deny(nested);
+
+            Assert.Null(FolderFingerprint.Of(folder));
+            Assert.False(FolderFingerprint.LooksUntouched(folder, recorded));
         }
     }
 }
