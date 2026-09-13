@@ -51,8 +51,11 @@ describe('which packages a bare run walks', () => {
     expect(FACES.some((f) => f.includes('Companion') || f.includes('Pit wall'))).toBe(false);
   });
 
-  test('the zone face is among them, so a capture of it costs nothing extra', () => {
-    expect(FACES).toContain('openDash zones 1920x480');
+  test('the zone face is among them, under the name it now ships as', () => {
+    // Since XOR-118 the zone face is plain "openDash"; the card face it replaced says "slots", and
+    // both are captured while the two are being compared.
+    expect(FACES).toContain('openDash');
+    expect(FACES).toContain('openDash slots 1920x480');
   });
 
   test('every one of them is a package the opener knows how to click', () => {
