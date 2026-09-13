@@ -86,13 +86,28 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
   { id: 'trackTemp', label: 'Track', sample: '27.6', bind: fmt(roadTemperature(), '0.0'), chars: CHARS.pressure, denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } } },
 ];
 
-/** One cell of the car settings strip: what it reads, and what it is called. */
+/**
+ * One cell of the car settings strip: what it reads, what it is called, and what says the car has
+ * the setting at all.
+ *
+ * `present` exists because for two of the seven the two are not the same property. SimHub
+ * normalises traction control and ABS into `TCLevel` and `ABSLevel` and reports **0** for a car
+ * that has neither control, which is indistinguishable from a car whose driver has turned them
+ * off. What says the car has the control is the raw iRacing field behind it, `dcTractionControl`
+ * and `dcABS`, which is simply absent on a car without it. The same for the brake bias, whose
+ * reading is already wrapped in an `isnull` default and so is never null itself.
+ *
+ * Getting this wrong is not a cell drawn wrongly: it is a cell drawn at all, and the cells beside
+ * it sitting where they would have been.
+ */
 interface StripCell {
   id: string;
   label: string;
   sample: string;
   expr: string;
   pattern: string;
+  /** What says the car has this setting; the value's own property when they are the same. */
+  present?: string;
 }
 
 /**
@@ -101,10 +116,10 @@ interface StripCell {
  */
 export const STRIP_CELLS: readonly StripCell[] = [
   { id: 'slip', label: 'Slip', sample: '4', expr: raw('dcThrottleShape'), pattern: '0' },
-  { id: 'tc', label: 'TC', sample: '5', expr: tcLevel(), pattern: '0' },
+  { id: 'tc', label: 'TC', sample: '5', expr: tcLevel(), pattern: '0', present: raw('dcTractionControl') },
   { id: 'cut', label: 'Cut', sample: '2', expr: raw('dcTractionControl2'), pattern: '0' },
-  { id: 'bias', label: 'Bias', sample: '50.5', expr: brakeBias(), pattern: '0.0' },
-  { id: 'abs', label: 'ABS', sample: '4', expr: absLevel(), pattern: '0' },
+  { id: 'bias', label: 'Bias', sample: '50.5', expr: brakeBias(), pattern: '0.0', present: game('BrakeBias') },
+  { id: 'abs', label: 'ABS', sample: '4', expr: absLevel(), pattern: '0', present: raw('dcABS') },
   { id: 'map', label: 'Map', sample: '1', expr: fuelMixture(), pattern: '0' },
   { id: 'diff', label: 'Diff', sample: '4', expr: antiRollRear(), pattern: '0' },
 ];
@@ -217,7 +232,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
   const strip = rank(
     STRIP_CELLS.map((cell) => {
       const w = stripCellWidth(cell, smallFs, labelFs);
-      const present = ncalc.not(ncalc.isNull(cell.expr));
+      const present = ncalc.not(ncalc.isNull(cell.present ?? cell.expr));
       const name = `${prefix}strip.${cell.id}`;
       return {
         id: cell.id,
