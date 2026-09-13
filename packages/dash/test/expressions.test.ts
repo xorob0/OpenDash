@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ncalc } from '../src/generator.ts';
 import { revBar, REDLINE_BLINK_MS } from '../src/components/revBar.ts';
-import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { GEAR_COUNT_PROPERTY, SHIFT_RPM_PROPERTIES, lastGear } from '../src/shift.ts';
 import { readFileSync } from 'node:fs';
 import { flagVisible } from '../src/components/flagStrip.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
@@ -130,6 +130,8 @@ describe('hero expressions', () => {
   const SL = (n: string) => `isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSL${n}RPM], 0)`;
   const MIRROR = `((${SL('First')}) > (0)) and ((${SL('Last')}) > (${SL('First')})) and ((${SL('Shift')}) >= (${SL('First')})) and ((${SL('Last')}) >= (${SL('Shift')}))`;
   const ON = 'isnull([OpenDash.ShiftLights], true)';
+  const GEARS = 'isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)';
+  const LAST_GEAR = `((${GEARS}) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (${GEARS}))`;
 
   const segOf = (layer: { children: readonly unknown[] }, k: number) => {
     const s = layer.children[k];
@@ -162,7 +164,7 @@ describe('hero expressions', () => {
     // The last band lights together at the last light, and flashes above the blink RPM rather than at redline.
     const blink = `max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), ${SL('Last')})`;
     expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if((${RPMS}) >= (${SL('Last')}), '#FF2D46', '#33383F')` });
-    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: `(${RPMS}) >= (${blink})` });
+    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: `((${RPMS}) >= (${blink})) and (!(${LAST_GEAR}))` });
     expect(seg(14).blink).toEqual({ delayMs: 62 });
     expect(seg(9).blink).toBeUndefined();
     expect(REDLINE_BLINK_MS).toBe(62);
@@ -187,6 +189,27 @@ describe('hero expressions', () => {
     for (const s of walkItems(revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 }))) {
       if (s.kind === 'rect') expect(s.border).toEqual({ radius: 2 });
     }
+  });
+
+  test('the last gear stops the flash but not the light: one ladder per car, no per-gear table', () => {
+    const [shift, simhub] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
+    if (shift?.kind !== 'layer' || simhub?.kind !== 'layer') throw new Error('layers');
+
+    // The top band is still lit at Last in every gear: the bar still says the engine is at its limit.
+    expect(expressionsOf(segOf(shift, 14))[0]).toContain(`(${RPMS}) >= (${SL('Last')})`);
+    // Only the flash is suppressed, and only there.
+    expect(segOf(shift, 14).bindings?.BlinkEnabled?.formula).toContain(`!(${LAST_GEAR})`);
+    expect(segOf(shift, 14).bindings?.BackgroundColor?.formula).not.toContain('GearNumForward');
+
+    // The gear count comes from the same DriverInfo block as the four RPMs, so there is no new source...
+    expect(GEAR_COUNT_PROPERTY).toBe('DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward');
+    // ...and a car that does not publish one keeps flashing, because the guard is count > 0.
+    expect(lastGear()).toBe(LAST_GEAR);
+
+    // The bands themselves are gear-independent: no gear appears in any segment's colour.
+    for (const k of [0, 4, 5, 9, 10]) expect(segOf(shift, k).bindings?.BackgroundColor?.formula).not.toContain('Gear');
+    // SimHub's fallback is untouched by this: it never knew about gears either.
+    expect(segOf(simhub, 14).bindings?.BlinkEnabled?.formula).not.toContain('Gear');
   });
 
   test('the four shift RPM property names appear in exactly one module', () => {
