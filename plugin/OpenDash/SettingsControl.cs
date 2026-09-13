@@ -978,7 +978,7 @@ namespace OpenDashPlugin
                         + "but does not install it: SimHub keeps matrix profiles in a file it rewrites itself. Import it once, "
                         + "and everything on this page reaches it while you drive.",
                     846),
-                Ui.Row("Profile", FlagBoxLine(), FlagBoxPathBox()),
+                BuildFlagBoxRow(),
                 Ui.Row("Brightness", "Percent, for every light openDash drives. SimHub's own device brightness applies on top.", BuildPercentBox(Settings.LightsBrightness, v => { Settings.LightsBrightness = v; plugin.SaveSettings(); })),
                 Ui.Row("Night brightness", "Used while night mode is on. 64 LEDs at full output beside a wheel in a dark room is too bright.", BuildPercentBox(Settings.LightsNightBrightness, v => { Settings.LightsNightBrightness = v; plugin.SaveSettings(); })),
                 Ui.Row("Night mode", "A switch you flip, not a time of day we guess at.", BuildToggle(Settings.LightsNightMode, on => { Settings.LightsNightMode = on; plugin.SaveSettings(); })),
@@ -1020,17 +1020,91 @@ namespace OpenDashPlugin
             return Ui.VStack(0, Ui.Caption("Matrix " + m, 846), stack);
         }
 
-        /// <summary>What became of the profile at startup, and where it went.</summary>
-        private string FlagBoxLine()
+        private TextBlock flagBoxLine;
+        private Button flagBoxButton;
+        private Button flagBoxCopyButton;
+        private TextBox flagBoxPath;
+
+        /// <summary>
+        /// The install row: what SimHub holds now, and one button that changes it.
+        ///
+        /// openDash hands SimHub a profile object through its own public API and SimHub writes its own
+        /// settings file (FlagBoxInstaller.cs); nothing here edits that file. It is a button rather
+        /// than something that happens at startup because a profile paints hardware the user owns, and
+        /// that is a thing to be asked about once rather than assumed -- ADR 0013.
+        /// </summary>
+        private FrameworkElement BuildFlagBoxRow()
         {
-            var result = plugin.FlagBox;
-            if (result == null) return "Not checked yet.";
-            switch (result.Status)
+            flagBoxLine = Ui.Caption("", 460);
+            flagBoxButton = BuildSecondaryButton("Install into SimHub", "Adds openDash's profile to SimHub's matrix profiles. It never changes a profile you made yourself.");
+            flagBoxButton.Click += (sender, args) => InstallFlagBox();
+
+            var text = Ui.VStack(4, Ui.Body("Flag box profile"), flagBoxLine);
+            text.MaxWidth = 460;
+            text.HorizontalAlignment = HorizontalAlignment.Left;
+            flagBoxCopyButton = BuildSecondaryButton("Copy where SimHub looks", "Puts a copy in Documents\\SimHub, which is the folder SimHub's own profile import opens in.");
+            flagBoxCopyButton.Click += (sender, args) => CopyFlagBoxForImport();
+            var right = Ui.VStack(4, flagBoxButton, flagBoxCopyButton, FlagBoxPathBox());
+            RefreshFlagBox();
+            return Ui.Row(text, right);
+        }
+
+        /// <summary>Re-reads SimHub's matrix profiles and repaints the row.</summary>
+        private void RefreshFlagBox()
+        {
+            if (flagBoxLine == null) return;
+            var plan = SafePlan();
+            flagBoxLine.Text = FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path);
+            if (flagBoxButton == null) return;
+            flagBoxButton.Content = FlagBoxInstallPlan.ButtonLabel(plan);
+            // Nothing to press when there is no profile to install or nowhere to put it.
+            var usable = plan != null && plan.State != FlagBoxInstallState.NotEmbedded && plan.State != FlagBoxInstallState.Unavailable;
+            flagBoxButton.IsEnabled = usable;
+            // The by-hand route, offered only when the one-click one is not there. SimHub's import
+            // dialog opens in Documents\SimHub, which is not where the profile was written.
+            if (flagBoxCopyButton != null)
             {
-                case FlagBoxStatus.NotEmbedded: return "No profile is embedded in this build.";
-                case FlagBoxStatus.Failed: return "Could not be written: " + result.Message;
-                default: return "Import this file in SimHub's matrix device settings. openDash does not install it.";
+                flagBoxCopyButton.Visibility = plan != null && plan.State == FlagBoxInstallState.Unavailable
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
             }
+        }
+
+        private void CopyFlagBoxForImport()
+        {
+            var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());
+            if (flagBoxPath != null && copied?.Path != null) flagBoxPath.Text = copied.Path;
+            if (flagBoxLine == null) return;
+            flagBoxLine.Text = copied != null && copied.Status == FlagBoxStatus.Failed
+                ? "Could not copy the profile: " + copied.Message
+                : "Copied to " + copied?.Path + ". In SimHub, open your matrix device's profiles and press Import; "
+                    + "the dialog opens in that folder.";
+        }
+
+        private FlagBoxPlan SafePlan()
+        {
+            try
+            {
+                return FlagBoxInstaller.Plan(plugin.FlagBoxJson);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Reading SimHub's matrix profiles failed: " + ex.Message);
+                return new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
+            }
+        }
+
+        private void InstallFlagBox()
+        {
+            try
+            {
+                FlagBoxInstaller.Install(plugin.FlagBoxJson);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Installing the flag box profile failed", ex);
+            }
+            RefreshFlagBox();
         }
 
         private FrameworkElement FlagBoxPathBox()
@@ -1044,8 +1118,9 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Right,
                 IsReadOnly = true,
                 Text = plugin.FlagBox?.Path ?? string.Empty,
-                ToolTip = "Where openDash left the profile. Read-only: copy it, then import it in SimHub.",
+                ToolTip = "Where openDash left the profile.",
             };
+            flagBoxPath = box;
             return box;
         }
 

@@ -320,7 +320,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const log = opts.log ?? ((line: string): void => console.log(line));
   const staged = composePackages({ ...opts, version, simHubVersion, strategy, log });
 
-  const ledProfile = opts.ledProfile ?? buildFlagBoxProfile();
+  const ledProfile = opts.ledProfile ?? buildFlagBoxProfile(version);
   const ledWarnings = validateProfileOrThrow(ledProfile);
   for (const w of ledWarnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
 

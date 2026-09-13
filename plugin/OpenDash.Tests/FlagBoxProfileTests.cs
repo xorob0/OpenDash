@@ -42,6 +42,48 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void ReadsTheProfilesOwnFieldsAndNotAContainersOwn()
+        {
+            // The bug this exists for: every container in the tree has a Description of its own, and
+            // they appear BEFORE the profile's in the file, so a first-match search returns a
+            // container's and the version marker silently disappears.
+            const string json = @"{
+  ""LedContainers"": [
+    { ""Description"": ""Brightness"", ""LedContainers"": [ { ""Description"": ""Racing"", ""Name"": ""nope"" } ] }
+  ],
+  ""Name"": ""openDash Flag box"",
+  ""Author"": ""openDash"",
+  ""Description"": ""Built by openDash 9.9.9; do not edit here.""
+}";
+            Assert.Equal("openDash Flag box", FlagBoxProfile.ProfileNameOf(json));
+            Assert.Equal("openDash", FlagBoxProfile.AuthorOf(json));
+            Assert.Equal("Built by openDash 9.9.9; do not edit here.", FlagBoxProfile.DescriptionOf(json));
+        }
+
+        [Fact]
+        public void ReadingAFieldSurvivesBracesAndQuotesInsideStrings()
+        {
+            // An NCalc expression or a description could carry a brace; counting depth without
+            // tracking strings would then lose the top level entirely.
+            const string json = @"{
+  ""LedContainers"": [ { ""TriggerFormula"": { ""Expression"": ""isnull([X], 1) = {weird}"" } } ],
+  ""Description"": ""Built by openDash 1.2.3; a \""quoted\"" word and a } brace.""
+}";
+            Assert.Equal(@"Built by openDash 1.2.3; a ""quoted"" word and a } brace.", FlagBoxProfile.DescriptionOf(json));
+        }
+
+        [Fact]
+        public void AMissingOrMalformedFieldReadsAsNullRatherThanThrowing()
+        {
+            Assert.Null(FlagBoxProfile.DescriptionOf("{}"));
+            Assert.Null(FlagBoxProfile.DescriptionOf(null));
+            Assert.Null(FlagBoxProfile.DescriptionOf(""));
+            Assert.Null(FlagBoxProfile.DescriptionOf(@"{ ""Description"": 42 }"));
+            Assert.Null(FlagBoxProfile.DescriptionOf(@"{ ""Description"": "));
+            Assert.Null(FlagBoxProfile.AuthorOf(@"{ ""LedContainers"": [ { ""Author"": ""someone else"" } ] }"));
+        }
+
+        [Fact]
         public void WritesTheProfileIntoItsOwnFolder()
         {
             using (var root = new TempDir())
@@ -125,14 +167,86 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void TheSummaryCarriesTheManualStep()
+        public void TheImportFolderIsWhereSimHubsOwnDialogOpens()
         {
-            // A user who is not told to import it will wait for something that is never going to happen.
+            // ProfilesManager.importProfile_Click sets InitialDirectory to
+            // Path.Combine(GetFolderPath(SpecialFolder.Personal), "SimHub"), so a copy put there is
+            // already in front of the user when the dialog opens.
+            Assert.Equal(Path.Combine("D:\\docs", "SimHub"), FlagBoxProfile.ImportFolder("D:\\docs"));
+            // A host with no Documents folder -- this test runs on Linux, where SpecialFolder.Personal
+            // is empty -- gets null rather than a path rooted at nowhere. CopyForImport reports that
+            // instead of throwing, which is the only reason this branch is reachable at all.
+            Assert.Null(FlagBoxProfile.ImportFolder(""));
+            var real = FlagBoxProfile.ImportFolder();
+            if (real != null) Assert.EndsWith("SimHub", real, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void CopyingForImportWritesTheProfileWhereTheDialogOpens()
+        {
+            using (var root = new TempDir())
+            using (var docs = new TempDir())
+            {
+                var extracted = FlagBoxProfile.Extract(root.Path, Self);
+                var copied = FlagBoxProfile.CopyForImport(extracted, docs.Path);
+
+                Assert.Equal(FlagBoxStatus.Extracted, copied.Status);
+                Assert.Equal(Path.Combine(docs.Path, "SimHub", "openDash Flag box.ledsprofile"), copied.Path);
+                Assert.Equal(File.ReadAllText(extracted.Path), File.ReadAllText(copied.Path));
+            }
+        }
+
+        [Fact]
+        public void NothingIsWrittenToDocumentsUnlessAsked()
+        {
+            // Extract() is what runs at startup, for everybody. A stray file in the user's Documents
+            // for a fallback most people never need would be a poor trade.
+            using (var root = new TempDir())
+            using (var docs = new TempDir())
+            {
+                FlagBoxProfile.Extract(root.Path, Self);
+                Assert.Empty(Directory.GetFileSystemEntries(docs.Path));
+            }
+        }
+
+        [Fact]
+        public void CopyingForImportSaysSoWhenThereIsNothingToCopy()
+        {
+            using (var docs = new TempDir())
+            {
+                Assert.Equal(FlagBoxStatus.NotEmbedded, FlagBoxProfile.CopyForImport(null, docs.Path).Status);
+                Assert.Equal(FlagBoxStatus.NotEmbedded, FlagBoxProfile.CopyForImport(new FlagBoxResult(), docs.Path).Status);
+                // No Documents folder at all: reported, not thrown.
+                using (var root = new TempDir())
+                {
+                    Assert.Equal(FlagBoxStatus.Failed, FlagBoxProfile.CopyForImport(FlagBoxProfile.Extract(root.Path, Self), "").Status);
+                }
+            }
+        }
+
+        [Fact]
+        public void TheExtractedResultCarriesTheProfileSoThePanelNeedNotReadItBack()
+        {
+            using (var root = new TempDir())
+            {
+                var result = FlagBoxProfile.Extract(root.Path, Self);
+                Assert.False(string.IsNullOrEmpty(result.Json));
+                Assert.Equal(File.ReadAllText(result.Path), result.Json);
+                // And again when it is already current, or the panel would lose the profile on restart.
+                var second = FlagBoxProfile.Extract(root.Path, Self);
+                Assert.Equal(FlagBoxStatus.UpToDate, second.Status);
+                Assert.Equal(result.Json, second.Json);
+            }
+        }
+
+        [Fact]
+        public void TheSummaryPointsAtTheButtonThatInstallsIt()
+        {
+            // A user who is not told where to go will wait for something that never happens.
             using (var root = new TempDir())
             {
                 var summary = FlagBoxProfile.Summary(FlagBoxProfile.Extract(root.Path, Self));
-                Assert.Contains("Import it", summary, StringComparison.Ordinal);
-                Assert.Contains("does not install it", summary, StringComparison.Ordinal);
+                Assert.Contains("Lights", summary, StringComparison.Ordinal);
                 Assert.Contains("openDash Flag box.ledsprofile", summary, StringComparison.Ordinal);
             }
         }

@@ -206,12 +206,34 @@ export function flagBoxTree(): MatrixContainer[] {
   ];
 }
 
+/**
+ * Stamped into the profile's `Author`, which SimHub shows in its profile list and round-trips
+ * untouched. It is how the plugin tells its own profile from one the user made.
+ */
+export const FLAG_BOX_AUTHOR = 'openDash';
+
+/**
+ * `openDash 0.2.0-rc.1` inside the description. The plugin reads the version back out of an
+ * installed profile to decide whether it is current, so this is a machine-read string as well as a
+ * human-read one; `flagBoxVersion()` is the other half and the two are tested together.
+ */
+export const flagBoxDescription = (version: string): string =>
+  `The alert catalogue on an 8x8 matrix, ranked the way the face ranks it. Built by openDash ${version}; do not edit here, it is replaced on update.`;
+
+/** The version stamped into a description, or null when it carries none. */
+export function flagBoxVersion(description: string | null | undefined): string | null {
+  if (typeof description !== 'string') return null;
+  const found = /Built by openDash ([0-9A-Za-z.+-]+)/.exec(description);
+  return found?.[1] ?? null;
+}
+
 /** The profile the build writes. */
-export function buildFlagBoxProfile(): MatrixProfile {
+export function buildFlagBoxProfile(version = '0.0.0'): MatrixProfile {
   return {
     name: FLAG_BOX_PROFILE_NAME,
     deviceKind: 'matrix8x8',
-    description: 'openDash flag box: the alert catalogue on an 8x8 matrix, ranked the way the face ranks it.',
+    author: FLAG_BOX_AUTHOR,
+    description: flagBoxDescription(version),
     containers: flagBoxContainers(),
   };
 }
