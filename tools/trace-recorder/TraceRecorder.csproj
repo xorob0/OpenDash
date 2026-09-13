@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A SimHub plugin that writes down what SimHub sees, so a scenario can be replayed off the VM.
+       It is a development tool and is never shipped: `bun run record` builds it, installs it on the
+       Windows test VM for the length of one recording and removes it again. net48 with no XAML, so
+       `dotnet build` works on Linux and macOS against the SimHub assemblies in ../../plugin/lib. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>OpenDashTraceRecorder</AssemblyName>
+    <RootNamespace>OpenDashTraceRecorder</RootNamespace>
+    <Description>Records SimHub's property values frame by frame, for the openDash telemetry traces.</Description>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <Deterministic>true</Deterministic>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <DebugType>portable</DebugType>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- SimHub ships every one of these, so none of them is copied next to the DLL. -->
+  <ItemGroup>
+    <Reference Include="SimHub.Plugins">
+      <HintPath>../../plugin/lib/SimHub.Plugins.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SimHub.Logging">
+      <HintPath>../../plugin/lib/SimHub.Logging.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GameReaderCommon">
+      <HintPath>../../plugin/lib/GameReaderCommon.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>../../plugin/lib/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>../../plugin/lib/log4net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
