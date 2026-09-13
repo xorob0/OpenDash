@@ -100,9 +100,9 @@ the reader to find out which. The 1.6 megabyte snapshot file covers the rest of 
 **A pull request carries native SimHub captures, taken by the author with `bun run shots` and
 attached to the pull request. openDash does not build a preview renderer.**
 
-The captures come from the real engine on the real Windows build, at the dashboard's own size, with
-the emulator replaying one of the pinned scenarios so that two captures of the same package show
-the same state. There is no second renderer, so there is nothing to keep honest and no fidelity
+The captures come from the real engine on Windows, at the dashboard's own size, with the emulator
+replaying one of the pinned scenarios so that two captures of the same package show the same
+state. There is no second renderer, so there is nothing to keep honest and no fidelity
 check to write.
 
 Where a reviewer would rather look than read, CI already attaches the built `.simhubdash` to every
@@ -123,8 +123,8 @@ phase, a chart trace filling, a zone advancing to its next page, a value that is
 frame captured and wrong a second later. XOR-22 asked for a video on every pull request, and this
 record does not deliver it.
 
-**It excludes a contributor who does not have the VM**, which is the sharpest cost of the three,
-because this is an MIT project that wants outside contributions and bounty claims. What is left for
+**It excludes a contributor who does not have the VM**, which is the sharpest of the four, because
+this is an MIT project that wants outside contributions and bounty claims. What is left for
 such a contributor is the artefact CI already attaches, installed on their own SimHub, or a
 maintainer running `bun run shots` on the branch. Neither is as good as a command they can run
 themselves, and there is no honest way to describe that as adequate.
