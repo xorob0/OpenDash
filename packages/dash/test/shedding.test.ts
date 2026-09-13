@@ -80,14 +80,16 @@ describe('a shape takes the answer of one of the four the catalogue draws', () =
 });
 
 describe('the two the ticket works through', () => {
-  test('lap times keeps six at wide, four at grid and two at tall narrow', () => {
+  test('lap times keeps six at wide and four at grid and at tall narrow', () => {
     const at = (shape: Archetype): readonly string[] => (sheddingFor('lapTimes') as { keeps: Record<Archetype, readonly string[]> }).keeps[shape];
     expect(at('wide')).toHaveLength(6);
     expect(at('grid')).toEqual(['last', 'sessionBest', 'yourBest', 'delta']);
-    expect(at('tallNarrow')).toEqual(['last', 'sessionBest']);
+    // The catalogue draws two here and the build takes four: a zone that stacks one column has the
+    // height for them, and 234 px of the base face's zone B was empty. zones.md §10 records it.
+    expect(at('tallNarrow')).toEqual(['last', 'sessionBest', 'yourBest', 'delta']);
 
     // And the page draws exactly that, which is the half a table alone cannot promise.
-    expect(namesAt('lapTimes', 'tallNarrow').filter((n) => n.endsWith('.value')).sort()).toEqual(['last.value', 'sessionBest.value']);
+    expect(namesAt('lapTimes', 'tallNarrow').filter((n) => n.endsWith('.value')).sort()).toEqual(['delta.value', 'last.value', 'sessionBest.value', 'yourBest.value']);
     // The laps and the estimate go before the delta does: shedding is not dropping the tail.
     expect(drewId(namesAt('lapTimes', 'grid'), 'delta')).toBe(true);
     expect(drewId(namesAt('lapTimes', 'grid'), 'laps')).toBe(false);

@@ -17,7 +17,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
-import { densityOf, type Density, type DensitySpec } from './density.ts';
+import { densityOf, nextOnRamp, type Density, type DensitySpec } from './density.ts';
 import { rank } from './rank.ts';
 
 /** A small text that follows a value on its baseline: a unit ("L", "km/h") or a denominator ("/ 24"). */
@@ -112,6 +112,22 @@ export function fieldHeight(spec: FieldSpec, density: Density): number {
   const belowTheLine = Math.max(0, box.top + box.height - spec.value.fs);
   return labelPart + spec.value.fs + belowTheLine;
 }
+
+/**
+ * How far a field's value hangs below the bottom edge it is placed on.
+ *
+ * The same tail `fieldHeight` counts, named on its own because a stack has to reserve it twice
+ * over: a block is centred, so the room it may take is its box less this at each end. Two pixels
+ * covered it while every value was a ramp size in a box with slack; a value that has grown into its
+ * box is exactly where a constant stops covering it.
+ */
+export function fieldTail(spec: FieldSpec): number {
+  const box = textBox(0, spec.value.fs);
+  return Math.max(0, box.top + box.height - spec.value.fs);
+}
+
+/** The deepest tail of a set of fields. */
+export const fieldsTail = (specs: readonly FieldSpec[]): number => specs.reduce((tail, spec) => Math.max(tail, fieldTail(spec)), 0);
 
 /** Tallest of a set of fields, which is the height of the row they sit in. */
 export const rowHeight = (specs: readonly FieldSpec[], density: Density): number =>
@@ -226,6 +242,13 @@ export function fieldRowFitted(
  * Greedy line breaking for a row of fields. A companion page is 802 px wide and a portrait one is
  * 432, so the same row of three lap times is one line on the first and two on the second. Fields
  * keep their order; a field wider than the whole box gets a line of its own.
+ *
+ * Greedy and not capped by `columnsAt`, which is a question worth answering here because the shape
+ * model declares a column count and this ignores it. Wiring it as a cap was tried and cost car
+ * settings two of its cells at 1280 x 400 and the sectors page its three lap times: a rank capped
+ * narrower than it fits is a taller rank, and a taller rank is one `rowsThatFit` takes a row off.
+ * What actually stacks a narrow zone is rule 20 -- two lap times fit side by side at 34 px and do
+ * not at 46, so the rank wraps to one column on its way up.
  */
 export function wrapFields(specs: readonly FieldSpec[], width: number, density: Density, gap?: number): FieldSpec[][] {
   const step = gap ?? densityOf(density).gapX;
@@ -247,6 +270,39 @@ export function wrapFields(specs: readonly FieldSpec[], width: number, density: 
   if (line.length > 0) lines.push(line);
   return lines;
 }
+
+/**
+ * How uneven a wrapped block is: the longest line less the shortest, and zero for one line.
+ *
+ * The measure rule 20 grows against. Almost every rank on the catalogue artboard is an even grid --
+ * `repeat(3, minmax(0, 1fr))` over three or nine cells -- and growing a rank that fits one line
+ * into two lines of two and one is a page that looks broken for the sake of a larger digit. The
+ * companion's three lap times are the case: at 64 px they are one row of three, at 75 they are two
+ * and one, and at 72 they are still one row of three.
+ */
+export const raggedness = (lines: readonly (readonly FieldSpec[])[]): number =>
+  lines.length <= 1 ? 0 : Math.max(...lines.map((l) => l.length)) - Math.min(...lines.map((l) => l.length));
+
+/**
+ * How far a set of fields may grow before the smallest step on the ramp would carry one of them
+ * past the next named size. **Rule 20's third edge.**
+ *
+ * The minimum over the fields rather than over the largest of them, because a rank grows by one
+ * factor: letting the 46 px value reach 64 while the 34 px one beside it passed 46 would be two
+ * sizes doing one job, and the hierarchy the ramp exists to express is the thing that would go.
+ */
+export function growthCeiling(specs: readonly FieldSpec[], density: Density): number {
+  let ceiling = Number.POSITIVE_INFINITY;
+  for (const spec of specs) {
+    const fs = spec.value.fs;
+    if (fs <= 0) continue;
+    ceiling = Math.min(ceiling, nextOnRamp(fs, density) / fs);
+  }
+  return Number.isFinite(ceiling) ? Math.max(1, ceiling) : 1;
+}
+
+/** The largest value size in a set of fields, which is what a stack steps when it grows one. */
+export const leadSize = (specs: readonly FieldSpec[]): number => specs.reduce((fs, spec) => Math.max(fs, spec.value.fs), 0);
 
 /** Height a wrapped block of fields takes: its lines and the gaps between them. */
 export const fieldBlockHeight = (lines: readonly FieldSpec[][], density: Density, lineGap: number): number =>

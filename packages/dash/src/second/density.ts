@@ -143,3 +143,22 @@ export const isZone = (density: Density): boolean => density !== 'companion';
  */
 export const densityForBox = (box: { width: number; height: number }): Density =>
   box.width < 320 || box.height < 220 ? 'compact' : 'zone';
+
+/**
+ * The named sizes of a density, smallest first. This is the ramp, and it is the only ladder a
+ * value is allowed to move along.
+ *
+ * Rule 20 is written against it: a rank grows until it meets an edge, and one of the three edges
+ * is the next size up here. That ceiling is what separates filling a box from scaling into one --
+ * a page that has spent its room is the same drawing one size larger, not a page stretched.
+ */
+export const rampOf = (density: Density): readonly number[] => {
+  const d = densityOf(density);
+  return [d.tiny, d.small, d.mid, d.big, d.hero];
+};
+
+/** The next size up the ramp from `fs`, or `fs` itself once it is at the top. */
+export function nextOnRamp(fs: number, density: Density): number {
+  for (const size of rampOf(density)) if (size > fs) return size;
+  return fs;
+}
