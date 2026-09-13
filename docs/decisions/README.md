@@ -31,6 +31,8 @@ collide.
 | 0010 | Where alert priority is decided | XOR-56 |
 | 0011 | How far personalisation reaches into a generated package | XOR-73 |
 | 0012 | Update checks, and what leaves the user's machine | XOR-29 |
+| 0013 | openDash lights hardware, and the flag box is where it starts | XOR-225 |
+| 0014 | The shift model is the sim's own, not SimHub's | XOR-230 |
 
 ## Writing one
 
