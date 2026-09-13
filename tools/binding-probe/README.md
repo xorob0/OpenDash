@@ -33,7 +33,7 @@ FAIL and a binding that says PASS, so the answer needs no telemetry and no plugi
 | 12 | `PaddingLeft` on the `TextPadding` sub-object |
 
 It is written as plain JSON rather than through `packages/generator`, because the generator's
-validator permits only the targets openDash already relies on and the point is the ones it does not.
+validator permits only the targets OpenDash already relies on and the point is the ones it does not.
 
 ## `themedTwin.ts`: what the bindings cost
 

@@ -21,6 +21,15 @@ export interface ValidateOptions {
   declaredProperties: string[];
   /** Property prefix, e.g. `OpenDash`. */
   propertyPrefix: string;
+  /**
+   * Declared properties this package may not read, with or without the prefix.
+   *
+   * A screen owns its settings, so a face must read its own group and no other's. Being declared is
+   * not enough: every face's properties are declared, and a package reading a neighbour's would
+   * validate cleanly and then move when somebody configured the screen beside it. There is no way
+   * to notice that except by looking at two dashboards at once on a rig that has two.
+   */
+  foreignProperties?: string[];
 }
 
 export interface ValidationIssue {
@@ -57,6 +66,9 @@ export const ALLOWED_BINDING_TARGETS: Record<Item['kind'], readonly BindingTarge
   radar: [...DRAWABLE_TARGETS, 'Scale'],
   staticMap: DRAWABLE_TARGETS,
   webPage: [...DRAWABLE_TARGETS, 'StartAddress'],
+  // `Image` is bindable in SimHub and is deliberately not offered until something needs it: a
+  // telltale set draws one item per lamp with `Visible` bound, which is the same picture.
+  image: DRAWABLE_TARGETS,
 };
 
 /** Targets a colour gradient (Mode 4) can drive. */
@@ -143,14 +155,16 @@ const checkId = (ctx: Context, id: string, explicit: boolean, path: string): voi
 
 const checkProperties = (ctx: Context, expression: string, path: string): void => {
   const prefix = `${ctx.opts.propertyPrefix}.`;
-  const declared = new Set(
-    ctx.opts.declaredProperties.map((p) => (p.startsWith(prefix) ? p.slice(prefix.length) : p)),
-  );
+  const bare = (p: string): string => (p.startsWith(prefix) ? p.slice(prefix.length) : p);
+  const declared = new Set(ctx.opts.declaredProperties.map(bare));
+  const foreign = new Set((ctx.opts.foreignProperties ?? []).map(bare));
   for (const ref of propertyReferences(expression)) {
     if (!ref.startsWith(prefix)) continue;
     const name = ref.slice(prefix.length);
     if (!declared.has(name)) {
       ctx.c.error('property/undeclared', path, `[${ref}] is not a declared ${ctx.opts.propertyPrefix} property`);
+    } else if (foreign.has(name)) {
+      ctx.c.error('property/another-screens', path, `[${ref}] belongs to another screen; this package may only read its own`);
     }
   }
 };
@@ -340,6 +354,14 @@ const checkItem = (ctx: Context, item: Item, path: string, id: string, dashboard
     }
   }
 
+  if (item.kind === 'image') {
+    // A name that is not in the dashboard's own Images list draws nothing at all, and SimHub
+    // reports nothing when it happens, so it has to be an error here rather than a blank box
+    // somebody notices on the rig.
+    const declared = (dashboard.images ?? []).some((image) => image.name === item.image);
+    if (!declared) c.error('image/missing', `${path}#image`, `${JSON.stringify(item.image)} is not an image of ${dashboard.name}.djson`);
+  }
+
   if (item.kind === 'widget') {
     const key = item.fileName.toLowerCase();
     const target = ctx.files.get(key);
@@ -366,7 +388,14 @@ const checkScreen = (ctx: Context, screen: Screen, dashboard: Dashboard): void =
   if (typeof screen.name !== 'string' || screen.name.trim() === '') c.error('name/empty', path, 'screen name is empty');
   checkId(ctx, screen.id ?? stableGuid(path), screen.id !== undefined, path);
   checkColor(c, path, 'backgroundColor', screen.backgroundColor, false);
-  if (screen.enabledExpression) checkProperties(ctx, screen.enabledExpression, `${path}#enabledExpression`);
+  if (screen.enabledExpression) {
+    // Both checks, not only the property one. A screen's enable expression is the one expression
+    // that costs the whole screen when it is wrong: SimHub evaluates an expression naming a
+    // function it does not dispatch to nothing, which reads as false, so the screen simply never
+    // appears and nothing anywhere says why. Every companion screen carries one of these.
+    checkProperties(ctx, screen.enabledExpression, `${path}#enabledExpression`);
+    checkFunctions(ctx, screen.enabledExpression, `${path}#enabledExpression`);
+  }
   if (!Array.isArray(screen.items) || screen.items.length === 0) {
     c.error('screen/no-items', path, 'screen has no items');
     return;
@@ -378,6 +407,36 @@ const checkScreen = (ctx: Context, screen: Screen, dashboard: Dashboard): void =
     else names.set(v.item.name, v.path);
     checkItem(ctx, v.item, v.path, v.id, dashboard, `${dashboard.name}.djson`);
   });
+};
+
+/**
+ * A dashboard's image declarations. The name is what an item references and what the
+ * `.ressources` entry is called, so two images of the same name would silently become one entry
+ * and one of the two items would draw the other's artwork.
+ */
+const checkImages = (ctx: Context, dashboard: Dashboard, path: string): void => {
+  const { c } = ctx;
+  const images = dashboard.images;
+  if (images === undefined) return;
+  if (!Array.isArray(images)) {
+    c.error('image/not-a-list', `${path}#images`, 'images must be a list');
+    return;
+  }
+  const names = new Set<string>();
+  for (const image of images) {
+    const at = `${path}#images.${image?.name ?? '?'}`;
+    if (!image || typeof image.name !== 'string' || image.name.trim() === '') {
+      c.error('image/name-empty', at, 'an image has no name');
+      continue;
+    }
+    if (names.has(image.name)) c.error('name/duplicate', at, `image name ${JSON.stringify(image.name)} is used twice`);
+    names.add(image.name);
+    if (!image.extension.startsWith('.')) c.error('image/extension', at, `extension ${JSON.stringify(image.extension)} does not begin with a dot`);
+    for (const k of ['width', 'height', 'length'] as const) {
+      if (checkNumber(c, at, k, image[k]) && image[k] <= 0) c.error('image/size', `${at}.${k}`, `${k} must be positive`);
+    }
+    if (!/^[0-9a-f]{32}$/.test(image.md5)) c.error('image/md5', `${at}.md5`, 'md5 is not 32 lowercase hex characters');
+  }
 };
 
 const checkDashboard = (ctx: Context, dashboard: Dashboard): void => {
@@ -398,6 +457,7 @@ const checkDashboard = (ctx: Context, dashboard: Dashboard): void => {
       c.error('metadata/preview-index', `${path}#metadata.mainPreviewIndex`, `screen ${preview} does not exist`);
     }
   }
+  checkImages(ctx, dashboard, path);
   if (!Array.isArray(dashboard.screens) || dashboard.screens.length === 0) {
     c.error('dashboard/no-screens', path, 'dashboard has no screens');
     return;

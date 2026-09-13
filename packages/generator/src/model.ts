@@ -360,6 +360,21 @@ export interface WebPageItem extends ItemBase {
 }
 
 /**
+ * A raster image from the dashboard's own `Images` list (SimHub's `ImageItem`).
+ *
+ * `AutoSize` sizes the item from the image and its scale; openDash always wants a fixed box, so
+ * the serialiser writes `AutoSize` false and the rect is what is drawn. The image is referenced
+ * by the name of an {@link ImageAsset} on the same dashboard, never by a file path: a path would
+ * be `ImageFromFileItem`, which reads from the user's disk and cannot be shipped.
+ */
+export interface ImageItem extends ItemBase {
+  kind: 'image';
+  rect: Rect;
+  /** The {@link ImageAsset.name} this draws. */
+  image: string;
+}
+
+/**
  * Embeds another `.djson` of the same package. `initialScreenIndex` selects which of its screens
  * is shown and can be bound, which is how openDash slots switch cards.
  */
@@ -373,10 +388,47 @@ export interface WidgetItem extends ItemBase {
   autoSize?: boolean;
 }
 
-export type Item = TextItem | RectangleItem | EllipseItem | LayerItem | WidgetItem | ChartItem | LinearGaugeItem | RadarItem | StaticMapItem | WebPageItem;
+export type Item = TextItem | RectangleItem | EllipseItem | LayerItem | WidgetItem | ChartItem | LinearGaugeItem | RadarItem | StaticMapItem | WebPageItem | ImageItem;
 
 /** The item kinds that carry a rect (everything but a Layer). */
 export type DrawableItem = Exclude<Item, LayerItem>;
+
+/**
+ * An image packed into `<dashboard>.djson.ressources` and referenced by name from an image item.
+ *
+ * Everything but `path` is read off the file by `describeImage`, because SimHub's descriptor
+ * states the image's own dimensions, its byte count and an MD5 of those bytes, and a descriptor
+ * that disagrees with the bytes beside it is how a dashboard draws nothing at all.
+ */
+export interface ImageAsset {
+  /** What an image item references, and the base name of the `.ressources` entry. */
+  name: string;
+  /** Including the dot, e.g. ".png". */
+  extension: string;
+  /** Absolute path to the source file, read when the package is written. */
+  path: string;
+  /** The image's own pixels, not the box it is drawn in. */
+  width: number;
+  height: number;
+  /** Uncompressed byte count. */
+  length: number;
+  /** Lowercase hex MD5 of the same bytes. */
+  md5: string;
+}
+
+/**
+ * A licence or notice file that has to travel with a package because of what the package carries.
+ *
+ * A `.simhubdash` is a redistribution: the SIL Open Font Licence requires its notice to accompany
+ * the fonts, and Apache 2.0 requires the NOTICE to accompany the icons. Both are ordinary files
+ * in the package folder, which SimHub ignores and a person can read.
+ */
+export interface NoticeFile {
+  /** Name inside the package folder, e.g. "OFL.txt". */
+  name: string;
+  /** Absolute path to the source file. */
+  path: string;
+}
 
 export interface Screen {
   id?: string;
@@ -411,6 +463,8 @@ export interface Dashboard {
   height: number;
   backgroundColor: Hex;
   screens: Screen[];
+  /** The images this dashboard's items may reference. Packed into `<name>.djson.ressources`. */
+  images?: ImageAsset[];
   metadata: DashboardMetadata;
 }
 
@@ -422,4 +476,6 @@ export interface DashPackage {
   dashboards: Dashboard[];
   /** Absolute paths to TTF files copied into `_SHFonts/`. */
   fonts: string[];
+  /** Licences and notices copied into the package root, for what the package redistributes. */
+  notices?: NoticeFile[];
 }

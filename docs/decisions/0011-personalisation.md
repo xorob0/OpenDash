@@ -6,7 +6,7 @@ and settles the shape of every ticket in the Personalisation project.
 
 ## Context
 
-Everything openDash draws is resolved at build time into literal values: `"TextColor": "#FFF2CD11"`,
+Everything OpenDash draws is resolved at build time into literal values: `"TextColor": "#FFF2CD11"`,
 `"FontSize": 40.0`, `"Left": 516.0`. A setting changes a *running* dashboard only by being read
 through a binding, so every thing a user might want to change is either something a binding can
 reach or something only a different build can.
@@ -91,7 +91,7 @@ tried and wrong about the conclusion it drew.
 attribute is read in exactly one place, `PropertyItemWrapper`, which is the editor's property grid.
 `ApplyBindings` never looks at it, so a binding written into the JSON by hand is applied: probe 4
 redrew its text in Courier New and probe 5 widened its monospace cells. That is a gap between what
-SimHub supports and what it happens to do, and the font section below is why openDash does not
+SimHub supports and what it happens to do, and the font section below is why OpenDash does not
 build on it.
 
 ![the twelve probes, rendered by SimHub](../../media/xor-73/binding-probe.png)

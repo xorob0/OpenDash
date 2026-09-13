@@ -18,6 +18,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { DEFAULT_AUTHOR } from '../../packages/dash/src/dashboard.ts';
 import type { DashPackage, Hex, Item, RectangleItem, TextItem } from '../../packages/generator/src/model.ts';
 import { writePackage, zipPackage } from '../../packages/generator/src/package.ts';
 import { validatePackage } from '../../packages/generator/src/validate.ts';
@@ -138,7 +139,7 @@ const pkg: DashPackage = {
       screens: [{ name: 'probe', items, backgroundColor: '#0A0B0D' }],
       metadata: {
         title: NAME,
-        author: 'openDash contributors',
+        author: DEFAULT_AUTHOR,
         description: 'Which properties SimHub applies a binding to (XOR-73)',
         version: '0.0.0-probe',
         simHubVersion: '9.12.6',

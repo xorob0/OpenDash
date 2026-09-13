@@ -16,6 +16,39 @@ import { ds } from '../src/tokens.ts';
 import { familyOf, fontName, loadFont, measure, NAME_ID, parseFont } from '../../../tools/measure-font/measure.ts';
 
 const VENDORED = path.resolve(import.meta.dir, '..', 'fonts');
+
+/** The tags whose stored checksum disagrees with their bytes, plus 'head' when the file sum does. */
+function checksumFaults(bytes: Uint8Array): string[] {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const sum = (offset: number, length: number): number => {
+    let total = 0;
+    for (let i = 0; i < length; i += 4) {
+      let word = 0;
+      for (let b = 0; b < 4; b++) word = ((word << 8) | (i + b < length ? view.getUint8(offset + i + b) : 0)) >>> 0;
+      total = (total + word) >>> 0;
+    }
+    return total;
+  };
+  const faults: string[] = [];
+  let head = -1;
+  for (let i = 0; i < view.getUint16(4); i++) {
+    const record = 12 + i * 16;
+    const tag = String.fromCharCode(view.getUint8(record), view.getUint8(record + 1), view.getUint8(record + 2), view.getUint8(record + 3));
+    const offset = view.getUint32(record + 8);
+    if (tag === 'head') head = offset;
+    else if (sum(offset, view.getUint32(record + 12)) !== view.getUint32(record + 4)) faults.push(tag);
+  }
+  const stored = view.getUint32(head + 8);
+  const zeroed = new Uint8Array(bytes);
+  new DataView(zeroed.buffer).setUint32(head + 8, 0);
+  const padded = new Uint8Array(Math.ceil(zeroed.length / 4) * 4);
+  padded.set(zeroed);
+  const whole = new DataView(padded.buffer);
+  let total = 0;
+  for (let i = 0; i < padded.length; i += 4) total = (total + whole.getUint32(i)) >>> 0;
+  if (stored !== ((0xb1b0afba - total) >>> 0)) faults.push('head.checkSumAdjustment');
+  return faults;
+}
 const shipped = (): string[] => [...fontsForPackage(), ...fontsForScreens()];
 const familyOfFile = (file: string): string | undefined => familyOf(loadFont(file));
 /** Bold and Regular carry no typographic names, being the pair a legacy family can name on its own. */
@@ -107,7 +140,10 @@ describe('the families a package ships', () => {
  */
 describe('the faces the settings panel embeds', () => {
   const panelFontsCs = readFileSync(path.resolve(import.meta.dir, '..', '..', '..', 'plugin', 'OpenDash', 'PanelFonts.cs'), 'utf8');
-  const listed = [...panelFontsCs.matchAll(/"([\w.-]+\.(?:ttf|txt))"/g)].map((m) => m[1]!);
+  // Only the Files array, so that a .ttf named anywhere else in that file, a comment included, does
+  // not join the list and fail this for a reason that has nothing to do with what it checks.
+  const filesArray = /private static readonly string\[\] Files =\s*\{([^}]*)\}/.exec(panelFontsCs);
+  const listed = [...(filesArray?.[1] ?? '').matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
 
   test('the panel lists exactly the fonts the build prepares for it, plus the licence', () => {
     expect(listed).toEqual([...fontsForPanel().map((f) => path.basename(f)), 'OFL.txt']);
@@ -135,12 +171,6 @@ describe('renaming a family', () => {
     expect(needsRename('/x/Barlow-Medium.ttf')).toBe(false);
   });
 
-  test('every replacement is the same length as what it replaces', () => {
-    // That is what lets this be a byte substitution: no name record changes length, so no offset in
-    // the file moves and no table but head needs a new checksum.
-    for (const [from, to] of FAMILY_RENAMES) expect([from, to.length]).toEqual([from, from.length]);
-  });
-
   test('renaming changes the family and nothing about the outlines', () => {
     const before = loadFont(source);
     const bytes = new Uint8Array(readFileSync(source));
@@ -154,10 +184,33 @@ describe('renaming a family', () => {
     for (const ch of '0123456789NR') expect([ch, measure(after, ch)]).toEqual([ch, measure(before, ch)]);
   });
 
-  test('the file a package ships is the same size as the one it was made from', () => {
-    const renamed = shipped().find((f) => path.basename(f) === 'openDashDisplay-Bold.ttf');
-    expect(renamed).toBeDefined();
-    expect(readFileSync(renamed!).byteLength).toBe(readFileSync(source).byteLength);
-    expect(familyOfFile(renamed!)).toBe(ds.font.data);
+  test('only the name table is searched, so nothing outside it can be rewritten', () => {
+    // The needles are long, and none of the vendored files carries one outside the name table, so
+    // this has never mattered. It would matter silently the first time a refreshed font did.
+    const bytes = new Uint8Array(readFileSync(source));
+    const view = new DataView(bytes.buffer);
+    const count = view.getUint16(4);
+    let name = { offset: 0, length: 0 };
+    for (let i = 0; i < count; i++) {
+      const record = 12 + i * 16;
+      const tag = String.fromCharCode(view.getUint8(record), view.getUint8(record + 1), view.getUint8(record + 2), view.getUint8(record + 3));
+      if (tag === 'name') name = { offset: view.getUint32(record + 8), length: view.getUint32(record + 12) };
+    }
+    // A needle planted in the glyph data must survive, and the family must still be renamed.
+    const planted = name.offset > 2048 ? 1024 : bytes.length - 64;
+    bytes.set([...'BarlowCondensed'].map((c) => c.charCodeAt(0)), planted);
+    const before = bytes.slice(planted, planted + 15);
+    expect(renameFamily(bytes)).toBeGreaterThan(0);
+    expect([...bytes.slice(planted, planted + 15)]).toEqual([...before]);
+    expect(familyOf(parseFont(bytes))).toBe(ds.font.data);
+  });
+
+  test('every checksum in a renamed file is the one the file claims', () => {
+    // The name table's bytes changed, so its directory checksum did; head.checkSumAdjustment covers
+    // the whole file and so has to be computed after that. Both were wrong at first, silently: no
+    // renderer validates them and only a font tool would have said so.
+    for (const file of [...shipped(), ...fontsForPanel()]) {
+      expect([path.basename(file), ...checksumFaults(new Uint8Array(readFileSync(file)))]).toEqual([path.basename(file)]);
+    }
   });
 });
