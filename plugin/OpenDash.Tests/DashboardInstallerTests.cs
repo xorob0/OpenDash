@@ -216,7 +216,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(entry.Edited);
             Assert.True(entry.HeldBack);
             Assert.False(entry.Extracted);
-            Assert.Contains(log.Lines, line => line.Contains("has changed since openDash wrote it"));
+            Assert.Contains(log.Lines, line => line.Contains("has changed since OpenDash wrote it"));
         }
 
         // The install run
