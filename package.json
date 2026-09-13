@@ -18,7 +18,9 @@
     "emulator": "bash scripts/emulator.sh",
     "dev": "bun scripts/dev.ts",
     "shots": "bun scripts/shots.ts",
-    "affected": "bun scripts/affected.ts"
+    "affected": "bun scripts/affected.ts",
+    "trace": "bun scripts/trace.ts",
+    "record": "bun scripts/record.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

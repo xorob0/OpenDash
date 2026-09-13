@@ -4,7 +4,7 @@
  * Everything else in that file is a remote side effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
-import { cleanClixml, inputMapping, PRESS, psq, resolveHost, shq, type Claim } from './vm.ts';
+import { cleanClixml, inputMapping, parseActivation, PRESS, psq, resolveHost, shq, withPluginActivated, type Claim, type PluginActivation } from './vm.ts';
 
 describe('quoting', () => {
   test('a shell argument survives a quote in a path', () => {
@@ -138,5 +138,42 @@ describe('binding a key to a SimHub action', () => {
     expect(() => inputMapping('CycleZoneC', 'F9')).toThrow();
     expect(() => inputMapping('OpenDash.CycleZoneC', 'F 9')).toThrow();
     expect(() => inputMapping('OpenDash.CycleZoneC', '')).toThrow();
+  });
+});
+
+
+describe("SimHub's record of which plugins are enabled", () => {
+  const entries: PluginActivation[] = [
+    { ClassName: 'SimHub.Plugins.Motion.MotionPlugin', IsEnabled: false, ShowInMainMenu: true, ShowInMainMenuPosition: 0 },
+    { ClassName: 'OpenDashPlugin.OpenDash', IsEnabled: false, ShowInMainMenu: true, ShowInMainMenuPosition: 0 },
+  ];
+
+  test('a plugin SimHub already knows is enabled in place, with the rest left alone', () => {
+    expect(withPluginActivated(entries, 'OpenDashPlugin.OpenDash')).toEqual([
+      entries[0]!,
+      { ClassName: 'OpenDashPlugin.OpenDash', IsEnabled: true, ShowInMainMenu: true, ShowInMainMenuPosition: 0 },
+    ]);
+  });
+
+  test('a plugin it has never seen is appended, enabled, and out of the left menu unless asked for', () => {
+    expect(withPluginActivated(entries, 'OpenDashTraceRecorder.TraceRecorderPlugin')[2]).toEqual({
+      ClassName: 'OpenDashTraceRecorder.TraceRecorderPlugin',
+      IsEnabled: true,
+      ShowInMainMenu: false,
+      ShowInMainMenuPosition: 0,
+    });
+  });
+
+  test('the file SimHub writes reads back as itself, byte order mark included', () => {
+    const text = `\uFEFF${JSON.stringify(entries)}`;
+    expect(parseActivation(text)).toEqual(entries);
+  });
+
+  test('anything but a flat array of plugins is refused', () => {
+    // PowerShell 5.1 turns the array into this when it is handed to ConvertTo-Json, and SimHub then
+    // dies at startup on a plugin with no class name. Refusing it here is what keeps that shape
+    // from being written back a second time.
+    expect(() => parseActivation(JSON.stringify({ value: [entries], Count: 1 }))).toThrow(/not an array/);
+    expect(() => parseActivation(JSON.stringify([{ IsEnabled: true }]))).toThrow(/names no plugin class/);
   });
 });
