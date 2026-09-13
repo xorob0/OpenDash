@@ -97,6 +97,37 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void Every_property_belongs_to_one_screen_or_to_every_screen()
+        {
+            // The rule the build enforces over a package is a partition of the contract: a name is one
+            // screen's or it is shared by all of them, and never both. Without that, attaching a rig's
+            // properties would either drop a name no screen claims or attach one twice.
+            //
+            // The lights are a third part of that partition rather than an exception to it. They belong
+            // to no screen -- a matrix is not one -- and they are not the screens' shared settings
+            // either, so folding them into SharedPropertyNames would make "shared" mean two things.
+            var all = Contract.PropertyNames().ToList();
+            var owned = Contract.ScreenPrefixes().SelectMany(Contract.ScreenPropertyNames).ToList();
+            var lights = Contract.LightsPropertyNames().ToList();
+            Assert.Equal(owned.Count, owned.Distinct().Count());
+            Assert.Empty(owned.Except(all));
+            Assert.Empty(lights.Except(all));
+            Assert.Empty(lights.Intersect(owned));
+            Assert.Empty(lights.Intersect(Contract.SharedPropertyNames()));
+            Assert.Equal(Contract.SharedPropertyNames(), all.Except(owned).Except(lights));
+
+            // The web view address is the pit wall's although its name carries no prefix: it was named
+            // before the idiom, and no other screen has a browser page to point anywhere.
+            Assert.Contains(Contract.WebViewUrl, Contract.ScreenPropertyNames(Contract.PitWallPrefix));
+            Assert.Equal(Modules.Count, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
+            Assert.Equal(Contract.FacePropertyNames(Contract.ReferenceFace), Contract.ScreenPropertyNames(Contract.FacePrefix(Contract.ReferenceFace)));
+
+            Assert.True(Contract.IsKnownScreen(Contract.FacePrefix(Contract.ReferenceFace)));
+            Assert.False(Contract.IsKnownScreen("Face1x1"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ScreenPropertyNames("Face1x1").ToList());
+        }
+
+        [Fact]
         public void Module_catalogue_has_twenty_one_pages_three_of_them_off()
         {
             Assert.Equal(21, Modules.Count);

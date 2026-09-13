@@ -1,6 +1,8 @@
 // SettingsTests.cs: defaults, normalisation of what comes back from disk, and duplicate detection.
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -566,6 +568,115 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
             Assert.False(settings.Faces.ContainsKey("Face1x1"));
             Assert.Equal(Contract.FaceSizes.Count, settings.Faces.Count);
+        }
+
+        [Fact]
+        public void A_rig_of_two_faces_a_pit_wall_and_a_companion_round_trips()
+        {
+            // SimHub persists the settings with Json.NET; what is asserted here is the shape rather than
+            // that serialiser, namely that every part of a rig is a plain settable member and comes back
+            // as it went in. A second face is the case that matters: the two carry different zones.
+            var rim = Contract.FaceSizes[3];
+            var settings = new OpenDashSettings
+            {
+                Screens = new List<string> { Contract.FacePrefix(Face), Contract.FacePrefix(rim), Contract.CompanionPrefix, Contract.PitWallPrefix },
+            };
+            settings.Normalise();
+            settings.SetFaceZoneStart(Face, "B", 4);
+            settings.SetFaceZoneStart(rim, "B", 9);
+            settings.SetBarField(rim, "Left1", 3);
+            settings.SetModule(6, true);
+            settings.SetZone("A", 3);
+            settings.WebViewUrl = "https://garage61.net";
+
+            var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
+            read.Normalise();
+
+            Assert.Equal(settings.Screens, read.Screens);
+            Assert.Equal(4, read.FaceZoneStart(Face, "B"));
+            Assert.Equal(9, read.FaceZoneStart(rim, "B"));
+            Assert.Equal(3, read.BarField(rim, "Left1"));
+            Assert.True(read.Module(6));
+            Assert.Equal(3, read.Zone("A"));
+            Assert.Equal("https://garage61.net", read.WebViewUrl);
+            // And the rig it names is the rig it keeps: a face outside it is not added back by a save.
+            Assert.Equal(2, read.Screens.Count(Contract.IsKnownFacePrefix));
+        }
+
+        [Fact]
+        public void Normalise_fills_in_a_screen_it_has_not_seen()
+        {
+            // What happens when a screen is added: the rig names it before anything has configured it,
+            // and it has to start from the defaults rather than from nothing.
+            var settings = new OpenDashSettings { Screens = new List<string> { Contract.FacePrefix(Face) } };
+            settings.Normalise();
+            Assert.Equal(new[] { Contract.FacePrefix(Face) }, settings.Faces.Keys);
+
+            var rim = Contract.FaceSizes[3];
+            settings.Screens.Add(Contract.FacePrefix(rim));
+            settings.Normalise();
+            Assert.True(settings.Faces.ContainsKey(Contract.FacePrefix(rim)));
+            Assert.Equal(Contract.DefaultFaceZones(), settings.Face(rim).Zones);
+            Assert.Equal(Contract.DefaultFaceZoneMasks(), settings.Face(rim).Masks);
+            Assert.Equal(Contract.DefaultQuickGlance, settings.Face(rim).QuickGlance);
+        }
+
+        [Fact]
+        public void A_screen_no_version_ships_is_dropped_from_the_rig()
+        {
+            // The same reason a face group at an unshipped size is dropped: a settings file can come
+            // from another version, and a screen nobody has would attach a group nothing reads.
+            var settings = new OpenDashSettings
+            {
+                Screens = new List<string> { Contract.PitWallPrefix, "Face1x1", null, Contract.PitWallPrefix },
+            };
+            settings.Normalise();
+            Assert.Equal(new[] { Contract.PitWallPrefix }, settings.Screens);
+        }
+
+        [Fact]
+        public void The_declared_properties_grow_and_shrink_with_the_rig()
+        {
+            // Eight face sizes times seventeen properties is what the plugin used to attach whatever the
+            // rig was. What it attaches now is the four modes and the twelve slots, which every screen
+            // shares, and one group per screen the settings hold.
+            const int perFace = 4 + 4 + 4 + 4 + 1;
+            var shared = Contract.SharedPropertyNames().Count();
+            Assert.Equal(16, shared);
+            // The lights are declared whatever the rig is: openDash does not install the flag box
+            // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
+            // rather than the hundred and thirty-six that made the screens worth narrowing.
+            var lights = Contract.LightsPropertyNames().Count();
+
+            var settings = new OpenDashSettings { Screens = new List<string>() };
+            settings.Normalise();
+            Assert.Equal(Contract.SharedPropertyNames().Concat(Contract.LightsPropertyNames()), settings.DeclaredProperties());
+
+            settings.Screens.Add(Contract.FacePrefix(Face));
+            settings.Screens.Add(Contract.FacePrefix(Contract.FaceSizes[3]));
+            settings.Screens.Add(Contract.CompanionPrefix);
+            settings.Screens.Add(Contract.PitWallPrefix);
+            settings.Normalise();
+            var names = settings.DeclaredProperties().ToList();
+            Assert.Equal(shared + 2 * perFace + Modules.Count + 6 + lights, names.Count);
+            Assert.Equal(names.Count, names.Distinct().Count());
+            Assert.Contains("Face1920x480ZoneA", names);
+            Assert.Contains("Face850x480ZoneA", names);
+            Assert.Contains("CompanionModule21", names);
+            Assert.Contains("WebViewUrl", names);
+            // And the six faces the rig has not got are not declared at all.
+            Assert.DoesNotContain("Face1280x480ZoneA", names);
+
+            settings.Screens.Remove(Contract.FacePrefix(Contract.FaceSizes[3]));
+            settings.Normalise();
+            Assert.Equal(shared + perFace + Modules.Count + 6 + lights, settings.DeclaredProperties().Count());
+
+            // A settings file that has never named a rig reads as every screen, which is what the plugin
+            // attached before a rig could be named at all.
+            var old = new OpenDashSettings();
+            Assert.Equal(Contract.PropertyNames(), old.DeclaredProperties());
+            old.Normalise();
+            Assert.Equal(Contract.ScreenPrefixes(), old.Screens);
         }
 
         [Fact]

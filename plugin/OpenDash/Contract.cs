@@ -269,6 +269,78 @@ namespace OpenDashPlugin
             return false;
         }
 
+        /// <summary>
+        /// The prefix the pit wall's and the companion's settings carry, as a face's is FacePrefix.
+        /// </summary>
+        /// <remarks>
+        /// Fixed rather than derived from a size, because the landscape and the portrait package of each
+        /// are one screen in two orientations rather than two screens: a spotter who turns the monitor
+        /// does not expect to configure it again.
+        /// </remarks>
+        public const string PitWallPrefix = "PitWall";
+
+        public const string CompanionPrefix = "Companion";
+
+        /// <summary>Every screen a rig can have, by the prefix its properties carry.</summary>
+        public static IEnumerable<string> ScreenPrefixes()
+        {
+            foreach (var face in FaceSizes) yield return FacePrefix(face);
+            yield return CompanionPrefix;
+            yield return PitWallPrefix;
+        }
+
+        /// <summary>Whether a prefix names a screen OpenDash knows, for reading a settings file written by another version.</summary>
+        public static bool IsKnownScreen(string prefix)
+        {
+            return IsKnownFacePrefix(prefix)
+                || string.Equals(prefix, CompanionPrefix, StringComparison.Ordinal)
+                || string.Equals(prefix, PitWallPrefix, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// The properties one screen owns, in attachment order.
+        /// </summary>
+        /// <remarks>
+        /// WebViewUrl is the pit wall's although its name carries no prefix: it was named before the
+        /// idiom and a published property cannot be renamed under ADR 0003, but no other screen has a
+        /// browser page to point anywhere.
+        /// </remarks>
+        public static IEnumerable<string> ScreenPropertyNames(string prefix)
+        {
+            if (IsKnownFacePrefix(prefix))
+            {
+                foreach (var name in FacePropertyNames(FaceForPrefix(prefix))) yield return name;
+                yield break;
+            }
+            if (string.Equals(prefix, CompanionPrefix, StringComparison.Ordinal))
+            {
+                for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(module);
+                yield break;
+            }
+            if (string.Equals(prefix, PitWallPrefix, StringComparison.Ordinal))
+            {
+                foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
+                yield return PitWallWide;
+                yield return WebViewUrl;
+                yield break;
+            }
+            throw new ArgumentOutOfRangeException("prefix", prefix, "no screen carries that prefix");
+        }
+
+        /// <summary>
+        /// The properties every screen of a rig shares: the four modes and the twelve slots. A lap time
+        /// compares against the same lap on the rim as it does on the pit wall, so these carry no
+        /// screen's name and are attached whatever the rig is.
+        /// </summary>
+        public static IEnumerable<string> SharedPropertyNames()
+        {
+            yield return ShiftLights;
+            yield return PositionMode;
+            yield return DeltaReference;
+            yield return SessionProgress;
+            for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
+        }
+
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
         public static readonly string[] FaceZoneLetters = { "A", "B", "C", "D" };
 
@@ -336,9 +408,12 @@ namespace OpenDashPlugin
         /// Per face and not five in total, because two faces on one rig have to cycle apart, which is
         /// the same reason their properties are prefixed. The cost is that SimHub's binding list holds
         /// five entries for every face rather than five altogether, and a driver with one screen will
-        /// see the four they do not have. Registering only what is installed was the alternative and
-        /// was not taken: which face a folder is would have to be parsed out of its name, and a face
-        /// installed later would have no actions until SimHub was restarted.
+        /// see the four they do not have.
+        ///
+        /// Every face and not the rig's, which is where the actions part company with the properties.
+        /// A property a rig does not have is one a binding reads through isnull and falls back on; an
+        /// action a rig does not have is a button a driver already assigned, left bound to nothing. The
+        /// first costs a default, the second costs somebody their wheel.
         /// </remarks>
         public static IEnumerable<string> ActionNames()
         {
@@ -491,22 +566,44 @@ namespace OpenDashPlugin
             return zones;
         }
 
-        /// <summary>Every property the plugin attaches, without the prefix, in attachment order.</summary>
+        /// <summary>
+        /// Every property the plugin attaches for a rig, without the prefix, in attachment order: the
+        /// shared ones, then each screen the rig has, in the order the settings name them.
+        /// </summary>
+        /// <remarks>
+        /// A rig and not the catalogue, because eight faces of seventeen properties is a hundred and
+        /// thirty-six names for a rig that has two screens, and a property list proportional to the rig
+        /// is both smaller and truthful. OpenDashSettings.DeclaredProperties() is how the plugin asks.
+        /// </remarks>
+        public static IEnumerable<string> PropertyNames(IEnumerable<string> screens)
+        {
+            foreach (var name in SharedPropertyNames()) yield return name;
+            if (screens != null)
+            {
+                foreach (var screen in screens)
+                {
+                    foreach (var name in ScreenPropertyNames(screen)) yield return name;
+                }
+            }
+            foreach (var name in LightsPropertyNames()) yield return name;
+        }
+
+        /// <summary>Every property of every screen OpenDash ships, which is what contract.ts declares
+        /// and the validator checks a package against. No rig has all of them.</summary>
         public static IEnumerable<string> PropertyNames()
         {
-            yield return ShiftLights;
-            yield return PositionMode;
-            yield return DeltaReference;
-            yield return SessionProgress;
-            for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
-            foreach (var face in FaceSizes)
-            {
-                foreach (var name in FacePropertyNames(face)) yield return name;
-            }
-            for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(module);
-            foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
-            yield return PitWallWide;
-            yield return WebViewUrl;
+            return PropertyNames(ScreenPrefixes());
+        }
+
+        /// <summary>The lights, which belong to the rig rather than to any screen: brightness and night
+        /// mode for every light openDash drives, then the flag box's own settings and one group per
+        /// matrix. They come after the screens so that this list and contract.ts agree end to end.
+        ///
+        /// A rig with no matrix still declares them, unlike a screen it does not have: the profile is
+        /// not installed by openDash (ADR 0013), so there is nothing to detect, and thirteen names is
+        /// not the hundred and thirty-six that made the screens worth narrowing.</summary>
+        public static IEnumerable<string> LightsPropertyNames()
+        {
             yield return LightsBrightness;
             yield return LightsNightBrightness;
             yield return LightsNightMode;

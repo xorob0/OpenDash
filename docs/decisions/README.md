@@ -18,6 +18,7 @@ the thing that is wrong when the two disagree.
 | 0006 | [The face is zones, not slots](0006-the-zone-face.md) | Five parts, a catalogue and a wheel button per zone; amends 0003 |
 | 0008 | [How a pull request renders a dash](0008-how-a-pull-request-renders-a-dash.md) | The author attaches a native SimHub capture; there is no preview renderer |
 | 0009 | [Does the plugin compute?](0009-does-the-plugin-compute.md) | No, and it turned out not to need to: SimHub already publishes almost all of it |
+| 0011 | [How far personalisation reaches](0011-personalisation.md) | Colour is a runtime setting, geometry is a build input, and nothing regenerates a package locally |
 | 0012 | [Update checks, and what leaves the user's machine](0012-update-checks.md) | openDash asks GitHub what the newest release is, sends nothing about the user, and never installs without being told |
 | 0013 | [openDash lights hardware, and the flag box is where it starts](0013-lighting-hardware.md) | An 8x8 matrix profile is build output like a package, but the user imports it rather than the plugin installing it |
 
@@ -31,7 +32,6 @@ collide.
 |---|---|---|
 | 0007 | The second screens, written down after the fact | XOR-67 |
 | 0010 | Where alert priority is decided | XOR-56 |
-| 0011 | How far personalisation reaches into a generated package | XOR-73 |
 | 0014 | The shift model is the sim's own, not SimHub's | XOR-230 |
 
 ## Writing one

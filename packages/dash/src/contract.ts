@@ -1,7 +1,8 @@
 /**
  * The settings contract between the dashboard and the plugin: property names, defaults, value
  * sets and the card catalogue. Every expression that reads an `OpenDash.*` property goes through
- * `setting`, so `declaredProperties()` is the single list the validator checks against.
+ * `setting`, so `declaredProperties()` is the single list the validator checks against, and
+ * `foreignProperties()` is what keeps each package inside its own screen's half of it.
  * plugin/OpenDash/Contract.cs mirrors this file.
  */
 import { ncalc } from './generator.ts';
@@ -301,6 +302,57 @@ export function facePropertyNames(face: FaceSize): string[] {
 /** Every zone property of every face that ships. */
 export function zoneProperties(): string[] {
   return FACE_SIZES.flatMap((face) => facePropertyNames(face)).map(propertyName);
+}
+
+// --- What one screen owns ---------------------------------------------------------------------
+//
+// A rig is a set of screens, and a screen owns the settings it is configured with. The face
+// prefixes above are one half of that; these are the other two screens and the rule that follows
+// from all of them, which is that a package reads its own screen's properties and the ones every
+// screen shares, and nothing else. `declaredProperties()` cannot express it: every screen's group
+// is declared, so a face reading the face beside it validates cleanly and then moves when somebody
+// configures the other screen.
+
+/**
+ * The prefix the pit wall's and the companion's settings carry.
+ *
+ * Fixed rather than derived from a size, because the landscape and the portrait package of each
+ * are one screen in two orientations rather than two screens: a spotter who turns the monitor does
+ * not expect to configure it again.
+ */
+export const PIT_WALL_PREFIX = 'PitWall';
+export const COMPANION_PREFIX = 'Companion';
+
+/** Every screen a rig can have, by the prefix its properties carry, in the order the plugin attaches them. */
+export function screenPrefixes(): string[] {
+  return [...FACE_SIZES.map(facePrefix), COMPANION_PREFIX, PIT_WALL_PREFIX];
+}
+
+/**
+ * The properties one screen owns.
+ *
+ * `WebViewUrl` is the pit wall's although it carries no prefix: it was named before the idiom and
+ * a published property cannot be renamed under ADR 0003, but no other screen has a web view, so
+ * the group it belongs to is not in doubt.
+ */
+export function screenProperties(prefix: string): string[] {
+  const face = faceForPrefix(prefix);
+  if (face) return facePropertyNames(face).map(propertyName);
+  if (prefix === PIT_WALL_PREFIX) {
+    return [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING].map(propertyName);
+  }
+  if (prefix === COMPANION_PREFIX) return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)).map(propertyName);
+  throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
+}
+
+/**
+ * Everything the package of one screen may not read: every property another screen owns. A card
+ * face owns no screen and passes nothing, which leaves it the four modes and the twelve slots.
+ */
+export function foreignProperties(owner?: string): string[] {
+  const screens = screenPrefixes();
+  if (owner !== undefined && !screens.includes(owner)) throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(owner)}`);
+  return screens.filter((prefix) => prefix !== owner).flatMap(screenProperties);
 }
 
 export interface CardMeta {

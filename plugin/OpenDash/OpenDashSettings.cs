@@ -172,6 +172,21 @@ namespace OpenDashPlugin
             }
             return result;
         }
+        // --- The rig ------------------------------------------------------------------------------
+
+        /// <summary>
+        /// The screens the rig has, by the prefix each one's properties carry: "Face1920x480",
+        /// "Face850x480", "Companion", "PitWall". The plugin attaches the properties of these and of no
+        /// other screen, so the property list is proportional to the rig rather than to the catalogue.
+        /// </summary>
+        /// <remarks>
+        /// Null until Normalise() fills it, and deliberately not initialised here: Json.NET's default
+        /// ObjectCreationHandling adds to a collection a property already holds rather than replacing
+        /// it, so a rig of two screens read into a list that already named ten would come back as
+        /// twelve. Null therefore means "this file has never named a rig", which is what a file written
+        /// before the rig existed looks like, and what Normalise() reads as every screen OpenDash ships.
+        /// </remarks>
+        public List<string> Screens { get; set; }
 
         // --- The dash face ---------------------------------------------------------------------
 
@@ -259,7 +274,71 @@ namespace OpenDashPlugin
 
             WideZone = Contract.NormaliseWideZonePage(WideZone);
             WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
+            NormaliseScreens();
             NormaliseFace();
+        }
+
+        /// <summary>
+        /// The rig, repaired: a prefix no screen carries is dropped, a screen named twice is kept once,
+        /// and a file that has never named a rig is read as every screen OpenDash ships.
+        /// </summary>
+        /// <remarks>
+        /// Every screen rather than none, because nothing outside this file knows the rig yet: the
+        /// installer installs everything the plugin embeds, and the panel that adds a screen and removes
+        /// one is XOR-125. So an old settings file attaches exactly what it attached before the rig
+        /// existed, and a driver who updates finds nothing reset; what the rig adds today is that the
+        /// list can shrink at all.
+        /// </remarks>
+        private void NormaliseScreens()
+        {
+            if (Screens == null)
+            {
+                Screens = new List<string>(Contract.ScreenPrefixes());
+                return;
+            }
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var kept = new List<string>();
+            foreach (var screen in Screens)
+            {
+                if (screen != null && Contract.IsKnownScreen(screen) && seen.Add(screen)) kept.Add(screen);
+            }
+            Screens = kept;
+        }
+
+        /// <summary>
+        /// The rig, readable before Normalise() has filled it: a settings object that has never named one
+        /// reads as every screen OpenDash ships, which is the same thing NormaliseScreens() writes.
+        /// </summary>
+        private IEnumerable<string> Rig()
+        {
+            return Screens ?? Contract.ScreenPrefixes();
+        }
+
+        /// <summary>Whether the rig has a screen, by the prefix its properties carry. Safe to call before Normalise().</summary>
+        public bool HasScreen(string screen)
+        {
+            if (screen == null) return false;
+            foreach (var known in Rig())
+            {
+                if (string.Equals(known, screen, StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The faces the rig has, in the order the settings name them. Safe to call before Normalise().</summary>
+        public IEnumerable<Contract.FaceSize> RigFaces()
+        {
+            foreach (var screen in Rig())
+            {
+                if (Contract.IsKnownFacePrefix(screen)) yield return Contract.FaceForPrefix(screen);
+            }
+        }
+
+        /// <summary>Every property the plugin attaches for this rig, in attachment order. OpenDash.cs
+        /// attaches exactly these, in this order, and ContractTests holds the two together.</summary>
+        public IEnumerable<string> DeclaredProperties()
+        {
+            return Contract.PropertyNames(Rig());
         }
 
         /// <summary>
@@ -301,10 +380,12 @@ namespace OpenDashPlugin
             {
                 if (!Contract.IsKnownFacePrefix(prefix) || Faces[prefix] == null) Faces.Remove(prefix);
             }
-            foreach (var face in Contract.FaceSizes)
-            {
-                Face(face).Normalise();
-            }
+            // A face the rig has gained since the last save gets its group here, which is what makes a
+            // screen added later start from the defaults rather than from nothing. A group belonging to
+            // a face the rig no longer has is repaired and kept rather than deleted: removing a screen
+            // is something a user asks for, and Normalise() runs on every save.
+            foreach (var face in RigFaces()) Face(face);
+            foreach (var state in Faces.Values) state.Normalise();
         }
 
         /// <summary>What one face is set to, created with its defaults the first time it is asked for.</summary>
@@ -376,10 +457,10 @@ namespace OpenDashPlugin
             Face(face).QuickGlance = Contract.NormaliseQuickGlance(value);
         }
 
-        /// <summary>Puts every zone of every face on the page it opens on, once, when the plugin starts.</summary>
+        /// <summary>Puts every zone of every face the rig has on the page it opens on, once, when the plugin starts.</summary>
         public void OpenOnStartPages()
         {
-            foreach (var face in Contract.FaceSizes) Face(face).OpenOnStartPages();
+            foreach (var face in RigFaces()) Face(face).OpenOnStartPages();
         }
 
         /// <summary>Advances one zone of one face to its next enabled page and returns it.</summary>
@@ -393,7 +474,7 @@ namespace OpenDashPlugin
         {
             get
             {
-                foreach (var face in Contract.FaceSizes)
+                foreach (var face in RigFaces())
                 {
                     if (Face(face).GlanceHeld) return true;
                 }
@@ -412,12 +493,12 @@ namespace OpenDashPlugin
         /// </remarks>
         public void BeginQuickGlance()
         {
-            foreach (var face in Contract.FaceSizes) Face(face).BeginQuickGlance();
+            foreach (var face in RigFaces()) Face(face).BeginQuickGlance();
         }
 
         public void EndQuickGlance()
         {
-            foreach (var face in Contract.FaceSizes) Face(face).EndQuickGlance();
+            foreach (var face in RigFaces()) Face(face).EndQuickGlance();
         }
 
         /// <summary>Zones of one face showing the same page as another, which the panel says and allows.</summary>
@@ -483,6 +564,7 @@ namespace OpenDashPlugin
             PositionMode = other.PositionMode;
             DeltaReference = other.DeltaReference;
             SessionProgress = other.SessionProgress;
+            Screens = other.Screens == null ? null : new List<string>(other.Screens);
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
             Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();
             Zones = other.Zones == null ? null : (int[])other.Zones.Clone();
