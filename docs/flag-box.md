@@ -77,6 +77,7 @@ Out of the box, matrix 1 does everything and 2 to 4 are off, which is the right 
 |---|---|
 | **At rest** | `Gear` or `Dark`: what this panel shows when nothing has taken it over. |
 | **Flags** | Let the flag catalogue take this panel. |
+| **Pit** | Let the limiter, the lane and speeding take this panel. |
 | **Spotter** | Let a car alongside take this panel. |
 | **Warnings** | Let low fuel, oil and water take this panel. |
 | **Mounted** | `Both`, `Left` or `Right`. |

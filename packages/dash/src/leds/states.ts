@@ -132,13 +132,26 @@ const limiterOn = (): Expr => eq(game('PitLimiterOn'), num(1));
 const inLane = (): Expr => eq(game('IsInPitLane'), num(1));
 
 /**
- * Over the pit lane limit, while in the lane. `PitLimiterSpeed` is iRacing's own
- * `TrackPitSpeedLimit` in km/h, and `SpeedKmh` is the car's; comparing two published numbers is
- * arithmetic over properties rather than state between frames, so it is not computed telemetry.
- * A small allowance keeps it from flickering at exactly the limit.
+ * Over the pit lane limit, while in the lane.
+ *
+ * **Both sides are in metres per second, and that is the whole point of this comment.**
+ * `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit` (GameManagerBase.cs:1339), so for a
+ * driver whose SimHub speed unit is MPH a 60 km/h limit arrives as 37. Comparing that with
+ * `SpeedKmh`, which is always km/h, reads as speeding from a standstill — and because this term
+ * heads the exclusion chain that gates the spotter, the warnings and the gear, it would not merely
+ * light the wrong picture, it would black out everything below the flags for every imperial user.
+ * `PitLimiterSpeedMs` (GameManagerBase.cs:1340) is metres per second whatever the user has set.
+ *
+ * It is also `double?`: a sim or track that publishes no pit limit gives null, so it needs the
+ * `isnull()` every other read here already has. The default is a speed nothing reaches, so an
+ * unknown limit means "not speeding" rather than "always speeding".
  */
-export const SPEEDING_ALLOWANCE_KMH = 1;
-const speeding = (): Expr => and(inLane(), gt(game('SpeedKmh'), ncalc.add(game('PitLimiterSpeed'), num(SPEEDING_ALLOWANCE_KMH))));
+export const SPEEDING_ALLOWANCE_MS = 0.3;
+/** Metres per second; nothing in a pit lane approaches it, so an unpublished limit never fires. */
+export const NO_PIT_LIMIT_MS = 999;
+const speedMs = (): Expr => ncalc.div(ncalc.isnull(game('SpeedKmh'), num(0)), num(3.6));
+const pitLimitMs = (): Expr => ncalc.isnull(game('PitLimiterSpeedMs'), num(NO_PIT_LIMIT_MS));
+const speeding = (): Expr => and(inLane(), gt(speedMs(), ncalc.add(pitLimitMs(), num(SPEEDING_ALLOWANCE_MS))));
 
 /** One state the box can show: a condition, a picture, and whether it blinks. */
 export interface BoxState {
