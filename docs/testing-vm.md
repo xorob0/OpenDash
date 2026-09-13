@@ -14,7 +14,7 @@ checked by being run:
 ```bash
 bun run vm status                 # container, guest SSH and VNC
 bun run vm up                     # start it; `wait` blocks until the guest answers
-bun run vm install 'openDash'     # expand built packages into DashTemplates, restart SimHub
+bun run vm install 'OpenDash'     # expand built packages into DashTemplates, restart SimHub
 bun run vm plugin                 # package, install OpenDash.dll, restart SimHub
 bun run vm logs 80                # tail the log SimHub is writing now
 bun run vm shot build/vm.png      # screenshot the display through QEMU's VNC
@@ -88,9 +88,9 @@ Fast path, no GUI involved:
 # run_powershell
 $src = 'Z:\openDash.simhubdash'
 $dst = 'C:\Program Files (x86)\SimHub\DashTemplates'
-Remove-Item "$dst\openDash" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item "$dst\OpenDash" -Recurse -Force -ErrorAction SilentlyContinue
 Expand-Archive -LiteralPath $src -DestinationPath $dst -Force
-Get-ChildItem "$dst\openDash"
+Get-ChildItem "$dst\OpenDash"
 ```
 
 Then `simhub_start` (or `simhub_stop` + `simhub_start` if it was already running so the
@@ -109,14 +109,14 @@ browser, with the caveat that the HTML renderer is not the native one the DDU us
 
 ### Running the plugin
 
-Build the C# plugin, then `simhub_install_plugin('/path/to/openDash.dll')`. SimHub will show
+Build the C# plugin, then `simhub_install_plugin('/path/to/OpenDash.dll')`. SimHub will show
 the "new plugin found" activation prompt on the desktop the first time; `screenshot` and
 `click` through it, or pre-activate by editing
 `C:\Program Files (x86)\SimHub\PluginsData\PluginsActivation.json`.
 
 ## Pressing a wheel button
 
-Five openDash actions are bound to wheel buttons by a driver, and a test has to be able to press
+Five OpenDash actions are bound to wheel buttons by a driver, and a test has to be able to press
 them. `bun run vm bind` writes SimHub's own input mappings and turns on the keyboard reader, which
 ships disabled:
 

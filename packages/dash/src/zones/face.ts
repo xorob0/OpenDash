@@ -10,7 +10,7 @@
  * read it off an artboard; see `docs/design/zones.md`.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect } from '../generator.ts';
-import { FACE_ZONE_LETTERS, zoneCounter, type FaceZone } from '../contract.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
@@ -25,6 +25,19 @@ import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '..
 import { widestCounter, zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
 export const FACE_SCREEN_NAME = 'Main';
+
+/**
+ * The contract's entry for a layout, which is what names its settings.
+ *
+ * Looked up rather than constructed: the contract is the list the plugin mirrors, so a layout it
+ * does not name has no properties and that is a build error rather than a face with a prefix
+ * nobody attached.
+ */
+export const sizeOf = (layout: ZoneLayout): FaceSize => {
+  const face = FACE_SIZES.find((f) => f.width === layout.width && f.height === layout.height);
+  if (!face) throw new Error(`${layout.folder} is ${layout.width} by ${layout.height}, which FACE_SIZES does not name`);
+  return face;
+};
 
 /** The zones a face embeds, each with the size its dashboard is drawn for. */
 export const zonesOf = (layout: ZoneLayout): { zone: FaceZone; size: { width: number; height: number }; corners: boolean }[] =>
@@ -44,7 +57,7 @@ export function faceItems(layout: ZoneLayout): Item[] {
 
   if (z.bar) {
     items.push(band('bar.ground', z.bar, ds.purpose.block.well));
-    items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd }));
+    items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd, face: sizeOf(layout) }));
   }
 
   // One pixel between the zones, because a rule is the whole boundary where a block would be too
@@ -56,9 +69,10 @@ export function faceItems(layout: ZoneLayout): Item[] {
     if (gapLeft > z.zoneB.left) items.push(rule(name, gapLeft, z.zoneB.top, 1, z.zoneB.height));
   }
 
+  const face = sizeOf(layout);
   for (const zone of FACE_ZONE_LETTERS) {
-    items.push(zoneWidget(`zone${zone}`, zone, rectOf(layout, zone)));
-    items.push(...zoneHeaderParts(zone, rectOf(layout, zone)));
+    items.push(zoneWidget(`zone${zone}`, face, zone, rectOf(layout, zone)));
+    items.push(...zoneHeaderParts(face, zone, rectOf(layout, zone)));
   }
 
   // A flag takes the band over, because an alert outranks fuel. The same sixty pixels goes to
@@ -84,7 +98,7 @@ export function faceItems(layout: ZoneLayout): Item[] {
  *
  * Zones A and D carry no header, so they get neither.
  */
-function zoneHeaderParts(zone: FaceZone, r: Rect): Item[] {
+function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect): Item[] {
   if (zone === 'A' || zone === 'D') return [];
   const density = densityForBox({ width: r.width, height: r.height });
   const { padX } = zoneFrameMetrics(density);
@@ -96,7 +110,7 @@ function zoneHeaderParts(zone: FaceZone, r: Rect): Item[] {
     label(`zone${zone}.counter`, counter.widest, zoneCounterX(r, counter, density), y, zoneCounterWidth(counter, density), {
       size,
       hAlign: 'right',
-      bind: zoneCounter(zone),
+      bind: zoneCounter(face, zone),
       widest: counter.widest,
     }),
   ];
@@ -140,5 +154,5 @@ export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions): Built
     ],
     metadata,
   };
-  return { main, zones: zoneDashboardsFor(zonesOf(layout), metadata) };
+  return { main, zones: zoneDashboardsFor(sizeOf(layout), zonesOf(layout), metadata) };
 }

@@ -13,7 +13,7 @@ namespace OpenDashPlugin
         private const string ResourcePrefix = "OpenDash.Fonts.";
         private const string FallbackFamily = "Segoe UI";
 
-        // The condensed faces are openDash's own build of Barlow Condensed, renamed so that WPF files them
+        // The condensed faces are OpenDash's own build of Barlow Condensed, renamed so that WPF files them
         // as a family of their own instead of folding them into Barlow as a stretch; the panel asks for the
         // same family the dash face does. See packages/dash/src/design/fontFiles.ts.
         private static readonly string[] Files =
@@ -69,7 +69,7 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Writes the embedded files to the private font folder when missing or of a different size.</summary>
+        /// <summary>Writes the embedded files to the private font folder, and removes any face no longer shipped.</summary>
         private static string Extract()
         {
             var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "openDash", "Fonts");
@@ -94,6 +94,16 @@ namespace OpenDashPlugin
                         source.CopyTo(destination);
                     }
                 }
+            }
+            // A face this version no longer ships is removed rather than left behind. Both FontFamily
+            // objects are built over the whole folder, so the BarlowCondensed files written there by
+            // 0.1.0-rc.1 and rc.2 would otherwise stay, declaring a family WPF folds into "Barlow".
+            foreach (var stale in Directory.GetFiles(folder, "*.ttf"))
+            {
+                if (Array.IndexOf(Files, Path.GetFileName(stale)) >= 0) continue;
+                try { File.Delete(stale); }
+                catch (IOException) { } // In use by another SimHub; it will go on the next start.
+                catch (UnauthorizedAccessException) { }
             }
             return folder;
         }

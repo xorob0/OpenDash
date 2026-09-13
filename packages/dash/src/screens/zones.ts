@@ -21,7 +21,7 @@ export type ZoneKind = 'standard' | 'wide';
 /** The pages a zone of this kind can show. */
 export const pagesOf = (kind: ZoneKind): readonly PitWallZonePageMeta[] => (kind === 'wide' ? PIT_WALL_WIDE_ZONE_PAGES : PIT_WALL_ZONE_PAGES);
 
-/** `zones-639x198` or `zones-wide-1039x255`: the dashboard name, which is also its file name. */
+/** `zones-639x202` or `zones-wide-1039x255`: the dashboard name, which is also its file name. */
 export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zones${kind === 'wide' ? '-wide' : ''}-${size.width}x${size.height}`;
 
 /** One screen of a zone dashboard: the title bar and the page drawn in the body. */

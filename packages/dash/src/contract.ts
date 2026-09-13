@@ -1,7 +1,8 @@
 /**
  * The settings contract between the dashboard and the plugin: property names, defaults, value
  * sets and the card catalogue. Every expression that reads an `OpenDash.*` property goes through
- * `setting`, so `declaredProperties()` is the single list the validator checks against.
+ * `setting`, so `declaredProperties()` is the single list the validator checks against, and
+ * `foreignProperties()` is what keeps each package inside its own screen's half of it.
  * plugin/OpenDash/Contract.cs mirrors this file.
  */
 import { ncalc } from './generator.ts';
@@ -105,6 +106,68 @@ export const setting = {
 // before a session; a zone is changed with a thumb in the middle of a lap. So what the contract
 // carries is a page number a button can advance, not an assignment a panel writes.
 
+/**
+ * Every face size that ships, and therefore every group of zone properties the plugin attaches.
+ *
+ * The list lives here rather than in `zones/` because the contract is what the plugin mirrors: a
+ * face the contract does not name has no properties, whatever the build emits. `zones/index.ts`
+ * reads it back, so the two cannot disagree.
+ */
+export const FACE_SIZES: readonly FaceSize[] = [
+  { width: 1920, height: 480, body: 'row', parts: [769, 380, 769], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 1280, height: 480, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 1280, height: 400, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 850, height: 480, body: 'row', parts: [274, 300, 274], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 800, height: 480, body: 'row', parts: [249, 300, 249], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 1280, height: 720, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
+  { width: 800, height: 286, body: 'row', parts: [269, 260, 269], hasBar: false, barFieldsPerEnd: 2 },
+  { width: 600, height: 686, body: 'column', parts: [234, 160, 150], hasBar: true, barFieldsPerEnd: 1 },
+];
+
+/**
+ * A face, and the little of its shape that anything outside the build needs.
+ *
+ * The plugin draws a plan of the face in its panel, and a plan drawn to one face's proportions for
+ * every face is how the 800 x 286 came to be offered bar fields for a bar it does not have. What is
+ * carried here is therefore only what a plan needs, and `zoneFace.test.ts` checks it against the
+ * real layouts so the two cannot drift.
+ */
+export interface FaceSize {
+  width: number;
+  height: number;
+  /** `row` lays zone B, zone A and zone C side by side; `column` stacks A over B over C. */
+  body: 'row' | 'column';
+  /** Relative sizes of the three body zones, in the order that body draws them. */
+  parts: readonly [number, number, number];
+  /** False on the nano at 800 x 286, where the height for a bar is not there. */
+  hasBar: boolean;
+  /** Two per end on a wide face, one in portrait. */
+  barFieldsPerEnd: 1 | 2;
+}
+
+/** The zone letters of a face's body, in the order that body draws them. */
+export const bodyOrder = (face: FaceSize): readonly [FaceZone, FaceZone, FaceZone] =>
+  face.body === 'column' ? ['A', 'B', 'C'] : ['B', 'A', 'C'];
+
+/**
+ * The prefix a face's settings carry, for instance `Face1920x480`.
+ *
+ * Concatenated rather than separated by a dot, because SimHub already puts one dot in front of
+ * every property name and whether its parser accepts a second inside the name is unverified.
+ *
+ * Every face carries one, so that a rig of a 1920 face, an 850 face and a pit wall is configured
+ * apart rather than sharing one set of zones. This completes an idiom the contract already has:
+ * the pit wall's properties carry `PitWall` and the companion's carry `CompanionModule`, and only
+ * the face behaved as though there could be just one of it. It is done now rather than later
+ * because property names are a public interface under ADR 0003, so `OpenDash.ZoneA` today and
+ * `OpenDash.Face1920x480ZoneA` tomorrow would break whoever had built on the first.
+ */
+export const facePrefix = (face: FaceSize): string => `Face${face.width}x${face.height}`;
+
+/** The face a prefix names, or undefined when nothing ships at that size. */
+export const faceForPrefix = (prefix: string): FaceSize | undefined =>
+  FACE_SIZES.find((face) => facePrefix(face) === prefix);
+
 /** The four zones of a rectangular face. Band D is a zone: it cycles a catalogue like the rest. */
 export const FACE_ZONE_LETTERS = ['A', 'B', 'C', 'D'] as const;
 export type FaceZone = (typeof FACE_ZONE_LETTERS)[number];
@@ -197,11 +260,11 @@ export const DEFAULT_ZONE_PAGE: Record<FaceZone, number> = { A: 0, B: 0, C: 14, 
  */
 export const defaultZoneMask = (zone: FaceZone): number => (1 << pagesForZone(zone).length) - 1;
 
-export const zonePageSettingName = (zone: FaceZone): string => `Zone${zone}`;
-export const zoneMaskSettingName = (zone: FaceZone): string => `Zone${zone}Pages`;
-export const zoneStartSettingName = (zone: FaceZone): string => `Zone${zone}Start`;
-export const zoneClassOnlySettingName = (zone: FaceZone): string => `Zone${zone}ClassOnly`;
-export const barFieldSettingName = (slot: BarSlot): string => `Bar${slot}`;
+export const zonePageSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}`;
+export const zoneMaskSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Pages`;
+export const zoneStartSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Start`;
+export const zoneClassOnlySettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}ClassOnly`;
+export const barFieldSettingName = (face: FaceSize, slot: BarSlot): string => `${facePrefix(face)}Bar${slot}`;
 
 /**
  * Whether a zone's list pages show the player's own class rather than the whole field.
@@ -216,7 +279,7 @@ export const DEFAULT_ZONE_CLASS_ONLY = false;
  * one thing a driver configures once, and four more properties for it would be four more rows in
  * the panel for no more expressiveness. Encoded as `zoneIndex * 100 + page`.
  */
-export const QUICK_GLANCE_SETTING = 'QuickGlance';
+export const quickGlanceSettingName = (face: FaceSize): string => `${facePrefix(face)}QuickGlance`;
 /** Zone C on the track page, which is what a glance is usually for. */
 export const DEFAULT_QUICK_GLANCE = 2 * 100 + 12;
 
@@ -226,25 +289,30 @@ export const quickGlancePage = (value: number): number => value % 100;
 
 /** Reads of the zone settings, each defaulted so a face works without the plugin. */
 export const zone = {
-  /** `isnull([OpenDash.ZoneB], 0)`: the page a zone is showing. */
-  page: (z: FaceZone): Expr => isnull(prop(propertyName(zonePageSettingName(z))), num(DEFAULT_ZONE_PAGE[z])),
-  /** `isnull([OpenDash.ZoneBPages], 2097151)`: which pages are enabled, as a mask. */
-  mask: (z: FaceZone): Expr => isnull(prop(propertyName(zoneMaskSettingName(z))), num(defaultZoneMask(z))),
-  /** `isnull([OpenDash.ZoneBStart], 0)`: the page the zone opens on. */
-  start: (z: FaceZone): Expr => isnull(prop(propertyName(zoneStartSettingName(z))), num(DEFAULT_ZONE_PAGE[z])),
-  /** `isnull([OpenDash.QuickGlance], 212)`: the zone and page a held button shows. */
-  quickGlance: (): Expr => isnull(prop(propertyName(QUICK_GLANCE_SETTING)), num(DEFAULT_QUICK_GLANCE)),
-  /** `isnull([OpenDash.BarLeft1], 0)`: which field an end of the bar shows. */
-  barField: (slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(slot))), num(DEFAULT_BAR_FIELDS[slot])),
-  /** `isnull([OpenDash.ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
-  classOnly: (z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(z))), String(DEFAULT_ZONE_CLASS_ONLY)),
+  /** `isnull([OpenDash.Face1920x480ZoneB], 0)`: the page a zone is showing. */
+  page: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zonePageSettingName(face, z))), num(DEFAULT_ZONE_PAGE[z])),
+  /** `isnull([OpenDash.Face1920x480ZoneBPages], 2097151)`: which pages are enabled, as a mask. */
+  mask: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneMaskSettingName(face, z))), num(defaultZoneMask(z))),
+  /** `isnull([OpenDash.Face1920x480ZoneBStart], 0)`: the page the zone opens on. */
+  start: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneStartSettingName(face, z))), num(DEFAULT_ZONE_PAGE[z])),
+  /** `isnull([OpenDash.Face1920x480QuickGlance], 212)`: the zone and page a held button shows. */
+  quickGlance: (face: FaceSize): Expr => isnull(prop(propertyName(quickGlanceSettingName(face))), num(DEFAULT_QUICK_GLANCE)),
+  /** `isnull([OpenDash.Face1920x480BarLeft1], 0)`: which field an end of the bar shows. */
+  barField: (face: FaceSize, slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(face, slot))), num(DEFAULT_BAR_FIELDS[slot])),
+  /** `isnull([OpenDash.Face1920x480ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
+  classOnly: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(face, z))), String(DEFAULT_ZONE_CLASS_ONLY)),
 };
 
-/** Every property the zone face reads. */
+/** Every property one face reads, which is the group the plugin attaches for it. */
+export function facePropertyNames(face: FaceSize): string[] {
+  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
+  const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
+  return [...perZone, ...bar, quickGlanceSettingName(face)];
+}
+
+/** Every zone property of every face that ships. */
 export function zoneProperties(): string[] {
-  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(z), zoneMaskSettingName(z), zoneStartSettingName(z), zoneClassOnlySettingName(z)]);
-  const bar = BAR_SLOTS.map(barFieldSettingName);
-  return [...perZone, ...bar, QUICK_GLANCE_SETTING].map(propertyName);
+  return FACE_SIZES.flatMap((face) => facePropertyNames(face)).map(propertyName);
 }
 
 /**
@@ -259,7 +327,7 @@ export function zoneProperties(): string[] {
  * The mask is an integer property, so the truncate is belt and braces rather than necessary, and
  * it costs nothing to keep the expression honest about what it means.
  */
-const maskBit = (z: FaceZone, i: number): Expr => mod(truncate(div(zone.mask(z), num(2 ** i))), num(2));
+const maskBit = (face: FaceSize, z: FaceZone, i: number): Expr => mod(truncate(div(zone.mask(face, z), num(2 ** i))), num(2));
 
 /**
  * How long a zone's cycle is: the number of pages its mask leaves enabled.
@@ -270,17 +338,19 @@ const maskBit = (z: FaceZone, i: number): Expr => mod(truncate(div(zone.mask(z),
  * the mask reads as its default and the answer is the whole catalogue, which is exactly what a
  * driver with no plugin can cycle.
  */
-export const zoneCycleLength = (z: FaceZone): Expr => add(...pagesForZone(z).map((_, i) => maskBit(z, i)));
+export const zoneCycleLength = (face: FaceSize, z: FaceZone): Expr => add(...pagesForZone(z).map((_, i) => maskBit(face, z, i)));
 
 /**
  * Where the page a zone is showing sits in its cycle, counting from one: the enabled pages before
  * it, plus itself. A page the mask has turned off counts as the one after the last enabled page
  * before it, which is a state the plugin's `Normalise` does not leave a zone in.
  */
-export const zoneCyclePosition = (z: FaceZone): Expr => add(num(1), ...pagesForZone(z).map((_, i) => iff(lt(num(i), zone.page(z)), maskBit(z, i), num(0))));
+export const zoneCyclePosition = (face: FaceSize, z: FaceZone): Expr =>
+  add(num(1), ...pagesForZone(z).map((_, i) => iff(lt(num(i), zone.page(face, z)), maskBit(face, z, i), num(0))));
 
 /** `2 / 3`: what a zone's header counts, which follows the mask and not the catalogue. */
-export const zoneCounter = (z: FaceZone): Expr => concat(fmt(zoneCyclePosition(z), '0'), str(' / '), fmt(zoneCycleLength(z), '0'));
+export const zoneCounter = (face: FaceSize, z: FaceZone): Expr =>
+  concat(fmt(zoneCyclePosition(face, z), '0'), str(' / '), fmt(zoneCycleLength(face, z), '0'));
 
 /** Every counter a zone could draw, so a caller can measure the box for the widest of them. */
 export function zoneCounterReadings(z: FaceZone): string[] {
@@ -299,8 +369,59 @@ export function zoneCounterReadings(z: FaceZone): string[] {
  * different settings, and docs/design/zones.md already records that two zones on one page is
  * reported and allowed; there they agree rather than disagreeing.
  */
-export const zoneClassOnlyOnPage = (zones: readonly [FaceZone, ...FaceZone[]], page: number): Expr =>
-  or(...zones.map((z) => and(eq(zone.page(z), num(page)), zone.classOnly(z))));
+export const zoneClassOnlyOnPage = (face: FaceSize, zones: readonly [FaceZone, ...FaceZone[]], page: number): Expr =>
+  or(...zones.map((z) => and(eq(zone.page(face, z), num(page)), zone.classOnly(face, z))));
+
+// --- What one screen owns ---------------------------------------------------------------------
+//
+// A rig is a set of screens, and a screen owns the settings it is configured with. The face
+// prefixes above are one half of that; these are the other two screens and the rule that follows
+// from all of them, which is that a package reads its own screen's properties and the ones every
+// screen shares, and nothing else. `declaredProperties()` cannot express it: every screen's group
+// is declared, so a face reading the face beside it validates cleanly and then moves when somebody
+// configures the other screen.
+
+/**
+ * The prefix the pit wall's and the companion's settings carry.
+ *
+ * Fixed rather than derived from a size, because the landscape and the portrait package of each
+ * are one screen in two orientations rather than two screens: a spotter who turns the monitor does
+ * not expect to configure it again.
+ */
+export const PIT_WALL_PREFIX = 'PitWall';
+export const COMPANION_PREFIX = 'Companion';
+
+/** Every screen a rig can have, by the prefix its properties carry, in the order the plugin attaches them. */
+export function screenPrefixes(): string[] {
+  return [...FACE_SIZES.map(facePrefix), COMPANION_PREFIX, PIT_WALL_PREFIX];
+}
+
+/**
+ * The properties one screen owns.
+ *
+ * `WebViewUrl` is the pit wall's although it carries no prefix: it was named before the idiom and
+ * a published property cannot be renamed under ADR 0003, but no other screen has a web view, so
+ * the group it belongs to is not in doubt.
+ */
+export function screenProperties(prefix: string): string[] {
+  const face = faceForPrefix(prefix);
+  if (face) return facePropertyNames(face).map(propertyName);
+  if (prefix === PIT_WALL_PREFIX) {
+    return [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING].map(propertyName);
+  }
+  if (prefix === COMPANION_PREFIX) return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)).map(propertyName);
+  throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
+}
+
+/**
+ * Everything the package of one screen may not read: every property another screen owns. A card
+ * face owns no screen and passes nothing, which leaves it the four modes and the twelve slots.
+ */
+export function foreignProperties(owner?: string): string[] {
+  const screens = screenPrefixes();
+  if (owner !== undefined && !screens.includes(owner)) throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(owner)}`);
+  return screens.filter((prefix) => prefix !== owner).flatMap(screenProperties);
+}
 
 export interface CardMeta {
   /** The value a slot setting takes. */

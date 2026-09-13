@@ -1,4 +1,4 @@
-// SettingsControl.cs: the openDash page in SimHub's left menu, built in code from design/canvas/Plugin.dc.html:
+// SettingsControl.cs: the OpenDash page in SimHub's left menu, built in code from design/canvas/Plugin.dc.html:
 // header (mark, wordmark, plugin version), then General, Data, Zones, Buttons, Layout, Companion, Pit wall
 // and Dashboard sections, then the footer. Zones is the picture of the face; Layout is the twelve-slot
 // picture it replaces, which stays while both models ship and leaves with the cards in XOR-95.
@@ -47,6 +47,11 @@ namespace OpenDashPlugin
             RefreshWarning();
             RefreshFaceWarning();
             RefreshStatus();
+            RefreshUpdateLine();
+            RefreshRestoreButton();
+            // Opening the page is the earliest a check may run: never on the startup path, and never at all unless
+            // the setting says so. A background check that finds nothing shows nothing, so most visits say nothing.
+            Check(manual: false);
         }
 
         // Page
@@ -80,7 +85,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildHeader()
         {
             var wordmark = Ui.HStack(0,
-                Ui.Text("open", Theme.SizeWordmark, FontWeights.Light, Theme.TextPrimary, PanelFonts.Data),
+                Ui.Text("Open", Theme.SizeWordmark, FontWeights.Light, Theme.TextPrimary, PanelFonts.Data),
                 Ui.Text("Dash", Theme.SizeWordmark, FontWeights.Bold, Theme.TextPrimary, PanelFonts.Data));
             var left = Ui.HStack(12, Ui.Mark(), wordmark);
             var right = Ui.HStack(8, Ui.Label("Plugin"), Ui.Numeral(OpenDash.Version, Theme.SizeNumeral, Theme.TextSecondary));
@@ -267,8 +272,19 @@ namespace OpenDashPlugin
         private const double FaceBodyHeight = 138;
         private const double FaceBandHeight = 26;
         private const double FaceCellPadding = 6;
-        /// <summary>Zone B, zone A and zone C, as the artboard divides the 844.</summary>
-        private static readonly double[] FaceBodyWidths = { 246, 316, 280 };
+
+        /// <summary>
+        /// The face this section is configuring.
+        ///
+        /// Every face has its own zones, its own bar and its own glance, so the panel has to say which
+        /// one it is showing and let a driver with two screens reach the second. The reference face is
+        /// where it opens, because that is the one nearly every rig has.
+        /// </summary>
+        private Contract.FaceSize face = Contract.ReferenceFace;
+
+        /// <summary>The face plan and the wheel bindings, both rebuilt when the chosen face changes.</summary>
+        private readonly ContentControl faceHost = new ContentControl();
+        private readonly ContentControl bindingHost = new ContentControl();
 
         private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
         private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
@@ -284,25 +300,108 @@ namespace OpenDashPlugin
                 "Each zone opens on the page chosen here and cycles through the ones left enabled. "
                 + "The same page may sit in two zones; the panel says so and does not prevent it.",
                 846);
-            var strip = Ui.Caption(
-                "The bar does not cycle: it carries what does not change during a lap. Two fields at each end, "
-                + "and between them the car settings your sim publishes — slip, TC, cut, bias, ABS, map and diff. "
-                + "A setting the sim has no value for takes its cell with it rather than leaving an empty box.",
-                846);
-            return Ui.Section("Zones", caption, BuildFacePicture(), strip, BuildFaceWarning());
+            stripCaption = Ui.Caption("", 846);
+            // The warning row is built before RebuildFace fills the hosts, because RebuildFace refreshes
+            // it: doing it the other way round dereferenced a control that did not exist yet, and the
+            // whole panel came up as "OpenDash settings could not be displayed".
+            var picker = BuildFacePicker();
+            var warning = BuildFaceWarning();
+            RebuildFace();
+            return Ui.Section("Zones", caption, picker, faceHost, stripCaption, warning);
         }
 
+        /// <summary>
+        /// Which face the zones below belong to.
+        /// </summary>
+        /// <remarks>
+        /// Choosing one rebuilds the plan beneath as well as the controls, so the picture is the face
+        /// that is being configured: the portrait reads as a column, and the nano at 800 x 286 shows
+        /// no bar because it has none. The shape comes from the contract, which carries just enough
+        /// of it for a plan, since the plugin cannot read a layout file.
+        /// </remarks>
+        private FrameworkElement BuildFacePicker()
+        {
+            var box = new ComboBox
+            {
+                Width = 160,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            };
+            foreach (var size in Contract.FaceSizes) box.Items.Add(size.ToString());
+            box.SelectedIndex = 0;
+            box.SelectionChanged += (sender, args) =>
+            {
+                if (box.SelectedIndex < 0) return;
+                face = Contract.FaceSizes[box.SelectedIndex];
+                RebuildFace();
+            };
+            return Ui.Row(
+                "Screen",
+                "Each screen keeps its own zones, bar and glance, so a face on the wheel and one beside it "
+                    + "are set up apart rather than moving together.",
+                box);
+        }
+
+        /// <summary>
+        /// Draws the plan and the bindings for whichever face is chosen.
+        ///
+        /// The caches are cleared first: they are keyed by zone letter, so a control left in them from
+        /// the previous face would be refreshed instead of the one on screen.
+        /// </summary>
+        private void RebuildFace()
+        {
+            zoneSelects.Clear();
+            zoneMaskButtons.Clear();
+            zoneMaskBoxes.Clear();
+            zoneClassBoxes.Clear();
+            barEndButtons.Clear();
+            faceHost.Content = BuildFacePicture();
+            RefreshStripCaption();
+            bindingHost.Content = BuildZoneBindings();
+            RefreshFaceWarning();
+        }
+
+        private TextBlock stripCaption;
+
+        /// <summary>What the bar is, said for the face on screen rather than for every face at once.</summary>
+        private void RefreshStripCaption()
+        {
+            if (stripCaption == null) return;
+            stripCaption.Text = face.HasBar
+                ? "The bar does not cycle: it carries what does not change during a lap. "
+                    + (face.BarFieldsPerEnd == 1 ? "One field at each end, " : "Two fields at each end, ")
+                    + "and between them the car settings your sim publishes \u2014 slip, TC, cut, bias, ABS, map and diff. "
+                    + "A setting the sim has no value for takes its cell with it rather than leaving an empty box."
+                : "This screen has no bar: at " + face + " the height is not there, so the body and band D have it instead.";
+        }
+
+        /// <summary>
+        /// A plan of the chosen face: the rev bar, the bar if it has one, the body and band D.
+        ///
+        /// Drawn to that face's own proportions rather than to the reference face's, so the portrait
+        /// reads as a column and the nano at 800 x 286 shows no bar, because it has none and offering
+        /// its four bar fields was offering settings that do nothing.
+        /// </summary>
         private FrameworkElement BuildFacePicture()
         {
             var grid = new Grid { Width = FaceWidth, Background = Ui.Brush(Theme.Rule), HorizontalAlignment = HorizontalAlignment.Left };
-            foreach (var height in new[] { FaceRevBarHeight, 1, FaceBarHeight, 1, FaceBodyHeight, 1, FaceBandHeight })
+            var rows = new List<double> { FaceRevBarHeight, 1 };
+            if (face.HasBar) rows.AddRange(new double[] { FaceBarHeight, 1 });
+            rows.AddRange(new double[] { BodyHeightFor(face), 1, FaceBandHeight });
+            foreach (var height in rows) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(height) });
+
+            var row = 0;
+            AddAt(grid, BuildRevBarStrip(), row);
+            row += 2;
+            if (face.HasBar)
             {
-                grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(height) });
+                AddAt(grid, BuildBarStrip(), row);
+                row += 2;
             }
-            AddAt(grid, BuildRevBarStrip(), 0);
-            AddAt(grid, BuildBarStrip(), 2);
-            AddAt(grid, BuildFaceBody(), 4);
-            AddAt(grid, BuildBandStrip(), 6);
+            AddAt(grid, BuildFaceBody(), row);
+            AddAt(grid, BuildBandStrip(), row + 2);
             return new Border
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
@@ -310,6 +409,23 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Child = grid,
             };
+        }
+
+        /// <summary>
+        /// How tall to draw the body.
+        ///
+        /// A stacked body needs room for three cells rather than one, so it is given the sum of its
+        /// parts scaled to the plan's width; a row keeps the artboard's height, which is what the
+        /// numbers above were read off.
+        /// </summary>
+        private static double BodyHeightFor(Contract.FaceSize f)
+        {
+            if (f.Body != Contract.FaceBody.Column) return FaceBodyHeight;
+            var total = 0;
+            foreach (var part in f.Parts) total += part;
+            // The plan is FaceWidth wide whatever the face is, so the body keeps the face's own ratio
+            // of body height to width.
+            return Math.Max(FaceBodyHeight, Math.Round(FaceWidth * ((double)total / f.Width) / 2));
         }
 
         private static void AddAt(Grid grid, UIElement child, int row)
@@ -333,8 +449,10 @@ namespace OpenDashPlugin
         /// <summary>The bar: an end at each side and the car settings strip between them.</summary>
         private FrameworkElement BuildBarStrip()
         {
-            var left = BuildBarEnd("Left1", "Left2", 120);
-            var right = BuildBarEnd("Right1", "Right2", 130);
+            // One field per end in portrait, two on a wide face, which is what the artboards draw.
+            var single = face.BarFieldsPerEnd == 1;
+            var left = BuildBarEnd("Left1", single ? null : "Left2", 120);
+            var right = BuildBarEnd("Right1", single ? null : "Right2", 130);
             var middle = Ui.Label("Car settings");
             middle.HorizontalAlignment = HorizontalAlignment.Center;
             var dock = new DockPanel { LastChildFill = true, Margin = new Thickness(8, 0, 8, 0) };
@@ -353,19 +471,20 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildBarEnd(string firstSlot, string secondSlot, double width)
         {
-            var button = Ui.DropButton(width, BarEndCaption(firstSlot, secondSlot), "The two fields this end of the bar shows");
+            var button = Ui.DropButton(width, BarEndCaption(firstSlot, secondSlot), secondSlot == null ? "The field this end of the bar shows" : "The two fields this end of the bar shows");
             barEndButtons[firstSlot] = button;
             var rows = new List<UIElement>();
-            foreach (var slot in new[] { firstSlot, secondSlot })
+            var slots = secondSlot == null ? new[] { firstSlot } : new[] { firstSlot, secondSlot };
+            foreach (var slot in slots)
             {
                 var captured = slot;
-                var select = BuildPageSelect(FacePages.BarFields, Settings.BarField(captured), 200, index =>
+                var select = BuildPageSelect(FacePages.BarFields, Settings.BarField(face, captured), 200, index =>
                 {
-                    Settings.SetBarField(captured, index);
+                    Settings.SetBarField(face, captured, index);
                     plugin.SaveSettings();
                     Ui.SetDropText(button, BarEndCaption(firstSlot, secondSlot));
                 });
-                rows.Add(Ui.Row(Ui.Label(slot == firstSlot ? "First" : "Second"), select));
+                rows.Add(Ui.Row(Ui.Label(secondSlot == null ? "Field" : slot == firstSlot ? "First" : "Second"), select));
             }
             var panel = Ui.VStack(8, rows.ToArray());
             panel.Width = 260;
@@ -374,23 +493,46 @@ namespace OpenDashPlugin
 
         private string BarEndCaption(string firstSlot, string secondSlot)
         {
-            return FacePages.EndLabel(FacePages.FieldName(Settings.BarField(firstSlot)), FacePages.FieldName(Settings.BarField(secondSlot)));
+            var first = FacePages.FieldName(Settings.BarField(face, firstSlot));
+            return secondSlot == null ? first : FacePages.EndLabel(first, FacePages.FieldName(Settings.BarField(face, secondSlot)));
         }
 
-        /// <summary>Zones B, A and C across the body, in the order the face draws them.</summary>
+        /// <summary>
+        /// The three body zones, in the order and along the axis this face draws them: B, A and C
+        /// across a wide face, A over B over C in portrait.
+        /// </summary>
         private FrameworkElement BuildFaceBody()
         {
             var grid = new Grid { Background = Ui.Brush(Theme.Rule) };
-            var letters = new[] { "B", "A", "C" };
+            var letters = face.BodyOrder;
+            var stacked = face.Body == Contract.FaceBody.Column;
+            // The parts are the face's real pixels; the plan is 844 wide, so they are shared out in
+            // proportion rather than used as they are.
+            var total = 0;
+            foreach (var part in face.Parts) total += part;
+            var span = stacked ? BodyHeightFor(face) : FaceWidth;
+            var sizes = new double[letters.Length];
+            for (var i = 0; i < letters.Length; i++) sizes[i] = Math.Round((span - 2) * face.Parts[i] / (double)total);
+
             for (var i = 0; i < letters.Length; i++)
             {
-                if (i > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(FaceBodyWidths[i]) });
+                if (stacked)
+                {
+                    if (i > 0) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1) });
+                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(sizes[i]) });
+                }
+                else
+                {
+                    if (i > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(sizes[i]) });
+                }
             }
             for (var i = 0; i < letters.Length; i++)
             {
-                var cell = BuildZoneCell(letters[i], FaceBodyWidths[i]);
-                Grid.SetColumn(cell, i * 2);
+                // A stacked cell is as wide as the plan; a cell in a row is as wide as its share.
+                var cell = BuildZoneCell(letters[i], stacked ? FaceWidth : sizes[i]);
+                if (stacked) Grid.SetRow(cell, i * 2);
+                else Grid.SetColumn(cell, i * 2);
                 grid.Children.Add(cell);
             }
             return grid;
@@ -444,9 +586,9 @@ namespace OpenDashPlugin
         private ComboBox BuildZoneSelectFor(string letter, double width)
         {
             var pages = FacePages.For(letter);
-            var select = BuildPageSelect(pages, Settings.FaceZoneStart(letter), width, index =>
+            var select = BuildPageSelect(pages, Settings.FaceZoneStart(face, letter), width, index =>
             {
-                Settings.SetFaceZoneStart(letter, index);
+                Settings.SetFaceZoneStart(face, letter, index);
                 plugin.SaveSettings();
                 RefreshZone(letter);
                 RefreshFaceWarning();
@@ -471,7 +613,7 @@ namespace OpenDashPlugin
                 FontSize = Theme.SizeLabel,
                 FontFamily = PanelFonts.Label,
                 Foreground = Ui.Brush(Theme.TextSecondary),
-                IsChecked = Settings.FaceZoneIsClassOnly(letter),
+                IsChecked = Settings.FaceZoneIsClassOnly(face, letter),
                 ToolTip = "Show the leaderboard and the relative in zone " + letter + " for your own class",
             };
             box.Checked += (sender, args) => SetClassFilter(letter, true);
@@ -482,7 +624,7 @@ namespace OpenDashPlugin
 
         private void SetClassFilter(string letter, bool classOnly)
         {
-            Settings.SetFaceZoneClassOnly(letter, classOnly);
+            Settings.SetFaceZoneClassOnly(face, letter, classOnly);
             plugin.SaveSettings();
         }
 
@@ -525,7 +667,7 @@ namespace OpenDashPlugin
             var on = 0;
             for (var page = 0; page < pages; page++)
             {
-                if (Settings.FaceZonePageEnabled(letter, page)) on++;
+                if (Settings.FaceZonePageEnabled(face, letter, page)) on++;
             }
             return on + " of " + pages + " pages";
         }
@@ -552,7 +694,7 @@ namespace OpenDashPlugin
                     FontSize = Theme.SizeLabel,
                     FontFamily = PanelFonts.Label,
                     Foreground = Ui.Brush(Theme.TextPrimary),
-                    IsChecked = Settings.FaceZonePageEnabled(letter, page),
+                    IsChecked = Settings.FaceZonePageEnabled(face, letter, page),
                     Margin = new Thickness(0, 0, 20, 6),
                     MinWidth = 120,
                 };
@@ -587,7 +729,7 @@ namespace OpenDashPlugin
 
         private void SetPage(string letter, int page, bool enabled)
         {
-            Settings.SetFaceZonePageEnabled(letter, page, enabled);
+            Settings.SetFaceZonePageEnabled(face, letter, page, enabled);
             plugin.SaveSettings();
             RefreshZone(letter);
             RefreshFaceWarning();
@@ -600,14 +742,14 @@ namespace OpenDashPlugin
             var pages = FacePages.For(letter);
             if (enabled)
             {
-                for (var i = 0; i < pages.Count; i++) Settings.SetFaceZonePageEnabled(letter, pages[i].Number, true);
+                for (var i = 0; i < pages.Count; i++) Settings.SetFaceZonePageEnabled(face, letter, pages[i].Number, true);
             }
             else
             {
-                var keep = Settings.FaceZoneStart(letter);
+                var keep = Settings.FaceZoneStart(face, letter);
                 for (var i = 0; i < pages.Count; i++)
                 {
-                    if (pages[i].Number != keep) Settings.SetFaceZonePageEnabled(letter, pages[i].Number, false);
+                    if (pages[i].Number != keep) Settings.SetFaceZonePageEnabled(face, letter, pages[i].Number, false);
                 }
             }
             plugin.SaveSettings();
@@ -622,7 +764,7 @@ namespace OpenDashPlugin
             ComboBox select;
             if (zoneSelects.TryGetValue(letter, out select))
             {
-                var start = Settings.FaceZoneStart(letter);
+                var start = Settings.FaceZoneStart(face, letter);
                 if (select.SelectedIndex != start) select.SelectedIndex = start;
             }
             ToggleButton button;
@@ -633,14 +775,14 @@ namespace OpenDashPlugin
                 var pages = FacePages.For(letter);
                 for (var i = 0; i < boxes.Count && i < pages.Count; i++)
                 {
-                    var enabled = Settings.FaceZonePageEnabled(letter, pages[i].Number);
+                    var enabled = Settings.FaceZonePageEnabled(face, letter, pages[i].Number);
                     if (boxes[i].IsChecked != enabled) boxes[i].IsChecked = enabled;
                 }
             }
             CheckBox classOnly;
             if (zoneClassBoxes.TryGetValue(letter, out classOnly))
             {
-                var on = Settings.FaceZoneIsClassOnly(letter);
+                var on = Settings.FaceZoneIsClassOnly(face, letter);
                 if (classOnly.IsChecked != on) classOnly.IsChecked = on;
             }
         }
@@ -660,7 +802,10 @@ namespace OpenDashPlugin
 
         private void RefreshFaceWarning()
         {
-            var message = FacePageClash.Warning(Settings);
+            var message = FacePageClash.Warning(Settings.Face(face));
+            // Called while the panel is still being assembled as well as after it, so a row that does
+            // not exist yet is nothing to refresh rather than a crash.
+            if (faceWarningText == null || faceWarningRow == null) return;
             faceWarningText.Text = message;
             faceWarningRow.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         }
@@ -679,25 +824,25 @@ namespace OpenDashPlugin
                 VerticalContentAlignment = VerticalAlignment.Center,
             };
             foreach (var letter in Contract.FaceZoneLetters) zoneBox.Items.Add("Zone " + letter);
-            zoneBox.SelectedIndex = Contract.QuickGlanceZone(Settings.QuickGlance);
+            zoneBox.SelectedIndex = Contract.QuickGlanceZone(Settings.QuickGlanceOf(face));
 
             var pageHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             Action fillPages = () =>
             {
                 var letter = Contract.FaceZoneLetters[Math.Max(0, zoneBox.SelectedIndex)];
-                var page = Contract.QuickGlanceZone(Settings.QuickGlance) == zoneBox.SelectedIndex
-                    ? Contract.QuickGlancePage(Settings.QuickGlance)
+                var page = Contract.QuickGlanceZone(Settings.QuickGlanceOf(face)) == zoneBox.SelectedIndex
+                    ? Contract.QuickGlancePage(Settings.QuickGlanceOf(face))
                     : 0;
                 pageHost.Child = BuildPageSelect(FacePages.For(letter), page, 200, index =>
                 {
-                    Settings.QuickGlance = Contract.NormaliseQuickGlance(Contract.QuickGlanceValue(zoneBox.SelectedIndex, index));
+                    Settings.SetQuickGlance(face, Contract.QuickGlanceValue(zoneBox.SelectedIndex, index));
                     plugin.SaveSettings();
                 });
             };
             zoneBox.SelectionChanged += (sender, args) =>
             {
                 if (zoneBox.SelectedIndex < 0) return;
-                Settings.QuickGlance = Contract.NormaliseQuickGlance(Contract.QuickGlanceValue(zoneBox.SelectedIndex, 0));
+                Settings.SetQuickGlance(face, Contract.QuickGlanceValue(zoneBox.SelectedIndex, 0));
                 plugin.SaveSettings();
                 fillPages();
             };
@@ -713,7 +858,7 @@ namespace OpenDashPlugin
                     "Next page",
                     "Bind a wheel button per zone. A driver cycles a zone without taking a hand off the wheel, "
                         + "which is the whole point of zones.",
-                    BuildZoneBindings()),
+                    bindingHost),
                 Ui.Row(text, Ui.HStack(8, zoneBox, pageHost)),
                 BuildGlanceBinding(),
             };
@@ -724,7 +869,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildZoneBindings()
         {
             var binders = Contract.FaceZoneLetters
-                .Select(letter => BuildBinder(Contract.CycleZoneAction(letter), "Zone " + letter))
+                .Select(letter => BuildBinder(Contract.CycleZoneAction(face, letter), "Zone " + letter))
                 .ToArray();
             var stack = Ui.VStack(6, binders);
             stack.HorizontalAlignment = HorizontalAlignment.Right;
@@ -733,7 +878,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildGlanceBinding()
         {
-            return Ui.Row(Ui.Label("Glance button"), BuildBinder(Contract.HoldQuickGlanceAction, "Quick glance", hold: true));
+            return Ui.Row(Ui.Label("Glance button"), BuildBinder(Contract.HoldQuickGlanceActionFor(face), "Quick glance", hold: true));
         }
 
         /// <summary>
@@ -944,18 +1089,273 @@ namespace OpenDashPlugin
 
         // Dashboard
 
+        private TextBlock updateLine;
+        private Button updateButton;
+        private Button restoreButton;
+        private Button checkButton;
+        private UpdateStatus updateStatus = new UpdateStatus();
+        private UpdateService updateService;
+        private bool confirmingEdited;
+        private bool applying;
+        private bool confirmingReinstall;
+
+        private UpdateService Updates =>
+            updateService ?? (updateService = new UpdateService(new ReleaseClient(OpenDash.Version), new SimHubInstallLog()));
+
         private FrameworkElement BuildDashboard()
         {
-            dashboardTitle = Ui.Body("openDash");
+            dashboardTitle = Ui.Body("OpenDash");
             var caption = Ui.Caption("One dashboard per screen size, installed in SimHub DashTemplates. Reinstall restores every embedded copy; settings are kept.");
             var text = Ui.VStack(4, dashboardTitle, caption);
             text.MaxWidth = 460;
             text.HorizontalAlignment = HorizontalAlignment.Left;
 
+            updateLine = Ui.Caption(string.Empty);
+            updateLine.Visibility = Visibility.Collapsed;
+            text.Children.Add(updateLine);
+
             statusHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             reinstallButton = BuildReinstallButton();
-            var right = Ui.HStack(24, statusHost, reinstallButton);
-            return Ui.Section("Dashboard", Ui.Row(text, right));
+            updateButton = BuildUpdateButton();
+            restoreButton = BuildRestoreButton();
+            var right = Ui.HStack(24, statusHost, restoreButton, updateButton, reinstallButton);
+
+            return Ui.Section("Dashboard", Ui.Row(text, right), BuildCheckRow());
+        }
+
+        /// <summary>The switch, its one sentence, and a button for somebody who would rather ask now.</summary>
+        private FrameworkElement BuildCheckRow()
+        {
+            var toggle = BuildToggle(Settings.CheckForUpdates, on =>
+            {
+                Settings.CheckForUpdates = on;
+                plugin.SaveSettings();
+                if (!on)
+                {
+                    updateStatus = new UpdateStatus { State = UpdateState.Disabled, InstalledVersion = plugin.Installer.InstalledVersion };
+                }
+                RefreshUpdateLine();
+            });
+
+            checkButton = BuildSecondaryButton("Check now", "Ask GitHub for the newest release now, without waiting for the daily check.");
+            checkButton.Click += (sender, args) => Check(manual: true);
+
+            var right = Ui.HStack(24, checkButton, toggle);
+            return Ui.Row(Ui.VStack(4, Ui.Body("Check for updates"), Ui.Caption(UpdateWording.CheckCaption)), right);
+        }
+
+        private Button BuildUpdateButton()
+        {
+            var button = BuildSecondaryButton("Update", "Download the newest release and replace the dashboards installed here.");
+            button.Visibility = Visibility.Collapsed;
+            button.Click += (sender, args) => ApplyUpdate();
+            return button;
+        }
+
+        /// <summary>
+        /// Puts back the copy kept when a dashboard somebody edited was replaced.
+        /// </summary>
+        /// <remarks>
+        /// The confirmation before replacing an edited dashboard promises that a copy is kept and can be put back.
+        /// Until this existed nothing in the plugin could put one back, so the promise was true only for somebody
+        /// willing to unzip a file by hand.
+        /// </remarks>
+        private Button BuildRestoreButton()
+        {
+            var button = BuildSecondaryButton("Put mine back", "Restore the dashboards that were replaced when you last chose to update over your own edits.");
+            button.Visibility = Visibility.Collapsed;
+            button.Click += (sender, args) => RestoreKept();
+            return button;
+        }
+
+        private void RestoreKept()
+        {
+            if (applying) return;
+            var root = plugin.Installer.SimHubRoot;
+            var restored = new List<string>();
+            foreach (var folder in plugin.Installer.Packages.Select(p => p.FolderName).Where(f => f != null).Distinct())
+            {
+                var kept = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
+                if (kept == null) continue;
+                try
+                {
+                    if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), kept)) restored.Add(folder);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Putting back " + folder + " failed", ex);
+                }
+            }
+            plugin.Installer.Refresh();
+            plugin.SaveSettings();
+            RefreshStatus();
+            updateLine.Text = restored.Count == 0
+                ? "There was nothing of yours to put back."
+                : "Put back " + (restored.Count == 1 ? "1 dashboard" : restored.Count + " dashboards") + ". " + UpdateWording.Reopen;
+            updateLine.Visibility = Visibility.Visible;
+            RefreshRestoreButton();
+        }
+
+        /// <summary>The button appears only when there is something of the user's to put back.</summary>
+        private void RefreshRestoreButton()
+        {
+            if (restoreButton == null) return;
+            var root = plugin.Installer.SimHubRoot;
+            var any = plugin.Installer.Packages
+                .Select(p => p.FolderName)
+                .Where(f => f != null)
+                .Distinct()
+                .Any(f => PackageExtractor.KeptCopies(root, f).Any(path => path.Contains(PackageExtractor.EditedSuffix)));
+            restoreButton.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static Button BuildSecondaryButton(string content, string tooltip)
+        {
+            Button button;
+            try
+            {
+                button = new SHButtonPrimary();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("SHButtonPrimary is unavailable; using a plain button: " + ex.Message);
+                button = new Button();
+            }
+            button.Content = content;
+            button.MinWidth = 96;
+            button.ToolTip = tooltip;
+            return button;
+        }
+
+        /// <summary>
+        /// Asks, off the UI thread, and shows whatever came back.
+        /// </summary>
+        /// <remarks>
+        /// Nothing here blocks: a socket that never answers would otherwise freeze the settings page, and on the
+        /// thread SimHub calls Init on it would freeze SimHub's start.
+        /// </remarks>
+        private void Check(bool manual)
+        {
+            if (!Settings.CheckForUpdates && !manual) return;
+            // Whether a request will be made is decided here rather than on the background thread, because saying
+            // "Checking for updates…" and then not checking left the panel on that sentence for as long as it was
+            // open, and hid an offer it had already found.
+            if (!UpdateCheck.ShouldCheck(Settings.CheckForUpdates, Settings.LastUpdateCheckTicks, DateTime.UtcNow, manual)) return;
+
+            checkButton.IsEnabled = false;
+            updateStatus = new UpdateStatus { State = UpdateState.Checking, InstalledVersion = plugin.Installer.InstalledVersion, Manual = manual };
+            RefreshUpdateLine();
+
+            var installed = UpdateCheck.ComparableInstalled(plugin.Installer.InstalledVersion, OpenDash.Version);
+            UpdateService.InBackground(() =>
+            {
+                var ticks = Settings.LastUpdateCheckTicks;
+                var answer = Updates.Check(installed, Settings.CheckForUpdates, ref ticks, DateTime.UtcNow, manual);
+                Dispatcher.Invoke(() =>
+                {
+                    if (answer == null)
+                    {
+                        // The service declined after all. Whatever was showing before is still the truth.
+                        updateStatus = new UpdateStatus { State = UpdateState.Idle, InstalledVersion = plugin.Installer.InstalledVersion };
+                    }
+                    if (answer != null)
+                    {
+                        updateStatus = answer;
+                        if (ticks != Settings.LastUpdateCheckTicks)
+                        {
+                            Settings.LastUpdateCheckTicks = ticks;
+                            plugin.SaveSettings();
+                        }
+                    }
+                    checkButton.IsEnabled = true;
+                    confirmingEdited = false;
+                    RefreshUpdateLine();
+                });
+            }, new SimHubInstallLog());
+        }
+
+        /// <summary>
+        /// Applies the release the last check found, asking once before replacing a dashboard somebody has edited.
+        /// </summary>
+        private void ApplyUpdate()
+        {
+            // A second click before the first has been answered used to fall straight through the confirmation,
+            // because the confirming branch returned without disabling anything.
+            if (applying) return;
+
+            var release = Updates.LastReleases.FirstOrDefault(r => r.Version == updateStatus.LatestVersion);
+            if (release == null)
+            {
+                // Nothing to act on, so the line says so and the button is put back where the status says it
+                // belongs, which is how a button left over from an earlier state disappears on the press that
+                // found it stale rather than staying to be pressed again.
+                RefreshUpdateLine();
+                updateLine.Text = UpdateWording.NothingToApply;
+                updateLine.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            if (edited.Count > 0 && !confirmingEdited)
+            {
+                // One click to be told, a second to mean it. A dialog would be the SimHub way and a modal in a
+                // settings page is worse than a button that changes what it says.
+                confirmingEdited = true;
+                updateButton.Content = "Replace anyway";
+                updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
+                    + " changed since OpenDash wrote them: " + string.Join(", ", edited)
+                    + ". Updating replaces what is there. A copy of yours is kept beside it in DashTemplates, "
+                    + "and \"Put mine back\" restores it.";
+                updateLine.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var replaceEdited = confirmingEdited;
+            applying = true;
+            updateButton.IsEnabled = false;
+            reinstallButton.IsEnabled = false;
+            checkButton.IsEnabled = false;
+            updateLine.Text = "Downloading " + updateStatus.LatestVersion + "…";
+            updateLine.Visibility = Visibility.Visible;
+
+            UpdateService.InBackground(() =>
+            {
+                var outcome = Updates.Apply(plugin.Installer, release, replaceEdited);
+                Dispatcher.Invoke(() =>
+                {
+                    applying = false;
+                    confirmingEdited = false;
+                    updateButton.Content = "Update";
+                    updateButton.IsEnabled = true;
+                    reinstallButton.IsEnabled = true;
+                    checkButton.IsEnabled = true;
+                    // The record is written in memory by the installer and saved here, on the UI thread, which is
+                    // the moment it is safe to serialise the settings.
+                    plugin.SaveSettings();
+                    plugin.Installer.Refresh();
+                    RefreshRestoreButton();
+                    if (outcome.Ok && outcome.Updated.Count > 0)
+                    {
+                        updateStatus = new UpdateStatus { State = UpdateState.UpToDate, InstalledVersion = plugin.Installer.InstalledVersion, Manual = true };
+                    }
+                    RefreshStatus();
+                    // The button's visibility is computed nowhere but here, so a status that has just stopped
+                    // offering an update has to be redrawn or the button outlives the release it was offering.
+                    // It runs before the outcome sentence is written because it writes the line as well.
+                    RefreshUpdateLine();
+                    updateLine.Text = outcome.Line;
+                    updateLine.Visibility = Visibility.Visible;
+                });
+            }, new SimHubInstallLog(), mustFinish: true);
+        }
+
+        private void RefreshUpdateLine()
+        {
+            if (updateLine == null) return;
+            var line = updateStatus.Line;
+            updateLine.Text = line ?? string.Empty;
+            updateLine.Visibility = updateStatus.IsVisible && line != null ? Visibility.Visible : Visibility.Collapsed;
+            updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
         }
 
         /// <summary>SimHub's primary button (SHButtonPrimary); a plain button when the type cannot be created.</summary>
@@ -978,25 +1378,64 @@ namespace OpenDashPlugin
             return button;
         }
 
+        /// <summary>
+        /// Writes every embedded dashboard again, asking once before replacing one somebody has edited.
+        /// </summary>
+        /// <remarks>
+        /// It used to leave an edited folder alone and report "Up to date", which made the button appear to have
+        /// worked while nothing happened. Worse, the only path that could replace an edited folder was the Update
+        /// button's second click, and that button appears only while a newer release exists, so a person who had
+        /// edited a dashboard had no way at all to get OpenDash's own version back.
+        /// </remarks>
         private void Reinstall()
         {
+            // Two installers over the same DashTemplates folders is the one combination that can delete a folder
+            // one of them is extracting into, so whichever starts first holds the field.
+            if (applying) return;
+
+            var edited = plugin.Installer.Packages.Where(p => p.Edited).Select(p => p.FolderName).ToList();
+            if (edited.Count > 0 && !confirmingReinstall)
+            {
+                confirmingReinstall = true;
+                reinstallButton.Content = "Replace anyway";
+                updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
+                    + " changed since OpenDash wrote them: " + string.Join(", ", edited)
+                    + ". Reinstalling replaces what is there. A copy of yours is kept beside it in DashTemplates, "
+                    + "and \"Put mine back\" restores it.";
+                updateLine.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var replaceEdited = confirmingReinstall;
             reinstallButton.IsEnabled = false;
             try
             {
-                plugin.Installer.EnsureInstalled(true);
+                plugin.Installer.EnsureInstalled(true, replaceEdited);
+                var replaced = plugin.Installer.Packages.Count(p => p.Extracted);
+                var held = plugin.Installer.Packages.Count(p => p.HeldBack);
+                updateLine.Text = held > 0
+                    ? "Reinstalled " + replaced + ". " + held + " left alone because you have edited them."
+                    : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.Reopen;
+                updateLine.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
             {
                 Log.Error("Reinstall failed", ex);
+                updateLine.Text = "The reinstall did not finish: " + ex.Message;
+                updateLine.Visibility = Visibility.Visible;
             }
             finally
             {
+                confirmingReinstall = false;
+                reinstallButton.Content = "Reinstall";
                 reinstallButton.IsEnabled = true;
+                plugin.SaveSettings();
                 RefreshStatus();
+                RefreshRestoreButton();
             }
         }
 
-        /// <summary>Title "openDash <installed version> · <n> dashboards" and the status pill: a 6 px dot and a tracked
+        /// <summary>Title "OpenDash <installed version> · <n> dashboards" and the status pill: a 6 px dot and a tracked
         /// label showing the worst status across the packages; the tooltip lists every dashboard with its own status.</summary>
         private void RefreshStatus()
         {

@@ -20,6 +20,7 @@ import {
   zone as zoneSetting,
   zoneClassOnlyOnPage,
   zoneCounterReadings,
+  type FaceSize,
   type FaceZone,
   type FaceZonePageMeta,
 } from '../contract.ts';
@@ -57,7 +58,7 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
  * say which page is showing. Zone A carries none: it is the gear, and 22 px of the column it is
  * sized to is too much to spend saying so. What zone A does instead is XOR-103.
  */
-export function zonePageScreen(zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false): Screen {
+export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false): Screen {
   const frame = rect(0, 0, size.width, size.height);
   const zone = zones[0];
 
@@ -70,7 +71,7 @@ export function zonePageScreen(zones: ZoneGroup, page: FaceZonePageMeta, size: S
     // A band draws no header either. It is one rank across the whole width, the corner blocks say
     // what is at each end, and a title line would take a third of the height to say "fuel" above a
     // field already labelled FUEL.
-    items = [...bandPageItems(page.id, frame, `${page.id}.`), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])];
+    items = [...bandPageItems(page.id, frame, `${page.id}.`, corners), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])];
   } else {
     // The chrome is prefixed `zone.` rather than with the page id, because a module already names
     // its own items after itself: the track page draws `track.title` and so did the header.
@@ -87,7 +88,7 @@ export function zonePageScreen(zones: ZoneGroup, page: FaceZonePageMeta, size: S
     );
     items = [
       ...chrome,
-      ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body), classOnly: zoneClassOnlyOnPage(zones, page.number) }),
+      ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body), classOnly: zoneClassOnlyOnPage(face, zones, page.number) }),
     ];
   }
 
@@ -95,21 +96,21 @@ export function zonePageScreen(zones: ZoneGroup, page: FaceZonePageMeta, size: S
 }
 
 /** A zone dashboard: every page of its catalogue, in the order the plugin lists them. */
-export function zoneDashboard(zones: ZoneGroup, size: Size, metadata: DashboardMetadata, corners = false): Dashboard {
+export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, metadata: DashboardMetadata, corners = false): Dashboard {
   const zone = zones[0];
   const pages = pagesForZone(zone);
   const kind = kindOf(zone);
   return pagedDashboard({
     name: zoneDashboardName(kind, size),
     size,
-    screens: pages.map((page) => zonePageScreen(zones, page, size, corners)),
+    screens: pages.map((page) => zonePageScreen(face, zones, page, size, corners)),
     metadata,
     description: `${kind === 'zoneA' ? ZONE_A_PAGES.length : kind === 'band' ? BAND_D_PAGES.length : pages.length} pages drawn for a ${size.width} x ${size.height} zone.`,
   });
 }
 
 /** The widget that embeds a zone dashboard in a face, its screen bound to the zone's property. */
-export function zoneWidget(name: string, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }): WidgetItem {
+export function zoneWidget(name: string, face: FaceSize, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }): WidgetItem {
   const size = { width: frame.width, height: frame.height };
   const start = pagesForZone(zone).findIndex((p) => p.number === 0);
   return pagedWidget({
@@ -117,7 +118,7 @@ export function zoneWidget(name: string, zone: FaceZone, frame: { left: number; 
     rect: { ...frame },
     fileName: `${zoneDashboardName(kindOf(zone), size)}.djson`,
     initialScreenIndex: Math.max(0, start),
-    page: zoneSetting.page(zone),
+    page: zoneSetting.page(face, zone),
   });
 }
 
@@ -128,7 +129,7 @@ export function zoneWidget(name: string, zone: FaceZone, frame: { left: number; 
  * which zones read it: a page that filters to the player's class asks whether *the zone showing it*
  * was set to, and answering that with the wrong letter would have zone B follow zone C's setting.
  */
-export function zoneDashboardsFor(zones: readonly { zone: FaceZone; size: Size; corners?: boolean }[], metadata: DashboardMetadata): Dashboard[] {
+export function zoneDashboardsFor(face: FaceSize, zones: readonly { zone: FaceZone; size: Size; corners?: boolean }[], metadata: DashboardMetadata): Dashboard[] {
   const groups = new Map<string, { zones: [FaceZone, ...FaceZone[]]; size: Size; corners: boolean }>();
   for (const { zone, size, corners } of zones) {
     const key = zoneDashboardName(kindOf(zone), size);
@@ -139,7 +140,7 @@ export function zoneDashboardsFor(zones: readonly { zone: FaceZone; size: Size; 
     }
     groups.set(key, { zones: [zone], size, corners: corners ?? false });
   }
-  return [...groups.values()].map((g) => zoneDashboard(g.zones, g.size, metadata, g.corners));
+  return [...groups.values()].map((g) => zoneDashboard(face, g.zones, g.size, metadata, g.corners));
 }
 
 /**

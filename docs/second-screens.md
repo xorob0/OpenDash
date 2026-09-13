@@ -1,25 +1,41 @@
 # The companion and the pit wall
 
-openDash draws three kinds of screen. The **face** is the one on the wheel: a hero zone and
-twelve slots, described in [scope.md](scope.md). The **companion** is a phone or tablet
-beside it showing one module at a time. The **pit wall** is a big screen for someone who is not
-driving.
+OpenDash draws three kinds of screen. The **face** is the one on the wheel: a rev bar, a bar of
+settled values, three zones across the body and a band at the foot, each zone cycling its own
+catalogue from a wheel button, described in [design/zones.md](design/zones.md) and summarised in
+[scope.md](scope.md). The **companion** is a phone or tablet beside it showing one module at a
+time. The **pit wall** is a big screen for someone who is not driving.
 
 All three are built from the same source and installed by the same plugin. This document is what
 the second screens are, how they are put together, and what they deliberately do not show.
 
 ## The module
 
-A module is a function of a rectangle and a density:
+A module is a function of a rectangle, a density and a shape:
 
 ```ts
-(ctx: { frame: Rect; density: 'companion' | 'zone' | 'wide'; prefix: string }) => Item[]
+(ctx: { frame: Rect; density: Density; prefix: string; shape?: Shape }) => Item[]
 ```
 
-That is the whole design. The companion draws a module across an 802 x 356 page; a pit wall zone
-draws the same module in a 607 x 212 panel. Nothing in a module knows which it is on: the density
-carries the type ramp (116 / 64 / 46 / 34 / 24 on a companion page, 64 / 46 / 34 / 24 / 16 in a
-zone), the gaps, the row heights and the trace length.
+`Density` is `'companion' | 'zone' | 'compact' | 'wide'`, in
+`packages/dash/src/second/density.ts`. `compact` is the ramp a zone gets when it is too small for
+the zone ramp, and `densityForBox` is what chooses. `Shape` is a pair of bands, width and height,
+in `packages/dash/src/second/shape.ts`; it is derived from the frame when the caller does not pass
+one, which is every caller today. Density says how large the type is, shape says how much of the
+page fits.
+
+That is the whole design. Nothing in a module knows which screen it is on: the density carries the
+type ramp (116 / 64 / 46 / 34 / 24 on a companion page, 64 / 46 / 34 / 24 / 16 in a zone), the
+gaps, the row heights and the trace length.
+
+The boxes themselves are not written down, here or anywhere else. They are computed: a companion
+page is `companionGeometry` less the padding `contentRect` takes, and a pit wall zone is the
+widget rectangle the page placed less what `zoneFrame` takes for its title and its gutters.
+`moduleBoxes` in `packages/dash/test/secondScreens.test.ts` derives all seven the packages produce
+and builds every module into each of them, so running the test is how to see the list. Those sizes
+were once literals in that test and every one had drifted taller than the real box, which made the
+test read as a stronger guarantee than it was; a size copied into this document would be the same
+mistake with nothing to catch it.
 
 Rows of fields shrink their gaps and then wrap, so a row of three lap times is one line on the
 850 px companion and two on the 480 px portrait one. No module has a portrait variant.
@@ -42,7 +58,7 @@ modules off means paging through thirteen.
 Every screen carries the same roles: in game and idle, not pit. SimHub only filters screens by
 role when the roles differ between them, so identical roles keep every enabled screen navigable
 whatever the game is doing, which is what a companion is for. Paging is a wheel button bound to
-the device's own `NextScreen` action in SimHub, not something openDash can do from the dashboard.
+the device's own `NextScreen` action in SimHub, not something OpenDash can do from the dashboard.
 
 ## The pit wall
 
@@ -58,9 +74,11 @@ Three landscape pages and one portrait page:
 ### Zones
 
 A zone is a widget over a small dashboard that holds every zone page as a screen, with the
-widget's screen index bound to the zone's plugin property. It is the slot mechanism of the dash
-face applied to a bigger screen, and it works for the same reason: a widget's `InitialScreenIndex`
-can be bound, so a setting change moves a zone to another page without touching a file.
+widget's screen index bound to the zone's plugin property. It is the same mechanism the dash face
+uses for its own zones, and it works for the same reason: a widget's `InitialScreenIndex` can be
+bound, so a setting change moves a zone to another page without touching a file. The difference is
+who moves it, and it is the reason the two catalogues have stayed apart: a pit wall zone is chosen
+with a mouse by somebody who is not driving, and a face zone is cycled with a thumb mid-lap.
 
 One zone dashboard exists per distinct zone rectangle a package uses, because a widget scaled to a
 box it was not drawn for would scale its type with it. The zone dashboards are derived from the

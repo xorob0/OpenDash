@@ -14,13 +14,14 @@
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withBindings } from '../bind.ts';
-import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot } from '../contract.ts';
+import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot, type FaceSize } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
 import { cells, monoWidth } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { densityOf } from '../second/density.ts';
+import { rank, type RankMember } from '../second/rank.ts';
 import {
   CHARS,
   absLevel,
@@ -85,13 +86,28 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
   { id: 'trackTemp', label: 'Track', sample: '27.6', bind: fmt(roadTemperature(), '0.0'), chars: CHARS.pressure, denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } } },
 ];
 
-/** One cell of the car settings strip: what it reads, and what it is called. */
+/**
+ * One cell of the car settings strip: what it reads, what it is called, and what says the car has
+ * the setting at all.
+ *
+ * `present` exists because for two of the seven the two are not the same property. SimHub
+ * normalises traction control and ABS into `TCLevel` and `ABSLevel` and reports **0** for a car
+ * that has neither control, which is indistinguishable from a car whose driver has turned them
+ * off. What says the car has the control is the raw iRacing field behind it, `dcTractionControl`
+ * and `dcABS`, which is simply absent on a car without it. The same for the brake bias, whose
+ * reading is already wrapped in an `isnull` default and so is never null itself.
+ *
+ * Getting this wrong is not a cell drawn wrongly: it is a cell drawn at all, and the cells beside
+ * it sitting where they would have been.
+ */
 interface StripCell {
   id: string;
   label: string;
   sample: string;
   expr: string;
   pattern: string;
+  /** What says the car has this setting; the value's own property when they are the same. */
+  present?: string;
 }
 
 /**
@@ -100,10 +116,10 @@ interface StripCell {
  */
 export const STRIP_CELLS: readonly StripCell[] = [
   { id: 'slip', label: 'Slip', sample: '4', expr: raw('dcThrottleShape'), pattern: '0' },
-  { id: 'tc', label: 'TC', sample: '5', expr: tcLevel(), pattern: '0' },
+  { id: 'tc', label: 'TC', sample: '5', expr: tcLevel(), pattern: '0', present: raw('dcTractionControl') },
   { id: 'cut', label: 'Cut', sample: '2', expr: raw('dcTractionControl2'), pattern: '0' },
-  { id: 'bias', label: 'Bias', sample: '50.5', expr: brakeBias(), pattern: '0.0' },
-  { id: 'abs', label: 'ABS', sample: '4', expr: absLevel(), pattern: '0' },
+  { id: 'bias', label: 'Bias', sample: '50.5', expr: brakeBias(), pattern: '0.0', present: game('BrakeBias') },
+  { id: 'abs', label: 'ABS', sample: '4', expr: absLevel(), pattern: '0', present: raw('dcABS') },
   { id: 'map', label: 'Map', sample: '1', expr: fuelMixture(), pattern: '0' },
   { id: 'diff', label: 'Diff', sample: '4', expr: antiRollRear(), pattern: '0' },
 ];
@@ -121,17 +137,6 @@ export const STRIP_CELLS: readonly StripCell[] = [
  * the first photograph of that face showed, BIAS sitting on top of POSITION.
  */
 const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', 'map', 'diff'];
-
-/** The most important cells that fit the width, in the order the canvas draws them. */
-function stripCellsThatFit(width: number, valueFs: number, labelFs: number, gap: number): StripCell[] {
-  for (let count = STRIP_PRIORITY.length; count > 0; count -= 1) {
-    const keep = new Set(STRIP_PRIORITY.slice(0, count));
-    const drawn = STRIP_CELLS.filter((c) => keep.has(c.id));
-    const total = drawn.reduce((sum, c) => sum + stripCellWidth(c, valueFs, labelFs), 0) + gap * (drawn.length - 1);
-    if (total <= width) return drawn;
-  }
-  return [];
-}
 
 /** Width a strip cell takes: its label or its value, whichever is wider. */
 function stripCellWidth(cell: StripCell, valueFs: number, labelFs: number): number {
@@ -151,6 +156,8 @@ function fieldWidth(spec: BarFieldSpec, valueFs: number, labelFs: number, smallF
 export interface BarOptions {
   /** Two fields per end on a wide face, one in portrait. */
   fieldsPerEnd: 1 | 2;
+  /** The face this bar is drawn on, which is what its settings are named after. */
+  face: FaceSize;
 }
 
 /**
@@ -194,7 +201,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         ? frame.left + padX + withinEnd * (widest + d.gapX)
         : frame.left + frame.width - padX - endWidth + withinEnd * (widest + d.gapX);
     for (const spec of BAR_FIELD_SPECS) {
-      const visible = eq(zoneSetting.barField(slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
+      const visible = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
       const name = `${prefix}${slot}.${spec.id}`;
       items.push({
         ...label(`${name}.label`, spec.label.toUpperCase(), x, top, widest, { size: labelFs }),
@@ -218,31 +225,40 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
     }
   }
 
-  // The strip, centred in what the two ends leave.
+  // The strip, centred in what the two ends leave. A setting the sim does not publish takes its
+  // cell with it and the strip closes over the hole, which is the rank's `close` mode: an empty box
+  // where a car has no differential is worse than a narrower strip.
   const stripLeft = frame.left + padX + endWidth + d.gapX;
   const stripRight = frame.left + frame.width - padX - endWidth - d.gapX;
   const stripWidth = Math.max(0, stripRight - stripLeft);
-  const cellsToDraw = stripCellsThatFit(stripWidth, smallFs, labelFs, d.gapX);
-  const widths = cellsToDraw.map((c) => stripCellWidth(c, smallFs, labelFs));
-  const total = widths.reduce((a, b) => a + b, 0) + d.gapX * Math.max(0, cellsToDraw.length - 1);
-  let x = stripLeft + Math.max(0, (stripWidth - total) / 2);
-  cellsToDraw.forEach((cell, i) => {
-    const w = widths[i] ?? 0;
-    const name = `${prefix}strip.${cell.id}`;
-    // A setting the sim does not publish takes the cell with it, rather than leaving an empty box.
-    const present = ncalc.not(ncalc.isNull(cell.expr));
-    items.push(
-      { ...label(`${name}.label`, cell.label.toUpperCase(), x, top, w, { size: labelFs }), ...withBindings({ Visible: present }) },
-      {
-        ...numeral(`${name}.value`, cell.sample, x, valueTop + (valueFs - smallFs), smallFs, { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 }, {
-          color: ds.color.text.secondary,
-          maxWidth: w + 4,
-        }),
-        ...withBindings({ Visible: present, Text: iff(present, fmt(cell.expr, cell.pattern), str('')) }),
-      },
-    );
-    x += w + d.gapX;
-  });
+  const strip = rank(
+    STRIP_CELLS.map((cell) => {
+      const w = stripCellWidth(cell, smallFs, labelFs);
+      const present = ncalc.not(ncalc.isNull(cell.present ?? cell.expr));
+      const name = `${prefix}strip.${cell.id}`;
+      return {
+        id: cell.id,
+        width: w,
+        present,
+        draw: (at) => [
+          label(`${name}.label`, cell.label.toUpperCase(), at.x, top, w, { size: labelFs, leftBind: at.leftAt(), visibleBind: at.visibleBind }),
+          numeral(`${name}.value`, cell.sample, at.x, valueTop + (valueFs - smallFs), smallFs, { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 }, {
+            color: ds.color.text.secondary,
+            maxWidth: w + 4,
+            leftBind: at.leftAt(),
+            visibleBind: at.visibleBind,
+            // Emptied as well as hidden: a hidden item still holds its last text, and the strip is
+            // rebuilt from the same items when the next car does publish the setting.
+            bind: iff(present, fmt(cell.expr, cell.pattern), str('')),
+          }),
+        ],
+      } satisfies RankMember;
+    }),
+    // `atLeast: 0`: a bar with no room between its ends draws no strip at all, rather than one cell
+    // over a field. The two ends are the settled values and they win the space.
+    { left: stripLeft, width: stripWidth, gap: d.gapX, when: 'close', shedOrder: STRIP_PRIORITY, atLeast: 0 },
+  );
+  items.push(...strip.items);
 
   return items;
 }
