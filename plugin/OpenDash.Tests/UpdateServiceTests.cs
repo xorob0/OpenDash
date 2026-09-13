@@ -12,6 +12,9 @@ namespace OpenDashPlugin.Tests
 {
     public class UpdateServiceTests : IDisposable
     {
+        /// <summary>A second dashboard, so that a plan can carry two items and a failure can be put on the later one.</summary>
+        private const string SmallFolder = "openDash 1280x480";
+
         private readonly string root;
 
         public UpdateServiceTests()
@@ -238,9 +241,12 @@ namespace OpenDashPlugin.Tests
 
         // Applying
 
-        private DashboardInstaller Installed(string folder, string version, IFolderRecord record)
+        /// <summary>Dashboards installed at one version. The order given is kept as far as the update plan, so a test
+        /// that needs the failure on a later item can decide which folder that is.</summary>
+        private DashboardInstaller Installed(string version, IFolderRecord record, params string[] folders)
         {
-            var source = new DownloadedPackageSource().Add(folder + ".simhubdash", SyntheticPackage.Zip(folder, version).ToArray());
+            var source = new DownloadedPackageSource();
+            foreach (var folder in folders) source.Add(folder + ".simhubdash", SyntheticPackage.Zip(folder, version).ToArray());
             var installer = new DashboardInstaller(root, null, source, record);
             installer.EnsureInstalled(false);
             return installer;
@@ -250,7 +256,7 @@ namespace OpenDashPlugin.Tests
         public void An_update_replaces_what_is_installed_and_says_to_reopen()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("openDash", "0.1.0", record);
+            var installer = Installed("0.1.0", record, "openDash");
 
             var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
             fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
@@ -267,18 +273,27 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("restart SimHub", outcome.Line);
         }
 
+        /// <summary>
+        /// Two dashboards, of which the second fails its digest after the first has been fetched whole. One package
+        /// would measure nothing: the only item would be the one that fails, so the test would stay green under an
+        /// implementation that installed each package as it arrived and left the machine half updated.
+        /// </summary>
         [Fact]
         public void Bytes_that_are_not_what_GitHub_published_install_nothing()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("openDash", "0.1.0", record);
+            var installer = Installed("0.1.0", record, "openDash", SmallFolder);
 
             var fetcher = new Fetcher
             {
-                Listing = "[{\"tag_name\":\"v0.2.0\",\"assets\":[{\"name\":\"openDash.simhubdash\",\"browser_download_url\":\"https://example.invalid/openDash\",\"digest\":\"sha256:"
+                // The first asset publishes no digest, which is accepted; the second publishes one nothing matches.
+                Listing = "[{\"tag_name\":\"v0.2.0\",\"assets\":["
+                    + "{\"name\":\"openDash.simhubdash\",\"browser_download_url\":\"https://example.invalid/openDash\"},"
+                    + "{\"name\":\"openDash.1280x480.simhubdash\",\"browser_download_url\":\"https://example.invalid/openDash.1280x480\",\"digest\":\"sha256:"
                     + new string('0', 64) + "\"}]}]",
             };
             fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            fetcher.Assets["https://example.invalid/openDash.1280x480"] = SyntheticPackage.Zip(SmallFolder, "0.2.0").ToArray();
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -287,14 +302,22 @@ namespace OpenDashPlugin.Tests
 
             Assert.False(outcome.Ok);
             Assert.Contains("did not arrive as GitHub published it", outcome.Reason);
+            Assert.Empty(outcome.Updated);
             Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
         }
 
+        /// <summary>
+        /// The same shape as the digest test, with the second asset absent rather than corrupt: the first download
+        /// succeeds, so a first folder still at 0.1.0 is the whole of what atomicity means here.
+        /// </summary>
         [Fact]
         public void A_download_that_fails_leaves_the_machine_as_it_was()
         {
-            var installer = Installed("openDash", "0.1.0", new MemoryFolderRecord());
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") }; // no asset bytes registered
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "openDash", SmallFolder);
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash", SmallFolder) };
+            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            // Nothing is registered for the second, so its download is the one that fails.
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -302,15 +325,17 @@ namespace OpenDashPlugin.Tests
             var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
 
             Assert.False(outcome.Ok);
-            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
             Assert.Contains("could not be downloaded", outcome.Reason);
+            Assert.Empty(outcome.Updated);
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
         }
 
         [Fact]
         public void A_dashboard_somebody_edited_is_left_alone_and_counted()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("openDash", "0.1.0", record);
+            var installer = Installed("0.1.0", record, "openDash");
             File.WriteAllText(Path.Combine(root, "DashTemplates", "openDash", "openDash.djson"), "{\"mine\":true}");
 
             var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
@@ -337,7 +362,7 @@ namespace OpenDashPlugin.Tests
         public void A_package_that_could_not_be_installed_makes_the_whole_update_a_failure()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("openDash", "0.1.0", record);
+            var installer = Installed("0.1.0", record, "openDash");
 
             var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
             // Bytes that are not a package at all: the install of this one fails while the run completes.
@@ -422,11 +447,11 @@ namespace OpenDashPlugin.Tests
             // On .NET Framework an unobserved exception on a thread-pool thread ends the process, which for a user
             // is SimHub vanishing without a dialog.
             var log = new ListLog();
-            var done = new System.Threading.ManualResetEventSlim();
-            UpdateService.InBackground(() => { try { throw new InvalidOperationException("boom"); } finally { done.Set(); } }, log);
+            UpdateService.InBackground(() => { throw new InvalidOperationException("boom"); }, log);
 
-            Assert.True(done.Wait(TimeSpan.FromSeconds(5)));
-            System.Threading.Thread.Sleep(50);
+            // Waiting on the log rather than on the work: an event the work item sets is signalled before the catch
+            // that writes the line has run, so it orders nothing and a sleep is the only thing left to paper over it.
+            Assert.True(log.Written.Wait(TimeSpan.FromSeconds(5)));
             Assert.Contains(log.Lines, line => line.Contains("failed in the background"));
         }
     }
