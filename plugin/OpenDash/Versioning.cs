@@ -18,8 +18,9 @@ namespace OpenDashPlugin
         /// <summary>Semver-style comparison. The core is numeric dot-separated segments, missing segments count as 0,
         /// a leading "v" is ignored and so is build metadata after "+". A pre-release after "-" sorts below its release
         /// ("0.2.0-rc1" is older than "0.2.0"); two pre-releases compare identifier by identifier as semver does:
-        /// numeric identifiers by value, others ordinally, numeric below alphanumeric, and when the shared identifiers
-        /// are equal the longer list is newer ("rc" is older than "rc.1").
+        /// numeric identifiers by value, numeric below alphanumeric, and when the shared identifiers are equal the
+        /// longer list is newer ("rc" is older than "rc.1"). An identifier mixing letters and digits compares run by
+        /// run rather than ordinally, so that "rc10" is newer than "rc2" just as "rc.10" is newer than "rc.2".
         /// Returns negative when a is older than b, 0 when equal, positive when newer. Null or empty is the oldest.</summary>
         public static int VersionCompare(string a, string b)
         {
@@ -94,7 +95,40 @@ namespace OpenDashPlugin
             var rightNumeric = IsNumeric(b);
             if (leftNumeric && rightNumeric) return CompareNumeric(a, b);
             if (leftNumeric != rightNumeric) return leftNumeric ? -1 : 1; // numeric identifiers rank below alphanumeric ones
-            return string.CompareOrdinal(a, b);
+            return CompareRuns(a, b);
+        }
+
+        /// <summary>Orders two identifiers that are not both wholly numeric by walking their digit and non-digit runs
+        /// in step, comparing a pair of digit runs by value and anything else ordinally, so that "rc10" is newer than
+        /// "rc2". Semver reads "rc10" as a single alphanumeric identifier and would order the two as text; we are
+        /// deliberately more forgiving than the specification, because a candidate tagged without the dot is a
+        /// mistake we would rather rank correctly than offer a user as a downgrade.</summary>
+        private static int CompareRuns(string a, string b)
+        {
+            int i = 0, j = 0;
+            while (i < a.Length && j < b.Length)
+            {
+                var leftEnd = RunEnd(a, i);
+                var rightEnd = RunEnd(b, j);
+                var left = a.Substring(i, leftEnd - i);
+                var right = b.Substring(j, rightEnd - j);
+                var order = IsAsciiDigit(left[0]) && IsAsciiDigit(right[0])
+                    ? CompareNumeric(left, right)
+                    : string.CompareOrdinal(left, right);
+                if (order != 0) return order;
+                i = leftEnd;
+                j = rightEnd;
+            }
+            return (a.Length - i).CompareTo(b.Length - j); // equal so far: whichever still has characters is newer
+        }
+
+        /// <summary>The index one past the run of digits, or of non-digits, that starts at <paramref name="start"/>.</summary>
+        private static int RunEnd(string text, int start)
+        {
+            var digits = IsAsciiDigit(text[start]);
+            var end = start + 1;
+            while (end < text.Length && IsAsciiDigit(text[end]) == digits) end++;
+            return end;
         }
 
         private static bool IsNumeric(string identifier)
