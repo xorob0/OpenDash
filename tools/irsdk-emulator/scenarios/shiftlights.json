@@ -1,0 +1,60 @@
+{
+  // The scenario the LED profiles are verified against, and the one that proves the mirror rather
+  // than the arithmetic (XOR-250).
+  //
+  // One slow sweep from below the first light to past the over-rev, so every threshold is crossed
+  // where a human can see which LED changed at which RPM: 1200 to 9600 over twenty seconds, against
+  // a ladder of 7800 / 8400 / 8800 / 9000. Nothing else moves — the flag is held green and the
+  // limiter is off — because a strip that is also cycling flags tells you nothing about its revs.
+  //
+  // At forty seconds the car changes to one with a much lower ladder (5400 / 5900 / 6200 / 6400)
+  // and five gears. That is the whole point: if the lights move with it, the profile is reading the
+  // car's own published thresholds, and if they do not, it is reading something derived from the
+  // redline and the mirror is not working.
+  "extends": "race.json",
+  "name": "Shift lights: a slow RPM sweep, then the same sweep in a different car",
+  "yaml": {
+    "RaceSessionLaps": "unlimited",
+    "RaceSessionTime": "3600.0000 sec"
+  },
+  "variables": [
+    {"name": "SessionFlags", "value": "green", "pin": true},
+    {"name": "OnPitRoad", "value": false, "pin": true},
+    // Pedals held still: the sides carry brake by default, and a moving brake bar makes it harder
+    // to see which rev LED just lit.
+    {"name": "Throttle", "value": 1.0, "pin": true},
+    {"name": "Brake", "value": 0.0, "pin": true},
+    {"name": "CarLeftRight", "value": 1, "pin": true}
+  ],
+  // The inherited drivers are reconfigured rather than replaced: a "drivers" list of its own would
+  // drop race.json's field driver, and with it every CarIdx array the leaderboard needs.
+  "timeline": [
+    // Twenty seconds bottom to top: slow enough to read, long enough that all four thresholds are
+    // distinct. min is under DriverCarIdleRPM and max is over DriverCarSLBlinkRPM on purpose, so
+    // both ends of the ladder are exercised rather than only the middle.
+    {"at": 0, "log": "sweep 1200-9600 against a 7800/8400/8800/9000 ladder",
+     "driver": {"type": "rpmSweep", "min": 1200, "max": 9600, "period": 20, "slFirst": 7800, "slBlink": 9000}},
+    {"at": 0, "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 40, "log": "a different car: ladder drops to 5400/5900/6200/6400 and five gears",
+     "yaml": {
+       "DriverCarRedLine": "6600.000",
+       "DriverCarGearNumForward": "5",
+       "DriverCarSLFirstRPM": "5400.000",
+       "DriverCarSLShiftRPM": "5900.000",
+       "DriverCarSLLastRPM": "6200.000",
+       "DriverCarSLBlinkRPM": "6400.000"
+     },
+     "driver": {"type": "rpmSweep", "min": 900, "max": 6900, "slFirst": 5400, "slBlink": 6400}},
+    {"at": 80, "log": "back to the first car", 
+     "yaml": {
+       "DriverCarRedLine": "9000.000",
+       "DriverCarGearNumForward": "6",
+       "DriverCarSLFirstRPM": "7800.000",
+       "DriverCarSLShiftRPM": "8400.000",
+       "DriverCarSLLastRPM": "8800.000",
+       "DriverCarSLBlinkRPM": "9000.000"
+     },
+     "driver": {"type": "rpmSweep", "min": 1200, "max": 9600, "slFirst": 7800, "slBlink": 9000}}
+  ]
+}
