@@ -12,11 +12,11 @@
  * cannot share a file even at the same size.
  */
 import type { Dashboard, DashboardMetadata, Item, Screen, WidgetItem } from '../generator.ts';
-import { withBindings } from '../bind.ts';
 import { BAND_D_PAGES, FACE_ZONE_LETTERS, ZONE_A_PAGES, pagesForZone, zone as zoneSetting, type FaceZone, type FaceZonePageMeta } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, type Size } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
+import { pageScreen, pagedDashboard, pagedWidget } from '../pagedDashboard.ts';
 import { zoneFrame, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
 import { densityForBox, densityOf, type Density } from '../second/density.ts';
 import { shapeOf } from '../second/shape.ts';
@@ -64,46 +64,33 @@ export function zonePageScreen(zone: FaceZone, page: FaceZonePageMeta, size: Siz
     items = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body) })];
   }
 
-  return { name: page.id, inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
+  return pageScreen(page.id, items);
 }
 
 /** A zone dashboard: every page of its catalogue, in the order the plugin lists them. */
 export function zoneDashboard(zone: FaceZone, size: Size, metadata: DashboardMetadata, corners = false): Dashboard {
   const pages = pagesForZone(zone);
   const kind = kindOf(zone);
-  return {
+  return pagedDashboard({
     name: zoneDashboardName(kind, size),
-    width: size.width,
-    height: size.height,
-    backgroundColor: ds.color.surface.base,
+    size,
     screens: pages.map((page) => zonePageScreen(zone, page, size, pages.length, corners)),
-    metadata: {
-      ...metadata,
-      title: `${metadata.title} ${zoneDashboardName(kind, size)}`,
-      description: `${kind === 'zoneA' ? ZONE_A_PAGES.length : kind === 'band' ? BAND_D_PAGES.length : pages.length} pages drawn for a ${size.width} x ${size.height} zone.`,
-    },
-  };
+    metadata,
+    description: `${kind === 'zoneA' ? ZONE_A_PAGES.length : kind === 'band' ? BAND_D_PAGES.length : pages.length} pages drawn for a ${size.width} x ${size.height} zone.`,
+  });
 }
 
-/**
- * The widget that embeds a zone dashboard in a face, its screen bound to the zone's property.
- *
- * `autoSize` is false: the dashboard is drawn for this rectangle, so scaling it would scale the
- * type with it, which is the thing the shape model exists to avoid.
- */
+/** The widget that embeds a zone dashboard in a face, its screen bound to the zone's property. */
 export function zoneWidget(name: string, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }): WidgetItem {
   const size = { width: frame.width, height: frame.height };
-  const pages = pagesForZone(zone);
-  const start = pages.findIndex((p) => p.number === 0);
-  return {
-    kind: 'widget',
+  const start = pagesForZone(zone).findIndex((p) => p.number === 0);
+  return pagedWidget({
     name,
     rect: { ...frame },
     fileName: `${zoneDashboardName(kindOf(zone), size)}.djson`,
     initialScreenIndex: Math.max(0, start),
-    autoSize: true,
-    ...withBindings({ InitialScreenIndex: zoneSetting.page(zone) }),
-  };
+    page: zoneSetting.page(zone),
+  });
 }
 
 /** Every distinct zone dashboard a face needs, one per rectangle and catalogue it uses. */
