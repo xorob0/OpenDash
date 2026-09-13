@@ -30,6 +30,19 @@ canvas is the author's:
 - **The first tab is Rig, not Screens.** Because it is now a list of what you have rather than a list
   of what exists.
 
+### Three tokens are owed
+
+[XOR-125](https://linear.app/xorob/issue/XOR-125) names `panel.tabs`, `control.tab` and
+`control.screenCard` as tokens. They are not in `design/tokens.json`, and that file is the author's
+rather than something a build writes into, so the tab bar and the screen card are composed from the
+tokens that do exist — `control.height`, `radius.sm`, `purpose.ui.*`, `color.surface.*`. Nothing
+invents a colour; every value in `Widgets.cs` is a `Theme` constant and `ThemeTests` still holds
+each one against the token it mirrors.
+
+What is not expressed as a token is the geometry: the tab height, the underline weight, and the
+card's width and height are literals in `Widgets.cs`. They belong in the token file when somebody
+adds them there, and this paragraph is the record that they are missing rather than forgotten.
+
 ## The tab bar
 
 Across the top under the header, `control.tab`. The selected tab carries the accent underline; the
