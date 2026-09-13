@@ -45,6 +45,154 @@ namespace OpenDashPlugin
             return ReadVersionFile(InstalledSidecar(simHubRoot, folderName));
         }
 
+        /// <summary>
+        /// Turns a freshly extracted package into one screen's copy of it, in the staging folder.
+        /// </summary>
+        /// <remarks>
+        /// Three things move, and only three. SimHub finds a dashboard as <c>&lt;folder&gt;/&lt;folder&gt;.djson</c>, so the
+        /// folder and the main dashboard are renamed together; the sub-dashboards are referenced by bare
+        /// file name and are left exactly as they are. The Title is written because SimHub's dashboard
+        /// list shows it, and two screens of one size were otherwise two entries a user could not tell
+        /// apart. Then every <c>OpenDash.&lt;namespace&gt;</c> in every .djson becomes this screen's.
+        ///
+        /// The rewrite is checked rather than trusted: a package that still mentions the namespace it
+        /// came from, or that gained a different number of references than it lost, is a package that
+        /// would silently read another screen's settings. That is the failure this whole mechanism
+        /// exists to prevent, so it throws rather than installing.
+        /// </remarks>
+        /// <returns>The folder name inside staging after the rename.</returns>
+        public static string Instantiate(string staging, string folderName, ScreenTarget screen, IInstallLog log)
+        {
+            log = log ?? NullInstallLog.Instance;
+            var wanted = string.IsNullOrWhiteSpace(screen.Folder) ? folderName : screen.Folder.Trim();
+            var source = Path.Combine(staging, folderName);
+
+            if (!string.Equals(wanted, folderName, StringComparison.Ordinal))
+            {
+                var renamed = Path.Combine(staging, wanted);
+                Directory.Move(source, renamed);
+                source = renamed;
+                foreach (var suffix in new[] { DashExtension, MetadataExtension })
+                {
+                    var from = Path.Combine(source, folderName + suffix);
+                    if (File.Exists(from)) File.Move(from, Path.Combine(source, wanted + suffix));
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(screen.Title)) WriteTitle(source, wanted, screen.Title, log);
+            if (screen.Rewrites) RewriteNamespace(source, screen, log);
+            return wanted;
+        }
+
+        /// <summary>The token a property carries in a built binding: "OpenDash." and the screen's namespace.</summary>
+        private static string Token(string ns)
+        {
+            return Contract.Prefix + "." + ns;
+        }
+
+        /// <summary>
+        /// Repoints every property reference in the package at this screen's namespace.
+        /// </summary>
+        /// <remarks>
+        /// A plain string replacement, and it is safe because the token is distinctive: a binding reads
+        /// <c>[OpenDash.Face1280x480ZoneA]</c>, and "OpenDash.Face1280x480" cannot be a prefix of any
+        /// other screen's property. Nothing is parsed, so nothing about the scene graph can be disturbed
+        /// by it -- no box moves and no text is re-measured, which is what keeps the textFit guarantees
+        /// true of the copy.
+        /// </remarks>
+        private static void RewriteNamespace(string folder, ScreenTarget screen, IInstallLog log)
+        {
+            var from = Token(screen.FromNamespace);
+            var to = Token(screen.ToNamespace);
+            var rewritten = 0;
+            var files = 0;
+            foreach (var path in Directory.GetFiles(folder, "*" + DashExtension, SearchOption.AllDirectories))
+            {
+                var text = File.ReadAllText(path);
+                var before = Occurrences(text, from);
+                if (before == 0) continue;
+                var already = Occurrences(text, to);
+                var updated = text.Replace(from, to);
+                var after = Occurrences(updated, to);
+                if (Occurrences(updated, from) != 0 || after != already + before)
+                {
+                    throw new InvalidDataException(
+                        "Rewriting " + Path.GetFileName(path) + " for " + screen.ToNamespace + " did not account for every reference: "
+                        + before + " to replace, " + (after - already) + " replaced. The copy was not installed.");
+                }
+                File.WriteAllText(path, updated);
+                rewritten += before;
+                files++;
+            }
+            if (rewritten == 0)
+            {
+                throw new InvalidDataException(
+                    "The package mentions " + from + " nowhere, so a copy of it would read " + screen.FromNamespace
+                    + "'s settings rather than " + screen.ToNamespace + "'s. The copy was not installed.");
+            }
+            log.Info("Pointed " + rewritten + " references in " + files + " file(s) at " + screen.ToNamespace + ".");
+        }
+
+        private static int Occurrences(string text, string token)
+        {
+            var count = 0;
+            var at = text.IndexOf(token, StringComparison.Ordinal);
+            while (at >= 0)
+            {
+                count++;
+                at = text.IndexOf(token, at + token.Length, StringComparison.Ordinal);
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// Writes the screen's name into the dashboard's Title, in both places SimHub reads one.
+        /// </summary>
+        /// <remarks>
+        /// The .metadata sidecar is what the dashboard list reads; the copy inside the .djson is what
+        /// Dash Studio shows once it is open. They are edited as text rather than parsed and rewritten,
+        /// because reserialising a scene graph through a JSON library we do not control is how
+        /// formatting, number precision and property order quietly change underneath SimHub.
+        /// </remarks>
+        private static void WriteTitle(string folder, string folderName, string title, IInstallLog log)
+        {
+            foreach (var name in new[] { folderName + MetadataExtension, folderName + DashExtension })
+            {
+                var path = Path.Combine(folder, name);
+                if (!File.Exists(path)) continue;
+                var text = File.ReadAllText(path);
+                var replaced = ReplaceFirstJsonString(text, "\"Title\":", title);
+                if (replaced == null)
+                {
+                    log.Warn("No Title in " + name + "; SimHub will list this screen under its folder name.");
+                    continue;
+                }
+                File.WriteAllText(path, replaced);
+            }
+        }
+
+        /// <summary>Replaces the first JSON string value after a key, or null when the key is not there.</summary>
+        private static string ReplaceFirstJsonString(string text, string key, string value)
+        {
+            var at = text.IndexOf(key, StringComparison.Ordinal);
+            if (at < 0) return null;
+            var open = text.IndexOf('"', at + key.Length);
+            if (open < 0) return null;
+            var close = open + 1;
+            while (close < text.Length && text[close] != '"')
+            {
+                if (text[close] == '\\') close++;
+                close++;
+            }
+            if (close >= text.Length) return null;
+            return text.Substring(0, open + 1) + Escape(value) + text.Substring(close);
+        }
+
+        private static string Escape(string value)
+        {
+            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        }
+
         /// <summary>The dashboard folder inside a package: the top-level directory holding <dir>.djson. Null when none.</summary>
         public static string PackageFolderName(ZipArchive zip)
         {
@@ -78,13 +226,52 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// What a package is being turned into: one screen's folder, name and namespace.
+        /// </summary>
+        /// <remarks>
+        /// Null for the stock install, which writes the package byte for byte under its own folder. A
+        /// second screen at a size needs its own copy, because a package carries its property names as
+        /// literals and SimHub properties are global; ADR 0017 records why that is the only shape a fix
+        /// can take, and why a rewrite of one distinctive token in an already-built scene graph is not
+        /// the local regeneration ADR 0011 refuses.
+        /// </remarks>
+        public sealed class ScreenTarget
+        {
+            /// <summary>The folder to write under DashTemplates, e.g. "openDash Rim".</summary>
+            public string Folder { get; set; }
+
+            /// <summary>The screen's name, which becomes the dashboard's Title in SimHub's own list.</summary>
+            public string Title { get; set; }
+
+            /// <summary>The namespace the package was built with, e.g. "Face1280x480".</summary>
+            public string FromNamespace { get; set; }
+
+            /// <summary>The namespace this screen owns, e.g. "Rim".</summary>
+            public string ToNamespace { get; set; }
+
+            /// <summary>Whether anything actually has to be rewritten.</summary>
+            public bool Rewrites
+            {
+                get
+                {
+                    return !string.IsNullOrEmpty(FromNamespace)
+                        && !string.IsNullOrEmpty(ToNamespace)
+                        && !string.Equals(FromNamespace, ToNamespace, StringComparison.Ordinal);
+                }
+            }
+        }
+
         /// <summary>Extracts the package into DashTemplates, replacing an existing folder (kept as <folder>_backup.zip),
         /// and copies the package fonts that DashFonts does not have yet. Throws on failure; the caller logs and reports.</summary>
         /// <param name="holdsAuthoredWork">
         /// True when the folder being replaced is one somebody has edited, so the copy set aside must outlive the
         /// next install rather than being reclaimed by it.
         /// </param>
-        public static InstallResult Install(Stream package, string simHubRoot, IInstallLog log, bool holdsAuthoredWork = false)
+        /// <param name="screen">
+        /// The screen this copy belongs to, or null to write the package as it is embedded.
+        /// </param>
+        public static InstallResult Install(Stream package, string simHubRoot, IInstallLog log, bool holdsAuthoredWork = false, ScreenTarget screen = null)
         {
             log = log ?? NullInstallLog.Instance;
             var templates = Path.Combine(simHubRoot, DashTemplates);
@@ -103,6 +290,7 @@ namespace OpenDashPlugin
                     ExtractSafely(zip, staging);
                 }
 
+                if (screen != null) folderName = Instantiate(staging, folderName, screen, log);
                 var extracted = Path.Combine(staging, folderName);
                 var target = Path.Combine(templates, folderName);
                 var result = new InstallResult
