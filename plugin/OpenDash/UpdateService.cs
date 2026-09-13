@@ -81,22 +81,41 @@ namespace OpenDashPlugin
                 return null;
             }
 
-            var fetched = source.GetString(UpdateCheck.ReleasesUrl);
-            if (!fetched.Ok)
+            var collected = new List<ReleaseInfo>();
+            var settled = false;
+            for (var page = 1; page <= UpdateCheck.MaxPages && !settled; page++)
             {
-                log.Info("Update check: " + fetched.Reason);
-                return new UpdateStatus { State = UpdateState.Unreachable, InstalledVersion = installedVersion, Manual = manual };
+                var fetched = source.GetString(UpdateCheck.ReleasesPage(page));
+                if (!fetched.Ok)
+                {
+                    log.Info("Update check: " + fetched.Reason);
+                    break;
+                }
+                // Past the last page GitHub answers "[]", which the parser reports as nothing to act on exactly as
+                // it reports GitHub's error shape, and the two cannot be told apart. Both therefore end the reading
+                // unsettled: calling an empty page the end of the listing would mean reporting up to date on an
+                // answer nothing verified, whereas the reverse costs at worst one "could not check", and only to a
+                // user whose stable version no release of this repository ever carried.
+                if (!ReleaseFeed.TryParse(fetched.Body, out var onThisPage))
+                {
+                    log.Info("Update check: the answer was not a release listing this can act on.");
+                    break;
+                }
+                collected.AddRange(onThisPage);
+                // A short page is the last one, so the listing is exhausted and nothing further can be hidden.
+                settled = UpdateCheck.Settles(collected, installedVersion) || onThisPage.Count < UpdateCheck.PageSize;
             }
-            if (!ReleaseFeed.TryParse(fetched.Body, out var releases))
+            if (!settled)
             {
-                log.Info("Update check: the answer was not a release listing this can act on.");
+                // Everything that lands here read either nothing or a run of releases this user may not be offered,
+                // and in both cases what exists beyond is unknown. Never up to date on the strength of that.
                 return new UpdateStatus { State = UpdateState.Unreachable, InstalledVersion = installedVersion, Manual = manual };
             }
 
-            LastReleases = releases;
+            LastReleases = collected;
             // Only a real answer moves the clock, so a day of failures does not silence tomorrow's check.
             lastCheckTicks = nowUtc.Ticks;
-            var status = UpdateCheck.Conclude(installedVersion, releases, manual);
+            var status = UpdateCheck.Conclude(installedVersion, collected, manual);
             log.Info("Update check: " + UpdateWording.Line(status));
             return status;
         }
