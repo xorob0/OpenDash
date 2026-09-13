@@ -34,11 +34,14 @@ Every capture below is the package itself, photographed through SimHub's own ren
 size while the telemetry emulator replayed a green flag lap at Spa, the car lying third of
 twenty-four. None of them is a mock-up, and no value in them was typed by hand.
 
-**The reference face, 1920 x 480.** CAPTION_FACE
+**The reference face, 1920 x 480.** The rev bar along the top, the bar of settled values beneath
+it, the gear between the two zones that flank it, and the band across the foot.
 
 ![The OpenDash face at 1920 by 480](media/readme/face-1920x480.png)
 
-**A narrow face, 800 x 286.** CAPTION_NANO
+**A narrow face, 800 x 286.** The same parts in a third of the height, minus the bar, which this
+face has no room for. A page is laid out for the box it is given rather than scaled into it, so
+each zone here shows fewer rows rather than smaller ones.
 
 ![The OpenDash face at 800 by 286](media/readme/face-800x286.png)
 
