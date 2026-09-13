@@ -238,9 +238,14 @@ narrow face that is not seven cells:
 |---|---|
 | 1920 × 480, 1280 × 480, 1280 × 400, 1280 × 720 | all seven |
 | 600 × 686 | slip, TC, bias, ABS — one field per end leaves more room than two |
-| 850 × 480 | TC, bias, ABS |
-| 800 × 480 | TC, bias |
+| 850 × 480 | TC, bias |
+| 800 × 480 | bias |
 | 800 × 286 | there is no bar |
+
+A cell is measured at the size its value is drawn in, which is the size the bar's end fields use.
+Bias is the one cell that is wider than its own label: "50.5" at 34 px takes 58 px where the other
+six still measure their four-letter label. That is what costs the 850 its ABS cell and the 800 its
+TC, and it is the reason those two rows are shorter than the canvas draws them.
 
 **The order it sheds in is not the order it draws in.** A driver on a GT3 car moves the brake bias
 every corner and has TC and ABS on wheel dials; the mixture changes once a stint; slip, cut and the
