@@ -108,6 +108,14 @@ export const ds = {
       label: hex('color.text.label'),
       dim: hex('color.text.dim'),
     },
+    // The semantic scale. The face reaches these through `purpose`, which is the right door for a
+    // readout; the LED profiles need them directly, because a strip has no readouts to name a
+    // colour after — a brake bar is the danger colour because it is a brake bar.
+    good: { primary: hex('color.good.primary') },
+    caution: { primary: hex('color.caution.primary') },
+    danger: { primary: hex('color.danger.primary') },
+    info: { primary: hex('color.info.primary') },
+    neutral: { primary: hex('color.neutral.primary') },
   },
   purpose: {
     delta: { faster: hex('purpose.delta.faster'), slower: hex('purpose.delta.slower'), zero: hex('purpose.delta.zero') },

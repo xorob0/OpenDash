@@ -27,9 +27,13 @@ import {
   type ValidationIssue,
   type WrittenPackage,
   type ZippedPackage,
+  leds,
+  stableGuid,
 } from './generator.ts';
 import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './screens/index.ts';
+import { STRIP_SHAPES, deviceLength, type StripShape } from './leds/strip.ts';
+import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from './leds/rpmStrip.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
 /** The repository root: this file lives in packages/dash/src. */
@@ -145,6 +149,21 @@ export function validateOrThrow(pkg: DashPackage, face?: { width: number; height
   return result.warnings;
 }
 
+/**
+ * Validates a generated LED profile the way {@link validateOrThrow} validates a package: errors
+ * block the whole build before anything is written, warnings are returned to be logged. The strip
+ * length is passed so that the fit rule has something to measure against — an effect running off
+ * the end of a strip is silent on the device, exactly as clipped text is silent on a screen.
+ */
+export function validateProfileOrThrow(profile: leds.LedProfile, ledCount: number): ValidationIssue[] {
+  const result = leds.validateProfile(profile, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX, ledCount });
+  if (!result.ok) {
+    const n = result.errors.length;
+    throw new BuildError(`profile ${profile.name} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
+  }
+  return result.warnings;
+}
+
 /** What a package is: the dash face, or one of the two second screens. */
 export type PackageKind = 'dash' | 'companion' | 'pitwall';
 
@@ -165,10 +184,28 @@ export interface ManifestEntry {
   file: string;
 }
 
+/**
+ * One generated LED profile. Deliberately not a {@link ManifestEntry}: a profile has no width, no
+ * height and no slots, and is not a `.simhubdash` — it is installed against a device rather than
+ * into `DashTemplates`. ADR 0013.
+ */
+export interface ProfileEntry {
+  /** Profile name as SimHub lists it, e.g. "openDash 4/14/4". */
+  name: string;
+  /** The strip shape it was generated for. */
+  shape: string;
+  /** How many LEDs the device has. */
+  leds: number;
+  /** The .ledsprofile, relative to the output directory. */
+  file: string;
+}
+
 export interface Manifest {
   version: string;
   simHubVersion: string;
   packages: ManifestEntry[];
+  /** The LED profiles beside the packages. Empty until a strip shape is built. */
+  profiles: ProfileEntry[];
 }
 
 export interface BuildOptions {
@@ -184,6 +221,8 @@ export interface BuildOptions {
   zoneFaces?: readonly ZoneLayout[];
   /** Default: every second screen in src/screens. Pass an empty list to build the faces alone. */
   screens?: readonly ScreenPackageDef[];
+  /** Default: every strip shape in src/leds. Pass an empty list to build the packages alone. */
+  ledProfiles?: readonly StripShape[];
   /** Progress and warnings, one line at a time. Default: console.log. */
   log?: (line: string) => void;
 }
@@ -202,12 +241,21 @@ export interface BuiltPackage {
   zipped: ZippedPackage;
 }
 
+/** A profile as it was written. */
+export interface BuiltProfile {
+  shape: StripShape;
+  profile: leds.LedProfile;
+  warnings: ValidationIssue[];
+  path: string;
+}
+
 export interface BuildResult {
   out: string;
   strategy: SlotStrategy;
   version: string;
   simHubVersion: string;
   packages: BuiltPackage[];
+  profiles: BuiltProfile[];
   manifest: Manifest;
   manifestPath: string;
 }
@@ -230,8 +278,13 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const layouts = opts.layouts ?? LAYOUTS;
   const zoneFaces = opts.zoneFaces ?? ZONE_FACES;
   const screens = opts.screens ?? SCREEN_PACKAGES;
+  const ledProfiles = opts.ledProfiles ?? STRIP_SHAPES;
   const log = opts.log ?? ((line: string): void => console.log(line));
-  if (layouts.length === 0 && screens.length === 0) throw new BuildError('there is no layout to build');
+  // A build of LED profiles alone is legitimate now that they are a second kind of output, so the
+  // guard asks whether there is anything to build at all rather than whether there is a dashboard.
+  if (layouts.length === 0 && screens.length === 0 && zoneFaces.length === 0 && ledProfiles.length === 0) {
+    throw new BuildError('there is nothing to build');
+  }
 
   const folders = new Set<string>();
   const staged: { layout?: Layout; zoneFace?: ZoneLayout; screen?: ScreenPackageDef; kind: PackageKind; pkg: DashPackage; warnings: ValidationIssue[] }[] = [];
@@ -262,9 +315,20 @@ export function build(opts: BuildOptions = {}): BuildResult {
     staged.push({ screen, kind: screen.kind, pkg, warnings });
   }
 
+  // Staged with the packages and before anything is written, so that a profile that would not
+  // light leaves the output directory untouched exactly as a bad package does.
+  const stagedProfiles: { shape: StripShape; profile: leds.LedProfile; warnings: ValidationIssue[] }[] = [];
+  for (const shape of ledProfiles) {
+    const profile = rpmStripProfile(shape, stableGuid(`openDash/leds/${shape.id}`));
+    const warnings = validateProfileOrThrow(profile, deviceLength(shape));
+    for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
+    stagedProfiles.push({ shape, profile, warnings });
+  }
+
   mkdirSync(out, { recursive: true });
   const packages: BuiltPackage[] = [];
-  const manifest: Manifest = { version, simHubVersion, packages: [] };
+  const profiles: BuiltProfile[] = [];
+  const manifest: Manifest = { version, simHubVersion, packages: [], profiles: [] };
   for (const { layout, zoneFace, screen, kind, pkg, warnings } of staged) {
     // Derived here rather than by each builder, so that a package cannot be assembled anywhere in
     // this file without the licences for what it carries.
@@ -284,6 +348,18 @@ export function build(opts: BuildOptions = {}): BuildResult {
       file: `${pkg.folderName}${PACKAGE_EXTENSION}`,
     });
   }
+  for (const { shape, profile, warnings } of stagedProfiles) {
+    const file = leds.writeLedsProfile(profile, out, rpmStripFileName(shape));
+    log(`wrote ${relative(file)}`);
+    profiles.push({ shape, profile, warnings, path: file });
+    manifest.profiles.push({
+      name: profile.name,
+      shape: shape.id,
+      leds: deviceLength(shape),
+      file: `${rpmStripFileName(shape)}${leds.LEDS_PROFILE_EXTENSION}`,
+    });
+  }
+
   // The plugin's settings panel draws in the same renamed family and embeds its own copies, and
   // its build runs on a machine that has never run this one. So the fonts a release needs are left
   // beside the packages, where the plugin build (and CI, which hands one job's output to the next)
@@ -304,7 +380,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const manifestPath = path.join(out, MANIFEST_FILE);
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   log(`wrote ${relative(manifestPath)}`);
-  return { out, strategy, version, simHubVersion, packages, manifest, manifestPath };
+  return { out, strategy, version, simHubVersion, packages, profiles, manifest, manifestPath };
 }
 
 const describe = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -325,8 +401,10 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
   try {
     const result = build({ out: args.out, strategy: args.strategy });
     const n = result.packages.length;
-    const warnings = result.packages.reduce((sum, p) => sum + p.warnings.length, 0);
-    console.log(`built ${n} package${n === 1 ? '' : 's'} (version ${result.version}, ${result.strategy} slots, ${warnings} warning${warnings === 1 ? '' : 's'}) into ${relative(result.out)}`);
+    const p = result.profiles.length;
+    const warnings = result.packages.reduce((sum, q) => sum + q.warnings.length, 0) + result.profiles.reduce((sum, q) => sum + q.warnings.length, 0);
+    const lights = p === 0 ? '' : ` and ${p} LED profile${p === 1 ? '' : 's'}`;
+    console.log(`built ${n} package${n === 1 ? '' : 's'}${lights} (version ${result.version}, ${result.strategy} slots, ${warnings} warning${warnings === 1 ? '' : 's'}) into ${relative(result.out)}`);
     return 0;
   } catch (e) {
     console.error(`build failed: ${describe(e)}`);

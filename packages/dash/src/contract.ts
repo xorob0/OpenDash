@@ -17,16 +17,23 @@ export const SLOT_MAX = 12;
 export type PositionMode = 'overall' | 'class';
 export type DeltaReference = 'session' | 'alltime';
 export type SessionProgress = 'auto' | 'laps' | 'time';
+/**
+ * What the middle of an RGB strip shows. The sides carry brake in the default, which is what the
+ * hardware makers put there and what DNR puts on the same LEDs.
+ */
+export type LedCentre = 'rpm' | 'rpmOnly' | 'brake' | 'throttleBrake' | 'fuel';
 
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
+export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'rpmOnly', 'brake', 'throttleBrake', 'fuel'];
 
 export const DEFAULTS = {
   ShiftLights: true,
   PositionMode: 'overall' as PositionMode,
   DeltaReference: 'session' as DeltaReference,
   SessionProgress: 'auto' as SessionProgress,
+  LedCentre: 'rpm' as LedCentre,
 } as const;
 
 /** `Slot01` .. `Slot12` for a 1-based slot index. */
@@ -61,6 +68,14 @@ export function dashProperties(): string[] {
   return [...[...fixed, ...slots].map(propertyName), ...zoneProperties()];
 }
 
+/** The properties only a generated LED profile reads. ADR 0013. */
+export function ledProperties(): string[] {
+  return [LED_CENTRE_SETTING].map(propertyName);
+}
+
+/** The name of the setting choosing what the middle of a strip shows. */
+export const LED_CENTRE_SETTING = 'LedCentre';
+
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
   const modules = MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
@@ -70,7 +85,7 @@ export function secondScreenProperties(): string[] {
 
 /** Every property the plugin exposes, in the order the plugin attaches them. */
 export function declaredProperties(): string[] {
-  return [...dashProperties(), ...secondScreenProperties()];
+  return [...dashProperties(), ...secondScreenProperties(), ...ledProperties()];
 }
 
 function assertSlot(slot: number): void {
@@ -92,6 +107,8 @@ export const setting = {
   sessionProgress: (): Expr => isnull(prop(propertyName('SessionProgress')), str(DEFAULTS.SessionProgress)),
   /** `isnull([OpenDash.Slot0i], default card number)` for a 1-based slot. */
   slot: (slot: number): Expr => isnull(prop(propertyName(slotSettingName(slot))), num(defaultCardForSlot(slot))),
+  /** `isnull([OpenDash.LedCentre], 'rpm')` */
+  ledCentre: (): Expr => isnull(prop(propertyName(LED_CENTRE_SETTING)), str(DEFAULTS.LedCentre)),
 };
 
 

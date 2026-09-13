@@ -105,10 +105,25 @@ describe('containers', () => {
     });
   });
 
-  test('a remap group joins its positions the way SimHub stores them, and nests its children', () => {
+  test('a remap group writes LedPosition objects, padded to 64, and nests its children', () => {
     const o = leds.buildContainerObject({ kind: 'remapGroup', positions: [4, 3, 2, 1], children: [{ kind: 'staticColor', ledCount: 1, color: 'Red' }] });
-    expect(o.Positions).toBe('4;3;2;1');
+    const positions = o.Positions as { Position: number }[];
+    // Positions is an ObservableCollection<LedPosition>, not a list of numbers and not a string.
+    expect(positions.slice(0, 4)).toEqual([{ Position: 4 }, { Position: 3 }, { Position: 2 }, { Position: 1 }]);
+    // SetResultBase indexes Positions[i] for every lit LED below 64, so the rest is filled with the
+    // natural position rather than left short — a short list throws once a frame instead of failing quietly.
+    expect(positions).toHaveLength(leds.REMAP_POSITIONS);
+    expect(positions[4]).toEqual({ Position: 5 });
+    expect(positions[63]).toEqual({ Position: 64 });
     expect((o.LedContainers as unknown[]).length).toBe(1);
+  });
+
+  test('a remap shorter than the strip is an error, because the lookup throws rather than clipping', () => {
+    const r = leds.validateProfile(
+      { name: 'x', profileId: ID, containers: [{ kind: 'remapGroup', positions: [2, 1], children: [] }] },
+      { ledCount: 16 },
+    );
+    expect(r.errors.map((e) => e.code)).toEqual(['leds/remap-short']);
   });
 
   test('raw carries any container SimHub has that the model does not spell out', () => {
@@ -139,13 +154,26 @@ describe('validation, which exists because every one of these fails silently', (
     expect(leds.validateProfile(profile([{ kind: 'staticColor', ledCount: 3, color: 'Red', startPosition: 14 }]), { ledCount: 16 }).ok).toBe(true);
   });
 
-  test('the fit rule reaches a nested effect, not only a top-level one', () => {
-    const r = leds.validateProfile(
-      profile([{ kind: 'conditionalGroup', trigger: { expression: '1' }, children: [{ kind: 'staticColor', ledCount: 9, color: 'Red', startPosition: 9 }] }]),
-      { ledCount: 16 },
-    );
+  test("a child's StartPosition is relative to its group, and the fit rule accumulates it", () => {
+    // GetGroupResult builds the group's buffer at its own position and merges each child at the
+    // child's, so a child at 1 inside a group at 12 is absolutely at 12 — not at 1, and not at 13.
+    const nested = (groupAt: number, childAt: number, ledCount: number): leds.LedProfile =>
+      profile([
+        { kind: 'group', startPosition: groupAt, children: [{ kind: 'staticColor', ledCount, color: 'Red', startPosition: childAt }] },
+      ]);
+    expect(leds.validateProfile(nested(12, 1, 5), { ledCount: 16 }).ok).toBe(true);
+    const r = leds.validateProfile(nested(12, 1, 6), { ledCount: 16 });
     expect(codes(r)).toEqual(['leds/off-strip']);
-    expect(r.errors[0]!.path).toBe('openDash strip/Groups.CustomConditionalGroup[0]/StaticColor[0]');
+    expect(r.errors[0]!.message).toBe('covers LEDs 12..17 of a 16-LED strip; the last 1 would not be drawn');
+    expect(r.errors[0]!.path).toBe('openDash strip/Base.Group[0]/StaticColor[0]');
+  });
+
+  test('a remap group renumbers rather than offsets, so its children start from 1 again', () => {
+    const r = leds.validateProfile(
+      profile([{ kind: 'remapGroup', positions: [4, 3, 2, 1], startPosition: 1, children: [{ kind: 'staticColor', ledCount: 4, color: 'Red', startPosition: 1 }] }]),
+      { ledCount: 4 },
+    );
+    expect(r.ok).toBe(true);
   });
 
   test('three-digit shorthand is rejected, because SimHub reads it as a transparent near-black', () => {
@@ -190,7 +218,7 @@ describe('validation, which exists because every one of these fails silently', (
   });
 
   test('a remap position past the end of the strip is an error, and a repeat is a warning', () => {
-    const r = leds.validateProfile(profile([{ kind: 'remapGroup', positions: [1, 1, 99], children: [] }]), { ledCount: 16 });
+    const r = leds.validateProfile(profile([{ kind: 'remapGroup', positions: [1, 1, 99], children: [] }]), { ledCount: 3 });
     expect(codes(r)).toEqual(['leds/remap-position']);
     expect(r.warnings.map((w) => w.code)).toEqual(['leds/remap-duplicate']);
   });

@@ -10,6 +10,7 @@
 import type { JsonObject, JsonValue } from '../serialize.ts';
 import {
   CONTAINER_TYPES,
+  REMAP_POSITIONS,
   RPM_MODES,
   type LedAnimation,
   type LedConditionalGroup,
@@ -73,8 +74,16 @@ const conditionalGroup = (c: LedConditionalGroup): JsonObject => ({
   LedContainers: c.children.map(buildContainerObject),
 });
 
+/**
+ * `[{ "Position": n }, ...]`, padded to {@link REMAP_POSITIONS} with the natural position, which is
+ * what SimHub's own `LoadDefaultSettings` writes. The padding is not cosmetic: `SetResultBase`
+ * indexes `Positions[i]` for every lit LED below 64, so a list shorter than the run throws.
+ */
+export const buildRemapPositions = (positions: readonly number[]): JsonValue =>
+  Array.from({ length: REMAP_POSITIONS }, (_, i) => ({ Position: positions[i] ?? i + 1 }));
+
 const remapGroup = (c: LedRemapGroup): JsonObject => ({
-  Positions: c.positions.join(';'),
+  Positions: buildRemapPositions(c.positions),
   LedContainers: c.children.map(buildContainerObject),
 });
 

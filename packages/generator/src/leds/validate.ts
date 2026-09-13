@@ -14,6 +14,7 @@ import { propertyReferences, type ValidateOptions, type ValidationIssue, type Va
 import { isGuid } from '../ids.ts';
 import {
   KNOWN_CONTAINER_TYPES,
+  REMAP_POSITIONS,
   childrenOf,
   containerTypeOf,
   isLedColor,
@@ -68,7 +69,14 @@ const colorsOf = (c: LedContainer): { color: string; key: string }[] => {
   return out;
 };
 
-const validateContainer = (c: LedContainer, path: string, opts: ValidateProfileOptions, errors: ValidationIssue[], warnings: ValidationIssue[]): void => {
+/**
+ * A container's `StartPosition` is relative to the group holding it, not to the strip.
+ * `IContainerGroupExtensions.GetGroupResult` builds the group's own `LedResult` at
+ * `group.StartPosition - 1` and then `LedResult.Merge`s each child at the *child's* position into
+ * that buffer, so the offsets accumulate down the tree. `offset` is the sum of the enclosing
+ * groups' positions, which is what makes the fit rule below the real one rather than a guess.
+ */
+const validateContainer = (c: LedContainer, path: string, offset: number, opts: ValidateProfileOptions, errors: ValidationIssue[], warnings: ValidationIssue[]): void => {
   const type = containerTypeOf(c);
 
   // An unresolvable ContainerType becomes a disabled UnknownContainer: the effect vanishes quietly.
@@ -87,13 +95,14 @@ const validateContainer = (c: LedContainer, path: string, opts: ValidateProfileO
   }
 
   // The fit rule. An effect running off the end of the strip paints nothing and says nothing.
+  const absolute = offset + start;
   if (opts.ledCount !== undefined && count !== undefined && count >= 1 && start >= 1 && c.kind !== 'animation') {
-    const last = start + count - 1;
+    const last = absolute + count - 1;
     if (last > opts.ledCount) {
       errors.push({
         code: 'leds/off-strip',
         path,
-        message: `covers LEDs ${start}..${last} of a ${opts.ledCount}-LED strip; the last ${last - opts.ledCount} would not be drawn`,
+        message: `covers LEDs ${absolute}..${last} of a ${opts.ledCount}-LED strip; the last ${last - opts.ledCount} would not be drawn`,
       });
     }
   }
@@ -108,6 +117,14 @@ const validateContainer = (c: LedContainer, path: string, opts: ValidateProfileO
     }
     const seen = new Set(c.positions);
     if (seen.size !== c.positions.length) warnings.push({ code: 'leds/remap-duplicate', path, message: 'a physical LED appears twice in the remap; the later one wins' });
+    // SetResultBase indexes Positions[i] for every lit LED below 64. Short is not quiet: it throws.
+    if (opts.ledCount !== undefined && c.positions.length < Math.min(opts.ledCount, REMAP_POSITIONS)) {
+      errors.push({
+        code: 'leds/remap-short',
+        path,
+        message: `remaps ${c.positions.length} of ${opts.ledCount} LEDs; SetResultBase indexes every lit position and throws past the end of the list`,
+      });
+    }
   }
 
   if (c.kind === 'animation') {
@@ -155,7 +172,9 @@ const validateContainer = (c: LedContainer, path: string, opts: ValidateProfileO
     }
   }
 
-  childrenOf(c).forEach((child, i) => validateContainer(child, `${path}/${containerTypeOf(child)}[${i}]`, opts, errors, warnings));
+  // A remap group renumbers rather than offsets: its children address the remapped run from 1.
+  const childOffset = c.kind === 'remapGroup' ? 0 : absolute - 1;
+  childrenOf(c).forEach((child, i) => validateContainer(child, `${path}/${containerTypeOf(child)}[${i}]`, childOffset, opts, errors, warnings));
 };
 
 /** Whether a profile is fit to be written, and what is wrong with it if not. */
@@ -173,7 +192,7 @@ export const validateProfile = (profile: LedProfile, opts: ValidateProfileOption
   }
 
   const ledCount = opts.ledCount ?? profile.ledCount;
-  profile.containers.forEach((c, i) => validateContainer(c, `${root}/${containerTypeOf(c)}[${i}]`, { ...opts, ledCount }, errors, warnings));
+  profile.containers.forEach((c, i) => validateContainer(c, `${root}/${containerTypeOf(c)}[${i}]`, 0, { ...opts, ledCount }, errors, warnings));
 
   return { ok: errors.length === 0, errors, warnings };
 };

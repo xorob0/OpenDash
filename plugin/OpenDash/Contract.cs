@@ -20,6 +20,9 @@ namespace OpenDashPlugin
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
 
+        /// <summary>What the middle of an RGB LED strip shows. ADR 0013; read by a generated .ledsprofile.</summary>
+        public const string LedCentre = "LedCentre";
+
         public const bool DefaultShiftLights = true;
 
         public static readonly string[] PositionModes = { "overall", "class" };
@@ -30,6 +33,9 @@ namespace OpenDashPlugin
 
         public static readonly string[] SessionProgressModes = { "auto", "laps", "time" };
         public const string DefaultSessionProgress = "auto";
+
+        public static readonly string[] LedCentres = { "rpm", "rpmOnly", "brake", "throttleBrake", "fuel" };
+        public const string DefaultLedCentre = "rpm";
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -394,6 +400,7 @@ namespace OpenDashPlugin
             foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
             yield return PitWallWide;
             yield return WebViewUrl;
+            yield return LedCentre;
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>
