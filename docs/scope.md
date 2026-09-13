@@ -8,11 +8,16 @@ which of the MVP's refusals have since been reversed and by what. It is the docu
 contributor or an agent should read first, and the one that has to be amended when the answer to
 "what is OpenDash" changes.
 
-> **The face is being rebuilt.** The zone model described below is the settled design
-> ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)) and it is what
-> the next release ships. **0.1.0 shipped the twelve-slot face**, and until the rename in 0.2.0
-> that is what a user has installed. `README.md` and `plugin/INSTALL.md` describe that installed
-> product and stay accurate to it; this document describes the product.
+> **The face has been rebuilt.** The zone model described below is the settled design
+> ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)), and since
+> 0.2.0-rc.1 it is what the names in the table below install: the eight rectangular faces are zone
+> faces, and the twelve-slot ones they replaced are published as `openDash slots <size>` for anyone
+> who wants the old design back. The two round faces are still the card model, because what a round
+> face does with zones is not decided (XOR-94).
+>
+> `README.md` and `plugin/INSTALL.md` still describe the twelve-slot face and are now wrong about
+> the product a user installs; correcting them is XOR-99, and until it lands this document is the
+> one to trust.
 >
 > The distinction matters because of the rule at the end of the refusals: a line has to move here
 > before the code that crosses it may be written. That is the reason this document changed first.
@@ -212,7 +217,7 @@ Three of the nine still stand. Each is restated above with the record that would
 |---|---|
 | Theming and colour customisation | ADR 0011, and this line moving with it. The Personalisation project is unmergeable until it does |
 | Idle and pit screens | XOR-62 and XOR-53, behind the same record |
-| Computed telemetry of our own | ADR 0009, owed before zones B and C |
+| Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
 falls under one of these lines is declined however well it is written**; the line moves first, in
