@@ -47,11 +47,13 @@ visual review as a human step in which the author attaches a capture from the VM
 and `CONTRIBUTING.md` names `bun run shots` among the conditions a change must meet before it is
 merged. Option C is not a proposal; it is a description.
 
-**Option A is sixteen points before it draws its first frame, and its largest piece is a second
-implementation of somebody else's expression language.** The preview renderer needs a trace to
-replay (XOR-19, three points), an NCalc evaluator in TypeScript (XOR-20, five points), the renderer
-itself (XOR-21, five points) and the fidelity check that polices the gap between the two renderers
-(XOR-24, three points). Only then does the video job (XOR-22) have something to record.
+**Option A is thirteen points before it draws a frame and sixteen before that frame can be
+believed, and its largest piece is a second implementation of somebody else's expression
+language.** The preview renderer needs a trace to replay (XOR-19, three points), an NCalc evaluator
+in TypeScript (XOR-20, five points) and the renderer itself (XOR-21, five points); the fidelity
+check that polices the gap between the two renderers (XOR-24, three points) is what makes the
+output worth looking at, and is therefore not optional. Only then does the video job (XOR-22) have
+something to record.
 
 The evaluator is the part worth dwelling on, because nothing in the repository evaluates a binding
 today: `packages/generator/src/ncalc.ts` builds expression strings and
@@ -134,9 +136,10 @@ needs to see, which is true while the work is faces, zones and modules. It stops
 next body of work is animation, and the answer then is more likely to be capturing video from the
 VM than building a renderer.
 
-**The batch stopping being a few minutes.** The default set is eighteen faces today, against the
-ten XOR-112 was written for, because the zone faces joined the list. Growth of that kind is what
-would eventually make a parallel renderer pay for itself.
+**The batch outgrowing a single claim.** The default set is eighteen faces today, against the ten
+XOR-112 was written for, because the zone faces joined the list, and nobody has timed the eighteen.
+Growth of that kind is what would eventually make a parallel renderer pay for itself, and the
+figure to watch is how long one claim holds the VM rather than how many packages exist.
 
 **Somebody wanting the preview renderer for its own sake.** A renderer in the browser is also a
 design tool and a way to look at a package without Windows, and that is a different justification
@@ -152,7 +155,7 @@ engine the driver will use, so the class of bug where the preview is right and t
 wrong cannot occur.
 
 Sixteen points of speculative work are returned to the backlog, and the failure mode they carried
-with them, which is a second renderer drifting quietly from the first, is not acquired.
+with them, which is a second renderer drifting quietly from the one that matters, is not acquired.
 
 ### Bad
 
