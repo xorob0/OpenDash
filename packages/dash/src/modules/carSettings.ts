@@ -11,11 +11,19 @@ import { defineModule, fieldsRow, fld } from './module.ts';
 import type { FieldSpec } from '../second/field.ts';
 import type { ModuleContext } from './module.ts';
 
-const { fmt, isNull, not, concat, str, ucase } = ncalc;
+const { fmt, isNull, not, concat, str, ucase, raw, game } = ncalc;
 
-/** A setting field that disappears when the sim does not publish the property behind it. */
-const settingField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number): FieldSpec =>
-  fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: not(isNull(expr)) });
+/**
+ * A setting field that disappears when the sim does not publish the property behind it, and whose
+ * rank then closes over the hole.
+ *
+ * `present` is the property that says the car **has** the setting, which is not always the one the
+ * value is read from. SimHub normalises traction control and ABS into `TCLevel` and `ABSLevel` and
+ * reports 0 for a car that has neither, so those two are tested on the raw iRacing field behind
+ * them; the brake bias is read through an `isnull` default and so is never null itself.
+ */
+const settingField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, present = expr): FieldSpec =>
+  fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: not(isNull(present)) });
 
 export const carSettings = defineModule('carSettings', (ctx) => {
   const d = densityOf(ctx.density);
@@ -39,9 +47,9 @@ export const carSettings = defineModule('carSettings', (ctx) => {
       ),
       fieldsRow(
         [
-          settingField(ctx, 'tc', 'TC', tcLevel(), '0', d.small),
-          settingField(ctx, 'abs', 'ABS', absLevel(), '0', d.small),
-          settingField(ctx, 'bb', 'BB', brakeBias(), '0.0', d.small),
+          settingField(ctx, 'tc', 'TC', tcLevel(), '0', d.small, raw('dcTractionControl')),
+          settingField(ctx, 'abs', 'ABS', absLevel(), '0', d.small, raw('dcABS')),
+          settingField(ctx, 'bb', 'BB', brakeBias(), '0.0', d.small, game('BrakeBias')),
           settingField(ctx, 'mix', 'Mix', fuelMixture(), '0', d.small),
         ],
         ctx,

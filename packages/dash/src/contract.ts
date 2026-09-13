@@ -1,13 +1,14 @@
 /**
  * The settings contract between the dashboard and the plugin: property names, defaults, value
  * sets and the card catalogue. Every expression that reads an `OpenDash.*` property goes through
- * `setting`, so `declaredProperties()` is the single list the validator checks against.
+ * `setting`, so `declaredProperties()` is the single list the validator checks against, and
+ * `foreignProperties()` is what keeps each package inside its own screen's half of it.
  * plugin/OpenDash/Contract.cs mirrors this file.
  */
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 
-const { isnull, prop, str, num } = ncalc;
+const { add, and, concat, div, eq, fmt, iff, isnull, lt, mod, num, or, prop, str, truncate } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -96,7 +97,9 @@ export function secondScreenProperties(): string[] {
 
 /** Every property the plugin exposes, in the order the plugin attaches them. */
 export function declaredProperties(): string[] {
-  return [...dashProperties(), ...secondScreenProperties(), ...ledProperties()];
+  // The flag box's settings and the strips' are both here: they are one set of lights with two
+  // kinds of hardware behind them, and a profile of either kind reads from this one list.
+  return [...dashProperties(), ...secondScreenProperties(), ...flagBoxProperties(), ...ledProperties()];
 }
 
 function assertSlot(slot: number): void {
@@ -292,7 +295,16 @@ export const defaultZoneMask = (zone: FaceZone): number => (1 << pagesForZone(zo
 export const zonePageSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}`;
 export const zoneMaskSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Pages`;
 export const zoneStartSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Start`;
+export const zoneClassOnlySettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}ClassOnly`;
 export const barFieldSettingName = (face: FaceSize, slot: BarSlot): string => `${facePrefix(face)}Bar${slot}`;
+
+/**
+ * Whether a zone's list pages show the player's own class rather than the whole field.
+ *
+ * Off, because most racing is single-class and a driver in one would not thank us for a
+ * leaderboard that hides nobody but says it does.
+ */
+export const DEFAULT_ZONE_CLASS_ONLY = false;
 
 /**
  * The zone and page a held button shows, as one property rather than a pair per zone: a glance is
@@ -319,11 +331,13 @@ export const zone = {
   quickGlance: (face: FaceSize): Expr => isnull(prop(propertyName(quickGlanceSettingName(face))), num(DEFAULT_QUICK_GLANCE)),
   /** `isnull([OpenDash.Face1920x480BarLeft1], 0)`: which field an end of the bar shows. */
   barField: (face: FaceSize, slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(face, slot))), num(DEFAULT_BAR_FIELDS[slot])),
+  /** `isnull([OpenDash.Face1920x480ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
+  classOnly: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(face, z))), String(DEFAULT_ZONE_CLASS_ONLY)),
 };
 
 /** Every property one face reads, which is the group the plugin attaches for it. */
 export function facePropertyNames(face: FaceSize): string[] {
-  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z)]);
+  const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
   return [...perZone, ...bar, quickGlanceSettingName(face)];
 }
@@ -331,6 +345,114 @@ export function facePropertyNames(face: FaceSize): string[] {
 /** Every zone property of every face that ships. */
 export function zoneProperties(): string[] {
   return FACE_SIZES.flatMap((face) => facePropertyNames(face)).map(propertyName);
+}
+
+/**
+ * Bit `i` of a zone's mask, as arithmetic rather than as a bitwise operator.
+ *
+ * NCalc's grammar has `>>` and `&`, and `(mask >> i) & 1` would be half the characters. It is not
+ * used because nothing in openDash has ever evaluated one on the VM, and an expression SimHub
+ * cannot evaluate does not fail: it draws the empty string. That is the `left([Class], 4)` bug
+ * that shipped for months and is why `ncalcFunctions.ts` exists. `truncate(x / n) % 2` is the same
+ * question in three things the packages already rely on everywhere.
+ *
+ * The mask is an integer property, so the truncate is belt and braces rather than necessary, and
+ * it costs nothing to keep the expression honest about what it means.
+ */
+const maskBit = (face: FaceSize, z: FaceZone, i: number): Expr => mod(truncate(div(zone.mask(face, z), num(2 ** i))), num(2));
+
+/**
+ * How long a zone's cycle is: the number of pages its mask leaves enabled.
+ *
+ * This is derived in the expression rather than published by the plugin, which is what
+ * [ADR 0009](../../../docs/decisions/0009-does-the-plugin-compute.md) settled: a value is derived
+ * from properties that already exist, so the package is still right on its own. Without the plugin
+ * the mask reads as its default and the answer is the whole catalogue, which is exactly what a
+ * driver with no plugin can cycle.
+ */
+export const zoneCycleLength = (face: FaceSize, z: FaceZone): Expr => add(...pagesForZone(z).map((_, i) => maskBit(face, z, i)));
+
+/**
+ * Where the page a zone is showing sits in its cycle, counting from one: the enabled pages before
+ * it, plus itself. A page the mask has turned off counts as the one after the last enabled page
+ * before it, which is a state the plugin's `Normalise` does not leave a zone in.
+ */
+export const zoneCyclePosition = (face: FaceSize, z: FaceZone): Expr =>
+  add(num(1), ...pagesForZone(z).map((_, i) => iff(lt(num(i), zone.page(face, z)), maskBit(face, z, i), num(0))));
+
+/** `2 / 3`: what a zone's header counts, which follows the mask and not the catalogue. */
+export const zoneCounter = (face: FaceSize, z: FaceZone): Expr =>
+  concat(fmt(zoneCyclePosition(face, z), '0'), str(' / '), fmt(zoneCycleLength(face, z), '0'));
+
+/** Every counter a zone could draw, so a caller can measure the box for the widest of them. */
+export function zoneCounterReadings(z: FaceZone): string[] {
+  const n = pagesForZone(z).length;
+  const readings: string[] = [];
+  for (let length = 1; length <= n; length++) for (let position = 1; position <= length; position++) readings.push(`${position} / ${length}`);
+  return readings;
+}
+
+/**
+ * When a list page drawn in one of these zones shows the player's own class.
+ *
+ * Zones B and C are the same rectangle on most faces and so share one dashboard file, which means
+ * a page in it cannot simply read "my zone's" setting: it has to ask which of the zones sharing the
+ * file is showing it. The one ambiguity that leaves is both zones showing the same list page with
+ * different settings, and docs/design/zones.md already records that two zones on one page is
+ * reported and allowed; there they agree rather than disagreeing.
+ */
+export const zoneClassOnlyOnPage = (face: FaceSize, zones: readonly [FaceZone, ...FaceZone[]], page: number): Expr =>
+  or(...zones.map((z) => and(eq(zone.page(face, z), num(page)), zone.classOnly(face, z))));
+
+// --- What one screen owns ---------------------------------------------------------------------
+//
+// A rig is a set of screens, and a screen owns the settings it is configured with. The face
+// prefixes above are one half of that; these are the other two screens and the rule that follows
+// from all of them, which is that a package reads its own screen's properties and the ones every
+// screen shares, and nothing else. `declaredProperties()` cannot express it: every screen's group
+// is declared, so a face reading the face beside it validates cleanly and then moves when somebody
+// configures the other screen.
+
+/**
+ * The prefix the pit wall's and the companion's settings carry.
+ *
+ * Fixed rather than derived from a size, because the landscape and the portrait package of each
+ * are one screen in two orientations rather than two screens: a spotter who turns the monitor does
+ * not expect to configure it again.
+ */
+export const PIT_WALL_PREFIX = 'PitWall';
+export const COMPANION_PREFIX = 'Companion';
+
+/** Every screen a rig can have, by the prefix its properties carry, in the order the plugin attaches them. */
+export function screenPrefixes(): string[] {
+  return [...FACE_SIZES.map(facePrefix), COMPANION_PREFIX, PIT_WALL_PREFIX];
+}
+
+/**
+ * The properties one screen owns.
+ *
+ * `WebViewUrl` is the pit wall's although it carries no prefix: it was named before the idiom and
+ * a published property cannot be renamed under ADR 0003, but no other screen has a web view, so
+ * the group it belongs to is not in doubt.
+ */
+export function screenProperties(prefix: string): string[] {
+  const face = faceForPrefix(prefix);
+  if (face) return facePropertyNames(face).map(propertyName);
+  if (prefix === PIT_WALL_PREFIX) {
+    return [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING].map(propertyName);
+  }
+  if (prefix === COMPANION_PREFIX) return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)).map(propertyName);
+  throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
+}
+
+/**
+ * Everything the package of one screen may not read: every property another screen owns. A card
+ * face owns no screen and passes nothing, which leaves it the four modes and the twelve slots.
+ */
+export function foreignProperties(owner?: string): string[] {
+  const screens = screenPrefixes();
+  if (owner !== undefined && !screens.includes(owner)) throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(owner)}`);
+  return screens.filter((prefix) => prefix !== owner).flatMap(screenProperties);
 }
 
 export interface CardMeta {
@@ -517,3 +639,188 @@ export const secondScreen = {
   /** `isnull([OpenDash.WebViewUrl], '')`: the address of the web view page. */
   webViewUrl: (): Expr => isnull(prop(propertyName(WEB_VIEW_SETTING)), str(DEFAULT_WEB_VIEW_URL)),
 };
+
+// --- The flag box ---------------------------------------------------------------------------
+//
+// An 8x8 LED matrix is not a screen, but its settings are ordinary SimHub properties for exactly
+// the reason ADR 0003 gives for the screens: a property is readable by anything and changeable
+// while driving. The profile reads these through `flagBox` below, every one wrapped in isnull()
+// with its default, so a user who imports the profile and never installs the plugin still gets a
+// working box. ADR 0013 is why the plugin does not install the profile itself.
+//
+// Rotation and serpentine wiring are deliberately absent: they are SimHub device settings decided
+// by the corner the data cable enters, and a second place to set them would be a second place to
+// disagree. The guide documents them instead.
+
+/**
+ * SimHub composes at most four matrix contents, so a box setting exists once per matrix. People do
+ * own more than one box — two in the corners of a monitor stand, one showing flags and one showing
+ * the gear, is a setup somebody will build on day one — and XOR-124 settled that a screen owns its
+ * settings as one group. A device is the same shape of thing, so it gets the same treatment.
+ *
+ * Rotation and serpentine wiring are deliberately **not** here. They are SimHub device settings
+ * decided by the corner the data cable enters, and duplicating them would produce two places that
+ * disagree. The guide documents them instead.
+ *
+ * Presets are not here either. openDash has no store: a setting *is* a SimHub property, which is
+ * what makes it readable by anything and changeable while driving. A preset is a set of values with
+ * a name, which is a different feature with its own storage, its own migration and its own failure
+ * when a property is added.
+ */
+export const FLAG_BOX_MATRICES = [1, 2, 3, 4] as const;
+export type FlagBoxMatrix = (typeof FLAG_BOX_MATRICES)[number];
+
+/** What a matrix shows when nothing has taken it over. */
+export type FlagBoxRest = 'dark' | 'gear';
+export const FLAG_BOX_RESTS: readonly FlagBoxRest[] = ['dark', 'gear'];
+
+/**
+ * Which side of the rig a box is mounted on. The spotter reads it, and getting it wrong is worse
+ * than having no box: one to the left of the wheel lighting for a car on the right is actively
+ * dangerous. `both` is the single-box setup, where one panel has to show both sides.
+ */
+export type FlagBoxSide = 'both' | 'left' | 'right';
+export const FLAG_BOX_SIDES: readonly FlagBoxSide[] = ['both', 'left', 'right'];
+
+/** `FlagBoxMatrix1Rest` and its siblings. Prefixed, because a property name is a public interface. */
+export const flagBoxMatrixSetting = (matrix: FlagBoxMatrix, name: string): string => `FlagBoxMatrix${matrix}${name}`;
+
+/** What each matrix does by default: matrix 1 does everything, 2 to 4 are off. One box works out of the box. */
+export interface FlagBoxMatrixDefaults {
+  rest: FlagBoxRest;
+  flags: boolean;
+  spotter: boolean;
+  warnings: boolean;
+  side: FlagBoxSide;
+}
+
+export const FLAG_BOX_MATRIX_DEFAULTS: Record<FlagBoxMatrix, FlagBoxMatrixDefaults> = {
+  1: { rest: 'gear', flags: true, spotter: true, warnings: true, side: 'both' },
+  2: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
+  3: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
+  4: { rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' },
+};
+
+/** Reads of one matrix's settings. */
+export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
+  const d = FLAG_BOX_MATRIX_DEFAULTS[matrix];
+  const read = (name: string, fallback: Expr): Expr => isnull(prop(propertyName(flagBoxMatrixSetting(matrix, name))), fallback);
+  return {
+    rest: (): Expr => read('Rest', str(d.rest)),
+    flags: (): Expr => read('Flags', String(d.flags)),
+    spotter: (): Expr => read('Spotter', String(d.spotter)),
+    warnings: (): Expr => read('Warnings', String(d.warnings)),
+    side: (): Expr => read('Side', str(d.side)),
+  };
+};
+
+/** The five property names of one matrix, in the order the plugin attaches them. */
+export const flagBoxMatrixProperties = (matrix: FlagBoxMatrix): string[] =>
+  ['Rest', 'Flags', 'Spotter', 'Warnings', 'Side'].map((n) => flagBoxMatrixSetting(matrix, n));
+
+/**
+ * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a
+ * flag box probably owns other lights, and "how bright are my lights and is it night" is one
+ * answer for a rig rather than one per device. If openDash ever ships a second profile it reads
+ * these same three properties; naming them per device now would mean renaming a public interface
+ * later, which ADR 0003 says a property name is.
+ */
+export const LIGHTS_BRIGHTNESS_SETTING = 'LightsBrightness';
+export const LIGHTS_NIGHT_BRIGHTNESS_SETTING = 'LightsNightBrightness';
+export const LIGHTS_NIGHT_MODE_SETTING = 'LightsNightMode';
+
+/** Flag-box-specific, because they are about this box rather than about lights in general. */
+export const FLAG_BOX_CRITICAL_ONLY_SETTING = 'FlagBoxCriticalOnly';
+export const FLAG_BOX_GEAR_SETTING = 'FlagBoxGear';
+
+/** Percent. SimHub's own global brightness for the device applies on top of this. */
+export const DEFAULT_LIGHTS_BRIGHTNESS = 100;
+
+/**
+ * Percent, at night. Sixty-four LEDs at full output beside a wheel in a dark room is genuinely
+ * too bright, and no amount of good colour choice fixes it; a quarter is the starting point, and
+ * it is a setting because the right number depends on the room.
+ */
+export const DEFAULT_LIGHTS_NIGHT_BRIGHTNESS = 25;
+
+/** Off. A switch the driver flips, not a time of day we guess at. */
+export const DEFAULT_LIGHTS_NIGHT_MODE = false;
+
+/** On. The gear is the box's resting state; off leaves the panel dark rather than showing something else. */
+export const DEFAULT_FLAG_BOX_GEAR = true;
+
+/**
+ * Laps, not litres. A litre threshold means nothing without knowing the car; laps remaining means
+ * something in every car, and SimHub already publishes `Fuel_RemainingLaps`.
+ */
+export const FLAG_BOX_LOW_FUEL_LAPS_SETTING = 'FlagBoxLowFuelLaps';
+export const DEFAULT_FLAG_BOX_LOW_FUEL_LAPS = 2;
+
+/**
+ * Degrees, in **SimHub's unit**. A driver in Fahrenheit who sets 120 and gets a Celsius threshold
+ * has been given a broken feature, and a threshold that silently converts is worse than one that
+ * refuses — so the comparison is done in whatever unit `WaterTemperature` and `OilTemperature` are
+ * already reported in, which is the user's, and the default is stated per unit below.
+ */
+export const FLAG_BOX_OIL_TEMP_SETTING = 'FlagBoxOilTemp';
+export const FLAG_BOX_WATER_TEMP_SETTING = 'FlagBoxWaterTemp';
+
+/** 120 °C and 110 °C, and their equivalents, so a default is right in whatever unit is set. */
+export const DEFAULT_OIL_TEMP: Record<string, number> = { Celcius: 120, Fahrenheit: 248, Kelvin: 393 };
+export const DEFAULT_WATER_TEMP: Record<string, number> = { Celcius: 110, Fahrenheit: 230, Kelvin: 383 };
+
+/**
+ * Off, so the box shows the whole catalogue until the driver asks for quiet. The default is the
+ * one that tells a driver the most; a box that stays dark through a chequered flag is a surprise,
+ * and a surprise is a worse default than a busy one.
+ */
+export const DEFAULT_FLAG_BOX_CRITICAL_ONLY = false;
+
+/** Reads of the lights settings, each defaulted so the profile works without the plugin. */
+export const flagBox = {
+  /** `isnull([OpenDash.LightsBrightness], 100)`: the day brightness. */
+  dayBrightness: (): Expr => isnull(prop(propertyName(LIGHTS_BRIGHTNESS_SETTING)), num(DEFAULT_LIGHTS_BRIGHTNESS)),
+  /** `isnull([OpenDash.LightsNightBrightness], 25)`. */
+  nightBrightness: (): Expr => isnull(prop(propertyName(LIGHTS_NIGHT_BRIGHTNESS_SETTING)), num(DEFAULT_LIGHTS_NIGHT_BRIGHTNESS)),
+  /** `isnull([OpenDash.LightsNightMode], false)`. */
+  nightMode: (): Expr => isnull(prop(propertyName(LIGHTS_NIGHT_MODE_SETTING)), String(DEFAULT_LIGHTS_NIGHT_MODE)),
+  /** The brightness in force: the night value when night mode is on, else the day value. */
+  brightness: (): Expr => iff(eq(flagBox.nightMode(), 'true'), flagBox.nightBrightness(), flagBox.dayBrightness()),
+  /** `isnull([OpenDash.FlagBoxCriticalOnly], false)`: quiet until something matters. */
+  criticalOnly: (): Expr => isnull(prop(propertyName(FLAG_BOX_CRITICAL_ONLY_SETTING)), String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
+  /** `isnull([OpenDash.FlagBoxGear], true)`: the gear as the resting state. */
+  gear: (): Expr => isnull(prop(propertyName(FLAG_BOX_GEAR_SETTING)), String(DEFAULT_FLAG_BOX_GEAR)),
+  /** `isnull([OpenDash.FlagBoxLowFuelLaps], 2)`. */
+  lowFuelLaps: (): Expr => isnull(prop(propertyName(FLAG_BOX_LOW_FUEL_LAPS_SETTING)), num(DEFAULT_FLAG_BOX_LOW_FUEL_LAPS)),
+  /**
+   * The oil threshold, defaulted **per unit**: the default is looked up from SimHub's own
+   * `TemperatureUnit` inside the expression, so a driver in Fahrenheit gets 248 rather than 120.
+   * Once they set a number it is theirs, in the unit they are reading.
+   */
+  oilTemp: (): Expr => isnull(prop(propertyName(FLAG_BOX_OIL_TEMP_SETTING)), defaultByUnit(DEFAULT_OIL_TEMP)),
+  /** As {@link oilTemp}, 110 °C. */
+  waterTemp: (): Expr => isnull(prop(propertyName(FLAG_BOX_WATER_TEMP_SETTING)), defaultByUnit(DEFAULT_WATER_TEMP)),
+};
+
+/** `if(unit = 'Fahrenheit', 248, if(unit = 'Kelvin', 393, 120))`, so no default is wrong in a unit. */
+function defaultByUnit(byUnit: Record<string, number>): Expr {
+  const unit = isnull(ncalc.game('TemperatureUnit'), str('Celcius'));
+  const celsius = byUnit.Celcius ?? 0;
+  return iff(eq(unit, str('Fahrenheit')), num(byUnit.Fahrenheit ?? celsius), iff(eq(unit, str('Kelvin')), num(byUnit.Kelvin ?? celsius), num(celsius)));
+}
+
+/** Every property the flag box profile reads. */
+export function flagBoxProperties(): string[] {
+  const global = [
+    LIGHTS_BRIGHTNESS_SETTING,
+    LIGHTS_NIGHT_BRIGHTNESS_SETTING,
+    LIGHTS_NIGHT_MODE_SETTING,
+    FLAG_BOX_CRITICAL_ONLY_SETTING,
+    FLAG_BOX_GEAR_SETTING,
+    FLAG_BOX_LOW_FUEL_LAPS_SETTING,
+    FLAG_BOX_OIL_TEMP_SETTING,
+    FLAG_BOX_WATER_TEMP_SETTING,
+  ];
+  const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
+  return [...global, ...perMatrix].map(propertyName);
+}

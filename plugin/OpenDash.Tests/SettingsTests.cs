@@ -1,6 +1,8 @@
 // SettingsTests.cs: defaults, normalisation of what comes back from disk, and duplicate detection.
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -398,6 +400,48 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_mask_of_any_length_cycles_through_exactly_the_pages_it_leaves_on()
+        {
+            // Zone B cycles twenty-one, which is where a mask can be any of two million shapes. What
+            // has to hold for every one of them is that the cycle visits the enabled pages, in order,
+            // and returns to where it started after as many presses as there are pages enabled.
+            var masks = new[]
+            {
+                Contract.DefaultZoneMask(1),                        // everything
+                1 << 4,                                             // one page
+                (1 << 0) | (1 << 4) | (1 << 14),                    // three, spread out
+                (1 << 19) | (1 << 20),                              // two, at the far end
+                0x155555,                                           // every other page
+                (1 << 0) | (1 << 20),                               // the first and the last
+            };
+
+            foreach (var mask in masks)
+            {
+                var settings = new OpenDashSettings();
+                settings.Face(Face).Masks = new[] { Contract.DefaultZoneMask(0), mask, Contract.DefaultZoneMask(2), Contract.DefaultZoneMask(3) };
+                settings.Normalise();
+                Assert.Equal(mask, settings.FaceZoneMask(Face, "B"));
+
+                var expected = new List<int>();
+                for (var page = 0; page < Modules.Count; page++)
+                {
+                    if ((mask & (1 << page)) != 0) expected.Add(page);
+                }
+
+                settings.OpenOnStartPages();
+                var first = settings.FaceZone(Face, "B");
+                Assert.Contains(first, expected);
+
+                // One press per enabled page comes back to the start, having seen each one once.
+                var seen = new List<int> { first };
+                for (var press = 1; press < expected.Count; press++) seen.Add(settings.CycleFaceZone(Face, "B"));
+                Assert.Equal(expected.Count, seen.Distinct().Count());
+                Assert.Equal(expected.OrderBy(p => p), seen.OrderBy(p => p));
+                Assert.Equal(first, settings.CycleFaceZone(Face, "B"));
+            }
+        }
+
+        [Fact]
         public void A_zone_with_one_page_left_stays_where_it_is()
         {
             var settings = new OpenDashSettings();
@@ -419,6 +463,61 @@ namespace OpenDashPlugin.Tests
             // they happened to leave it.
             settings.OpenOnStartPages();
             Assert.Equal(6, settings.FaceZone(Face, "B"));
+        }
+
+        // --- Listing the class a driver is racing in ---------------------------------------------
+
+        [Fact]
+        public void The_class_filter_is_off_and_is_per_zone()
+        {
+            var settings = new OpenDashSettings();
+            foreach (var letter in Contract.FaceZoneLetters) Assert.False(settings.FaceZoneIsClassOnly(Face, letter));
+
+            // The point of it being per zone: zone B lists the race, zone C lists the class.
+            settings.SetFaceZoneClassOnly(Face, "C", true);
+            Assert.True(settings.FaceZoneIsClassOnly(Face, "C"));
+            Assert.False(settings.FaceZoneIsClassOnly(Face, "B"));
+        }
+
+        [Fact]
+        public void The_class_filter_is_per_face_as_well_as_per_zone()
+        {
+            // It lives in FaceSettings like every other zone setting, so a rig with a face on the wheel
+            // and one beside it filters them apart rather than filtering both at once.
+            var rim = Contract.FaceSizes[3];
+            var settings = new OpenDashSettings();
+            settings.SetFaceZoneClassOnly(Face, "C", true);
+            Assert.True(settings.FaceZoneIsClassOnly(Face, "C"));
+            Assert.False(settings.FaceZoneIsClassOnly(rim, "C"));
+        }
+
+        [Fact]
+        public void The_class_filter_survives_a_save_and_a_short_array()
+        {
+            var settings = new OpenDashSettings();
+            settings.Face(Face).ClassOnly = new[] { true };
+            settings.Normalise();
+            Assert.Equal(Contract.FaceZoneLetters.Length, settings.Face(Face).ClassOnly.Length);
+            Assert.True(settings.FaceZoneIsClassOnly(Face, "A"));
+            Assert.False(settings.FaceZoneIsClassOnly(Face, "D"));
+
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.True(copy.FaceZoneIsClassOnly(Face, "A"));
+            // A clone, not the same array: editing one settings object must not edit the other.
+            copy.SetFaceZoneClassOnly(Face, "A", false);
+            Assert.True(settings.FaceZoneIsClassOnly(Face, "A"));
+        }
+
+        [Fact]
+        public void The_panel_offers_the_class_filter_only_where_a_page_would_change()
+        {
+            // Zones B and C hold the leaderboard and the relative. Zone A lists nobody, and band D's
+            // relative page is three gaps rather than a list.
+            Assert.True(FacePages.OffersClassFilter("B"));
+            Assert.True(FacePages.OffersClassFilter("C"));
+            Assert.False(FacePages.OffersClassFilter("A"));
+            Assert.False(FacePages.OffersClassFilter("D"));
         }
 
         [Fact]
@@ -566,6 +665,259 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
             Assert.False(settings.Faces.ContainsKey("Face1x1"));
             Assert.Equal(Contract.FaceSizes.Count, settings.Faces.Count);
+        }
+
+        [Fact]
+        public void A_rig_of_two_faces_a_pit_wall_and_a_companion_round_trips()
+        {
+            // SimHub persists the settings with Json.NET; what is asserted here is the shape rather than
+            // that serialiser, namely that every part of a rig is a plain settable member and comes back
+            // as it went in. A second face is the case that matters: the two carry different zones.
+            var rim = Contract.FaceSizes[3];
+            var settings = new OpenDashSettings
+            {
+                Screens = new List<string> { Contract.FacePrefix(Face), Contract.FacePrefix(rim), Contract.CompanionPrefix, Contract.PitWallPrefix },
+            };
+            settings.Normalise();
+            settings.SetFaceZoneStart(Face, "B", 4);
+            settings.SetFaceZoneStart(rim, "B", 9);
+            settings.SetBarField(rim, "Left1", 3);
+            settings.SetModule(6, true);
+            settings.SetZone("A", 3);
+            settings.WebViewUrl = "https://garage61.net";
+
+            var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
+            read.Normalise();
+
+            Assert.Equal(settings.Screens, read.Screens);
+            Assert.Equal(4, read.FaceZoneStart(Face, "B"));
+            Assert.Equal(9, read.FaceZoneStart(rim, "B"));
+            Assert.Equal(3, read.BarField(rim, "Left1"));
+            Assert.True(read.Module(6));
+            Assert.Equal(3, read.Zone("A"));
+            Assert.Equal("https://garage61.net", read.WebViewUrl);
+            // And the rig it names is the rig it keeps: a face outside it is not added back by a save.
+            Assert.Equal(2, read.Screens.Count(Contract.IsKnownFacePrefix));
+        }
+
+        [Fact]
+        public void Normalise_fills_in_a_screen_it_has_not_seen()
+        {
+            // What happens when a screen is added: the rig names it before anything has configured it,
+            // and it has to start from the defaults rather than from nothing.
+            var settings = new OpenDashSettings { Screens = new List<string> { Contract.FacePrefix(Face) } };
+            settings.Normalise();
+            Assert.Equal(new[] { Contract.FacePrefix(Face) }, settings.Faces.Keys);
+
+            var rim = Contract.FaceSizes[3];
+            settings.Screens.Add(Contract.FacePrefix(rim));
+            settings.Normalise();
+            Assert.True(settings.Faces.ContainsKey(Contract.FacePrefix(rim)));
+            Assert.Equal(Contract.DefaultFaceZones(), settings.Face(rim).Zones);
+            Assert.Equal(Contract.DefaultFaceZoneMasks(), settings.Face(rim).Masks);
+            Assert.Equal(Contract.DefaultQuickGlance, settings.Face(rim).QuickGlance);
+        }
+
+        [Fact]
+        public void A_screen_no_version_ships_is_dropped_from_the_rig()
+        {
+            // The same reason a face group at an unshipped size is dropped: a settings file can come
+            // from another version, and a screen nobody has would attach a group nothing reads.
+            var settings = new OpenDashSettings
+            {
+                Screens = new List<string> { Contract.PitWallPrefix, "Face1x1", null, Contract.PitWallPrefix },
+            };
+            settings.Normalise();
+            Assert.Equal(new[] { Contract.PitWallPrefix }, settings.Screens);
+        }
+
+        // --- The lights ------------------------------------------------------------------------
+        //
+        // A settings file is whatever came back from disk: written by an older build, hand-edited, or
+        // truncated. Normalise() is the only thing between that and a profile reading it, so the tests
+        // here are all about what a bad file turns into.
+
+        [Fact]
+        public void Normalise_repairs_per_matrix_arrays_that_came_back_short()
+        {
+            var settings = new OpenDashSettings
+            {
+                FlagBoxRest = new[] { "dark" },
+                FlagBoxFlags = new[] { false },
+                FlagBoxSide = new[] { "left" },
+            };
+            settings.Normalise();
+
+            // What the file named is kept; what it did not name falls back to the default for that
+            // matrix rather than to the default for matrix 1.
+            Assert.Equal(4, settings.FlagBoxRest.Length);
+            Assert.Equal("dark", settings.MatrixRest(1));
+            Assert.Equal("dark", settings.MatrixRest(4));
+            Assert.False(settings.MatrixFlags(1));
+            Assert.False(settings.MatrixFlags(2));
+            Assert.Equal("left", settings.MatrixSide(1));
+            Assert.Equal("both", settings.MatrixSide(2));
+        }
+
+        [Fact]
+        public void Normalise_replaces_a_per_matrix_value_that_is_not_one_of_the_choices()
+        {
+            // A hand-edited file, or one written by a build that had a choice this one dropped.
+            var settings = new OpenDashSettings
+            {
+                FlagBoxRest = new[] { "sideways", "gear", null, "dark" },
+                FlagBoxSide = new[] { "up", "right", "both", null },
+            };
+            settings.Normalise();
+
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.Equal("gear", settings.MatrixRest(2));
+            Assert.Equal("dark", settings.MatrixRest(3));
+            Assert.Equal("both", settings.MatrixSide(1));
+            Assert.Equal("right", settings.MatrixSide(2));
+            Assert.Equal("both", settings.MatrixSide(4));
+        }
+
+        [Fact]
+        public void Normalise_survives_per_matrix_arrays_that_are_null_or_too_long()
+        {
+            var settings = new OpenDashSettings
+            {
+                FlagBoxRest = null,
+                FlagBoxSpotter = new[] { true, true, true, true, true, true },
+            };
+            settings.Normalise();
+
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.Equal("dark", settings.MatrixRest(2));
+            Assert.Equal(4, settings.FlagBoxSpotter.Length);
+            Assert.True(settings.MatrixSpotter(4));
+        }
+
+        [Fact]
+        public void A_matrix_outside_one_to_four_reads_as_its_default_rather_than_throwing()
+        {
+            // Nothing should ask, but a profile is a file and the panel is a UI; neither is worth
+            // crashing SimHub's settings page over.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            Assert.Equal("both", settings.MatrixSide(0));
+            Assert.Equal("both", settings.MatrixSide(9));
+            Assert.False(settings.MatrixFlags(9));
+        }
+
+        [Fact]
+        public void Normalise_clamps_the_brightnesses_and_repairs_the_thresholds()
+        {
+            var settings = new OpenDashSettings
+            {
+                LightsBrightness = 250,
+                LightsNightBrightness = -4,
+                FlagBoxLowFuelLaps = -1,
+                FlagBoxOilTemp = -20,
+            };
+            settings.Normalise();
+
+            Assert.Equal(100, settings.LightsBrightness);
+            Assert.Equal(0, settings.LightsNightBrightness);
+            Assert.Equal(Contract.DefaultFlagBoxLowFuelLaps, settings.FlagBoxLowFuelLaps);
+            // Zero, not a Celsius number: zero means "not set" and lets the profile pick the default
+            // for whichever unit SimHub is in.
+            Assert.Equal(0, settings.FlagBoxOilTemp);
+        }
+
+        [Fact]
+        public void The_defaults_are_a_working_single_box_setup()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.True(settings.MatrixFlags(1));
+            Assert.True(settings.MatrixSpotter(1));
+            Assert.True(settings.MatrixWarnings(1));
+            foreach (var matrix in new[] { 2, 3, 4 })
+            {
+                Assert.Equal("dark", settings.MatrixRest(matrix));
+                Assert.False(settings.MatrixFlags(matrix));
+                Assert.False(settings.MatrixSpotter(matrix));
+                Assert.False(settings.MatrixWarnings(matrix));
+            }
+            Assert.Equal(100, settings.LightsBrightness);
+            Assert.True(settings.LightsNightBrightness < settings.LightsBrightness);
+            Assert.False(settings.LightsNightMode);
+            Assert.False(settings.FlagBoxCriticalOnly);
+            Assert.True(settings.FlagBoxGear);
+        }
+
+        [Fact]
+        public void A_settings_file_written_before_the_lights_existed_comes_back_with_them_defaulted()
+        {
+            // Every rc.1 user's file is one of these. It must not come back with a dark matrix 1.
+            var json = "{\"ShiftLights\":false,\"PositionMode\":\"class\"}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            Assert.False(settings.ShiftLights);
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.True(settings.MatrixFlags(1));
+            Assert.Equal(100, settings.LightsBrightness);
+        }
+
+        [Fact]
+        public void The_lights_are_declared_whatever_the_rig_is()
+        {
+            // Unlike a screen the rig has not got. There is nothing to detect -- openDash does not
+            // install the profile (ADR 0013) -- and it is a fixed handful of names.
+            var settings = new OpenDashSettings { Screens = new List<string>() };
+            settings.Normalise();
+            var declared = settings.DeclaredProperties().ToList();
+            foreach (var name in Contract.LightsPropertyNames()) Assert.Contains(name, declared);
+        }
+
+        [Fact]
+        public void The_declared_properties_grow_and_shrink_with_the_rig()
+        {
+            // Eight face sizes times twenty-one properties is what the plugin used to attach whatever
+            // the rig was. What it attaches now is the four modes and the twelve slots, which every
+            // screen shares, and one group per screen the settings hold.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
+            var shared = Contract.SharedPropertyNames().Count();
+            Assert.Equal(16, shared);
+            // The lights are declared whatever the rig is: openDash does not install the flag box
+            // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
+            // rather than the hundred and thirty-six that made the screens worth narrowing.
+            var lights = Contract.LightsPropertyNames().Count();
+
+            var settings = new OpenDashSettings { Screens = new List<string>() };
+            settings.Normalise();
+            Assert.Equal(Contract.SharedPropertyNames().Concat(Contract.LightsPropertyNames()), settings.DeclaredProperties());
+
+            settings.Screens.Add(Contract.FacePrefix(Face));
+            settings.Screens.Add(Contract.FacePrefix(Contract.FaceSizes[3]));
+            settings.Screens.Add(Contract.CompanionPrefix);
+            settings.Screens.Add(Contract.PitWallPrefix);
+            settings.Normalise();
+            var names = settings.DeclaredProperties().ToList();
+            Assert.Equal(shared + 2 * perFace + Modules.Count + 6 + lights, names.Count);
+            Assert.Equal(names.Count, names.Distinct().Count());
+            Assert.Contains("Face1920x480ZoneA", names);
+            Assert.Contains("Face850x480ZoneA", names);
+            Assert.Contains("CompanionModule21", names);
+            Assert.Contains("WebViewUrl", names);
+            // And the six faces the rig has not got are not declared at all.
+            Assert.DoesNotContain("Face1280x480ZoneA", names);
+
+            settings.Screens.Remove(Contract.FacePrefix(Contract.FaceSizes[3]));
+            settings.Normalise();
+            Assert.Equal(shared + perFace + Modules.Count + 6 + lights, settings.DeclaredProperties().Count());
+
+            // A settings file that has never named a rig reads as every screen, which is what the plugin
+            // attached before a rig could be named at all.
+            var old = new OpenDashSettings();
+            Assert.Equal(Contract.PropertyNames(), old.DeclaredProperties());
+            old.Normalise();
+            Assert.Equal(Contract.ScreenPrefixes(), old.Screens);
         }
 
         [Fact]

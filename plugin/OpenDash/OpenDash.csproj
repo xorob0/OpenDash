@@ -78,10 +78,10 @@
     <EmbeddedResource Include="Resources/*.simhubdash" Exclude="Resources/openDash slots *.simhubdash" />
   </ItemGroup>
 
-  <!-- The LED profiles, which are NOT installed the way the packages are. ADR 0013: a dashboard is a file in a folder
-       and the worst case is a dashboard somebody can close, but a device profile changes what hardware they own does.
-       So these are embedded, offered in the panel, and written out only when a person asks (LedProfiles.Core.cs).
-       The dash build writes build/*.ledsprofile and scripts/package.sh copies them in beside the packages. -->
+  <!-- The flag box profile. Embedded the same way and extracted at runtime (FlagBoxProfile.cs), but
+       not installed: ADR 0013 decided the plugin writes the file where the user can find it and never
+       into SimHub's own ArduinoRGBMatrixSettings.json, which SimHub rewrites underneath us. Allowed to
+       be absent for the same reason the packages are: the plugin loads without it and says so. -->
   <ItemGroup>
     <EmbeddedResource Include="Resources/*.ledsprofile" />
   </ItemGroup>

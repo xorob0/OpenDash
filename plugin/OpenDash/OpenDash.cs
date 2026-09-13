@@ -35,6 +35,9 @@ namespace OpenDashPlugin
         public DashboardInstaller Installer =>
             installer ?? (installer = new DashboardInstaller(new SettingsFolderRecord(() => Settings)));
 
+        /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
+        public FlagBoxResult FlagBox { get; private set; }
+
         public string LeftMenuTitle => "OpenDash";
 
         public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create(this));
@@ -76,11 +79,46 @@ namespace OpenDashPlugin
             {
                 Log.Error("Dashboard installation failed", ex);
             }
+            try
+            {
+                // Extracted, not installed: ADR 0013. The user imports it, and the panel says so.
+                FlagBox = FlagBoxProfile.Extract(Installer.SimHubRoot, typeof(OpenDash).Assembly, new SimHubInstallLog());
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Writing the flag box profile failed", ex);
+            }
             AttachProperties();
             AttachActions(pluginManager);
             Log.Info("Dashboard status: " + Installer.Status);
+            Log.Info(FlagBoxProfile.Summary(FlagBox));
             // The installer records what it wrote into each folder but never saves; this is the safe moment.
             SaveSettings();
+        }
+
+        /// <summary>The lights, which no dashboard reads and the flag box profile does. A profile the user
+        /// has not imported costs nothing here: a property nobody reads is one delegate.</summary>
+        private void AttachLightsProperties()
+        {
+            this.AttachDelegate(Contract.LightsBrightness, () => Settings.LightsBrightness);
+            this.AttachDelegate(Contract.LightsNightBrightness, () => Settings.LightsNightBrightness);
+            this.AttachDelegate(Contract.LightsNightMode, () => Settings.LightsNightMode);
+            this.AttachDelegate(Contract.FlagBoxCriticalOnly, () => Settings.FlagBoxCriticalOnly);
+            this.AttachDelegate(Contract.FlagBoxGear, () => Settings.FlagBoxGear);
+            this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
+            // Zero means "not set": the profile then applies its own default, which is per unit, so a
+            // driver in Fahrenheit who has never opened this page does not get a Celsius number.
+            this.AttachDelegate(Contract.FlagBoxOilTemp, () => Settings.FlagBoxOilTemp == 0 ? (int?)null : Settings.FlagBoxOilTemp);
+            this.AttachDelegate(Contract.FlagBoxWaterTemp, () => Settings.FlagBoxWaterTemp == 0 ? (int?)null : Settings.FlagBoxWaterTemp);
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                var m = matrix;
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Rest"), () => Settings.MatrixRest(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Flags"), () => Settings.MatrixFlags(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixSpotter(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
+            }
         }
 
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
@@ -153,10 +191,24 @@ namespace OpenDashPlugin
             Settings.Normalise();
         }
 
-        /// <summary>One delegate per setting. SimHub names them <class name>.<name>, hence OpenDash.ShiftLights.</summary>
+        /// <summary>
+        /// One delegate per setting. SimHub names them <class name>.<name>, hence OpenDash.ShiftLights.
+        /// </summary>
+        /// <remarks>
+        /// The shared settings first, then one group per screen the rig has, in the order
+        /// OpenDashSettings.DeclaredProperties() lists them: a rig and not the catalogue, because eight
+        /// faces of twenty-one properties is a hundred and sixty-eight names for a rig of two screens.
+        ///
+        /// A screen added while SimHub is running therefore has no properties until it is restarted.
+        /// That is not a new limitation: SimHub reads its dashboard list once at startup too, so the
+        /// screen a user has just added is not one they can open in this session either. Until then its
+        /// bindings fall back to the defaults they carry, which is what a package does with no plugin at
+        /// all.
+        /// </remarks>
         private void AttachProperties()
         {
             this.AttachDelegate(Contract.ShiftLights, () => Settings.ShiftLights);
+            AttachLightsProperties();
             this.AttachDelegate(Contract.PositionMode, () => Settings.PositionMode);
             this.AttachDelegate(Contract.DeltaReference, () => Settings.DeltaReference);
             this.AttachDelegate(Contract.SessionProgress, () => Settings.SessionProgress);
@@ -165,10 +217,7 @@ namespace OpenDashPlugin
                 var captured = slot;
                 this.AttachDelegate(Contract.SlotProperty(captured), () => Settings.Slot(captured));
             }
-            // One group per face that ships, so that a rig with two screens configures them apart. A
-            // property for a face nobody has installed costs one integer and is never read, which is
-            // cheaper than a face that cannot be configured until SimHub is restarted.
-            foreach (var face in Contract.FaceSizes)
+            foreach (var face in Settings.RigFaces())
             {
                 var capturedFace = face;
                 foreach (var letter in Contract.FaceZoneLetters)
@@ -177,6 +226,7 @@ namespace OpenDashPlugin
                     this.AttachDelegate(Contract.ZonePageProperty(capturedFace, captured), () => Settings.FaceZone(capturedFace, captured));
                     this.AttachDelegate(Contract.ZoneMaskProperty(capturedFace, captured), () => Settings.FaceZoneMask(capturedFace, captured));
                     this.AttachDelegate(Contract.ZoneStartProperty(capturedFace, captured), () => Settings.FaceZoneStart(capturedFace, captured));
+                    this.AttachDelegate(Contract.ZoneClassOnlyProperty(capturedFace, captured), () => Settings.FaceZoneIsClassOnly(capturedFace, captured));
                 }
                 foreach (var slot in Contract.BarSlots)
                 {
@@ -185,18 +235,24 @@ namespace OpenDashPlugin
                 }
                 this.AttachDelegate(Contract.QuickGlanceProperty(capturedFace), () => Settings.QuickGlanceOf(capturedFace));
             }
-            for (var module = 1; module <= Modules.Count; module++)
+            if (Settings.HasScreen(Contract.CompanionPrefix))
             {
-                var captured = module;
-                this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+                for (var module = 1; module <= Modules.Count; module++)
+                {
+                    var captured = module;
+                    this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+                }
             }
-            foreach (var letter in Contract.PitWallZoneLetters)
+            if (Settings.HasScreen(Contract.PitWallPrefix))
             {
-                var captured = letter;
-                this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
+                foreach (var letter in Contract.PitWallZoneLetters)
+                {
+                    var captured = letter;
+                    this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
+                }
+                this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
+                this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
             }
-            this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
-            this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
         }
 
         /// <summary>

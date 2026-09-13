@@ -26,9 +26,8 @@ contributor or an agent should read first, and the one that has to be amended wh
 
 OpenDash is an open-source dashboard package for [SimHub](https://www.simhubdash.com/),
 released under the MIT licence. It consists of fourteen dashboards covering three kinds of
-screen and the LED profiles that light the hardware around them, together with a SimHub plugin
-that installs them and exposes the settings which decide what they show. It is free, and
-bounties or donations may follow later.
+screen, together with a SimHub plugin that installs them and exposes the settings which decide
+what they show. It is free, and bounties or donations may follow later.
 
 The dashboards are generated from TypeScript and design tokens rather than drawn in SimHub's
 editor. A generator emits the `.djson` scene graph, the build packs it into a `.simhubdash`, and
@@ -42,7 +41,6 @@ and [ADR 0002](decisions/0002-djson-generated-from-source.md); the pipeline is i
 | Telemetry | SimHub; the user supplies their own install |
 | Supported sim | iRacing |
 | Screens | ten dash faces, two companions, two pit walls |
-| Lights | LED profiles for the hardware beside the screen; the 8x8 flag box first |
 | Plugin | .NET Framework 4.8, code-only WPF, builds on Linux |
 | Licence | MIT |
 
@@ -53,8 +51,8 @@ until somebody has actually driven them. Concerning that audit, see XOR-51.
 
 ## What ships
 
-Three kinds of screen and the lights beside them, built from one set of parts and installed by
-one plugin.
+Three kinds of screen, built from one set of parts and installed by one plugin, and one profile
+for a box of lights that is not a screen at all.
 
 ### The face
 
@@ -132,29 +130,21 @@ driver's own lap beside it, and data zones whose contents are plugin settings.
 full, including every case where a module is off by default because iRacing publishes none of
 its data.
 
-### The lights
+### The flag box
 
-The hardware around the screen: an 8x8 matrix flag box, an RPM strip, a brow strip above the
-monitor, the LEDs in a wheel or button box, and ambient lights behind the rig. SimHub drives all of
-them out of profile files, and openDash generates those profiles the same way it generates the
-scene graph — from TypeScript and `design/tokens.json`, so that a flag is the same colour on the
-box as it is on the face, and a shift light comes on at the same instant on the strip as it does on
-the rev bar.
+An 8x8 LED matrix in a printed box, beside the screen rather than on it, showing the flag that is
+out, the gear, the pit state, a car alongside and the warnings a driver would otherwise miss —
+each as a 64-pixel picture, ranked in the same order the face ranks them and coloured from the
+same `purpose.flag.*` tokens.
 
-[ADR 0013](decisions/0013-lighting-hardware.md) is the record, and it settles three things worth
-repeating here. A profile is **build output**, so nobody edits one in SimHub's LED editor and
-brings it back. A profile is **never written to a device without being asked**: the choice is per
-device family, off by default, remembered and reversible, because a profile changes what hardware
-someone owns does. And a profile is a **complete product on its own**, every property read wrapped
-in `isnull()` with its default, so a user who imports one without the plugin gets the default
-behaviour rather than an unlit strip.
-
-[research/simhub-leds-format.md](research/simhub-leds-format.md) is the format, verified against
-SimHub 9.12.6.
-
-The flag box ships first, because it is the one whose content openDash already owns: the flag
-colours are in `design/tokens.json` and the alert catalogue is one ordered list for the face, the
-companion and the pit wall. A 64-pixel box is that list with a different renderer.
+One profile ships, `openDash Flag box.ledsprofile`, built by `bun run build` like everything else
+and embedded in the plugin like everything else. It is the one artefact **the plugin does not
+install**: SimHub keeps matrix profiles inside a settings file it rewrites itself, and painting
+hardware somebody owns is not something a dashboard should do without being asked. The plugin
+extracts the file and the lights page says what to import.
+[ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning, [flag-box.md](flag-box.md) is
+the guide, and the rest of the LED families — strips, brows, wheel buttons, ambient lighting — are
+deliberately not claimed.
 
 ## The plugin
 
@@ -202,16 +192,24 @@ The line moves if a derivation is shared widely enough to need a name, or if som
 needs memory between frames. The first is a JavaScript binding before it is a plugin, because the
 standalone package is the property worth defending.
 
-**Theming and colour customisation.** OpenDash ships one opinionated look, resolved at build time
-into literal values in the `.djson`. Nothing a user can change reaches a colour, a typeface or a
-size. How far personalisation could ever reach into a generated package is
-[ADR 0011](decisions/0011-personalisation.md), and it has to be written before any of it is built,
-because the one line the product holds is that two states a driver cannot tell apart is a bug
-whoever chose the colours.
+**Personalisation that changes the layout.** Colour is no longer refused:
+[ADR 0011](decisions/0011-personalisation.md) settled how far personalisation reaches, and the
+colours, the frames and the idle screen are settings read through bindings like every other setting.
+What stays refused is anything a binding cannot reach without giving up the guarantee that a glyph
+is never clipped. A typeface, a font size, a spacing and a position are consumed by a layout
+decision in TypeScript, and a value that arrives after the build cannot re-run it. Those are build
+inputs, and a package built from a user's own tokens is XOR-81.
+
+The one line the product holds underneath all of it is unchanged: two states a driver cannot tell
+apart is a bug whoever chose the colours. A user may choose any colours they like, and OpenDash
+says so when a choice collides rather than quietly shipping it.
 
 **Idle and pit screens.** Every screen already declares `IdleScreen`, so SimHub shows the racing
 face with no data in it between sessions, which is arguably worse than SimHub's own default. A
-screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan.
+screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan. What
+a user may then do to it is no longer the open question:
+[ADR 0011](decisions/0011-personalisation.md) puts the idle screen in the runtime bucket, so XOR-53
+waits on the screen existing rather than on a record.
 
 **Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
 
@@ -232,7 +230,7 @@ audited.
 
 ## What the MVP refused and what reversed it
 
-The MVP scope listed nine things as explicitly out of scope. Six of them have since been reversed,
+The MVP scope listed nine things as explicitly out of scope. Seven of them have since been reversed,
 and each reversal is recorded here so that a reader of the old document is not misled.
 
 | The MVP refused | Reversed by | What is true now |
@@ -243,13 +241,15 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Phone and tablet layouts | XOR-8 | Two companion packages ship |
 | Page navigation | XOR-8, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
 | Network update checks | XOR-29, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
+| Theming and colour customisation | XOR-73, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
 
-Three of the nine still stand. Each is restated above with the record that would have to move it:
+Two of the nine still stand, and ADR 0011 left a narrower line behind the one it moved. Each is
+restated above with the record that would have to move it:
 
 | Still refused | What would have to happen first |
 |---|---|
-| Theming and colour customisation | ADR 0011, and this line moving with it. The Personalisation project is unmergeable until it does |
-| Idle and pit screens | XOR-62 and XOR-53, behind the same record |
+| Personalisation that changes the layout | XOR-81: a package built from the user's own tokens. Nothing at runtime re-measures a text box |
+| Idle and pit screens | XOR-62. The screen has to exist before XOR-53 can hand it to the user |
 | Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
@@ -262,24 +262,22 @@ The stream overlay is neither built nor refused. Nobody has asked for it.
 
 A change is done when `bun run check` passes, when `dotnet test plugin/OpenDash.Tests` passes if
 the plugin changed, when the snapshot diff has been read rather than merely refreshed, and when
-whatever the change draws has been seen on the Windows VM in real SimHub. The last condition is
+whatever the change draws has been seen on the Windows VM in real SimHub. The flag box is the one
+exception, and it is a stated one: no 8x8 panel is plugged into the VM and CI owns no hardware, so
+a profile is done when it loads in real SimHub and its glyphs were read in SimHub's own matrix
+preview. That is weaker than seeing a panel light, which is why it is written here rather than
+assumed. The last condition is
 the one that catches what the tests cannot: WPF clips silently, and a box measured from the
 wrong face or from a sample narrower than the runtime value loses glyphs without failing
 anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
 [testing-vm.md](testing-vm.md) explains the VM.
 
-**For a change that lights hardware, that last condition cannot be met and something weaker takes
-its place**, because nobody in CI owns an 8x8 matrix or an RPM strip. A generated profile is done
-when it loads through SimHub's own deserializer without becoming an `UnknownContainer`, when the
-preview renderer draws what it should draw, and when the pull request says plainly that the pixels
-were not seen lit. That is a weaker bar than the screens are held to, and it is stated here rather
-than left to be discovered, so that a reviewer knows which of the two they are reading.
-
 ## Related documents
 
 [architecture.md](architecture.md) is how source becomes a `.simhubdash` and how a setting
 reaches a running dashboard. [second-screens.md](second-screens.md) is the companion and the pit
-wall. [decisions/](decisions/) holds the records that this document summarises, and a record
+wall. [flag-box.md](flag-box.md) is the 8x8 matrix, and [design/flag-box.md](design/flag-box.md)
+is what each of its sixty-four-pixel pictures means. [decisions/](decisions/) holds the records that this document summarises, and a record
 wins over this summary wherever the two disagree. [research/](research/) holds the format notes
 verified against SimHub 9.12.6, which are the place to check before guessing at a property name.
 [scope-mvp.md](scope-mvp.md) is closed, and is of historical interest only.

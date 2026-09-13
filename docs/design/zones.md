@@ -254,20 +254,92 @@ Energy, Damage and Track rivals are off by default because iRacing publishes non
 [second-screens.md](../second-screens.md) says which, and why.
 
 Each is drawn at all four shapes on the catalogue artboard — eighty-four drawings. **That is the
-shedding order**, and it is data rather than mechanism: XOR-104 reads it, and until it is
-transcribed here page by page, the artboard is the reference.
+shedding order**, and it is data rather than mechanism. The table below is those drawings read off
+page by page; `packages/dash/src/modules/shedding.ts` is the same table in code, and
+`shedding.test.ts` fails when the two disagree.
 
-Two worked examples, so the shape of the table is clear:
+Two worked examples first, because they are the two that show why it cannot be derived:
 
 - **Lap times.** `wide`: last lap, session best, your best, laps, estimated, delta to your best —
-  six. `grid`: drops laps and estimated — four. `tall narrow`: last lap and session best — two.
-  `tall`: all six again, stacked.
-- **Relative.** `wide`: position, number, code, licence, rating, gap — six columns, six rows.
-  `grid`: drops the rating. `tall narrow`: position, code and gap only, but eight rows. `tall`:
-  every column and nine rows.
+  six. `grid`: drops laps and estimated — four. So what goes is neither the tail of the row nor
+  the narrowest field; the delta outlives both of the values drawn before it. `tall narrow`: last
+  lap and session best — two. `tall`: all six again, stacked.
+- **Relative.** `wide`: position, number, code, class, gap. `grid`: the same five. `tall narrow`:
+  position, code and gap only, and eight rows rather than six. The number and the class chip go
+  from between two columns that stay, which no rule about prefixes produces.
 
 The pattern holds generally: a narrow zone loses columns before it loses rows, and a tall one
 buys rows before it buys columns.
+
+### The table
+
+Field and column ids, as the module names them. The `wide` row is the fullest form and keeps
+everything the page carries, the companion artboard's fields included, which is why a companion
+page is not changed by any of this. The declaration is read before the box is measured, and what
+does not fit still sheds afterwards: a declared set is a design decision and a box is a fact.
+
+| № | Page | `wide` | `grid` | `tall narrow` | `tall` |
+|---|---|---|---|---|---|
+| 1 | Lap times | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` |
+| 2 | Delta | `delta` | `delta` | `delta` | `delta` |
+| 3 | Sectors | `yourBest` · `last` · `sessionBest` | `yourBest` · `last` · `sessionBest` | `yourBest` · `last` | `last` · `sessionBest` |
+| 4 | Speedo | `speed` · `rpm` · `redline` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
+| 5 | Fuel | `level` · `time` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` | `level` · `time` · `toAdd` · `average` | `level` · `time` · `toAdd` · `average` | `level` · `time` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` |
+| 8 | Pit view | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` |
+| 9 | Car settings | `car` · `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `car` · `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `car` · `tc` · `abs` · `bb` | `car` · `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` |
+| 11 | Session | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` | `position` · `class` · `lap` · `timeLeft` | `position` · `class` · `lap` · `timeLeft` | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` |
+| 14 | Leaderboard | `pos` · `num` · `name` · `class` · `gap` · `best` · `last` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
+| 15 | Relative | `pos` · `num` · `name` · `class` · `gap` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
+| 16 | Opponents | `ahead.gap` · `ahead.name` · `ahead.num` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.num` · `behind.class` · `behind.detail` | `ahead.gap` · `ahead.name` · `ahead.num` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.num` · `behind.class` · `behind.detail` | `ahead.gap` · `ahead.name` · `behind.gap` · `behind.name` | `ahead.gap` · `ahead.name` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.class` · `behind.detail` |
+| 18 | Stint | `stintLaps` · `stintTime` · `completed` · `driver` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stintTime` · `completed` · `driver` · `stops` · `lastStop` |
+
+Pages with nothing to shed, and why:
+
+- **Energy** (`energy`) — one line of prose: iRacing publishes no virtual energy.
+- **Tyres** (`tyres`) — four corners cut from the box; rule 18.
+- **Inputs** (`inputs`) — three traces and their bars, cut from the box; rule 18.
+- **Radar** (`radar`) — the cars beside you, cut from the box; rule 18.
+- **Track** (`track`) — the map, cut from the box; rule 18.
+- **Gear** (`gear`) — the gear, cut from the box; rule 18.
+- **Lap history** (`lapHistory`) — three columns and as many rows as fit; there is no fourth to drop.
+- **Damage** (`damage`) — one line of prose: iRacing publishes no damage.
+- **Track rivals** (`trackRivals`) — one line of prose: SimHub times sectors, not segments.
+
+A drawing is cut from its box rather than shed (rule 18), and a page that says it has no data is
+one line of prose with nothing in it to drop.
+
+What a rank does with a field that is **not there at all** is a different question from this one,
+and the answer is in [§11](#11-a-field-that-is-not-there).
+
+### The class filter
+
+**A zone may list the player's own class rather than the whole field.** It is the one option the
+leaderboard and the relative need that the companion never gave them, and it is a setting of the
+zone rather than one switch for the whole face, because the point of it is zone B listing the race
+while zone C lists the class a driver is actually racing in. It sits in the face's own group with
+every other zone setting, so a rig with a face on the wheel and one beside it filters them apart.
+
+It is **not** `PositionMode`. That setting is which number a position column shows; this one is who
+is in the list at all, and one class counted by overall position is a legitimate thing to ask for.
+What `PositionMode: class` currently does to a list it did not reorder is XOR-161.
+
+Two pages read it: the leaderboard and the relative. Zone A lists nobody. Band D's own relative
+page is three gaps rather than a list, so filtering it means asking for the car *ahead in class*
+rather than listing fewer of them — the same idea, a different change, and XOR-159. The panel
+offers the checkbox only where a page would change.
+
+### The counter
+
+**A zone's header counts its cycle, not its catalogue.** A zone with three pages enabled reads
+"2 / 3" and not "15 / 21": the mask is what decides how long the cycle is, so it is what the
+counter counts.
+
+The counter is drawn by the face rather than by the zone, for the same reason the letter is —
+zones B and C share one dashboard file where they are the same rectangle, and a screen in it cannot
+know whose mask is deciding its length. The arithmetic is in the expression, which is what
+[ADR 0009](../decisions/0009-does-the-plugin-compute.md) settled: a popcount is
+`truncate(mask / 2^i) % 2` summed over the catalogue, and the mask is a property that already
+exists. Without the plugin, the mask reads as its default and the counter says "n / 21".
 
 ---
 
@@ -318,8 +390,12 @@ One property per decision, all under the `OpenDash` prefix.
 | `ZoneA` … `ZoneD` | The page each zone is showing. A button advances it. |
 | `ZoneAPages` … `ZoneDPages` | A mask of which pages are enabled, which is what sets the cycle's length. |
 | `ZoneAStart` … `ZoneDStart` | The page the zone opens on. |
+| `ZoneAClassOnly` … `ZoneDClassOnly` | Whether the zone's list pages show the player's own class rather than the whole field. Off. |
 | `QuickGlance` | The zone and page held while a button is down, as one property rather than a pair per zone. |
 | `BarLeft1`, `BarLeft2`, `BarRight1`, `BarRight2` | The bar's four end fields. |
+
+Each name is written here without its prefix, for the shape. A screen owns its settings, so what is
+attached is `Face1920x480ZoneA` and `Face1280x400ZoneBClassOnly`: the same decision, once per face.
 
 The four modes the slot model already had — `ShiftLights`, `PositionMode`, `DeltaReference`,
 `SessionProgress` — are unchanged.
@@ -336,11 +412,12 @@ the bar with an end control at each side, zones B, A and C across the body at 24
 band D along the foot. Every part is at the size the artboard gives it, because "zone C" means
 nothing until you see where zone C is.
 
-Three things the artboard does not settle, and what the panel does about each:
+Four things the artboard does not settle, and what the panel does about each:
 
 | | |
 |---|---|
 | **The mask has no control drawn.** | It is the setting that decides how long a driver's cycle is, so it cannot simply be missing. The panel puts a second drop in each zone cell, reading "21 of 21 pages", opening a checkbox per page. Owed on the canvas. |
+| **Nor has the class filter.** | A checkbox under the start page in each zone cell, reading "My class only", and only in the cells where a page would change — zones B and C. Owed on the canvas alongside the mask. |
 | **An end of the bar is drawn as one control** reading "Race · lap", and an end carries two fields. | The control stays one box and opens a panel with a picker for each, rather than splitting into two boxes the artboard does not have. |
 | **Nothing says what happens to a zone sitting on a page that is then turned off.** | It snaps *forward* to the next enabled page, wrapping once — forward because a cycle runs forward, so the next press of the button carries on rather than repeats. Turning off a zone's last enabled page is refused: a zone with an empty cycle has nothing to draw. |
 
@@ -397,6 +474,31 @@ a mistake in this document.
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
 
 ---
+
+## 11. A field that is not there
+
+Shedding is what a page does when a field **will not fit**. A field can also be missing because
+there is nothing to draw, and the design asks for the opposite behaviour in the two cases that
+arise.
+
+**A field the sim does not publish is removed, and the rank closes over the hole.** The band says
+it plainly: nothing is spread to fill, the rank is packed and centred in what the corners leave.
+The bar's strip hides what the game does not expose, because a strip drawing an empty box for a
+setting iRacing has no property for is worse than a narrower strip. Band D's car page removes an
+oil pressure the sim does not wire rather than drawing 0.0, which is a reading and a wrong one.
+
+**A telltale that is unlit keeps its place and is drawn dim.** A lamp coming on is then a change of
+colour and not of layout: one that vanished and returned would move every lamp beside it at the
+moment the driver most needs to read them. DRS, push to pass and the spotter sit in the band's
+right-hand corner and behave this way.
+
+Both rules are deliberate and they contradict each other, which is why the choice is a mode of one
+component — `packages/dash/src/second/rank.ts`, `when: 'close'` or `when: 'dim'` — rather than a
+judgement taken once per page. A rank whose members can never go missing carries no binding at all.
+
+Closing over a hole happens **while the dashboard is running**, not while it is built: the item's
+`Left` is bound to the arithmetic that repacks and recentres whatever is left. `Left` is a bindable
+target, verified in [research/simhub-dash-format.md](../research/simhub-dash-format.md).
 
 ## Related
 

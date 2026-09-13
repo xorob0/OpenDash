@@ -16,6 +16,7 @@ bun run dev 'openDash Pit wall'               # another package
 bun run dev --scenario notc                   # another scenario
 bun run dev --no-build                        # when only the scenario changed
 bun run dev --keep                            # leave the emulator running and the VM claimed
+bun run dev --scenario flagbox                # walk every state the flag box draws
 ```
 
 ## The pieces underneath
@@ -27,9 +28,20 @@ bun run dev --keep                            # leave the emulator running and t
 | [`bun run vm`](../scripts/vm.ts) | the VM and SimHub: `status`, `up`, `down`, `wait`, `install`, `plugin`, `logs`, `shot`, `claim`, `release` |
 | [`bun run emulator`](../scripts/emulator.ts) | the telemetry: `start <scenario> [--follow]`, `stop`, `status`, `tail` |
 | [`scripts/gui.ts`](../scripts/gui.ts) | the clicking, which is how a dashboard gets opened |
+| [`bun run record`](../scripts/record.ts) | the telemetry traces: one recording of a scenario, committed under `traces/` |
 
 [testing-vm.md](testing-vm.md) describes the VM itself and is what to read when something in it
 breaks.
+
+## Recording a trace is the one thing that has to happen here
+
+Everything else in this loop is a convenience, since a dashboard can be read in the JSON and
+measured by the tests. A telemetry trace cannot: the values a dashboard reads are SimHub's
+normalised view of the sim rather than the variables the emulator writes, and only a running SimHub
+knows the mapping. So `bun run record` runs each scenario past a recorder plugin once and commits
+what SimHub saw, and the preview renderer, the per-pull-request video and the goldens replay that
+file instead of claiming the VM. [traces/README.md](../traces/README.md) is the format and when to
+re-record.
 
 ## There is one VM
 
@@ -51,6 +63,54 @@ column, the window is put where they expect it first, every other window that co
 minimised, and the result is checked by asking Windows which dash windows exist. It retries once
 and then tells you to open it by hand, which is enough, since everything else will already be in
 place.
+
+## The flag box, which has no hardware
+
+`bun run dev` ends in a screenshot of a dashboard. The 8x8 flag box has no equivalent and cannot
+have the same one: **no matrix is plugged into the VM, and CI owns no hardware at all.**
+[scope.md](scope.md)'s definition of done states that as an exception rather than leaving it
+implied, and this is what stands in for it.
+
+```bash
+bun run build                                  # writes the profile and the contact sheet
+bun run dev --scenario flagbox                 # drives every state the box can draw, on a loop
+```
+
+**The contact sheet is the check that needs nothing.** `build/flag-box.svg` renders every glyph
+from the same functions the profile is built from, so a change to the chequered flag shows the
+chequered flag in the pull request. `packages/dash/test/glyphFit.test.ts` is the matrix's
+`textFit`: sixty-four cells, tokens rather than literals, nothing invisible at low brightness,
+nothing a lamp at night, and no two pictures that differ only in hue.
+
+**The `flagbox` scenario is the check that needs SimHub.** It walks the catalogue in priority
+order — fifteen flags, the pit family, the spotter on each side, the three warnings, then a gear
+sweep through the redline — six seconds apart, in a fixed order, and loops after 156 s, so two
+runs are comparable and the whole thing can be watched twice without restarting. The emulator's
+`--selfcheck` runs it in memory on Linux and is part of what CI checks:
+
+```bash
+export PATH="$HOME/.dotnet:$PATH"; export DOTNET_ROOT="$HOME/.dotnet"
+cd tools/irsdk-emulator
+dotnet devcheck/bin/Release/net8.0/IrsdkEmulator.dll --selfcheck flagbox
+```
+
+**What is still missing, and it is the important part.** Three of this loop's steps have not been
+performed:
+
+* **Nothing has opened SimHub's own matrix preview.** SimHub's LED profile editor previews a
+  matrix on screen, and if that preview is faithful it is the whole answer for everyone without a
+  box. Whether `bun run dev`'s scripted clicking can reach it has not been tried; the traps in
+  this file apply unchanged, and XOR-252 already has `dev` failing to open a *dashboard*, which is
+  the easier case.
+* **The profile has not been loaded in real SimHub.** It is generated against the format read out
+  of the decompiled 9.12.6 assemblies. Until somebody imports it, "it parses" is a claim about
+  Json.NET rather than about SimHub.
+* **Nobody has compared the sheet to a real panel.** Brightness and diffusion are exactly where a
+  preview lies. When somebody who owns an iFlag checks it, that result belongs in
+  [design/flag-box.md](design/flag-box.md) whichever way it comes out.
+
+Until those three are done, every "seen on the VM" line on the `iflag` tickets is an aspiration,
+and this section exists so that it is a recorded one.
 
 ## What to know before changing any of this
 

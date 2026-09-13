@@ -1,0 +1,659 @@
+/**
+ * The flag box profile: the tree's shape, the rules it inherits from the packages, and the thing
+ * a matrix gets wrong that a screen does not — which of several live flags it shows.
+ *
+ * Nothing in the repository evaluates a binding (XOR-20), so `raised()` below carries a small
+ * boolean evaluator for the subset of NCalc these conditions are built from, the way
+ * barStrip.test.ts carries an arithmetic one. It is what makes the several-flags-at-once table
+ * possible at all.
+ */
+import { describe, expect, test } from 'bun:test';
+import { FLAG_PRIORITY } from '../src/components/flagStrip.ts';
+import {
+  declaredProperties,
+  DEFAULT_OIL_TEMP,
+  DEFAULT_WATER_TEMP,
+  flagBoxMatrixProperties,
+  flagBoxProperties,
+  FLAG_BOX_MATRICES,
+  FLAG_BOX_MATRIX_DEFAULTS,
+  PROPERTY_PREFIX,
+} from '../src/contract.ts';
+import { FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, type SessionFlagBit } from '../src/flags.ts';
+import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type MatrixContainer } from '../src/generator.ts';
+import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
+import { GEARS, gearGrid } from '../src/leds/gear.ts';
+import { flagFrames, FLAG_PALETTE, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
+import { buildFlagBoxProfile, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
+import { CAR_BOTH, CAR_LEFT, CAR_RIGHT, pitStates, spotterStates, warningStates } from '../src/leds/states.ts';
+import { ds } from '../src/tokens.ts';
+
+/** Every colour `ds` resolves, so "is this a token" is a question about tokens.json rather than
+ * about one branch of it. */
+const TOKEN_COLOURS = new Set<string>();
+(function collect(node: unknown): void {
+  if (typeof node === 'string') {
+    if (/^#[0-9A-F]{6}$/.test(node)) TOKEN_COLOURS.add(node);
+    return;
+  }
+  if (node !== null && typeof node === 'object') for (const v of Object.values(node)) collect(v);
+})(ds);
+
+const profile = buildFlagBoxProfile();
+const all = [...walkContainers(profile.containers)];
+const kinds = all.map((c) => c.kind);
+
+/**
+ * Evaluates one of these conditions with the named bits set. Handles exactly what flags.ts emits:
+ * parenthesised `and`, `or`, `!`, and `[prop] = 1`. Anything else throws rather than guessing,
+ * so a change to how the conditions are built fails here instead of passing wrongly.
+ */
+function evaluate(expression: string, set: readonly SessionFlagBit[], criticalOnly = false): boolean {
+  const truths = new Map<string, string>();
+  for (const condition of FLAG_CATALOGUE) {
+    for (const bit of condition.bits) truths.set(flagBit(bit), set.includes(bit) ? '1' : '0');
+  }
+  let s = expression;
+  for (const [property, value] of truths) s = s.split(property).join(value);
+  s = s.split('isnull([OpenDash.FlagBoxCriticalOnly], false)').join(criticalOnly ? 'true' : 'false');
+  // NCalc's operators to JavaScript's, on a string that now holds only literals and operators.
+  s = s.replace(/\band\b/g, '&&').replace(/\bor\b/g, '||').replace(/([^!<>=])=([^=])/g, '$1===$2');
+  if (!/^[\s()!&|=01a-z]+$/.test(s)) throw new Error(`the condition holds something this cannot evaluate: ${s}`);
+  // eslint-disable-next-line no-new-func
+  return Boolean(new Function(`return (${s});`)());
+}
+
+/** Which flag the box shows with these bits raised, or undefined when it shows none. */
+function shown(set: readonly SessionFlagBit[], criticalOnly = false): string | undefined {
+  const lit = flagContainers().filter((c) => {
+    const formula = (c as Extract<MatrixContainer, { kind: 'when' }>).formula;
+    return evaluate(typeof formula === 'string' ? formula : formula.expression, set, criticalOnly);
+  });
+  expect(lit.length).toBeLessThanOrEqual(1);
+  return lit[0]?.description;
+}
+
+describe('the tree is evaluated outside in', () => {
+  test('brightness is the root, so one setting answers for everything below it', () => {
+    expect(profile.containers).toHaveLength(1);
+    expect(profile.containers[0]?.kind).toBe('brightnessFormula');
+  });
+
+  test('the running and not-running branches are both declared', () => {
+    const declared = [...walkContainers(flagBoxTree())].map((c) => c.kind);
+    expect(declared).toContain('gameRunning');
+    expect(declared).toContain('gameNotRunning');
+  });
+
+  test('a branch with nothing in it yet is pruned rather than written', () => {
+    expect(kinds).toContain('gameRunning');
+    expect(kinds).not.toContain('gameNotRunning');
+    expect(pruneEmpty([{ kind: 'group', children: [] }])).toEqual([]);
+  });
+
+  test('it is an 8x8 profile', () => {
+    expect(profile.deviceKind).toBe('matrix8x8');
+  });
+});
+
+describe('the rules it inherits from the packages', () => {
+  test('every property it reads is declared, so the profile and the panel cannot drift', () => {
+    const result = validateProfile(profile, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
+    expect(result.errors).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  test('the flag box properties are part of what the plugin declares', () => {
+    for (const name of flagBoxProperties()) expect(declaredProperties()).toContain(name);
+  });
+
+  test('every property read is wrapped in isnull with a default, so the box works with no plugin', () => {
+    const text = serializeProfile(profile);
+    const reads = [...text.matchAll(/\[OpenDash\.[A-Za-z0-9]+\]/g)].map((m) => m[0]);
+    expect(reads.length).toBeGreaterThan(0);
+    for (const read of new Set(reads)) expect(text).toInclude(`isnull(${read},`);
+  });
+
+  test('colour comes from the tokens, so nothing here re-picks one', () => {
+    for (const container of all) {
+      if (container.kind !== 'animation') continue;
+      for (const frame of container.frames) for (const row of frame.pixels) for (const c of row) if (c) expect(TOKEN_COLOURS.has(c)).toBe(true);
+    }
+  });
+
+  test('the palettes are tokens and nothing else', () => {
+    for (const colour of [...Object.values(FLAG_PALETTE), ...Object.values(STANDBY_PALETTE)]) expect(TOKEN_COLOURS.has(colour)).toBe(true);
+  });
+});
+
+describe('one ordered list, shared with the face', () => {
+  test('the face ranks from the catalogue rather than its own copy', () => {
+    expect(FLAG_PRIORITY).toEqual(FACE_FLAG_PRIORITY);
+    expect(FACE_FLAG_PRIORITY).toEqual(['Flag_Black', 'Flag_Checkered', 'Flag_Yellow', 'Flag_Blue', 'Flag_White', 'Flag_Green']);
+  });
+
+  test('the box draws the catalogue in that same order', () => {
+    const drawn = flagContainers().map((c) => c.description);
+    expect(drawn).toEqual(drawnFlags(false).map((c) => c.id));
+    // The face's six keep their relative rank inside the longer list, or the two would disagree.
+    const faceIds = ['black', 'chequered', 'yellow', 'blue', 'white', 'green'];
+    expect(drawn.filter((d) => faceIds.includes(d ?? ''))).toEqual(faceIds);
+  });
+
+  test('every condition in the catalogue is either drawn or absent on purpose', () => {
+    // The docs table is the other half of this: a condition with no glyph is listed there with
+    // the reason, and this proves the code and that table are talking about the same list.
+    for (const condition of FLAG_CATALOGUE) expect(flagFrames(condition.id)).toBeDefined();
+  });
+});
+
+describe('several conditions true at once', () => {
+  // iRacing raises more than one bit constantly: a caution is yellow plus caution plus
+  // cautionWaving, and the last lap of a race under a black flag is three at once. The box shows
+  // one picture, so the only question that matters is which.
+  const cases: { name: string; bits: SessionFlagBit[]; expect: string | undefined }[] = [
+    { name: 'nothing out', bits: [], expect: undefined },
+    { name: 'green alone', bits: ['green'], expect: 'green' },
+    { name: 'a local yellow', bits: ['yellow'], expect: 'yellow' },
+    { name: 'a waved yellow also sets yellow', bits: ['yellow', 'yellowWaving'], expect: 'yellowWaving' },
+    { name: 'a full-course caution sets all three', bits: ['yellow', 'yellowWaving', 'caution', 'cautionWaving'], expect: 'caution' },
+    { name: 'debris under a yellow', bits: ['yellow', 'debris'], expect: 'yellow' },
+    { name: 'debris alone', bits: ['debris'], expect: 'debris' },
+    { name: 'red outranks everything', bits: ['red', 'yellow', 'caution', 'black'], expect: 'red' },
+    { name: 'a black flag on the last lap', bits: ['black', 'white'], expect: 'black' },
+    { name: 'disqualified outranks the black flag it comes with', bits: ['black', 'disqualify'], expect: 'disqualify' },
+    { name: 'a furled black is not a black', bits: ['furled'], expect: 'furled' },
+    { name: 'a meatball while being lapped', bits: ['repair', 'blue'], expect: 'meatball' },
+    { name: 'the chequer while being lapped', bits: ['checkered', 'blue'], expect: 'chequered' },
+    { name: 'the start gantry', bits: ['startReady'], expect: 'startReady' },
+    { name: 'set outranks ready, because it is later', bits: ['startReady', 'startSet'], expect: 'startSet' },
+  ];
+
+  for (const c of cases) {
+    test(c.name, () => {
+      expect(shown(c.bits)).toBe(c.expect);
+    });
+  }
+
+  test('exactly one flag is ever lit, whichever bits are set', () => {
+    // Every pair in the catalogue, which is the case a hand-written list of examples misses.
+    const bits = FLAG_CATALOGUE.flatMap((c) => c.bits);
+    for (const a of bits) for (const b of bits) expect(() => shown([a, b])).not.toThrow();
+  });
+});
+
+describe('critical flags only', () => {
+  test('it is a contract property and it defaults to off', () => {
+    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxCriticalOnly');
+    expect(serializeProfile(profile)).toInclude('isnull([OpenDash.FlagBoxCriticalOnly], false)');
+  });
+
+  test('with it on, the box keeps the flags that mean slow down or are addressed to you', () => {
+    const quiet = drawnFlags(true).map((c) => c.id);
+    expect(quiet).toContain('red');
+    expect(quiet).toContain('black');
+    expect(quiet).toContain('yellow');
+    expect(quiet).toContain('blue');
+  });
+
+  test('with it on, the news goes quiet', () => {
+    const quiet = drawnFlags(true).map((c) => c.id);
+    expect(quiet).not.toContain('chequered');
+    expect(quiet).not.toContain('green');
+    expect(quiet).not.toContain('startReady');
+  });
+
+  test('a suppressed flag stops outranking the ones below it, rather than blanking the box', () => {
+    // The chequer is not critical. With the switch on and the chequer out over a blue flag, the
+    // box shows blue; a naive implementation shows nothing, because the chequer still wins and
+    // then draws nothing.
+    expect(shown(['checkered', 'blue'], false)).toBe('chequered');
+    expect(shown(['checkered', 'blue'], true)).toBe('blue');
+  });
+
+  test('the switch is a guard on each flag, not a second copy of the catalogue', () => {
+    // Carrying the list twice reads better in the file and costs twice the glyphs, and the tree is
+    // already written once per matrix, so the doubling would be eightfold by the time it hits disk.
+    expect(flagContainers()).toHaveLength(drawnFlags(false).length);
+    const text = serializeProfile(profile);
+    expect(text).toInclude('isnull([OpenDash.FlagBoxCriticalOnly], false)');
+  });
+
+  test('a critical flag is shown whatever the switch says', () => {
+    for (const condition of FLAG_CATALOGUE.filter((c) => c.critical)) {
+      expect(shown(condition.bits, true)).toBe(condition.id);
+    }
+  });
+});
+
+describe('sixty-four pixels', () => {
+  test('every glyph is eight by eight', () => {
+    for (const condition of FLAG_CATALOGUE) {
+      for (const frame of flagFrames(condition.id) ?? []) {
+        expect(frame.pixels).toHaveLength(8);
+        for (const row of frame.pixels) expect(row).toHaveLength(8);
+      }
+    }
+  });
+
+  test('black is an outline and a disqualification is a cross, because black is unlit', () => {
+    const black = flagFrames('black')?.[0]?.pixels ?? [];
+    expect(black[0]?.every((p) => p !== null)).toBe(true);
+    expect(black[3]?.slice(1, 7).every((p) => p === null)).toBe(true);
+    const dq = flagFrames('disqualify')?.[0]?.pixels ?? [];
+    expect(dq[0]?.[0]).toBe(ds.purpose.flag.black);
+    expect(dq[0]?.[3]).toBeNull();
+  });
+
+  test('a waved yellow is the yellow flag blinking, which is what tells them apart', () => {
+    const yellow = flagFrames('yellow') ?? [];
+    const waving = flagFrames('yellowWaving') ?? [];
+    expect(yellow).toHaveLength(1);
+    expect(waving).toHaveLength(2);
+    expect(waving[0]?.pixels).toEqual(yellow[0]?.pixels);
+    expect(waving[1]?.pixels.flat().every((p) => p === null)).toBe(true);
+  });
+
+  test('the blink is the flagBand rate, so the box pulses with the band on the face', () => {
+    const half = Math.round(1000 / ds.indicator.flagBand.flashHz / 2);
+    for (const frame of flagFrames('yellowWaving') ?? []) expect(frame.durationMs).toBe(half);
+  });
+
+  test('a full-course caution is banded, so it never looks like a local yellow', () => {
+    const caution = flagFrames('caution')?.[0]?.pixels ?? [];
+    const yellow = flagFrames('yellow')?.[0]?.pixels ?? [];
+    expect(caution).not.toEqual(yellow);
+    expect(caution[2]?.every((p) => p === null)).toBe(true);
+  });
+
+  test('blue moves: two frames whose arrows are in different places', () => {
+    const blue = flagFrames('blue') ?? [];
+    expect(blue).toHaveLength(2);
+    expect(blue[0]?.pixels).not.toEqual(blue[1]?.pixels);
+  });
+
+  test('no two conditions draw the same picture', () => {
+    // Two identical glyphs mean the driver cannot tell two conditions apart, which is the failure
+    // this whole file is about.
+    const seen = new Map<string, string>();
+    for (const condition of FLAG_CATALOGUE) {
+      const key = JSON.stringify(flagFrames(condition.id));
+      const clash = seen.get(key);
+      expect({ id: condition.id, clash }).toEqual({ id: condition.id, clash: undefined });
+      seen.set(key, condition.id);
+    }
+  });
+});
+
+describe('what the box does when nobody is racing', () => {
+  test('not racing is dark, and that is the decision rather than a gap', () => {
+    // Idle screens are a refusal in scope.md; a glowing logo on somebody's desk when nothing is
+    // running is the hardest version of it to defend.
+    const declared = [...walkContainers(flagBoxTree())].find((c) => c.kind === 'gameNotRunning');
+    expect(declared).toBeDefined();
+    expect(declared && 'children' in declared ? declared.children : ['something']).toEqual([]);
+    expect(kinds).not.toContain('gameNotRunning');
+  });
+
+  test('ignition off is visibly distinct from a profile that failed to load', () => {
+    const text = serializeProfile(profile);
+    expect(text).toInclude('"Description": "Ignition off"');
+    const standby = all.find((c) => c.description === 'Standby');
+    expect(standby?.kind).toBe('animation');
+    const lit = ignitionOffFrames()[0]?.pixels.flat().filter((p) => p !== null) ?? [];
+    expect(lit.length).toBeGreaterThan(0);
+    expect(lit.length).toBeLessThan(8);
+    expect(new Set(lit)).toEqual(new Set([ds.purpose.shift.unlit]));
+  });
+
+  test('the flags only run with the ignition on', () => {
+    const text = serializeProfile(profile);
+    expect(text).toInclude('"Description": "Ignition on"');
+    expect(text).toInclude('[DataCorePlugin.GameData.EngineIgnitionOn]');
+  });
+
+  test('nothing reads an image from the user\'s disk', () => {
+    // Every picture is frames in the file. A custom idle image is personalisation, which ADR 0011
+    // owes an answer before anything here builds it.
+    const text = serializeProfile(profile);
+    for (const word of ['AnimationPath', 'FileName', 'ledanimation', 'UserOverrides', 'C:\\\\']) expect(text).not.toInclude(word);
+  });
+});
+
+describe('brightness', () => {
+  test('day, night and the switch are all contract properties', () => {
+    expect(flagBoxProperties().slice(0, 8)).toEqual([
+      'OpenDash.LightsBrightness',
+      'OpenDash.LightsNightBrightness',
+      'OpenDash.LightsNightMode',
+      'OpenDash.FlagBoxCriticalOnly',
+      'OpenDash.FlagBoxGear',
+      'OpenDash.FlagBoxLowFuelLaps',
+      'OpenDash.FlagBoxOilTemp',
+      'OpenDash.FlagBoxWaterTemp',
+    ]);
+  });
+
+  test('they are named for the rig, not for this box', () => {
+    // A driver who owns a flag box probably owns other lights, and "how bright, and is it night"
+    // is one answer for a rig. Naming them per device now means renaming a public interface later.
+    for (const name of flagBoxProperties().slice(0, 3)) expect(name).toStartWith('OpenDash.Lights');
+  });
+
+  test('night mode picks the night value, and it is dimmer', () => {
+    const text = serializeProfile(profile);
+    expect(text).toInclude('if(');
+    expect(text).toInclude('isnull([OpenDash.LightsNightMode], false)');
+    expect(text).toInclude('isnull([OpenDash.LightsNightBrightness], 25)');
+    expect(text).toInclude('isnull([OpenDash.LightsBrightness], 100)');
+  });
+
+  test('one brightness answers for everything, because it is the root', () => {
+    expect(profile.containers[0]?.kind).toBe('brightnessFormula');
+    expect(all.filter((c) => c.kind === 'brightnessFormula' || c.kind === 'brightness')).toHaveLength(1);
+  });
+});
+
+describe('the gear, as the resting state', () => {
+  test('every gear iRacing reports has a glyph, reverse and neutral included', () => {
+    expect(GEARS).toEqual(['R', 'N', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+    for (const gear of GEARS) {
+      const grid = gearGrid(gear);
+      expect(grid).toHaveLength(8);
+      for (const row of grid) expect(row).toHaveLength(8);
+    }
+  });
+
+  test('no two gears draw the same glyph, and 6 and 8 differ in more than one place', () => {
+    const seen = new Map<string, string>();
+    for (const gear of GEARS) {
+      const key = gearGrid(gear).join('|');
+      expect({ gear, clash: seen.get(key) }).toEqual({ gear, clash: undefined });
+      seen.set(key, gear);
+    }
+    const six = gearGrid('6').join('');
+    const eight = gearGrid('8').join('');
+    const differences = [...six].filter((ch, i) => ch !== eight[i]).length;
+    expect(differences).toBeGreaterThan(1);
+  });
+
+  test('the colour is the shift model, taken from the rev bar', () => {
+    // One relationship learned once and read in two places. When XOR-230 replaces SimHub's
+    // per-car bands with the sim's own DriverCarSL* values, it changes shiftBands() alone.
+    const bands = shiftBands();
+    expect(bands.map((b) => b.id)).toEqual(['redline', 'stage2', 'stage1', 'rest']);
+    expect(bands.map((b) => b.colour)).toEqual([ds.purpose.shift.stage3, ds.purpose.shift.stage2, ds.purpose.shift.stage1, ds.color.text.primary]);
+    const text = serializeProfile(profile);
+    expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMRedLineReached]');
+    expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMShiftLight1]');
+    expect(text).toInclude('[DataCorePlugin.GameData.CarSettings_RPMShiftLight2]');
+  });
+
+  test('the bands the gear uses are the ones the rev bar segments light at', () => {
+    // revSegmentOptions lights the first segment of stage 0 when RPMShiftLight1 leaves zero and
+    // the first of stage 1 when RPMShiftLight2 does; shiftBands says the same thing for a digit.
+    const bands = shiftBands();
+    const first = revSegmentOptions(0, 15);
+    const stage1Entry = bands.find((b) => b.id === 'stage1');
+    expect(first.shift.colorBind).toInclude(ds.purpose.shift.stage1);
+    expect(stage1Entry?.raised).toInclude('CarSettings_RPMShiftLight1');
+  });
+
+  test('the redline band blinks the digit rather than filling the panel', () => {
+    // A filled panel is a flag's vocabulary, and the box has to keep the two apart.
+    const redline = all.find((c) => c.description === 'Gear redline');
+    expect(redline).toBeDefined();
+    const glyph = [...walkContainers(redline ? [redline] : [])].find((c) => c.kind === 'animation');
+    expect(glyph?.kind === 'animation' ? glyph.frames : []).toHaveLength(2);
+    const lit = glyph?.kind === 'animation' ? (glyph.frames[0]?.pixels.flat().filter((x) => x !== null) ?? []) : [];
+    expect(lit.length).toBeLessThan(64);
+    expect(new Set(lit)).toEqual(new Set([ds.purpose.shift.stage3]));
+  });
+
+  test('every flag outranks it, so the panel is never two things at once', () => {
+    // With any flag raised the resting condition is false, whichever way the switch is set.
+    for (const condition of FLAG_CATALOGUE) {
+      expect(evaluate(noFlagShowing(), condition.bits, false)).toBe(false);
+      if (condition.critical) expect(evaluate(noFlagShowing(), condition.bits, true)).toBe(false);
+    }
+    expect(evaluate(noFlagShowing(), [], false)).toBe(true);
+  });
+
+  test('a flag the switch has silenced stops suppressing the gear', () => {
+    // The chequer is not critical: with the switch on it is not shown, so it must not hold the
+    // panel dark either.
+    expect(evaluate(noFlagShowing(), ['checkered'], false)).toBe(false);
+    expect(evaluate(noFlagShowing(), ['checkered'], true)).toBe(true);
+  });
+
+  test('the gear switch is a contract property, and off means dark', () => {
+    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxGear');
+    const text = serializeProfile(profile);
+    expect(text).toInclude('isnull([OpenDash.FlagBoxGear], true)');
+    // Off leaves the panel dark rather than showing something else: the switch is the gear
+    // group's own condition, and there is no sibling to take its place.
+    const gear = all.find((c) => c.description === 'Gear');
+    expect(gear?.kind).toBe('when');
+    const resting = all.find((c) => c.description === 'Resting');
+    expect(resting && 'children' in resting ? resting.children.map((c) => c.description) : []).toEqual(['Gear']);
+  });
+
+  test('it is written once per matrix, and no more often than that', () => {
+    // Once per matrix is forced: SimHub has no way to bind which matrix a container paints, and a
+    // group's StartPositionMatrix is a static offset. Twice per matrix would not be.
+    expect(all.filter((c) => c.description === 'Gear')).toHaveLength(FLAG_BOX_MATRICES.length);
+  });
+});
+
+describe('the four matrix contents', () => {
+  test('each matrix has a group of its own, offset onto it', () => {
+    // A group's StartPositionMatrix is an offset applied when its children's results are merged,
+    // so the subtree below stays at matrix 1 and the group shifts it.
+    const groups = all.filter((c) => c.description?.startsWith('Matrix '));
+    expect(groups.map((c) => c.matrix)).toEqual([...FLAG_BOX_MATRICES]);
+    for (const container of all) {
+      if (container.description?.startsWith('Matrix ')) continue;
+      expect(container.matrix ?? 1).toBe(1);
+    }
+  });
+
+  test('a matrix nobody has switched on costs one expression, not a hundred', () => {
+    // ConditionnalGroupContainer does not descend when it is false, so the gate is the whole cost.
+    const second = all.find((c) => c.description === 'Matrix 2');
+    expect(second?.kind).toBe('when');
+    const formula = (second as Extract<MatrixContainer, { kind: 'when' }>).formula;
+    const text = typeof formula === 'string' ? formula : formula.expression;
+    expect(text).toInclude('OpenDash.FlagBoxMatrix2Flags');
+    expect(text).toInclude('OpenDash.FlagBoxMatrix2Rest');
+  });
+
+  test('the defaults are a working single-box setup: matrix 1 does everything, 2 to 4 are off', () => {
+    expect(FLAG_BOX_MATRIX_DEFAULTS[1]).toEqual({ rest: 'gear', flags: true, spotter: true, warnings: true, side: 'both' });
+    for (const matrix of [2, 3, 4] as const) {
+      expect(FLAG_BOX_MATRIX_DEFAULTS[matrix]).toEqual({ rest: 'dark', flags: false, spotter: false, warnings: false, side: 'both' });
+    }
+  });
+
+  test('every per-matrix setting is declared and defaulted', () => {
+    for (const matrix of FLAG_BOX_MATRICES) {
+      for (const name of flagBoxMatrixProperties(matrix)) {
+        expect(declaredProperties()).toContain(`OpenDash.${name}`);
+        expect(serializeProfile(profile)).toInclude(`isnull([OpenDash.${name}],`);
+      }
+    }
+  });
+
+  test('rotation and serpentine are not ours, so they are nowhere in the settings', () => {
+    // They are SimHub device settings decided by the corner the data cable enters; a second place
+    // to set them is a second place to disagree.
+    for (const name of declaredProperties()) {
+      expect(name.toLowerCase()).not.toInclude('rotation');
+      expect(name.toLowerCase()).not.toInclude('serpentine');
+    }
+  });
+});
+
+describe('the pit family, the spotter and the warnings', () => {
+  test('the limiter in the lane and out of it differ in shape, not only in colour', () => {
+    // XOR-78: meaning cannot rest on colour alone, and these two share purpose.pitLimiter.
+    const inLane = pitStates().find((s) => s.id === 'limiterInLane');
+    const out = pitStates().find((s) => s.id === 'limiterOutOfLane');
+    expect(inLane?.grid).not.toEqual(out?.grid);
+    expect(inLane?.blink).toBe(false);
+    expect(out?.blink).toBe(true);
+    // Neither is a filled panel: purpose.pitLimiter is pure white, so a filled one would be the
+    // white flag. The frame says "contained"; the exclamation mark says "stop".
+    for (const state of [inLane, out]) {
+      const lit = (state?.grid ?? []).join('').split('').filter((c) => c === 'P').length;
+      expect(lit).toBeGreaterThan(0);
+      expect(lit).toBeLessThan(64);
+    }
+  });
+
+  test('speeding outranks both, and is a different picture again', () => {
+    expect(pitStates()[0]?.id).toBe('speeding');
+    expect(pitStates()[0]?.grid).not.toEqual(pitStates()[1]?.grid);
+  });
+
+  test('speeding is a comparison of two published numbers, not state between frames', () => {
+    const text = serializeProfile(profile);
+    expect(text).toInclude('[DataCorePlugin.GameData.PitLimiterSpeed]');
+    expect(text).toInclude('[DataCorePlugin.GameData.SpeedKmh]');
+    expect(text).toInclude('[DataCorePlugin.GameData.IsInPitLane]');
+  });
+
+  test('a box knows which side of the rig it is on', () => {
+    // A box to the left of the wheel lighting for a car on the right is worse than no box.
+    const left = spotterStates(2).find((s) => s.id === 'carLeft');
+    const text = typeof left?.raised === 'string' ? left.raised : '';
+    expect(text).toInclude('OpenDash.FlagBoxMatrix2Side');
+    expect(spotterStates(1).find((s) => s.id === 'carLeft')?.grid).toEqual(CAR_LEFT);
+  });
+
+  test('a single box shows both sides, on the edge each is actually on', () => {
+    expect(CAR_LEFT[0]).toStartWith('WW');
+    expect(CAR_RIGHT[0]).toEndWith('WW');
+    expect(CAR_BOTH[0]).toBe('WW....WW');
+  });
+
+  test('the warnings sit below the flags, so a low fuel light cannot hide a yellow', () => {
+    // The failure this ordering exists to prevent, and the one that gets somebody hurt.
+    const warnings = all.find((c) => c.description === 'Warnings');
+    expect(warnings).toBeDefined();
+    const below = all.find((c) => c.description === 'Below the flags');
+    const ids = below && 'children' in below ? [...walkContainers(below.children)].map((c) => c.description) : [];
+    expect(ids).toContain('Warnings');
+    const formula = (below as Extract<MatrixContainer, { kind: 'when' }>).formula;
+    const text = typeof formula === 'string' ? formula : formula.expression;
+    for (const condition of FLAG_CATALOGUE) expect(text).toInclude(condition.bits[0] ?? '');
+  });
+
+  test('the pit family outranks the spotter, which outranks the warnings', () => {
+    const below = all.find((c) => c.description === 'Below the flags');
+    const order = below && 'children' in below ? below.children.map((c) => c.description) : [];
+    expect(order).toEqual(['Pit', 'Spotter', 'Warnings', 'Resting']);
+  });
+
+  test('low fuel is measured in laps, because litres mean nothing without the car', () => {
+    expect(serializeProfile(profile)).toInclude('isnull([OpenDash.FlagBoxLowFuelLaps], 2)');
+    expect(serializeProfile(profile)).toInclude('Fuel_RemainingLaps');
+  });
+
+  test('a temperature threshold defaults correctly in every unit SimHub reports', () => {
+    // A driver in Fahrenheit who sets 120 and gets a Celsius threshold has a broken feature.
+    const text = serializeProfile(profile);
+    expect(text).toInclude('[DataCorePlugin.GameData.TemperatureUnit]');
+    for (const value of [DEFAULT_OIL_TEMP.Celcius, DEFAULT_OIL_TEMP.Fahrenheit, DEFAULT_OIL_TEMP.Kelvin]) {
+      expect(text).toInclude(String(value));
+    }
+    for (const value of [DEFAULT_WATER_TEMP.Celcius, DEFAULT_WATER_TEMP.Fahrenheit, DEFAULT_WATER_TEMP.Kelvin]) {
+      expect(text).toInclude(String(value));
+    }
+  });
+
+  test('a car that reports no temperature never trips a warning', () => {
+    const text = serializeProfile(profile);
+    expect(text).toInclude('isnull([DataCorePlugin.GameData.OilTemperature], 0)');
+    expect(text).toInclude('isnull([DataCorePlugin.GameData.WaterTemperature], 0)');
+  });
+
+  test('no two of these states draw the same picture', () => {
+    const grids = [...pitStates(), ...spotterStates(1), ...warningStates()].map((s) => s.grid.join('|'));
+    expect(new Set(grids).size).toBe(grids.length);
+  });
+
+  test('nothing anywhere in the profile draws the same picture as anything else', () => {
+    // Across the families, not only within one. Two things this caught: the limiter in the lane was
+    // the black flag's outline in another colour, and the limiter out of the lane was a filled
+    // panel in purpose.pitLimiter -- which is pure white, so it was the white flag with a blink.
+    // Telling a driver "last lap" when you mean "your limiter is on" is what XOR-78 is about.
+    const seen = new Map<string, string>();
+    for (const container of all) {
+      if (container.kind !== 'animation' || container.description === undefined) continue;
+      const picture = JSON.stringify(container.frames.map((f) => f.pixels));
+      const name = container.description.replace(/ glyph$/, '');
+      const clash = seen.get(picture);
+      expect({ name, clash: clash === name ? undefined : clash }).toEqual({ name, clash: undefined });
+      seen.set(picture, name);
+    }
+  });
+
+  test('a solid flag is told apart by colour, which is what a flag is', () => {
+    // The counterpart of the test above: red, yellow, white and green are the same shape on
+    // purpose. A racing flag *is* a colour, and inventing a pattern for each would be worse.
+    const solids = ['red', 'yellow', 'white', 'green'].map((id) => flagFrames(id)?.[0]?.pixels.map((r) => r.map((c) => (c === null ? '.' : '#')).join('')).join('|'));
+    expect(new Set(solids).size).toBe(1);
+    const colours = ['red', 'yellow', 'white', 'green'].map((id) => flagFrames(id)?.[0]?.pixels[0]?.[0]);
+    expect(new Set(colours).size).toBe(4);
+  });
+
+  test('the same glyph on matrix 2 differs only in StartPositionMatrix', () => {
+    const glyph: MatrixContainer = { kind: 'animation', description: 'g', frames: flagFrames('green') ?? [] };
+    const a = buildContainerObject(glyph, 'p/0', 'matrix8x8');
+    const b = buildContainerObject({ ...glyph, matrix: 2 }, 'p/0', 'matrix8x8');
+    expect(b.StartPositionMatrix).toBe(2);
+    expect(JSON.stringify({ ...b, StartPositionMatrix: 1 })).toBe(JSON.stringify(a));
+  });
+});
+
+describe('the emitted file', () => {
+  // Not the JSON. The tree is written once per matrix, so the file is three quarters of a megabyte
+  // and a snapshot of it could not be read, which is the only thing a snapshot is for. These two
+  // are what a reviewer actually needs: the shape, and the pictures.
+
+  test('the tree', () => {
+    const lines: string[] = [];
+    const walk = (containers: readonly MatrixContainer[], depth: number): void => {
+      for (const c of containers) {
+        const matrix = c.matrix !== undefined && c.matrix !== 1 ? ` -> matrix ${c.matrix}` : '';
+        lines.push(`${'  '.repeat(depth)}${c.kind} ${c.description ?? ''}${matrix}`.trimEnd());
+        walk('children' in c ? c.children : [], depth + 1);
+      }
+    };
+    walk(profile.containers, 0);
+    expect(lines.join('\n')).toMatchSnapshot();
+  });
+
+  test('the glyphs', () => {
+    // Every distinct picture as a grid, which is how they were drawn and the only way to review
+    // them. A changed snapshot here is a changed picture: look at it.
+    const ink = new Map<string, string>();
+    const key = (c: string | null): string => {
+      if (c === null) return '.';
+      if (!ink.has(c)) ink.set(c, 'ABCDEFGHIJKLMNOP'[ink.size] ?? '?');
+      return ink.get(c) ?? '?';
+    };
+    const seen = new Set<string>();
+    const blocks: string[] = [];
+    for (const container of all) {
+      if (container.kind !== 'animation' || container.description === undefined) continue;
+      const name = container.description.replace(/ glyph$/, '');
+      if (seen.has(name)) continue;
+      seen.add(name);
+      const frames = container.frames.map((f) => f.pixels.map((row) => row.map(key).join('')).join('\n'));
+      blocks.push(`${name}\n${frames.join('\n  --\n')}`);
+    }
+    const legend = [...ink].map(([colour, ch]) => `${ch} ${colour}`).join('\n');
+    expect(`${blocks.join('\n\n')}\n\nlegend\n${legend}`).toMatchSnapshot();
+  });
+});

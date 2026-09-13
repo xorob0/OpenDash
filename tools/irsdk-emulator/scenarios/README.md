@@ -37,6 +37,13 @@ CarIdx 12 in a Porsche 911 GT3 R, overall P3 and class P2. Its drivers move the 
 the lap time, the fuel and the flags, which is what you want when watching behaviour rather than
 capturing it.
 
+`flagbox.json` walks the whole flag box catalogue one state at a time: fifteen flags in priority
+order, the pit family, the spotter on each side, the three warnings, then a gear sweep through the
+redline. Six seconds apart, in a fixed order, and it **loops** (the `loop` key, in seconds), so the
+catalogue can be watched twice without restarting the emulator and two runs are comparable. It is
+the only scenario that drives states nothing on the screen shows, and
+[docs/design/flag-box.md](../../../docs/design/flag-box.md) says what each one should look like.
+
 `notc.json` is the same field in a car with no `dcTractionControl` or `dcABS` at all — SimHub then
 reports level 0 and the dashes have to show `--` rather than a zero — in a timed race rather than
 a lap-counted one. `quali.json` extends it.

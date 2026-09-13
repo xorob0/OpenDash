@@ -14,7 +14,6 @@ import { ALL_EFFECTS, BEST_EFFORT, NO_PROPERTY, PIT_SPEEDING_MARGIN, SIDE_EFFECT
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
-import { FLAG_BOX_PROFILE_NAME, FLAG_PICTURES, MATRIX_SIZE, flagBoxProfile, flagCatalogue } from '../src/leds/flagBox.ts';
 
 const profileFor = (id: string): leds.LedProfile => {
   const shape = shapeById(id);
@@ -352,73 +351,3 @@ describe('the per-gear shift table', () => {
   });
 });
 
-describe('the 8x8 flag box', () => {
-  const box = (): leds.LedProfile => flagBoxProfile(stableGuid('test/leds/flag-box'));
-
-  test('is a matrix profile, and so is spelled in the matrix driver\'s dialect', () => {
-    const p = box();
-    expect(p.dialect).toBe('matrix');
-    expect(p.name).toBe(FLAG_BOX_PROFILE_NAME);
-    // The same file extension carries two object models. The matrix driver spells ContainerType as
-    // the bare class name; a strip name here resolves in neither and loads as a disabled container.
-    for (const c of walk(p.containers)) {
-      const type = leds.containerTypeOf(c, 'matrix');
-      expect({ type, known: leds.KNOWN_MATRIX_CONTAINER_TYPES.has(type) }).toMatchObject({ known: true });
-      expect(type).not.toContain('.');
-    }
-    // ...and the strip dialect would get it wrong, which is exactly why the dialect is explicit.
-    expect(leds.containerTypeOf(flagCatalogue()[0]!, 'strip')).toBe('Groups.CustomConditionalGroup');
-    expect(leds.containerTypeOf(flagCatalogue()[0]!, 'matrix')).toBe('CustomConditionalGroupContainer');
-  });
-
-  test('validates against the matrix catalogue, and would fail against the strip one', () => {
-    const p = box();
-    expect(leds.validateProfile(p, { dialect: 'matrix', declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX }).errors).toEqual([]);
-    // The same profile checked as a strip reports every container as unresolvable, which is the
-    // silent failure this dialect exists to prevent.
-    const asStrip = leds.validateProfile({ ...p, dialect: 'strip' }, { dialect: 'strip' });
-    expect(asStrip.ok).toBe(false);
-    expect(asStrip.errors.every((e) => e.code === 'leds/container-type')).toBe(true);
-  });
-
-  test('draws every flag the face draws, ranked the way the face ranks them', () => {
-    const flags = flagCatalogue();
-    expect(flags.map((f) => f.description)).toEqual(['Green flag', 'White flag', 'Blue flag', 'Yellow flag', 'Checkered flag', 'Black flag']);
-    // Highest priority last, so it composes on top; and each blanks what is under it, because a
-    // flag showing through another flag is two answers to one question.
-    for (const f of flags) {
-      expect(f.kind).toBe('conditionalGroup');
-      if (f.kind !== 'conditionalGroup') throw new Error('group');
-      expect(f.clearBackgroundWhenActive).toBe(true);
-    }
-  });
-
-  test('every picture is sixty-four pixels, and every pixel is a token', () => {
-    const tokens = new Set<string>([...Object.values(ds.purpose.flag), ds.color.surface.base]);
-    for (const [flag, pixels] of Object.entries(FLAG_PICTURES)) {
-      expect({ flag, rows: pixels.length }).toMatchObject({ rows: MATRIX_SIZE });
-      for (const row of pixels) {
-        expect(row).toHaveLength(MATRIX_SIZE);
-        for (const px of row) expect({ flag, px, fromTokens: px !== undefined && tokens.has(px) }).toMatchObject({ fromTokens: true });
-      }
-    }
-  });
-
-  test('the chequer is blocks rather than single pixels, or it aliases to a grey smear', () => {
-    const chequered = FLAG_PICTURES.Flag_Checkered!;
-    // A four-by-four board out of eight pixels: the top-left two-by-two is one colour throughout.
-    expect(chequered[0]![0]).toBe(chequered[1]![1]);
-    expect(chequered[0]![0]).toBe(chequered[0]![1]);
-    // ...and the block beside it is the other.
-    expect(chequered[0]![2]).not.toBe(chequered[0]![0]);
-  });
-
-  test('the black flag is not drawn black, because a black flag on an unlit box is an unlit box', () => {
-    expect(FLAG_PICTURES.Flag_Black![0]![0]).toBe(ds.purpose.flag.black);
-    expect(FLAG_PICTURES.Flag_Black![0]![0]).not.toBe(ds.color.surface.base);
-  });
-
-  test('is gated on the sim running, for the same reason the strip is', () => {
-    expect(leds.containerTypeOf(box().containers[0]!, 'matrix')).toBe('GameRunningGroupContainer');
-  });
-});
