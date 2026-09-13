@@ -255,7 +255,7 @@ shifted onto the right panel.
 **The subtree is repeated once per matrix, and that is the whole of the file's size.** SimHub has
 no way to bind which matrix a container paints — the position is a static property — so there is no
 alternative to writing it four times. Measured on a clean `bun run package` of 0.2.0-rc.1, the
-profile is **941,382 bytes (919 KiB) and 697 containers**, which is **12.6%** of the 7,456,256-byte
+profile is **941,382 bytes (919 KiB) and 697 containers**, which is **12.6%** of the 7,457,280-byte
 plugin DLL that embeds it and about **43 KB** once deflated into the release zip.
 
 Those numbers moved when the gear's flash was corrected, and the correction is why. `Gear redline`

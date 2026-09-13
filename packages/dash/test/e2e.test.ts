@@ -16,6 +16,7 @@ import {
   FLAG_BOX_SHEET_FILE,
   main,
   MANIFEST_FILE,
+  MANIFEST_SCHEMA_VERSION,
   PANEL_FONTS_DIR,
   parseArgs,
   readVersion,
@@ -160,7 +161,7 @@ describe('widget build on disk', () => {
     // A profile is listed apart from the packages because it is not one: the plugin extracts it and
     // the user imports it, which is ADR 0013. This fixture builds no strips, so the flag box is the
     // only profile in it.
-    expect(manifest).toEqual({ version: readVersion(), simHubVersion: '9.12.6', packages: [...LAYOUTS.map(entry), ...ZONE_FACES.map(zoneEntry)], ledProfiles: [FLAG_BOX_FILE] });
+    expect(manifest).toEqual({ schemaVersion: MANIFEST_SCHEMA_VERSION, version: readVersion(), simHubVersion: '9.12.6', packages: [...LAYOUTS.map(entry), ...ZONE_FACES.map(zoneEntry)], ledProfiles: [FLAG_BOX_FILE] });
     for (const face of ZONE_FACES) {
       const row = (manifest.packages as JsonItem[]).find((p) => p.folder === face.folder)!;
       expect(row).toMatchObject({ slots: 0 });
@@ -205,7 +206,10 @@ describe('widget build on disk', () => {
     expect(manifest).toEqual(widget.manifest as unknown as JsonItem);
     // `ledProfiles` is its own list rather than a package kind: a profile has no width, no height
     // and no slots, and the user imports it rather than the plugin installing it. ADR 0013.
-    expect(Object.keys(manifest)).toEqual(['version', 'simHubVersion', 'packages', 'ledProfiles']);
+    expect(Object.keys(manifest)).toEqual(['schemaVersion', 'version', 'simHubVersion', 'packages', 'ledProfiles']);
+    // First, because a reader that cannot read this shape should be able to say so before parsing
+    // the rest of it.
+    expect(manifest.schemaVersion).toBe(MANIFEST_SCHEMA_VERSION);
     // Every card face carries a rung; a zone face does not, because it has no cards to size.
     for (const p of manifest.packages as JsonItem[]) {
       const keys = ['folder', 'kind', 'width', 'height', 'slots', ...(p.rung === undefined ? [] : ['rung']), 'file'];

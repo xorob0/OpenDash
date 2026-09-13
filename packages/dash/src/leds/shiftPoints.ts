@@ -47,6 +47,9 @@ import table from '../../../../data/shift-points.json';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { rpms } from '../shift.ts';
+// The car a table entry is keyed by. One body, in `second/values.ts`; this file used to carry a
+// byte-identical second one, which is the defect ADR 0014 records for `gearRedline`.
+import { carModel } from '../second/values.ts';
 
 const { and, eq, game, gt, ge, isnull, num, raw, str } = ncalc;
 
@@ -104,8 +107,6 @@ export function validateShiftTable(t: Record<string, CarShiftPoints> = SHIFT_TAB
 /** iRacing's numeric gear. `[Gear]` is a string ("N", "R", "1"), so the raw one is the one to compare. */
 const gearNumber = (): Expr => isnull(raw('Gear'), num(0));
 
-/** The car SimHub says we are in, which is what a table entry is keyed by. */
-export const carModel = (): Expr => isnull(game('CarModel'), str(''));
 
 /**
  * Whether the user has turned SimHub's own per-gear redline on for this car.
