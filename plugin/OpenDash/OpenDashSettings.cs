@@ -8,7 +8,20 @@ namespace OpenDashPlugin
 {
     public class OpenDashSettings
     {
+        /// <summary>Whether the segments are SimHub's shift lights. Deprecated by <see cref="RevBar"/>,
+        /// kept as its alias and kept attached, because it has shipped and README publishes it as a
+        /// property an LED profile may read. Normalise() keeps the two agreeing.</summary>
         public bool ShiftLights { get; set; } = Contract.DefaultShiftLights;
+
+        /// <summary>
+        /// What the top of a rectangular face carries: "shift", "rpm" or "off".
+        ///
+        /// Null rather than defaulted, so that a settings file written before the mode existed is
+        /// recognisable as one: an initialiser here would make an rc.2 file that says
+        /// <c>ShiftLights: false</c> indistinguishable from one that asked for the shift lights, and
+        /// that user would find them switched back on. Normalise() fills it in.
+        /// </summary>
+        public string RevBar { get; set; }
 
         public string PositionMode { get; set; } = Contract.DefaultPositionMode;
 
@@ -55,6 +68,8 @@ namespace OpenDashPlugin
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
         public void Normalise()
         {
+            RevBar = RevBarMode();
+            ShiftLights = RevBar == Contract.RevBarShift;
             PositionMode = Contract.NormaliseChoice(PositionMode, Contract.PositionModes, Contract.DefaultPositionMode);
             DeltaReference = Contract.NormaliseChoice(DeltaReference, Contract.DeltaReferences, Contract.DefaultDeltaReference);
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
@@ -134,6 +149,21 @@ namespace OpenDashPlugin
             BarFields = bar;
 
             QuickGlance = Contract.NormaliseQuickGlance(QuickGlance);
+        }
+
+        /// <summary>What the top of the face carries, resolving a file written before the mode existed
+        /// through the deprecated ShiftLights alias. Safe to call before Normalise().</summary>
+        public string RevBarMode()
+        {
+            return Contract.NormaliseRevBar(RevBar, ShiftLights);
+        }
+
+        /// <summary>Sets the mode, and the alias with it: a dashboard or an LED profile still reading
+        /// ShiftLights should see the switch the driver just moved.</summary>
+        public void SetRevBar(string mode)
+        {
+            RevBar = Contract.NormaliseChoice(mode, Contract.RevBarModes, Contract.DefaultRevBar);
+            ShiftLights = RevBar == Contract.RevBarShift;
         }
 
         /// <summary>Page a face zone is showing, by its letter. Safe to call before Normalise().</summary>
@@ -359,6 +389,7 @@ namespace OpenDashPlugin
         {
             if (other == null) return;
             ShiftLights = other.ShiftLights;
+            RevBar = other.RevBar;
             PositionMode = other.PositionMode;
             DeltaReference = other.DeltaReference;
             SessionProgress = other.SessionProgress;

@@ -26,6 +26,7 @@ import {
   DELTA_REFERENCES,
   POSITION_MODES,
   PROPERTY_PREFIX,
+  REV_BAR_MODES,
   SESSION_PROGRESS_MODES,
   setting,
   SLOT_MAX,
@@ -54,7 +55,8 @@ describe('settings', () => {
   test('declares the dash, the zones, the companion and the pit wall', () => {
     const props = declaredProperties();
     const zoneCount = FACE_ZONE_LETTERS.length * 3 + BAR_SLOTS.length + 1;
-    expect(props).toHaveLength(4 + SLOT_MAX + zoneCount + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2);
+    // Four modes, twelve slots, the zones, RevBar, the modules, the pit wall zones, the wide zone and the URL.
+    expect(props).toHaveLength(4 + SLOT_MAX + zoneCount + 1 + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -66,6 +68,8 @@ describe('settings', () => {
     expect(props).toContain('OpenDash.ZoneCStart');
     expect(props).toContain('OpenDash.BarLeft1');
     expect(props).toContain('OpenDash.QuickGlance');
+    // Appended after the zones rather than beside ShiftLights, which has shipped at index 0.
+    expect(props[4 + SLOT_MAX + zoneCount]).toBe('OpenDash.RevBar');
     expect(props.slice(-6)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
   });
 
@@ -84,6 +88,12 @@ describe('settings', () => {
 
   test('every read falls back to the default without the plugin', () => {
     expect(setting.shiftLights()).toBe('isnull([OpenDash.ShiftLights], true)');
+    // Two fallbacks: the deprecated alias, and through it the default a package without the plugin
+    // shows. An rc.2 plugin attaches ShiftLights and not RevBar, and its user's switch still works.
+    expect(setting.revBar()).toBe("isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))");
+    expect(setting.revBarIs('off')).toBe("(isnull([OpenDash.RevBar], if(isnull([OpenDash.ShiftLights], true), 'shift', 'rpm'))) = ('off')");
+    expect(REV_BAR_MODES).toEqual(['shift', 'rpm', 'off']);
+    expect(DEFAULTS.RevBar).toBe('shift');
     expect(setting.positionMode()).toBe("isnull([OpenDash.PositionMode], 'overall')");
     expect(setting.deltaReference()).toBe("isnull([OpenDash.DeltaReference], 'session')");
     expect(setting.sessionProgress()).toBe("isnull([OpenDash.SessionProgress], 'auto')");
@@ -113,7 +123,13 @@ describe('plugin mirror', () => {
     const source = pluginSource('Contract.cs');
     expect(source).toContain(`public const string Prefix = "${PROPERTY_PREFIX}";`);
     expect(source).toContain(`public const int SlotCount = ${SLOT_MAX};`);
-    for (const name of ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress']) expect(source).toContain(`public const string ${name} = "${name}";`);
+    for (const name of ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress', 'RevBar']) expect(source).toContain(`public const string ${name} = "${name}";`);
+    expect(source).toContain(`RevBarModes = ${csArray(REV_BAR_MODES)};`);
+    // The plugin names each mode, because it compares against them in four places; the mirror is
+    // that the names spell the modes this file declares and that the default points at one of them.
+    const revBarConst = (mode: string): string => `RevBar${mode[0]!.toUpperCase()}${mode.slice(1)}`;
+    for (const mode of REV_BAR_MODES) expect(source).toContain(`public const string ${revBarConst(mode)} = "${mode}";`);
+    expect(source).toContain(`public const string DefaultRevBar = ${revBarConst(DEFAULTS.RevBar)};`);
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);

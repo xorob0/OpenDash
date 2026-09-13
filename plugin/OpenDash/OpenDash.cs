@@ -148,6 +148,7 @@ namespace OpenDashPlugin
                 this.AttachDelegate(Contract.BarFieldProperty(captured), () => Settings.BarField(captured));
             }
             this.AttachDelegate(Contract.QuickGlance, () => Settings.QuickGlance);
+            this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
             for (var module = 1; module <= Modules.Count; module++)
             {
                 var captured = module;

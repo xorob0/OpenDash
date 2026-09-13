@@ -12,10 +12,77 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings();
             Assert.True(settings.ShiftLights);
+            Assert.Equal(Contract.RevBarShift, settings.RevBarMode());
             Assert.Equal("overall", settings.PositionMode);
             Assert.Equal("session", settings.DeltaReference);
             Assert.Equal("auto", settings.SessionProgress);
             Assert.Equal(Contract.DefaultSlots(), settings.Slots);
+        }
+
+        /// <summary>
+        /// XOR-138 and XOR-119. The mode arrived after rc.2 shipped, so a settings file may not carry
+        /// it, and the one thing that must not happen is a driver who turned the shift lights off
+        /// finding them back on after an update.
+        /// </summary>
+        [Fact]
+        public void A_settings_file_written_before_the_mode_existed_keeps_its_answer()
+        {
+            // What Json.NET leaves behind for an rc.2 file: ShiftLights set, RevBar absent.
+            var off = new OpenDashSettings { ShiftLights = false, RevBar = null };
+            Assert.Equal(Contract.RevBarRpm, off.RevBarMode());
+            off.Normalise();
+            Assert.Equal(Contract.RevBarRpm, off.RevBar);
+            Assert.False(off.ShiftLights);
+
+            var on = new OpenDashSettings { ShiftLights = true, RevBar = null };
+            on.Normalise();
+            Assert.Equal(Contract.RevBarShift, on.RevBar);
+            Assert.True(on.ShiftLights);
+        }
+
+        [Fact]
+        public void The_mode_wins_over_the_alias_once_it_is_set_and_the_two_stay_in_step()
+        {
+            // A file that carries both: the mode is what the driver chose last, so it decides, and
+            // the alias is rewritten to agree rather than left to contradict it.
+            var settings = new OpenDashSettings { ShiftLights = true, RevBar = Contract.RevBarOff };
+            settings.Normalise();
+            Assert.Equal(Contract.RevBarOff, settings.RevBar);
+            Assert.False(settings.ShiftLights);
+
+            settings.SetRevBar(Contract.RevBarShift);
+            Assert.True(settings.ShiftLights);
+            settings.SetRevBar(Contract.RevBarRpm);
+            Assert.False(settings.ShiftLights);
+        }
+
+        [Fact]
+        public void An_unreadable_mode_falls_back_through_the_alias()
+        {
+            var settings = new OpenDashSettings { ShiftLights = false, RevBar = "sparkles" };
+            settings.Normalise();
+            Assert.Equal(Contract.RevBarRpm, settings.RevBar);
+
+            // Case and whitespace are the shapes a hand-edited file has.
+            var typed = new OpenDashSettings { RevBar = "  OFF " };
+            typed.Normalise();
+            Assert.Equal(Contract.RevBarOff, typed.RevBar);
+
+            // And an unknown mode handed to the setter is refused rather than stored.
+            var set = new OpenDashSettings();
+            set.SetRevBar("sparkles");
+            Assert.Equal(Contract.DefaultRevBar, set.RevBar);
+        }
+
+        [Fact]
+        public void CopyFrom_carries_the_mode()
+        {
+            var source = new OpenDashSettings();
+            source.SetRevBar(Contract.RevBarOff);
+            var target = new OpenDashSettings();
+            target.CopyFrom(source);
+            Assert.Equal(Contract.RevBarOff, target.RevBar);
+            Assert.False(target.ShiftLights);
         }
 
         [Fact]
