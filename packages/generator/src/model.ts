@@ -54,9 +54,12 @@ export type Binding = FormulaBinding | GradientBinding;
  * Bindable targets. The key is the SimHub property name exactly as it appears in the JSON.
  * Not every target makes sense on every item kind; the validator checks that.
  *
- * `BorderColor` is deliberately absent: it is a member of `BorderStyle`, not of the item, and
- * SimHub's BindingHelper resolves targets with `item.GetType().GetProperty(name)`, so an
- * item-level `Bindings.BorderColor` is silently ignored.
+ * `BorderColor` is absent, and that is a fact about the spelling rather than about the capability.
+ * SimHub's BindingHelper resolves a target with `item.GetType().GetProperty(name)`, so an
+ * item-level `Bindings.BorderColor` finds nothing and is silently ignored. The property lives on
+ * `BorderStyle`, which is an `IBindable` carrying bindings of its own, and SimHub evaluates those
+ * every frame. A border can therefore be bound; this model does not do it yet.
+ * See docs/decisions/0011-personalisation.md.
  */
 export type BindingTarget =
   | 'Text'

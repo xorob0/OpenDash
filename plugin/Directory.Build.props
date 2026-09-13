@@ -8,9 +8,9 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    <Authors>openDash contributors</Authors>
-    <Company>openDash contributors</Company>
-    <Product>openDash</Product>
-    <Copyright>MIT licence. openDash contributors.</Copyright>
+    <Authors>OpenDash contributors</Authors>
+    <Company>OpenDash contributors</Company>
+    <Product>OpenDash</Product>
+    <Copyright>MIT licence. OpenDash contributors.</Copyright>
   </PropertyGroup>
 </Project>

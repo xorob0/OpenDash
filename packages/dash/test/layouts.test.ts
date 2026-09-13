@@ -29,6 +29,7 @@ import {
   LAYOUTS,
   layout1280x400,
   layout1280x480,
+  layout1920x480,
   layout1280x720,
   layout480round,
   layout600x686,
@@ -274,7 +275,7 @@ const strip = (top: number, width: number, height: number, style?: typeof FLAG_S
 const RECT_ROWS: RectRow[] = [
   {
     layout: layout1280x480,
-    folder: 'openDash 1280x480',
+    folder: 'openDash slots 1280x480',
     rung: 'M',
     slot: [223, 187],
     origins: [[1, 65], [225, 65], [1, 253], [225, 253], [832, 65], [1056, 65], [832, 253], [1056, 253]],
@@ -297,7 +298,7 @@ const RECT_ROWS: RectRow[] = [
   },
   {
     layout: layout1280x400,
-    folder: 'openDash 1280x400',
+    folder: 'openDash slots 1280x400',
     rung: 'M',
     slot: [223, 156],
     origins: [[1, 55], [225, 55], [1, 212], [225, 212], [832, 55], [1056, 55], [832, 212], [1056, 212]],
@@ -320,7 +321,7 @@ const RECT_ROWS: RectRow[] = [
   },
   {
     layout: layout850x480,
-    folder: 'openDash 850x480',
+    folder: 'openDash slots 850x480',
     rung: 'M',
     slot: [233, 124],
     origins: [[0, 65], [0, 190], [0, 315], [617, 65], [617, 190], [617, 315]],
@@ -344,7 +345,7 @@ const RECT_ROWS: RectRow[] = [
   },
   {
     layout: layout800x480,
-    folder: 'openDash 800x480',
+    folder: 'openDash slots 800x480',
     rung: 'M',
     slot: [208, 124],
     origins: [[0, 65], [0, 190], [0, 315], [592, 65], [592, 190], [592, 315]],
@@ -367,7 +368,7 @@ const RECT_ROWS: RectRow[] = [
   },
   {
     layout: layout1280x720,
-    folder: 'openDash 1280x720',
+    folder: 'openDash slots 1280x720',
     rung: 'M',
     slot: [223, 204],
     origins: [[1, 65], [225, 65], [1, 270], [225, 270], [1, 475], [225, 475], [832, 65], [1056, 65], [832, 270], [1056, 270], [832, 475], [1056, 475]],
@@ -393,7 +394,7 @@ const RECT_ROWS: RectRow[] = [
   },
   {
     layout: layout800x286,
-    folder: 'openDash 800x286',
+    folder: 'openDash slots 800x286',
     rung: 'M',
     slot: [250, 109],
     origins: [[0, 55], [0, 165], [550, 55], [550, 165]],
@@ -414,7 +415,7 @@ const RECT_ROWS: RectRow[] = [
   },
   {
     layout: layout600x686,
-    folder: 'openDash 600x686',
+    folder: 'openDash slots 600x686',
     rung: 'M',
     slot: [199, 139],
     origins: [[0, 366], [200, 366], [400, 366], [0, 506], [200, 506], [400, 506]],
@@ -440,7 +441,9 @@ describe('the rectangular sizes, row by row of the spec table', () => {
   test('the table covers every rectangular layout but the MVP, each once', () => {
     const rows = RECT_ROWS.map((r) => r.layout);
     expect(new Set(rows).size).toBe(rows.length);
-    expect(LAYOUTS.filter((l) => l.shape === 'rect' && l.folder !== 'openDash')).toEqual(rows);
+    // The reference face is the MVP row and has its own describe above; excluded by identity rather
+    // than by name, because the name moved to the zone face in XOR-118.
+    expect(LAYOUTS.filter((l) => l.shape === 'rect' && l !== layout1920x480)).toEqual(rows);
   });
 
   for (const row of RECT_ROWS) {
