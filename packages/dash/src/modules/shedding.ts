@@ -58,10 +58,10 @@ const nothing = (why: string): Shedding => ({ kind: 'nothing', why });
 /**
  * The table. One entry per page of the catalogue, in the catalogue's order.
  *
- * Where a module carries a field the drawing does not name, the field is kept at `wide` and `tall`
- * -- the two forms that keep everything -- and sheds with the drawing at the other two. Where the
- * drawing names a field the module does not have yet, it is simply not here; the module is what
- * this table is about.
+ * Where a module carries a field the drawing does not name -- the companion artboard gives fuel
+ * three per-lap consumptions where the zone drawing gives it one -- the field is kept at `wide`,
+ * the fullest form, and follows the drawing everywhere else. Where the drawing names a field the
+ * module does not have yet, it is simply not here; the module is what this table is about.
  */
 export const SHEDDING: Record<string, Shedding> = {
   // Six values at `wide`, four at `grid`: the laps and the estimate go, and the delta stays,
@@ -76,8 +76,9 @@ export const SHEDDING: Record<string, Shedding> = {
   // One value and a bar it is drawn against; there is nothing secondary to lose. The catalogue
   // draws three sector deltas under the bar that this page does not build yet (XOR-171).
   delta: fields({ wide: ['delta'], grid: ['delta'], tallNarrow: ['delta'], tall: ['delta'] }),
-  // The three sectors are the page and stay at every shape. Of the lap times under them, a narrow
-  // zone keeps the two you are beating and a tall one keeps the two that are being beaten.
+  // The three sectors are the page and stay at every shape. Of the three lap times under them the
+  // drawings keep two, and not the same two: your own best and the last lap in a narrow zone, the
+  // last lap and the session best in a tall one.
   sectors: fields({
     wide: ['yourBest', 'last', 'sessionBest'],
     grid: ['yourBest', 'last', 'sessionBest'],
@@ -96,8 +97,8 @@ export const SHEDDING: Record<string, Shedding> = {
   }),
   energy: nothing('one line of prose: iRacing publishes no virtual energy'),
   tyres: nothing('four corners cut from the box; rule 18'),
-  // The refuel and the clock stay; the corner toggles wrap and the tear-off goes with the width,
-  // which the block already does for itself.
+  // The refuel and the pit time stay at every shape; the corner toggles wrap and the tear-off goes
+  // with the width, which the toggle block already does for itself.
   pitView: fields({ wide: ['refuel', 'pitTime'], grid: ['refuel', 'pitTime'], tallNarrow: ['refuel', 'pitTime'], tall: ['refuel', 'pitTime'] }),
   // The catalogue keeps seven of its ten cells at `tall narrow` and drops the three drawn last.
   // The same rule here: the car, the two a driver moves every corner, and the brake bias.
