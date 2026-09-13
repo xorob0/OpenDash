@@ -21,6 +21,7 @@ import { cells, monoWidth } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { densityOf } from '../second/density.ts';
+import { rank, type RankMember } from '../second/rank.ts';
 import {
   CHARS,
   absLevel,
@@ -122,17 +123,6 @@ export const STRIP_CELLS: readonly StripCell[] = [
  */
 const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', 'map', 'diff'];
 
-/** The most important cells that fit the width, in the order the canvas draws them. */
-function stripCellsThatFit(width: number, valueFs: number, labelFs: number, gap: number): StripCell[] {
-  for (let count = STRIP_PRIORITY.length; count > 0; count -= 1) {
-    const keep = new Set(STRIP_PRIORITY.slice(0, count));
-    const drawn = STRIP_CELLS.filter((c) => keep.has(c.id));
-    const total = drawn.reduce((sum, c) => sum + stripCellWidth(c, valueFs, labelFs), 0) + gap * (drawn.length - 1);
-    if (total <= width) return drawn;
-  }
-  return [];
-}
-
 /** Width a strip cell takes: its label or its value, whichever is wider. */
 function stripCellWidth(cell: StripCell, valueFs: number, labelFs: number): number {
   const value = monoWidth(cells('SemiBold', valueFs), { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 });
@@ -218,31 +208,38 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
     }
   }
 
-  // The strip, centred in what the two ends leave.
+  // The strip, centred in what the two ends leave. A setting the sim does not publish takes its
+  // cell with it and the strip closes over the hole, which is the rank's `close` mode: an empty box
+  // where a car has no differential is worse than a narrower strip.
   const stripLeft = frame.left + padX + endWidth + d.gapX;
   const stripRight = frame.left + frame.width - padX - endWidth - d.gapX;
   const stripWidth = Math.max(0, stripRight - stripLeft);
-  const cellsToDraw = stripCellsThatFit(stripWidth, smallFs, labelFs, d.gapX);
-  const widths = cellsToDraw.map((c) => stripCellWidth(c, smallFs, labelFs));
-  const total = widths.reduce((a, b) => a + b, 0) + d.gapX * Math.max(0, cellsToDraw.length - 1);
-  let x = stripLeft + Math.max(0, (stripWidth - total) / 2);
-  cellsToDraw.forEach((cell, i) => {
-    const w = widths[i] ?? 0;
-    const name = `${prefix}strip.${cell.id}`;
-    // A setting the sim does not publish takes the cell with it, rather than leaving an empty box.
-    const present = ncalc.not(ncalc.isNull(cell.expr));
-    items.push(
-      { ...label(`${name}.label`, cell.label.toUpperCase(), x, top, w, { size: labelFs }), ...withBindings({ Visible: present }) },
-      {
-        ...numeral(`${name}.value`, cell.sample, x, valueTop + (valueFs - smallFs), smallFs, { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 }, {
-          color: ds.color.text.secondary,
-          maxWidth: w + 4,
-        }),
-        ...withBindings({ Visible: present, Text: iff(present, fmt(cell.expr, cell.pattern), str('')) }),
-      },
-    );
-    x += w + d.gapX;
-  });
+  const strip = rank(
+    STRIP_CELLS.map((cell) => {
+      const w = stripCellWidth(cell, smallFs, labelFs);
+      const present = ncalc.not(ncalc.isNull(cell.expr));
+      const name = `${prefix}strip.${cell.id}`;
+      return {
+        id: cell.id,
+        width: w,
+        present,
+        draw: (at) => [
+          label(`${name}.label`, cell.label.toUpperCase(), at.x, top, w, { size: labelFs, leftBind: at.leftAt(), visibleBind: at.visibleBind }),
+          numeral(`${name}.value`, cell.sample, at.x, valueTop + (valueFs - smallFs), smallFs, { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 }, {
+            color: ds.color.text.secondary,
+            maxWidth: w + 4,
+            leftBind: at.leftAt(),
+            visibleBind: at.visibleBind,
+            // Emptied as well as hidden: a hidden item still holds its last text, and the strip is
+            // rebuilt from the same items when the next car does publish the setting.
+            bind: iff(present, fmt(cell.expr, cell.pattern), str('')),
+          }),
+        ],
+      } satisfies RankMember;
+    }),
+    { left: stripLeft, width: stripWidth, gap: d.gapX, when: 'close', shedOrder: STRIP_PRIORITY },
+  );
+  items.push(...strip.items);
 
   return items;
 }
