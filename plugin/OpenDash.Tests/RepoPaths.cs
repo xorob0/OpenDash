@@ -27,6 +27,9 @@ namespace OpenDashPlugin.Tests
 
         public static string ContractTs() => Path.Combine(Root(), "packages", "dash", "src", "contract.ts");
 
+        /// <summary>The mark, which the panel redraws in WPF because WPF cannot render an SVG.</summary>
+        public static string LogoSvg() => Path.Combine(Root(), "media", "logo.svg");
+
         public static string Version() => File.ReadAllText(Path.Combine(Root(), "VERSION")).Trim();
 
         /// <summary>The package `bun run build` writes; absent until the dash has been built.</summary>
