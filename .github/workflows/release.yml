@@ -59,6 +59,7 @@ jobs:
           path: |
             build/*.simhubdash
             build/*.ledsprofile
+            build/flag-box.svg
             build/manifest.json
             build/fonts/*.ttf
             build/fonts/OFL.txt

@@ -81,12 +81,14 @@ export const gearIs = (gear: string): string => eq(ncalc.game('Gear'), str(gear)
 function gearsAtBand(band: ShiftBand): MatrixContainer[] {
   return GEARS.map((gear) => ({
     kind: 'when' as const,
-    description: `Gear ${gear}`,
+    description: `Gear ${gear} ${band.id}`,
     formula: gearIs(gear),
     children: [
       {
+        // Named with the band as well as the gear: the same digit exists in four colours, and the
+        // contact sheet and the fit test both address them by this name.
         kind: 'animation' as const,
-        description: `Gear ${gear} glyph`,
+        description: `Gear ${gear} ${band.id} glyph`,
         // The redline band blinks the digit rather than filling the panel behind it: a filled
         // panel is a flag's vocabulary, and the box has to keep those two apart.
         frames: band.blink

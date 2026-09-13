@@ -49,6 +49,7 @@ jobs:
           path: |
             build/*.simhubdash
             build/*.ledsprofile
+            build/flag-box.svg
             build/manifest.json
             build/fonts/*.ttf
           if-no-files-found: error
@@ -67,7 +68,8 @@ jobs:
           dotnet-version: 8.0.x
 
       # The plugin embeds Resources/*.simhubdash and the .ledsprofile (both gitignored); take them
-      # from the dash job.
+      # from the dash job. flag-box.svg rides along as the contact sheet a reviewer looks at; it is
+      # not embedded, and the csproj only globs the two extensions it wants.
       - name: Download dashboard packages
         uses: actions/download-artifact@v4
         with:
