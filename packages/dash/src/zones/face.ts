@@ -131,10 +131,15 @@ export interface BuiltFace {
   zones: Dashboard[];
 }
 
-/** One arrangement of the face, with the expression that decides when SimHub shows it. */
-function faceScreen(layout: ZoneLayout, name: string, withRevBar: boolean): Screen {
+/**
+ * One arrangement of the face, with the expression that decides when SimHub shows it.
+ *
+ * The name follows the flag rather than being passed beside it, so a screen cannot end up named for
+ * one arrangement and drawn as the other.
+ */
+function faceScreen(layout: ZoneLayout, withRevBar: boolean): Screen {
   return {
-    name,
+    name: withRevBar ? FACE_SCREEN_NAME : FACE_SCREEN_NAME_NO_REV_BAR,
     inGame: true,
     idle: true,
     pit: true,
@@ -159,7 +164,7 @@ export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions): Built
     width: layout.width,
     height: layout.height,
     backgroundColor: layout.background,
-    screens: [faceScreen(layout, FACE_SCREEN_NAME, true), faceScreen(off, FACE_SCREEN_NAME_NO_REV_BAR, false)],
+    screens: [faceScreen(layout, true), faceScreen(off, false)],
     metadata,
   };
   return { main, zones: zoneDashboardsFor([...zonesOf(layout), ...zonesOf(off)], metadata) };

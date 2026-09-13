@@ -117,7 +117,7 @@ export const setting = {
    * correct: a plugin that has never heard of the mode cannot have been asked for it.
    */
   revBar: (): Expr => isnull(prop(propertyName(REV_BAR_SETTING)), iff(setting.shiftLights(), str('shift'), str('rpm'))),
-  /** `isnull([OpenDash.RevBar], ...) = 'shift'`: whether the segments are SimHub's shift lights. */
+  /** `isnull([OpenDash.RevBar], ...) = 'off'`: whether the face is in the given rev bar mode. */
   revBarIs: (mode: RevBarMode): Expr => eq(setting.revBar(), str(mode)),
   /** `isnull([OpenDash.PositionMode], 'overall')` */
   positionMode: (): Expr => isnull(prop(propertyName('PositionMode')), str(DEFAULTS.PositionMode)),
