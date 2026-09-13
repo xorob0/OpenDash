@@ -22,11 +22,18 @@ export type SessionProgress = 'auto' | 'laps' | 'time';
  * hardware makers put there and what DNR puts on the same LEDs.
  */
 export type LedCentre = 'rpm' | 'rpmOnly' | 'brake' | 'throttleBrake' | 'fuel';
+/**
+ * How the rev ladder fills the strip. It decides the *look*, never the *when*: the thresholds are
+ * the car's own either way (ADR 0014), and a style only chooses which LED takes which rung and
+ * what colour it is.
+ */
+export type LedRpmStyle = 'leftToRight' | 'meetInMiddle' | 'f1';
 
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
 export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'rpmOnly', 'brake', 'throttleBrake', 'fuel'];
+export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['leftToRight', 'meetInMiddle', 'f1'];
 
 export const DEFAULTS = {
   ShiftLights: true,
@@ -34,6 +41,7 @@ export const DEFAULTS = {
   DeltaReference: 'session' as DeltaReference,
   SessionProgress: 'auto' as SessionProgress,
   LedCentre: 'rpm' as LedCentre,
+  LedRpmStyle: 'leftToRight' as LedRpmStyle,
 } as const;
 
 /** `Slot01` .. `Slot12` for a 1-based slot index. */
@@ -70,11 +78,14 @@ export function dashProperties(): string[] {
 
 /** The properties only a generated LED profile reads. ADR 0013. */
 export function ledProperties(): string[] {
-  return [LED_CENTRE_SETTING].map(propertyName);
+  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING].map(propertyName);
 }
 
 /** The name of the setting choosing what the middle of a strip shows. */
 export const LED_CENTRE_SETTING = 'LedCentre';
+
+/** The name of the setting choosing how the rev ladder fills the strip. */
+export const LED_RPM_STYLE_SETTING = 'LedRpmStyle';
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
@@ -109,6 +120,8 @@ export const setting = {
   slot: (slot: number): Expr => isnull(prop(propertyName(slotSettingName(slot))), num(defaultCardForSlot(slot))),
   /** `isnull([OpenDash.LedCentre], 'rpm')` */
   ledCentre: (): Expr => isnull(prop(propertyName(LED_CENTRE_SETTING)), str(DEFAULTS.LedCentre)),
+  /** `isnull([OpenDash.LedRpmStyle], 'leftToRight')` */
+  ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
 };
 
 

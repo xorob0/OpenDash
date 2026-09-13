@@ -66,10 +66,12 @@ namespace OpenDashPlugin.Tests
             // wide zone and the URL, and the LED centre — which no screen reads and a generated
             // .ledsprofile does (ADR 0013).
             const int perFace = 4 + 4 + 4 + 4 + 1;
-            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 1, names.Count);
-            Assert.Equal(Contract.LedCentre, names[names.Count - 1]);
+            Assert.Equal(4 + 12 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 2, names.Count);
+            Assert.Equal(Contract.LedCentre, names[names.Count - 2]);
+            Assert.Equal(Contract.LedRpmStyle, names[names.Count - 1]);
             Assert.Equal("rpm", Contract.DefaultLedCentre);
             Assert.Contains(Contract.DefaultLedCentre, Contract.LedCentres);
+            Assert.Contains(Contract.DefaultLedRpmStyle, Contract.LedRpmStyles);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -94,7 +96,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LedCentre" }, names.Skip(afterFaces + 21));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LedCentre", "LedRpmStyle" }, names.Skip(afterFaces + 21));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 

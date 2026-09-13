@@ -31,7 +31,7 @@ import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
 import { SCREEN_PACKAGES } from '../src/screens/index.ts';
 import { ZONE_FACES, type ZoneLayout } from '../src/zones/index.ts';
 import { CARDS_FILE } from '../src/slots.ts';
-import { STRIP_SHAPES, deviceLength } from '../src/leds/strip.ts';
+import { ALL_SHAPES, deviceLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { ds } from '../src/tokens.ts';
@@ -412,8 +412,8 @@ describe('LED profiles on disk', () => {
   });
 
   test('writes one .ledsprofile per strip shape, and nothing that looks like a package', () => {
-    expect(lit.profiles.map((p) => p.shape.id)).toEqual(STRIP_SHAPES.map((s) => s.id));
-    expect(readdirSync(lit.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, ...STRIP_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`)].sort());
+    expect(lit.profiles.map((p) => p.shape.id)).toEqual(ALL_SHAPES.map((s) => s.id));
+    expect(readdirSync(lit.out).sort()).toEqual([MANIFEST_FILE, PANEL_FONTS_DIR, ...ALL_SHAPES.map((s) => `${rpmStripFileName(s)}.ledsprofile`)].sort());
     // A profile is not a dashboard: no folder, no .djson, no zip.
     expect(readdirSync(lit.out).filter((f) => f.endsWith('.simhubdash'))).toEqual([]);
   });
@@ -421,9 +421,9 @@ describe('LED profiles on disk', () => {
   test('the manifest records each profile with the strip it is for', () => {
     const manifest = readJson(lit.manifestPath) as unknown as { profiles: JsonItem[]; packages: JsonItem[] };
     expect(manifest.packages).toEqual([]);
-    expect(manifest.profiles.map((p) => p.name)).toEqual(STRIP_SHAPES.map(rpmStripProfileName));
+    expect(manifest.profiles.map((p) => p.name)).toEqual(ALL_SHAPES.map(rpmStripProfileName));
     for (const row of manifest.profiles) expect(Object.keys(row)).toEqual(['name', 'shape', 'leds', 'file']);
-    expect(manifest.profiles.map((p) => p.leds)).toEqual(STRIP_SHAPES.map(deviceLength));
+    expect(manifest.profiles.map((p) => p.leds)).toEqual(ALL_SHAPES.map(deviceLength));
   });
 
   test('every profile is the JSON SimHub reads, and every ContainerType is one it resolves', () => {

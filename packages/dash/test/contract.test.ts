@@ -77,7 +77,7 @@ describe('settings', () => {
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance)/.test(p))).toEqual([]);
-    expect(props.slice(-7)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl', 'OpenDash.LedCentre']);
+    expect(props.slice(-8)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl', 'OpenDash.LedCentre', 'OpenDash.LedRpmStyle']);
   });
 
   test('every face that ships has a group, and every group is complete', () => {

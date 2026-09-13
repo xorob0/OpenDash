@@ -32,7 +32,7 @@ import {
 } from './generator.ts';
 import { LAYOUTS, rungOf, type Layout } from './layouts/index.ts';
 import { SCREEN_PACKAGES, buildScreenPackage, type ScreenPackageDef } from './screens/index.ts';
-import { STRIP_SHAPES, deviceLength, type StripShape } from './leds/strip.ts';
+import { ALL_SHAPES, deviceLength, type StripShape } from './leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from './leds/rpmStrip.ts';
 import { DEFAULT_STRATEGY, type SlotStrategy } from './slots.ts';
 
@@ -278,7 +278,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const layouts = opts.layouts ?? LAYOUTS;
   const zoneFaces = opts.zoneFaces ?? ZONE_FACES;
   const screens = opts.screens ?? SCREEN_PACKAGES;
-  const ledProfiles = opts.ledProfiles ?? STRIP_SHAPES;
+  const ledProfiles = opts.ledProfiles ?? ALL_SHAPES;
   const log = opts.log ?? ((line: string): void => console.log(line));
   // A build of LED profiles alone is legitimate now that they are a second kind of output, so the
   // guard asks whether there is anything to build at all rather than whether there is a dashboard.

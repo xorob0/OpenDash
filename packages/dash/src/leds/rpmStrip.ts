@@ -18,70 +18,68 @@
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { DEFAULTS, LED_CENTRES, setting } from '../contract.ts';
-import type { LedCentre } from '../contract.ts';
-import { stageOf } from '../components/revSegments.ts';
-import { mirrorAvailable, mirrorOverRev, mirrorStageLit, simhubRedline, simhubStageLit } from '../shift.ts';
+import { DEFAULTS, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
+import type { LedCentre, LedRpmStyle } from '../contract.ts';
+import { mirrorAvailable } from '../shift.ts';
+import { OVER_REV_BLINK_MS, ladderColors, ladderOrder, overRev, rungFlashes, rungLit, stepLit, type Ladder } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
 
-const { and, eq, gt, not, num, str, mul } = ncalc;
-
-/** Half period of the over-rev flash, the same 62 ms the rev bar blinks at. */
-export const OVER_REV_BLINK_MS = Math.floor(1000 / ds.shiftLights.flashHz / 2);
-
-const STAGE_COLORS = [ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3] as const;
+const { and, eq, gt, not, num, or, str } = ncalc;
 
 /** `isnull([OpenDash.LedCentre], 'rpm') = '<which>'`, the gate on each centre function. */
 const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which));
 
-/**
- * One LED of a progressive bar over a 0..100 input: lit once `value` has passed `k` of `count`
- * equal steps. Written as a cross-multiplication for the same reason the rev bar's is — no
- * division, so nothing divides by a zero range.
- */
-const stepLit = (value: Expr, k: number, count: number): Expr => gt(mul(value, num(count)), num(k * 100));
+/** `isnull([OpenDash.LedRpmStyle], 'leftToRight') = '<which>'`, the gate on each style. */
+const styleIs = (which: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(which));
 
-/** The shift ladder over `count` LEDs, under one of the two ladders. */
-const ladder = (count: number, which: 'mirror' | 'simhub'): leds.LedContainer[] =>
-  Array.from({ length: count }, (_, k) => {
-    const stage = stageOf(k, count);
-    const indexes = Array.from({ length: count }, (_, i) => i);
-    const stageStart = indexes.findIndex((i) => stageOf(i, count) === stage);
-    const stageCount = indexes.filter((i) => stageOf(i, count) === stage).length;
-    const local = k - stageStart;
-    const lit = which === 'mirror' ? mirrorStageLit(stage, local, stageCount) : simhubStageLit(stage, local, stageCount);
-    const flash = which === 'mirror' ? mirrorOverRev() : simhubRedline();
+/** The rev ladder over `count` LEDs, in one style, under one of the two ladders. */
+const rungs = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContainer[] => {
+  const order = ladderOrder(style, count);
+  const colors = ladderColors(style);
+  return Array.from({ length: count }, (_, k) => {
+    const rung = order.rungOf(k);
+    const band = Math.min(2, Math.floor((rung * 3) / order.rungs));
     return {
       kind: 'customStatus' as const,
       description: `rev ${String(k + 1).padStart(2, '0')}`,
       startPosition: k + 1,
       ledCount: 1,
-      color: STAGE_COLORS[stage] ?? ds.purpose.shift.stage3,
-      enabledFormula: { expression: lit },
-      ...(stage === 2 ? { blinkFormula: { expression: flash }, blinkColor: ds.purpose.shift.stage3, blinkDelayMs: OVER_REV_BLINK_MS } : {}),
+      color: colors[band] ?? colors[2],
+      enabledFormula: { expression: rungLit(which, rung, order.rungs) },
+      ...(rungFlashes(style, rung, order.rungs)
+        ? { blinkFormula: { expression: overRev(which) }, blinkColor: colors[2], blinkDelayMs: OVER_REV_BLINK_MS }
+        : {}),
     };
   });
+};
 
 /**
- * The centre, as the shift ladder: two conditional groups, exactly as the rev bar is two layers.
- * Whichever is active is the ladder the car is on, which is how the strip is debugged.
+ * The centre, as the shift ladder: one conditional group per style, and inside each the two
+ * ladders — exactly as the rev bar is two layers. Whichever is active is the ladder the car is on,
+ * which is how the strip is debugged.
  */
-const revCentre = (count: number): leds.LedContainer[] => [
-  {
-    kind: 'conditionalGroup',
-    description: "the car's own shift lights",
-    trigger: { expression: mirrorAvailable() },
-    children: ladder(count, 'mirror'),
-  },
-  {
-    kind: 'conditionalGroup',
-    description: "SimHub's bands, for a car that publishes no ladder",
-    trigger: { expression: not(mirrorAvailable()) },
-    children: ladder(count, 'simhub'),
-  },
-];
+const revCentre = (count: number): leds.LedContainer[] =>
+  LED_RPM_STYLES.map((style) => ({
+    kind: 'conditionalGroup' as const,
+    description: `style: ${style}`,
+    trigger: { expression: styleIs(style) },
+    children: [
+      {
+        kind: 'conditionalGroup' as const,
+        description: "the car's own shift lights",
+        trigger: { expression: mirrorAvailable() },
+        children: rungs(count, style, 'mirror'),
+      },
+      {
+        kind: 'conditionalGroup' as const,
+        description: "SimHub's bands, for a car that publishes no ladder",
+        trigger: { expression: not(mirrorAvailable()) },
+        children: rungs(count, style, 'simhub'),
+      },
+    ],
+  }));
 
 /** A progressive bar of `count` LEDs in one colour, driven by a 0..100 telemetry percentage. */
 const pedalBar = (count: number, value: Expr, color: string, label: string): leds.LedContainer[] =>
@@ -142,21 +140,29 @@ const fuelBar = (count: number): leds.LedContainer[] => {
   }));
 };
 
-/** The five things the centre can be, each behind its own setting value. */
-const centreFunctions = (count: number): leds.LedContainer[] =>
-  LED_CENTRES.map((which) => ({
+/**
+ * The five things the centre can be, each behind its own setting value.
+ *
+ * `rpm` and `rpmOnly` share one rev tree gated on either, rather than carrying a copy each: they
+ * differ only in whether the sides light, which is decided over in {@link sides}. The rev tree is
+ * already three styles times two ladders, so a second copy of it would be the largest thing in the
+ * file and would say nothing new.
+ */
+const centreFunctions = (count: number): leds.LedContainer[] => [
+  {
+    kind: 'conditionalGroup',
+    description: 'centre: rpm or rpmOnly',
+    trigger: { expression: or(centreIs('rpm'), centreIs('rpmOnly')) },
+    children: revCentre(count),
+  },
+  ...LED_CENTRES.filter((which) => which !== 'rpm' && which !== 'rpmOnly').map((which) => ({
     kind: 'conditionalGroup' as const,
     description: `centre: ${which}`,
     trigger: { expression: centreIs(which) },
     children:
-      which === 'rpm' || which === 'rpmOnly'
-        ? revCentre(count)
-        : which === 'brake'
-          ? pedalBar(count, brakeInput(), ds.color.danger.primary, 'brake')
-          : which === 'throttleBrake'
-            ? throttleBrakeBar(count)
-            : fuelBar(count),
-  }));
+      which === 'brake' ? pedalBar(count, brakeInput(), ds.color.danger.primary, 'brake') : which === 'throttleBrake' ? throttleBrakeBar(count) : fuelBar(count),
+  })),
+];
 
 /**
  * The sides: brake, and only under the default centre. `rpmOnly` is the setting for somebody who
