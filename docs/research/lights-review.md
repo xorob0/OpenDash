@@ -54,9 +54,10 @@ reads iRacing, and a claim about a real car below is a claim about that renditio
 **The ends of a real dash are lamps.** The Mercedes-AMG GT3 stack names each of its eight LEDs; the
 Bosch DDU 10 carries five per side and builds a pattern by selecting individual LEDs; AiM separates
 ten shift LEDs from five to eight alarm LEDs, one alarm per LED; Cosworth carries ten and six; DNR
-toned its ABS and TC down to one LED per side in February 2024. Nobody lights a group of four for one
-boolean. Where a real car does spend several LEDs on one thing, the extra LEDs carry a magnitude (the
-BMW M4 GT3's five-lamp TC severity, lockup by axle and count on the GTP cars) or a side.
+toned its ABS and TC down to one LED per side in February 2024. Where a real car does spend several LEDs on one thing, the extra LEDs carry a
+magnitude (the BMW M4 GT3's five-lamp TC severity, lockup by axle and count on the GTP cars) or a
+side; the Porsche 992 is the one exception, lighting its whole side cluster blue for traction control,
+and even there nothing else is hidden underneath.
 
 **Nothing takes the shift row for a flag.** Of twenty-one manuals, one (the IR18) puts a flag on its
 LEDs, and it uses the side cluster. The F1 technical regulations mandate three cockpit lights, red,
@@ -66,9 +67,11 @@ on side LEDs only and never on the ladder, and the two open community profiles s
 `ClearBackgroundWhenActive` on any flag container. What does take the whole shift cluster, in nearly
 every car, is the pit limiter, in a colour the ramp does not use, usually flashing.
 
-**The shift point is the whole bar in one colour.** No sampled car flashes its top third. The
-majority turns every LED blue and flashes it (Porsche 992 and 963, Cadillac, IR18, McLaren, Mustang,
-Lamborghini, W12); the rest go all red (BMW, Mercedes, Ferrari, Acura, GR86). Fill direction, band
+**The shift point is the whole bar in one colour.** No sampled car changes only its top third. The
+majority turns every LED blue (Porsche 992 and 963, Cadillac, IR18, McLaren, Mustang, Lamborghini,
+W12); the rest go all red (BMW, Mercedes, Ferrari, Acura, GR86). About half of them flash that row
+and the rest hold it, so flashing at the blink RPM is openDash's own choice, justified by the sim
+publishing a blink RPM for every car. Fill direction, band
 widths and colours differ per car and match no three-equal-band ladder, which is why DNR and Lovely
 carry per-car tables and why the sim publishes thresholds only, never a colour.
 
@@ -184,12 +187,17 @@ so rather than redrawing them.
 
 These are not design questions and should be looked at before any of the above is built.
 
-1. **The blink may never have been visible.** In every strip effect Tim saw as steady, and in the
-   ladder's over-rev flash, the blinking colour is the same value as the colour. If SimHub's
-   `CustomStatus` alternates `Color` with `BlinkingColor` rather than with dark, none of them has ever
-   blinked, and the notes asking for blinking are evidence about SimHub rather than about the
-   catalogue. This is decided by reading `StatusContainerBase` in the decompiled 9.12.6 assemblies on
-   the VM, and it is the first thing to do.
+1. **The blink has never been visible, and this is confirmed.** SimHub's `CustomStatus` and
+   `StaticColor` containers both derive from `StaticColorContainerBase`, whose result fills the run
+   with `BlinkingColor` while blinking and `Color` otherwise, with `BlinkingColor` defaulting to
+   transparent; the assembly the plugin builds against, `plugin/lib/SimHub.Plugins.dll`, decompiles
+   locally and says so. Every openDash effect that blinks writes the same colour to both fields
+   (traction control, DRS, push to pass, low fuel, the indicators, the limiter, speeding, the yellow
+   flag), and `rungs()` writes the top band's own red as its blinking colour, so the over-rev flash
+   of the ladder has never flashed either. The notes asking for blinking were observing this. The fix
+   is two lines: an opaque black rather than the colour as the default blinking colour in
+   `effectContainer`, and the same for the flashing rungs; transparent will not do, because the merge
+   drops transparent pixels and the ladder underneath would show through the off phase.
 2. **The Fanatec 3/9/3 is wired the other way.** Through Fanalab a Fanatec wheel presents its LEDs as
    the nine rev LEDs first, then the right flag LEDs from the outside in, then the left; DNR's profile
    carries a `RemapGroup` for exactly that order. openDash's 3/9/3 assumes left, centre, right, so on
@@ -208,37 +216,40 @@ These are not design questions and should be looked at before any of the above i
 7. **The 3/10/3's extra runs** repeat the centre and never carry a lamp; DNR folds them into the sides.
 8. **The strip reads six lossy flags** and so cannot show red, disqualification, the furled black,
    the meatball or debris, while the box ranks all fifteen; the two can disagree about which flag is
-   out. The strip should rank the catalogue as the box does.
+   out. The strip should rank the catalogue as the box does, with one care the box does not need:
+   the catalogue reads the flag bits bare, which a matrix group tolerates, whereas a strip's status
+   container answers a throwing formula with *on*, so on the strip every bit wants its `isnull()`.
 
 ## 7. The suggestions, ranked
 
 Each line says what it needs: nothing, a design token on the canvas, a decision record, or a check on
-the VM. The verification column is filled from a second pass in which two independent reviewers tried
-to refute each suggestion, one on its evidence and one on whether the data and the format can carry
-it.
+the VM. The verification column comes from a second pass in which two independent reviewers tried to
+refute each suggestion, one on its evidence and one on whether the data and the format can carry it.
+That pass covered the first eight of the thirty synthesised suggestions before the session's usage
+limit stopped it; the rows it reached say *held* and carry its corrections, the rest say *not run*.
 
 | # | Suggestion | Needs | Verification |
 |---|---|---|---|
-| 1 | Read the blink semantics of `CustomStatus` in the decompiled assemblies before anything else (defect 1). | VM | see below |
-| 2 | Wrap the strip trees in a brightness group and gate them on the ignition (defect 3). | nothing | |
-| 3 | A `RemapGroup` for the Fanatec order on the 3/9/3 (defect 2). | a Fanatec owner to confirm | |
-| 4 | The strip ranks `FLAG_CATALOGUE` through `SessionFlagsDetails`, as the box does (defect 8). | nothing | |
-| 5 | The slot model: one LED per function, the lamp table per side count, a test that no two conditions on one lamp share hue and rate. | nothing | |
-| 6 | Flags on the race-control lamp, never on the ladder; movement decays after `LedFlagHold` seconds through `changed()`. | ADR 0009 line | |
-| 7 | Two rates, 4 Hz and 2 Hz; `shiftLights.flashHz` from 8 to 4. | token | |
-| 8 | Colours: TC blue, ABS amber, low fuel amber, P2P blue then green, spotter purple; `purpose.spotter` and `purpose.shift.blink` as new tokens, `purpose.fuel.low` and `purpose.alert.p2p` retargeted. | tokens | |
-| 9 | The shift point as the whole bar in one colour, blue by default. | token | |
-| 10 | A per-car appearance table (fill, steps, shift colour, limiter pattern) beside the shift-points table, from the manuals; Lovely's open car data is the machine-readable alternative and its licence is unchecked. | data | |
-| 11 | A generic fallback ladder that spaces its rungs by the car's own spans rather than fixed thirds. | nothing | |
-| 12 | One pit model for strip and box, with the centre as a speed-against-the-limit gauge under the limiter (defect 4). | VM for the property | |
-| 13 | One low-fuel definition in laps, `LightsLowFuelLaps` with the box's setting as fallback (defect 5). | nothing | |
-| 14 | Read the missing `EngineWarnings` bits (fuel pressure, oil temperature, repair) and gate oil pressure on the engine running; correct the research notes. | nothing | |
-| 15 | Derived ends on brows and bare runs of twelve or more; the 3/10/3's extra runs as sides (defect 7). | decision record | |
-| 16 | The box: red and meatball grow then hold, black pulses between two outlines, blue full, incident X, spotter purple overlay with optional animation, gear colour choice. | tokens for purple | |
-| 17 | Per-function switches for the strip (`LightsFlags`, `LightsSpotter`, `LightsAssists`, `LightsWarnings`), and a shared `LightsCriticalOnly`. | nothing | |
-| 18 | A night floor for the critical set (red, DQ, pit speeding, oil pressure) above the general night level. | nothing | |
-| 19 | A 3 × 3 or 2 × 2 status cluster as a strip profile with a fixed legend (the F1 trio on top, spotter and pit in the middle, aids below), if a device for it ever exists. | a device | |
-| 20 | The one-field readability rule on the faces. | nothing | |
+| 1 | Give every blink an opaque black blinking colour, on the effects and on the flashing rungs (defect 1). | nothing | held, and the assembly decompiles locally, so no VM is needed |
+| 2 | Wrap the strip trees in a brightness group and gate them on the ignition (defect 3). | nothing | not run |
+| 3 | A `RemapGroup` for the Fanatec order on the 3/9/3 (defect 2). | a Fanatec owner to confirm | not run; read from DNR's own remap |
+| 4 | The strip ranks `FLAG_CATALOGUE` through `SessionFlagsDetails`, as the box does (defect 8). | nothing | held; every bit wants `isnull()` on a strip, and a shared critical-only setting must not silently replace the box's |
+| 5 | The slot model: one LED per function, the lamp table per side count, a test that no two conditions on one lamp share hue and rate. | nothing | held; the DNR change is dated 28 February 2024, and the MoTeC C125 has no side LEDs |
+| 6 | Flags on the race-control lamp, never on the ladder; movement decays after `LedFlagHold` seconds through `changed()`. | ADR 0009 line | held; the F1 regulation mandates the three lamps and is silent on the rev LEDs, so it is a precedent rather than a prohibition |
+| 7 | Two rates, 4 Hz and 2 Hz; `shiftLights.flashHz` from 8 to 4. | token | held; the indicators already run at 2 Hz, the upper edge of UN R48's band |
+| 8 | Colours: TC blue, ABS amber, low fuel amber, P2P blue then green, spotter purple; `purpose.spotter` and `purpose.shift.blink` as new tokens, `purpose.alert.p2p` retargeted and `purpose.fuel.low` moved from red to amber. | tokens | held on the car manuals; on iRacing the TC lamp is dark whatever its colour |
+| 9 | The shift point as the whole bar in one colour, blue by default. | token | held; the blinking colour must be opaque black, not transparent |
+| 10 | A per-car appearance table (fill, steps, shift colour, limiter pattern) beside the shift-points table, from the manuals; Lovely's open car data is the machine-readable alternative and its licence is unchecked. | data | not run |
+| 11 | A generic fallback ladder that spaces its rungs by the car's own spans rather than fixed thirds. | nothing | not run |
+| 12 | One pit model for strip and box, with the centre as a speed-against-the-limit gauge under the limiter (defect 4). | VM for the property | held; the Porsche 963 grades pit speed in red and green rather than blue |
+| 13 | One low-fuel definition in laps, `LightsLowFuelLaps` with the box's setting as fallback (defect 5). | nothing | not run |
+| 14 | Read the missing `EngineWarnings` bits (fuel pressure, oil temperature, repair) and gate oil pressure on the engine running; correct the research notes. | nothing | not run |
+| 15 | Derived ends on brows and bare runs of twelve or more; the 3/10/3's extra runs as sides (defect 7). | decision record | not run |
+| 16 | The box: red and meatball grow then hold, black pulses between two outlines, blue full, incident X, spotter purple overlay with optional animation, gear colour choice. | tokens for purple | not run |
+| 17 | Per-function switches for the strip (`LightsFlags`, `LightsSpotter`, `LightsAssists`, `LightsWarnings`), and a shared `LightsCriticalOnly`. | nothing | not run |
+| 18 | A night floor for the critical set (red, DQ, pit speeding, oil pressure) above the general night level. | nothing | not run |
+| 19 | A 3 × 3 or 2 × 2 status cluster as a strip profile with a fixed legend (the F1 trio on top, spotter and pit in the middle, aids below), if a device for it ever exists. | a device | not run |
+| 20 | The one-field readability rule on the faces. | nothing | not run |
 
 ## 8. What is not decided
 
