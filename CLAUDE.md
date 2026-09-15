@@ -16,6 +16,18 @@ able to revert exactly it.
 
 Never commit a red tree. If something has to be left broken, say so in the message.
 
+## The backlog
+
+The work is tracked as GitHub issues on `xorob0/OpenDash`, and a ticket is cited as `#123`. Labels
+carry the wave, milestones carry what used to be a Linear project, and the board carries Status,
+Priority and Estimate.
+
+Anything written before 2026-09-15 cites a Linear number instead — `XOR-123` — because that is where
+the backlog lived until the free tier stopped accepting new issues. Git history, old pull requests
+and review comments still read that way and are not rewritten; [docs/backlog.md](docs/backlog.md) is
+the lookup table. The working tree itself was renumbered, so a `#` in a comment or a document is a
+GitHub issue.
+
 ## The checks
 
 ```bash
