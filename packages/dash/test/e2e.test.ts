@@ -75,7 +75,7 @@ const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0
 const expectedFiles = (folder: string, cards = true): string[] =>
   [...FONT_FILES, FONT_LICENCE.name, ...(cards ? [CARDS_FILE, `${CARDS_FILE}.metadata`] : []), `${folder}.djson`, `${folder}.djson.metadata`].sort(byCodeUnit);
 
-/** The reference card face, which since XOR-118 is named for its slots rather than "openDash". */
+/** The reference card face, which since #169 is named for its slots rather than "openDash". */
 const REFERENCE_CARD_FACE = layout1920x480.folder;
 const EXPECTED_FILES = expectedFiles(REFERENCE_CARD_FACE);
 const FOLDERS = LAYOUTS.map((l) => l.folder);
@@ -168,8 +168,8 @@ describe('widget build on disk', () => {
       expect(Object.keys(row)).toEqual(['folder', 'kind', 'width', 'height', 'slots', 'file']);
     }
     // Written out rather than derived, because a rename is exactly what this should catch. Since
-    // XOR-118 the card faces carry "slots" in their names and the zone faces carry the shipped ones;
-    // the two round faces keep theirs, having no zone equivalent while XOR-94 is undecided.
+    // #169 the card faces carry "slots" in their names and the zone faces carry the shipped ones;
+    // the two round faces keep theirs, having no zone equivalent while #145 is undecided.
     expect((manifest.packages as JsonItem[])[0]).toEqual({ folder: 'openDash slots 1920x480', kind: 'dash', width: 1920, height: 480, slots: 12, rung: 'L', file: 'openDash slots 1920x480.simhubdash' });
     expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash slots 850x480', kind: 'dash', width: 850, height: 480, slots: 6, rung: 'M', file: 'openDash slots 850x480.simhubdash' });
     expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 480 round', kind: 'dash', width: 480, height: 480, slots: 2, rung: 'S', file: 'openDash 480 round.simhubdash' });
@@ -629,13 +629,13 @@ describe('command line', () => {
 
 /**
  * What the plugin embeds, it installs, so a package embedded by mistake appears in the dashboard
- * list of a user who asked for nothing. Since XOR-118 the zone faces carry the shipped names and
+ * list of a user who asked for nothing. Since #169 the zone faces carry the shipped names and
  * are what a user gets; the card faces are still built so that the two can be compared on a rig
- * before XOR-95 deletes the card path, and they are the ones that must not be installed.
+ * before #146 deletes the card path, and they are the ones that must not be installed.
  *
  * The direction of that exclusion inverted with the rename, which is the reason this test reads the
  * csproj rather than restating a list: a pattern left pointing at the old names would exclude
- * nothing and quietly embed everything, which is the shape of XOR-123.
+ * nothing and quietly embed everything, which is the shape of #174.
  *
  * It is checked here rather than left to the packaging script because that is exactly how it went
  * wrong the first time: the rule lived only in `scripts/package.sh`, CI never runs that script, and
@@ -658,7 +658,7 @@ describe('what a released plugin embeds', () => {
   test('every card face is excluded, and nothing else is', () => {
     expect(LAYOUTS.length).toBeGreaterThan(0);
     // The two round faces are the exception and are deliberate: they have no zone equivalent while
-    // XOR-94 is undecided, so they are the only face at their size and a user who has one must keep
+    // #145 is undecided, so they are the only face at their size and a user who has one must keep
     // getting it. They keep the shipped name and are embedded.
     const rounds = LAYOUTS.filter((l) => l.folder.includes('round'));
     expect(rounds).toHaveLength(2);

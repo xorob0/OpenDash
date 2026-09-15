@@ -41,7 +41,7 @@ export type LedRpmStyle = 'leftToRight' | 'meetInMiddle' | 'f1';
  * (ADR 0014). There is no fourth value for that and there should not be one.
  *
  * `ShiftLights` is not retired with it. It has shipped, it is one of the four names the plugin
- * attaches first, and README publishes it as a property an LED profile may read; XOR-119 is the
+ * attaches first, and README publishes it as a property an LED profile may read; #170 is the
  * rule that an rc.2 user's properties do not vanish without a release of warning. It stays as the
  * deprecated alias that {@link setting.revBar} falls back to.
  */
@@ -173,7 +173,7 @@ export const setting = {
 // --- The zone face -------------------------------------------------------------------------
 //
 // Additive. `Slot01` to `Slot12` stay declared and stay tested until the card path is retired in
-// XOR-95, because ten faces still read them and README.md publishes them as properties an LED
+// #146, because ten faces still read them and README.md publishes them as properties an LED
 // profile may read.
 //
 // The shape of these is the whole point of the model. A slot is arranged once, with a mouse,
@@ -270,7 +270,7 @@ export const ZONE_A_PAGES: readonly FaceZonePageMeta[] = [
  *
  * The catalogue artboard is headed "seven pages" and draws D1 through D8; the drawings are more
  * specific than the caption, so eight is taken and the disagreement is recorded in
- * docs/design/zones.md. The car page needs the telltale pictograms and arrives with XOR-97; the
+ * docs/design/zones.md. The car page needs the telltale pictograms and arrives with #148; the
  * mask is sized for eight from the start so that adding it costs nothing.
  */
 export const BAND_D_PAGES: readonly FaceZonePageMeta[] = [
@@ -698,7 +698,7 @@ export const secondScreen = {
 /**
  * SimHub composes at most four matrix contents, so a box setting exists once per matrix. People do
  * own more than one box — two in the corners of a monitor stand, one showing flags and one showing
- * the gear, is a setup somebody will build on day one — and XOR-124 settled that a screen owns its
+ * the gear, is a setup somebody will build on day one — and #175 settled that a screen owns its
  * settings as one group. A device is the same shape of thing, so it gets the same treatment.
  *
  * Rotation and serpentine wiring are deliberately **not** here. They are SimHub device settings

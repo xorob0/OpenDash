@@ -2,7 +2,7 @@
  * The zone faces the build produces, and everything needed to build one.
  *
  * They are a separate list from `LAYOUTS` rather than entries in it, and that is the whole reason
- * the zone face can be built without disturbing the ten that ship. `build.ts` walks both; XOR-95
+ * the zone face can be built without disturbing the ten that ship. `build.ts` walks both; #146
  * deletes the other list and this becomes the only one.
  */
 import { zoneFace1920x480 } from './faces/1920x480.ts';

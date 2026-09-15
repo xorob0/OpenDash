@@ -1,7 +1,7 @@
 /**
  * Which field of which page is secondary: the table, transcribed from the catalogue.
  *
- * Rule 17 says a page sheds its secondary ranks before it shrinks its numerals, and XOR-86 built
+ * Rule 17 says a page sheds its secondary ranks before it shrinks its numerals, and #137 built
  * the shape model that decides when. Neither says **what goes first**, and that is not a mechanism
  * to be derived: it is a design decision taken eighty-four times, once per page per shape, on
  * `design/canvas/ZoneCatalogue.dc.html`. Every drawing there is a row of this table.
@@ -74,7 +74,7 @@ export const SHEDDING: Record<string, Shedding> = {
     tall: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
   }),
   // One value and a bar it is drawn against; there is nothing secondary to lose. The catalogue
-  // draws three sector deltas under the bar that this page does not build yet (XOR-171).
+  // draws three sector deltas under the bar that this page does not build yet (#222).
   delta: fields({ wide: ['delta'], grid: ['delta'], tallNarrow: ['delta'], tall: ['delta'] }),
   // The three sectors are the page and stay at every shape. Of the three lap times under them the
   // drawings keep two, and not the same two: your own best and the last lap in a narrow zone, the

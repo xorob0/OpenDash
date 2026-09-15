@@ -214,7 +214,7 @@ The gradient form, `Mode` 4, maps the value of a formula onto a colour ramp:
 }
 ```
 
-### What a binding can target, and what silently does not (2026-09-13, XOR-73)
+### What a binding can target, and what silently does not (2026-09-13, #124)
 
 The list above is what samples happened to bind. This is the rule underneath it, from
 `BindingHelper`, `EditorModel.ApplyBindings` and `PropertyItemWrapper`.
@@ -341,7 +341,7 @@ loading the widget deletes every screen but the selected one from the dashboard
 (`LinqExtensions.RemoveAll` on `Model.Dashboard.Screens`). A frozen widget cannot be cycled
 afterwards, because the pages are not there any more.
 
-### `AddAction`'s release callback is discarded by the extension method (2026-09-12, XOR-93)
+### `AddAction`'s release callback is discarded by the extension method (2026-09-12, #144)
 
 `SimHub.Plugins.IPluginExtensions` is the convenient way to register an action:
 
@@ -461,7 +461,7 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   carries `Font` and `FontWeight` and nothing for stretch, and `usWidthClass` does not override the
   name, which was tried on the VM. What OpenDash ships is therefore Barlow Condensed with its family
   renamed to one carrying no width word, "openDash Display", so that WPF has nothing to fold; see
-  `packages/dash/src/design/fontFiles.ts` and XOR-108. The lesson generalises beyond this font: no
+  `packages/dash/src/design/fontFiles.ts` and #159. The lesson generalises beyond this font: no
   family OpenDash asks for may contain Condensed, Narrow, Compressed, Extended, Expanded or Wide.
   Their digits are proportional and SimHub cannot request `tnum`, so numerals use
   `UseMonospacedText` with `CharWidth` and `SpecialCharsWidth` cells, which SimHub offers for
@@ -505,7 +505,7 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   all invisible through the normalised properties. The whole bitfield is published separately; see
   below.
 
-### Every iRacing flag bit is a property of its own (2026-09-13, XOR-227)
+### Every iRacing flag bit is a property of its own (2026-09-13, #278)
 
 iRacing's telemetry carries one `SessionFlags` bitfield, and SimHub does not leave it as a number
 to be masked. `DataSampleEx` exposes it through `ExposableObject.EnumerateEnum<SessionFlags>`,
@@ -548,7 +548,7 @@ Still open: whether `Version` gates anything (every sample says 2, and 2 is what
 verification of the plugin-driven slot switch with the real plugin, which follows the plugin
 build.
 
-### NCalc dispatches on the name *and* the argument count (2026-09-11, XOR-83)
+### NCalc dispatches on the name *and* the argument count (2026-09-11, #134)
 
 `NCalcEngineBase.EvaluateFunction` is a chain of `name == "x" && parameterCount == n` tests. When
 neither a name nor an arity matches, **no delegate is attached and the expression evaluates to

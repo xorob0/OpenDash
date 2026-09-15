@@ -231,7 +231,7 @@ namespace OpenDashPlugin
             }
             // Shared rather than one face's, because the round faces' rev arc and the companion's
             // speedo read it too, and attached last of the shared group because ShiftLights is one of
-            // the names this list has always opened with. XOR-119, XOR-138.
+            // the names this list has always opened with. #170, #189.
             this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
             foreach (var face in Settings.RigFaces())
             {

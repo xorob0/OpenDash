@@ -156,7 +156,7 @@ describe('hero expressions', () => {
     const layers = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
     expect(layers.map((l) => l.kind)).toEqual(['layer', 'layer', 'layer']);
     expect(layers.map((l) => l.name)).toEqual(['revBar.shiftLights', 'revBar.shiftLightsSimHub', 'revBar.rpmBar']);
-    // The gate is the tri-state RevBar (ADR 0004, XOR-138), not the deprecated ShiftLights boolean,
+    // The gate is the tri-state RevBar (ADR 0004, #189), not the deprecated ShiftLights boolean,
     // so `rpm` and `off` both land on the plain bar and the ladder split applies only within `shift`.
     expect(ON).toContain('[OpenDash.RevBar]');
     // Which ladder a car is on is which layer is visible, which is how it is seen in Dash Studio.

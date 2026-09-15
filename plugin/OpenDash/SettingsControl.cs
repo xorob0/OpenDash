@@ -1,7 +1,7 @@
 // SettingsControl.cs: the OpenDash page in SimHub's left menu, built in code from design/canvas/Plugin.dc.html:
 // header (mark, wordmark, plugin version), then General, Data, Zones, Buttons, Layout, Companion, Pit wall
 // and Dashboard sections, then the footer. Zones is the picture of the face; Layout is the twelve-slot
-// picture it replaces, which stays while both models ship and leaves with the cards in XOR-95.
+// picture it replaces, which stays while both models ship and leaves with the cards in #146.
 // Every change writes the settings object and saves it at once; the attached properties read the same object.
 using System;
 using System.Collections.Generic;
@@ -103,7 +103,7 @@ namespace OpenDashPlugin
             // Three states in one control rather than a toggle and a second toggle under it: what the
             // top of the face carries is one decision, and a driver whose wheel already has LEDs
             // across it wants the third of them. Off redraws the face without the well, so the zones
-            // start where the recess did. XOR-138.
+            // start where the recess did. #189.
             var revBar = BuildSegmented(Contract.RevBarModes, new[] { "Shift lights", "RPM bar", "Off" }, Settings.RevBarMode(), value =>
             {
                 Settings.SetRevBar(value);

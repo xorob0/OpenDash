@@ -29,19 +29,19 @@ Three tickets claimed 0006 at once, which is how these came to be assigned in on
 is taken when the ticket is opened, not when the record is written, so that two records cannot
 collide.
 
-It happened again on 2026-09-13, and worse: four tickets, two numbers. XOR-142 and XOR-225 both
-claimed 0013, and XOR-146 and XOR-230 both claimed 0014, all four opened within an afternoon of
+It happened again on 2026-09-13, and worse: four tickets, two numbers. #193 and #276 both
+claimed 0013, and #197 and #281 both claimed 0014, all four opened within an afternoon of
 each other. The two lighting records keep the numbers, because they were the pair actually being
 written when the collision was found; the two Car themes records move to 0015 and 0016. Any ticket
 body still naming the old number is amended rather than rewritten, which is why a reader may find
-"ADR 0014" in XOR-146 and XOR-147 meaning the record now numbered 0016.
+"ADR 0014" in #197 and #198 meaning the record now numbered 0016.
 
 | | | |
 |---|---|---|
-| 0007 | The second screens, written down after the fact | XOR-67 |
-| 0010 | Where alert priority is decided | XOR-56 |
-| 0015 | What a car theme is, and the scope line it has to move | XOR-142 |
-| 0016 | How several hundred themed packages reach the user | XOR-146 |
+| 0007 | The second screens, written down after the fact | #118 |
+| 0010 | Where alert priority is decided | #107 |
+| 0015 | What a car theme is, and the scope line it has to move | #193 |
+| 0016 | How several hundred themed packages reach the user | #197 |
 
 ## Writing one
 

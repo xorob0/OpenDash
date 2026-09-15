@@ -111,7 +111,7 @@ own. A grep of the decompiled `GameReaderCommon.dll` finds zero of each.
 
 ## Per-gear shift points: there is nothing to derive
 
-This was the question behind XOR-233, and the answer is flatly no on iRacing.
+This was the question behind #284, and the answer is flatly no on iRacing.
 
 - **iRacing publishes one ladder for the car.** The `DriverInfo` block holds seventeen `DriverCar*`
   keys and none of them is per gear. There is no `DriverCarGearRatio`, and the four `DriverCarSL*`

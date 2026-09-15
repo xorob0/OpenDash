@@ -89,7 +89,7 @@ const lowFuel = (): Expr => gt(g('CarSettings_FuelAlertActive'), num(0));
 
 /**
  * The flags, in the order the face ranks them, read through the face's own `flagVisible` so that
- * the box and the screen cannot disagree about which of two live flags wins — the thing XOR-225
+ * the box and the screen cannot disagree about which of two live flags wins — the thing #276
  * names as the reason the alert catalogue matters here.
  */
 const FLAG_COLORS: Record<FlagProperty, string> = {

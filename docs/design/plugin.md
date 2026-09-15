@@ -5,7 +5,7 @@ Data, Zones, Buttons, Layout, Companion, Pit wall, **Lights**, Dashboard.
 
 Only the Lights page is drawn here so far. The rest was built before this file existed and is
 described by `plugin/OpenDash/SettingsControl.cs`; a section added from now on belongs here first,
-which is the habit [XOR-231](https://linear.app/xorob/issue/XOR-231) asked for and the reason the
+which is the habit [#282](https://github.com/xorob0/OpenDash/issues/282) asked for and the reason the
 file exists at all.
 
 ## Lights
@@ -87,7 +87,7 @@ carries the verb (*Install*, *Update*, *Reinstall*) and the line above it says w
 now, so pressing it is never a guess. The path stays under it as the fallback for when SimHub's
 matrix settings cannot be reached. See the amendment to ADR 0013.
 
-**One group per matrix**, prefixed, the way [XOR-124](https://linear.app/xorob/issue/XOR-124)
+**One group per matrix**, prefixed, the way [#175](https://github.com/xorob0/OpenDash/issues/175)
 settled that a screen owns its settings. A device is the same shape of thing. People do own two
 boxes — one in each corner of a monitor stand, one on flags and one on the gear — and that setup
 has to be configurable without either box guessing.

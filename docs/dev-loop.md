@@ -100,7 +100,7 @@ performed:
 * **Nothing has opened SimHub's own matrix preview.** SimHub's LED profile editor previews a
   matrix on screen, and if that preview is faithful it is the whole answer for everyone without a
   box. Whether `bun run dev`'s scripted clicking can reach it has not been tried; the traps in
-  this file apply unchanged, and XOR-252 already has `dev` failing to open a *dashboard*, which is
+  this file apply unchanged, and #303 already has `dev` failing to open a *dashboard*, which is
   the easier case.
 * **The profile has not been loaded in real SimHub.** It is generated against the format read out
   of the decompiled 9.12.6 assemblies. Until somebody imports it, "it parses" is a claim about

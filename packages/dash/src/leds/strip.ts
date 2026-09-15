@@ -88,7 +88,7 @@ export const STRIP_SHAPES: readonly StripShape[] = [
 /**
  * Brows: a bare run mounted above a monitor rather than on a wheel. Nine to twenty-five LEDs is
  * what the makers sell, and the effect tree is the same one — a brow is a strip with no sides.
- * XOR-241.
+ * #292.
  */
 export const BROW_SHAPES: readonly StripShape[] = [9, 12, 15, 16, 18, 20, 25].map((n) => ({
   id: `brow-${n}`,

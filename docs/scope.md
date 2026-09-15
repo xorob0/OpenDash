@@ -13,10 +13,10 @@ contributor or an agent should read first, and the one that has to be amended wh
 > 0.2.0-rc.1 it is what the names in the table below install: the eight rectangular faces are zone
 > faces, and the twelve-slot ones they replaced are published as `openDash slots <size>` for anyone
 > who wants the old design back. The two round faces are still the card model, because what a round
-> face does with zones is not decided (XOR-94).
+> face does with zones is not decided (#145).
 >
 > `README.md` and `plugin/INSTALL.md` still describe the twelve-slot face and are now wrong about
-> the product a user installs; correcting them is XOR-99, and until it lands this document is the
+> the product a user installs; correcting them is #150, and until it lands this document is the
 > one to trust.
 >
 > The distinction matters because of the rule at the end of the refusals: a line has to move here
@@ -47,7 +47,7 @@ and [ADR 0002](decisions/0002-djson-generated-from-source.md); the pipeline is i
 Other sims will very probably work, because SimHub normalises the common fields into
 `StatusDataBase`, and a module that reads something iRacing does not publish says so rather than
 drawing a zero. They are nevertheless untested, and they must not be advertised as supported
-until somebody has actually driven them. Concerning that audit, see XOR-51.
+until somebody has actually driven them. Concerning that audit, see #102.
 
 ## What ships
 
@@ -170,7 +170,7 @@ The plugin installs the embedded packages when one is missing or older than the 
 attaches every setting as a SimHub property under the `OpenDash` prefix, and draws a settings
 page in SimHub's left menu. It does not render, does not read telemetry and does not compute
 anything; [ADR 0003](decisions/0003-plugin-settings-through-properties.md) is why, and the
-question of whether it should ever compute is open as XOR-47.
+question of whether it should ever compute is open as #98.
 
 The settings are the shift lights, the position mode, the delta reference, the session progress
 mode, the four zones of the face (the page each shows, which pages are enabled, and the page it
@@ -216,7 +216,7 @@ colours, the frames and the idle screen are settings read through bindings like 
 What stays refused is anything a binding cannot reach without giving up the guarantee that a glyph
 is never clipped. A typeface, a font size, a spacing and a position are consumed by a layout
 decision in TypeScript, and a value that arrives after the build cannot re-run it. Those are build
-inputs, and a package built from a user's own tokens is XOR-81.
+inputs, and a package built from a user's own tokens is #132.
 
 The one line the product holds underneath all of it is unchanged: two states a driver cannot tell
 apart is a bug whoever chose the colours. A user may choose any colours they like, and OpenDash
@@ -224,9 +224,9 @@ says so when a choice collides rather than quietly shipping it.
 
 **Idle and pit screens.** Every screen already declares `IdleScreen`, so SimHub shows the racing
 face with no data in it between sessions, which is arguably worse than SimHub's own default. A
-screen with idle content is a real gap and is XOR-62; it is a refusal today rather than a plan. What
+screen with idle content is a real gap and is #113; it is a refusal today rather than a plan. What
 a user may then do to it is no longer the open question:
-[ADR 0011](decisions/0011-personalisation.md) puts the idle screen in the runtime bucket, so XOR-53
+[ADR 0011](decisions/0011-personalisation.md) puts the idle screen in the runtime bucket, so #104
 waits on the screen existing rather than on a record.
 
 **Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
@@ -253,21 +253,21 @@ and each reversal is recorded here so that a reader of the old document is not m
 
 | The MVP refused | Reversed by | What is true now |
 |---|---|---|
-| Multiple dashboards | XOR-6, XOR-8 | Fourteen packages ship from one source tree |
-| Multiple screen sizes | XOR-6 | Ten faces, each one layout file |
-| Round DDUs | XOR-6 | 480 and 800 round faces ship |
-| Phone and tablet layouts | XOR-8 | Two companion packages ship |
-| Page navigation | XOR-8, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
-| Network update checks | XOR-29, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
-| Theming and colour customisation | XOR-73, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
+| Multiple dashboards | #57, #59 | Fourteen packages ship from one source tree |
+| Multiple screen sizes | #57 | Ten faces, each one layout file |
+| Round DDUs | #57 | 480 and 800 round faces ship |
+| Phone and tablet layouts | #59 | Two companion packages ship |
+| Page navigation | #59, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
+| Network update checks | #80, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
+| Theming and colour customisation | #124, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
 
 Two of the nine still stand, and ADR 0011 left a narrower line behind the one it moved. Each is
 restated above with the record that would have to move it:
 
 | Still refused | What would have to happen first |
 |---|---|
-| Personalisation that changes the layout | XOR-81: a package built from the user's own tokens. Nothing at runtime re-measures a text box |
-| Idle and pit screens | XOR-62. The screen has to exist before XOR-53 can hand it to the user |
+| Personalisation that changes the layout | #132: a package built from the user's own tokens. Nothing at runtime re-measures a text box |
+| Idle and pit screens | #113. The screen has to exist before #104 can hand it to the user |
 | Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
