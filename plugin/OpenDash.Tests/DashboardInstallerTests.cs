@@ -71,7 +71,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The case XOR-118 creates, and the one it says can hurt somebody.
+        /// The case #169 creates, and the one it says can hurt somebody.
         ///
         /// A user on rc.2 has DashTemplates/openDash holding the twelve-slot card face, and their settings carry no
         /// fingerprint for it, because fingerprints only began in rc.3. The rename puts the zone face under that

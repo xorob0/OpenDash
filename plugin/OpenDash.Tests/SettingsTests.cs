@@ -26,7 +26,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// XOR-138 and XOR-119. The mode arrived after rc.2 shipped, so a settings file may not carry
+        /// #189 and #170. The mode arrived after rc.2 shipped, so a settings file may not carry
         /// it, and the one thing that must not happen is a driver who turned the shift lights off
         /// finding them back on after an update.
         /// </summary>

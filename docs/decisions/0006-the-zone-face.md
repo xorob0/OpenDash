@@ -117,7 +117,7 @@ without revisiting every page.
 
 Every shipped face is rebuilt. The settings contract, its C# mirror, the plugin panel and the
 plugin's tests all change. `OpenDash.Slot01`–`Slot12` are published in `README.md` as properties
-an LED profile may read, so they are deprecated for a release rather than deleted (XOR-119). The
+an LED profile may read, so they are deprecated for a release rather than deleted (#170). The
 work is large and the tree has to stay green throughout, which is why every zone pull request is
 additive and the single subtractive one is last.
 
@@ -127,4 +127,4 @@ What a round face does with zones. The two round artboards are still drawn on th
 the only zone-era word touching them is that a round face uses its ring instead of a band.
 `480round.ts` and `800round.ts` read `layout.slots`, which stays optional rather than being
 removed, so they keep building throughout and the decision is owed before the card path is
-retired rather than before the first zone face. XOR-94.
+retired rather than before the first zone face. #145.

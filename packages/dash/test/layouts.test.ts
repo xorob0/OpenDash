@@ -442,7 +442,7 @@ describe('the rectangular sizes, row by row of the spec table', () => {
     const rows = RECT_ROWS.map((r) => r.layout);
     expect(new Set(rows).size).toBe(rows.length);
     // The reference face is the MVP row and has its own describe above; excluded by identity rather
-    // than by name, because the name moved to the zone face in XOR-118.
+    // than by name, because the name moved to the zone face in #169.
     expect(LAYOUTS.filter((l) => l.shape === 'rect' && l !== layout1920x480)).toEqual(rows);
   });
 
@@ -840,7 +840,7 @@ describe('480 round', () => {
   const layout = layout480round;
 
   // The full 260 of the spec, in the 160 px between the two slots: a 260 gear needs 140 px of box
-  // and fits. It was cut to 228 while the cell had to hold whichever Barlow WPF resolved (XOR-84).
+  // and fits. It was cut to 228 while the cell had to hold whichever Barlow WPF resolved (#135).
   test('the gear alone, 260, centred on the face', () => {
     const [gearItem] = gear(layout.hero.gear.rect, layout.hero.gear.size);
     if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');

@@ -1,7 +1,7 @@
 // UpdateWording.cs: every sentence the panel says about updates, in one place.
 //
 // Separate from UpdateCheck so that the copy is reviewable as a diff of its own rather than buried in control flow,
-// and so that it is tested as a table. The wording is the deliverable of XOR-31 as much as the fetching is: a line
+// and so that it is tested as a table. The wording is the deliverable of #82 as much as the fetching is: a line
 // that reads as an error when nothing is wrong, or that tells a driver to restart SimHub when reopening the
 // dashboard is enough, costs more than a failed request does.
 using System;
@@ -68,7 +68,7 @@ namespace OpenDashPlugin
 
         /// <summary>The release notes, cut to something that fits beside a button.</summary>
         /// <remarks>
-        /// The body is the release's section of CHANGELOG.md (XOR-25), which opens with a sentence of prose and
+        /// The body is the release's section of CHANGELOG.md (#76), which opens with a sentence of prose and
         /// then groups its changes under headings. A leading heading is dropped and the first real line is shown,
         /// which is that opening sentence; the whole of it is a click away on the release page, which is what the
         /// link is for. A release cut before that change carries GitHub's generated summary instead, and the same

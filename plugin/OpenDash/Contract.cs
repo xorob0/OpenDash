@@ -125,7 +125,7 @@ namespace OpenDashPlugin
             new Dictionary<string, int> { { "Celcius", 110 }, { "Fahrenheit", 230 }, { "Kelvin", 383 } };
 
         /// <summary>The four matrix contents SimHub composes. A device is the same shape of thing as a
-        /// screen, so it owns its settings as one group (XOR-124), prefixed, exactly as a face does.
+        /// screen, so it owns its settings as one group (#175), prefixed, exactly as a face does.
         ///
         /// Rotation and serpentine wiring are deliberately absent: they are SimHub device settings decided
         /// by the corner the data cable enters, and a second place to set them is a second place to
@@ -387,7 +387,7 @@ namespace OpenDashPlugin
         ///
         /// It is yielded after the twelve slots rather than beside the mode it supersedes: the four
         /// fixed names have shipped and the tests assert them by index, so a new setting is appended
-        /// to this group and never inserted into it. XOR-119, XOR-138.
+        /// to this group and never inserted into it. #170, #189.
         /// </remarks>
         public static IEnumerable<string> SharedPropertyNames()
         {
@@ -730,7 +730,7 @@ namespace OpenDashPlugin
         /// `null` is the shape an rc.2 file has -- it was written before the mode existed -- and it
         /// resolves through the deprecated alias, so that a user who had turned the shift lights off
         /// finds the plain RPM bar rather than the shift lights back on. Anything unrecognised
-        /// resolves the same way. XOR-119 is the rule this keeps.
+        /// resolves the same way. #170 is the rule this keeps.
         /// </summary>
         public static string NormaliseRevBar(string value, bool shiftLights)
         {

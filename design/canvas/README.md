@@ -49,7 +49,7 @@ parts' rectangles.
 | System | `PluginComponents.dc.html`, `Plugin.dc.html` | Plugin controls and the settings panel: four zones, the bar, the buttons and the quick glance |
 | DDU sizes | `Dash.dc.html` | 1920 × 480, the reference face |
 | DDU sizes | `Dash1280x480`, `Dash1280x400`, `Dash850x480`, `Dash1280x720`, `DashNano800x286`, `DashDisplayDash600x686` | The other rectangular faces, each with its own zone rectangles |
-| DDU sizes | `DashRound480`, `DashRound800` | The two round faces. **Still drawn on the slot model**; what a round face does with zones is XOR-94 |
+| DDU sizes | `DashRound480`, `DashRound800` | The two round faces. **Still drawn on the slot model**; what a round face does with zones is #145 |
 | Second screens | `Companion850x480`, `Companion480x850` | A companion for a wheel or a phone: one module at a time behind a header |
 | Second screens | `CompanionModules.dc.html` | The twenty-one modules, which also serve the zones and the pit wall |
 | Second screens | `PitWall1920x1080`, `PitWallTower1920x1080`, `PitWallTelemetry1920x1080`, `PitWall1080x1920` | The three pit wall pages on a monitor, and the portrait variant |

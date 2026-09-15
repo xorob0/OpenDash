@@ -321,7 +321,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Every screen rather than none, because nothing outside this file knows the rig yet: the
         /// installer installs everything the plugin embeds, and the panel that adds a screen and removes
-        /// one is XOR-125. So an old settings file attaches exactly what it attached before the rig
+        /// one is #176. So an old settings file attaches exactly what it attached before the rig
         /// existed, and a driver who updates finds nothing reset; what the rig adds today is that the
         /// list can shrink at all.
         /// </remarks>

@@ -59,7 +59,7 @@ const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
 /** The companion and the pit walls, to check the face's new options stay off their screens. */
 const SECOND_SCREENS = SCREEN_PACKAGES.map((def) => buildScreenPackage(def, OPTS));
-// Looked up by identity rather than by folder name, which moved to plain "openDash" in XOR-118.
+// Looked up by identity rather than by folder name, which moved to plain "openDash" in #169.
 const reference = BUILT.find((b) => b.face === zoneFace1920x480)!;
 /** Every zone property carries its face's prefix, so a test that names one has to say whose. */
 const REFERENCE = facePrefix(sizeOf(zoneFace1920x480));
@@ -591,7 +591,7 @@ describe('the twenty-one pages reach the face', () => {
 /**
  * Evaluates the counter's arithmetic by turning it into the JavaScript it already almost is.
  *
- * This is not an NCalc interpreter and is not trying to be one -- that is XOR-20. The counter uses
+ * This is not an NCalc interpreter and is not trying to be one -- that is #71. The counter uses
  * six things (a property, `isnull`, `truncate`, `if`, `format` and arithmetic), every one of which
  * has a JavaScript spelling, so substituting the two properties and renaming three calls is enough
  * to ask the real expression what it answers. The point is that the arithmetic is checked against a
@@ -750,7 +750,7 @@ describe('a zone may list the class a driver is racing in', () => {
 
 
 /**
- * XOR-138: the rev bar off entirely.
+ * #189: the rev bar off entirely.
  *
  * Unlike every other geometry assertion in this file, the rectangles here are **derived** rather
  * than read off an artboard -- the canvas has not answered what the top of a face without a rev bar
@@ -834,7 +834,7 @@ describe('the rev bar can be off entirely', () => {
 
   test('the nano gets a ninth of its screen back, which is what makes the setting worth having', () => {
     // By identity rather than by folder name, the way `reference` is: the folders were renamed in
-    // XOR-118 and a string here would have gone on compiling and stopped finding anything.
+    // #169 and a string here would have gone on compiling and stopped finding anything.
     const nano = zoneFace800x286;
     expect(ZONE_FACES).toContain(nano);
     const o = layoutWithoutRevBar(nano).zones;
