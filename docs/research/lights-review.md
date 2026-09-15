@@ -258,3 +258,44 @@ two-value mode under ADR 0011; whether the brows derive ends; whether `changed()
 ADR 0009; whether the per-car appearance table is transcribed from the manuals or read from Lovely's
 data; and what a frame of several minutes does on a real matrix. Each is named in the table above
 with what decides it.
+
+## 9. The second pass: twenty-nine further notes
+
+Version 19 of the canvas drew a second round of notes the same evening, most of them on the face
+pages rather than the lights. They are answered on version 20, and this section says where each one
+went, since the canvas annotation points here.
+
+**The faces.** Twenty of the notes say one thing in twenty ways: the per-size sheets drew each page
+as a crude list of fields, and the drawings Tim likes are on the Zones artboard of the System page.
+The sheets now embed the catalogue's own drawing for each page, reflowed to the zone's real
+rectangle, and grown into it as one block until it meets the width, the height or a ceiling of
+2.2, which is rule 20 applied to a drawing; the factor is on each card's chip, and a page whose
+drawing does not fit its box at all says so rather than shrinking. That answers the delta's missing
+bar, the sectors that did not look like sectors, the car model nobody needs, the opponents page that
+was unusable, and the fuel page that lacked its stint time and consumption, because the catalogue's
+drawings carry all of those. Zone A now fills its column: the gear is cut from the height, and the
+speed page leads with the speed. What is still small after growth is small on the catalogue too
+(the lap times' lead value, the lists' row height) and is the readability pass's to redraw. The
+flag gains a second format, full screen over zones B, A and C, as a per-screen setting beside the
+band. The 1920 × 480 note that the larger screens should carry more information rather than larger
+text is what the catalogue's `wide` drawings do, and embedding them answers it.
+
+**The System page.** The components artboard's anatomy said slots 1 to 6 and 7 to 12; it now says
+zones B, A and C, with the caption rewritten for the zone model. The licence badge gains an
+iRacing-coloured variant beside the grey ramp, drawn with the palette's own tokens: it reverses
+the 11 September decision that the badge is achromatic, so it is proposed rather than taken, and the
+relative and leaderboard cells would follow it.
+
+**The plugin.** A light is now an instance, the way a screen is: the Lights tab lists the rig's
+lights (a flag box, a wheel strip, a brow, and an Add a light button), each with its own settings
+under a per-light name such as `OpenDash.Light1.Centre`, so two wheels differ; the strip's lamp
+switches mirror the box's four families. Install lists the profiles beside the packages, one per
+shape, with Install and Update buttons. Data's four settings fold into Screens as a "for every
+screen" group, which is offered as the answer to the question of whether the tab stays.
+
+**The flag box.** The chequered flag gains its second frame, the board's inverse, at 2 Hz; and the
+two-box variant is drawn, one box mounted left answering only for the left and one mounted right
+for the right, which the Mounted setting already provides.
+
+Where the earlier decision and the note disagree (the licence colours; the flags taking the whole
+face), the sheet draws both and the record says which is taken; nothing on version 20 is built.
