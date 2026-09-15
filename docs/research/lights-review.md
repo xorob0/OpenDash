@@ -299,3 +299,14 @@ for the right, which the Mounted setting already provides.
 
 Where the earlier decision and the note disagree (the licence colours; the flags taking the whole
 face), the sheet draws both and the record says which is taken; nothing on version 20 is built.
+
+**What the catalogue cannot draw.** The per-size sheets now count the pages whose catalogue
+drawing does not fit the zone, and the count is on each sheet's introduction as well as in red on
+the chips. At 1920 × 480, 1280 × 480 and 1280 × 720 every page fits as drawn; at 850 × 480 one
+page does not (the radar, whose drawing is wider than the 274-pixel zone), at 1280 × 400 four (the
+picture pages), at 800 × 480 nine, at 800 × 286 twelve, and at 600 × 686 sixteen of the twenty-one
+in zone B and nineteen in zone C, since those zones are 600 × 160 and 600 × 150 and the catalogue
+has no shape that wide and that short. It would seem, therefore, that the readability pass for
+the small faces is less a matter of shedding ranks than of a fifth shape, wide and short, which
+the catalogue does not have yet; the sheets draw the misfits clipped rather than shrunk, so that
+the gap is visible instead of hidden.
