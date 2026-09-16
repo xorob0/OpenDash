@@ -9,7 +9,7 @@
  */
 import { ncalc } from '../generator.ts';
 import { readoutRow } from '../components/readoutRow.ts';
-import { setting } from '../contract.ts';
+import { isTimedSession, sessionTimeLeft, showsTimeLeft } from '../second/values.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
@@ -17,26 +17,17 @@ import { SESSION_CHARS, SESSION_LAP_DIGITS } from './chars.ts';
 
 const { game, eq, gt, lt, or, and, not, str, iff, fmt, concat, add, mul, num, digitCount, hms, timespanToSeconds } = ncalc;
 
-/** SessionTimeLeft at or above this (a day, in seconds) means the session has no time limit. */
-export const UNTIMED_SECONDS = 86400;
 /** What the time value shows when time mode is forced in an untimed session. */
 export const TIME_PLACEHOLDER = '-:--:--';
 
-/** `timespantoseconds([SessionTimeLeft])` */
-export const timeLeft = (): Expr => timespanToSeconds(game('SessionTimeLeft'));
-
-/** True when the session has a time limit: `0 < timeLeft < 86400`. */
-export const timedSession = (): Expr => and(gt(timeLeft(), num(0)), lt(timeLeft(), num(UNTIMED_SECONDS)));
-
-/** True when the card shows time left: mode 'time', or 'auto' in a timed session. Anything else shows laps. */
-export const showTime = (): Expr => {
-  const mode = setting.sessionProgress();
-  return or(eq(mode, str('time')), and(eq(mode, str('auto')), timedSession()));
-};
+// The session's own two predicates are `second/values.ts`'s, re-exported here because this card was
+// where they were written and the tests still name them: the module beside it reads the same
+// setting, and a card and a module answering it apart is the fault ADR 0014 is about.
+export { UNTIMED_SECONDS, sessionTimeLeft as timeLeft, isTimedSession as timedSession, showsTimeLeft as showTime } from '../second/values.ts';
 
 export const session = defineCard('session', (slot, rung, prefix, meta) => {
-  const time = showTime();
-  const timed = timedSession();
+  const time = showsTimeLeft();
+  const timed = isTimedSession();
   const placeholder = and(time, not(timed));
   const currentLap = game('CurrentLap');
   const totalLaps = game('TotalLaps');
@@ -47,7 +38,7 @@ export const session = defineCard('session', (slot, rung, prefix, meta) => {
     { text: meta.label, bind: iff(time, str('TIME LEFT'), str('LAP')) },
     {
       sample: '12',
-      bind: iff(time, iff(timed, hms(timeLeft()), str(TIME_PLACEHOLDER)), fmt(currentLap, '0')),
+      bind: iff(time, iff(timed, hms(sessionTimeLeft()), str(TIME_PLACEHOLDER)), fmt(currentLap, '0')),
       chars: SESSION_CHARS,
       colorBind: iff(placeholder, str(ds.color.text.dim), str(ds.color.text.primary)),
     },
