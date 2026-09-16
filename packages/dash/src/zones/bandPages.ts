@@ -450,11 +450,13 @@ function blockGeometry(frame: Rect, valueFs: number, labelFs: number): { valueFs
  *
  * The letter is drawn by the face rather than by the band -- a band dashboard is one file serving
  * one rectangle and knows no letter -- but the room is reserved here, because the corner block and
- * the rank are what would otherwise be drawn over it.
+ * the rank are what would otherwise be drawn over it. Measured at `ds.size.label`, which is the
+ * size the face draws it at: a room measured against one size and filled at another is the mistake
+ * this file exists to avoid.
  */
 const letterRoom = (frame: Rect): number => {
   const m = bandMetrics(frame);
-  return Math.ceil(measureText('BarlowMedium', 'D', densityOf('zone').labelSm)) + 2 + m.letterGap;
+  return Math.ceil(measureText('BarlowMedium', 'D', ds.size.label)) + 2 + m.letterGap;
 };
 
 // --- The corner blocks at each end of the band -------------------------------------------------
