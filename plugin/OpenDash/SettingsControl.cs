@@ -202,7 +202,6 @@ namespace OpenDashPlugin
             zoneSelects.Clear();
             zoneMaskButtons.Clear();
             zoneMaskBoxes.Clear();
-            zoneClassBoxes.Clear();
             barEndButtons.Clear();
             flagBoxLine = null;
             flagBoxButton = null;
