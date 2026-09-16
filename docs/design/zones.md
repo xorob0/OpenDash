@@ -247,8 +247,10 @@ is; the traces take what is left. The catalogue gives the car at 142 wide in `wi
 Condensed's digits are proportional and SimHub cannot ask the font for its tabular ones, so every
 value is drawn with SimHub's monospace cells, cut to hold the widest ink a value can draw. WPF
 clips a glyph that overruns one, so `#`, `%`, `&`, `@`, `M`, `W`, `m` and `w` are never part of a
-value. A car number is drawn bare and its hash belongs to the label; a class beside a number is a
-proportional label and a monospaced value, not one string.
+value. A car number is drawn bare and its hash belongs to the label. A class beside a number is the one
+value that is text rather than a number, and the bar draws it as the artboard does, as a single
+proportional run of "GT3 · P4" measured from the widest class and place it promises to hold; a
+cell would hold the dot and the letters, but only by spacing them as digits.
 
 ---
 
@@ -266,7 +268,20 @@ Strength of field was the eleventh and is not built, because SimHub publishes it
 and OpenDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
 named here only so that a reader of an older draft knows where it went.
 
-The default is Race and Lap on the left, Position and Class on the right.
+The default is Race and Lap on the left, Position and Class on the right. The left end is drawn
+from the left edge and the right end from the right one, each field flush to the padding on its
+own side, and the class reads "GT3 · P4".
+
+The bar is drawn at a scale of its own rather than at the zone density ramp's. Every artboard
+gives it a 15 px label in a 13 px row, five pixels under it, six between a value and the dimmer
+"/ 32" after it, and twenty of side padding; what changes with the face is the value, the
+denominator, the strip column and the gap between two readouts:
+
+| face | value | denominator | column | gap |
+|---|---|---|---|---|
+| 1920 × 480, 1280 × 480, 1280 × 720 | 34 | 24 | 57 | 22 |
+| 1280 × 400, 850 × 480, 800 × 480 | 28 | 20 | 54 | 22 |
+| 600 × 686 | 28 | 20 | 54 | 12 |
 
 Between them is the **car settings strip**: slip, TC, cut, bias, ABS, map, diff. It draws what the
 game exposes and **hides what it does not**, because a strip drawing an empty box for a setting
@@ -279,15 +294,16 @@ narrow face that is not seven cells:
 | face | cells |
 |---|---|
 | 1920 × 480, 1280 × 480, 1280 × 400, 1280 × 720 | all seven |
-| 600 × 686 | slip, TC, bias, ABS — one field per end leaves more room than two |
-| 850 × 480 | TC, bias |
-| 800 × 480 | bias |
+| 600 × 686 | slip, TC, cut, bias, ABS — one field per end leaves more room than two |
+| 850 × 480 | slip, TC, bias, ABS |
+| 800 × 480 | TC, bias, ABS |
 | 800 × 286 | there is no bar |
 
-A cell is measured at the size its value is drawn in, which is the size the bar's end fields use.
-Bias is the one cell that is wider than its own label: "50.5" at 34 px takes 58 px where the other
-six still measure their four-letter label. That is what costs the 850 its ABS cell and the 800 its
-TC, and it is the reason those two rows are shorter than the canvas draws them.
+A cell is the artboard's column rather than a measurement of its own reading, so the seven read as
+a rank of equal cells; it is rounded up to an even width, because the strip closes over what is
+missing and centres on half of what is left. A reading wider than the column widens that cell
+rather than losing a digit, and "Bias 50.5" at 34 px is the only one that does: it takes 58 px
+where the other six sit in their 57.
 
 **The order it sheds in is not the order it draws in.** A driver on a GT3 car moves the brake bias
 every corner and has TC and ABS on wheel dials; the mixture changes once a stint; slip, cut and the

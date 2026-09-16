@@ -167,7 +167,7 @@ describe('the strip closes over what the game does not publish', () => {
   }
 
   test('a narrow face closes its shorter strip the same way', () => {
-    // 850 by 480 keeps two cells, so the arithmetic is a different one and worth its own case.
+    // 850 by 480 keeps four of the seven, so the arithmetic is a different one and worth its own case.
     const narrow = stripValues('openDash 850x480');
     expect(narrow.length).toBeGreaterThan(0);
     expect(narrow.length).toBeLessThan(values.length);
@@ -176,6 +176,51 @@ describe('the strip closes over what the game does not publish', () => {
     const withoutFirst = narrow.slice(1).map((v) => evaluate(leftOf(v), [exprOf(cellIdOf(narrow[0]!))]));
     expect(withoutFirst[0]! + withoutFirst[withoutFirst.length - 1]!).toBe(full[0]! + full[full.length - 1]!);
   });
+});
+
+/**
+ * The columns, and which of them each face has the width for.
+ *
+ * Both are read off the artboards: the column is a fixed width per face rather than a cell
+ * measured from its own reading, and what a narrow face keeps is what is left once the two ends
+ * have been laid out for the widest entry the catalogue holds. The cells a face keeps are
+ * tabulated in `docs/design/zones.md` section 3 and are what changes first when a field of an end
+ * grows, so they are pinned here rather than recomputed.
+ */
+describe('the strip is a rank of equal columns', () => {
+  const KEPT: Record<string, string[]> = {
+    openDash: ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'openDash 1280x480': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'openDash 1280x400': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'openDash 1280x720': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'openDash 850x480': ['slip', 'tc', 'bias', 'abs'],
+    'openDash 800x480': ['tc', 'bias', 'abs'],
+    'openDash 600x686': ['slip', 'tc', 'cut', 'bias', 'abs'],
+    'openDash 800x286': [],
+  };
+
+  for (const face of ZONE_FACES) {
+    const scale = face.bar;
+    test(`${face.folder} draws ${KEPT[face.folder]!.length} of the seven`, () => {
+      expect(stripValues(face.folder).map(cellIdOf)).toEqual(KEPT[face.folder]!);
+    });
+    if (!scale || stripValues(face.folder).length === 0) continue;
+
+    test(`${face.folder} draws them ${scale.stripCell} wide, centred, ${scale.gap} apart`, () => {
+      const column = 2 * Math.ceil(scale.stripCell / 2);
+      const values = stripValues(face.folder);
+      for (const value of values) {
+        // The column is a floor rather than a width: "Bias 50.5" is the one reading wider than the
+        // column it is given, and it takes the pixels it needs rather than losing its last digit.
+        expect({ cell: cellIdOf(value), width: value.rect.width, atLeast: value.rect.width >= column, centred: value.hAlign }).toMatchObject({ atLeast: true, centred: 'center' });
+      }
+      const ordered = [...values].sort((a, b) => a.rect.left - b.rect.left);
+      for (const [i, value] of ordered.slice(1).entries()) {
+        const before = ordered[i]!;
+        expect({ cell: cellIdOf(value), pitch: value.rect.left - before.rect.left }).toMatchObject({ pitch: before.rect.width + scale.gap });
+      }
+    });
+  }
 });
 
 /**
