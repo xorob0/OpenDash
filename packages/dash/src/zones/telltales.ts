@@ -19,7 +19,7 @@
  * file it wants and draws whichever of them the registry already holds, so the lamps gain their
  * pictograms the moment the artwork lands and nothing here has to change.
  *
- * **Seven of the twelve have no source.** Which property lights a wiper, a stability lamp, a tyre
+ * **Nine of the twelve have no source.** Which property lights a wiper, a stability lamp, a tyre
  * pressure warning or a door is a decision the canvas has not taken, and iRacing publishes nothing
  * for any of them; the lamps are built in their places and stay dark, which asserts nothing, rather
  * than being bound to a property that means something else. §10 of zones.md carries the list.

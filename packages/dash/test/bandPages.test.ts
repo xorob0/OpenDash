@@ -229,7 +229,7 @@ describe('the fields the catalogue draws on each page', () => {
  * corner blocks leave, and a 20 px pictogram in each.
  *
  * Two of the drawing's parts are absences rather than departures, and the tests say which: the
- * pictogram files are not in the repository, and seven of the twelve lamps have nothing that lights
+ * pictogram files are not in the repository, and nine of the twelve lamps have nothing that lights
  * them. Both are recorded in docs/design/zones.md §10.
  */
 describe('D8, the telltale rank', () => {
