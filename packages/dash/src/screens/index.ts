@@ -32,7 +32,8 @@ export const SCREEN_PACKAGES: readonly ScreenPackageDef[] = [
 
 /**
  * The fonts a second screen needs: the face's three, plus Barlow Condensed Light, which the pit
- * wall wordmark's "open" is set in.
+ * wall wordmark's "open" is set in. One list serves both screens, so a companion carries Light
+ * without drawing it; the build only refuses the other direction, a weight drawn with no file.
  */
 export const SCREEN_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'BarlowCondensed-Light.ttf', 'Barlow-Medium.ttf'] as const;
 
