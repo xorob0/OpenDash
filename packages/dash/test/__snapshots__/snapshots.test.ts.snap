@@ -1354,7 +1354,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1382,7 +1382,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1410,7 +1410,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1438,7 +1438,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1466,7 +1466,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1494,7 +1494,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FFFFB300",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1522,7 +1522,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FFFFB300",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1550,7 +1550,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FFFFB300",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1578,7 +1578,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FFFFB300",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1828,7 +1828,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1856,7 +1856,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1884,7 +1884,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1912,7 +1912,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1940,7 +1940,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF00D96A",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1968,7 +1968,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FFFFB300",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -1996,7 +1996,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FFFFB300",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2024,7 +2024,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FFFFB300",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2052,7 +2052,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FFFFB300",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2302,7 +2302,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2330,7 +2330,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2358,7 +2358,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2386,7 +2386,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2414,7 +2414,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2442,7 +2442,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2470,7 +2470,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2498,7 +2498,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 118,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -2526,7 +2526,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Width": 117,
         "Height": 40,
         "Visible": true,
-        "BackgroundColor": "#FF33383F",
+        "BackgroundColor": "#FF8A9099",
         "BorderStyle": {
           "RadiusTopLeft": 2,
           "RadiusTopRight": 2,
@@ -4815,7 +4815,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -4843,7 +4843,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -4871,7 +4871,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -4899,7 +4899,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -4927,7 +4927,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -4955,7 +4955,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -4983,7 +4983,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5011,7 +5011,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5039,7 +5039,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5289,7 +5289,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5317,7 +5317,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5345,7 +5345,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5373,7 +5373,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5401,7 +5401,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5429,7 +5429,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5457,7 +5457,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5485,7 +5485,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5513,7 +5513,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5763,7 +5763,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5791,7 +5791,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5819,7 +5819,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5847,7 +5847,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5875,7 +5875,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5903,7 +5903,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5931,7 +5931,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5959,7 +5959,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 118,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -5987,7 +5987,7 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Width": 117,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10420,7 +10420,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10448,7 +10448,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10476,7 +10476,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10504,7 +10504,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10532,7 +10532,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10560,7 +10560,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10588,7 +10588,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10616,7 +10616,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10644,7 +10644,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10894,7 +10894,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10922,7 +10922,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10950,7 +10950,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -10978,7 +10978,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11006,7 +11006,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11034,7 +11034,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11062,7 +11062,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11090,7 +11090,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11118,7 +11118,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11368,7 +11368,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11396,7 +11396,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11424,7 +11424,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11452,7 +11452,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11480,7 +11480,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11508,7 +11508,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11536,7 +11536,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11564,7 +11564,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 78,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -11592,7 +11592,7 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15429,7 +15429,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15457,7 +15457,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15485,7 +15485,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15513,7 +15513,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15541,7 +15541,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15569,7 +15569,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15597,7 +15597,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15625,7 +15625,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15653,7 +15653,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15903,7 +15903,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15931,7 +15931,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15959,7 +15959,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -15987,7 +15987,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16015,7 +16015,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16043,7 +16043,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16071,7 +16071,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16099,7 +16099,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16127,7 +16127,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16377,7 +16377,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16405,7 +16405,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16433,7 +16433,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16461,7 +16461,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16489,7 +16489,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16517,7 +16517,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16545,7 +16545,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16573,7 +16573,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 78,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -16601,7 +16601,7 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Width": 77,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20678,7 +20678,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20706,7 +20706,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20734,7 +20734,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 50,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20762,7 +20762,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20790,7 +20790,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20818,7 +20818,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20846,7 +20846,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20874,7 +20874,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 50,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -20902,7 +20902,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21152,7 +21152,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21180,7 +21180,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21208,7 +21208,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 50,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21236,7 +21236,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21264,7 +21264,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21292,7 +21292,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21320,7 +21320,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21348,7 +21348,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 50,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21376,7 +21376,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21626,7 +21626,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21654,7 +21654,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21682,7 +21682,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 50,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21710,7 +21710,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21738,7 +21738,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21766,7 +21766,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21794,7 +21794,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21822,7 +21822,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 50,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -21850,7 +21850,7 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Width": 51,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25314,7 +25314,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25342,7 +25342,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25370,7 +25370,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25398,7 +25398,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25426,7 +25426,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25454,7 +25454,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25482,7 +25482,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25510,7 +25510,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25538,7 +25538,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25788,7 +25788,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25816,7 +25816,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25844,7 +25844,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25872,7 +25872,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25900,7 +25900,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25928,7 +25928,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25956,7 +25956,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -25984,7 +25984,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26012,7 +26012,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26262,7 +26262,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26290,7 +26290,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26318,7 +26318,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26346,7 +26346,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26374,7 +26374,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26402,7 +26402,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26430,7 +26430,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26458,7 +26458,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 48,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -26486,7 +26486,7 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Width": 47,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -29935,7 +29935,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -29963,7 +29963,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -29991,7 +29991,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30019,7 +30019,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30047,7 +30047,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30075,7 +30075,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30103,7 +30103,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30131,7 +30131,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30159,7 +30159,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30409,7 +30409,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30437,7 +30437,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30465,7 +30465,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30493,7 +30493,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30521,7 +30521,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30549,7 +30549,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30577,7 +30577,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30605,7 +30605,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30633,7 +30633,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30883,7 +30883,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30911,7 +30911,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30939,7 +30939,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30967,7 +30967,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -30995,7 +30995,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -31023,7 +31023,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -31051,7 +31051,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -31079,7 +31079,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 76,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -31107,7 +31107,7 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Width": 77,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35030,7 +35030,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35058,7 +35058,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35086,7 +35086,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35114,7 +35114,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35142,7 +35142,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35170,7 +35170,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35198,7 +35198,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35226,7 +35226,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35254,7 +35254,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35504,7 +35504,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35532,7 +35532,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35560,7 +35560,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35588,7 +35588,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35616,7 +35616,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35644,7 +35644,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35672,7 +35672,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35700,7 +35700,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35728,7 +35728,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -35978,7 +35978,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -36006,7 +36006,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -36034,7 +36034,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -36062,7 +36062,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -36090,7 +36090,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -36118,7 +36118,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -36146,7 +36146,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -36174,7 +36174,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 48,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -36202,7 +36202,7 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Width": 47,
               "Height": 32,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -40823,7 +40823,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -40851,7 +40851,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -40879,7 +40879,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -40907,7 +40907,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 35,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -40935,7 +40935,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -40963,7 +40963,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -40991,7 +40991,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41019,7 +41019,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41047,7 +41047,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41297,7 +41297,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41325,7 +41325,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41353,7 +41353,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41381,7 +41381,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 35,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41409,7 +41409,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41437,7 +41437,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41465,7 +41465,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41493,7 +41493,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41521,7 +41521,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41771,7 +41771,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41799,7 +41799,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41827,7 +41827,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41855,7 +41855,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 35,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41883,7 +41883,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41911,7 +41911,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41939,7 +41939,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41967,7 +41967,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -41995,7 +41995,7 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Width": 34,
               "Height": 40,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45160,7 +45160,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -63,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45189,7 +45189,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -54,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45218,7 +45218,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -45,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45247,7 +45247,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -36,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45276,7 +45276,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -27,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45305,7 +45305,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45334,7 +45334,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45362,7 +45362,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Width": 22,
               "Height": 14,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45391,7 +45391,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": 9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45648,7 +45648,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -63,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45677,7 +45677,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -54,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45706,7 +45706,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -45,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45735,7 +45735,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -36,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45764,7 +45764,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -27,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45793,7 +45793,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45822,7 +45822,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45850,7 +45850,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Width": 22,
               "Height": 14,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -45879,7 +45879,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": 9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46136,7 +46136,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -63,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46165,7 +46165,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -54,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46194,7 +46194,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -45,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46223,7 +46223,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -36,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46252,7 +46252,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -27,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46281,7 +46281,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46310,7 +46310,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": -9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46338,7 +46338,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Width": 22,
               "Height": 14,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -46367,7 +46367,7 @@ exports[`package snapshots openDash 480 round/openDash 480 round.djson 1`] = `
               "Height": 14,
               "Rotation": 9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49186,7 +49186,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -63,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49215,7 +49215,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -54,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49244,7 +49244,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -45,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49273,7 +49273,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -36,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49302,7 +49302,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -27,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49331,7 +49331,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49360,7 +49360,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49388,7 +49388,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Width": 30,
               "Height": 18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49417,7 +49417,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": 9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49674,7 +49674,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -63,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49703,7 +49703,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -54,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49732,7 +49732,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -45,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49761,7 +49761,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -36,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49790,7 +49790,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -27,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF00D96A",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49819,7 +49819,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49848,7 +49848,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49876,7 +49876,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Width": 30,
               "Height": 18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -49905,7 +49905,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": 9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FFFFB300",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50162,7 +50162,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -63,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50191,7 +50191,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -54,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50220,7 +50220,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -45,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50249,7 +50249,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -36,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50278,7 +50278,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -27,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50307,7 +50307,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50336,7 +50336,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": -9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50364,7 +50364,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Width": 30,
               "Height": 18,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
@@ -50393,7 +50393,7 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
               "Height": 18,
               "Rotation": 9,
               "Visible": true,
-              "BackgroundColor": "#FF33383F",
+              "BackgroundColor": "#FF8A9099",
               "BorderStyle": {
                 "RadiusTopLeft": 2,
                 "RadiusTopRight": 2,
