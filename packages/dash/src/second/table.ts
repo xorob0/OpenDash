@@ -20,9 +20,10 @@ import { cells, monoWidth, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
+import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
-import { densityOf, type Density, type DensitySpec } from './density.ts';
+import { densityOf, isZone, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex } from './values.ts';
 
 const { iff, str, fmt, eq, ne, num, and, not, gt, abs, concat, left, ucase, isnull } = ncalc;
@@ -64,6 +65,41 @@ const CELL_GAP = 12;
 const HEADER_HEIGHT = 16;
 
 /**
+ * The board, which is the other table the canvas draws.
+ *
+ * The three pit wall artboards and the leaderboard panel on `Panels.dc.html` state their row in
+ * one stylesheet rule each and all four agree: `.trow` is 36 px -- 34 on the race page, 32 on the
+ * portrait one, 28 on the tower -- `.th` is 32, both are padded `0 16px`, and both close on
+ * `1px solid #1C1F24` with no gap between two rows. So a board is not a list with wider padding:
+ * it is a second drawing, and the pit wall is where it is drawn.
+ *
+ * The header follows the row where the row is the shorter of the two, which is what the tower's
+ * 28 px `.th` is and what leaves its header and its rows the same pitch.
+ */
+const BOARD_PAD_X = 16;
+const BOARD_HEADER_HEIGHT = 32;
+
+/**
+ * Which of the two drawings a table is.
+ *
+ * Its header tells them apart, and only on a pit wall page: a zone carries a title of its own and
+ * no list on the catalogue or on a face artboard is headed at all, so a table that draws column
+ * labels at a zone density is one of the three boards. The companion's leaderboard draws a legend
+ * over the catalogue's row, which is the row it has drawn since the second screens shipped and
+ * which no companion artboard contradicts.
+ */
+const isBoard = (density: Density, header: boolean): boolean => header && isZone(density);
+
+/** Side padding of a row: the board's 16, or the catalogue's 6. */
+const padXOf = (board: boolean): number => (board ? BOARD_PAD_X : ROW_PAD_X);
+
+/** Gap between two rows. A board has none: its rows are flush and a 1 px rule closes each. */
+const rowGapOf = (board: boolean): number => (board ? 0 : ROW_GAP);
+
+/** Height of the column-label row. */
+const headerHeightOf = (board: boolean, rowHeight: number): number => (board ? Math.min(BOARD_HEADER_HEIGHT, rowHeight) : HEADER_HEIGHT);
+
+/**
  * How tall a row is at each density.
  *
  * Mechanism 1 of docs/design/readability-pass.md: a table answered a taller box with more rows of
@@ -96,8 +132,17 @@ interface RowType {
  * takes; the companion's 38 px row promotes the car number to the position's size. The name stops
  * at 13 rather than following the compact ramp down to 12, which `density.ts` itself calls the
  * floor below which a label stops being readable at arm's length.
+ *
+ * A board is read across a garage rather than at arm's length and types the other way about: the
+ * pit wall artboards draw every `.trow` with a 15 px name under 24 px numerals, with the car
+ * number and the rank held at 16 beside them, and the tower brings the numerals down to 16 as well
+ * rather than shortening the name. Panels.dc.html states the same ramp in words.
  */
-function rowTypeOf(rowHeight: number): RowType {
+function rowTypeOf(rowHeight: number, board = false): RowType {
+  if (board) {
+    const lead = rowHeight >= 32 ? 24 : 16;
+    return { lead, minor: 16, rating: lead, name: 15 };
+  }
   if (rowHeight >= 38) return { lead: 34, minor: 34, rating: 24, name: 15 };
   if (rowHeight >= 34) return { lead: 34, minor: 24, rating: 24, name: 13 };
   return { lead: 24, minor: 16, rating: 24, name: 13 };
@@ -167,21 +212,25 @@ const inkBind = (ctx: CellContext): Expr => iff(ctx.inPit, str(ds.color.text.dim
 /** The three cells the own row lifts: its position, its name and its gap. The rest keep their ink. */
 const liftBind = (ctx: CellContext, otherwise: Expr): Expr => iff(ctx.isPlayer, str(ds.color.text.primary), otherwise);
 
-/** A numeral cell, vertically centred in the row. */
+/**
+ * A numeral cell, vertically centred in the row.
+ *
+ * A right-aligned cell is drawn right-aligned, which is not the same as a box whose right edge
+ * meets the column's. The box used to be placed at the column's edge and left the run `hAlign`
+ * left inside cells cut for the widest value the column can hold, so P1 sat a whole digit cell
+ * short of the edge and so did a `+9.9` measured against `+12.6`. `numeral` documents `width` as
+ * the option for a value that does not fill its cells, and that is what this passes.
+ */
 function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, chars: Chars, opts: { fs?: number; color?: string; colorBind?: Expr; align?: HAlign } = {}): Item[] {
   const fs = opts.fs ?? ctx.type.lead;
-  const mono = cells('SemiBold', fs);
-  const drawn = monoWidth(mono, chars);
   const align = opts.align ?? ctx.align;
-  const x = align === 'right' ? ctx.x + ctx.width - drawn : ctx.x;
   return [
-    numeral(`${ctx.name}.${id}`, sample, x, ctx.top + (ctx.height - fs) / 2, fs, chars, {
+    numeral(`${ctx.name}.${id}`, sample, ctx.x, ctx.top + (ctx.height - fs) / 2, fs, chars, {
       bind,
       color: (opts.color as `#${string}`) ?? ds.color.text.secondary,
       colorBind: opts.colorBind ?? inkBind(ctx),
-      // The room left from where the cell starts, not the column's whole width: a right-aligned
-      // cell starts partway into its column and its box must still end at the column's edge.
-      maxWidth: ctx.x + ctx.width - x,
+      hAlign: align,
+      ...(align === 'right' ? { width: ctx.width } : { maxWidth: ctx.width }),
     }),
   ];
 }
@@ -260,6 +309,9 @@ function cellPit(ctx: CellContext): Item[] {
     }),
   ];
 }
+
+/** A compound chip holds one letter, so it is the padding and a letter's width either side of it. */
+const compoundChipWidth = (d: DensitySpec): number => Math.ceil(2 * d.chipPadding + 14);
 
 /** The position, which the canvas prefixes with a P: `P4`, not `4`. */
 const positionText = (idx: Expr): Expr => concat(str('P'), fmt(carPosition(idx), '0'));
@@ -347,12 +399,16 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
   tyre: {
     header: 'Tyre',
     align: 'right',
-    width: ({ d }) => Math.ceil(2 * d.chipPadding + 14),
-    cell: (ctx) =>
-      chip(`${ctx.name}.tyre`, 'M', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
+    width: ({ d }) => compoundChipWidth(d),
+    cell: (ctx) => {
+      // A chip narrower than its column is drawn at the column's right edge, the way `cellPit`
+      // draws its own: the column declares `right` and a chip filling it aligns nothing.
+      const width = Math.min(ctx.width, compoundChipWidth(ctx.d));
+      return chip(`${ctx.name}.tyre`, 'M', ctx.x + ctx.width - width, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
         bind: chipText(carCompound(ctx.idx)),
-        width: Math.ceil(2 * ctx.d.chipPadding + 14),
-      }),
+        width,
+      });
+    },
   },
   rating: { header: 'iR', align: 'right', width: ({ type }) => cellColumn(54, type.rating, CHARS.rating), cell: (ctx) => cellValue(ctx, 'rating', '4.6k', carRating(ctx.idx), CHARS.rating, { fs: ctx.type.rating }) },
 };
@@ -399,18 +455,19 @@ function rowIndexFor(spec: TableSpec, centre: number): Expr {
 /**
  * The widths of a table's columns, the name column taking what is left of the padded row.
  *
- * The row is inset `ROW_PAD_X` either side, so the width the columns share is the frame's less
- * that padding; a column laid out against the frame's own edge would start in the padding and end
- * outside it.
+ * The row is inset either side, so the width the columns share is the frame's less that padding; a
+ * column laid out against the frame's own edge would start in the padding and end outside it. A
+ * board is inset by 16 rather than 6 and types its cells differently, so it asks for its own
+ * widths and the name column is what pays the difference.
  */
-export function columnWidths(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number): number[] {
+export function columnWidths(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number, board = false): number[] {
   const d = densityOf(density);
-  const row: RowSpec = { d, type: rowTypeOf(rowHeight ?? tableRowHeight(density)) };
+  const row: RowSpec = { d, type: rowTypeOf(rowHeight ?? tableRowHeight(density), board) };
   const raw = columns.map((id) => COLUMNS[id].width(row));
   const fixed = raw.reduce((sum, w) => sum + w, 0);
   const gaps = CELL_GAP * Math.max(0, columns.length - 1);
   const flexColumns = raw.filter((w) => w === 0).length;
-  const spare = Math.max(0, width - 2 * ROW_PAD_X - fixed - gaps);
+  const spare = Math.max(0, width - 2 * padXOf(board) - fixed - gaps);
   return raw.map((w) => (w === 0 ? Math.floor(spare / Math.max(1, flexColumns)) : w));
 }
 
@@ -430,16 +487,19 @@ export function rowCapacity(frame: Rect, density: Density, header: boolean, rowH
  * and stacks its rows flush; this is what the two list pages count with.
  */
 export function rowsThatFit(frame: Rect, opts: { density: Density; header: boolean; rowHeight?: number }): number {
+  const board = isBoard(opts.density, opts.header);
   const h = opts.rowHeight ?? tableRowHeight(opts.density);
-  const body = frame.height - (opts.header ? HEADER_HEIGHT : 0);
-  return Math.max(0, Math.floor((body + ROW_GAP) / (h + ROW_GAP)));
+  const gap = rowGapOf(board);
+  const body = frame.height - (opts.header ? headerHeightOf(board, h) : 0);
+  return Math.max(0, Math.floor((body + gap) / (h + gap)));
 }
 
-/** The header row: a label per column, aligned as its cells are. */
-function headerRow(spec: TableSpec, widths: number[], top: number): Item[] {
+/** The header row: a label per column, aligned as its cells are, closed on a board by its rule. */
+function headerRow(spec: TableSpec, widths: number[], top: number, board: boolean): Item[] {
   const d = densityOf(spec.density);
-  const items: Item[] = [];
-  let x = spec.frame.left + ROW_PAD_X;
+  const height = headerHeightOf(board, spec.rowHeight ?? tableRowHeight(spec.density));
+  const items: Item[] = board ? [rule(`${spec.name}.head.rule`, spec.frame.left, top + height - 1, spec.frame.width, 1)] : [];
+  let x = spec.frame.left + padXOf(board);
   spec.columns.forEach((id, i) => {
     const width = widths[i] ?? 0;
     const column = COLUMNS[id];
@@ -448,7 +508,7 @@ function headerRow(spec: TableSpec, widths: number[], top: number): Item[] {
     // and a box measured from the canvas's own capitalisation is a box the drawn text overruns.
     const drawn = Math.ceil(measureText('BarlowMedium', text.toUpperCase(), d.labelSm));
     const left = column.align === 'right' ? x + width - drawn : x;
-    items.push(label(`${spec.name}.head.${id}`, text, left, top + (HEADER_HEIGHT - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
+    items.push(label(`${spec.name}.head.${id}`, text, left, top + (height - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
     x += width + CELL_GAP;
   });
   return items;
@@ -462,15 +522,19 @@ export function table(spec: TableSpec): Item[] {
   const d = densityOf(spec.density);
   const header = spec.header ?? true;
   const rowHeight = spec.rowHeight ?? tableRowHeight(spec.density);
-  const type = rowTypeOf(rowHeight);
+  const board = isBoard(spec.density, header);
+  const padX = padXOf(board);
+  const rowGap = rowGapOf(board);
+  const headerHeight = headerHeightOf(board, rowHeight);
+  const type = rowTypeOf(rowHeight, board);
   const capacity = rowsThatFit(spec.frame, { density: spec.density, header, rowHeight });
   const rows = Math.max(1, Math.min(spec.rows ?? capacity, capacity));
-  const widths = columnWidths(spec.columns, spec.frame.width, spec.density, rowHeight);
-  const headTop = spec.frame.top + (header ? HEADER_HEIGHT : 0);
+  const widths = columnWidths(spec.columns, spec.frame.width, spec.density, rowHeight, board);
+  const headTop = spec.frame.top + (header ? headerHeight : 0);
   // The canvas gives every list body `justify-content: center`, so what a declared row count leaves
   // over is shared above and below the block rather than piled under it.
-  const body = spec.frame.height - (header ? HEADER_HEIGHT : 0);
-  const top = headTop + Math.max(0, Math.round((body - (rows * rowHeight + (rows - 1) * ROW_GAP)) / 2));
+  const body = spec.frame.height - (header ? headerHeight : 0);
+  const top = headTop + Math.max(0, Math.round((body - (rows * rowHeight + (rows - 1) * rowGap)) / 2));
   // The player sits in the middle of a relative table, so the row index counts from that row.
   const centre = Math.ceil(rows / 2);
   const idx = rowIndexFor(spec, centre);
@@ -479,8 +543,11 @@ export function table(spec: TableSpec): Item[] {
 
   const children: Item[] = [
     { ...band(`${spec.name}.row.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), ...withBindings({ Visible: isPlayer }) },
+    // The board's rows are flush and each is closed by a rule; a list's are two apart and closed by
+    // the gap. Both run the frame's full width, under the padding the cells are inset by.
+    ...(board ? [rule(`${spec.name}.row.rule`, spec.frame.left, top + rowHeight - 1, spec.frame.width, 1)] : []),
   ];
-  let x = spec.frame.left + ROW_PAD_X;
+  let x = spec.frame.left + padX;
   spec.columns.forEach((id, i) => {
     const width = widths[i] ?? 0;
     children.push(
@@ -504,8 +571,8 @@ export function table(spec: TableSpec): Item[] {
   });
 
   const row: LayerItem = { kind: 'layer', name: `${spec.name}.row`, children, ...withBindings({ Visible: carAvailable(idx) }) };
-  const stamped: LayerItem = { kind: 'layer', name: `${spec.name}.rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + ROW_GAP, repeatLeftOffset: 0 };
-  return [...(header ? headerRow(spec, widths, spec.frame.top) : []), stamped];
+  const stamped: LayerItem = { kind: 'layer', name: `${spec.name}.rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + rowGap, repeatLeftOffset: 0 };
+  return [...(header ? headerRow(spec, widths, spec.frame.top, board) : []), stamped];
 }
 
 /** Every column the tables can show, for the docs and for a test that keeps them in step. */
