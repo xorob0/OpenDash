@@ -298,6 +298,15 @@ const CORNER_GAP = 18;
 const LAMP_GAP = 6;
 /** Gap between a field's label and its value, and between a value and the unit after it. */
 const FIELD_GAP = 5;
+/**
+ * The row a field's label sits in, which is shorter than the label itself.
+ *
+ * Every band on every artboard puts a 15 px label in a 13 px row and centres it there, the same
+ * arrangement the bar above uses. Drawing the label at the row's height instead cost two pixels of
+ * a size the whole face is set in, and a 13 px label beside the bar's 15 px one reads as a
+ * rendering fault rather than a hierarchy.
+ */
+const LABEL_ROW = 13;
 /** Gap between the numerals a field draws under one label. */
 const ROW_GAP = ds.space[2];
 
@@ -313,14 +322,24 @@ const ROW_GAP = ds.space[2];
  * it starts a tenth of the size above the line it is given and runs about a fifth below the
  * baseline, and rounding at both ends is what the last pixel turns on.
  */
-function valueSizeFor(height: number, preferred: number, labelFs: number, fieldGap: number): number {
+function valueSizeFor(height: number, preferred: number, labelFs: number, labelRow: number, fieldGap: number): number {
   for (let fs = preferred; fs > 8; fs--) {
-    const top = blockTop(height, fs, labelFs, fieldGap);
-    const box = textBox(top + labelFs + fieldGap, fs);
-    if (box.top >= 0 && box.top + box.height <= height) return fs;
+    const top = blockTop(height, fs, labelFs, labelRow, fieldGap);
+    const value = textBox(top + labelRow + fieldGap, fs);
+    const labelTop = textBox(top + (labelRow - labelFs) / 2, labelFs).top;
+    if (labelTop >= 0 && value.top >= 0 && value.top + value.height <= height) return fs;
   }
   return 8;
 }
+
+/**
+ * How far down the block must start for the label's own box to be inside the band.
+ *
+ * A 15 px label centred in a 13 px row already begins a pixel above the row, and the box around it
+ * begins a tenth of the size above that again. The block therefore cannot be pushed flat against
+ * the top of the band, which is what bounds the ride-up below.
+ */
+const minBlockTop = (labelFs: number, labelRow: number): number => Math.max(0, -textBox((labelRow - labelFs) / 2, labelFs).top);
 
 /**
  * Where the two rows sit in a band of `height`: centred, then ridden up until the line box fits.
@@ -333,16 +352,16 @@ function valueSizeFor(height: number, preferred: number, labelFs: number, fieldG
  * those six tenths costs nothing a driver can see and keeps the size the drawing asks for, so the
  * value only shrinks once the band is genuinely too short, which is the 54 px band at 1280 by 400.
  */
-function blockTop(height: number, valueFs: number, labelFs: number, fieldGap: number): number {
-  const centred = Math.max(0, (height - (labelFs + fieldGap + valueFs)) / 2);
-  const box = textBox(centred + labelFs + fieldGap, valueFs);
+function blockTop(height: number, valueFs: number, labelFs: number, labelRow: number, fieldGap: number): number {
+  const centred = Math.max(0, (height - (labelRow + fieldGap + valueFs)) / 2);
+  const box = textBox(centred + labelRow + fieldGap, valueFs);
   const over = box.top + box.height - height;
-  return over > 0 ? Math.max(0, centred - over) : centred;
+  return over > 0 ? Math.max(minBlockTop(labelFs, labelRow), centred - over) : centred;
 }
 
 /** Width the unit after a value takes. Measured, not the remainder of the field: a field whose
  *  value fills its width left the unit a box narrower than its own glyph, and WPF clipped it. */
-const unitWidth = (field: BandField, labelFs: number): number => (field.after ? Math.ceil(measureText('BarlowMedium', field.after, labelFs)) + 2 : 0);
+const unitWidth = (field: BandField): number => (field.after ? Math.ceil(measureText('BarlowMedium', field.after, ds.size.labelSm)) + 2 : 0);
 
 /** Width the value of a field takes, the numerals sharing its label included. */
 function valueWidthOf(field: BandField, valueFs: number): number {
@@ -354,7 +373,7 @@ function valueWidthOf(field: BandField, valueFs: number): number {
 /** Width a band field takes: its value with its unit, or its label, whichever is wider. */
 function fieldWidth(field: BandField, valueFs: number, labelFs: number): number {
   const value = valueWidthOf(field, valueFs);
-  const after = field.after ? FIELD_GAP + unitWidth(field, labelFs) : 0;
+  const after = field.after ? FIELD_GAP + unitWidth(field) : 0;
   const text = Math.ceil(measureText('BarlowMedium', field.labelWidest ?? field.label.toUpperCase(), labelFs)) + 2;
   return Math.ceil(Math.max(value + after, text));
 }
@@ -363,8 +382,8 @@ function fieldWidth(field: BandField, valueFs: number, labelFs: number): number 
  * One field of a band page as a member of its rank: how wide it is, whether the game publishes it,
  * and how it draws itself wherever the rank puts it.
  */
-function bandMember(field: BandField, prefix: string, geometry: { valueFs: number; labelFs: number; top: number; valueTop: number }): RankMember {
-  const { valueFs, labelFs, top, valueTop } = geometry;
+function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): RankMember {
+  const { valueFs, labelFs, labelTop, valueTop } = geometry;
   const w = fieldWidth(field, valueFs, labelFs);
   const cell = field.widest ? w : monoWidth(cells('SemiBold', valueFs), field.chars);
   const valueWidth = valueWidthOf(field, valueFs);
@@ -374,7 +393,7 @@ function bandMember(field: BandField, prefix: string, geometry: { valueFs: numbe
     present: field.present,
     draw: (at) => {
       const items: Item[] = [
-        label(`${prefix}${field.id}.label`, field.label.toUpperCase(), at.x, top, w, {
+        label(`${prefix}${field.id}.label`, field.label.toUpperCase(), at.x, labelTop, w, {
           size: labelFs,
           bind: field.labelBind,
           widest: field.labelWidest,
@@ -414,8 +433,8 @@ function bandMember(field: BandField, prefix: string, geometry: { valueFs: numbe
       });
       if (field.after) {
         items.push(
-          unit(`${prefix}${field.id}.unit`, field.after, at.x + valueWidth + FIELD_GAP, valueTop + (valueFs - labelFs), unitWidth(field, labelFs), {
-            size: labelFs,
+          unit(`${prefix}${field.id}.unit`, field.after, at.x + valueWidth + FIELD_GAP, valueTop + (valueFs - ds.size.labelSm), unitWidth(field), {
+            size: ds.size.labelSm,
             leftBind: at.leftAt(valueWidth + FIELD_GAP),
             visibleBind: at.visibleBind,
           }),
@@ -439,8 +458,8 @@ export function bandPageItems(id: string, frame: Rect, prefix: string, corners =
   const fields = BAND_PAGES[id];
   if (!fields) throw new RangeError(`band D has no page "${id}"`);
   const m = bandMetrics(frame);
-  const labelFs = densityOf('zone').labelSm;
-  const valueFs = valueSizeFor(frame.height, m.valueSize, labelFs, FIELD_GAP);
+  const labelFs = ds.size.label;
+  const valueFs = valueSizeFor(frame.height, m.valueSize, labelFs, LABEL_ROW, FIELD_GAP);
   const geometry = blockGeometry(frame, valueFs, labelFs);
 
   // The rank gets what the letter and the corner blocks leave, not the whole band. Centring in the
@@ -456,10 +475,20 @@ export function bandPageItems(id: string, frame: Rect, prefix: string, corners =
   ).items;
 }
 
-/** Where a block of labels over values sits in the band, its two rows 5 apart. */
-function blockGeometry(frame: Rect, valueFs: number, labelFs: number): { valueFs: number; labelFs: number; top: number; valueTop: number } {
-  const top = frame.top + blockTop(frame.height, valueFs, labelFs, FIELD_GAP);
-  return { valueFs, labelFs, top, valueTop: top + labelFs + FIELD_GAP };
+/** Where a block of a label over a value sits in the band, its two rows 5 apart and the label
+ *  centred in a row shorter than itself. */
+function blockGeometry(frame: Rect, valueFs: number, labelFs: number): BlockGeometry {
+  const top = frame.top + blockTop(frame.height, valueFs, labelFs, LABEL_ROW, FIELD_GAP);
+  return { valueFs, labelFs, top, labelTop: top + (LABEL_ROW - labelFs) / 2, valueTop: top + LABEL_ROW + FIELD_GAP };
+}
+
+interface BlockGeometry {
+  valueFs: number;
+  labelFs: number;
+  /** The top of the block, which is the top of the label's row rather than of the label. */
+  top: number;
+  labelTop: number;
+  valueTop: number;
 }
 
 /**
@@ -524,15 +553,15 @@ const cornerClocks = (): BandField[] => [
  */
 export function bandCornerWidths(frame: Rect): { left: number; right: number } {
   const m = bandMetrics(frame);
-  const labelFs = densityOf('zone').labelSm;
-  const valueFs = cornerValueSize(frame, labelFs);
+  const labelFs = ds.size.label;
+  const valueFs = cornerValueSize(frame);
   const left = leftCornerFields().reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs), CORNER_GAP);
   const clockWidth = cornerClocks().reduce((sum, f) => sum + fieldWidth(f, valueFs, labelFs), CORNER_GAP);
-  const lamps = cornerLamps().length * lampWidth(labelFs) + LAMP_GAP * (cornerLamps().length - 1);
+  const lamps = cornerLamps().length * lampWidth() + LAMP_GAP * (cornerLamps().length - 1);
   return { left: m.padX + letterRoom(frame) + left, right: m.padX + lamps + CORNER_GAP + clockWidth };
 }
 
-const cornerValueSize = (frame: Rect, labelFs: number): number => valueSizeFor(frame.height, densityOf('zone').small, labelFs, FIELD_GAP);
+const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, densityOf('zone').small, ds.size.label, LABEL_ROW, FIELD_GAP);
 
 /**
  * The room a lamp takes: the word, and the padding of the chip the canvas draws around it.
@@ -543,21 +572,21 @@ const cornerValueSize = (frame: Rect, labelFs: number): number => valueSizeFor(f
  * the outline moves nothing.
  */
 const LAMP_PAD_X = 7;
-const lampWidth = (labelFs: number): number => Math.ceil(measureText('BarlowMedium', 'DRS', labelFs)) + 2 + 2 * (LAMP_PAD_X + 1);
+const lampWidth = (): number => Math.ceil(measureText('BarlowMedium', 'DRS', ds.size.labelSm)) + 2 + 2 * (LAMP_PAD_X + 1);
 
 export function bandCorners(frame: Rect, prefix: string): Item[] {
   const m = bandMetrics(frame);
-  const labelFs = densityOf('zone').labelSm;
-  const valueFs = cornerValueSize(frame, labelFs);
-  const { top, valueTop } = blockGeometry(frame, valueFs, labelFs);
-  const blockHeight = labelFs + FIELD_GAP + valueFs;
+  const labelFs = ds.size.label;
+  const valueFs = cornerValueSize(frame);
+  const { top, labelTop, valueTop } = blockGeometry(frame, valueFs, labelFs);
+  const blockHeight = LABEL_ROW + FIELD_GAP + valueFs;
   const items: Item[] = [];
 
   const left = leftCornerFields();
   let x = frame.left + m.padX + letterRoom(frame);
   for (const field of left) {
     const w = fieldWidth(field, valueFs, labelFs);
-    items.push(label(`${prefix}${field.id}.label`, field.label.toUpperCase(), x, top, w, { size: labelFs }));
+    items.push(label(`${prefix}${field.id}.label`, field.label.toUpperCase(), x, labelTop, w, { size: labelFs }));
     items.push(
       field.widest
         ? label(`${prefix}${field.id}.value`, field.sample, x, valueTop, w, {
@@ -576,7 +605,7 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   // the two beside it at the moment they matter.
   const lamps = cornerLamps();
   const clocks = cornerClocks();
-  const lamp = lampWidth(labelFs);
+  const lamp = lampWidth();
 
   // Laid from the right edge rather than from a computed start, so that Sim ends against the band's
   // own padding whatever the clocks measure, and each clock is right aligned inside its box for the
@@ -585,7 +614,7 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   for (const field of [...clocks].reverse()) {
     const w = fieldWidth(field, valueFs, labelFs);
     right -= w;
-    items.push(label(`${prefix}${field.id}.label`, field.label.toUpperCase(), right, top, w, { size: labelFs, hAlign: 'right' }));
+    items.push(label(`${prefix}${field.id}.label`, field.label.toUpperCase(), right, labelTop, w, { size: labelFs, hAlign: 'right' }));
     items.push(numeral(`${prefix}${field.id}.value`, field.sample, right, valueTop, valueFs, field.chars, { bind: field.bind, width: w, hAlign: 'right' }));
     right -= CORNER_GAP;
   }
@@ -598,8 +627,8 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
         width: lamp,
         present: each.on,
         draw: (at) => [
-          label(`${prefix}${each.id}`, each.text, at.x, top + (blockHeight - labelFs) / 2, lamp, {
-            size: labelFs,
+          label(`${prefix}${each.id}`, each.text, at.x, top + (blockHeight - ds.size.labelSm) / 2, lamp, {
+            size: ds.size.labelSm,
             hAlign: 'center',
             color: ds.color.text.dim,
             colorBind: dimUnless(at.litBind, each.colour),
