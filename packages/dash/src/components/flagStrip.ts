@@ -97,12 +97,17 @@ function blackFlag(frame: Rect, style: FlagStripStyle, prefix: string): LayerIte
   };
 }
 
+/**
+ * The chequer, in the phase the canvas draws. `repeating-conic-gradient(#F5F7FA 0 25%, #0A0B0D 0
+ * 50%)` sweeps clockwise from twelve o'clock, so the light quadrant of every tile is its top right
+ * and the band opens on the ground: row 0 starts one square in, not at the band's left edge.
+ */
 function chequeredFlag(frame: Rect, prefix: string): LayerItem {
   const check = frame.height / 2;
   const columns = Math.ceil(frame.width / check);
   const children: Item[] = [band(`${prefix}.chequered.band`, frame, ds.color.surface.base)];
   for (let row = 0; row < 2; row++) {
-    for (let col = row % 2; col < columns; col += 2) {
+    for (let col = (row + 1) % 2; col < columns; col += 2) {
       const width = Math.min(check, frame.left + frame.width - (frame.left + col * check));
       children.push(
         band(`${prefix}.chequered.r${row}c${String(col).padStart(2, '0')}`, rect(frame.left + col * check, frame.top + row * check, width, check), ds.purpose.flag.chequer),
