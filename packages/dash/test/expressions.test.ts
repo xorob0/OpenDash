@@ -360,8 +360,8 @@ describe('module expressions', () => {
     const value = moduleItem('delta', 'delta.value');
     expect(formulaOf(value, 'Text')).toMatch(/^replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)$/);
     expect(value.text).toBe('\u22120.21');
-    expect(moduleItem('delta', 'scale0').text).toBe('\u22122.0');
-    expect(moduleItem('delta', 'scale4').text).toBe('+2.0');
+    expect(moduleItem('delta', 'scale.0').text).toBe('\u22122.0');
+    expect(moduleItem('delta', 'scale.4').text).toBe('+2.0');
   });
 
   test('the lap times delta names the best it is against and is signed the same way', () => {
