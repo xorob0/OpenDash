@@ -4,7 +4,8 @@
  * the number is never ambiguous.
  *
  * The bar covers two seconds either side. Beyond that the fill simply stays at the end: a driver
- * two seconds off does not need to know whether it is 2.1 or 2.4.
+ * two seconds off does not need to know whether it is 2.1 or 2.4. It stands ten high whatever the
+ * density, because the canvas draws one delta bar rather than a companion one and a zone one.
  */
 import { ncalc } from '../generator.ts';
 import { ds } from '../tokens.ts';
@@ -17,7 +18,7 @@ import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 import { stack } from '../second/layout.ts';
 import { CHARS, deltaColour, referenceDelta, referenceLabel } from '../second/values.ts';
 
-const { fmt } = ncalc;
+const { signed } = ncalc;
 
 /** Seconds either side of zero the bar covers. */
 export const DELTA_RANGE = 2;
@@ -25,14 +26,14 @@ export const DELTA_RANGE = 2;
 export const delta = defineModule('delta', (ctx) => {
   const d = densityOf(ctx.density);
   const value = referenceDelta();
-  const barHeight = ctx.density === 'companion' ? 14 : 10;
+  const barHeight = 10;
   const scaleHeight = d.labelSm;
   return stack(
     ctx.frame,
     [
       fieldsRow(
         [
-          fld(ctx, 'delta', 'VS SESSION BEST', { sample: '-0.21', bind: fmt(value, '0.00', true), chars: CHARS.delta, fs: d.hero, colorBind: deltaColour(value) }, {
+          fld(ctx, 'delta', 'VS SESSION BEST', { sample: '\u22120.21', bind: signed(value, '0.00'), chars: CHARS.delta, fs: d.hero, colorBind: deltaColour(value) }, {
             labelBind: referenceLabel(),
             labelWidest: 'VS ALL-TIME BEST',
           }),
@@ -43,7 +44,7 @@ export const delta = defineModule('delta', (ctx) => {
       blockRow(scaleHeight, (bottom) => {
         const y = bottom - scaleHeight;
         const marks: { text: string; at: number; color?: string }[] = [
-          { text: `-${DELTA_RANGE.toFixed(1)}`, at: 0 },
+          { text: `\u2212${DELTA_RANGE.toFixed(1)}`, at: 0 },
           { text: 'FASTER', at: 0.25, color: ds.purpose.delta.faster },
           { text: '0', at: 0.5 },
           { text: 'SLOWER', at: 0.75, color: ds.purpose.delta.slower },
