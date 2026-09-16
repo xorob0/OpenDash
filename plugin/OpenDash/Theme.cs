@@ -27,6 +27,7 @@ namespace OpenDashPlugin
         public const string Hover = "#1C1F24"; // purpose.ui.hover
         public const string Field = "#14161A"; // purpose.ui.field
         public const string Caution = "#FFB300"; // color.caution.primary
+        public const string Danger = "#FF2D46"; // color.danger.primary
 
         // Install status dot
         public const string StatusUpToDate = "#00D96A"; // purpose.status.upToDate
@@ -48,7 +49,10 @@ namespace OpenDashPlugin
         // Controls
         public const double ControlHeight = 32; // control.height
         public const double ControlHeightSm = 24; // control.heightSm
+        public const double PaddingX = 16; // control.paddingX
         public const double IconSize = 16; // control.icon
+        public const double FocusRing = 2; // control.focusRing
+        public const double FocusRingOffset = 2; // control.focusRing.offset
         public const double Radius = 2; // radius.sm
     }
 }
