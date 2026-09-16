@@ -1,4 +1,14 @@
-/** The components: readouts, grids, the rev bar and arc, the gear, the flags and the pit limiter. */
+/**
+ * The components: readouts, grids, the rev bar and arc, the gear, the flags, the pit limiter and
+ * the list row.
+ *
+ * These are the face's. The second screens have a component layer of their own in `second/` --
+ * the class chip, the gauges, the sector strip, the wheel, the page dots and the table -- which is
+ * a fifth structure the four-layer model of element, component, card and layout does not name. It
+ * is not an oversight to be tidied away by moving those files here: a second-screen part is a
+ * function of a rectangle at a density, which is not what a face component is, and the two sets
+ * have never shared a caller.
+ */
 export { cardFrame, centredTop, type CardFrame } from './frame.ts';
 export { readout, readoutGeometry, type LabelSpec, type ValueSpec, type ReadoutGeometry } from './readout.ts';
 export { readoutRow, type FollowerSpec, type FollowerContext } from './readoutRow.ts';
@@ -10,3 +20,4 @@ export { gear, GEAR_SIZES, GEAR_CHARS } from './gear.ts';
 export { flagStrip, flagVisible, FLAG_PRIORITY, FLAG_BLINK_MS, BLACK_FLAG_BORDER, FLAG_STRIP_STYLES, type FlagProperty, type FlagStripStyle } from './flagStrip.ts';
 export { flagRing, CHEQUER_COUNT, CHEQUER_STEP, CHEQUER_SIZE } from './flagRing.ts';
 export { pitLimiter, PIT_LIMITER_BLINK_MS } from './pitLimiter.ts';
+export { listRow, listRowHeight, LIST_ROW, type ListRowSpec, type ListRowValue } from './listRow.ts';
