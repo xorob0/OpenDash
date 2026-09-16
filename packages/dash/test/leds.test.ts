@@ -21,6 +21,7 @@ import {
   SLOW_BLINK_MS,
   SPOTTER_EFFECTS,
   TURN_EFFECTS,
+  effectContainer,
   flagEffects,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
@@ -206,6 +207,60 @@ describe('the effect catalogue', () => {
     for (const name of ['TCActive', 'TurnIndicatorLeft', 'TurnIndicatorRight']) {
       expect({ name, inProfile: text.includes(name) }).toMatchObject({ inProfile: true });
     }
+  });
+
+  test('the aid lamp draws the pair the way UN R121 and the manuals do: ABS amber, traction control blue', () => {
+    const by = (id: string): (typeof SIDE_EFFECTS)[number] => SIDE_EFFECTS.find((e) => e.id === id)!;
+    // The build drew the two the other way round, and the reversal is the point of this test: a
+    // driver who has read either lamp on a road car or in any other sim reads the swap as the other
+    // system intervening. Both are steady, because an intervention is a state and not an event.
+    expect({ abs: by('abs').color, tc: by('tc').color }).toEqual({ abs: ds.color.caution.primary, tc: ds.color.info.primary });
+    expect({ abs: by('abs').blinkWhen, tc: by('tc').blinkWhen }).toMatchObject({ abs: undefined, tc: undefined });
+  });
+
+  test('a condition with two states draws the second in a second colour, and one with one state in darkness', () => {
+    const drs = SIDE_EFFECTS.find((e) => e.id === 'drs')!;
+    const p2p = SIDE_EFFECTS.find((e) => e.id === 'p2p')!;
+    // Push to pass carries two facts: blue while one is in hand, green while one is being spent.
+    // Both were white before, which made the lamp one colour and the blink invisible on top of it.
+    expect({ color: p2p.color, blinkColor: p2p.blinkColor, delay: p2p.blinkDelayMs }).toMatchObject({
+      color: ds.color.info.primary,
+      blinkColor: ds.color.good.primary,
+      delay: FAST_BLINK_MS,
+    });
+    // DRS carries one fact in two rhythms, so its off phase is darkness rather than a second hue.
+    expect({ color: drs.color, blinkColor: drs.blinkColor, delay: drs.blinkDelayMs }).toMatchObject({
+      color: ds.color.good.primary,
+      blinkColor: undefined,
+      delay: FAST_BLINK_MS,
+    });
+  });
+
+  test('every blink has an off phase, which is the whole of what a blink is', () => {
+    // Defect 1 of the lights review: StaticColorContainerBase alternates Color with BlinkingColor,
+    // and every blinking effect wrote its own colour into both, so nothing on the strip has ever
+    // flashed. The off phase must also be opaque: the merge drops transparent pixels, and the rev
+    // ladder underneath would show through the gap.
+    for (const e of ALL_EFFECTS()) {
+      if (!e.blinkWhen) continue;
+      const c = effectContainer(e, 1, 1) as Extract<leds.LedContainer, { kind: 'customStatus' }>;
+      expect({ id: e.id, same: c.blinkColor === c.color }).toMatchObject({ same: false });
+      expect({ id: e.id, opaque: /^#[0-9A-F]{6}$/.test(String(c.blinkColor)) }).toMatchObject({ opaque: true });
+    }
+  });
+
+  test('the car lamp reads both temperature bits in amber, and oil pressure in red only while the engine turns', () => {
+    const temperature = SIDE_EFFECTS.find((e) => e.id === 'temperature')!;
+    expect({ color: temperature.color, delay: temperature.blinkDelayMs }).toMatchObject({ color: ds.color.caution.primary, delay: FAST_BLINK_MS });
+    // Bit 1 is water and 0x0040 is oil; one lamp takes both, because a single LED cannot say which
+    // fluid it is and the driver's answer to either is to lift and watch the gauge.
+    expect(temperature.when).toContain('EngineWarnings');
+    expect(temperature.when).toContain('(64)');
+    const oil = SIDE_EFFECTS.find((e) => e.id === 'oilPressure')!;
+    expect({ color: oil.color, delay: oil.blinkDelayMs }).toMatchObject({ color: ds.color.danger.primary, delay: FAST_BLINK_MS });
+    // A stopped engine sets the bit as readily as a failing one, so the lamp would otherwise be red
+    // in every garage and on every grid.
+    expect(oil.when).toContain('Rpms');
   });
 
   test('what is dropped has a property and no lamp, which is neither best effort nor an absence', () => {

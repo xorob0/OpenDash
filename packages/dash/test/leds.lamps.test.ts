@@ -11,8 +11,9 @@ import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
 import { ALL_SHAPES, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
-import { lampConditions, PIT_EFFECTS, flagEffects } from '../src/leds/effects.ts';
+import { FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
 import { lampsForSide, lampsOf } from '../src/leds/lamps.ts';
+import { ds } from '../src/tokens.ts';
 
 const profileFor = (shape: StripShape): leds.LedProfile => rpmStripProfile(shape, stableGuid(`test/lamps/${shape.id}`));
 
@@ -115,6 +116,73 @@ describe('the lamps of a side', () => {
       for (const higher of ranked.slice(0, i)) expect({ id: effect.id, guarded: child.enabledFormula.expression.includes(`!(${higher.when})`) }).toMatchObject({ guarded: true });
       // The top of a lamp answers to nobody, so it carries no guard at all.
       if (i === 0) expect(child.enabledFormula.expression).toBe(effect.when);
+    }
+  });
+});
+
+describe('what a driver can tell one condition from another by', () => {
+  /** All a lamp has to say it with: a hue and a rhythm, a steady light being a rhythm of its own. */
+  const appearance = (e: LedEffect): string => `${e.color} ${e.blinkWhen ? `${String(e.blinkDelayMs)} ms` : 'steady'}`;
+
+  test('no two conditions on one lamp share a hue and a rate, at any side count', () => {
+    // One LED drawn the same way by two conditions is one light with two meanings, and the driver
+    // reads whichever of them they learned first. The scope is the lamp rather than the strip: the
+    // same amber may be a car alongside on the side lamp and ABS on the aid lamp, because those are
+    // never the same LED and nothing can put both on one.
+    //
+    // The black flag and the chequered flag are the single pair that breaks the rule. Both resolve
+    // to #F5F7FA and neither blinks, and separating them means moving purpose.flag.black or
+    // purpose.flag.chequer in design/tokens.json, which is the author's file. The pair is named
+    // here rather than the rule being skipped, so that every other clash still fails and so that
+    // the exception falls away of its own accord the day the token moves.
+    const known = ['flag.black flag.checkered'];
+    for (const count of [1, 2, 3, 4, 5]) {
+      for (const lamp of lampsForSide(count)) {
+        const seen = new Map<string, string>();
+        for (const e of lampConditions(lamp, 'left')) {
+          const clashed = seen.get(appearance(e));
+          const pair = clashed === undefined ? undefined : [clashed, e.id].sort().join(' ');
+          expect({ count, lamp: lamp.label, clash: pair !== undefined && known.includes(pair) ? undefined : pair }).toMatchObject({ clash: undefined });
+          seen.set(appearance(e), e.id);
+        }
+      }
+    }
+  });
+
+  test('ABS intervening: one amber LED at each end of a 4/14/4, steady, with the ladder untouched', () => {
+    const placed = placedOf(profileFor(shapeById('4-14-4')!).containers);
+    const abs = placed.filter((p) => p.description === 'ABS active');
+    expect(abs.map((p) => p.start).sort((a, b) => a - b)).toEqual([4, 19]);
+    for (const p of abs) {
+      const c = p.container as Extract<leds.LedContainer, { kind: 'customStatus' }>;
+      expect({ start: p.start, count: p.count, color: c.color, blink: c.blinkFormula }).toMatchObject({
+        count: 1,
+        color: ds.color.caution.primary,
+        blink: undefined,
+      });
+    }
+    // The lamp it sits in is a plain group, so the rev rungs keep showing underneath it.
+    expect(placed.filter((p) => p.description.endsWith('aid lamp')).map((p) => clears(p.container))).toEqual([false, false]);
+  });
+
+  test('oil pressure with low fuel: the car lamp is oil pressure and the two beneath it are guarded out', () => {
+    const placed = placedOf(profileFor(shapeById('4-14-4')!).containers);
+    const oil = placed.filter((p) => p.description === 'Oil pressure warning');
+    expect(oil.map((p) => p.start).sort((a, b) => a - b)).toEqual([3, 20]);
+    const top = oil[0]!.container as Extract<leds.LedContainer, { kind: 'customStatus' }>;
+    expect({ count: oil[0]!.count, color: top.color, delay: top.blinkDelayMs }).toMatchObject({
+      count: 1,
+      color: ds.color.danger.primary,
+      delay: FAST_BLINK_MS,
+    });
+    // Rank 1 answers to nobody, so its condition is written bare...
+    const oilWhen = SIDE_EFFECTS.find((e) => e.id === 'oilPressure')!.when;
+    expect(top.enabledFormula.expression).toBe(oilWhen);
+    // ...and both rows under it carry its negation, which is what makes the rank a fact about the
+    // emitted profile rather than about the order the catalogue happens to be written in.
+    for (const label of ['Water or oil temperature warning', 'Low fuel']) {
+      const lower = placed.find((p) => p.description === label)!.container as Extract<leds.LedContainer, { kind: 'customStatus' }>;
+      expect({ label, guarded: lower.enabledFormula.expression.includes(`!(${oilWhen})`) }).toMatchObject({ guarded: true });
     }
   });
 });
