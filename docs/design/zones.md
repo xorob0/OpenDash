@@ -227,6 +227,12 @@ The four shapes the catalogue draws, which are the test fixtures:
 A fifth band, `strip`, survives these because the pit wall already hands a module 607 × 158 and
 1007 × 211, and it is not on the canvas. Say so in the code rather than pretending it is.
 
+A `short` box is given no fifth drawing of its own. It takes the drawing of the next shape down —
+a wide one takes `grid`, a medium or narrow one takes `tall narrow` — because what a short box has
+is room for less, and §5 is where "less" is written page by page. That is the whole of the rule,
+and it lives in `archetypeOf`; a predicate beside the bands saying that a short box keeps one rank
+stated it a second time in other words, so it is gone.
+
 **Rule 18.** *A drawing is cut from its box. Never placed in it at a fixed size.* A tyre is as
 tall as the readings beside it; a car is capped at a third of the zone width however tall the box
 is; the traces take what is left. The catalogue gives the car at 142 wide in `wide`, 129 in

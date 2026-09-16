@@ -76,13 +76,12 @@ export function columnsAt(shape: Shape): number {
 }
 
 /**
- * Whether a page should keep its secondary ranks at this shape.
- *
- * A short box has room for one rank and nothing else, which is the pit wall's strips. A tall one
- * has room for everything the page has, which is why the sectors come back at `tall` after going
- * at `tall narrow`.
+ * What a short box does is not a second rule here. It is `archetypeOf` in
+ * `modules/shedding.ts`, which hands a short box the drawing of the next shape down -- `grid` to a
+ * wide one, `tall narrow` to the rest -- because what a short box has is room for less, and the
+ * declaration is where "less" is written down page by page. A predicate here saying a short box
+ * keeps one rank said the same thing a second time and in other words, and nothing read it.
  */
-export const keepsSecondaryRanks = (shape: Shape): boolean => shape.height !== 'short';
 
 /** Whether the lead value of a page is promoted a size, which a tall box can afford. */
 export const promotesLead = (shape: Shape): boolean => shape.height === 'tall';
