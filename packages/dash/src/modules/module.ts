@@ -117,12 +117,13 @@ export interface FieldsRowOptions {
  * A bare number is the gap between the fields of a line, which is what most pages pass.
  */
 export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts: number | FieldsRowOptions = {}): StackRow {
-  const { gap, lines: plan, columns, align, justify } = typeof opts === 'number' ? { gap: opts } : opts;
+  const { gap, lines: plan, columns, align, justify, lineGap: asked }: FieldsRowOptions = typeof opts === 'number' ? { gap: opts } : opts;
   const shape = shapeIn(ctx);
-  const lineGap = (typeof opts === 'number' ? undefined : opts.lineGap) ?? Math.round(densityOf(ctx.density).gapY / 2);
+  const lineGap = asked ?? Math.round(densityOf(ctx.density).gapY / 2);
   const kept = keptAt(specs, ctx.page, shape);
   if (kept.length === 0) return fixedRow(0, () => []);
-  const columnCount = columns ?? columnsAt(shape);
+  const shapeColumns = columnsAt(shape);
+  const columnCount = columns ?? shapeColumns;
   // A zone narrow enough for one column centres what is in it; a wider one draws from its left
   // edge. `rank` already carries the centring, including the bindings that re-centre the line when
   // the sim does not publish one of its fields.
@@ -130,7 +131,7 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts:
     gap,
     lineGap,
     align,
-    justify: justify ?? (columnsAt(shape) === 1 ? 'centre' : 'left'),
+    justify: justify ?? (shapeColumns === 1 ? 'centre' : 'left'),
     ...(plan === 'grid' ? { columns: columnCount } : {}),
   };
   const linesOf = (at: readonly FieldSpec[]): FieldSpec[][] => planLines(at, ctx.frame.width, ctx.density, { plan, columns: columnCount, gap });
