@@ -1305,7 +1305,7 @@ exports[`card snapshots card 12 speed 1`] = `
     "FontWeight": "Medium",
     "FontStyle": "Normal",
     "FontSize": 13,
-    "Text": "KM/H",
+    "Text": "km/h",
     "TextColor": "#FF8A9099",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -1320,7 +1320,7 @@ exports[`card snapshots card 12 speed 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+          "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
         },
         "Mode": 2
       },
@@ -10092,7 +10092,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -10107,7 +10107,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -15101,7 +15101,7 @@ exports[`package snapshots openDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -15116,7 +15116,7 @@ exports[`package snapshots openDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -20350,7 +20350,7 @@ exports[`package snapshots openDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -20365,7 +20365,7 @@ exports[`package snapshots openDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -24986,7 +24986,7 @@ exports[`package snapshots openDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -25001,7 +25001,7 @@ exports[`package snapshots openDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -29577,7 +29577,7 @@ exports[`package snapshots openDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -29592,7 +29592,7 @@ exports[`package snapshots openDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -34732,7 +34732,7 @@ exports[`package snapshots openDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -34747,7 +34747,7 @@ exports[`package snapshots openDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -40525,7 +40525,7 @@ exports[`package snapshots openDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -40540,7 +40540,7 @@ exports[`package snapshots openDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -44936,7 +44936,7 @@ exports[`package snapshots openDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -44951,7 +44951,7 @@ exports[`package snapshots openDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -48962,7 +48962,7 @@ exports[`package snapshots openDash 480 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -48977,7 +48977,7 @@ exports[`package snapshots openDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
@@ -53104,7 +53104,7 @@ exports[`package snapshots openDash 800 round/cards.djson 1`] = `
           "FontWeight": "Medium",
           "FontStyle": "Normal",
           "FontSize": 13,
-          "Text": "KM/H",
+          "Text": "km/h",
           "TextColor": "#FF8A9099",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -53119,7 +53119,7 @@ exports[`package snapshots openDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'MPH', 'KM/H')"
+                "Expression": "if(([DataCorePlugin.GameData.SpeedLocalUnit]) = ('MPH'), 'mph', 'km/h')"
               },
               "Mode": 2
             },
