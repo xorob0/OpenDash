@@ -7,13 +7,27 @@
  *
  * The grid the canvas draws under the cars is four rectangles of this module's own: the radar item
  * paints no lines and takes no grid setting, and its background is transparent, so they are drawn
- * behind it. The cars themselves are dots, and the spotter flanks are bars rather than the
- * canvas's arrows; `docs/second-screens.md` records both, and what the item would need to do
- * better.
+ * behind it.
+ *
+ * Three of the canvas's marks are outside what `RadarItem` will draw, and each is answered as far
+ * as the format allows rather than dropped:
+ *
+ *   - The player's car is a 24 by 44 block. The item always draws the player at its own centre, so
+ *     a rectangle over that centre states it exactly; the player's dot is set to radius 0 and the
+ *     block takes its place.
+ *   - The other cars are the same block, outlined, and they stay dots because a dot is the only
+ *     mark the item draws for them. What they can take is the canvas's fill and stroke, as the
+ *     dot's own border, which leaves the shape wrong and the colours right.
+ *   - The red outline on the car alongside has no equivalent at all. The item styles every
+ *     opponent alike and takes no per-car condition, so the state lives in the spotter flanks
+ *     beside the plot, which are bars rather than the canvas's arrows.
+ *
+ * `docs/second-screens.md` records these, and what the item would need to do better.
  */
 import { ncalc } from '../generator.ts';
 import { withBindings } from '../bind.ts';
-import { rect, type Rect } from '../design/geometry.ts';
+import { assetBox } from '../design/assets.ts';
+import { rect, type Rect, type Size } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { densityOf } from '../second/density.ts';
 import type { Item, RadarItem } from '../generator.ts';
@@ -40,6 +54,15 @@ export const radarScaleFor = (plot: Rect): number => Math.max(0.55, Math.min(1.4
  */
 export const spotterWidthFor = (width: number): number => Math.max(12, Math.min(64, Math.round(width / 12)));
 
+/**
+ * The car the canvas draws, which is what the player's block is cut from.
+ *
+ * It is a size and not a proportion of the plot because the cars around it are dots of a fixed
+ * radius: a block that grew with the box would leave the field it stands in. A plot too small to
+ * hold it gets it smaller at this ratio, which is rule 18, and never larger than this.
+ */
+const CAR: Size = { width: 24, height: 44 };
+
 const spotterOn = (side: 'Left' | 'Right') => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
 
 export const radar = defineModule('radar', (ctx) => {
@@ -55,8 +78,15 @@ export const radar = defineModule('radar', (ctx) => {
     rect: plot,
     scale: radarScaleFor(plot),
     useSmoothedPlayerAngle: true,
-    playerStyle: { dotColor: ds.color.text.primary, dotRadius: 14, labelFontSize: 1, labelColor: ds.color.surface.base },
-    opponentStyle: { dotColor: ds.color.text.secondary, dotRadius: 12, labelFontSize: 1, labelColor: ds.color.surface.base },
+    playerStyle: { dotColor: ds.color.text.primary, dotRadius: 0, labelFontSize: 1, labelColor: ds.color.surface.base },
+    opponentStyle: {
+      dotColor: ds.color.surface.raised,
+      dotRadius: CAR.width / 2,
+      dotBorderThickness: 1,
+      dotBorderColor: ds.color.text.dim,
+      labelFontSize: 1,
+      labelColor: ds.color.surface.base,
+    },
   };
   // The canvas's three horizontals and its centre line, at the quarters of the plot: what they say
   // is how far away a dot is, which is the one thing a bare field of dots does not.
@@ -64,9 +94,10 @@ export const radar = defineModule('radar', (ctx) => {
     band(`${ctx.prefix}grid${i}`, rect(plot.left, Math.round(plot.top + fraction * plot.height), plot.width, 1), ds.color.surface.raised),
   );
   grid.push(band(`${ctx.prefix}centre`, rect(Math.round(plot.left + plot.width / 2), plot.top, 1, plot.height), ds.color.surface.raised));
+  const you = band(`${ctx.prefix}you`, assetBox(plot, CAR, { maxWidth: CAR.width, maxHeight: CAR.height }), ds.color.text.primary);
   const side = (id: 'left' | 'right', x: number): Item => ({
     ...band(`${ctx.prefix}${id}`, rect(x, blockTop, spotter, blockHeight), ds.color.text.dim),
     ...withBindings({ BackgroundColor: iff(spotterOn(id === 'left' ? 'Left' : 'Right'), str(ds.purpose.delta.slower), str(ds.color.text.dim)) }),
   });
-  return [side('left', ctx.frame.left), ...grid, item, side('right', ctx.frame.left + ctx.frame.width - spotter)];
+  return [side('left', ctx.frame.left), ...grid, item, you, side('right', ctx.frame.left + ctx.frame.width - spotter)];
 });

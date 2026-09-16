@@ -27,7 +27,7 @@ import { densityForBox } from '../src/second/density.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type Follower } from '../src/second/field.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { rect } from '../src/design/geometry.ts';
+import { contains, rect } from '../src/design/geometry.ts';
 import type { Density } from '../src/second/density.ts';
 import type { Rect } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
@@ -603,6 +603,34 @@ describe('the radar is cut from its box', () => {
     // Behind, not over: SimHub paints the items in order and the radar's own background is clear.
     expect(items.findIndex((i) => i.name === 'radar.centre')).toBeLessThan(items.findIndex((i) => i.kind === 'radar'));
   });
+
+  test('the player is the canvas block over the plot centre rather than a dot of the item', () => {
+    const items = build(802, 336, 'companion');
+    const radar = radarIn(items);
+    const you = items.find((i): i is RectangleItem => i.name === 'radar.you')!;
+    expect({ colour: you.backgroundColor, width: you.rect.width, height: you.rect.height }).toEqual({ colour: ds.color.text.primary, width: 24, height: 44 });
+    // The item draws the player at its own centre, so the block is only true where it sits on it.
+    expect(you.rect.left + you.rect.width / 2).toBeCloseTo(radar.rect.left + radar.rect.width / 2, 0);
+    expect(you.rect.top + you.rect.height / 2).toBeCloseTo(radar.rect.top + radar.rect.height / 2, 0);
+    // Over, not behind, and with nothing of the item's own left under it.
+    expect(items.findIndex((i) => i.name === 'radar.you')).toBeGreaterThan(items.findIndex((i) => i.kind === 'radar'));
+    expect(radar.playerStyle?.dotRadius).toBe(0);
+  });
+
+  test('the other cars wear the canvas fill and stroke as a dot border', () => {
+    const opponents = radarIn(build(802, 336, 'companion')).opponentStyle;
+    expect(opponents).toMatchObject({ dotColor: ds.color.surface.raised, dotBorderColor: ds.color.text.dim, dotBorderThickness: 1, dotRadius: 12 });
+  });
+
+  for (const box of moduleBoxes()) {
+    test(`the grid and the player's block stay in the plot on a ${box.name}`, () => {
+      const items = MODULES.find((m) => m.id === 'radar')!.build({ frame: box.frame, density: box.density, prefix: 'radar.' });
+      const plot = radarIn(items).rect;
+      const drawn = items.filter((i): i is RectangleItem => i.kind === 'rect' && /\.(grid\d|centre|you)$/.test(i.name));
+      expect(drawn.map((i) => i.name).sort()).toEqual(['radar.centre', 'radar.grid0', 'radar.grid1', 'radar.grid2', 'radar.you']);
+      for (const mark of drawn) expect({ box: box.name, mark: mark.name, rect: mark.rect, inside: contains(plot, mark.rect) }).toMatchObject({ inside: true });
+    });
+  }
 
   test('the spotter flanks are a proportion of the width and turn red on the side being called', () => {
     const flanksOf = (w: number, h: number): RectangleItem[] => build(w, h).filter((i): i is RectangleItem => i.name === 'radar.left' || i.name === 'radar.right');
