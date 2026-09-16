@@ -8,7 +8,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { buildPackage, fontsForPackage } from '../src/dashboard.ts';
-import { imageOf, WHEEL_CHANGE_TICK } from '../src/design/assets.ts';
+import { ASSET_SOURCES, imageOf, WHEEL_CHANGE_TICK, type AssetSource, type AssetSourceId } from '../src/design/assets.ts';
 import { VENDORED_FONTS_DIR } from '../src/design/fontFiles.ts';
 import { FONT_LICENCE, NOTICES_BY_SOURCE, noticesForPackage, PANEL_NOTICES } from '../src/design/notices.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
@@ -75,5 +75,16 @@ describe('images', () => {
 
   test('every notice a source owes is a file that is there to be copied', () => {
     for (const notices of Object.values(NOTICES_BY_SOURCE)) for (const notice of notices) expect(existsSync(notice.path)).toBe(true);
+  });
+
+  test("a source that owes nothing is openDash's own work, and nobody else's", () => {
+    // The empty list is a real answer for artwork the project made and publishes itself, and a
+    // licence breach for anything taken from elsewhere. Which of the two it is has to be read off
+    // the source rather than assumed, or the day somebody registers a source and leaves its notices
+    // empty is the day a release ships somebody else's drawing with nothing attached to it.
+    for (const [id, source] of Object.entries(ASSET_SOURCES) as [AssetSourceId, AssetSource][]) {
+      if (NOTICES_BY_SOURCE[id].length > 0) continue;
+      expect([id, source.who, source.licence]).toEqual([id, 'the openDash authors', 'MIT']);
+    }
   });
 });
