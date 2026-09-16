@@ -43,6 +43,12 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>The size an icon is drawn at when it stands beside a line of prose rather than inside a
+        /// control, which is the second of the two sizes control.icon describes.</summary>
+        // TODO: read this from Theme once design/tokens.json carries the standing-alone size as a token of
+        // its own; control.icon mirrors the 16 and says the 20 in its description only.
+        private const double IconAlone = 20;
+
         private FrameworkElement BuildRigTab()
         {
             var rig = Settings.RigScreens();
@@ -56,8 +62,30 @@ namespace OpenDashPlugin
 
             var screen = Selected;
             rows.Add(BuildScreenHeader(screen));
-            rows.Add(BuildScreenPane(screen));
-            return Ui.VStack(0, Ui.Section("Your rig", rows.ToArray()));
+            // The pane takes a section of its own rather than a place inside "Your rig". Ui.Section nests
+            // perfectly well -- it is a rule and a label with no indent -- but the pane already carries a
+            // section of its own in the wheel buttons, and a heading that sits one level deeper than the
+            // heading beneath it reads as a mistake.
+            return Ui.VStack(0,
+                Ui.Section("Your rig", rows.ToArray()),
+                Ui.Section(PaneTitle(screen), BuildScreenPane(screen)));
+        }
+
+        /// <summary>
+        /// The heading over the selected screen's pane, which names what the pane is a list of.
+        /// </summary>
+        /// <remarks>
+        /// A pit wall takes the first of the two headings the canvas gives it, because its pane opens with
+        /// the picture; the second, "What each zone shows", waits on the pane itself being split in two.
+        /// Slots is the kind the canvas never drew, and it leaves with XOR-95, so it borrows the shape of
+        /// the face's heading rather than being given a design of its own.
+        /// </remarks>
+        private static string PaneTitle(ScreenInstance screen)
+        {
+            if (screen.IsCompanion) return "Modules in the rotation";
+            if (screen.IsPitWall) return "Where the zones are";
+            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return "What each slot shows";
+            return "What each zone shows";
         }
 
         /// <summary>The cards, wrapped, and the add card after them.</summary>
@@ -125,8 +153,7 @@ namespace OpenDashPlugin
             // is the explanation of what adding a screen does, not a second announcement.
             var text = Ui.Caption(
                 "Add the one your rig actually has and openDash installs its dashboard into SimHub; "
-                + "everything else on this page is about the screens you have added.",
-                BodyWidth);
+                + "everything else on this page is about the screens you have added.");
             var stack = Ui.VStack(4, pill, text);
             stack.Margin = new Thickness(0, 4, 0, 0);
             return stack;
@@ -143,14 +170,12 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildCrowdedRigNote()
         {
-            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution);
+            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            icon.Margin = new Thickness(0, 1, 0, 0);
             var text = Ui.Caption(
                 "openDash used to install every dashboard it ships, which is why there are so many here. "
                 + "Remove the ones you have no screen for: it tidies SimHub's dashboard list too, and nothing "
-                + "else is touched.",
-                BodyWidth - 26);
+                + "else is touched.");
             var row = Ui.HStack(10, icon, text);
             row.Margin = new Thickness(0, 4, 0, 4);
             return row;
@@ -160,26 +185,43 @@ namespace OpenDashPlugin
         private FrameworkElement BuildScreenHeader(ScreenInstance screen)
         {
             var title = Ui.Text(screen.Name, Theme.SizeTitle, FontWeights.SemiBold, Theme.TextPrimary);
-            // Kind, size, folder and namespace. The namespace is here because ADR 0017 freezes it at
-            // creation and a rename does not move it, so a screen called "Rim" whose properties say
-            // MainDash has to be able to say so rather than leave it to be discovered.
-            var facts = Ui.Caption(
-                KindLabel(screen) + (screen.Width > 0 ? " · " + screen.SizeLabel : string.Empty) + " · " + (screen.Folder ?? "not installed")
-                    + " · properties OpenDash." + screen.Namespace + "*",
-                BodyWidth - 260);
-            var text = Ui.VStack(4, title, facts);
+            var facts = Ui.Label(ScreenFacts(screen));
+            // The folder and the namespace, quieter than the two facts above them because the canvas draws
+            // neither. The namespace is here because ADR 0017 freezes it at creation and a rename does not
+            // move it, so a screen called "Rim" whose properties say MainDash has to be able to say so
+            // rather than leave it to be discovered.
+            var origin = Ui.Caption((screen.Folder ?? "not installed") + " · properties OpenDash." + screen.Namespace + "*");
+            var text = Ui.VStack(4, title, facts, origin);
             text.HorizontalAlignment = HorizontalAlignment.Left;
 
-            var rename = BuildSecondaryButton("Rename", "Change what this screen is called here and in SimHub's dashboard list.");
+            var rename = Ui.LinkButton("Rename");
+            rename.ToolTip = "Change what this screen is called here and in SimHub's dashboard list.";
             rename.Click += (sender, args) => ShowRename(screen);
-            var remove = BuildSecondaryButton("Remove", "Remove this screen, its settings and its dashboard folder.");
+            // Text and not a button face, which is what the canvas draws. What keeps a quiet destructive
+            // action from being an accident is the confirmation behind it rather than its own weight.
+            var remove = Ui.LinkButton("Remove this screen", Theme.Danger);
+            remove.ToolTip = "Remove this screen, its settings and its dashboard folder.";
             remove.Click += (sender, args) => ShowRemove(screen);
 
-            var row = Ui.Row(text, Ui.HStack(8, rename, remove));
-            row.Margin = new Thickness(0, 8, 0, 0);
-            var rows = new List<UIElement> { row };
+            var rows = new List<UIElement> { Ui.Row(text, Ui.HStack(8, rename, remove)) };
             if (!Installed(screen)) rows.Add(BuildMissingFolder(screen));
-            return Ui.VStack(10, rows.ToArray());
+            var stack = Ui.VStack(10, rows.ToArray());
+            stack.Margin = new Thickness(0, 8, 0, PanelMetrics.SectionGap);
+            // The rule closes the header rather than opening the pane: the pane's own section draws its
+            // own, and the two say different things about what they separate.
+            return new Border
+            {
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),
+                Child = stack,
+            };
+        }
+
+        /// <summary>The two facts the canvas puts under a screen's name, in the order it puts them. Drawn
+        /// through Ui.Label, which upper-cases them.</summary>
+        private static string ScreenFacts(ScreenInstance screen)
+        {
+            return KindLabel(screen) + (screen.Width > 0 ? " · " + screen.SizeLabel : string.Empty);
         }
 
         /// <summary>
@@ -191,13 +233,11 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildMissingFolder(ScreenInstance screen)
         {
-            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution);
+            var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            icon.Margin = new Thickness(0, 1, 0, 0);
             var text = Ui.Caption(
                 "This screen's dashboard is not in SimHub: " + (screen.Folder ?? "it has no folder")
-                    + " is missing. Your settings for it are kept.",
-                BodyWidth - 280);
+                    + " is missing. Your settings for it are kept.");
             var write = BuildSecondaryButton("Install it again", "Write this screen's dashboard back into SimHub DashTemplates.");
             write.Click += (sender, args) =>
             {
@@ -234,7 +274,7 @@ namespace OpenDashPlugin
             {
                 bodyHost.Content = Ui.VStack(0, Ui.Section("Add a screen",
                     Ui.Caption("This build of openDash carries no dashboard packages, so there is nothing to add. "
-                        + "See plugin/OpenDash/Resources/README.md.", BodyWidth),
+                        + "See plugin/OpenDash/Resources/README.md."),
                     BackRow()));
                 return;
             }
@@ -258,7 +298,7 @@ namespace OpenDashPlugin
                 VerticalContentAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Left,
             };
-            var note = Ui.Caption("", BodyWidth);
+            var note = Ui.Caption("");
 
             Action refresh = () =>
             {
@@ -354,8 +394,7 @@ namespace OpenDashPlugin
                 Ui.Row("Name", "What this screen is called here, and what SimHub's dashboard list shows.", name),
                 Ui.Caption(
                     "Only the name changes. Its settings stay as they are, and its properties keep the names they "
-                    + "have (OpenDash." + screen.Namespace + "*) so that anything you have bound to them keeps working.",
-                    BodyWidth),
+                    + "have (OpenDash." + screen.Namespace + "*) so that anything you have bound to them keeps working."),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
         }
 
@@ -373,7 +412,8 @@ namespace OpenDashPlugin
             var bound = screen.IsFace
                 ? " Any wheel button you bound to this screen — the zone buttons and the glance — will stop doing anything."
                 : string.Empty;
-            var remove = BuildSecondaryButton("Remove it", "Remove the screen, its settings and its folder.");
+            var remove = Ui.DestructiveButton("Remove it");
+            remove.ToolTip = "Remove the screen, its settings and its folder.";
             remove.Click += (sender, args) =>
             {
                 var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
@@ -395,8 +435,7 @@ namespace OpenDashPlugin
             bodyHost.Content = Ui.VStack(0, Ui.Section("Remove " + screen.Name,
                 Ui.Caption(
                     "This removes the screen from your rig, deletes " + (screen.Folder ?? "its folder")
-                    + " from SimHub's DashTemplates, and forgets what you had set on it." + bound,
-                    BodyWidth),
+                    + " from SimHub's DashTemplates, and forgets what you had set on it." + bound),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, remove))));
         }
 
