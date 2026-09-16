@@ -17,10 +17,10 @@ import {
   secondScreen,
   secondScreenProperties,
 } from '../src/contract.ts';
-import { validatePackage, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
-import { MODULES } from '../src/modules/index.ts';
+import { MODULES, pageBuilder } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox } from '../src/second/density.ts';
@@ -723,5 +723,89 @@ describe('what iRacing cannot answer', () => {
       expect({ id, text: placeholder?.text }).toMatchObject({ text: expect.stringContaining('NOT A') });
       expect(placeholder?.textColor).toBe(ds.color.text.dim);
     }
+  });
+});
+
+/**
+ * The wide car-telemetry zone, against `pitwalltower1920x1080` and the wide zone sheet.
+ *
+ * The row is drawn twice on the canvas, at the 1279 by 240 reference frame and at the 1039 by 255
+ * the tower page carries, and the two agree on three things a single drawing would have left
+ * looking like one author's arithmetic: the settings column is 380 px at both, the row keeps a page
+ * padding of slack at its right edge at both, and the plot is 28 px shorter than the content box at
+ * both. The numbers below are the 1039 px frame's half of that, so a change to the split fails here
+ * rather than by looking plausible on a screen nobody has open.
+ */
+describe('the wide car-telemetry page', () => {
+  const { body } = zoneFrame('probe', { frame: rect(0, 0, 1039, 255), title: 'CAR TELEMETRY · WIDE', counter: { kind: 'static', page: 6, pages: 6 } });
+  const items = pageBuilder('carTelemetry')({ frame: body, density: 'wide', prefix: 'carTelemetry.' }).flatMap((i) => [...walkItems([i])]);
+  const named = (suffix: string): Exclude<Item, { kind: 'layer' }>[] => items.filter((i): i is Exclude<Item, { kind: 'layer' }> => i.kind !== 'layer' && i.name.endsWith(suffix));
+  const charts = items.filter((i): i is ChartItem => i.kind === 'chart');
+  const plot = charts[0]!.rect;
+
+  test('splits the content box the way the sheet does', () => {
+    expect({ width: body.width, height: body.height }).toEqual({ width: 1007, height: 211 });
+    // Both traces share the plot, and the plot is the canvas's 587 by 183.
+    expect([...new Set(charts.map((c) => `${c.rect.width}x${c.rect.height}`))]).toEqual(['587x183']);
+    // The row is the plot, the canvas's 24 px gap, the 380 px settings column, and the page padding
+    // of slack the sheet leaves at the right edge.
+    expect(plot.width + 24 + 380 + 16).toBe(body.width);
+    const labels = named('.label').map((i) => i.rect);
+    expect(labels[0]!.left - (plot.left + plot.width)).toBe(24);
+    // Equal cells three across a 380 px column, which is the shape of the sheet's nine-cell grid.
+    expect([...new Set(labels.map((r) => r.width))]).toEqual([Math.floor((380 - 2 * 18) / 3)]);
+    expect([...new Set(labels.map((r) => r.left))]).toHaveLength(3);
+  });
+
+  test('stands the settings grid on the plot rather than in the middle of the box', () => {
+    // `align-items: flex-end` on the sheet's row: the two halves share a bottom edge. The block of
+    // cells is short, so bottom-aligned and centred are far apart and easy to tell apart.
+    const cells = [...named('.label'), ...named('.value')].map((i) => i.rect);
+    expect(Math.min(...cells.map((r) => r.top))).toBeGreaterThan(plot.top + plot.height / 2);
+    const foot = Math.max(...cells.map((r) => r.top + r.height));
+    // The last line is placed on the plot's bottom edge; what hangs below it is the line box's own
+    // tail, which is transparent and is what `every module fits the box it is given` allows for.
+    expect(foot - (plot.top + plot.height)).toBeLessThanOrEqual(Math.ceil(0.25 * 16) + 2);
+    expect(foot).toBeGreaterThan(plot.top + plot.height - LINE_SPACING * 16);
+  });
+
+  test('draws the midline alone, where the telemetry panels draw their quarters', () => {
+    const grid = items.filter((i): i is RectangleItem => i.kind === 'rect' && /\.grid\d$/.test(i.name));
+    expect(grid).toHaveLength(1);
+    expect(grid[0]!.backgroundColor).toBe(ds.color.surface.raised);
+    expect(grid[0]!.rect.top).toBe(Math.round(plot.top + plot.height / 2));
+    // And no rule under the plot: the sheet closes a panel drawn under a title, not this row.
+    expect(named('.baseline')).toEqual([]);
+  });
+
+  test('keeps the legend outside the plot, in the band under the row', () => {
+    const legend = named('.legend') as TextItem[];
+    expect(legend.map((i) => i.text)).toEqual(['THROTTLE', 'BRAKE']);
+    // The swatches are drawn boxes and land squarely in the band; a label is a WPF line box and
+    // starts a tenth of its size above the line it was given, so it is measured by its foot.
+    for (const swatch of named('.swatch')) expect(swatch.rect.top).toBeGreaterThanOrEqual(plot.top + plot.height);
+    for (const entry of legend) expect(entry.rect.top + entry.rect.height).toBeGreaterThan(plot.top + plot.height);
+  });
+
+  test('lists the cells the catalogue names, in its order and at the size it sets them', () => {
+    expect((named('.label') as TextItem[]).map((i) => i.text)).toEqual(['TC', 'BB', 'MAP', 'ABS']);
+    // Pinned at the sheet's 16 px rather than grown by rule 20, which drew them at 29 and the car
+    // number at 41: the grid is a reference beside a trace, and the trace is the reading.
+    expect([...new Set((named('.value') as TextItem[]).map((i) => i.fontSize))]).toEqual([16]);
+    // The car line and the anti-roll bars belong to the car settings page and not to this one.
+    expect(items.filter((i) => /\.(car|arbFront|arbRear)\./.test(i.name))).toEqual([]);
+  });
+
+  test('and leaves the telemetry column its four lines a plot', () => {
+    const pitwall = PACKAGES.find((p) => p.def.folder === 'openDash Pit wall')!.pkg.dashboards[0]!;
+    const screen = pitwall.screens.find((s) => s.name === 'telemetry')!;
+    const lines = new Map<string, number>();
+    for (const item of itemsOf({ ...pitwall, screens: [screen] })) {
+      const match = /^(.*)\.(?:grid\d|baseline)$/.exec(item.name);
+      if (match) lines.set(match[1]!, (lines.get(match[1]!) ?? 0) + 1);
+    }
+    // The five panels the column stacks, each with its quarters and the rule that closes it.
+    expect(lines.size).toBeGreaterThanOrEqual(5);
+    expect([...new Set(lines.values())]).toEqual([4]);
   });
 });
