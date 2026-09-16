@@ -133,9 +133,14 @@ interface Quantity {
   unit?: { text: string; widest?: string; bind?: Expr };
 }
 
-/** The unit's box: the canvas's 22 px, or what the widest unit the binding can produce really needs. */
+/**
+ * The unit's box: the canvas's 22 px, or what the widest unit the binding can produce really needs.
+ *
+ * Measured upper-cased, which is how a unit is drawn: "kPa" fits the canvas's cell and "KPA" is a
+ * twentieth of a pixel past it.
+ */
 const unitBox = (q: Quantity, d: DensitySpec): number =>
-  q.unit === undefined ? 0 : Math.max(UNIT_CELL, Math.ceil(measureText('BarlowMedium', q.unit.widest ?? q.unit.text, d.labelSm)) + 1);
+  q.unit === undefined ? 0 : Math.max(UNIT_CELL, Math.ceil(measureText('BarlowMedium', (q.unit.widest ?? q.unit.text).toUpperCase(), d.labelSm)) + 1);
 
 const valueWidth = (q: Quantity): number => monoWidth(cells('SemiBold', q.fs), q.chars);
 

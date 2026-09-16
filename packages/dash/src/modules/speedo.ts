@@ -12,7 +12,7 @@ import { CHARS, rpm, speed, speedUnit } from '../second/values.ts';
 import { redlineRpm } from '../shift.ts';
 import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 
-const { fmt, lcase } = ncalc;
+const { fmt } = ncalc;
 
 export const speedo = defineModule('speedo', (ctx) => {
   const d = densityOf(ctx.density);
@@ -28,7 +28,7 @@ export const speedo = defineModule('speedo', (ctx) => {
             bind: fmt(speed(), '0'),
             chars: CHARS.speed,
             fs: d.hero,
-            follower: { text: 'km/h', bind: lcase(speedUnit()) },
+            follower: { text: 'km/h', bind: speedUnit() },
           }),
           fld(ctx, 'rpm', 'RPM', { sample: '7,420', bind: fmt(rpm(), '#,0'), chars: CHARS.rpm, fs: d.big }),
           // The number the bar above it turns red at, from the same model rather than SimHub's own

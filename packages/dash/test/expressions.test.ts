@@ -87,7 +87,10 @@ describe('card expressions', () => {
   test('fuel unit Left adds one digit cell for the decimal and one special for the point', () => {
     const left = formulaOf(textItem('fuel', 'unit'), 'Left');
     expect(left).toMatch(/\+ \(1\)\) \* \(31\)\) \+ \(17\) \+ \(8\)$/);
-    expect(formulaOf(textItem('fuel', 'unit'), 'Text')).toBe("if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L')");
+    // Through `ucase`, which is what makes a unit the sim spells match the style the canvas sets
+    // on every small label. The element cannot know that this particular expression already
+    // returns capitals, and a unit that arrives in the sim's own case is the reason it is there.
+    expect(formulaOf(textItem('fuel', 'unit'), 'Text')).toBe("ucase(if(([DataCorePlugin.GameData.FuelUnit]) = ('Gallons'), 'GAL', 'L'))");
   });
 
   test('lap times use toshorttime with forced minutes and dim no-data glyphs', () => {
