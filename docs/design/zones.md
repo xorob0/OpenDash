@@ -125,7 +125,7 @@ says so, exactly as `layouts/800x480.ts` says it today.
 ### The face with the rev bar off
 
 **Derived, not drawn.** `OpenDash.RevBar` has a third state, `off`, for a driver whose wheel or DDU
-already carries LEDs across its top (XOR-138). Hiding the segments alone leaves the well lit by
+already carries LEDs across its top (#189). Hiding the segments alone leaves the well lit by
 nothing, so the face has a second arrangement, and its rectangles are the only ones in this document
 that no artboard gives. §10 records what the canvas owes.
 
@@ -341,7 +341,7 @@ Two worked examples first, because they are the two that show why it cannot be d
   wrong about the box it really answers: a zone that stacks one column has room for four of them,
   and what the build actually drew there was two 34 px times side by side with 234 px of the zone
   empty under them. See §10 — **the catalogue owes a redraw of this one**, and
-  [readability-pass.md](readability-pass.md) §1 is the ticket.
+  [#330](https://github.com/xorob0/OpenDash/issues/330) is the ticket.
 - **Relative.** `wide`: position, number, code, class, gap. `grid`: the same five. `tall narrow`:
   position, code and gap only, and eight rows rather than six. The number and the class chip go
   from between two columns that stay, which no rule about prefixes produces.
@@ -399,11 +399,11 @@ every other zone setting, so a rig with a face on the wheel and one beside it fi
 
 It is **not** `PositionMode`. That setting is which number a position column shows; this one is who
 is in the list at all, and one class counted by overall position is a legitimate thing to ask for.
-What `PositionMode: class` currently does to a list it did not reorder is XOR-161.
+What `PositionMode: class` currently does to a list it did not reorder is #212.
 
 Two pages read it: the leaderboard and the relative. Zone A lists nobody. Band D's own relative
 page is three gaps rather than a list, so filtering it means asking for the car *ahead in class*
-rather than listing fewer of them — the same idea, a different change, and XOR-159. The panel
+rather than listing fewer of them — the same idea, a different change, and #210. The panel
 offers the checkbox only where a page would change.
 
 ### The counter
@@ -481,7 +481,7 @@ The four modes the slot model already had — `ShiftLights`, `PositionMode`, `De
 because it is not one face's, whatever the second arrangement is: the round faces' rev arc and the
 companion's speedo draw the same segments from the same setting, and a screen may not read a
 property another screen owns. `ShiftLights` is now its deprecated alias and stays attached for a
-release: an rc.2 user's properties do not vanish without warning (XOR-119), and a package installed
+release: an rc.2 user's properties do not vanish without warning (#170), and a package installed
 beside an older plugin falls back through it.
 
 Every expression that reads one of these wraps it in `isnull()` with the default, so a package
@@ -524,9 +524,9 @@ candidates, none yet chosen:
 2. A header like the others, which costs 22 px of the column the gear is sized to.
 3. A name that appears for a second after the page changes and fades. This costs nothing at rest
    and is the same behaviour as the change notification, which suggests the two are one component
-   — and it needs a show-for-N-seconds primitive the format may not have (XOR-116).
+   — and it needs a show-for-N-seconds primitive the format may not have (#167).
 
-This section is filled in when the canvas answers it. XOR-103 owns the question.
+This section is filled in when the canvas answers it. #154 owns the question.
 
 ---
 
@@ -538,7 +538,7 @@ touching them is rule 10: *a round face uses its ring instead of a band.*
 
 `480round.ts` and `800round.ts` read `layout.slots`, which the zone work makes optional rather
 than removing, so they keep building throughout. The decision is owed before the card path is
-retired, not before the first zone face. XOR-94 owns it.
+retired, not before the first zone face. #145 owns it.
 
 ---
 
@@ -554,10 +554,10 @@ a mistake in this document.
 | Zone C's capacity | Stated as ten drivers at 1920; seven rows are drawn. |
 | Page dots | `pageIndicator` is still in the component list, against "there is no row of page dots". |
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
-| The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
-| The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
-| The face with no rev bar | XOR-138 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
-| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [readability-pass.md](readability-pass.md). |
+| The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see #159. |
+| The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before #148 starts. |
+| The face with no rev bar | #189 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
+| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [#327](https://github.com/xorob0/OpenDash/issues/327) and the twenty tickets under it. |
 
 ---
 
@@ -591,7 +591,7 @@ target, verified in [research/simhub-dash-format.md](../research/simhub-dash-for
 [scope.md](../scope.md) is what OpenDash is and what it refuses to be.
 [ADR 0006](../decisions/0006-the-zone-face.md) is why the model changed.
 [brand.md](brand.md) is the reasoning behind the colours and the type.
-[readability-pass.md](readability-pass.md) is one ticket per page: what each of the twenty-one
+[#327](https://github.com/xorob0/OpenDash/issues/327) is one ticket per page: what each of the twenty-one
 would have to change to put the reading a driver needs first.
 [second-screens.md](../second-screens.md) is the companion and the pit wall, which share the
 twenty-one pages.

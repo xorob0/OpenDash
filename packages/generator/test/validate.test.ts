@@ -331,7 +331,7 @@ describe('plugin properties', () => {
   });
 
   test('a screen enabled expression naming a function SimHub does not dispatch is an error', () => {
-    // The XOR-83 failure, moved to the one expression where it costs a whole screen rather than
+    // The #134 failure, moved to the one expression where it costs a whole screen rather than
     // one item's text: SimHub evaluates the expression to nothing, nothing reads as false, and the
     // screen never appears with no message anywhere saying so.
     const pkg = single([rect('r')]);

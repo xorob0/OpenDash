@@ -71,7 +71,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_font_that_differs_is_not_somebody_editing_a_dashboard()
         {
-            // Fonts are copied rather than authored, and the renamed faces changed under XOR-108 without anyone
+            // Fonts are copied rather than authored, and the renamed faces changed under #159 without anyone
             // touching a dashboard. Stopping to ask about one would be asking about the wrong thing.
             var folder = Folder();
             var before = FolderFingerprint.Of(folder);

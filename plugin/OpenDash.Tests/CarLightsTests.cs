@@ -127,7 +127,7 @@ namespace OpenDashPlugin.Tests
             {
                 var lit = CarLightMirror.Colors(table, "1", 2500, run, MirrorFit.Stretch, 0);
                 // Enumerable.Reverse by name: on an array a newer compiler binds `.Reverse()` to the
-                // Span overload, which returns void and reverses in place. Same trap as XOR-269.
+                // Span overload, which returns void and reverses in place. Same trap as #320.
                 Assert.Equal(lit, Enumerable.Reverse(lit).ToArray());
                 // And it is filling from the ends: at 2500 rpm the outer pair is lit and the middle is not.
                 Assert.NotEqual(Off, lit[0]);

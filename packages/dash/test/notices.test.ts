@@ -36,7 +36,7 @@ describe('what a package owes', () => {
 
   test('every font the build packs is covered by the licence that travels with it', () => {
     // Asserted on the vendored sources rather than on what the build emits, because the condensed
-    // faces are renamed to openDash Display so that WPF resolves them (XOR-108) and their file
+    // faces are renamed to openDash Display so that WPF resolves them (#159) and their file
     // names no longer say Barlow. The OFL covers Barlow; a face from another foundry would need
     // its own notice, and this is the assertion that would fail rather than a release quietly
     // breaking somebody's licence.
@@ -61,7 +61,7 @@ describe('images', () => {
   };
 
   test('a package carrying an image with no registered licence refuses to be built', () => {
-    // The artwork arrives with XOR-97. Until its licence is registered beside it, this throws,
+    // The artwork arrives with #148. Until its licence is registered beside it, this throws,
     // which is the point: an unlicensed asset must not be able to reach a release quietly.
     if (IMAGE_LICENCES.length === 0) {
       expect(() => noticesForPackage(withImage())).toThrow(/no licence is registered/);

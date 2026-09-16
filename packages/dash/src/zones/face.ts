@@ -7,7 +7,7 @@
  * page and nothing in the scene graph has to know.
  *
  * Twice, because `OpenDash.RevBar` `off` is not a hidden rev bar but a differently arranged screen:
- * the two arrangements are built here and SimHub shows whichever the setting enables. XOR-138.
+ * the two arrangements are built here and SimHub shows whichever the setting enables. #189.
  *
  * What this file does *not* do is decide any geometry. Every rectangle comes from the layout, which
  * read it off an artboard; see `docs/design/zones.md`.

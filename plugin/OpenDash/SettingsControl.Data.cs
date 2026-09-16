@@ -15,7 +15,7 @@ namespace OpenDashPlugin
             // Three states in one control rather than a toggle and a second toggle under it: what the
             // top of the face carries is one decision, and a driver whose wheel already has LEDs
             // across it wants the third of them. Off redraws the face without the well, so the zones
-            // start where the recess did. XOR-138.
+            // start where the recess did. #189.
             var revBar = BuildSegmented(Contract.RevBarModes, new[] { "Shift lights", "RPM bar", "Off" }, Settings.RevBarMode(), value =>
             {
                 Settings.SetRevBar(value);

@@ -24,7 +24,7 @@ export const FONT_LICENCE: NoticeFile = { name: 'OFL.txt', path: path.join(VENDO
  *
  * Empty until something ships an image. Material Design Icons are Apache 2.0, which requires both
  * the licence text and the NOTICE naming Pictogrammers, and both belong here beside the artwork
- * when XOR-97 brings it.
+ * when #148 brings it.
  */
 export const IMAGE_LICENCES: readonly NoticeFile[] = [];
 
