@@ -264,6 +264,13 @@ decide, grouped by where they arose. Each is a sentence the author can answer in
 - **The redline flash now stops in the last gear on every surface**, the digit, the bar and the
   strip, rather than on the digit alone. No canvas statement covers the bar or the strip there, and
   a steady digit beside a strobing bar in one rig is the divergence that was fixed once already.
+- **The strip and the face now flash the over-rev at different rates.** The strip's blinks were four
+  rates, three of them derived from the shift lights' flash rate and none of them visible, since each
+  alternated a colour with itself. They are two now, four and eight times a second, and the off phase
+  is the ground, so a blink that never showed does. The face's redline still flashes at the shift
+  lights' own rate, so the bar on the wheel and the strip above it no longer agree. Moving that token
+  is the author's. Worth a release note either way: blinks that were never visible now are, on the
+  ladder and on nine effects.
 - **A portrait face's miniature is now as tall as the rule makes it**, about 963 px against the 410
   it used to be, because the picture is drawn to one rule for every face. Capping it needs a height
   the canvas does not give, so it scrolls.
