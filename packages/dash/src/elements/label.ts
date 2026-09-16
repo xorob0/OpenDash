@@ -1,7 +1,7 @@
 /**
- * label: an uppercase field label in Barlow Medium, text.label, 15 px (13 for the small variant).
- * Proportional, never monospaced. The box spans the available width and is top aligned so the
- * baseline lands where the canvas line box puts it.
+ * label: a field label in Barlow Medium, text.label, 15 px (13 for the small variant), upper-cased
+ * unless the caller keeps the case it wrote. Proportional, never monospaced. The box spans the
+ * available width and is top aligned so the baseline lands where the canvas line box puts it.
  */
 import type { HAlign, Hex, TextItem } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
@@ -17,6 +17,12 @@ export interface LabelOptions {
   /** TextColor binding, for a label whose ink says something: a telltale lit or unlit. */
   colorBind?: Expr;
   hAlign?: HAlign;
+  /**
+   * What is done to a literal `text`: a field label is upper-cased, which is the default, while
+   * `asIs` keeps what the caller wrote. The canvas writes a unit `s` and prose copy in sentence
+   * case, and neither survives an upper-casing the caller cannot decline.
+   */
+  case?: 'upper' | 'asIs';
   /** Text binding. `text` is then the design-time sample and is not upper-cased. */
   bind?: Expr;
   /** The widest string `bind` can produce. The box should be measured from it, and the fit tests are. */
@@ -33,7 +39,7 @@ export function label(name: string, text: string, x: number, y: number, width: n
     kind: 'text',
     name,
     rect: roundRect({ left: x, top: box.top, width, height: box.height }),
-    text: opts.bind ? text : text.toUpperCase(),
+    text: opts.bind || opts.case === 'asIs' ? text : text.toUpperCase(),
     font: ds.font.label,
     fontWeight: 'Medium',
     fontSize: fs,
