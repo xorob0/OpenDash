@@ -392,6 +392,46 @@ Pages with nothing to shed, and why:
 A drawing is cut from its box rather than shed (rule 18), and a page that says it has no data is
 one line of prose with nothing in it to drop.
 
+### The parts that are not fields
+
+A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap history
+is rows under a header, pit view's four corner toggles are what the drawing writes as the one line
+`Tyres · RIGHTS`, and tyres closes its corners with the caption saying where its pressures come
+from. The catalogue draws each of these at some shapes and not at others, so they are declared the
+same way a field is, in `PARTS` beside the table above. An empty cell is a part the drawing does not
+carry at that shape.
+
+| № | Page | `wide` | `grid` | `tall narrow` | `tall` |
+|---|---|---|---|---|---|
+| 2 | Delta | `bar` · `scale` | `bar` · `scale` |  | `bar` · `scale` |
+| 7 | Tyres | `footer` | `footer` |  | `footer` |
+| 8 | Pit view | `tyres` | `tyres` |  |  |
+| 19 | Lap history | `head` | `head` |  |  |
+
+Two tables rather than one because they answer two questions: the first is what a rank sheds, this
+is what furniture the page keeps around it, and a page may appear in both. Until they were
+declared, a narrow box lost them to `rowsThatFit` instead, which is arithmetic arriving at a design
+decision one pixel at a time, and in the tyres caption's case arriving at the wrong one: the module
+sized its two rows to the frame exactly, so the caption was dropped at every size the build
+produces rather than at the one shape the catalogue drops it.
+
+The catalogue also draws a steering readout on the inputs page at `wide` and at `grid`. It is not
+in the table because the module does not build one, and a part a page cannot draw would be a line
+nobody will notice is dead.
+
+### A page that takes another page's drawing
+
+The medium height band runs from 200 to 400 px and holds both the catalogue's `grid 430 × 300` and
+the 1280 × 400 face's zone body, which is 437 × 214. Two pages cannot be drawn the same way in
+both, and `FaceVariants1280x400` marks them: car settings draws seven cells where 214 px has room
+for four, and lap history draws a header row where 214 px would rather have one more lap. **Both
+take the `tall narrow` drawing in a `grid` box shorter than 260 px**, which is the floor between
+that face's two arrangements, 214 and 248 px, and the 1280 × 480 face's 276 px, drawn from the
+`grid` sheet.
+
+A floor for two pages rather than a fifth shape for all of them, because a fifth column on the
+table would repeat the fourth on nineteen rows.
+
 What a rank does with a field that is **not there at all** is a different question from this one,
 and the answer is in [§11](#11-a-field-that-is-not-there).
 

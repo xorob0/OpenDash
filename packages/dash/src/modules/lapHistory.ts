@@ -17,7 +17,7 @@ import { densityOf } from '../second/density.ts';
 import { rowCapacity } from '../second/table.ts';
 import { CHARS, PREVIOUS_LAP_SLOTS, currentLap, hasTime, lapTime, previousLap, previousLapDelta } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { defineModule } from './module.ts';
+import { defineModule, pageKeeps } from './module.ts';
 
 const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull } = ncalc;
 
@@ -27,7 +27,8 @@ export const DELTA_THRESHOLDS = { caution: 0.5, danger: 1 } as const;
 export const lapHistory = defineModule('lapHistory', (ctx) => {
   const d = densityOf(ctx.density);
   const rowHeight = d.rowHeight;
-  const rows = Math.max(1, Math.min(PREVIOUS_LAP_SLOTS, rowCapacity(ctx.frame, ctx.density, true, rowHeight)));
+  const head = pageKeeps('head', ctx);
+  const rows = Math.max(1, Math.min(PREVIOUS_LAP_SLOTS, rowCapacity(ctx.frame, ctx.density, head, rowHeight)));
   // Row one is the most recent lap, which SimHub numbers 00, so the slot is the repeat index less one.
   const slot = sub(repeatIndex(), num(1));
   const time = previousLap(slot);
@@ -38,7 +39,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
   const lapWidth = monoWidth(mono, { digits: 4, specials: 0 });
   const timeWidth = monoWidth(mono, CHARS.lapTime);
   const deltaWidth = monoWidth(mono, CHARS.delta);
-  const top = ctx.frame.top + d.headerHeight;
+  const top = ctx.frame.top + (head ? d.headerHeight : 0);
   const timeX = ctx.frame.left + lapWidth + d.cellGap;
   const deltaX = ctx.frame.left + ctx.frame.width - deltaWidth;
   const deltaColour = iff(
@@ -65,10 +66,10 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
     }),
   ];
   const row: LayerItem = { kind: 'layer', name: `${ctx.prefix}row`, children, ...withBindings({ Visible: hasTime(time) }) };
+  const heading = (name: string, text: string, left: number, width: number, hAlign?: 'right'): Item =>
+    label(`${ctx.prefix}head.${name}`, text, left, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, width, { size: d.labelSm, hAlign });
   return [
-    label(`${ctx.prefix}head.lap`, 'LAP', ctx.frame.left, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, lapWidth, { size: d.labelSm }),
-    label(`${ctx.prefix}head.time`, 'TIME', timeX, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, timeWidth, { size: d.labelSm }),
-    label(`${ctx.prefix}head.delta`, 'Δ BEST', deltaX, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, deltaWidth, { size: d.labelSm, hAlign: 'right' }),
+    ...(head ? [heading('lap', 'LAP', ctx.frame.left, lapWidth), heading('time', 'TIME', timeX, timeWidth), heading('delta', 'Δ BEST', deltaX, deltaWidth, 'right')] : []),
     { kind: 'layer', name: `${ctx.prefix}rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight, repeatLeftOffset: 0 },
   ];
 });

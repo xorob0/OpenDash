@@ -16,7 +16,7 @@ import { fieldRowFitted, fieldsThatFit } from '../second/field.ts';
 import { stack } from '../second/layout.ts';
 import { CHARS, carClass, carLastLap, carName, carNumber, carPosition, carRating, carRelativeGap, neighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { blockRow, defineModule, fld, pageKeeps, shapeIn } from './module.ts';
+import { blockRow, defineModule, drawnAt, fld, pageKeeps } from './module.ts';
 import { keptAt } from './shedding.ts';
 import type { Item } from '../generator.ts';
 import type { ModuleContext } from './module.ts';
@@ -44,7 +44,7 @@ function block(ctx: ModuleContext, id: string, offset: number, heading: string, 
     const room = ctx.frame.width - chipW - (chipW > 0 ? d.gapX / 2 : 0);
     // The page's shedding order first -- a narrow zone keeps the gap and who it belongs to, and
     // drops the car number -- and what fits the room second.
-    const declared = keptAt([gapField, nameField, numberField], ctx.page, shapeIn(ctx));
+    const declared = keptAt([gapField, nameField, numberField], ctx.page, drawnAt(ctx));
     const row = fieldRowFitted(fieldsThatFit(declared, room, ctx.density), ctx.frame.left, valueBottom, room, ctx.density);
     const chipX = Math.min(ctx.frame.left + row.width + d.gapX / 2, ctx.frame.left + ctx.frame.width - chipW);
     items.push(...row.items);
