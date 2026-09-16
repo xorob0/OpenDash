@@ -66,6 +66,7 @@ import {
 } from '../src/zones/index.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
+import { SAMPLE_LIT, stageOf } from '../src/components/revSegments.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
@@ -475,9 +476,9 @@ describe('the rev bar segments sit at the gap each artboard draws', () => {
     'openDash 600x686': 4,
   };
 
-  const segmentsOf = (layout: ZoneLayout): RectangleItem[] => {
-    const found = faceItems(layout).find((i) => i.name === 'revBar.shiftLights');
-    if (found?.kind !== 'layer') throw new Error(`${layout.folder} draws no rev bar`);
+  const segmentsOf = (layout: ZoneLayout, layer = 'revBar.shiftLights'): RectangleItem[] => {
+    const found = faceItems(layout).find((i) => i.name === layer);
+    if (found?.kind !== 'layer') throw new Error(`${layout.folder} draws no ${layer}`);
     return found.children.filter((c): c is RectangleItem => c.kind === 'rect');
   };
 
@@ -509,6 +510,25 @@ describe('the rev bar segments sit at the gap each artboard draws', () => {
       }
     });
   }
+
+  // The artboards default `litSegments` to nine, and the static colours are what Dash Studio's
+  // editor and its Overview thumbnails show, having no telemetry to evaluate a binding against.
+  test('nine of the fifteen are coloured in at build time, as every sheet draws them', () => {
+    const stages = [ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3];
+    for (const layer of ['revBar.shiftLights', 'revBar.shiftLightsSimHub'] as const) {
+      const drawn = segmentsOf(zoneFace1920x480, layer).map((s) => s.backgroundColor);
+      expect(drawn.filter((c) => c !== ds.purpose.shift.unlit)).toHaveLength(SAMPLE_LIT);
+      expect({ layer, drawn }).toEqual({
+        layer,
+        drawn: Array.from({ length: 15 }, (_, k) => (k < SAMPLE_LIT ? stages[stageOf(k, 15)] : ds.purpose.shift.unlit)),
+      });
+    }
+    // The plain RPM bar reports revs rather than a shift point, so its nine are the one colour it
+    // ever lights.
+    const rpm = segmentsOf(zoneFace1920x480, 'revBar.rpmBar').map((s) => s.backgroundColor);
+    expect(rpm.slice(0, SAMPLE_LIT)).toEqual(Array(SAMPLE_LIT).fill(ds.color.text.secondary));
+    expect(rpm.slice(SAMPLE_LIT)).toEqual(Array(15 - SAMPLE_LIT).fill(ds.purpose.shift.unlit));
+  });
 });
 
 /**
