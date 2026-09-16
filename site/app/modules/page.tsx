@@ -77,11 +77,25 @@ export default function Modules() {
             </p>
           </SectionHead>
 
+          {/*
+            These are photographed too, and they earn it: the picture is the claim. A page that
+            writes "not available in iRacing" across itself is the argument for shipping it off,
+            and it makes it better than the paragraph above ever could.
+          */}
           <div className={styles.offGrid}>
             {off.map((m, i) => (
               <Reveal key={m.id} delay={i * 70} className={styles.off}>
-                <h3 className="h3">{m.name}</h3>
-                <p className={styles.desc}>{OFF_REASON[m.id] ?? m.description}</p>
+                <Shot
+                  src={`/shots/module-${m.id}.png`}
+                  alt={`The ${m.name} module, saying it has no data rather than drawing zeros`}
+                  width={850}
+                  height={480}
+                  sizes="(min-width: 48rem) 30vw, 100vw"
+                />
+                <div className={styles.offText}>
+                  <h3 className="h3">{m.name}</h3>
+                  <p className={styles.desc}>{OFF_REASON[m.id] ?? m.description}</p>
+                </div>
               </Reveal>
             ))}
           </div>
