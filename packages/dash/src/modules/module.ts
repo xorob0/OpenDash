@@ -92,7 +92,7 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, gap?:
       fill: {
         ceiling: growthCeiling(at, ctx.density),
         lead: leadSize(at),
-        tail: fieldsTail(at),
+        tail: fieldsTail(at, ctx.density),
         at: (factor) => {
           const grown = scaleFields(kept, factor);
           // A field wider than the whole box is where growing stops. `wrapFields` would give it a
