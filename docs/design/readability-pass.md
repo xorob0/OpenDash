@@ -290,6 +290,16 @@ keeps six there at 16 px. 16 px is below the 12 px label floor argument's cousin
 but four cells in a column at 24 px is a different page from six at 16, and the choice has not been
 made.
 
+**The wide car-telemetry page pins its cells at 16 px, which is an exception to rule 20 rather than
+an application of it.** That page draws the same four readings in the 380 px column the sheet gives
+it, beside the pedal traces, and the room the column has left over belongs to the traces rather than
+to the grid: letting the cells fill it drew the values at 29 px and the car number at 41, which is
+the size of a subject on a page whose subject is the trace. The cells are therefore built at `d.tiny`
+and placed by `drawFieldBlock`, which does not fill, instead of by a stack that does. Car settings
+itself is not affected, since it still fills the zone it is given at every one of its own shapes, and
+the exception is written down here because pinning a value against rule 20 is a change of principle
+rather than a tweak.
+
 ### Done when
 
 The cells are a grid of equal columns whose count comes from `columnsAt`, the cell vocabulary is
