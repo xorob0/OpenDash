@@ -686,11 +686,14 @@ namespace OpenDashPlugin
                 Text = screen.WebViewUrl ?? string.Empty,
             };
             Ui.Field(box, PanelPitWallPlan.SelectHeight);
-            box.Padding = new Thickness(PanelPitWallPlan.AddressPaddingX, 0, PanelPitWallPlan.AddressPaddingX, 0);
+            // The kit's own pair rather than a second answer: both panel sheets write every field
+            // `padding: 0 8px 0 10px`, twenty times between them and never symmetrically, so the address
+            // box is padded like the select beside it.
+            box.Padding = new Thickness(PanelMetrics.FieldPaddingLeft, 0, PanelMetrics.FieldPaddingRight, 0);
 
             var watermark = Ui.Text(PanelPitWallPlan.AddressPlaceholder, Theme.SizeBody, FontWeights.Normal, Theme.TextLabel);
             watermark.HorizontalAlignment = HorizontalAlignment.Left;
-            watermark.Margin = new Thickness(PanelPitWallPlan.AddressPaddingX + PanelMetrics.BorderWeight, 0, 0, 0);
+            watermark.Margin = new Thickness(PanelMetrics.FieldPaddingLeft + PanelMetrics.BorderWeight, 0, 0, 0);
             watermark.IsHitTestVisible = false;
 
             Action reread = () =>

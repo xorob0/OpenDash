@@ -250,7 +250,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(220, PanelPitWallPlan.AddressWidth);
             Assert.Equal(Theme.ControlHeight, PanelPitWallPlan.SelectHeight);
             Assert.Equal(32, PanelPitWallPlan.SelectHeight);
-            Assert.Equal(10, PanelPitWallPlan.AddressPaddingX);
         }
 
         /// <summary>A watermark and not a value: what the empty box shows is exactly what
