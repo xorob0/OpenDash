@@ -118,6 +118,13 @@ settle rather than an implementer's.
   WPF line box, and the band is 60. Band D shrinks its value to 32 rather than clip; the settings bar
   keeps the overrun it has always had, because the box is transparent and digits have no descenders.
   The two should agree.
+- **The pit wall board is drawn grouped by class and is not built that way.** Every use of the
+  recessed ground `#060708` on the three pit wall sheets, and on the Panels sheet beside them, is a
+  28 px row heading a group of cars with its class and the position of that class's leader, for
+  example `GT3 · P1` and then `GT4 · P9` further down. The table builds one flat list, so the colour
+  appears nowhere in either pit wall package. The audit filed this as a fill to be corrected, which
+  it is not: grouping a board by class is a feature of the table, and it should be built once, in
+  the table, rather than painted here. Until it is, a multi-class board reads as one race.
 - **The push to pass lamp has no lit colour.** Band D's three chips are drawn on eight catalogue
   bands and on four face sheets, and the spotter is amber and the DRS green on every one of them.
   The push to pass is drawn dim on all twelve, so nothing says what colour it takes when it is
