@@ -179,6 +179,36 @@ describe('a long name cannot cost a page its gap column', () => {
   }
 });
 
+/**
+ * Where the list sits inside the body the chrome leaves it.
+ *
+ * Every one of the seventeen zone bodies on `PitWallZones.dc.html` carries `justify-content:
+ * center`, and so does every list body of the catalogue, whereas a table page used to stamp its
+ * rows from the top of that rect and pile the remainder under them. The two are the same drawing
+ * only when the rows happen to fill the body exactly, which is one box in twenty; in the 639 x 202
+ * pit wall zone they were eight pixels apart. Nothing checked it, so it is checked here, at every
+ * rectangle the build really hands a zone rather than at one of them.
+ */
+describe('a zone centres its list in the body it is given', () => {
+  for (const box of moduleBoxes().filter((b) => b.density !== 'companion')) {
+    test(`on a ${box.name}`, () => {
+      for (const id of ['relative', 'leaderboard']) {
+        const items = MODULES.find((m) => m.id === id)!.build({ frame: box.frame, density: box.density, prefix: '' });
+        const { count, pitch } = rowsOf(items);
+        const band = rowBand(items);
+        // The pitch is the row and the gap under it, so the block is one row shorter than a count
+        // of pitches: the last row is closed by the body's edge rather than by a gap of its own.
+        const extent = (count - 1) * pitch + band.height;
+        const above = band.top - box.frame.top;
+        const below = box.frame.top + box.frame.height - (band.top + extent);
+        // Within a pixel, because an odd remainder cannot be halved and `table` rounds up.
+        expect({ id, box: box.name, above, below, centred: Math.abs(above - below) <= 1 }).toMatchObject({ id, box: box.name, centred: true });
+        expect({ id, box: box.name, overflows: below < 0 }).toMatchObject({ overflows: false });
+      }
+    });
+  }
+});
+
 describe('the column lists are the canvas order', () => {
   test('the leaderboard draws its two lap times before the gap', () => {
     expect(LEADERBOARD_COLUMNS.indexOf('gap')).toBeGreaterThan(LEADERBOARD_COLUMNS.indexOf('best'));
