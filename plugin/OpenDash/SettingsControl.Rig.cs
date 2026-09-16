@@ -74,7 +74,9 @@ namespace OpenDashPlugin
                     // A screen whose package is gone has no size to show, and "0 × 0" is worse than
                     // the folder it lives in.
                     captured.Width > 0 ? captured.SizeLabel : (captured.Folder ?? string.Empty),
-                    KindLabel(captured),
+                    // The kind itself rather than a word for it: the card draws the icon the canvas gives
+                    // it, and writes the word only for the kind that has none.
+                    captured.Kind,
                     current != null && ReferenceEquals(current, captured),
                     missing ? Theme.StatusFailed : null,
                     () =>
@@ -87,6 +89,8 @@ namespace OpenDashPlugin
             return wrap;
         }
 
+        /// <summary>The kind as a word, for the fact line under the screen's name. The card draws an icon
+        /// instead, so this is the one place the kind is still spelled out.</summary>
         private static string KindLabel(ScreenInstance screen)
         {
             if (screen.IsCompanion) return "companion";
