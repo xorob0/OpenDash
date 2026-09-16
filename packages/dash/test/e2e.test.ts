@@ -17,6 +17,7 @@ import {
   main,
   MANIFEST_FILE,
   MANIFEST_SCHEMA_VERSION,
+  packImages,
   PANEL_FONTS_DIR,
   parseArgs,
   readVersion,
@@ -27,9 +28,26 @@ import {
 } from '../src/build.ts';
 import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
+import { assetBox, imageOf, VENDORED_IMAGES_DIR, WHEEL_CHANGE_TICK } from '../src/design/assets.ts';
 import { fontsForPanel, needsRename, renameFamily, renamedFileName } from '../src/design/fontFiles.ts';
-import { FONT_LICENCE } from '../src/design/notices.ts';
-import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, leds, listFiles, PACKAGE_EXTENSION, readZip, stableGuid, subfamilyHasWeight } from '../src/generator.ts';
+import { FONT_LICENCE, noticesForPackage } from '../src/design/notices.ts';
+import {
+  FONTS_DIR,
+  isGuid,
+  isNormalisedHex,
+  ITEM_TYPES,
+  leds,
+  listFiles,
+  PACKAGE_EXTENSION,
+  readZip,
+  RESOURCES_EXTENSION,
+  stableGuid,
+  subfamilyHasWeight,
+  writePackage,
+  zipPackage,
+  type DashPackage,
+  type ZippedPackage,
+} from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
 import { SCREEN_PACKAGES } from '../src/screens/index.ts';
@@ -690,6 +708,66 @@ describe('command line', () => {
     expect(readVersion()).toMatch(/^\d+\.\d+\.\d+/);
     expect(readVersion()).toBe(readFileSync(join(import.meta.dir, '..', '..', '..', 'VERSION'), 'utf8').trim());
     expect(() => readVersion(join(root, 'missing'))).toThrow(/cannot read/);
+  });
+});
+
+/**
+ * The picture path, end to end: an item draws an asset, the packer declares it on the dashboard it
+ * landed on, and the file reaches the archive inside the `.ressources` sidecar.
+ *
+ * Asserted on a package composed here rather than on a shipped one, because no drawing uses an
+ * asset yet: the registry, the packer and the sidecar have to be known good before a telltale or a
+ * tick is drawn against them, and this is the test that keeps them so.
+ */
+describe('an image asset reaches the archive', () => {
+  const tick = imageOf(WHEEL_CHANGE_TICK);
+  const folder = layout1920x480.folder;
+  const drawing = (name: string): DashPackage => {
+    const pkg = buildPackage(layout1920x480, { version: '0.0.0-test' });
+    pkg.dashboards[0]!.screens[0]!.items.push({ kind: 'image', name: 'tyre.fl.change', image: name, rect: assetBox({ left: 0, top: 0, width: 40, height: 40 }, tick) });
+    return pkg;
+  };
+
+  let out: string;
+  let pkg: DashPackage;
+  let zipped: ZippedPackage;
+  beforeAll(() => {
+    out = join(root, 'images');
+    pkg = drawing(WHEEL_CHANGE_TICK.name);
+    packImages(pkg);
+    pkg.notices = noticesForPackage(pkg);
+    writePackage(pkg, out);
+    zipped = zipPackage(out, folder);
+  });
+
+  test('the dashboard declares the asset its own items draw, and only that one', () => {
+    expect(pkg.dashboards[0]!.images).toEqual([tick]);
+    // cards.djson draws no picture, so it gets no Images list and no sidecar of its own.
+    expect(pkg.dashboards[1]!.images).toBeUndefined();
+    expect(validateOrThrow(pkg)).toEqual([]);
+  });
+
+  test('the descriptor states the file that is packed beside it', () => {
+    const bytes = new Uint8Array(readFileSync(join(VENDORED_IMAGES_DIR, WHEEL_CHANGE_TICK.file)));
+    const doc = readJson(join(out, folder, `${folder}.djson`));
+    expect(doc.Images).toEqual([
+      { Name: WHEEL_CHANGE_TICK.name, Extension: '.png', Modified: false, Optimized: false, Width: tick.width, Height: tick.height, Length: bytes.length, MD5: tick.md5 },
+    ]);
+    expect(itemsOfDocument(doc).filter((i) => i.$type === ITEM_TYPES.image).map((i) => i.Image)).toEqual([WHEEL_CHANGE_TICK.name]);
+  });
+
+  test('the file travels in the sidecar, and the sidecar in the .simhubdash', () => {
+    const sidecar = join(out, folder, `${folder}${RESOURCES_EXTENSION}`);
+    expect(existsSync(sidecar)).toBe(true);
+    const packed = readZip(new Uint8Array(readFileSync(sidecar)));
+    expect(Object.keys(packed)).toEqual([`${WHEEL_CHANGE_TICK.name}.png`]);
+    expect(packed[`${WHEEL_CHANGE_TICK.name}.png`]).toEqual(new Uint8Array(readFileSync(join(VENDORED_IMAGES_DIR, WHEEL_CHANGE_TICK.file))));
+    expect(zipped.entries).toContain(`${folder}/${folder}${RESOURCES_EXTENSION}`);
+  });
+
+  test('a drawing whose picture no asset claims fails the build rather than shipping a hole', () => {
+    expect(() => packImages(drawing('mdi-car-brake-abs'))).toThrow(BuildError);
+    expect(() => packImages(drawing('mdi-car-brake-abs'))).toThrow(/not an asset/);
   });
 });
 
