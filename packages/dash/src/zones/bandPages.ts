@@ -315,12 +315,29 @@ const ROW_GAP = ds.space[2];
  */
 function valueSizeFor(height: number, preferred: number, labelFs: number, fieldGap: number): number {
   for (let fs = preferred; fs > 8; fs--) {
-    const blockHeight = labelFs + fieldGap + fs;
-    const top = Math.max(0, (height - blockHeight) / 2);
+    const top = blockTop(height, fs, labelFs, fieldGap);
     const box = textBox(top + labelFs + fieldGap, fs);
     if (box.top >= 0 && box.top + box.height <= height) return fs;
   }
   return 8;
+}
+
+/**
+ * Where the two rows sit in a band of `height`: centred, then ridden up until the line box fits.
+ *
+ * What WPF clips is the line box and not the glyphs, and the box hangs about a fifth of the size
+ * below the row the value is given. A block centred on its two rows therefore hangs out of a band
+ * that has the room for it: 13 over 5 over 34 is 52 px of rows in a 60 px band, and the box that
+ * holds the 34 ends six tenths of a pixel past the bottom. Shrinking the value was the old answer
+ * and it cost the artboards' 34 at every 60 px band and at the nano's 58. Moving the block up by
+ * those six tenths costs nothing a driver can see and keeps the size the drawing asks for, so the
+ * value only shrinks once the band is genuinely too short, which is the 54 px band at 1280 by 400.
+ */
+function blockTop(height: number, valueFs: number, labelFs: number, fieldGap: number): number {
+  const centred = Math.max(0, (height - (labelFs + fieldGap + valueFs)) / 2);
+  const box = textBox(centred + labelFs + fieldGap, valueFs);
+  const over = box.top + box.height - height;
+  return over > 0 ? Math.max(0, centred - over) : centred;
 }
 
 /** Width the unit after a value takes. Measured, not the remainder of the field: a field whose
@@ -439,9 +456,9 @@ export function bandPageItems(id: string, frame: Rect, prefix: string, corners =
   ).items;
 }
 
-/** Where a block of labels over values sits in the band: vertically centred, its two rows 5 apart. */
+/** Where a block of labels over values sits in the band, its two rows 5 apart. */
 function blockGeometry(frame: Rect, valueFs: number, labelFs: number): { valueFs: number; labelFs: number; top: number; valueTop: number } {
-  const top = frame.top + Math.max(0, (frame.height - (labelFs + FIELD_GAP + valueFs)) / 2);
+  const top = frame.top + blockTop(frame.height, valueFs, labelFs, FIELD_GAP);
   return { valueFs, labelFs, top, valueTop: top + labelFs + FIELD_GAP };
 }
 

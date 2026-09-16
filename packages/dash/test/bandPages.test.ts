@@ -95,16 +95,37 @@ describe('the metrics band D is drawn to', () => {
     });
   }
 
-  // 34 is what every 60 and 58 px band draws and what none of them can hold: 13 + 5 + 34 is a 52 px
-  // block, and WPF's line box around a 34 px value runs 60.6 px from the top of the label. The
-  // value shrinks rather than overrunning, which is `valueSizeFor`, and the artboards are owed an
-  // answer -- a taller band, or the size they draw.
-  test('the 54 and 56 px bands draw the size their artboard asks for and the taller ones shrink', () => {
+  // Every band draws the size its artboard asks for. 13 + 5 + 34 is a 52 px block and WPF's box
+  // around the 34 runs six tenths of a pixel past a 60 px band, which used to shrink the value;
+  // the block rides up by those six tenths instead, so the 60 and the nano's 58 both keep 34 and
+  // only the 54 px band at 1280 by 400 is genuinely too short for it.
+  test('every band draws the value size its artboard asks for', () => {
     const sizeOn = (face: keyof typeof BANDS): number => named(pageTexts(face, 'fuel'), 'fuel.value').fontSize;
+    expect(sizeOn('1920x480')).toBe(34);
+    expect(sizeOn('800x286')).toBe(34);
     expect(sizeOn('1280x400')).toBe(24);
     expect(sizeOn('600x686')).toBe(24);
-    expect(sizeOn('1920x480')).toBeLessThan(34);
-    expect(sizeOn('800x286')).toBeLessThan(34);
+  });
+
+  // The corners are the band's other size, and the two are read together: a page at 34 between two
+  // corners at 24 is what every artboard with corner blocks draws.
+  test('the corner blocks stay at 24 where the page is drawn at 34', () => {
+    const items = textsIn(bandCorners(BANDS['1920x480'], ''));
+    for (const id of ['incidents.value', 'clock.value', 'sim.value']) expect(named(items, id).fontSize).toBe(24);
+    expect(named(pageTexts('1920x480', 'fuel'), 'fuel.value').fontSize).toBe(34);
+  });
+
+  // And nothing the band draws, at any size, hangs out of it.
+  test('no band text has a box outside its band', () => {
+    for (const [face, frame] of Object.entries(BANDS)) {
+      for (const item of [...pageTexts(face as keyof typeof BANDS, 'fuel'), ...textsIn(bandCorners(frame, ''))]) {
+        expect({ face, name: item.name, inside: item.rect.top >= frame.top && item.rect.top + item.rect.height <= frame.top + frame.height }).toEqual({
+          face,
+          name: item.name,
+          inside: true,
+        });
+      }
+    }
   });
 });
 
