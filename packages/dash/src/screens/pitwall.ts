@@ -122,7 +122,7 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
     ...items,
     ...fitFields([deltaField], rect(body.left, body.top, deltaWidth, topHeight), DENSITY),
     ...centreZeroGauge(`${name}.bar`, rect(body.left + deltaWidth + d.gapX, body.top + topHeight - barHeight - 6, barWidth, barHeight), value, { range: 2 }),
-    ...sectorFields(`${name}.sector`, rect(body.left, sectorTop, body.width, sectorHeight), DENSITY, d.small),
+    ...sectorFields(`${name}.sector.`, rect(body.left, sectorTop, body.width, sectorHeight), DENSITY, d.small),
   ];
 }
 
