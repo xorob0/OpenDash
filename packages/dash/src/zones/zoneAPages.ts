@@ -114,15 +114,30 @@ type Run =
   | { kind: 'value'; name: string; sample: string; fs: number; chars: Chars; weight?: DataWeight; mono?: Monospace; color?: Hex; bind?: Expr; gap?: number }
   | { kind: 'label'; name: string; text: string; fs: number; widest: string; color?: Hex; bind?: Expr; gap?: number };
 
-/** What a run takes across: its cells and their slack, or its advances. */
+/**
+ * What a run draws: its cells, or its advances. Not its box, which is a little wider.
+ *
+ * A follower is positioned from the cells, as `numeral` says it is: the slack a box takes beyond
+ * its text is there so that WPF clips no glyph, and counting it as width would put it between the
+ * value and its unit, where the canvas draws a gap of exactly six pixels.
+ */
 function runWidth(run: Run): number {
-  if (run.kind === 'label') return Math.ceil(measureText('BarlowMedium', run.widest, run.fs)) + 1;
-  return monoWidth(run.mono ?? cells(run.weight ?? 'SemiBold', run.fs), run.chars) + boxSlack(run.fs);
+  if (run.kind === 'label') return Math.ceil(measureText('BarlowMedium', run.widest, run.fs));
+  return monoWidth(run.mono ?? cells(run.weight ?? 'SemiBold', run.fs), run.chars);
 }
 
-/** What a whole row takes across, its gaps included; what the row is centred by. */
+/** The slack a run's box takes beyond what it draws. */
+const runSlack = (run: Run): number => (run.kind === 'label' ? 1 : boxSlack(run.fs));
+
+/** What a whole row draws across, its gaps included; what the row is centred by. */
 const rowWidth = (runs: readonly Run[]): number =>
   runs.reduce((sum, run, i) => sum + runWidth(run) + (i === 0 ? 0 : (run.gap ?? UNIT_GAP)), 0);
+
+/**
+ * What a row's boxes need of the column: what it draws, and the slack its last box takes past that.
+ * Twice, because a centred row splits what is left over between its two ends.
+ */
+const rowExtent = (runs: readonly Run[]): number => rowWidth(runs) + 2 * runSlack(runs[runs.length - 1]!);
 
 /**
  * A row of runs on one baseline, centred across `frame` in the stack row starting at `top`.
@@ -138,19 +153,22 @@ function row(frame: Rect, top: number, runs: readonly Run[]): Item[] {
   let x = frame.left + (frame.width - rowWidth(runs)) / 2;
   return runs.map((run, i) => {
     if (i > 0) x += run.gap ?? UNIT_GAP;
-    const width = runWidth(run);
+    const drawn = runWidth(run);
+    // The box takes its slack past the cells, and no further than the column: the last run of a
+    // centred row has only half the row's leftover beside it.
+    const box = Math.min(drawn + runSlack(run), frame.left + frame.width - x);
     const y = canvasYForBaseline(baseline, run.fs);
     const item =
       run.kind === 'label'
-        ? unit(run.name, run.text, x, y, width, { size: run.fs, color: run.color, bind: run.bind, widest: run.widest })
+        ? unit(run.name, run.text, x, y, box, { size: run.fs, color: run.color, bind: run.bind, widest: run.widest })
         : numeral(run.name, run.sample, x, y, run.fs, run.chars, {
             bind: run.bind,
             color: run.color,
             weight: run.weight,
             mono: run.mono,
-            maxWidth: width,
+            maxWidth: box,
           });
-    x += width;
+    x += drawn;
     return item;
   });
 }
@@ -224,8 +242,8 @@ function gearSpeedRevs(frame: Rect, prefix: string): Item[] {
   const d = densityOf('zone');
   const share = SHARE.a1;
   const gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, ghostedGearWidth);
-  const speedSize = fitWidth(shareOf(frame.height, share.speed), frame.width, (fs) => rowWidth(speedRuns(prefix, fs, d.labelSm)));
-  const revsSize = fitWidth(shareOf(frame.height, share.revs), frame.width, (fs) => rowWidth(revsRuns(prefix, fs, d.labelSm)));
+  const speedSize = fitWidth(shareOf(frame.height, share.speed), frame.width, (fs) => rowExtent(speedRuns(prefix, fs, d.labelSm)));
+  const revsSize = fitWidth(shareOf(frame.height, share.revs), frame.width, (fs) => rowExtent(revsRuns(prefix, fs, d.labelSm)));
   return stack(frame, rowGap(frame.height, share.gap), [
     { fs: gearSize, draw: (top) => gearRow(frame, top, gearSize, prefix) },
     { fs: speedSize, draw: (top) => row(frame, top, speedRuns(prefix, speedSize, d.labelSm)) },
@@ -316,13 +334,13 @@ function gearAlone(frame: Rect, prefix: string): Item[] {
 function speedPage(frame: Rect, prefix: string): Item[] {
   const d = densityOf('zone');
   const share = SHARE.a3;
-  const gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, (fs) => rowWidth(gearRuns(prefix, fs, d.labelSm)));
+  const gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, (fs) => rowExtent(gearRuns(prefix, fs, d.labelSm)));
   const lead = (speedFs: number, withRevs: boolean): Run[] => [
     ...speedRuns(prefix, speedFs, d.labelSm),
     ...(withRevs ? revsRuns(prefix, gearSize, d.labelSm, RPM_GAP) : []),
   ];
-  const speedSize = fitWidth(shareOf(frame.height, share.speed), frame.width, (fs) => rowWidth(lead(fs, false)));
-  const withRevs = rowWidth(lead(speedSize, true)) <= frame.width;
+  const speedSize = fitWidth(shareOf(frame.height, share.speed), frame.width, (fs) => rowExtent(lead(fs, false)));
+  const withRevs = rowExtent(lead(speedSize, true)) <= frame.width;
   return stack(frame, rowGap(frame.height, share.gap), [
     { fs: speedSize, draw: (top) => row(frame, top, lead(speedSize, withRevs)) },
     { fs: gearSize, draw: (top) => row(frame, top, gearRuns(prefix, gearSize, d.labelSm)) },

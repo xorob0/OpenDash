@@ -462,7 +462,8 @@ describe('what the first photograph of the face showed', () => {
     const unit = items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('speed.unit'))!;
     expect(speed.rect.left).toBeGreaterThan(0);
     const centre = (speed.rect.left + unit.rect.left + unit.rect.width) / 2;
-    expect({ centre, column: a.width / 2, off: Math.abs(centre - a.width / 2) }).toMatchObject({ off: expect.closeTo(0, 0) });
+    // Within a pixel: the boxes are integer-snapped and the unit's takes a pixel past its advances.
+    expect({ centre, column: a.width / 2, centred: Math.abs(centre - a.width / 2) <= 1 }).toMatchObject({ centred: true });
   });
 
   test('the ghosted gears are mapped from text, because SimHub publishes the gear as a string', () => {
