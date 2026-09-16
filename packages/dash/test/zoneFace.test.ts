@@ -26,7 +26,6 @@ import { ds } from '../src/tokens.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING, boxSlack } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
-import { ds } from '../src/tokens.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { MODULES } from '../src/modules/index.ts';
