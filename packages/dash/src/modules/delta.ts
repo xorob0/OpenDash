@@ -17,7 +17,7 @@ import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 import { stack } from '../second/layout.ts';
 import { CHARS, deltaColour, referenceDelta, referenceLabel } from '../second/values.ts';
 
-const { fmt } = ncalc;
+const { signed } = ncalc;
 
 /** Seconds either side of zero the bar covers. */
 export const DELTA_RANGE = 2;
@@ -32,7 +32,7 @@ export const delta = defineModule('delta', (ctx) => {
     [
       fieldsRow(
         [
-          fld(ctx, 'delta', 'VS SESSION BEST', { sample: '-0.21', bind: fmt(value, '0.00', true), chars: CHARS.delta, fs: d.hero, colorBind: deltaColour(value) }, {
+          fld(ctx, 'delta', 'VS SESSION BEST', { sample: '\u22120.21', bind: signed(value, '0.00'), chars: CHARS.delta, fs: d.hero, colorBind: deltaColour(value) }, {
             labelBind: referenceLabel(),
             labelWidest: 'VS ALL-TIME BEST',
           }),
@@ -43,7 +43,7 @@ export const delta = defineModule('delta', (ctx) => {
       blockRow(scaleHeight, (bottom) => {
         const y = bottom - scaleHeight;
         const marks: { text: string; at: number; color?: string }[] = [
-          { text: `-${DELTA_RANGE.toFixed(1)}`, at: 0 },
+          { text: `\u2212${DELTA_RANGE.toFixed(1)}`, at: 0 },
           { text: 'FASTER', at: 0.25, color: ds.purpose.delta.faster },
           { text: '0', at: 0.5 },
           { text: 'SLOWER', at: 0.75, color: ds.purpose.delta.slower },

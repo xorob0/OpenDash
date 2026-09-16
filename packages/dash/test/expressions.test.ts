@@ -32,6 +32,10 @@ describe('ncalc helpers', () => {
     expect(ncalc.digitCount('[X]', 3)).toBe('if(([X]) >= (100), 3, if(([X]) >= (10), 2, 1))');
   });
 
+  test('signed replaces the hyphen .NET writes with the typographic minus', () => {
+    expect(ncalc.signed('[X]', '0.00')).toBe("replace(format([X], '0.00', true), '-', '\u2212')");
+  });
+
   test('hms formats seconds as h:mm:ss without TimeSpan format strings', () => {
     const e = ncalc.hms('[S]');
     expect(e).toContain('max(0, [S])');
@@ -293,5 +297,31 @@ describe('hero expressions', () => {
       '(([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Checkered]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (1))',
     );
     expect(flagVisible('Flag_Green').split(' and ')).toHaveLength(6);
+  });
+});
+
+describe('module expressions', () => {
+  /** A text item of a module, at the zone density, where a module keeps every field it declares. */
+  const moduleItem = (id: string, name: string): TextItem => {
+    const module = MODULES.find((m) => m.id === id);
+    if (!module) throw new Error(`no ${id} module`);
+    const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
+    const item = [...walkItems(module.build({ frame: box, density: 'zone', prefix: `${id}.` }))].find((i) => i.name === `${id}.${name}`);
+    if (!item || item.kind !== 'text') throw new Error(`${id}.${name} is not a text item`);
+    return item;
+  };
+
+  test('the delta draws its sign as U+2212, in the value and at the left end of the scale', () => {
+    const value = moduleItem('delta', 'delta.value');
+    expect(formulaOf(value, 'Text')).toMatch(/^replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)$/);
+    expect(value.text).toBe('\u22120.21');
+    expect(moduleItem('delta', 'scale0').text).toBe('\u22122.0');
+    expect(moduleItem('delta', 'scale4').text).toBe('+2.0');
+  });
+
+  test('the lap times delta is signed the same way', () => {
+    const value = moduleItem('lapTimes', 'delta.value');
+    expect(formulaOf(value, 'Text')).toContain("'-', '\u2212'");
+    expect(value.text).toBe('\u22120.21');
   });
 });
