@@ -10,7 +10,7 @@
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
-import { setting } from '../contract.ts';
+import { flagBox, setting } from '../contract.ts';
 import { rpms } from '../shift.ts';
 import { ds as dsTokens } from '../tokens.ts';
 
@@ -305,6 +305,20 @@ export const lapsLeft = (): Expr => isnull(game('RemainingLaps'), num(0));
 
 /** Fuel to add: what the laps left will burn, less what is in the tank; never negative. */
 export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
+
+/**
+ * The tank under the threshold the driver set, which is the sentence three separate drawings had
+ * each written for themselves: band D's fuel telltale, the strip's low-fuel state and the hero's
+ * fuel pop-up. ADR 0009 puts a derivation that has reached three items behind one name, and this is
+ * that name.
+ *
+ * The remaining laps default high here and to zero in {@link fuelLapsLeft} above, which is not an
+ * oversight: a figure the sim does not compute is drawn as nothing, whereas a warning raised on a
+ * missing figure would come on in every car that has no such reading. The threshold itself is
+ * `LightsLowFuelLaps` with the box's deprecated name behind it, so one number answers "am I low"
+ * for every light and every face.
+ */
+export const tankIsLow = (): Expr => lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps());
 
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));
