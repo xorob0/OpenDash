@@ -27,9 +27,22 @@ namespace OpenDashPlugin
             updateLine.Visibility = Visibility.Collapsed;
             text.Children.Add(updateLine);
 
+            // The bar is held by the button that starts a run rather than by a field, because a field would
+            // have to be dropped in SettingsControl.ForgetTabControls with the rest and a run that finished
+            // after the tab was left would otherwise draw into a column nobody is looking at. The button and
+            // the bar are built together and go together.
+            var progressHost = new Border
+            {
+                Visibility = Visibility.Collapsed,
+                // The 8 the component puts between its own two halves, which is the only rhythm the canvas
+                // gives this block; the VStack above applies its gap at construction and this arrives after.
+                Margin = new Thickness(0, PanelMetrics.ProgressGap, 0, 0),
+            };
+            text.Children.Add(progressHost);
+
             statusHost = new Border { VerticalAlignment = VerticalAlignment.Center };
             reinstallButton = BuildReinstallButton();
-            updateButton = BuildUpdateButton();
+            updateButton = BuildUpdateButton(progressHost);
             restoreButton = BuildRestoreButton();
             var right = Ui.HStack(24, statusHost, restoreButton, updateButton, reinstallButton);
 
@@ -61,11 +74,11 @@ namespace OpenDashPlugin
             return Ui.Row(Ui.VStack(4, Ui.Body("Check for updates"), Ui.Caption(UpdateWording.CheckCaption)), right);
         }
 
-        private Button BuildUpdateButton()
+        private Button BuildUpdateButton(Border progressHost)
         {
             var button = BuildSecondaryButton("Update", "Download the newest release and replace the dashboards installed here.");
             button.Visibility = Visibility.Collapsed;
-            button.Click += (sender, args) => ApplyUpdate();
+            button.Click += (sender, args) => ApplyUpdate(progressHost);
             return button;
         }
 
@@ -178,7 +191,7 @@ namespace OpenDashPlugin
         /// <summary>
         /// Applies the release the last check found, asking once before replacing a dashboard somebody has edited.
         /// </summary>
-        private void ApplyUpdate()
+        private void ApplyUpdate(Border progressHost)
         {
             // A second click before the first has been answered used to fall straight through the confirmation,
             // because the confirming branch returned without disabling anything.
@@ -219,14 +232,32 @@ namespace OpenDashPlugin
             checkButton.IsEnabled = false;
             updateLine.Text = "Downloading " + updateStatus.LatestVersion + "…";
             updateLine.Visibility = Visibility.Visible;
+            progressHost.Child = Ui.Progress(0);
+            progressHost.Visibility = Visibility.Visible;
+
+            // The run reports per chunk of a several-megabyte download, which is thousands of calls, and every
+            // one of them crosses to the interface thread. Only a whole percent is drawn, so only a whole
+            // percent is sent: the bar is redrawn exactly when the number above it would change, which caps the
+            // crossings at a hundred and one for the run. BeginInvoke rather than Invoke, because a download
+            // that waited for the panel to paint would be paced by the panel.
+            var shown = -1;
+            Action<double> report = fraction =>
+            {
+                var percent = PanelMetrics.PercentOf(fraction);
+                if (percent == shown) return;
+                shown = percent;
+                Dispatcher.BeginInvoke(new Action(() => progressHost.Child = Ui.Progress(fraction)));
+            };
 
             UpdateService.InBackground(() =>
             {
-                var outcome = Updates.Apply(plugin.Installer, release, replaceEdited);
+                var outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);
                 Dispatcher.Invoke(() =>
                 {
                     applying = false;
                     confirmingEdited = false;
+                    progressHost.Visibility = Visibility.Collapsed;
+                    progressHost.Child = null;
                     if (updateButton != null)
                     {
                         updateButton.Content = "Update";
