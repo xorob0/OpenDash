@@ -81,8 +81,8 @@ describe('the lamps of a side', () => {
   test('a shared lamp ranks by role, not by catalogue position: every car warning ahead of every aid', () => {
     const shared = lampsForSide(3)[2]!;
     const ids = lampConditions(shared, 'left').map((e) => e.id);
-    const car = ['oilPressure', 'waterTemp', 'lowFuel'];
-    const aid = ['headlightFlash', 'p2p', 'drs', 'ers', 'tc', 'abs'];
+    const car = ['oilPressure', 'temperature', 'lowFuel'];
+    const aid = ['abs', 'tc', 'drs', 'p2p'];
     expect(ids).toEqual([...car, ...aid]);
     // The rank is the order the list is in, highest first, so the last car warning still outranks
     // the first aid.
@@ -92,7 +92,7 @@ describe('the lamps of a side', () => {
   test('at two lamps a side the aids are dropped altogether and the car warning outranks the flag', () => {
     const shared = lampsForSide(2)[1]!;
     const ids = lampConditions(shared, 'left').map((e) => e.id);
-    expect(ids.slice(0, 3)).toEqual(['oilPressure', 'waterTemp', 'lowFuel']);
+    expect(ids.slice(0, 3)).toEqual(['oilPressure', 'temperature', 'lowFuel']);
     expect(ids.slice(3)).toEqual(flagEffects().map((e) => e.id).reverse());
     // Dropped rather than shadowed: a two-LED side says nothing about ABS rather than saying it
     // where nobody can see it.

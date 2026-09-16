@@ -7,10 +7,10 @@
  * docs/research/simhub-led-sources.md — and an honest note where iRacing does not publish it.
  *
  * **Best effort, where SimHub has a property and iRacing does not fill it.** `TCActive`,
- * `TurnIndicatorLeft`, `TurnIndicatorRight` and `ERSPercent` are real, exposed members of
- * `StatusDataBase`, filled by whichever game reader is running. The iRacing reader overrides the
- * first three with `[NotAvailable] return 0` and never overrides the ERS pair, so on iRacing they
- * are dark — and on a sim that does fill them they light. They ship for that reason.
+ * `TurnIndicatorLeft` and `TurnIndicatorRight` are real, exposed members of `StatusDataBase`,
+ * filled by whichever game reader is running. The iRacing reader overrides all three with
+ * `[NotAvailable] return 0`, so on iRacing they are dark — and on a sim that does fill them they
+ * light. They ship for that reason.
  *
  * That is a different judgement from the one the second screens make, and deliberately so. The rule
  * in scope.md is that a module which reads something iRacing does not publish **says so rather than
@@ -22,10 +22,16 @@
  * field in `StatusDataBase`, no `KERS` member anywhere in SimHub 9.12.6, and no water pressure. A
  * grep of the decompiled `GameReaderCommon.dll` finds zero of each. {@link NO_PROPERTY} lists them
  * with the nearest thing that does exist.
+ *
+ * **And there is a third case, neither refused nor absent**: a property that exists, that some sim
+ * fills, and that no lamp is spent on all the same. A side has four LEDs on the wheels most people
+ * own, so a row earns its lamp or it does not ship; {@link DROPPED} records those and why, because
+ * a reader who finds `ERSPercent` in SimHub and not here should be able to tell a judgement from an
+ * oversight.
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { FLAG_PRIORITY, flagVisible, type FlagProperty } from '../components/flagStrip.ts';
+import { FLAG_BLINK_MS, FLAG_PRIORITY, flagVisible, type FlagProperty } from '../components/flagStrip.ts';
 import { ds } from '../tokens.ts';
 import { OVER_REV_BLINK_MS } from './ladder.ts';
 import { type EffectRole, type Lamp } from './lamps.ts';
@@ -50,11 +56,45 @@ export interface LedEffect {
   color: string;
   /** When it blinks, if it does. */
   blinkWhen?: Expr;
+  /**
+   * The off phase, where a second colour is itself a fact — push to pass is blue while it is there
+   * and green while it is being spent. Left out, the lamp goes dark instead, which is what makes a
+   * blink a blink; see {@link BLINK_OFF}.
+   */
   blinkColor?: string;
   blinkDelayMs?: number;
   /** The SimHub property this reads, for the guide and for the test that keeps the two honest. */
   source: string;
 }
+
+// --- the two rates, and the colour of an off phase ---------------------------------------------
+
+/**
+ * The half periods of the only two rhythms a lamp blinks in: 4 Hz for what is urgent and 2 Hz for
+ * what is merely true. Two is what the eye sorts at speed, and a rate that is neither reads as one
+ * of them anyway, so a third would be a distinction the driver cannot collect.
+ *
+ * The slow one is the flag band's own, so a yellow on the face and a yellow on the strip flash
+ * together rather than drifting against each other. Neither is derived from `OVER_REV_BLINK_MS`,
+ * which was the previous arrangement and which tied every lamp on the strip to `shiftLights.flashHz`:
+ * a change to the over-rev flash moved the indicators with it, which is the kind of coupling nobody
+ * discovers until both are wrong.
+ */
+export const SLOW_BLINK_MS = FLAG_BLINK_MS;
+export const FAST_BLINK_MS = Math.round(SLOW_BLINK_MS / 2);
+
+/**
+ * The off phase of every blink that does not name a second colour of its own.
+ *
+ * SimHub's `StaticColorContainerBase` fills the run with `BlinkingColor` while blinking and with
+ * `Color` otherwise, so an effect writing its own colour into both fields alternates a colour with
+ * itself and has never flashed at all: the first defect of the lights review, and the reason the
+ * notes kept asking for blinking that was already there. Transparent will not do either, because
+ * the merge drops transparent pixels and the rev ladder underneath would show through the gap, so
+ * the off phase takes the darkest opaque value the palette has, which is the nearest thing the
+ * design system holds to an LED that is simply off.
+ */
+const BLINK_OFF = ds.color.surface.base;
 
 // --- sources, each verified rather than guessed ------------------------------------------------
 
@@ -81,6 +121,14 @@ const pitSpeeding = (): Expr => and(on('IsInPitLane'), gt(pitLimit(), num(0)), g
 const lowFuel = (): Expr => gt(g('CarSettings_FuelAlertActive'), num(0));
 
 /**
+ * The engine turning, which is what an engine warning has to be read against. `EngineWarnings` sets
+ * its oil-pressure bit on an engine that is merely stopped as readily as on one that is failing, so
+ * without this the car lamp is red in every garage and on every grid, and a lamp that is red when
+ * nothing is wrong is a lamp the driver stops reading by the third session.
+ */
+const engineRunning = (): Expr => gt(g('Rpms'), num(0));
+
+/**
  * The flags, in the order the face ranks them, read through the face's own `flagVisible` so that
  * the box and the screen cannot disagree about which of two live flags wins — the thing XOR-225
  * names as the reason the alert catalogue matters here.
@@ -93,9 +141,6 @@ const FLAG_COLORS: Record<FlagProperty, string> = {
   Flag_White: ds.purpose.flag.white,
   Flag_Green: ds.purpose.flag.green,
 };
-
-/** Half period of the yellow flag's flash on a strip, the 2 Hz the band uses. */
-export const FLAG_BLINK_MS = 250;
 
 /**
  * One effect per flag, highest priority last so that it composes on top.
@@ -116,53 +161,35 @@ export const flagEffects = (): LedEffect[] =>
       when: flagVisible(flag),
       color: FLAG_COLORS[flag] ?? ds.purpose.flag.white,
       source: `DataCorePlugin.GameData.${flag}`,
-      ...(flag === 'Flag_Yellow' ? { blinkWhen: flagVisible(flag), blinkColor: ds.purpose.flag.yellow, blinkDelayMs: FLAG_BLINK_MS } : {}),
+      ...(flag === 'Flag_Yellow' ? { blinkWhen: flagVisible(flag), blinkDelayMs: SLOW_BLINK_MS } : {}),
     }));
 
 /**
- * The catalogue, in composition order: what is later shows over what is earlier, which is how a
- * strip ranks two live things without a priority field of its own. The three warnings a car raises
- * about itself carry the `car` role and everything a car does for its driver carries `aid`, which
- * is the distinction the lamps are built on: a car warning always outranks an aid.
+ * The catalogue, lowest rank first within each role, which is also composition order: what is later
+ * shows over what is earlier, and {@link lampConditions} reads the order backwards to get the rank.
+ * The three warnings a car raises about itself carry the `car` role and everything a car does for
+ * its driver carries `aid`, which is the distinction the lamps are built on: a car warning always
+ * outranks an aid.
+ *
+ * Within a role the rank is the driver's cost of missing it. On the car lamp that is oil pressure,
+ * then temperature, then fuel: the first ends the engine in a lap, the second in a stint, and the
+ * third only ends the race. On the aid lamp it is ABS, then traction control, then DRS, then push to
+ * pass, which is the order in which the car is doing something the driver did not ask for and then,
+ * lower down, something the driver did.
  */
 export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
-    id: 'abs',
-    label: 'ABS active',
+    id: 'p2p',
+    label: 'Push to pass',
     role: 'aid',
-    when: gt(g('ABSActive'), num(0)),
+    // Blue while one is in hand and green while one is being spent — the same available-then-active
+    // pair DRS draws, which is what lets the two share the second aid lamp of a five-LED side.
+    when: gt(isnull(prop('DataCorePlugin.GameRawData.Telemetry.PlayerP2P_Count'), num(0)), num(0)),
     color: ds.color.info.primary,
-    source: 'DataCorePlugin.GameData.ABSActive',
-  },
-  {
-    id: 'tc',
-    label: 'Traction control',
-    role: 'aid',
-    // One light carrying both facts, so it degrades rather than going dark. Steady means the dial is
-    // set above zero, which every sim including iRacing fills; blinking means TC is actually cutting
-    // in, which iRacing does not publish (GD_TCActive() is [NotAvailable] return 0) and other readers
-    // do. On iRacing it is therefore a steady light that never blinks, which is the truth about
-    // iRacing rather than a gap.
-    when: gt(g('TCLevel'), num(0)),
-    color: ds.color.caution.primary,
-    blinkWhen: gt(g('TCActive'), num(0)),
-    blinkColor: ds.color.caution.primary,
-    blinkDelayMs: OVER_REV_BLINK_MS,
-    source: 'DataCorePlugin.GameData.TCLevel, TCActive',
-  },
-  {
-    id: 'ers',
-    label: 'ERS charge',
-    role: 'aid',
-    // ERS is also where KERS lands: SimHub models no KERS of its own — the string does not occur in
-    // any of its assemblies — and normalises every hybrid store into this one percentage.
-    when: gt(g('ERSPercent'), num(0)),
-    color: ds.color.info.primary,
-    // Nearly spent, which is the part a driver acts on.
-    blinkWhen: and(gt(g('ERSPercent'), num(0)), gt(num(10), g('ERSPercent'))),
-    blinkColor: ds.color.danger.primary,
-    blinkDelayMs: OVER_REV_BLINK_MS * 2,
-    source: 'DataCorePlugin.GameData.ERSPercent',
+    blinkWhen: eq(isnull(prop('DataCorePlugin.GameData.PushToPassActive'), num(0)), num(1)),
+    blinkColor: ds.color.good.primary,
+    blinkDelayMs: FAST_BLINK_MS,
+    source: 'DataCorePlugin.GameData.PushToPassActive, GameRawData.Telemetry.PlayerP2P_Count',
   },
   {
     id: 'drs',
@@ -172,30 +199,32 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     color: ds.color.good.primary,
     // Available is a steady light and open is a flashing one, which is how a driver tells them apart.
     blinkWhen: on('DRSEnabled'),
-    blinkColor: ds.color.good.primary,
-    blinkDelayMs: OVER_REV_BLINK_MS * 2,
+    blinkDelayMs: FAST_BLINK_MS,
     source: 'DataCorePlugin.GameData.DRSAvailable / DRSEnabled',
   },
   {
-    id: 'p2p',
-    label: 'Push to pass',
+    id: 'tc',
+    label: 'Traction control',
     role: 'aid',
-    when: gt(isnull(prop('DataCorePlugin.GameRawData.Telemetry.PlayerP2P_Count'), num(0)), num(0)),
-    color: ds.purpose.alert.p2p,
-    blinkWhen: eq(isnull(prop('DataCorePlugin.GameData.PushToPassActive'), num(0)), num(1)),
-    blinkColor: ds.purpose.alert.p2p,
-    blinkDelayMs: OVER_REV_BLINK_MS * 2,
-    source: 'DataCorePlugin.GameData.PushToPassActive, GameRawData.Telemetry.PlayerP2P_Count',
+    // The intervention, and nothing else. It used to light on TCLevel as well, so that some light
+    // was on wherever the dial sat, and since iRacing fills the dial and not the intervention the
+    // result there was a lamp lit from the green flag to the flag: a lamp that is always on carries
+    // no information, and one that means "the dial is at four" is not what the driver looks at when
+    // a wheel spins. Dark on iRacing is the honest reading, and BEST_EFFORT says so.
+    when: gt(g('TCActive'), num(0)),
+    color: ds.color.info.primary,
+    source: 'DataCorePlugin.GameData.TCActive',
   },
   {
-    id: 'headlightFlash',
-    label: 'Headlight flash',
+    id: 'abs',
+    label: 'ABS active',
     role: 'aid',
-    // The only source there is: SimHub normalises nothing for this, and a car without the control
-    // does not publish the var at all, so the read has to survive the property being absent.
-    when: gt(t('dcHeadlightFlash'), num(0)),
-    color: ds.color.neutral.primary,
-    source: 'DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash',
+    when: gt(g('ABSActive'), num(0)),
+    // Amber here and blue on traction control, which is the way round UN R121 and the car manuals
+    // put the pair. The build drew them reversed, and a driver who has read either one anywhere else
+    // reads the reversal as the other system.
+    color: ds.color.caution.primary,
+    source: 'DataCorePlugin.GameData.ABSActive',
   },
   {
     id: 'lowFuel',
@@ -204,27 +233,33 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     when: lowFuel(),
     color: ds.purpose.fuel.low,
     blinkWhen: lowFuel(),
-    blinkColor: ds.purpose.fuel.low,
-    blinkDelayMs: OVER_REV_BLINK_MS * 4,
+    blinkDelayMs: SLOW_BLINK_MS,
     source: 'DataCorePlugin.GameData.CarSettings_FuelAlertActive',
   },
   {
-    id: 'waterTemp',
-    label: 'Water temperature warning',
+    id: 'temperature',
+    label: 'Water or oil temperature warning',
     role: 'car',
-    // iRacing's EngineWarnings bitfield, bit 1. There is no normalised SimHub property for it, and
-    // no oil-temperature or water-pressure bit exists at all — see NOT_ON_IRACING.
-    when: engineWarning(1),
-    color: ds.color.danger.primary,
-    source: 'DataCorePlugin.GameRawData.Telemetry.EngineWarnings bit 1 (WaterTempWarning)',
+    // Both temperature bits of iRacing's EngineWarnings word: 1 for water and 0x0040 for oil. The
+    // second has existed since 2021 season 2, and this file used to deny it outright under
+    // NO_PROPERTY, which is a claim the review corrected rather than a property that arrived.
+    when: or(engineWarning(1), engineWarning(64)),
+    color: ds.color.caution.primary,
+    blinkWhen: or(engineWarning(1), engineWarning(64)),
+    blinkDelayMs: FAST_BLINK_MS,
+    source: 'DataCorePlugin.GameRawData.Telemetry.EngineWarnings bits 1 (WaterTempWarning) and 64 (OilTempWarning)',
   },
   {
     id: 'oilPressure',
     label: 'Oil pressure warning',
     role: 'car',
-    when: engineWarning(4),
+    // Gated on the engine turning, because the bit is as true of an engine that is merely stopped as
+    // of one that is failing, and the lamp otherwise greets the driver in every garage.
+    when: and(engineWarning(4), engineRunning()),
     color: ds.color.danger.primary,
-    source: 'DataCorePlugin.GameRawData.Telemetry.EngineWarnings bit 4 (OilPressureWarning)',
+    blinkWhen: and(engineWarning(4), engineRunning()),
+    blinkDelayMs: FAST_BLINK_MS,
+    source: 'DataCorePlugin.GameRawData.Telemetry.EngineWarnings bit 4 (OilPressureWarning), gated on GameData.Rpms',
   },
 ];
 
@@ -238,7 +273,14 @@ function engineWarning(bit: number): Expr {
   return eq(mod(truncate(div(t('EngineWarnings'), num(bit))), num(2)), num(1));
 }
 
-/** The spotters, each on the side the car is actually on. */
+/**
+ * The spotters, each on the side the car is actually on, and steady.
+ *
+ * They used to blink red when a car was alongside on both sides at once. With one lamp to a side,
+ * two lit side lamps already *are* the both-sides signal, and a blink on top of it says the same
+ * thing a second time in a rhythm the car lamp is using for something else. It is in
+ * {@link DROPPED}.
+ */
 export const SPOTTER_EFFECTS: readonly LedEffect[] = [
   {
     id: 'spotter.left',
@@ -247,9 +289,6 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
     side: 'left',
     when: gt(g('SpotterCarLeft'), num(0)),
     color: ds.color.caution.primary,
-    blinkWhen: and(gt(g('SpotterCarLeft'), num(0)), gt(g('SpotterCarRight'), num(0))),
-    blinkColor: ds.color.danger.primary,
-    blinkDelayMs: OVER_REV_BLINK_MS * 2,
     source: 'DataCorePlugin.GameData.SpotterCarLeft',
   },
   {
@@ -259,9 +298,6 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
     side: 'right',
     when: gt(g('SpotterCarRight'), num(0)),
     color: ds.color.caution.primary,
-    blinkWhen: and(gt(g('SpotterCarLeft'), num(0)), gt(g('SpotterCarRight'), num(0))),
-    blinkColor: ds.color.danger.primary,
-    blinkDelayMs: OVER_REV_BLINK_MS * 2,
     source: 'DataCorePlugin.GameData.SpotterCarRight',
   },
 ];
@@ -269,6 +305,11 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
 /**
  * The turn indicators, on the side being signalled — the same rule as the spotters, and
  * for the same reason: a light about a side belongs on that side.
+ *
+ * Green at 2 Hz, which is ISO 2575 and the upper edge of the band UN R48 allows a real indicator.
+ * They used to be the spotter's amber at the spotter's rate, so the two conditions that share the
+ * side lamp were one light, and rank 2 was indistinguishable from rank 1 on the only lamp where
+ * both can be live at once.
  *
  * Best effort. `TurnIndicatorLeft` and `TurnIndicatorRight` are real `StatusDataBase` members and
  * the iRacing reader overrides both with `[NotAvailable] return 0`, so on iRacing these are dark and
@@ -283,10 +324,9 @@ export const TURN_EFFECTS: readonly LedEffect[] = [
     role: 'side',
     side: 'left',
     when: gt(g('TurnIndicatorLeft'), num(0)),
-    color: ds.color.caution.primary,
+    color: ds.color.good.primary,
     blinkWhen: gt(g('TurnIndicatorLeft'), num(0)),
-    blinkColor: ds.color.caution.primary,
-    blinkDelayMs: OVER_REV_BLINK_MS * 4,
+    blinkDelayMs: SLOW_BLINK_MS,
     source: 'DataCorePlugin.GameData.TurnIndicatorLeft',
   },
   {
@@ -295,10 +335,9 @@ export const TURN_EFFECTS: readonly LedEffect[] = [
     role: 'side',
     side: 'right',
     when: gt(g('TurnIndicatorRight'), num(0)),
-    color: ds.color.caution.primary,
+    color: ds.color.good.primary,
     blinkWhen: gt(g('TurnIndicatorRight'), num(0)),
-    blinkColor: ds.color.caution.primary,
-    blinkDelayMs: OVER_REV_BLINK_MS * 4,
+    blinkDelayMs: SLOW_BLINK_MS,
     source: 'DataCorePlugin.GameData.TurnIndicatorRight',
   },
 ];
@@ -320,7 +359,6 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
     when: on('PitLimiterOn'),
     color: ds.purpose.pitLimiter,
     blinkWhen: on('PitLimiterOn'),
-    blinkColor: ds.purpose.pitLimiter,
     blinkDelayMs: OVER_REV_BLINK_MS * 3,
     source: 'DataCorePlugin.GameData.PitLimiterOn',
   },
@@ -332,7 +370,6 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
     when: pitSpeeding(),
     color: ds.color.danger.primary,
     blinkWhen: pitSpeeding(),
-    blinkColor: ds.color.danger.primary,
     blinkDelayMs: OVER_REV_BLINK_MS,
     source: 'IsInPitLane + SpeedLocal + PitLimiterSpeed (SimHub publishes no speeding property)',
   },
@@ -350,17 +387,38 @@ export const BEST_EFFORT: readonly { effect: string; property: string; reason: s
   {
     effect: 'TC intervening',
     property: 'DataCorePlugin.GameData.TCActive',
-    reason: 'IRacingManager.GD_TCActive() is [NotAvailable] and returns 0. The light is steady on the dial and blinks on the intervention, so on iRacing it is steady and never blinks.',
+    reason: 'IRacingManager.GD_TCActive() is [NotAvailable] and returns 0, so on iRacing the lamp is dark. It used to read TCLevel as well and was therefore lit there from the green flag onwards, which is a light that reports the dial rather than the intervention.',
   },
   {
     effect: 'Turn indicators',
     property: 'DataCorePlugin.GameData.TurnIndicatorLeft / TurnIndicatorRight',
     reason: 'GD_TurnIndicatorLeft/Right are [NotAvailable] and return 0 — hard zero rather than null, so isnull() cannot tell "off" from "not published".',
   },
+];
+
+/**
+ * What has a property, and is not drawn all the same.
+ *
+ * This is neither {@link BEST_EFFORT} nor {@link NO_PROPERTY}: the property exists and some sim
+ * fills it, and the row was still not given a lamp. A side has four LEDs on the wheels most people
+ * own, so a condition earns one or it does not ship, and the reason it did not is worth more to a
+ * later reader than the row would have been.
+ */
+export const DROPPED: readonly { effect: string; property: string; reason: string }[] = [
   {
     effect: 'ERS charge, and KERS with it',
     property: 'DataCorePlugin.GameData.ERSPercent',
-    reason: 'The iRacing reader overrides neither GD_ERSMax nor GD_ERSStored, so ERSPercent is always 0 there. SimHub models no KERS of its own and normalises every hybrid store into this one percentage.',
+    reason: 'A store that empties is a bar rather than a lamp, and one LED can say neither how much is left nor how fast it is going. The iRacing reader moreover overrides neither GD_ERSMax nor GD_ERSStored, so it would be dark on the only sim openDash is tested against. SimHub models no KERS of its own and folds every hybrid store into this one percentage, so KERS goes with it.',
+  },
+  {
+    effect: 'Headlight flash',
+    property: 'DataCorePlugin.GameRawData.Telemetry.dcHeadlightFlash',
+    reason: "It reports the driver's own momentary button rather than anything about the car or the race, and an LED spent telling the driver what their hand just did is an LED not spent on an aid.",
+  },
+  {
+    effect: 'Car alongside on both sides',
+    property: 'DataCorePlugin.GameData.SpotterCarLeft and SpotterCarRight',
+    reason: 'It used to blink both side lamps red. Now that a side lamp is one LED, two of them lit already are the both-sides signal, so the blink restated it in a rhythm the car lamp needs for something else.',
   },
 ];
 
@@ -380,11 +438,9 @@ export const NO_PROPERTY: readonly { effect: string; reason: string; nearest: st
     reason: 'No StatusDataBase member and no iRacing variable. iRacing publishes oil pressure and water temperature, and no coolant pressure.',
     nearest: "The water temperature warning bit of iRacing's EngineWarnings, which is shipped, and the raw WaterLevel in litres.",
   },
-  {
-    effect: 'Oil temperature warning',
-    reason: "iRacing's EngineWarnings word has a water-temperature bit and an oil-pressure bit and no oil-temperature bit.",
-    nearest: 'GameData.OilTemperature, thresholded by whoever wants the lamp.',
-  },
+  // The oil temperature warning used to be here, on the claim that EngineWarnings carries no
+  // oil-temperature bit. It carries 0x0040 and has since 2021 season 2, so the row was a mistake in
+  // this file rather than an absence in iRacing, and the bit is read by the temperature lamp above.
   {
     effect: 'Distance or time to the pit box',
     reason: 'No SimHub property and no iRacing variable; any figure would be an estimate rather than a reading.',
@@ -433,5 +489,5 @@ export const effectContainer = (effect: LedEffect, startPosition: number, ledCou
   ledCount,
   color: effect.color,
   enabledFormula: { expression: above.length === 0 ? effect.when : and(effect.when, ...above.map(not)) },
-  ...(effect.blinkWhen ? { blinkFormula: { expression: effect.blinkWhen }, blinkColor: effect.blinkColor ?? effect.color, blinkDelayMs: effect.blinkDelayMs } : {}),
+  ...(effect.blinkWhen ? { blinkFormula: { expression: effect.blinkWhen }, blinkColor: effect.blinkColor ?? BLINK_OFF, blinkDelayMs: effect.blinkDelayMs } : {}),
 });
