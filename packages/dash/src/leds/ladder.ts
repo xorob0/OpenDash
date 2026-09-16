@@ -78,8 +78,11 @@ export const overRev = (ladder: Ladder): Expr => (ladder === 'mirror' ? mirrorOv
  */
 export const rungFlashes = (style: LedRpmStyle, rung: number, rungs: number): boolean => style === 'f1' || bandOf(rung, rungs) === 2;
 
-/** Half period of the over-rev flash, the same 62 ms the rev bar blinks at. */
-export const OVER_REV_BLINK_MS = Math.floor(1000 / ds.shiftLights.flashHz / 2);
+// The half period of the over-rev flash used to be declared here, as `1000 / shiftLights.flashHz / 2`,
+// and every blink on the strip was a multiple of it: the indicators at four times, the limiter at
+// three, the fuel bar at four again. A strip has two rates and they live in `effects.ts`, so the
+// over-rev flash takes the fast one like everything else urgent rather than setting a rate the rest
+// of the strip is measured against. The face keeps `shiftLights.flashHz` for its own redline.
 
 /**
  * One LED of a progressive bar over a 0..100 input: lit once `value` has passed `k` of `count`
