@@ -153,9 +153,9 @@ namespace OpenDashPlugin
 
         public string[] FlagBoxSide { get; set; } = Contract.DefaultFlagBoxSides();
 
-        /// <summary>What the middle of an RGB strip shows: "rpm", "rpmOnly", "brake", "throttleBrake" or
-        /// "fuel". One value for the rig and not an array, because openDash generates one profile per
-        /// strip shape rather than per device and every shape reads this one name.</summary>
+        /// <summary>What the middle of an RGB strip shows: "rpm", "brake", "throttleBrake" or "fuel".
+        /// One value for the rig and not an array, because openDash generates one profile per strip
+        /// shape rather than per device and every shape reads this one name.</summary>
         public string LedCentre { get; set; } = Contract.DefaultLedCentre;
 
         /// <summary>How the rev ladder fills a strip: "leftToRight", "meetInMiddle" or "f1". The look
@@ -199,7 +199,7 @@ namespace OpenDashPlugin
             // No array to repair: the strips carry one value each for the whole rig. A profile reads
             // both through isnull() with its own default, so an unrecognised spelling has to become a
             // legal one here rather than reaching the strip as itself.
-            LedCentre = Contract.NormaliseChoice(LedCentre, Contract.LedCentres, Contract.DefaultLedCentre);
+            LedCentre = Contract.NormaliseLedCentre(LedCentre);
             LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
         }
 

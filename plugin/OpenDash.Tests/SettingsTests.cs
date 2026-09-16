@@ -943,6 +943,19 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_settings_file_carrying_the_retired_strip_centre_is_migrated_into_rpm()
+        {
+            // rpmOnly lit the same centre as rpm and only left the sides dark, so it was retired into
+            // rpm. A rig upgraded with it still stored would otherwise match no conditional group in
+            // the profile, and its strip centre would go dark.
+            var json = "{\"LedCentre\":\"rpmOnly\"}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+            Assert.Equal("rpm", settings.LedCentre);
+            Assert.Contains(settings.LedCentre, Contract.LedCentres);
+        }
+
+        [Fact]
         public void CopyFrom_carries_the_lights()
         {
             // It carried none of them before the strips were added: the panel's copy handed back a rig

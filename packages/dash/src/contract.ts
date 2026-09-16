@@ -22,8 +22,13 @@ export type SessionProgress = 'auto' | 'laps' | 'time';
 /**
  * What the middle of an RGB strip shows. The sides carry brake in the default, which is what the
  * hardware makers put there and what DNR puts on the same LEDs.
+ *
+ * Four, not five. `rpmOnly` lit the same centre as `rpm` and differed only in leaving the sides
+ * dark, which is a decision about the sides rather than about the centre, so it is retired into
+ * `rpm`; {@link RETIRED_LED_CENTRE} is what a settings file written before the retirement carries,
+ * and the plugin migrates it rather than letting a strip match no group and go dark.
  */
-export type LedCentre = 'rpm' | 'rpmOnly' | 'brake' | 'throttleBrake' | 'fuel';
+export type LedCentre = 'rpm' | 'brake' | 'throttleBrake' | 'fuel';
 /**
  * How the rev ladder fills the strip. It decides the *look*, never the *when*: the thresholds are
  * the car's own either way (ADR 0014), and a style only chooses which LED takes which rung and
@@ -53,8 +58,11 @@ export const REV_BAR_SETTING = 'RevBar';
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
-export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'rpmOnly', 'brake', 'throttleBrake', 'fuel'];
+export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'brake', 'throttleBrake', 'fuel'];
 export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['leftToRight', 'meetInMiddle', 'f1'];
+
+/** The fifth centre, retired into `rpm`. Named so that the plugin can migrate it rather than guess. */
+export const RETIRED_LED_CENTRE = 'rpmOnly';
 
 export const DEFAULTS = {
   ShiftLights: true,

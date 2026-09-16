@@ -189,10 +189,14 @@ namespace OpenDashPlugin
         /// a worse default than a busy one.</summary>
         public const bool DefaultFlagBoxCriticalOnly = false;
 
-        /// <summary>What the middle of a strip shows: the revs, the revs with the sides left dark, the
-        /// brake, throttle and brake from the middle outwards, or the fuel. Mirrors LED_CENTRES in
-        /// contract.ts.</summary>
-        public static readonly string[] LedCentres = { "rpm", "rpmOnly", "brake", "throttleBrake", "fuel" };
+        /// <summary>What the middle of a strip shows: the revs, the brake, throttle and brake from the
+        /// middle outwards, or the fuel. Mirrors LED_CENTRES in contract.ts.</summary>
+        public static readonly string[] LedCentres = { "rpm", "brake", "throttleBrake", "fuel" };
+
+        /// <summary>The fifth centre, retired into "rpm". It lit the same centre and differed only in
+        /// leaving the sides dark, which is a decision about the sides rather than about the centre.
+        /// Kept as a name so that NormaliseLedCentre can migrate a settings file that carries it.</summary>
+        public const string RetiredLedCentre = "rpmOnly";
 
         /// <summary>The revs, with brake on the sides. What the hardware makers put there.</summary>
         public const string DefaultLedCentre = "rpm";
@@ -971,6 +975,21 @@ namespace OpenDashPlugin
         {
             var alias = shiftLights ? RevBarShift : RevBarRpm;
             return string.IsNullOrWhiteSpace(value) ? alias : NormaliseChoice(value, RevBarModes, alias);
+        }
+
+        /// <summary>
+        /// The strip centre a settings file means.
+        /// </summary>
+        /// <remarks>
+        /// A stored "rpmOnly" becomes "rpm", which is where the value was retired. Migrated by name
+        /// rather than left to the fallback: the fallback lands on "rpm" only for as long as "rpm" is
+        /// the default, and a value no conditional group in the profile matches is a strip whose centre
+        /// goes dark. XOR-119 is the rule that an rc.2 user's settings survive the release.
+        /// </remarks>
+        public static string NormaliseLedCentre(string value)
+        {
+            if (value != null && string.Equals(value.Trim(), RetiredLedCentre, StringComparison.OrdinalIgnoreCase)) return DefaultLedCentre;
+            return NormaliseChoice(value, LedCentres, DefaultLedCentre);
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>
