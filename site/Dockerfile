@@ -102,11 +102,16 @@ WORKDIR /app
 # served from a CDN in the deployments this output was designed for — so they are placed by hand.
 # Miss either and the site answers 200 with no CSS and no pictures, which is the failure mode this
 # comment exists to prevent.
-COPY --from=build /repo/site/.next/standalone/site ./
-COPY --from=build /repo/site/.next/static ./.next/static
-COPY --from=build /repo/site/public ./public
+COPY --from=build --chown=node:node /repo/site/.next/standalone/site ./
+COPY --from=build --chown=node:node /repo/site/.next/static ./.next/static
+COPY --from=build --chown=node:node /repo/site/public ./public
 
-# The site writes nothing and needs no root.
+# The one thing the site does write. next/image optimises a capture on first request and caches the
+# result here; without a writable directory it re-optimises every picture on every request and logs
+# an EACCES for each one. COPY lands files as root, so the ownership above and this directory are
+# both needed — the first draft had neither and the container ran hot serving the same pages.
+RUN mkdir -p .next/cache && chown -R node:node .next
+
 USER node
 EXPOSE 3000
 CMD ["node", "server.js"]
