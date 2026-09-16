@@ -592,8 +592,15 @@ export function table(spec: TableSpec): Item[] {
   const headTop = spec.frame.top + (header ? headerHeight : 0);
   // The canvas gives every list body `justify-content: center`, so what a declared row count leaves
   // over is shared above and below the block rather than piled under it.
+  //
+  // A board is the other drawing here too, and the other way about: the column holding its header
+  // and its rows is a plain `flex-direction: column` on all four artboards that draw one, with no
+  // `justify-content` at all, so the rows open against the header rule and whatever the field is
+  // short of falls at the foot. Centring them is what put 84 px of margin over P1 on the race page
+  // and 158 on the tower, which is a board that has lost the edge a reader reads positions down.
   const body = spec.frame.height - (header ? headerHeight : 0);
-  const top = headTop + Math.max(0, Math.round((body - (rows * rowHeight + (rows - 1) * rowGap)) / 2));
+  const slack = board ? 0 : Math.max(0, Math.round((body - (rows * rowHeight + (rows - 1) * rowGap)) / 2));
+  const top = headTop + slack;
   // The player sits in the middle of a relative table, so the row index counts from that row.
   const centre = Math.ceil(rows / 2);
   const idx = rowIndexFor(spec, centre);
