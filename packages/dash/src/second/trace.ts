@@ -7,6 +7,10 @@
  * The hairlines at the quarters are drawn behind the series, with a rule closing the plot for the
  * panels the canvas draws one under, and a legend row is added when there is more than one series,
  * because unlabelled colours are a guess.
+ *
+ * What a ChartItem will not do is end a line: it carries a colour, a thickness and a sample count
+ * and nothing about joins or caps, so the round ones the canvas draws are square here and a
+ * polyline turning at a sample is mitred. That is the format and not a setting left unset.
  */
 import type { ChartItem, Hex, Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
