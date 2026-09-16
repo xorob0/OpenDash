@@ -9,6 +9,10 @@ import {
   facePrefix,
   facePropertyNames,
   faceForPrefix,
+  flagFormatSettingName,
+  FLAG_FORMATS,
+  DEFAULT_FLAG_FORMAT,
+  zone,
   CARD_CATALOGUE,
   cardMeta,
   declaredProperties,
@@ -78,8 +82,8 @@ describe('settings', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
     // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
-    // page, mask, start and the class filter -- plus the bar's ends and the glance.
-    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 1;
+    // page, mask, start and the class filter -- plus the bar's ends, the glance and the flag format.
+    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 2;
     // The last two terms are the lights, which are not screens but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is nine
     // global and six per matrix, the way every face carries its own group; the strips are the three
@@ -92,7 +96,7 @@ describe('settings', () => {
     );
     // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
     // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
-    expect(props).toHaveLength(248);
+    expect(props).toHaveLength(256);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -107,9 +111,11 @@ describe('settings', () => {
     expect(props).toContain('OpenDash.Face1280x400ZoneBClassOnly');
     expect(props).toContain('OpenDash.Face600x686BarLeft1');
     expect(props).toContain('OpenDash.Face800x286QuickGlance');
+    expect(props).toContain('OpenDash.Face1920x480FlagFormat');
+    expect(props).toContain('OpenDash.Face600x686FlagFormat');
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
     // settings silently shared with every other.
-    expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance)/.test(p))).toEqual([]);
+    expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat)/.test(p))).toEqual([]);
     const lights = flagBoxProperties().length + ledProperties().length;
     expect(props.slice(-(lights + 6), -lights)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
     // The lights come last, after the screens, because they are the artefacts the plugin does not
@@ -127,6 +133,14 @@ describe('settings', () => {
     for (const face of FACE_SIZES) expect(facePrefix(face)).toMatch(/^Face\d+x\d+$/);
     expect(faceForPrefix('Face1920x480')).toMatchObject({ width: 1920, height: 480 });
     expect(faceForPrefix('Face1x1')).toBeUndefined();
+    // The flag format is one of a face's own, on every size, so a rig with two faces can take a flag
+    // over the whole of one and leave the other's band alone.
+    expect(FLAG_FORMATS).toEqual(['band', 'full']);
+    expect(DEFAULT_FLAG_FORMAT).toBe('band');
+    for (const face of FACE_SIZES) expect(facePropertyNames(face)).toContain(flagFormatSettingName(face));
+    expect(flagFormatSettingName(FACE_SIZES[0]!)).toBe('Face1920x480FlagFormat');
+    expect(zone.flagFormat(FACE_SIZES[0]!)).toBe("isnull([OpenDash.Face1920x480FlagFormat], 'band')");
+    expect(zone.flagFormatIs(FACE_SIZES[6]!, 'full')).toBe("(isnull([OpenDash.Face800x286FlagFormat], 'band')) = ('full')");
   });
 
   test('every property belongs to one screen or to every screen', () => {
@@ -296,6 +310,8 @@ describe('plugin mirror', () => {
     const revBarConst = (mode: string): string => `RevBar${mode[0]!.toUpperCase()}${mode.slice(1)}`;
     for (const mode of REV_BAR_MODES) expect(source).toContain(`public const string ${revBarConst(mode)} = "${mode}";`);
     expect(source).toContain(`public const string DefaultRevBar = ${revBarConst(DEFAULTS.RevBar)};`);
+    expect(source).toContain(`FlagFormats = ${csArray(FLAG_FORMATS)};`);
+    expect(source).toContain(`public const string DefaultFlagFormat = "${DEFAULT_FLAG_FORMAT}";`);
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);

@@ -1084,10 +1084,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_declared_properties_grow_and_shrink_with_the_rig()
         {
-            // Eight face sizes times twenty-one properties is what the plugin used to attach whatever
+            // Eight face sizes times twenty-two properties is what the plugin used to attach whatever
             // the rig was. What it attaches now is the four modes, the twelve slots and the rev bar,
             // which every screen shares, and one group per screen the rig holds.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1;
             var shared = Contract.SharedPropertyNames().Count();
             Assert.Equal(17, shared);
             // The lights are declared whatever the rig is: openDash does not install the flag box
@@ -1307,7 +1307,51 @@ namespace OpenDashPlugin.Tests
             confused.Normalise();
             Assert.Null(confused.Face);
             Assert.Null(confused.Modules);
+            Assert.Null(confused.FlagFormat);
             Assert.NotNull(confused.Zones);
+        }
+
+        [Fact]
+        public void The_flag_format_is_the_band_by_default_and_is_set_per_screen()
+        {
+            // Per screen like the zones: the face in the driver's peripheral vision is the one a
+            // full-face flag is for, and the one they read directly should keep its band.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Rig.Add(Screen(Contract.KindFace, Contract.FaceSizes[3].Width, Contract.FaceSizes[3].Height));
+            settings.Normalise();
+            Assert.Equal("band", settings.ScreenFlagFormat("Face1920x480"));
+            Assert.Equal("band", settings.ScreenFlagFormat("Face850x480"));
+
+            settings.ScreenOf("Face850x480").FlagFormat = "full";
+            settings.Normalise();
+            Assert.Equal("band", settings.ScreenFlagFormat("Face1920x480"));
+            Assert.Equal("full", settings.ScreenFlagFormat("Face850x480"));
+
+            // A spelling the panel never wrote falls back rather than reaching the face as itself, and
+            // a screen the rig no longer holds reads the default rather than throwing on SimHub's
+            // data thread, the way every other per-screen read does.
+            settings.ScreenOf("Face850x480").FlagFormat = "enormous";
+            settings.Normalise();
+            Assert.Equal("band", settings.ScreenFlagFormat("Face850x480"));
+            Assert.Equal("band", settings.ScreenFlagFormat("Face1280x720"));
+        }
+
+        [Fact]
+        public void The_flag_format_survives_a_save()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.ScreenOf("Face1920x480").FlagFormat = "full";
+            settings.Normalise();
+
+            var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
+            read.Normalise();
+            Assert.Equal("full", read.ScreenFlagFormat("Face1920x480"));
+
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.Equal("full", copy.ScreenFlagFormat("Face1920x480"));
         }
 
         [Fact]

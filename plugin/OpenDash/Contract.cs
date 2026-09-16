@@ -519,6 +519,14 @@ namespace OpenDashPlugin
         /// zoneIndex * 100 + page, so a glance is one property rather than a pair per zone.</summary>
         public const int DefaultQuickGlance = 2 * 100 + 12;
 
+        /// <summary>How a face draws a flag: over the band it shares with whatever else has a claim on
+        /// those sixty pixels, or over the whole face. Mirrors FLAG_FORMATS in contract.ts.</summary>
+        public static readonly string[] FlagFormats = { "band", "full" };
+
+        /// <summary>The band, which is what the face has always drawn: a flag over the whole face takes
+        /// the gear with it, and that is a choice rather than a default.</summary>
+        public const string DefaultFlagFormat = "band";
+
         /// <summary>
         /// The characters a namespace may be spelled with, and the rule that produces one from a name.
         /// </summary>
@@ -582,6 +590,19 @@ namespace OpenDashPlugin
         public static string QuickGlanceProperty(FaceSize face)
         {
             return QuickGlanceProperty(FacePrefix(face));
+        }
+
+        /// <summary>Property name of a face's flag format: Face1920x480FlagFormat. Per screen and not per
+        /// rig, so that the face in the driver's peripheral vision can take a flag over the whole screen
+        /// while the one they read directly keeps its band.</summary>
+        public static string FlagFormatProperty(string ns)
+        {
+            return ns + "FlagFormat";
+        }
+
+        public static string FlagFormatProperty(FaceSize face)
+        {
+            return FlagFormatProperty(FacePrefix(face));
         }
 
         /// <summary>
@@ -715,6 +736,9 @@ namespace OpenDashPlugin
             foreach (var letter in FaceZoneLetters) yield return ZoneClassOnlyProperty(ns, letter);
             foreach (var slot in BarSlots) yield return BarFieldProperty(ns, slot);
             yield return QuickGlanceProperty(ns);
+            // Last, after the glance: the names before it have shipped and both halves of the contract
+            // assert the group by index, so a new one joins the end of it.
+            yield return FlagFormatProperty(ns);
         }
 
         public static IEnumerable<string> FacePropertyNames(FaceSize face)
