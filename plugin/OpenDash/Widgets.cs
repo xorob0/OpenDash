@@ -71,8 +71,10 @@ namespace OpenDashPlugin
             return block;
         }
 
-        /// <summary>.cap on the canvas: Barlow 13, text.secondary, wrapping at 460 px, line height 1.45.</summary>
-        public static TextBlock Caption(string text, double maxWidth = 460)
+        /// <summary>.cap on the canvas: Barlow 13, text.secondary, line height 1.45, wrapping at the 620 px
+        /// a section's own caption is given. A caption inside a settings row is narrower and says so, the
+        /// row capping its whole text column.</summary>
+        public static TextBlock Caption(string text, double maxWidth = 620)
         {
             var block = Text(text, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
             block.TextWrapping = TextWrapping.Wrap;
@@ -176,9 +178,17 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        /// <summary>A section: 1 px rule on top, 28 px of padding, a tracked label and its rows 20 px apart,
-        /// which is the canvas's .sec. Every tab is built out of these, so the numbers reflow the panel.</summary>
+        /// <summary>A section: 1 px rule on top, 28 px of padding above it, a tracked label and its rows
+        /// 20 px apart, which is the canvas's .sec. Every tab is built out of these, so the numbers reflow
+        /// the panel.</summary>
         public static Border Section(string label, params UIElement[] rows)
+        {
+            return Section(label, PanelMetrics.SectionGap, rows);
+        }
+
+        /// <summary>The same section with a gap of its own, for a tab whose rows are shorter than the rest
+        /// and would otherwise drift apart.</summary>
+        public static Border Section(string label, double gap, params UIElement[] rows)
         {
             var children = new List<UIElement> { Label(label) };
             children.AddRange(rows);
@@ -186,8 +196,10 @@ namespace OpenDashPlugin
             {
                 BorderBrush = Brush(PanelMetrics.SectionRule),
                 BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
-                Padding = new Thickness(0, PanelMetrics.SectionPadding, 0, PanelMetrics.SectionPadding),
-                Child = VStack(PanelMetrics.SectionGap, children.ToArray()),
+                // Padding above the rule only: the gap between two sections is the next one's padding, so
+                // padding underneath as well would count it twice and put 56 px where the canvas draws 28.
+                Padding = new Thickness(0, PanelMetrics.SectionPadding, 0, 0),
+                Child = VStack(gap, children.ToArray()),
             };
         }
 
@@ -314,16 +326,33 @@ namespace OpenDashPlugin
         // the bare Border below is the whole of the drop button and the card, so the ring a keyboard
         // needs and the answer a pointer expects are drawn here or nowhere.
 
-        /// <summary>The focus visual: control.focusRing of ui.focus, held its own offset clear of the
-        /// control. A focus visual is an adorner, so the ring costs the layout nothing and cannot nudge
-        /// the row it is in, which is what lets a 24 px control carry one without crowding its text.</summary>
-        private static Style FocusRing()
+        /// <summary>
+        /// The focus visual: control.focusRing of ui.focus, held its own offset clear of the control.
+        /// </summary>
+        /// <remarks>
+        /// The canvas draws it as two shadows, `0 0 0 2px surface.base, 0 0 0 4px ui.focus`, so the offset
+        /// is painted rather than left clear: over the panel's own ground the two read the same, and over a
+        /// card or a flyout only the painted one holds the ring off what is under it.
+        ///
+        /// A focus visual is an adorner, so the ring costs the layout nothing and cannot nudge the row it
+        /// is in, which is what lets a 24 px control carry one without crowding its text. It is public
+        /// because the controls SimHub draws for the panel -- the toggle, the list -- have to be given it
+        /// by hand; the ones drawn here take it from the factories below.
+        /// </remarks>
+        public static Style FocusRing()
         {
+            var offset = new FrameworkElementFactory(typeof(Border));
+            offset.SetValue(Border.BorderBrushProperty, Brush(Theme.SurfaceBase));
+            offset.SetValue(Border.BorderThicknessProperty, new Thickness(Theme.FocusRingOffset));
+            offset.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius + Theme.FocusRingOffset));
+
             var ring = new FrameworkElementFactory(typeof(Border));
             ring.SetValue(Border.BorderBrushProperty, Brush(Theme.Focus));
             ring.SetValue(Border.BorderThicknessProperty, new Thickness(Theme.FocusRing));
-            ring.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius + Theme.FocusRingOffset));
+            ring.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius + Theme.FocusRingOffset + Theme.FocusRing));
             ring.SetValue(FrameworkElement.MarginProperty, new Thickness(-(Theme.FocusRingOffset + Theme.FocusRing)));
+            ring.AppendChild(offset);
+
             var style = new Style(typeof(Control));
             style.Setters.Add(new Setter(Control.TemplateProperty, new ControlTemplate(typeof(Control)) { VisualTree = ring }));
             return style;
@@ -337,6 +366,62 @@ namespace OpenDashPlugin
             var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
             over.Setters.Add(new Setter(Border.BorderBrushProperty, Brush(Theme.AccentHover), "chrome"));
             return over;
+        }
+
+        // Fields
+        //
+        // The select, the drop button and the text box are one shape on the canvas, so they are one
+        // description here. The two paddings are the canvas's own; design/tokens.json carries neither of
+        // them yet, and they are owed as tokens the way the panel's other geometry is.
+
+        private const double FieldPaddingLeft = 9;
+        private const double FieldPaddingRight = 6;
+
+        /// <summary>
+        /// The chrome every field-shaped control carries: ui.field under a one pixel ui.border at the
+        /// panel's radius, the canvas's padding, and the focus ring. The value is 14 in the full height
+        /// and 12 in the short one, which is the canvas's own pairing rather than a choice made here.
+        /// </summary>
+        /// <remarks>
+        /// A TextBox is given a template as well, because Control has no CornerRadius and WPF's own
+        /// template has none to bind. A ComboBox keeps SimHub's: the template that would round its box
+        /// supplies the list under it too, and half a replacement would leave the box openDash's and the
+        /// list SimHub's. That corner is therefore recorded as SimHub's rather than approximated here.
+        /// </remarks>
+        public static void Field(Control control, double height = Theme.ControlHeight)
+        {
+            control.Height = height;
+            control.Padding = new Thickness(FieldPaddingLeft, 0, FieldPaddingRight, 0);
+            control.Background = Brush(Theme.Field);
+            control.BorderBrush = Brush(Theme.Border);
+            control.BorderThickness = new Thickness(PanelMetrics.BorderWeight);
+            control.Foreground = Brush(Theme.TextPrimary);
+            control.FontFamily = PanelFonts.Label;
+            control.FontSize = height <= Theme.ControlHeightSm ? Theme.SizeLabel : Theme.SizeBody;
+            control.VerticalContentAlignment = VerticalAlignment.Center;
+            control.FocusVisualStyle = FocusRing();
+            var box = control as TextBox;
+            if (box != null) box.Template = FieldTemplate();
+        }
+
+        /// <summary>The field's own chrome around whatever the control puts inside it, which for a TextBox
+        /// is the content host WPF looks for by name.</summary>
+        private static ControlTemplate FieldTemplate()
+        {
+            var border = new FrameworkElementFactory(typeof(Border), "chrome");
+            border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+            border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+            border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
+            border.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));
+            var host = new FrameworkElementFactory(typeof(ScrollViewer), "PART_ContentHost");
+            host.SetValue(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden);
+            host.SetValue(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden);
+            host.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            border.AppendChild(host);
+            var template = new ControlTemplate(typeof(TextBox)) { VisualTree = border };
+            template.Triggers.Add(HoverOutline());
+            return template;
         }
 
         // Drop-downs
@@ -362,19 +447,12 @@ namespace OpenDashPlugin
             var button = new ToggleButton
             {
                 Width = width,
-                Height = Theme.ControlHeightSm,
-                Padding = new Thickness(10, 0, 8, 0),
-                Background = Brush(Theme.Field),
-                BorderBrush = Brush(Theme.Border),
-                BorderThickness = new Thickness(1),
-                Foreground = Brush(Theme.TextPrimary),
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Center,
                 Content = row,
                 Cursor = Cursors.Hand,
                 ToolTip = tooltip,
-                FocusVisualStyle = FocusRing(),
             };
+            Field(button, Theme.ControlHeightSm);
             // SimHub's ToggleButton style is a switch, so the drop button keeps the plain one and paints
             // itself; asking for the styled template here would draw a slider where a box belongs.
             button.Template = DropButtonTemplate();
@@ -423,6 +501,7 @@ namespace OpenDashPlugin
                     Background = Brush(Theme.SurfaceRaised),
                     BorderBrush = Brush(Theme.Border),
                     BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(Theme.Radius),
                     Padding = new Thickness(12),
                     Margin = new Thickness(0, 2, 0, 0),
                     Child = content,
@@ -453,11 +532,13 @@ namespace OpenDashPlugin
 
         // Buttons
         //
-        // The canvas draws one primary per panel and asks for everything else as an outline or a link,
-        // which is a distinction SHButtonPrimary cannot make. Leaving SimHub's style costs its hover, focus
-        // and disabled chrome, and the panel disables a button for the length of a run, so these draw all
-        // four states themselves: the ground changes under the pointer, focus is a ring in the adorner
-        // layer, and a disabled button keeps the canvas's 40 %.
+        // The canvas draws one primary per panel and asks for everything else as an outline, a link or a
+        // dashed add, which is a distinction SHButtonPrimary cannot make. All of them are 32 high, or the
+        // 28 of a row, padded 16 and set in Barlow Medium 14; what changes between them is the ground, the
+        // outline and the ink. Leaving SimHub's style costs its hover, focus and disabled chrome, and the
+        // panel disables a button for the length of a run, so these draw all four states themselves: the
+        // ground changes under the pointer, focus is a ring in the adorner layer, and a disabled button
+        // keeps the canvas's 40 %.
 
         /// <summary>The one accented action of a page: an update, and nothing beside it.</summary>
         public static Button PrimaryButton(string text, double height = PanelMetrics.ButtonHeight)
@@ -472,6 +553,21 @@ namespace OpenDashPlugin
             return Chrome(text, height, iconPath, System.Windows.Media.Brushes.Transparent, Brush(Theme.Hover), Brush(Theme.Border), Theme.TextPrimary);
         }
 
+        /// <summary>The action that takes something away: the outline again, with danger for its ink. The
+        /// colour is the whole of the warning, because a destructive action in a row of buttons has to be
+        /// read before it is pressed and a heavier ground would only make it the loudest thing there.</summary>
+        public static Button DestructiveButton(string text, double height = PanelMetrics.ButtonHeight)
+        {
+            return Chrome(text, height, null, System.Windows.Media.Brushes.Transparent, Brush(Theme.Hover), Brush(Theme.Border), Theme.Danger);
+        }
+
+        /// <summary>The action that adds one: the add card's dashed frame at a button's height, since what
+        /// it adds does not exist yet and a solid outline would say that it does.</summary>
+        public static Button AddButton(string text, double height = PanelMetrics.ButtonHeight)
+        {
+            return Chrome(text, height, null, System.Windows.Media.Brushes.Transparent, Brush(Theme.Hover), null, Theme.TextSecondary, true);
+        }
+
         /// <summary>A text-only action, the ink carrying it: accent for a link, danger for a destructive
         /// one. No ground, no outline and no padding, so it does not read as a button in a row of them.</summary>
         public static Button LinkButton(string text, string hex = Theme.Accent)
@@ -481,7 +577,7 @@ namespace OpenDashPlugin
             return button;
         }
 
-        private static Button Chrome(string text, double height, string iconPath, Brush background, Brush hover, Brush border, string ink)
+        private static Button Chrome(string text, double height, string iconPath, Brush background, Brush hover, Brush border, string ink, bool dashed = false)
         {
             return new Button
             {
@@ -503,14 +599,15 @@ namespace OpenDashPlugin
                 Content = iconPath == null
                     ? (object)text
                     : HStack(PanelMetrics.ButtonIconGap, Icon(iconPath, ink), Text(text, Theme.SizeBody, FontWeights.Medium, ink)),
-                Template = ButtonTemplate(hover),
+                Template = ButtonTemplate(hover, dashed),
                 FocusVisualStyle = FocusRing(),
             };
         }
 
         /// <summary>The button's own chrome: the border the control's brushes describe, and the two states
-        /// a trigger can carry. A null hover is a link, which has no ground to change.</summary>
-        private static ControlTemplate ButtonTemplate(Brush hover)
+        /// a trigger can carry. A null hover is a link, which has no ground to change; a dashed button
+        /// carries no border of its own and the frame over it is the outline.</summary>
+        private static ControlTemplate ButtonTemplate(Brush hover, bool dashed)
         {
             var border = new FrameworkElementFactory(typeof(Border), "chrome");
             border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
@@ -523,15 +620,25 @@ namespace OpenDashPlugin
             presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
             border.AppendChild(presenter);
 
-            var template = new ControlTemplate(typeof(Button)) { VisualTree = border };
+            FrameworkElementFactory root = border;
+            if (dashed)
+            {
+                root = new FrameworkElementFactory(typeof(Grid));
+                root.AppendChild(border);
+                root.AppendChild(DashedFrame());
+            }
+
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = root };
             if (hover != null)
             {
                 var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
                 over.Setters.Add(new Setter(Border.BackgroundProperty, hover, "chrome"));
                 template.Triggers.Add(over);
             }
+            // The whole button rather than its chrome, so that what is drawn beside the chrome fades with
+            // it: the dashed frame is a sibling of the ground it outlines.
             var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
-            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity, "chrome"));
+            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity));
             template.Triggers.Add(disabled);
             return template;
         }
@@ -545,7 +652,7 @@ namespace OpenDashPlugin
         // geometry is in PanelMetrics.cs, where a test can hold it against the canvas; the tab's is here,
         // because nothing but this file has asked for it yet.
 
-        public const double TabHeight = 40;
+        public const double TabHeight = 44;
         public const double TabUnderline = 2;
 
         /// <summary>
@@ -555,16 +662,21 @@ namespace OpenDashPlugin
         /// A button rather than a ToggleButton in a group: SimHub's ToggleButton style is a switch
         /// (Widgets' drop button hit the same thing), and what is wanted here is a label with a rule
         /// under it.
+        ///
+        /// The name is the tracked label rather than body copy, so a tab reads as the label it is; that
+        /// makes it a stack of one block per character, which is wider than the same word set solid, and
+        /// the underline takes its width from the stack rather than from a fixed number. The tab that is
+        /// not selected keeps a transparent rule rather than one painted in the ground, which reads the
+        /// same on the base and stays right wherever the strip is put.
         /// </remarks>
         public static Button Tab(string text, bool selected, Action clicked)
         {
-            var label = Text(text, Theme.SizeBody, selected ? FontWeights.SemiBold : FontWeights.Normal,
-                selected ? Theme.TextPrimary : Theme.TextSecondary);
+            var label = Label(text, selected ? Theme.TextPrimary : Theme.TextLabel);
             label.Margin = new Thickness(0, 0, 0, 8);
             var underline = new Rectangle
             {
                 Height = TabUnderline,
-                Fill = Brush(selected ? Theme.Accent : Theme.SurfaceBase),
+                Fill = selected ? Brush(Theme.Accent) : System.Windows.Media.Brushes.Transparent,
                 VerticalAlignment = VerticalAlignment.Bottom,
             };
             var stack = new DockPanel { LastChildFill = true };
@@ -686,12 +798,31 @@ namespace OpenDashPlugin
         /// The add card's frame, which is the same card drawn with a dashed edge.
         /// </summary>
         /// <remarks>
-        /// A dash cannot come from Border.BorderBrush, so the frame is a Rectangle over the content and the
-        /// click target stays the button underneath it. A Rectangle centres its stroke on its own edge, so
-        /// half of it would fall outside the card without the margin. Once the card at rest is transparent
-        /// too, these dashes are the only thing telling a screen from the action that adds one.
+        /// Once the card at rest is transparent too, these dashes are the only thing telling a screen from
+        /// the action that adds one.
         /// </remarks>
         private static ControlTemplate DashedCardTemplate()
+        {
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(FrameworkElement.MarginProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+
+            var host = new FrameworkElementFactory(typeof(Grid));
+            host.AppendChild(presenter);
+            host.AppendChild(DashedFrame());
+            return new ControlTemplate(typeof(Button)) { VisualTree = host };
+        }
+
+        /// <summary>
+        /// The dashed outline the add card and the add button are drawn with.
+        /// </summary>
+        /// <remarks>
+        /// A dash cannot come from Border.BorderBrush, so the frame is a Rectangle over the content and the
+        /// click target stays the control underneath it. A Rectangle centres its stroke on its own edge, so
+        /// half of it would fall outside without the margin.
+        /// </remarks>
+        private static FrameworkElementFactory DashedFrame()
         {
             var dashes = new DoubleCollection { PanelMetrics.DashOn, PanelMetrics.DashOff };
             dashes.Freeze();
@@ -703,16 +834,7 @@ namespace OpenDashPlugin
             frame.SetValue(Rectangle.RadiusYProperty, PanelMetrics.Radius);
             frame.SetValue(FrameworkElement.MarginProperty, new Thickness(PanelMetrics.BorderWeight / 2));
             frame.SetValue(UIElement.IsHitTestVisibleProperty, false);
-
-            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
-            presenter.SetValue(FrameworkElement.MarginProperty, new TemplateBindingExtension(Control.PaddingProperty));
-            presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-            presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
-
-            var host = new FrameworkElementFactory(typeof(Grid));
-            host.AppendChild(presenter);
-            host.AppendChild(frame);
-            return new ControlTemplate(typeof(Button)) { VisualTree = host };
+            return frame;
         }
 
         private static ControlTemplate BareButtonTemplate()
