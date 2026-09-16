@@ -365,11 +365,58 @@ export const pressureUnit = (): Expr => {
  */
 export const PIT_SERVICE_BITS = { FrontLeft: 1, FrontRight: 2, RearLeft: 4, RearRight: 8, fuel: 16, tearOff: 32, fastRepair: 64 } as const;
 
-export const pitServiceFlag = (bit: number): Expr => gt(mod(truncate(div(isnull(raw('PitSvFlags'), num(0)), num(bit))), num(2)), num(0));
+/** One bit of the field as a number, 1 or 0, which is what a count of corners is added from. */
+const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvFlags'), num(0)), num(bit))), num(2));
+
+export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
 export const pitRefuelLitres = (): Expr => raw('PitSvFuel');
 export const isInPitLane = (): Expr => gt(isnull(game('IsInPitLane'), num(0)), num(0));
 export const inPitSeconds = (): Expr => isnull(game('IsInPitSince'), num(0));
 export const lastPitDuration = (): Expr => isnull(game('LastPitStopDuration'), num(0));
+
+/**
+ * The words the catalogue writes beside `Tyres`, longest first is not the order: this is the set,
+ * and what a box is measured by is whichever of them is widest.
+ *
+ * Four bits give sixteen selections and the drawing names six, so the ladder below answers the
+ * pairs a driver asks for by name and calls the ten that are left `SOME`. Which corners those are
+ * is what the four corner toggles drawn beside the summary still say.
+ */
+export const TYRE_SELECTIONS: readonly string[] = ['NONE', 'ALL', 'FRONTS', 'REARS', 'LEFTS', 'RIGHTS', 'SOME'];
+
+/** Which corners the next stop changes, as the one word the catalogue writes beside `Tyres`. */
+export const pitTyreSelection = (): Expr => {
+  const fronts = add(pitServiceBit(PIT_SERVICE_BITS.FrontLeft), pitServiceBit(PIT_SERVICE_BITS.FrontRight));
+  const rears = add(pitServiceBit(PIT_SERVICE_BITS.RearLeft), pitServiceBit(PIT_SERVICE_BITS.RearRight));
+  const lefts = add(pitServiceBit(PIT_SERVICE_BITS.FrontLeft), pitServiceBit(PIT_SERVICE_BITS.RearLeft));
+  const rights = add(pitServiceBit(PIT_SERVICE_BITS.FrontRight), pitServiceBit(PIT_SERVICE_BITS.RearRight));
+  const both = (pair: Expr, other: Expr): Expr => and(eq(pair, num(2)), eq(other, num(0)));
+  return iff(
+    eq(add(fronts, rears), num(0)),
+    str('NONE'),
+    iff(
+      eq(add(fronts, rears), num(4)),
+      str('ALL'),
+      iff(
+        both(fronts, rears),
+        str('FRONTS'),
+        iff(both(rears, fronts), str('REARS'), iff(both(lefts, rights), str('LEFTS'), iff(both(rights, lefts), str('RIGHTS'), str('SOME')))),
+      ),
+    ),
+  );
+};
+
+/**
+ * How far through the stop the crew is, as a percentage.
+ *
+ * SimHub publishes no service progress at all, so this is an estimate and not a reading: the
+ * seconds since the car entered the box over the duration of the last stop, which is the only
+ * figure the game gives for how long a stop takes. It reads nothing outside the lane and before a
+ * first stop has been timed, which is honest about a number that is not there rather than showing
+ * a quantity from another page.
+ */
+export const pitServiceProgress = (): Expr =>
+  iff(and(isInPitLane(), gt(lastPitDuration(), num(0))), min(num(100), mul(num(100), div(inPitSeconds(), lastPitDuration()))), num(0));
 
 // --- Lap history and deltas ---------------------------------------------------------------------
 
