@@ -94,8 +94,8 @@ const BOARD_HEADER_HEIGHT = 32;
  * Neither `.trow` nor `.th` declares a `gap` on any of the four artboards, and their cells are
  * `flex: none`, so a board's columns meet: what separates two values is the slack inside the wider
  * of the two columns rather than a gap between them. That is not a detail. The race board's
- * eighteen columns come to 1216 inside 1248 of padded frame, which twelve pixels seventeen times
- * over would overrun by a third, so the canvas's own column set only fits at this gap.
+ * eighteen columns come to 1216 inside 1248 of padded frame, and twelve pixels seventeen times over
+ * is another 204, so the canvas's own column set only fits a board at this gap.
  */
 const BOARD_CELL_GAP = 0;
 
@@ -381,11 +381,11 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
    * The flexible column, with the floor the canvas gives it: below 60 px the row sheds instead.
    *
    * The pit wall artboards fix it at 190 and let the row stop short of its right edge, which is the
-   * one number of a board this file does not take literally. Two of the eighteen columns the race
-   * board draws have no source to fill them, so a fixed 190 would end that row a sixth of the board
-   * from its edge rather than the canvas's thirty-two pixels; the remainder goes to the name
-   * instead, which is the column WPF punishes for being narrow. `pitwallColumns.test.ts` holds it
-   * above the canvas's 190 so that the floor is the thing that is checked.
+   * one number of a board this file does not take literally. Three of the eighteen columns the race
+   * board is headed for have no source to fill them, so a fixed 190 would end that row a sixth of
+   * the board from its edge rather than the thirty-two pixels the canvas leaves; the remainder goes
+   * to the name instead, which is the column WPF punishes for being narrow.
+   * `pitwallColumns.test.ts` holds it above the canvas's 190 so that the floor is what is checked.
    */
   name: { header: 'Driver', align: 'left', width: () => 0, cell: cellName },
   class: {
