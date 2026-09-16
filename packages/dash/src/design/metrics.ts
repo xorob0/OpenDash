@@ -74,6 +74,17 @@ export const CELL: Record<DataWeight, { digit: number; special: number }> = {
 export const SPECIAL_CHARS = ds.font.cell.specialChars;
 
 /**
+ * The minus a signed value is drawn with: U+2212, not the hyphen-minus .NET's formatter writes,
+ * which beside tabular figures reads as a dropped stroke.
+ *
+ * It keeps the digit cell rather than joining `SPECIAL_CHARS`. Measured from the bundled condensed
+ * faces it is 0.439 em in SemiBold, 0.438 in Bold and 0.443 in Light, all of them under the 0.47
+ * and 0.49 em digit cells, so a value that goes negative stays in column and no cell has to be cut
+ * wider for it.
+ */
+export const MINUS = '−';
+
+/**
  * Integer monospace cells for a face at a font size. Rounded up, never down: SimHub draws each
  * character inside its cell, so a cell narrower than the glyph's advance clips the glyph.
  */
