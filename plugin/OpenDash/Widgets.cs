@@ -223,6 +223,37 @@ namespace OpenDashPlugin
             };
         }
 
+        // Focus and hover
+        //
+        // A control openDash templates itself keeps none of what WPF and SimHub draw around a control:
+        // the bare Border below is the whole of the drop button and the card, so the ring a keyboard
+        // needs and the answer a pointer expects are drawn here or nowhere.
+
+        /// <summary>The focus visual: control.focusRing of ui.focus, held its own offset clear of the
+        /// control. A focus visual is an adorner, so the ring costs the layout nothing and cannot nudge
+        /// the row it is in, which is what lets a 24 px control carry one without crowding its text.</summary>
+        private static Style FocusRing()
+        {
+            var ring = new FrameworkElementFactory(typeof(Border));
+            ring.SetValue(Border.BorderBrushProperty, Brush(Theme.Focus));
+            ring.SetValue(Border.BorderThicknessProperty, new Thickness(Theme.FocusRing));
+            ring.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius + Theme.FocusRingOffset));
+            ring.SetValue(FrameworkElement.MarginProperty, new Thickness(-(Theme.FocusRingOffset + Theme.FocusRing)));
+            var style = new Style(typeof(Control));
+            style.Setters.Add(new Setter(Control.TemplateProperty, new ControlTemplate(typeof(Control)) { VisualTree = ring }));
+            return style;
+        }
+
+        /// <summary>The pointer's answer on such a control: the outline lightens to ui.accentHover, the
+        /// one state the canvas gives the accent. SimHub's own styles bring a hover of their own, so this
+        /// goes on the controls openDash draws and on none of theirs.</summary>
+        private static Trigger HoverOutline()
+        {
+            var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            over.Setters.Add(new Setter(Border.BorderBrushProperty, Brush(Theme.AccentHover), "chrome"));
+            return over;
+        }
+
         // Drop-downs
 
         /// <summary>
@@ -257,6 +288,7 @@ namespace OpenDashPlugin
                 Content = row,
                 Cursor = Cursors.Hand,
                 ToolTip = tooltip,
+                FocusVisualStyle = FocusRing(),
             };
             // SimHub's ToggleButton style is a switch, so the drop button keeps the plain one and paints
             // itself; asking for the styled template here would draw a slider where a box belongs.
@@ -273,10 +305,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A border around the content and nothing else: no chrome, no checked state, because the
-        /// button's own brushes are the canvas's field and the popup below it is the affordance.</summary>
+        /// button's own brushes are the canvas's field and the popup below it is the affordance. The outline
+        /// under the pointer is all a shut field has to say that it is a control.</summary>
         private static ControlTemplate DropButtonTemplate()
         {
-            var border = new FrameworkElementFactory(typeof(Border));
+            var border = new FrameworkElementFactory(typeof(Border), "chrome");
             border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
             border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
             border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
@@ -285,7 +318,9 @@ namespace OpenDashPlugin
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
             presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
             border.AppendChild(presenter);
-            return new ControlTemplate(typeof(ToggleButton)) { VisualTree = border };
+            var template = new ControlTemplate(typeof(ToggleButton)) { VisualTree = border };
+            template.Triggers.Add(HoverOutline());
+            return template;
         }
 
         /// <summary>The panel a drop button opens: raised surface, a border, 12 px of padding, and it
@@ -438,17 +473,18 @@ namespace OpenDashPlugin
                 Content = content,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Stretch,
+                FocusVisualStyle = FocusRing(),
             };
             button.Template = CardTemplate();
             button.Click += (sender, args) => clicked();
             return button;
         }
 
-        /// <summary>A border around the content and nothing else, as the drop button's template is: SimHub's
-        /// button styles paint a chrome these do not want.</summary>
+        /// <summary>A border around the content and nothing else, as the drop button's template is, and with
+        /// the same outline under the pointer: SimHub's button styles paint a chrome these do not want.</summary>
         private static ControlTemplate CardTemplate()
         {
-            var border = new FrameworkElementFactory(typeof(Border));
+            var border = new FrameworkElementFactory(typeof(Border), "chrome");
             border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
             border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
             border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
@@ -456,7 +492,9 @@ namespace OpenDashPlugin
             border.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
             border.AppendChild(presenter);
-            return new ControlTemplate(typeof(Button)) { VisualTree = border };
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = border };
+            template.Triggers.Add(HoverOutline());
+            return template;
         }
 
         private static ControlTemplate BareButtonTemplate()
