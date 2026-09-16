@@ -24,14 +24,15 @@ import {
 import { validatePackage, type Dashboard, type RectangleItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
-import { LINE_SPACING, boxSlack } from '../src/design/metrics.ts';
+import { LINE_SPACING, boxSlack, textBox } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { MODULES } from '../src/modules/index.ts';
-import { rect } from '../src/design/geometry.ts';
+import { rect, type Rect } from '../src/design/geometry.ts';
+import { densityForBox } from '../src/second/density.ts';
 import { shapeOf } from '../src/second/shape.ts';
-import { zoneFrame } from '../src/second/header.ts';
+import { zoneFrame, zoneFrameMetrics } from '../src/second/header.ts';
 import {
   BAR_FIELD_SPECS,
   BASE_FACE,
@@ -40,6 +41,7 @@ import {
   LARGE_FACE,
   ZONE_FACES,
   bandCorners,
+  bandMetrics,
   bandPageItems,
   bar,
   buildZoneFace,
@@ -412,6 +414,64 @@ describe('the hairlines across the face', () => {
 });
 
 /**
+ * The chrome a face zone draws, which is the artboards' and not the pit wall's.
+ *
+ * Every Dash sheet pads a zone `6px 12px` and opens it with a 22 px baseline row: the zone letter,
+ * 8 px, the page name, both in the 15 px label style in `#5A6069`. `PitWallZones.dc.html` draws a
+ * 28 px row over 16 px of padding, and the two shared one table until the audit read them apart.
+ */
+describe('a face zone is framed the way the artboards frame it', () => {
+  test('22 px of header inside 6px 12px of padding, in the 15 px label style', () => {
+    for (const density of ['zone', 'compact'] as const) {
+      // The same at every density, compact included: the *page* steps down to the compact ladder on
+      // a 269 by 194 zone, the chrome around it does not.
+      expect({ density, metrics: zoneFrameMetrics(density, 'face') }).toEqual({
+        density,
+        metrics: { title: 22, padX: 12, padTop: 6, gap: 4, padBottom: 6, size: ds.size.label, color: ds.color.text.label },
+      });
+    }
+  });
+
+  test('and the pit wall keeps the 28 px frame its own artboard draws', () => {
+    expect(zoneFrameMetrics('zone')).toMatchObject({ title: 28, padX: 16, size: ds.size.labelSm, color: ds.color.text.secondary });
+    expect(zoneFrameMetrics('compact')).toMatchObject({ title: 20, padX: 10 });
+    // The rectangle it has always cut, which the padding being written from the body rather than
+    // from the title row must not have moved: 28 + 6 down, 16 in, 10 left under it.
+    const { body } = zoneFrame('probe', { frame: rect(0, 0, 607, 328), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
+    expect(body).toEqual({ left: 16, top: 34, width: 575, height: 284 });
+  });
+
+  test('which leaves each face the body its artboard leaves', () => {
+    // 769 - 24 wide and 314 - 38 tall, and so on down the eight faces: the page gets the rectangle
+    // the drawing gives it rather than one the frame decided.
+    const bodyOf = (width: number, height: number): Rect =>
+      zoneFrame('probe', { frame: rect(0, 0, width, height), title: 'PROBE', counter: { kind: 'reserved', widest: '21 / 21' } }, densityForBox({ width, height }), 'face').body;
+    expect(bodyOf(769, 314)).toEqual({ left: 12, top: 32, width: 745, height: 276 });
+    expect(bodyOf(469, 320)).toEqual({ left: 12, top: 32, width: 445, height: 282 });
+    expect(bodyOf(469, 258)).toEqual({ left: 12, top: 32, width: 445, height: 220 });
+    expect(bodyOf(469, 554)).toEqual({ left: 12, top: 32, width: 445, height: 516 });
+    expect(bodyOf(274, 328)).toEqual({ left: 12, top: 32, width: 250, height: 290 });
+    expect(bodyOf(249, 328)).toEqual({ left: 12, top: 32, width: 225, height: 290 });
+    expect(bodyOf(269, 194)).toEqual({ left: 12, top: 32, width: 245, height: 156 });
+    expect(bodyOf(600, 160)).toEqual({ left: 12, top: 32, width: 576, height: 122 });
+    expect(bodyOf(600, 150)).toEqual({ left: 12, top: 32, width: 576, height: 112 });
+  });
+
+  test('the page name follows the letter by the canvas eight pixels', () => {
+    const letter = faceItems(zoneFace1920x480).find((i): i is TextItem => i.kind === 'text' && i.name === 'zoneB.letter')!;
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    const title = [...walkItems(shared.screens[0]!.items)].find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.zone.title'))!;
+    const { padX, size } = zoneFrameMetrics('zone', 'face');
+    // The letter's box, the gap, the name. Measured from the zone's own left edge, since the title
+    // is drawn inside the zone's dashboard and the letter over it by the face.
+    const letterBox = Math.ceil(measureText('BarlowMedium', 'D', size)) + 2;
+    expect({ left: title.rect.left }).toEqual({ left: padX + letterBox + ds.space[2] });
+    expect({ size: title.fontSize, ink: title.textColor }).toEqual({ size: ds.size.label, ink: ds.color.text.label });
+    expect(letter.fontSize).toBe(title.fontSize);
+  });
+});
+
+/**
  * The three things the first capture of the 1920 face on the VM caught, which no test had an
  * opinion about. Each is the same shape of mistake: something measured or written in one place and
  * drawn in another.
@@ -425,8 +485,11 @@ describe('what the first photograph of the face showed', () => {
     const c = texts.find((t) => t.name === 'zoneC.letter')!;
     expect(b.text).toBe('B');
     expect(c.text).toBe('C');
-    // Zone A and band D carry no header, so they get no letter.
-    expect(texts.some((t) => t.name === 'zoneA.letter' || t.name === 'zoneD.letter')).toBe(false);
+    // Band D opens with a letter of its own, drawn by the face for the same reason: a band
+    // dashboard is one file per rectangle and knows nothing of the zone it is serving.
+    expect(texts.find((t) => t.name === 'zoneD.letter')!.text).toBe('D');
+    // Zone A carries no header, so it gets no letter.
+    expect(texts.some((t) => t.name === 'zoneA.letter')).toBe(false);
 
     // And no page of the shared dashboard carries a letter of its own: one file cannot say both.
     const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
@@ -438,14 +501,71 @@ describe('what the first photograph of the face showed', () => {
   });
 
   test('each letter sits where its zone will draw its title, not over the page name', () => {
+    // The artboard's header: `padding: 6px 12px` and a 22 px baseline row, so the letter starts 12
+    // px in and its line box opens 6 px down. Literal rather than bounded, because a letter that
+    // has drifted two pixels off the title it is meant to sit beside is exactly what the first
+    // capture showed and a bound would not have caught.
+    const { padX, padTop, title, size } = zoneFrameMetrics('zone', 'face');
     for (const zone of ['B', 'C'] as const) {
       const letter = texts.find((t) => t.name === `zone${zone}.letter`)!;
       const r = rectOf(zoneFace1920x480, zone);
-      expect(letter.rect.left).toBeGreaterThanOrEqual(r.left);
-      // Inside the zone's own padding, and clear of the page name that follows it.
-      expect(letter.rect.left - r.left).toBeLessThan(24);
-      expect(letter.rect.top).toBeGreaterThanOrEqual(r.top);
-      expect(letter.rect.top).toBeLessThan(r.top + 28);
+      const line = r.top + padTop + (title - size) / 2;
+      expect({ zone, left: letter.rect.left, top: letter.rect.top }).toEqual({ zone, left: r.left + padX, top: textBox(line, size).top });
+      // And it is drawn in the ink and at the size the page name beside it is.
+      expect({ zone, size: letter.fontSize, ink: letter.textColor }).toEqual({ zone, size: ds.size.label, ink: ds.color.text.label });
+    }
+  });
+
+  test('band D opens with its letter, centred on the band and clear of the rank', () => {
+    for (const { face, built } of BUILT) {
+      const band = face.zones.band;
+      const letter = faceItems(face)
+        .filter((i): i is TextItem => i.kind === 'text')
+        .find((t) => t.name === 'zoneD.letter')!;
+      expect({ face: face.folder, text: letter.text, size: letter.fontSize, ink: letter.textColor }).toEqual({
+        face: face.folder,
+        text: 'D',
+        size: ds.size.label,
+        ink: ds.color.text.label,
+      });
+      // The band's own padding, from the table the band lays its rank out from, and the middle of
+      // the strip rather than a header row the band does not have.
+      expect({ face: face.folder, left: letter.rect.left }).toEqual({ face: face.folder, left: band.left + bandMetrics(band).padX });
+      expect({ face: face.folder, top: letter.rect.top }).toEqual({ face: face.folder, top: textBox(band.top + (band.height - ds.size.label) / 2, ds.size.label).top });
+
+      // And nothing the band draws reaches back into the letter's room.
+      const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
+      const clear = bandMetrics(band).padX + letter.rect.width;
+      for (const screen of dashboard.screens) {
+        for (const item of [...walkItems(screen.items)]) {
+          if (item.kind === 'layer') continue;
+          expect({ face: face.folder, screen: screen.name, item: item.name, left: item.rect.left, clear: item.rect.left >= clear }).toMatchObject({ clear: true });
+        }
+      }
+    }
+  });
+
+  test('band D sits in the well the artboards recess it into, and the face draws it there too', () => {
+    for (const { face, built } of BUILT) {
+      const band = face.zones.band;
+      const ground = faceItems(face).find((i): i is RectangleItem => i.kind === 'rect' && i.name === 'band.ground')!;
+      expect({ face: face.folder, rect: ground.rect, colour: ground.backgroundColor }).toEqual({ face: face.folder, rect: band, colour: ds.purpose.block.well });
+      // The widget paints its own dashboard's ground over the face, so the band's pages have to be
+      // drawn in the well rather than have one painted behind them.
+      const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
+      expect({ face: face.folder, ground: dashboard.backgroundColor }).toEqual({ face: face.folder, ground: ds.purpose.block.well });
+      for (const screen of dashboard.screens) {
+        expect({ face: face.folder, screen: screen.name, ground: screen.backgroundColor }).toEqual({ face: face.folder, screen: screen.name, ground: ds.purpose.block.well });
+      }
+    }
+  });
+
+  test('and every other zone is drawn on the base surface, which is not a well', () => {
+    const zoneA = rectOf(zoneFace1920x480, 'A');
+    const modules = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    const gear = reference.built.zones.find((d) => d.name === zoneDashboardName('zoneA', { width: zoneA.width, height: zoneA.height }))!;
+    for (const dashboard of [modules, gear]) {
+      expect({ name: dashboard.name, ground: dashboard.backgroundColor }).toEqual({ name: dashboard.name, ground: ds.color.surface.base });
     }
   });
 
@@ -742,7 +862,7 @@ describe('the twenty-one pages reach the face', () => {
   test('every page of the catalogue draws, and draws inside a 769 by 314 zone at shape wide', () => {
     // The ticket's own measure. The zone is 769 by 314; what a page is handed is the body under the
     // header, and the shape model is asked what that body is before anything is drawn into it.
-    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: MODULE_COUNT } });
+    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: MODULE_COUNT } }, 'zone', 'face');
     expect(shapeOf(body).width).toBe('wide');
 
     for (const screen of shared.screens) {
