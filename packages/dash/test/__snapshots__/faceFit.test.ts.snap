@@ -332,7 +332,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
-  carSettings    grid       keeps car tc abs bb mix  sheds arbFront arbRear  declared car tc abs bb mix arbFront arbRear
+  carSettings    grid       keeps car tc abs bb  sheds mix arbFront arbRear  declared car tc abs bb mix arbFront arbRear
   inputs         grid       one drawing, nothing to shed  parts steer
   session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          grid       one drawing, nothing to shed
@@ -355,7 +355,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
-  carSettings    grid       keeps car tc abs bb mix  sheds arbFront arbRear  declared car tc abs bb mix arbFront arbRear
+  carSettings    grid       keeps car tc abs bb  sheds mix arbFront arbRear  declared car tc abs bb mix arbFront arbRear
   inputs         grid       one drawing, nothing to shed  parts steer
   session        grid       keeps position class  sheds type lap timeLeft lapsLeft incidents cars  declared position class lap timeLeft
   radar          grid       one drawing, nothing to shed
