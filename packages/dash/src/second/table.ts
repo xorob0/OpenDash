@@ -23,7 +23,7 @@ import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, rowIndex } from './values.ts';
+import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex } from './values.ts';
 
 const { iff, str, fmt, eq, ne, num, and, not, gt, abs, concat, left, ucase, isnull } = ncalc;
 
@@ -112,9 +112,6 @@ function rowTypeOf(rowHeight: number): RowType {
  * instead, and a row that cannot hold even that sheds a column.
  */
 const NAME_TO_FIT = 'Tomasz Kowalczyk';
-
-/** A driver name cut to the three-letter code the narrow drawings show, upper-cased. */
-const driverCode = (idx: Expr): Expr => ucase(left(isnull(carName(idx), str('')), 3));
 
 interface CellContext {
   /** Item name prefix, unique within the screen. */
