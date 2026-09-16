@@ -171,9 +171,13 @@ describe('a shape takes the answer of one of the four the catalogue draws', () =
 });
 
 describe('the two the ticket works through', () => {
-  test('lap times keeps six at wide and four at grid and at tall narrow', () => {
+  test('lap times keeps twelve at wide, six at tall and four at grid and at tall narrow', () => {
     const at = (shape: Archetype): readonly string[] => (sheddingFor('lapTimes') as { keeps: Record<Archetype, readonly string[]> }).keeps[shape];
-    expect(at('wide')).toHaveLength(6);
+    // Twelve is the companion artboard's drawing: the six a zone draws, then the five-lap average,
+    // the position and the stint lap, then the three sectors of the last lap. The catalogue's own
+    // zone drawings keep six, so `tall` keeps six and the extra rank lives at `wide` alone.
+    expect(at('wide')).toHaveLength(12);
+    expect(at('tall')).toEqual(['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta']);
     expect(at('grid')).toEqual(['last', 'sessionBest', 'yourBest', 'delta']);
     // The catalogue draws two here and the build takes four: a zone that stacks one column has the
     // height for them, and 234 px of the base face's zone B was empty. zones.md §10 records it.
@@ -293,19 +297,28 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     // The two anti-roll bars are the cells the 122 px band cannot hold.
     '600x686 600x160 carSettings': ['arbFront', 'arbRear'],
     '600x686 600x150 carSettings': ['arbFront', 'arbRear'],
-    // Zone C of the 600 x 686 face is where a second row stops fitting at all: the delta loses its
-    // scale and the sectors their three lap times. Zone B joins it on the delta now that the frame
-    // takes the artboards' 6 by 12 padding rather than the 16 it had, which is six pixels of body
-    // height and eight of width; by the same six pixels the session loses its lap and its time
-    // left, and the stint the two stops its lead coming off `d.hero` had just bought back. Those
-    // three are the readability pass's subject rather than the frame's: readability-pass.md §9,
-    // §13 and §2.
-    '600x686 600x160 delta': ['scale'],
-    '600x686 600x150 delta': ['scale'],
+    // Zone C of the 600 x 686 face is where a second row stops fitting at all, and zone B joins it
+    // now that the frame takes the artboards' 6 by 12 padding rather than the 16 it had, which is
+    // six pixels of body height and eight of width. The delta loses its three sector deltas, the
+    // rule that belongs with them and its scale; the sectors lose their three lap times; the
+    // session loses its lap and its time left, and the stint the two stops its lead coming off
+    // `d.hero` had just bought back. The catalogue draws all of these at all four of its shapes,
+    // so each is a box it does not draw rather than a drawing withdrawn, and each is the
+    // readability pass's subject rather than the frame's: readability-pass.md §2, §9 and §13.
+    '1280x400 469x258 delta': ['s1', 's2', 's3', 'rule'],
+    // A fourth lap time does not fit the 445 x 220 body beside three others at their grown size,
+    // so the rank sheds the delta the `grid` drawing keeps; readability-pass.md §1 owns the redraw.
+    '1280x400 469x258 lapTimes': ['delta'],
+    '600x686 600x160 delta': ['s1', 's2', 's3', 'scale', 'rule'],
+    '600x686 600x150 delta': ['s1', 's2', 's3', 'scale', 'rule'],
     '600x686 600x150 lapTimes': ['delta'],
     '600x686 600x150 sectors': ['yourBest', 'last', 'sessionBest'],
     '600x686 600x150 session': ['lap', 'timeLeft'],
     '600x686 600x150 stint': ['stops', 'lastStop'],
+    // The nano's 194 px zone keeps the three sectors at the size the drawing gives them and loses
+    // the two lap times under them, which is rule 17 taking the recap rather than shrinking the
+    // reading the page exists for. The 800 x 480 face's 292 px zone keeps both.
+    '800x286 269x194 sectors': ['yourBest', 'last'],
     // The nano's session keeps the position and the class, which is what the page is read for, and
     // sheds the lap and the time left: its two counters each carry a denominator now, and a
     // denominator at 0.7 of a value is wider than the small label it replaced.

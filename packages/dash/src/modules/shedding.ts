@@ -99,26 +99,38 @@ const nothing = (why: string): Shedding => ({ kind: 'nothing', why });
  * §5, so that a reader holding a drawing against a zone finds the argument rather than a bug.
  */
 export const SHEDDING: Record<string, Shedding> = {
-  // Six values at `wide`, four at `grid`: the laps and the estimate go, and the delta stays,
+  // Twelve values at `wide`, four at `grid`: the laps and the estimate go, and the delta stays,
   // which is the clearest proof in the catalogue that shedding is not dropping the tail. At
   // `tall narrow` only the two times a driver compares on a lap.
+  //
+  // The last six are the fullest form and belong to `wide` alone. The companion artboard draws
+  // all twelve, the catalogue's own page description names nine, and the two zone drawings that
+  // are `tall` draw six; a box that cannot hold the tail takes it off in this order anyway.
   lapTimes: fields({
-    wide: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
+    wide: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta', 'average5', 'position', 'stintLap', 's1', 's2', 's3'],
     grid: ['last', 'sessionBest', 'yourBest', 'delta'],
     tallNarrow: ['last', 'sessionBest', 'yourBest', 'delta'],
     tall: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
   }),
-  // One value and a bar it is drawn against; there is nothing secondary to lose. The catalogue
-  // draws three sector deltas under the bar that this page does not build yet (XOR-171).
-  delta: fields({ wide: ['delta'], grid: ['delta'], tallNarrow: ['delta'], tall: ['delta'] }),
+  // The number and the same comparison sector by sector, which the catalogue keeps at every shape:
+  // a zone narrow enough for one column spends the bar and the scale on the number and keeps the
+  // three sectors, so the rank has nothing secondary of its own. The bar, the scale and the rule
+  // are furniture rather than fields and are declared in `PARTS`.
+  delta: fields({
+    wide: ['delta', 's1', 's2', 's3'],
+    grid: ['delta', 's1', 's2', 's3'],
+    tallNarrow: ['delta', 's1', 's2', 's3'],
+    tall: ['delta', 's1', 's2', 's3'],
+  }),
   // The three sectors are the page and stay at every shape. Of the three lap times under them the
   // drawings keep two, and not the same two: your own best and the last lap in a narrow zone, the
-  // last lap and the session best in a tall one.
+  // last lap and the session best in a tall one. The session's best of each sector is the
+  // companion artboard's own last rank and stays at `wide`, the fullest form.
   sectors: fields({
-    wide: ['yourBest', 'last', 'sessionBest'],
-    grid: ['yourBest', 'last', 'sessionBest'],
-    tallNarrow: ['yourBest', 'last'],
-    tall: ['last', 'sessionBest'],
+    wide: ['s1', 's2', 's3', 'yourBest', 'last', 'sessionBest', 'bestS1', 'bestS2', 'bestS3'],
+    grid: ['s1', 's2', 's3', 'yourBest', 'last', 'sessionBest'],
+    tallNarrow: ['s1', 's2', 's3', 'yourBest', 'last'],
+    tall: ['s1', 's2', 's3', 'last', 'sessionBest'],
   }),
   // The redline is a number a driver reads once a car, so it is the first thing the speedo drops.
   speedo: fields({ wide: ['speed', 'rpm', 'redline'], grid: ['speed', 'rpm'], tallNarrow: ['speed', 'rpm'], tall: ['speed', 'rpm'] }),
@@ -214,8 +226,9 @@ export const SHEDDING: Record<string, Shedding> = {
  */
 export const PARTS: Record<string, Keeps> = {
   // The bar and its scale are two thirds of the page's height and the drawing spends them on the
-  // number when the box is one column wide.
-  delta: { wide: ['bar', 'scale'], grid: ['bar', 'scale'], tallNarrow: [], tall: ['bar', 'scale'] },
+  // number when the box is one column wide. The rule under the scale goes with them, being what
+  // separates the scale from the three sector deltas rather than a thing of its own.
+  delta: { wide: ['bar', 'scale', 'rule'], grid: ['bar', 'scale', 'rule'], tallNarrow: [], tall: ['bar', 'scale', 'rule'] },
   // The corner toggles are the drawing's `Tyres · RIGHTS`; the fast repair and the tear-off stay.
   pitView: { wide: ['tyres'], grid: ['tyres'], tallNarrow: [], tall: [] },
   // The caption says the pressures are the ones the car left the box with. A column that narrow
