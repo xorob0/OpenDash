@@ -153,7 +153,7 @@ export const SHEDDING: Record<string, Shedding> = {
     tallNarrow: ['stintLaps', 'stops', 'lastStop'],
     tall: ['stintLaps', 'stintTime', 'completed', 'stops', 'lastStop', 'avgLap', 'driver'],
   }),
-  lapHistory: nothing('three columns and as many rows as fit; there is no fourth to drop'),
+  lapHistory: nothing('lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops'),
   damage: nothing('one line of prose: iRacing publishes no damage'),
   trackRivals: nothing('one line of prose: SimHub times sectors, not segments'),
 };
