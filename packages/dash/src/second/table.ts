@@ -111,7 +111,7 @@ function rowTypeOf(rowHeight: number): RowType {
  * Kowalcz" with the class chip hard against it. A column narrower than this draws the code form
  * instead, and a row that cannot hold even that sheds a column.
  */
-export const NAME_TO_FIT = 'Tomasz Kowalczyk';
+const NAME_TO_FIT = 'Tomasz Kowalczyk';
 
 /** A driver name cut to the three-letter code the narrow drawings show, upper-cased. */
 const driverCode = (idx: Expr): Expr => ucase(left(isnull(carName(idx), str('')), 3));
