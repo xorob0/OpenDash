@@ -504,11 +504,11 @@ export function rowsThatFit(frame: Rect, opts: { density: Density; header: boole
 }
 
 /** The header row: a label per column, aligned as its cells are, closed on a board by its rule. */
-function headerRow(spec: TableSpec, widths: number[], top: number, board: boolean): Item[] {
+function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { height: number; padX: number; board: boolean }): Item[] {
   const d = densityOf(spec.density);
-  const height = headerHeightOf(board, spec.rowHeight ?? tableRowHeight(spec.density));
+  const { height, padX, board } = geometry;
   const items: Item[] = board ? [rule(`${spec.name}.head.rule`, spec.frame.left, top + height - 1, spec.frame.width, 1)] : [];
-  let x = spec.frame.left + padXOf(board);
+  let x = spec.frame.left + padX;
   spec.columns.forEach((id, i) => {
     const width = widths[i] ?? 0;
     const column = COLUMNS[id];
@@ -581,7 +581,7 @@ export function table(spec: TableSpec): Item[] {
 
   const row: LayerItem = { kind: 'layer', name: `${spec.name}.row`, children, ...withBindings({ Visible: carAvailable(idx) }) };
   const stamped: LayerItem = { kind: 'layer', name: `${spec.name}.rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + rowGap, repeatLeftOffset: 0 };
-  return [...(header ? headerRow(spec, widths, spec.frame.top, board) : []), stamped];
+  return [...(header ? headerRow(spec, widths, spec.frame.top, { height: headerHeight, padX, board }) : []), stamped];
 }
 
 /** Every column the tables can show, for the docs and for a test that keeps them in step. */
