@@ -120,12 +120,17 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildEmptyRig()
         {
+            var pill = Ui.HStack(8, Ui.Dot(Theme.TextDim), Ui.Label("No screens yet", Theme.TextLabel));
+            pill.Height = Theme.ControlHeightSm;
+            // The pill states the rig is empty, so the sentence under it no longer says so as well: it
+            // is the explanation of what adding a screen does, not a second announcement.
             var text = Ui.Caption(
-                "No screens yet. Add the one your rig actually has and openDash installs its dashboard into SimHub; "
+                "Add the one your rig actually has and openDash installs its dashboard into SimHub; "
                 + "everything else on this page is about the screens you have added.",
                 BodyWidth);
-            text.Margin = new Thickness(0, 4, 0, 0);
-            return text;
+            var stack = Ui.VStack(4, pill, text);
+            stack.Margin = new Thickness(0, 4, 0, 0);
+            return stack;
         }
 
         /// <summary>
