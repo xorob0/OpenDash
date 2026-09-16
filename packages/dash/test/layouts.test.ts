@@ -771,7 +771,7 @@ describe('the round faces, row by row of the spec table', () => {
         expect(items.filter((i) => i.kind === 'layer' && i.name.startsWith('flag.')).map((i) => i.name)).toEqual(['flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']);
       });
 
-      test('the chequered ring is 24 white 20 x 12 checks at 15 degree steps, centred 6 px inside the rim, and nothing else', () => {
+      test('the chequered ring is 24 white 20 x 12 checks at 15 degree steps offset half a step, centred 6 px inside the rim, and nothing else', () => {
         const checks = layerNamed(items, 'flag.chequered').children;
         expect(checks).toHaveLength(CHEQUER_COUNT);
         expect(CHEQUER_COUNT).toBe(24);
@@ -781,7 +781,7 @@ describe('the round faces, row by row of the spec table', () => {
           if (c.kind !== 'rect') throw new Error('check');
           expect(c.name).toBe(`flag.chequered.c${pad2(k)}`);
           expect(c.backgroundColor).toBe('#F5F7FA');
-          expect(c.rotation ?? 0).toBe(k * 15);
+          expect(c.rotation ?? 0).toBe((k + 0.5) * 15);
           expect({ width: c.rect.width, height: c.rect.height }).toEqual({ width: 20, height: 12 });
           expect(Math.abs(distance(centre(c.rect), centrePoint) - (face.r - 6))).toBeLessThanOrEqual(1);
           expect(c.border?.radius).toBeUndefined();
