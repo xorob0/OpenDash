@@ -17,6 +17,7 @@ namespace OpenDashPlugin
         private TextBlock dashboardTitle;
         private Border statusHost;
         private Button reinstallButton;
+        private TextBlock reinstallLabel;
         private TextBlock updateLine;
         private Button updateButton;
         private Button restoreButton;
@@ -287,10 +288,26 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>An outline button, as every action on the panel but the one primary is.</summary>
+        /// <summary>
+        /// An outline button carrying the refresh icon, which is how Plugin.dc.html draws this row.
+        /// </summary>
+        /// <remarks>
+        /// The component sheet uses the word "Reinstall" as the label on its primary swatches, but the
+        /// page itself draws this button transparent inside ui.border, so the swatch is a specimen and
+        /// the page is the instruction. The accented press the tab would spend on it is not owed here:
+        /// somebody opens Install to see what is on disk, and writing it all again is the repair.
+        ///
+        /// The label is kept as a block of its own because the confirmation rewrites it; replacing the
+        /// button's whole Content, which is what it did while the label was a bare string, would drop
+        /// the icon beside it and never put it back.
+        /// </remarks>
         private Button BuildReinstallButton()
         {
-            var button = BuildSecondaryButton("Reinstall", "Write every dashboard your rig has into DashTemplates again. Your settings are kept.");
+            var button = Ui.OutlineButton(null);
+            button.MinWidth = ButtonMinWidth;
+            button.ToolTip = "Write every dashboard your rig has into DashTemplates again. Your settings are kept.";
+            reinstallLabel = Ui.Text("Reinstall", Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
+            button.Content = Ui.HStack(PanelMetrics.ButtonIconGap, Ui.Icon(PanelIcons.Refresh, Theme.TextPrimary), reinstallLabel);
             button.Click += (sender, args) => Reinstall();
             return button;
         }
@@ -314,7 +331,7 @@ namespace OpenDashPlugin
             if (edited.Count > 0 && !confirmingReinstall)
             {
                 confirmingReinstall = true;
-                reinstallButton.Content = "Replace anyway";
+                if (reinstallLabel != null) reinstallLabel.Text = "Replace anyway";
                 updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
                     + " changed since OpenDash wrote them: " + string.Join(", ", edited)
                     + ". Reinstalling replaces what is there. A copy of yours is kept beside it in DashTemplates, "
@@ -352,11 +369,10 @@ namespace OpenDashPlugin
             finally
             {
                 confirmingReinstall = false;
-                if (reinstallButton != null)
-                {
-                    reinstallButton.Content = "Reinstall";
-                    reinstallButton.IsEnabled = true;
-                }
+                if (reinstallLabel != null) reinstallLabel.Text = "Reinstall";
+                // The kit draws a disabled button at the canvas's 40 per cent through a template trigger,
+                // so putting IsEnabled back is the whole of the re-enable: nothing here dimmed it by hand.
+                if (reinstallButton != null) reinstallButton.IsEnabled = true;
                 Save();
                 RefreshStatus();
                 RefreshRestoreButton();
