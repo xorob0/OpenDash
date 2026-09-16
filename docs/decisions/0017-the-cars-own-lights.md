@@ -167,8 +167,9 @@ skips what it cannot read rather than throwing, and a car openDash cannot parse 
 
 **The strip and the screen now disagree about colour.** The strip mirrors the car's palette; the rev
 bar and the rev arc still draw openDash's tokens at openDash's thresholds. This is the divergence
-`shiftPoints.ts` warns about, arriving for real, and it is the first thing to close: the same
-computation that fills a strip can fill a bar, and rung 1 should not stay strips-only for long.
+`shiftPoints.ts` warns about, arriving for real, and it is the first thing to close
+([#353](https://github.com/xorob0/OpenDash/issues/353)): the same computation that fills a strip can
+fill a bar, and rung 1 should not stay strips-only for long.
 
 ### Unresolved
 
@@ -176,3 +177,5 @@ Whether the rev bar should adopt the car's colours at all, or whether a screen i
 openDash's palette should win and only the *timing* should mirror. That is a design question rather
 than a mechanical one, and it is the reason rung 1 is deliberately strips-only in this record
 instead of being pushed through `shift.ts` where the screens would have picked it up for free.
+[#353](https://github.com/xorob0/OpenDash/issues/353) is where it is decided, and it lists the three
+answers rather than assuming one.

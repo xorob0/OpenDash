@@ -11,6 +11,11 @@
  * one at a time, all red — appears nowhere in this file and nowhere in the generated profile. It is
  * the numbers in the table, and the strip draws whatever they say.
  *
+ * The screens do not read this yet, and that is a gap rather than a shape: the rev bar and the rev
+ * arc still draw openDash's tokens at the published ladder's thresholds, so a strip and a face in
+ * one rig now disagree about a car the table covers. #353 decides what a screen should do with a
+ * car's colours; the mechanism is the property below either way.
+ *
  * **Why a colour formula rather than a lit/unlit formula.** `CustomStatus`, which every other effect
  * in `rpmStrip.ts` uses, has one colour chosen at build time and an expression that says whether to
  * show it. A mirrored LED changes colour with the car, so the colour is the thing that has to be
