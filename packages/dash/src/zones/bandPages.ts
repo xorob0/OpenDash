@@ -76,6 +76,9 @@ export interface BandField {
   /** A small unit or denominator drawn after the value. */
   after?: string;
   color?: `#${string}`;
+  /** The label's own colour, where it is not the label grey: D7 writes the driver's own position
+   *  in the primary text the way it writes his own gap. */
+  labelColor?: `#${string}`;
   colorBind?: string;
   /**
    * True while the game publishes the field. A field without one is always drawn; a field with one
@@ -167,8 +170,13 @@ const sectors: readonly BandField[] = [
  * D7 Relative: the car ahead, the driver, and the car behind.
  *
  * Each gap is headed by the position of the car it belongs to rather than by the word for where it
- * is, which is how the catalogue draws it: P3 above −1.342 says both which car and how far in the
- * room a label already takes. "P99" is the widest of them, and a field is measured by its widest.
+ * is, and the catalogue sets the two side by side at the same size rather than one over the other:
+ * P3 −1.342 is read in one movement of the eye, where a 15 px P3 over a 34 px gap would read as the
+ * heading of a column one number long. That is {@link INLINE_PAGES}. "P99" is the widest position,
+ * and a field is measured by its widest.
+ *
+ * The catalogue draws a 16 by 11 country flag between the two, which nothing publishes a country
+ * for; it is the same missing source as the licence badge on the opponents page.
  */
 const relativePosition = (idx: string): string => concat(str('P'), fmt(carPosition(idx), '0'));
 
@@ -183,7 +191,16 @@ const relative: readonly BandField[] = [
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
-  { id: 'you', label: 'P4', labelBind: relativePosition(playerPosition()), labelWidest: 'P99', sample: '0.000', bind: str('0.000'), chars: CHARS.relativeGap },
+  {
+    id: 'you',
+    label: 'P4',
+    labelBind: relativePosition(playerPosition()),
+    labelWidest: 'P99',
+    labelColor: ds.color.text.primary,
+    sample: '0.000',
+    bind: str('0.000'),
+    chars: CHARS.relativeGap,
+  },
   {
     id: 'behind',
     label: 'P5',
@@ -254,6 +271,21 @@ export const BAND_PAGES: Record<string, readonly BandField[]> = {
 };
 
 /**
+ * The pages the catalogue draws as one line rather than as labels over values, and the word each is
+ * headed with.
+ *
+ * D7 is the only one, and it needs the word because P3, P4 and P5 name the cars rather than the
+ * page. The gap between its groups is the catalogue's own 20 and not the band's field gap, which is
+ * the pitch of two rows and too wide for three pairs on one line.
+ */
+interface InlinePage {
+  word: string;
+  gap: number;
+}
+
+const INLINE_PAGES: Record<string, InlinePage> = { relative: { word: 'Relative', gap: 20 } };
+
+/**
  * What the artboards draw band D to, per band rectangle.
  *
  * Keyed by the rectangle because that is all a band dashboard is ever given: its screens are built
@@ -309,6 +341,8 @@ const FIELD_GAP = 5;
 const LABEL_ROW = 13;
 /** Gap between the numerals a field draws under one label. */
 const ROW_GAP = ds.space[2];
+/** Gap between the position and the gap of a field the catalogue draws on one line. */
+const INLINE_GAP = 8;
 
 /**
  * The largest value size whose line box fits the band, given the label above it.
@@ -459,8 +493,8 @@ export function bandPageItems(id: string, frame: Rect, prefix: string, corners =
   if (!fields) throw new RangeError(`band D has no page "${id}"`);
   const m = bandMetrics(frame);
   const labelFs = ds.size.label;
-  const valueFs = valueSizeFor(frame.height, m.valueSize, labelFs, LABEL_ROW, FIELD_GAP);
-  const geometry = blockGeometry(frame, valueFs, labelFs);
+  const inline = INLINE_PAGES[id];
+  const valueFs = inline ? inlineValueSize(frame.height, m.valueSize) : valueSizeFor(frame.height, m.valueSize, labelFs, LABEL_ROW, FIELD_GAP);
 
   // The rank gets what the letter and the corner blocks leave, not the whole band. Centring in the
   // whole band put the last field of D6 Sectors six pixels into the DRS lamp at 1280, where a page
@@ -469,10 +503,72 @@ export function bandPageItems(id: string, frame: Rect, prefix: string, corners =
   const apart = corners ? BAND_GROUP_GAP : 0;
   const usable = { left: frame.left + taken.left + apart, width: Math.max(0, frame.width - taken.left - taken.right - 2 * apart) };
 
-  return rank(
-    fields.map((field) => bandMember(field, prefix, geometry)),
-    { left: usable.left, width: usable.width, gap: m.fieldGap, when: 'close' },
-  ).items;
+  const geometry = blockGeometry(frame, valueFs, labelFs);
+  const members = inline ? inlineMembers(fields, inline, prefix, frame, valueFs, labelFs) : fields.map((field) => bandMember(field, prefix, geometry));
+
+  return rank(members, { left: usable.left, width: usable.width, gap: inline ? inline.gap : m.fieldGap, when: 'close' }).items;
+}
+
+/**
+ * The largest value whose box fits a band that draws one line rather than two rows.
+ *
+ * An inline page has no label row above its values, so the whole band is the line's to use and the
+ * artboards' size fits with room to spare; this exists so that a band shorter than any drawn still
+ * shrinks rather than clips.
+ */
+function inlineValueSize(height: number, preferred: number): number {
+  for (let fs = preferred; fs > 8; fs--) {
+    const box = textBox((height - fs) / 2, fs);
+    if (box.top >= 0 && box.top + box.height <= height) return fs;
+  }
+  return 8;
+}
+
+/** The page word and then one member per field, each of them a position and a gap on one line. */
+function inlineMembers(fields: readonly BandField[], page: InlinePage, prefix: string, frame: Rect, valueFs: number, labelFs: number): RankMember[] {
+  const valueTop = frame.top + (frame.height - valueFs) / 2;
+  const wordTop = frame.top + (frame.height - labelFs) / 2;
+  const wordWidth = Math.ceil(measureText('BarlowMedium', page.word.toUpperCase(), labelFs)) + 2;
+  const word: RankMember = {
+    id: 'word',
+    width: wordWidth,
+    draw: (at) => [
+      label(`${prefix}word`, page.word.toUpperCase(), at.x, wordTop, wordWidth, { size: labelFs, leftBind: at.leftAt(), visibleBind: at.visibleBind }),
+    ],
+  };
+
+  return [
+    word,
+    ...fields.map((field): RankMember => {
+      // The position is set in the value's face at the value's size, so it is measured there and
+      // not in the label's: a position is proportional rather than cellular, because "P" is wider
+      // than any digit and a cell cut for digits would clip it.
+      const head = Math.ceil(measureText('BarlowCondensedSemiBold', field.labelWidest ?? field.label, valueFs)) + 2;
+      const value = valueWidthOf(field, valueFs);
+      return {
+        id: field.id,
+        width: head + INLINE_GAP + value,
+        present: field.present,
+        draw: (at) => [
+          numeral(`${prefix}${field.id}.position`, field.label, at.x, valueTop, valueFs, field.chars, {
+            bind: field.labelBind,
+            proportional: true,
+            widest: field.labelWidest,
+            color: field.labelColor ?? ds.color.text.label,
+            leftBind: at.leftAt(),
+            visibleBind: at.visibleBind,
+          }),
+          numeral(`${prefix}${field.id}.value`, field.sample, at.x + head + INLINE_GAP, valueTop, valueFs, field.chars, {
+            bind: field.bind,
+            color: field.color,
+            maxWidth: value + 4,
+            leftBind: at.leftAt(head + INLINE_GAP),
+            visibleBind: at.visibleBind,
+          }),
+        ],
+      };
+    }),
+  ];
 }
 
 /** Where a block of a label over a value sits in the band, its two rows 5 apart and the label
