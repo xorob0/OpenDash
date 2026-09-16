@@ -23,7 +23,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import type { Item } from '../generator.ts';
 import { cells, monoWidth } from '../design/metrics.ts';
-import { defineModule, pageKeeps } from './module.ts';
+import { defineModule, drawnAt, pageKeeps } from './module.ts';
 
 const { add, div, fmt, max, min, mul, num } = ncalc;
 
@@ -38,8 +38,13 @@ export const PEDALS = [
   { id: 'clutch', name: 'Clutch', color: ds.color.text.secondary, value: clutch, sample: '0' },
 ] as const;
 
-/** A pedal bar, at the catalogue's 20 px on a companion page and 16 in a zone, 10 apart. */
-const BAR = { companion: 20, zone: 16, gap: 10 } as const;
+/**
+ * A pedal bar: the catalogue draws it 20 px wide at its fullest shape and 16 at the other three,
+ * always 10 apart, and puts 16 px between the three groups of the page.
+ */
+const BAR = { wide: 20, narrow: 16, gap: 10 } as const;
+/** The gap between the trace, the bars and the steering, which the catalogue draws at 16 everywhere. */
+const GROUP_GAP = ds.space[4];
 
 /**
  * The steering indicator: the canvas's 96 px dial, drawn as a track with a marker running along it.
@@ -53,7 +58,10 @@ const STEER = { width: 96, marker: 4, gap: 6 } as const;
 
 export const inputs = defineModule('inputs', (ctx) => {
   const d = densityOf(ctx.density);
-  const barWidth = ctx.density === 'companion' ? BAR.companion : BAR.zone;
+  const barWidth = drawnAt(ctx) === 'wide' ? BAR.wide : BAR.narrow;
+  // The catalogue draws the numbers at 24 at three of its four shapes and at 16 at `tall narrow`,
+  // which is `d.tiny` and is 14 at the compact ramp. readability-pass.md §8 is the argument for
+  // not following it down there: a percentage nobody can read is one the page may as well drop.
   const valueFs = d.small;
   const valueHeight = valueFs + d.fieldGap;
   // A pedal's column is as wide as the wider of its bar and its number, so three numbers side by
@@ -62,13 +70,13 @@ export const inputs = defineModule('inputs', (ctx) => {
   const columnWidth = Math.max(barWidth, valueWidth);
   const barsWidth = PEDALS.length * columnWidth + (PEDALS.length - 1) * BAR.gap;
   const steers = pageKeeps('steer', ctx);
-  const steerWidth = steers ? STEER.width + d.gapX : 0;
-  const plotWidth = Math.max(0, ctx.frame.width - barsWidth - steerWidth - d.gapX);
+  const steerWidth = steers ? STEER.width + GROUP_GAP : 0;
+  const plotWidth = Math.max(0, ctx.frame.width - barsWidth - steerWidth - GROUP_GAP);
   const series: Series[] = PEDALS.map((pedal) => ({ name: pedal.name, color: pedal.color, bind: pedal.value(), min: 0, max: 100 }));
   const items = trace(`${ctx.prefix}trace`, rect(ctx.frame.left, ctx.frame.top, plotWidth, ctx.frame.height), series, ctx.density, { legend: false });
   const barsTop = ctx.frame.top;
   const barsHeight = Math.max(0, ctx.frame.height - valueHeight);
-  const barsLeft = ctx.frame.left + plotWidth + d.gapX;
+  const barsLeft = ctx.frame.left + plotWidth + GROUP_GAP;
   PEDALS.forEach((pedal, i) => {
     const x = barsLeft + i * (columnWidth + BAR.gap);
     items.push(
@@ -84,7 +92,7 @@ export const inputs = defineModule('inputs', (ctx) => {
       }),
     );
   });
-  if (steers) items.push(...steerColumn(ctx.prefix, rect(barsLeft + barsWidth + d.gapX, barsTop, STEER.width, barsHeight), valueFs, d.labelSm, d.fieldGap));
+  if (steers) items.push(...steerColumn(ctx.prefix, rect(barsLeft + barsWidth + GROUP_GAP, barsTop, STEER.width, barsHeight), valueFs, d.labelSm, d.fieldGap));
   return items;
 });
 
