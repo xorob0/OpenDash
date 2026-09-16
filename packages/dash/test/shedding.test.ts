@@ -280,12 +280,13 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     '800x480 249x328 relative': ['gap'],
     '800x480 249x366 leaderboard': ['gap'],
     '800x480 249x366 relative': ['gap'],
-    // The five-lap average is the last field of a rank the nano has no room for. Zone B of the
-    // 600 x 686 face joins zone C at it now that a denominator is drawn at 0.7 of its value rather
-    // than at the density's small label, which is wider and leaves the rank less room.
-    '800x286 269x194 fuel': ['average'],
-    '600x686 600x160 fuel': ['average'],
-    '600x686 600x150 fuel': ['average'],
+    // The refuel figure and the five-lap average are the last two fields of a rank the 600 x 686
+    // face's 114 px zones have no room for: two ranks plus the level bar need about 124 px at the
+    // compact ramp, so the two lead readings are what survive. The nano keeps its rank whole now
+    // that fuel leads with the tank, the time and the laps rather than spreading three readings
+    // over one line.
+    '600x686 600x160 fuel': ['toAdd', 'average'],
+    '600x686 600x150 fuel': ['toAdd', 'average'],
     // Half the subject: a page about the car ahead and the car behind draws one of them. This is
     // the clearest defect of the set, and it is the opponents block's own ticket.
     '800x286 269x194 opponents': ['behind.gap', 'behind.name'],
