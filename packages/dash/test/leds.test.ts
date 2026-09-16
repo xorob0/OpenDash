@@ -9,10 +9,11 @@ import { stableGuid, leds } from '../src/generator.ts';
 import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE } from '../src/contract.ts';
 import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
-import { bandOf, ladderColors, ladderOrder, rungFlashes } from '../src/leds/ladder.ts';
+import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
 import {
   ALL_EFFECTS,
   BEST_EFFORT,
+  BLINK_OFF,
   DROPPED,
   FAST_BLINK_MS,
   NO_PROPERTY,
@@ -25,7 +26,7 @@ import {
   flagEffects,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
-import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { lastGear, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -99,18 +100,91 @@ describe('the rev ladder and its styles', () => {
     expect([0, 4, 8].map(ladderOrder('meetInMiddle', 9).rungOf)).toEqual([0, 4, 0]);
   });
 
-  test('f1 is the same order in different colours, and flashes the whole bar rather than the top band', () => {
+  test('f1 is the same order in green and red, and keeps blue for the over-rev', () => {
     expect(ladderOrder('f1', 14).rungOf(5)).toBe(ladderOrder('leftToRight', 14).rungOf(5));
-    expect(ladderColors('f1')).toEqual([ds.color.good.primary, ds.color.danger.primary, ds.color.info.primary]);
+    // This asserted [green, red, blue] and the whole bar flashing under f1 alone, and both halves
+    // are reversed on purpose. Blue was the third band's ordinary colour, so it lit on the way up
+    // the ladder and could not also be what over-rev means; and the flash is no longer a property
+    // of a style at all, so there is nothing here to ask about it.
+    expect(ladderColors('f1')).toEqual([ds.color.good.primary, ds.color.good.primary, ds.color.danger.primary]);
+    expect(ladderColors('f1')).not.toContain(OVER_REV_COLOR);
     expect(ladderColors('leftToRight')).toEqual([ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3]);
-    // Every rung flashes under f1; only the top band does otherwise.
-    expect([0, 5, 13].map((r) => rungFlashes('f1', r, 14))).toEqual([true, true, true]);
-    expect([0, 5, 13].map((r) => rungFlashes('leftToRight', r, 14))).toEqual([false, false, true]);
+  });
+
+  test('the fourteen LEDs are coloured as the sheets draw them: f1 green to the shift point, the others in thirds', () => {
+    const letters: Record<string, string> = { [ds.purpose.shift.stage1]: 'G', [ds.purpose.shift.stage2]: 'A', [ds.purpose.shift.stage3]: 'R' };
+    const drawn = (style: (typeof LED_RPM_STYLES)[number]): string => {
+      const order = ladderOrder(style, 14);
+      const colors = ladderColors(style);
+      return Array.from({ length: 14 }, (_, k) => letters[colors[bandOf(order.rungOf(k), order.rungs)]!] ?? '?').join('');
+    };
+    // leftToRight: five green, five amber, four red, so part way is GGGGGA and shift-now GGGGGAAAAAR.
+    expect(drawn('leftToRight')).toBe('GGGGGAAAAARRRR');
+    // f1: ten green and four red, so part way is six green and shift-now ten green and one red.
+    expect(drawn('f1')).toBe('GGGGGGGGGGRRRR');
+    // meetInMiddle is the same thirds read inwards from both ends.
+    expect(drawn('meetInMiddle')).toBe('GGGAARRRRAAGGG');
   });
 
   test('the bands are thirds with the last taking the remainder', () => {
     expect([0, 4, 5, 9, 10, 13].map((r) => bandOf(r, 14))).toEqual([0, 0, 1, 1, 2, 2]);
     expect([0, 1, 2].map((r) => bandOf(r, 3))).toEqual([0, 1, 2]);
+  });
+
+  test('over the blink RPM the whole bar turns one colour and flashes at 4 Hz, in every style', () => {
+    // It was the top band alone in two styles of the three, in that band's own red, and the whole
+    // bar only under f1 — where the lower bands alternated their own colour with the top band's,
+    // which reads as a bar changing colour rather than as a bar flashing.
+    expect(1000 / (FAST_BLINK_MS * 2)).toBe(4);
+    const profile = profileFor('4-14-4');
+    for (const style of LED_RPM_STYLES) {
+      const ladders = leds.childrenOf(walk(profile.containers).find((c) => c.description === `style: ${style}`)!);
+      for (const ladder of ladders) {
+        const children = leds.childrenOf(ladder);
+        const last = children[children.length - 1]!;
+        // After the rungs, so it takes the bar from whatever they were drawing.
+        expect({ style, ladder: ladder.description, last: last.description }).toMatchObject({ last: 'over-rev' });
+        const over = leds.childrenOf(last) as Extract<leds.LedContainer, { kind: 'customStatus' }>[];
+        expect({ style, ladder: ladder.description, leds: over.length }).toMatchObject({ leds: 14 });
+        expect(new Set(over.map((c) => c.color))).toEqual(new Set([OVER_REV_COLOR]));
+        expect(new Set(over.map((c) => c.blinkColor))).toEqual(new Set([BLINK_OFF]));
+        expect(new Set(over.map((c) => c.blinkDelayMs))).toEqual(new Set([FAST_BLINK_MS]));
+        // ...and no rung under it flashes any more, because the flash is the layer.
+        const rungs = children.slice(0, -1) as Extract<leds.LedContainer, { kind: 'customStatus' }>[];
+        expect({ style, ladder: ladder.description, flashing: rungs.filter((c) => c.blinkFormula !== undefined).length }).toMatchObject({ flashing: 0 });
+      }
+    }
+  });
+
+  test('no over-rev flashes in the last gear, on either ladder or on a measured gear', () => {
+    // A flash is an instruction, and in the gear there is nothing to shift out of it asks for a
+    // shift that cannot be made. The exception belongs to the flash rather than to one source of
+    // thresholds, so all three carry the same negation rather than three readings of one rule.
+    const guard = `!(${lastGear()})`;
+    const points = { first: 6000, shift: 7000, last: 7500, blink: 7800 };
+    for (const [which, expression] of [
+      ['mirror', overRev('mirror')],
+      ['simhub', overRev('simhub')],
+      ['measured', tabledOverRev(points)],
+    ] as const) {
+      expect({ which, guarded: expression.includes(guard) }).toMatchObject({ guarded: true });
+    }
+    // ...and every over-rev layer the build emits is triggered by one of those three, measured
+    // gears included, so there is nowhere left for a flash without the exception on it.
+    const model = 'examplecar';
+    SHIFT_TABLE[model] = { name: 'Example', source: 'test', gears: { '3': points } };
+    try {
+      for (const shape of ALL_SHAPES) {
+        const layers = walk(rpmStripProfile(shape, stableGuid(`t/lastgear/${shape.id}`)).containers).filter((c) => c.description === 'over-rev');
+        expect({ shape: shape.id, layers: layers.length > 0 }).toMatchObject({ layers: true });
+        for (const layer of layers) {
+          const trigger = (layer as Extract<leds.LedContainer, { kind: 'conditionalGroup' }>).trigger.expression;
+          expect({ shape: shape.id, guarded: trigger.includes(guard) }).toMatchObject({ guarded: true });
+        }
+      }
+    } finally {
+      delete SHIFT_TABLE[model];
+    }
   });
 
   test('a style decides the look and never the when: every style reads the same four thresholds', () => {
@@ -483,9 +557,12 @@ describe('the per-gear shift table', () => {
     // Band 0 runs 6000 to 7000 over five rungs: rung 0 at 6000, rung 2 at 6400.
     expect(tabledStageLit(points, 0, 0, 5)).toBe(`(${rpm}) > (6000)`);
     expect(tabledStageLit(points, 0, 2, 5)).toBe(`(${rpm}) > (6400)`);
-    // The top band lights together at `last`, and the flash is at `blink`.
+    // The top band lights together at `last`, and the flash is at `blink`. The flash also carries
+    // the last-gear exception, which this used to assert the absence of: a measured gear has no
+    // more claim to flash in the gear there is nothing to shift out of than either derived ladder
+    // has, so the reversal is the point of the line rather than a loosening of it.
     expect(tabledStageLit(points, 2, 0, 5)).toBe(`(${rpm}) >= (7500)`);
-    expect(tabledOverRev(points)).toBe(`(${rpm}) >= (7800)`);
+    expect(tabledOverRev(points)).toBe(`((${rpm}) >= (7800)) and (!(${lastGear()}))`);
   });
 
   test('an entry reaches a profile as a gear-and-car override that composes over the derived ladder', () => {
