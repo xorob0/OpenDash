@@ -62,6 +62,16 @@ export interface ZoneLayout {
   background: Hex;
   zones: ZoneRects;
   /**
+   * The gap between two of the fifteen rev segments: 8 at 1920, 6 at 1280, 4 at 850 and below.
+   *
+   * A field per face rather than one constant, and read off the artboard like every other number in
+   * this directory: the three figures are what `design/canvas/Dash.dc.html` and its siblings draw in
+   * the flex row that holds the segments, and `design/tokens.json` shiftLights.segments writes the
+   * same three down. They look like a ramp, but a face is entitled to disagree with the ramp, which
+   * is why this is a number the face states rather than one derived from its width.
+   */
+  revBarGap: number;
+  /**
    * Whether band D draws a corner block at each end. The artboards draw them at 1920x480,
    * 1280x480, 1280x400 and 1280x720 and not at 850x480, 800x286 or 600x686; the threshold is those
    * drawings rather than a round number.

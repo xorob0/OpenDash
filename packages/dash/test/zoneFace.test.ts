@@ -453,6 +453,65 @@ describe('the parts the face draws itself', () => {
 });
 
 /**
+ * The rev bar of each face, which is fifteen segments and one number.
+ *
+ * The spans are snapped to whole pixels from the rect and the gap, so the gap is the only figure a
+ * face states and every width follows from it. Each artboard draws the row as a flex box carrying
+ * its own `gap`, and the three figures below are read off those rows rather than off a ramp: the
+ * faces all passed 8 until they were given a gap of their own, which made the segments of every
+ * 1280 face two pixels narrow and those of the nano four.
+ */
+describe('the rev bar segments sit at the gap each artboard draws', () => {
+  /** The `gap` of the flex row holding the fifteen segments, per sheet. */
+  const GAPS: Record<string, number> = {
+    openDash: 8,
+    'openDash 1280x480': 6,
+    'openDash 1280x400': 6,
+    'openDash 1280x720': 6,
+    'openDash 850x480': 4,
+    // 800 x 480 has no sheet of its own and takes 850's here as it takes every other number.
+    'openDash 800x480': 4,
+    'openDash 800x286': 4,
+    'openDash 600x686': 4,
+  };
+
+  const segmentsOf = (layout: ZoneLayout): RectangleItem[] => {
+    const found = faceItems(layout).find((i) => i.name === 'revBar.shiftLights');
+    if (found?.kind !== 'layer') throw new Error(`${layout.folder} draws no rev bar`);
+    return found.children.filter((c): c is RectangleItem => c.kind === 'rect');
+  };
+
+  test('the table names every face once', () => {
+    expect(Object.keys(GAPS).sort()).toEqual(ZONE_FACES.map((f) => f.folder).sort());
+  });
+
+  for (const face of ZONE_FACES) {
+    const gap = GAPS[face.folder]!;
+
+    test(`${face.folder} draws fifteen segments ${gap} px apart, flush with the rev bar rect`, () => {
+      expect({ folder: face.folder, gap: face.revBarGap }).toEqual({ folder: face.folder, gap });
+      const segments = segmentsOf(face);
+      expect(segments).toHaveLength(ds.shiftLights.segments);
+
+      // Flush at both ends: the rounding is spent between the segments, never outside them, so a
+      // face whose gap changed keeps the strip the artboard drew and only redistributes its insides.
+      const r = face.zones.revBar;
+      const last = segments[segments.length - 1]!.rect;
+      expect({ folder: face.folder, first: segments[0]!.rect.left, right: last.left + last.width }).toEqual({
+        folder: face.folder,
+        first: r.left,
+        right: r.left + r.width,
+      });
+      for (const s of segments) expect([s.rect.top, s.rect.height]).toEqual([r.top, r.height]);
+      for (let k = 1; k < segments.length; k++) {
+        const before = segments[k - 1]!.rect;
+        expect({ folder: face.folder, k, gap: segments[k]!.rect.left - (before.left + before.width) }).toEqual({ folder: face.folder, k, gap });
+      }
+    });
+  }
+});
+
+/**
  * The face is ruled across as well as down. The build drew the two vertical rules between the zones
  * from the first zone face and neither of the horizontal ones, although every rectangular artboard
  * separates the bar from the body and the body from band D with the same pixel.
