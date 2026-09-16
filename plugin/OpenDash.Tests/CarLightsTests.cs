@@ -126,7 +126,9 @@ namespace OpenDashPlugin.Tests
             foreach (var run in new[] { 8, 9, 10, 12, 14, 15, 16, 18, 20, 25, 6, 5 })
             {
                 var lit = CarLightMirror.Colors(table, "1", 2500, run, MirrorFit.Stretch, 0);
-                Assert.Equal(lit, lit.Reverse().ToArray());
+                // Enumerable.Reverse by name: on an array a newer compiler binds `.Reverse()` to the
+                // Span overload, which returns void and reverses in place. Same trap as XOR-269.
+                Assert.Equal(lit, Enumerable.Reverse(lit).ToArray());
                 // And it is filling from the ends: at 2500 rpm the outer pair is lit and the middle is not.
                 Assert.NotEqual(Off, lit[0]);
                 Assert.Equal(Off, lit[run / 2]);
@@ -194,7 +196,7 @@ namespace OpenDashPlugin.Tests
             // LEDs, so the indices cannot mirror. What a driver sees still does, because those two
             // share a threshold and a colour on a bar that fills from both ends.
             var thresholds = placement.Select(i => row.Thresholds[i]).ToArray();
-            Assert.Equal(thresholds, thresholds.Reverse().ToArray());
+            Assert.Equal(thresholds, Enumerable.Reverse(thresholds).ToArray());
         }
 
         [Fact]
