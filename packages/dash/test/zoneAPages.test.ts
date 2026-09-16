@@ -103,10 +103,17 @@ const DRAWN: Record<string, { a1: [number, number, number]; a2: number; a3: [num
   '380x358': { a1: [197, 68, 39], a2: 295, a3: [158, 86] },
   '340x361': { a1: [199, 69, 40], a2: 297, a3: [159, 87] },
   '300x366': { a1: [201, 70, 40], a2: 301, a3: [161, 88] },
-  // The speed is the one run a column can be too narrow for: at 340 the width stops it at 204
-  // before the height does, which is what the 1280x720 sheet draws too (38 per cent, not 44).
-  '340x554': { a1: [305, 105, 61], a2: 458, a3: [204, 133] },
-  '340x598': { a1: [329, 114, 66], a2: 495, a3: [204, 144] },
+  // The speed is the one run a column can be too narrow for: at 340 the width stops it before the
+  // height does, and the sheets draw 204 there. The code reaches 212, because the speed is a
+  // SemiBold numeral again and SemiBold cells are narrower than the Bold ones it used to be
+  // measured in, so the same column holds eight pixels more. docs/research/design-audit.md carries
+  // the question; the 204 is the only number on these sheets the build no longer reproduces.
+  '340x554': { a1: [305, 105, 61], a2: 458, a3: [212, 133] },
+  // The one column where the gear is stopped by its neighbours rather than by its own share: a
+  // 0.42 ghost either side of a 329 px gear wants 344 px of a 340 px column, so the cluster settles
+  // at 320. It is a rev-bar-off arrangement, which no sheet draws, so 329 was a share rather than a
+  // reading; the three sheets that do draw ghosts all set them at 0.42 of the gear.
+  '340x598': { a1: [320, 114, 66], a2: 495, a3: [212, 144] },
 };
 
 describe('zone A shares its column', () => {
@@ -145,8 +152,11 @@ describe('zone A shares its column', () => {
       expect(speed.fontSize).toBeGreaterThan(gear.fontSize);
       expect(gear.textColor).toBe(ds.color.text.secondary);
       expect(speed.textColor).toBe(ds.color.text.primary);
-      // The speed is the page's one big value and is drawn, and measured, in Bold.
-      expect(speed.fontWeight).toBe('Bold');
+      // The speed is the page's one big value and is still a numeral: every sheet sets a numeral in
+      // 600 and the current gear alone in 700, and zone A's catalogue is on every face, so a Bold
+      // speed was a second Bold on every screen the build emits. The size is unchanged, the solver
+      // landing on the same share of the column in either face.
+      expect(speed.fontWeight).toBe('SemiBold');
       expect(baselineOf(speed)).toBeGreaterThan(0);
     });
 
@@ -190,9 +200,9 @@ describe("what zone A's pages say beside their values", () => {
     }
   });
 
-  test('A1 draws the speed in Bold and the revs in the secondary ink', () => {
+  test('only the gear is Bold, and the revs are in the secondary ink', () => {
     const items = page('gearSpeedRevs', frame);
-    expect(named(items, '.speed').fontWeight).toBe('Bold');
+    expect(named(items, '.speed').fontWeight).toBe('SemiBold');
     expect(named(items, '.revs').textColor).toBe(ds.color.text.secondary);
     expect(named(items, 'main.gear').fontWeight).toBe('Bold');
   });

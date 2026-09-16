@@ -28,7 +28,7 @@ import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
 import { UNIT_GAP } from '../second/field.ts';
-import { CHARS } from '../second/values.ts';
+import { CHARS, speedUnit } from '../second/values.ts';
 import { lastGear } from '../shift.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { shapeOf } from '../second/shape.ts';
@@ -36,8 +36,15 @@ import { ds } from '../tokens.ts';
 
 const { game, fmt, isnull, num, str, iff, eq, not } = ncalc;
 
-/** The weight the speed page draws its one big value in, and the weight it is measured in. */
-const SPEED_WEIGHT = 'Bold' as const;
+/**
+ * The weight the speed page draws its one big value in, and the weight it is measured in.
+ *
+ * Every sheet says the same thing: a numeral is Barlow Condensed 600, and the current gear alone is
+ * 700. The speed was Bold as well, and zone A's catalogue is on every face, so the second Bold was
+ * on every screen the build emits rather than on one artboard. The weight is also what the size is
+ * solved in, Bold cells being wider than SemiBold ones, so the page settles on a larger speed now.
+ */
+const SPEED_WEIGHT = 'SemiBold' as const;
 
 /** The smallest a run may be shrunk to when the column is too narrow for its share. */
 const MIN_SIZE = 24;
@@ -78,7 +85,7 @@ const rowLineBox = (top: number, fs: number): number => top + (rowHeight(fs) - f
 const rowGap = (height: number, share: number): number => Math.max(2, Math.round(height * share));
 
 /** The share of the gear a ghosted neighbour is drawn at, and the gap off the gear's cell edge. */
-const GHOST_SHARE = 0.34;
+const GHOST_SHARE = 0.42;
 const GHOST_GAP = ds.space[3];
 
 /**
@@ -219,7 +226,9 @@ const speedRuns = (prefix: string, fs: number, unitFs: number): Run[] => [
     weight: SPEED_WEIGHT,
     bind: fmt(isnull(game('SpeedKmh'), num(0)), '0'),
   },
-  { kind: 'label', name: `${prefix}speed.unit`, text: 'KM/H', fs: unitFs, widest: 'KM/H', bind: game('SpeedLocalUnit') },
+  // The written unit rather than the enum. `SpeedLocalUnit` reads `KMH` or `MPH`, so binding it
+  // raw drew `KMH` where every sheet writes `KM/H`; `speedUnit` is the one place that mapping lives.
+  { kind: 'label', name: `${prefix}speed.unit`, text: 'KM/H', fs: unitFs, widest: 'KM/H', bind: speedUnit() },
 ];
 
 /** The revs and their unit, in the secondary ink the canvas draws them in. */
