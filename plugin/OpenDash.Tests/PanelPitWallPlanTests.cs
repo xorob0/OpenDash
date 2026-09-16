@@ -262,5 +262,23 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultWebViewUrl, Contract.NormaliseUrl(PanelPitWallPlan.AddressPlaceholder));
         }
 
+        /// <summary>The companion's grid: two columns, and the two gaps between its rows.</summary>
+        [Fact]
+        public void The_companion_grid_is_two_columns()
+        {
+            Assert.Equal(2, PanelCompanionPlan.ModuleColumns);
+            Assert.Equal(12, PanelCompanionPlan.ModuleRowGap);
+            Assert.Equal(40, PanelCompanionPlan.ModuleColumnGap);
+            Assert.Equal(11, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
+        }
+
+        /// <summary>The one action the companion's own section binds, which the contract has to carry for
+        /// the row to be bindable at all.</summary>
+        [Fact]
+        public void A_companion_has_one_wheel_action_to_bind()
+        {
+            var actions = Contract.ScreenActionNames(Contract.KindCompanion, "Companion").ToArray();
+            Assert.Contains(Contract.NextModuleActionFor("Companion"), actions);
+        }
     }
 }
