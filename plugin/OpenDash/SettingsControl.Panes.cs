@@ -545,13 +545,27 @@ namespace OpenDashPlugin
 
         // --- A pit wall ---------------------------------------------------------------------------
 
+        /// <summary>
+        /// Two sections and not one: where the zones are, and what each of them shows.
+        /// </summary>
+        /// <remarks>
+        /// The picture answers a different question from the list under it, and the canvas gives each its
+        /// own heading. The pane therefore carries both headings itself, which is why the Rig tab does not
+        /// wrap a pit wall the way it wraps the other kinds.
+        /// </remarks>
         private FrameworkElement BuildPitWallPane(ScreenInstance screen)
         {
-            var rows = new List<UIElement>
-            {
-                Ui.Caption("Three pages share four data zones and one wide zone, so the letters need a picture.", BodyWidth),
-                BuildPitWallPicture(),
-            };
+            return Ui.VStack(0,
+                Ui.Section("Where the zones are",
+                    Ui.Caption("Three pages share four data zones and one wide zone, so the letters need a picture.", BodyWidth),
+                    BuildPitWallPicture()),
+                Ui.Section("What each zone shows", Ui.VStack(PanelPitWallPlan.RowGap, BuildPitWallRows(screen))));
+        }
+
+        /// <summary>The four zones, the wide zone and the address, in that order.</summary>
+        private UIElement[] BuildPitWallRows(ScreenInstance screen)
+        {
+            var rows = new List<UIElement>();
             foreach (var letter in Contract.PitWallZoneLetters)
             {
                 var captured = letter;
@@ -561,7 +575,7 @@ namespace OpenDashPlugin
                     screen.Zones[index] = Contract.NormaliseZonePage(page, Contract.PitWallDefaultZonePages[index]);
                     Save();
                 });
-                rows.Add(Ui.Row("Zone " + captured, ZoneDescription(captured), select));
+                rows.Add(Ui.Row("Zone " + captured, PanelPitWallPlan.ZoneDescription(captured), select));
             }
             var wide = BuildZoneSelect(ZonePages.Wide, screen.WideZone, page =>
             {
@@ -570,85 +584,66 @@ namespace OpenDashPlugin
             });
             rows.Add(Ui.Row("Wide zone", "The full-width zone on the tower page.", wide));
             rows.Add(Ui.Row("Web view address", "The page the Web view zone shows. http or https only; leave empty for none.", BuildWebViewBox(screen)));
-            return Ui.VStack(12, rows.ToArray());
+            return rows.ToArray();
         }
 
         /// <summary>The three pages, so a letter is a position rather than a label.</summary>
         private static FrameworkElement BuildPitWallPicture()
         {
-            var race = PitWallPage("Race", new[] { "Board", "A", "B" }, false);
-            var tower = PitWallPage("Tower", new[] { "Wide", "C", "D" }, false);
-            var telemetry = PitWallPage("Telemetry", new[] { "A", "B", "C" }, true);
-            var row = Ui.HStack(16, race, tower, telemetry);
+            var pages = new List<UIElement>();
+            foreach (var page in PanelPitWallPlan.Pages) pages.Add(BuildPitWallPage(page));
+            var row = Ui.HStack(PanelPitWallPlan.ThumbGap, pages.ToArray());
             row.HorizontalAlignment = HorizontalAlignment.Left;
             return row;
         }
 
-        private static FrameworkElement PitWallPage(string title, string[] cells, bool stacked)
+        /// <summary>
+        /// One page, drawn at the rectangles PanelPitWallPlan gives it.
+        /// </summary>
+        /// <remarks>
+        /// A Canvas rather than a Grid because the three pages have three shapes and only one of them is a
+        /// table: the Tower page puts a wide zone across the top of its right half and two zones side by
+        /// side under it, which no arrangement of star rows and columns draws. Placing every panel
+        /// absolutely is also what lets the picture and the sentences beside it come from one table.
+        /// </remarks>
+        private static FrameworkElement BuildPitWallPage(PanelPitWallPlan.Page page)
         {
-            var grid = new Grid { Width = 172, Height = 104, Background = Ui.Brush(Theme.Rule) };
-            if (stacked)
+            var canvas = new Canvas
             {
-                for (var i = 0; i < cells.Length; i++)
-                {
-                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-                }
-            }
-            else
+                Width = PanelPitWallPlan.ThumbWidth,
+                Height = PanelPitWallPlan.ThumbHeight,
+                Background = Ui.Brush(Theme.SurfaceInset),
+            };
+            foreach (var panel in page.Panels)
             {
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-                grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            }
-
-            for (var i = 0; i < cells.Length; i++)
-            {
-                var label = Ui.Label(cells[i], i == 0 ? Theme.TextSecondary : Theme.TextPrimary);
+                // The accent says the letter can be pointed at a page in the list below; text.label says
+                // the panel is part of the page and there is nothing here to set.
+                var label = Ui.Label(panel.Name, panel.Configurable ? Theme.Accent : Theme.TextLabel);
                 label.HorizontalAlignment = HorizontalAlignment.Center;
                 label.VerticalAlignment = VerticalAlignment.Center;
-                var cell = new Border { Background = Ui.Brush(Theme.SurfaceBase), Margin = new Thickness(0, i > 0 ? 1 : 0, 0, 0), Child = label };
-                if (stacked)
+                var box = new Border
                 {
-                    Grid.SetRow(cell, i);
-                }
-                else if (i == 0)
-                {
-                    // The first cell of each landscape page spans both rows on the left.
-                    Grid.SetRow(cell, 0);
-                    Grid.SetRowSpan(cell, 2);
-                    Grid.SetColumn(cell, 0);
-                    cell.Margin = new Thickness(0);
-                }
-                else
-                {
-                    Grid.SetRow(cell, i - 1);
-                    Grid.SetColumn(cell, 1);
-                    cell.Margin = new Thickness(1, i > 1 ? 1 : 0, 0, 0);
-                }
-                grid.Children.Add(cell);
+                    Width = panel.Width,
+                    Height = panel.Height,
+                    Background = Ui.Brush(Theme.Field),
+                    BorderBrush = Ui.Brush(Theme.Rule),
+                    BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                    Child = label,
+                };
+                Canvas.SetLeft(box, panel.X);
+                Canvas.SetTop(box, panel.Y);
+                canvas.Children.Add(box);
             }
 
-            var caption = Ui.Label(title);
-            caption.Margin = new Thickness(0, 6, 0, 0);
-            return Ui.VStack(0, new Border
+            var caption = Ui.Text(page.Title, PanelPitWallPlan.CaptionSize, FontWeights.Normal, Theme.TextSecondary);
+            caption.Margin = new Thickness(0, PanelPitWallPlan.CaptionGap, 0, 0);
+            var picture = new Border
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
-                BorderThickness = new Thickness(1),
-                Child = grid,
-            }, caption);
-        }
-
-        /// <summary>Where each zone sits, so the letters mean something before the dashboard is open.</summary>
-        private static string ZoneDescription(string letter)
-        {
-            switch (letter)
-            {
-                case "A": return "Race page, upper right. Telemetry page, top.";
-                case "B": return "Race page, lower right. Telemetry page, middle.";
-                case "C": return "Tower page, lower left. Telemetry page, bottom.";
-                default: return "Tower page, lower right.";
-            }
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                Child = canvas,
+            };
+            return Ui.VStack(0, picture, caption);
         }
 
         /// <summary>The pages in page-number order, so that SelectedIndex is the page number.</summary>
@@ -656,12 +651,10 @@ namespace OpenDashPlugin
         {
             var box = new ComboBox
             {
-                Width = 220,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
+                Width = PanelPitWallPlan.SelectWidth,
                 HorizontalAlignment = HorizontalAlignment.Right,
             };
+            Ui.Field(box, PanelPitWallPlan.SelectHeight);
             foreach (var page in pages) box.Items.Add(page.Name);
             box.SelectedIndex = selected >= 0 && selected < pages.Count ? selected : 0;
             box.SelectionChanged += (sender, args) =>
@@ -672,18 +665,39 @@ namespace OpenDashPlugin
             return box;
         }
 
-        /// <summary>The web view address. Written when the box loses focus or Enter is pressed, then normalised.</summary>
+        /// <summary>
+        /// The web view address. Written when the box loses focus or Enter is pressed, then normalised.
+        /// </summary>
+        /// <remarks>
+        /// The "https://" an empty box shows is drawn and not stored. Contract.NormaliseUrl keeps only an
+        /// absolute address, so a bare scheme written into the setting would be blanked on the first
+        /// commit and the box would empty itself in front of whoever was typing into it. WPF has no
+        /// watermark of its own, so it is a text block over the box rather than behind it: the box paints
+        /// ui.field and anything underneath is covered.
+        ///
+        /// At 220 an address of any length is cut off, so the tooltip carries the whole of it once there
+        /// is one; the rule it has to satisfy is in the row's caption and does not need saying twice.
+        /// </remarks>
         private FrameworkElement BuildWebViewBox(ScreenInstance screen)
         {
             var box = new TextBox
             {
-                Width = 320,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Right,
+                Width = PanelPitWallPlan.AddressWidth,
                 Text = screen.WebViewUrl ?? string.Empty,
-                ToolTip = "An http or https address; anything else is ignored.",
+            };
+            Ui.Field(box, PanelPitWallPlan.SelectHeight);
+            box.Padding = new Thickness(PanelPitWallPlan.AddressPaddingX, 0, PanelPitWallPlan.AddressPaddingX, 0);
+
+            var watermark = Ui.Text(PanelPitWallPlan.AddressPlaceholder, Theme.SizeBody, FontWeights.Normal, Theme.TextLabel);
+            watermark.HorizontalAlignment = HorizontalAlignment.Left;
+            watermark.Margin = new Thickness(PanelPitWallPlan.AddressPaddingX + PanelMetrics.BorderWeight, 0, 0, 0);
+            watermark.IsHitTestVisible = false;
+
+            Action reread = () =>
+            {
+                var empty = box.Text.Length == 0;
+                watermark.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+                box.ToolTip = empty ? "An http or https address; anything else is ignored." : box.Text;
             };
             Action commit = () =>
             {
@@ -691,12 +705,18 @@ namespace OpenDashPlugin
                 Save();
                 if (box.Text != screen.WebViewUrl) box.Text = screen.WebViewUrl;
             };
+            box.TextChanged += (sender, args) => reread();
             box.LostFocus += (sender, args) => commit();
             box.KeyDown += (sender, args)  =>
             {
                 if (args.Key == Key.Enter) commit();
             };
-            return box;
+            reread();
+
+            var host = new Grid { Width = PanelPitWallPlan.AddressWidth, HorizontalAlignment = HorizontalAlignment.Right };
+            host.Children.Add(box);
+            host.Children.Add(watermark);
+            return host;
         }
 
         // --- A companion ---------------------------------------------------------------------------
