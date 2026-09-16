@@ -20,13 +20,6 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
-        private const double FaceWidth = BodyWidth - 50;
-        private const double FaceRevBarHeight = 19;
-        private const double FaceBarHeight = 24;
-        private const double FaceBodyHeight = 150;
-        private const double FaceBandHeight = 26;
-        private const double FaceCellPadding = 6;
-
         // --- A face ------------------------------------------------------------------------------
 
         private FrameworkElement BuildFacePane(ScreenInstance screen)
@@ -50,7 +43,7 @@ namespace OpenDashPlugin
                 BuildFacePicture(screen, face),
                 BuildStripCaption(face),
                 BuildFaceWarning(screen),
-                BuildWheelButtons(screen),
+                BuildWheelButtons(screen, face),
             };
             RefreshFaceWarning(screen);
             return Ui.VStack(12, rows.ToArray());
@@ -70,21 +63,22 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildFacePicture(ScreenInstance screen, Contract.FaceSize face)
         {
-            var grid = new Grid { Width = FaceWidth, Background = Ui.Brush(Theme.Rule), HorizontalAlignment = HorizontalAlignment.Left };
-            var rows = new List<double> { FaceRevBarHeight, 1 };
-            if (face.HasBar) rows.AddRange(new double[] { FaceBarHeight, 1 });
-            rows.AddRange(new double[] { BodyHeightFor(face), 1, FaceBandHeight });
+            var plan = PanelFacePlan.For(face);
+            var grid = new Grid { Width = PanelFacePlan.PictureWidth, Background = Ui.Brush(Theme.Rule), HorizontalAlignment = HorizontalAlignment.Left };
+            var rows = new List<double> { plan.RevBar, PanelFacePlan.Seam };
+            if (plan.HasBar) rows.AddRange(new double[] { plan.Bar, PanelFacePlan.Seam });
+            rows.AddRange(new double[] { plan.Body, PanelFacePlan.Seam, plan.Band });
             foreach (var height in rows) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(height) });
 
             var row = 0;
             AddAt(grid, BuildRevBarStrip(), row);
             row += 2;
-            if (face.HasBar)
+            if (plan.HasBar)
             {
                 AddAt(grid, BuildBarStrip(screen, face), row);
                 row += 2;
             }
-            AddAt(grid, BuildFaceBody(screen, face), row);
+            AddAt(grid, BuildFaceBody(screen, plan), row);
             AddAt(grid, BuildBandStrip(screen), row + 2);
             return new Border
             {
@@ -93,20 +87,6 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Child = grid,
             };
-        }
-
-        /// <summary>
-        /// How tall to draw the body.
-        ///
-        /// A stacked body needs room for three cells rather than one, so it is given the sum of its
-        /// parts scaled to the plan's width; a row keeps the artboard's height.
-        /// </summary>
-        private static double BodyHeightFor(Contract.FaceSize f)
-        {
-            if (f.Body != Contract.FaceBody.Column) return FaceBodyHeight;
-            var total = 0;
-            foreach (var part in f.Parts) total += part;
-            return Math.Max(FaceBodyHeight, Math.Round(FaceWidth * ((double)total / f.Width) / 2));
         }
 
         private static void AddAt(Grid grid, UIElement child, int row)
@@ -131,8 +111,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildBarStrip(ScreenInstance screen, Contract.FaceSize face)
         {
             var single = face.BarFieldsPerEnd == 1;
-            var left = BuildBarEnd(screen, "Left1", single ? null : "Left2", 130);
-            var right = BuildBarEnd(screen, "Right1", single ? null : "Right2", 140);
+            var left = BuildBarEnd(screen, "Left1", single ? null : "Left2", PanelFacePlan.BarEndLeftWidth);
+            var right = BuildBarEnd(screen, "Right1", single ? null : "Right2", PanelFacePlan.BarEndRightWidth);
             var middle = Ui.Label("Car settings");
             middle.HorizontalAlignment = HorizontalAlignment.Center;
             var dock = new DockPanel { LastChildFill = true, Margin = new Thickness(8, 0, 8, 0) };
@@ -180,79 +160,81 @@ namespace OpenDashPlugin
         /// The three body zones, in the order and along the axis this face draws them: B, A and C
         /// across a wide face, A over B over C in portrait.
         /// </summary>
-        private FrameworkElement BuildFaceBody(ScreenInstance screen, Contract.FaceSize face)
+        private FrameworkElement BuildFaceBody(ScreenInstance screen, PanelFacePlan plan)
         {
             var grid = new Grid { Background = Ui.Brush(Theme.Rule) };
-            var letters = face.BodyOrder;
-            var stacked = face.Body == Contract.FaceBody.Column;
-            var total = 0;
-            foreach (var part in face.Parts) total += part;
-            var span = stacked ? BodyHeightFor(face) : FaceWidth;
-            var sizes = new double[letters.Length];
-            for (var i = 0; i < letters.Length; i++) sizes[i] = Math.Round((span - 2) * face.Parts[i] / (double)total);
-
-            for (var i = 0; i < letters.Length; i++)
+            for (var i = 0; i < plan.Letters.Length; i++)
             {
-                if (stacked)
+                if (plan.Stacked)
                 {
-                    if (i > 0) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1) });
-                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(sizes[i]) });
+                    if (i > 0) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(PanelFacePlan.Seam) });
+                    grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(plan.Cells[i]) });
                 }
                 else
                 {
-                    if (i > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
-                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(sizes[i]) });
+                    if (i > 0) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PanelFacePlan.Seam) });
+                    grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(plan.Cells[i]) });
                 }
             }
-            for (var i = 0; i < letters.Length; i++)
+            for (var i = 0; i < plan.Letters.Length; i++)
             {
-                var cell = BuildZoneCell(screen, letters[i], stacked ? FaceWidth : sizes[i]);
-                if (stacked) Grid.SetRow(cell, i * 2);
+                var cell = BuildZoneCell(screen, plan.Letters[i], plan.Stacked ? PanelFacePlan.PictureWidth : plan.Cells[i]);
+                if (plan.Stacked) Grid.SetRow(cell, i * 2);
                 else Grid.SetColumn(cell, i * 2);
                 grid.Children.Add(cell);
             }
             return grid;
         }
 
-        /// <summary>"ZONE B" at the top, the page it opens on and how many it cycles at the bottom, and the
-        /// class filter under them where the zone has a page it changes.</summary>
+        /// <summary>
+        /// One zone of the body: its letter, the page it opens on directly under it, how many pages it
+        /// cycles under that, and the class filter at the foot where the zone has a page it changes.
+        /// </summary>
+        /// <remarks>
+        /// The three read down in the order they are written here, which they did not before: a
+        /// DockPanel of three bottom-docked children draws them from the bottom up, so the count came
+        /// out above the select it counts. One stack is what holds the order the canvas draws, and an
+        /// edit that adds a fourth control to the dock cannot invert it again.
+        ///
+        /// The cell is the tightest box on the panel. At the reference face it is 138 high, of which the
+        /// padding takes 16, the letter about 16, the two controls 48 and the gaps between them 18,
+        /// which leaves the class filter the 40 a toggle and its label need; a control added here has to
+        /// shrink another or move out of the cell rather than draw past the seam.
+        /// </remarks>
         private FrameworkElement BuildZoneCell(ScreenInstance screen, string letter, double width)
         {
-            var inner = width - 2 * FaceCellPadding;
+            var inner = PanelFacePlan.Inner(width);
             var dock = new DockPanel { LastChildFill = false };
-            var label = Ui.Label("Zone " + letter);
-            DockPanel.SetDock(label, Dock.Top);
-            dock.Children.Add(label);
+            var stack = Ui.VStack(PanelFacePlan.CellGap,
+                Ui.Label(PanelFacePlan.ZoneLabel(letter), Theme.TextSecondary),
+                BuildZoneSelectFor(screen, letter, inner),
+                BuildMaskDrop(screen, letter, inner));
+            DockPanel.SetDock(stack, Dock.Top);
+            dock.Children.Add(stack);
 
             if (FacePages.OffersClassFilter(letter))
             {
-                var classOnly = BuildClassFilterBox(screen, letter);
-                classOnly.Margin = new Thickness(0, 6, 0, 0);
+                var classOnly = BuildClassFilterRow(screen, letter);
                 DockPanel.SetDock(classOnly, Dock.Bottom);
                 dock.Children.Add(classOnly);
             }
 
-            var select = BuildZoneSelectFor(screen, letter, inner);
-            DockPanel.SetDock(select, Dock.Bottom);
-            dock.Children.Add(select);
-
-            var mask = BuildMaskDrop(screen, letter, inner);
-            mask.Margin = new Thickness(0, 0, 0, 6);
-            DockPanel.SetDock(mask, Dock.Bottom);
-            dock.Children.Add(mask);
-
             return new Border
             {
                 Background = Ui.Brush(Theme.SurfaceBase),
-                Padding = new Thickness(FaceCellPadding),
+                Padding = new Thickness(PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY, PanelFacePlan.CellPaddingX, PanelFacePlan.CellPaddingY),
                 Child = dock,
             };
         }
 
-        /// <summary>Band D, across the foot: the same two controls as a body zone, laid along the row.</summary>
+        /// <summary>Band D, across the foot: the same two controls as a body zone, laid along the row
+        /// rather than stacked, since a band has the width and not the height.</summary>
         private FrameworkElement BuildBandStrip(ScreenInstance screen)
         {
-            var row = Ui.HStack(8, Ui.Label("Zone D"), BuildZoneSelectFor(screen, "D", 170), BuildMaskDrop(screen, "D", 150));
+            var row = Ui.HStack(PanelFacePlan.BandGap,
+                Ui.Label(PanelFacePlan.ZoneLabel("D"), Theme.TextSecondary),
+                BuildZoneSelectFor(screen, "D", PanelFacePlan.BandSelectWidth),
+                BuildMaskDrop(screen, "D", PanelFacePlan.BandSelectWidth));
             row.Margin = new Thickness(8, 0, 8, 0);
             return new Border { Background = Ui.Brush(Theme.SurfaceInset), Child = row };
         }
@@ -270,6 +252,9 @@ namespace OpenDashPlugin
                 RefreshFaceWarning(screen);
             });
             select.ToolTip = "The page zone " + letter + " opens on";
+            // The field chrome, so that the two controls of a cell are one pair rather than SimHub's box
+            // above the panel's own. A ComboBox keeps SimHub's template, which is what Ui.Field leaves it.
+            Ui.Field(select, Theme.ControlHeightSm);
             zoneSelects[letter] = select;
             return select;
         }
@@ -281,21 +266,16 @@ namespace OpenDashPlugin
         /// of the zone and not of the face: the point of it is zone B listing the race while zone C
         /// lists the class a driver is actually racing in.
         /// </summary>
-        private CheckBox BuildClassFilterBox(ScreenInstance screen, string letter)
+        /// <remarks>
+        /// A toggle and a label beside it, because a boolean is a toggle everywhere else on the panel and
+        /// this was one of the two places it was not. Nothing but the control itself writes the setting,
+        /// so the toggle is not kept for refreshing the way the page select and the count are.
+        /// </remarks>
+        private FrameworkElement BuildClassFilterRow(ScreenInstance screen, string letter)
         {
-            var box = new CheckBox
-            {
-                Content = "My class only",
-                FontSize = Theme.SizeLabel,
-                FontFamily = PanelFonts.Label,
-                Foreground = Ui.Brush(Theme.TextSecondary),
-                IsChecked = screen.Face.IsClassOnly(letter),
-                ToolTip = "Show the leaderboard and the relative in zone " + letter + " for your own class",
-            };
-            box.Checked += (sender, args) => { screen.Face.SetClassOnly(letter, true); Save(); };
-            box.Unchecked += (sender, args) => { screen.Face.SetClassOnly(letter, false); Save(); };
-            zoneClassBoxes[letter] = box;
-            return box;
+            var toggle = BuildToggle(screen.Face.IsClassOnly(letter), on => { screen.Face.SetClassOnly(letter, on); Save(); });
+            toggle.ToolTip = "Show the leaderboard and the relative in zone " + letter + " for your own class";
+            return Ui.HStack(PanelFacePlan.CellGap, toggle, Ui.Text("My class only", Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary));
         }
 
         /// <summary>
@@ -304,9 +284,46 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildMaskDrop(ScreenInstance screen, string letter, double width)
         {
-            var button = Ui.DropButton(width, MaskCaption(screen, letter), "Which pages zone " + letter + " cycles through");
+            var caption = MaskCaption(screen, letter);
+            var button = Ui.DropButton(width, caption, "Which pages zone " + letter + " cycles through");
+            DressAsCount(button, caption);
             zoneMaskButtons[letter] = button;
             return Ui.Drop(button, BuildMaskPanel(screen, letter));
+        }
+
+        /// <summary>
+        /// A count is not a value: the canvas sets it as a tracked label at eleven in text.label under a
+        /// twelve pixel chevron, where a drop button's caption is a value at twelve in text.primary.
+        /// </summary>
+        /// <remarks>
+        /// The chrome stays the kit's -- this rewrites the caption of a button Ui.DropButton built and
+        /// touches nothing else -- because the kit has no tracked-caption variant to ask for, and a
+        /// second drop button drawn here would be a field the control kit already covers. The variant
+        /// belongs in Widgets.cs beside DropButton; until it is there, the pair below is where it lives.
+        ///
+        /// A tracked label is one block per character rather than a TextBlock, so Ui.SetDropText has
+        /// nothing to write to and SetCountCaption replaces the whole caption instead. The gap of five
+        /// the canvas leaves between the caption and the chevron is the slack in a docked row rather
+        /// than a number: the caption takes the left of the box and the chevron the right.
+        /// </remarks>
+        private static void DressAsCount(ToggleButton button, string text)
+        {
+            var host = new Border { VerticalAlignment = VerticalAlignment.Center };
+            var chevron = Ui.Icon(Ui.ChevronIcon, Theme.TextLabel, PanelFacePlan.CountChevronSize);
+            chevron.HorizontalAlignment = HorizontalAlignment.Right;
+            var row = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(chevron, Dock.Right);
+            row.Children.Add(chevron);
+            row.Children.Add(host);
+            button.Content = row;
+            button.Tag = host;
+            SetCountCaption(button, text);
+        }
+
+        private static void SetCountCaption(ToggleButton button, string text)
+        {
+            var host = button.Tag as Border;
+            if (host != null) host.Child = Ui.Label(text, Theme.TextLabel, PanelFacePlan.CountCaptionSize);
         }
 
         private static string MaskCaption(ScreenInstance screen, string letter)
@@ -416,7 +433,7 @@ namespace OpenDashPlugin
                 if (select.SelectedIndex != start) select.SelectedIndex = start;
             }
             ToggleButton button;
-            if (zoneMaskButtons.TryGetValue(letter, out button)) Ui.SetDropText(button, MaskCaption(screen, letter));
+            if (zoneMaskButtons.TryGetValue(letter, out button)) SetCountCaption(button, MaskCaption(screen, letter));
             List<CheckBox> boxes;
             if (zoneMaskBoxes.TryGetValue(letter, out boxes))
             {
@@ -426,12 +443,6 @@ namespace OpenDashPlugin
                     var enabled = screen.Face.PageEnabled(letter, pages[i].Number);
                     if (boxes[i].IsChecked != enabled) boxes[i].IsChecked = enabled;
                 }
-            }
-            CheckBox classOnly;
-            if (zoneClassBoxes.TryGetValue(letter, out classOnly))
-            {
-                var on = screen.Face.IsClassOnly(letter);
-                if (classOnly.IsChecked != on) classOnly.IsChecked = on;
             }
         }
 
@@ -468,45 +479,22 @@ namespace OpenDashPlugin
         /// Per screen, which is what lets a second face stay still while the one in front of the driver
         /// cycles. Before ADR 0017 the actions were per face *size*, so two screens of one size shared
         /// one set of buttons and there was no way to give them different ones.
+        ///
+        /// The four are laid out in the order the picture above them draws the zones, wrapping into
+        /// pairs, so that a driver binding zone C looks in the place zone C is. PanelFacePlan.ZoneOrder
+        /// is that order; Contract.FaceZoneLetters keeps its own, because it indexes the settings.
         /// </remarks>
-        private FrameworkElement BuildWheelButtons(ScreenInstance screen)
+        private FrameworkElement BuildWheelButtons(ScreenInstance screen, Contract.FaceSize face)
         {
-            var binders = Contract.FaceZoneLetters
-                .Select(letter => (UIElement)Ui.Row(Ui.Label("Zone " + letter), BuildBinder(Contract.CycleZoneAction(screen.Namespace, letter), screen.Name + " · zone " + letter)))
-                .ToArray();
-
-            var zoneBox = new ComboBox
+            var wrap = new WrapPanel { Width = BodyWidth };
+            foreach (var letter in PanelFacePlan.ZoneOrder(face))
             {
-                Width = 110,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-            };
-            foreach (var letter in Contract.FaceZoneLetters) zoneBox.Items.Add("Zone " + letter);
-            var glance = Contract.NormaliseQuickGlance(screen.Face.QuickGlance);
-            zoneBox.SelectedIndex = Contract.QuickGlanceZone(glance);
-
-            var pageHost = new Border { VerticalAlignment = VerticalAlignment.Center };
-            Action fillPages = () =>
-            {
-                var letter = Contract.FaceZoneLetters[Math.Max(0, zoneBox.SelectedIndex)];
-                var current = Contract.NormaliseQuickGlance(screen.Face.QuickGlance);
-                var page = Contract.QuickGlanceZone(current) == zoneBox.SelectedIndex ? Contract.QuickGlancePage(current) : 0;
-                pageHost.Child = BuildPageSelect(FacePages.For(letter), page, 200, index =>
-                {
-                    screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneBox.SelectedIndex, index);
-                    Save();
-                    RefreshFaceWarning(screen);
-                });
-            };
-            zoneBox.SelectionChanged += (sender, args) =>
-            {
-                if (zoneBox.SelectedIndex < 0) return;
-                screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneBox.SelectedIndex, 0);
-                Save();
-                fillPages();
-            };
-            fillPages();
+                var pair = Ui.HStack(8,
+                    Ui.Label(PanelFacePlan.ZoneLabel(letter)),
+                    BuildBinder(Contract.CycleZoneAction(screen.Namespace, letter), screen.Name + " · zone " + letter));
+                pair.Margin = new Thickness(0, 0, PanelFacePlan.BindingGap, PanelFacePlan.BindingGap);
+                wrap.Children.Add(pair);
+            }
 
             var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
                 Ui.Caption("Hold to show one page, release to return. Usually the relative or the track."));
@@ -514,9 +502,45 @@ namespace OpenDashPlugin
 
             return Ui.Section("Wheel buttons on this screen",
                 Ui.Caption("Bound per screen, so a second face can stay still while the one in front of you cycles.", BodyWidth),
-                Ui.VStack(6, binders),
-                Ui.Row(glanceText, Ui.HStack(8, zoneBox, pageHost)),
-                Ui.Row(Ui.Label("Glance button"), BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true)));
+                wrap,
+                Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
+                    BuildGlanceSelect(screen),
+                    BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true))));
+        }
+
+        /// <summary>
+        /// The one page the glance shows, zone and page together.
+        /// </summary>
+        /// <remarks>
+        /// One select of fifty-four rather than a zone box beside a page box: the glance is one choice,
+        /// and a zone without a page means nothing. The list is Contract.FaceZoneLetters order, which is
+        /// the order the settings are in, and the item a row reads is PanelFacePlan.GlanceLabel, which is
+        /// where the wording is pinned.
+        /// </remarks>
+        private ComboBox BuildGlanceSelect(ScreenInstance screen)
+        {
+            var options = PanelFacePlan.GlanceOptions();
+            var select = new ComboBox
+            {
+                Width = PanelFacePlan.GlanceSelectWidth,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                ToolTip = "The page a held button shows",
+            };
+            Ui.Field(select, Theme.ControlHeightSm);
+            foreach (var option in options) select.Items.Add(PanelFacePlan.GlanceLabel(option));
+            var glance = Contract.NormaliseQuickGlance(screen.Face.QuickGlance);
+            var index = Array.IndexOf(options, glance);
+            select.SelectedIndex = index >= 0 ? index : 0;
+            select.SelectionChanged += (sender, args) =>
+            {
+                if (select.SelectedIndex < 0 || select.SelectedIndex >= options.Length) return;
+                screen.Face.QuickGlance = options[select.SelectedIndex];
+                Save();
+                // The clash line counts the glance among the participants, so the warning has to be asked
+                // again here and not only when a zone moves.
+                RefreshFaceWarning(screen);
+            };
+            return select;
         }
 
         // --- A pit wall ---------------------------------------------------------------------------
