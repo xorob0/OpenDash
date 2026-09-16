@@ -11,7 +11,7 @@
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import type { LedRpmStyle } from '../contract.ts';
-import { mirrorOverRev, mirrorStageLit, simhubRedline, simhubStageLit } from '../shift.ts';
+import { mirrorOverRev, mirrorStageLit, simhubOverRev, simhubStageLit } from '../shift.ts';
 import { ds } from '../tokens.ts';
 
 const { gt, mul, num } = ncalc;
@@ -68,8 +68,8 @@ export const rungLit = (ladder: Ladder, rung: number, rungs: number): Expr => {
   return ladder === 'mirror' ? mirrorStageLit(band, local, count) : simhubStageLit(band, local, count);
 };
 
-/** Whether the bar is over-revving, under the chosen ladder. */
-export const overRev = (ladder: Ladder): Expr => (ladder === 'mirror' ? mirrorOverRev() : simhubRedline());
+/** Whether the bar is over-revving, under the chosen ladder. Neither half flashes in the last gear. */
+export const overRev = (ladder: Ladder): Expr => (ladder === 'mirror' ? mirrorOverRev() : simhubOverRev());
 
 /**
  * Whether a rung flashes. Every style flashes its top band at over-rev; `f1` flashes the *whole*
