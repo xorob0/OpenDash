@@ -371,8 +371,8 @@ namespace OpenDashPlugin
         // Fields
         //
         // The select, the drop button and the text box are one shape on the canvas, so they are one
-        // description here. The two paddings are the canvas's own and the token file carries neither;
-        // docs/design/plugin.md is where the panel's owed tokens are recorded.
+        // description here. The two paddings are the canvas's own; design/tokens.json carries neither of
+        // them yet, and they are owed as tokens the way the panel's other geometry is.
 
         private const double FieldPaddingLeft = 9;
         private const double FieldPaddingRight = 6;
@@ -635,8 +635,10 @@ namespace OpenDashPlugin
                 over.Setters.Add(new Setter(Border.BackgroundProperty, hover, "chrome"));
                 template.Triggers.Add(over);
             }
+            // The whole button rather than its chrome, so that what is drawn beside the chrome fades with
+            // it: the dashed frame is a sibling of the ground it outlines.
             var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
-            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity, "chrome"));
+            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity));
             template.Triggers.Add(disabled);
             return template;
         }
