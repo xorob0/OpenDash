@@ -7,9 +7,18 @@
  * layer inside that copy's repeat context, whereas the repeated layer's own Visible would be
  * evaluated once, for row one, and hide or show all of them together.
  *
- * Class rows cannot be grouped under class headings: SimHub exposes per-class rows only for the
- * player's own class, so the table is one continuous list in leaderboard order and the class is a
- * chip on each row.
+ * Class rows cannot be grouped under class headings, which is what the three pit wall artboards
+ * and `Panels.dc.html` draw: a 28 px row in `purpose.block.well` heading each class with that
+ * class's leader, `GT3 · P1` and then `GT4 · P9`. Two things are missing and neither is a colour.
+ * SimHub names the classes in a session -- `getleaderboardcarclasscount`,
+ * `getleaderboardcarclassname(n)` and `getleaderboardcarclassopponentscount(n)` -- and publishes
+ * exactly one per-class ordering, `getopponentleaderboardposition_playerclassonly`, the player's
+ * own; the m-th car of an arbitrary class has no expression, so neither the cars under a heading
+ * nor the heading's own leader can be addressed. And a repeated layer stamps one row at one
+ * `repeatTopOffset`, so a heading inserted between two groups has no row of its own to sit in and
+ * nothing below it can be pushed down by it. The table is therefore one continuous list in
+ * leaderboard order with the class as a chip on each row, and the well stays unpainted until both
+ * halves exist.
  */
 import type { HAlign, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
