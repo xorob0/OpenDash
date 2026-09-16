@@ -29,10 +29,22 @@ export const GEAR_SIZES = {
   nano: ds.size.gearSm,
 } as const;
 
+/**
+ * Where `gear` puts its cell in `frame`: the letter-wide cell, centred across the frame's width.
+ *
+ * Read rather than repeated, because zone A places the two ghosted neighbours off the edges of this
+ * cell. Centring the gear in one place and guessing where it landed in another is how the ghosts
+ * came to be spaced from the column's edges instead of from the gear.
+ */
+export function gearCell(frame: Rect, size: number): { left: number; width: number } {
+  const width = monoWidth(gearCells(size), GEAR_CHARS);
+  return { left: frame.left + (frame.width - width) / 2, width };
+}
+
 /** The gear centred in `frame`, horizontally on its cell width and vertically on its font size. */
 export function gear(frame: Rect, size: number = GEAR_SIZES.standard, prefix = 'hero'): Item[] {
   const mono = gearCells(size);
-  const width = monoWidth(mono, GEAR_CHARS);
+  const { left, width } = gearCell(frame, size);
   // A frame too narrow for the cell has only bad answers: narrowing the cell clips the glyph, and
   // keeping it draws over whatever the frame was protecting. Neither is something to do quietly,
   // so a layout that cannot give the gear its cell has to say what it wants instead.
@@ -42,7 +54,6 @@ export function gear(frame: Rect, size: number = GEAR_SIZES.standard, prefix = '
         `Either give it more room or set a size of at most ${Math.floor((frame.width - GEAR_BOX_SLACK) / GEAR_CELL)}.`,
     );
   }
-  const left = frame.left + (frame.width - width) / 2;
   const top = frame.top + (frame.height - size) / 2;
   // The box takes a few pixels beyond the cell so that WPF never clips the glyph, and no more:
   // on a round face the slots start just past it.
