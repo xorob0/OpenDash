@@ -72,6 +72,8 @@ export const CHARS = {
   carNumber: { digits: 4, specials: 0 } as Chars,
   /** `0:42:15` */
   clock: { digits: 6, specials: 2 } as Chars,
+  /** `08:46` */
+  minutesClock: { digits: 4, specials: 1 } as Chars,
   /** `299` */
   speed: { digits: 3, specials: 0 } as Chars,
   /** `12,450` */
@@ -109,6 +111,18 @@ export const sectorTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toS
 
 /** Seconds as `h:mm:ss`, or `-:--:--` when there is nothing to count. */
 export const clock = (seconds: Expr): Expr => iff(gt(seconds, num(0)), hms(seconds), str('-:--:--'));
+
+/**
+ * Seconds as `mm:ss`, or `--:--` when there is nothing to count. Built the way `hms` is, minus the
+ * hour term, because band D is 60 px tall and an hour that reads `0:` whenever a tank lasts under
+ * one is a cell spent saying nothing. A range over 99 minutes overruns the four digits it is
+ * budgeted, which no tank the sims model reaches.
+ */
+export const minutesClock = (seconds: Expr): Expr => {
+  const s = max(num(0), seconds);
+  const mmss = concat(fmt(truncate(div(s, num(60))), '00'), str(':'), fmt(truncate(mod(s, num(60))), '00'));
+  return iff(gt(seconds, num(0)), mmss, str('--:--'));
+};
 
 /** An iRating as `2.4k`, or `--` when the sim does not report one. */
 export const ratingK = (value: Expr): Expr => iff(gt(isnull(value, num(0)), num(0)), concat(fmt(div(value, num(1000)), '0.0'), str('k')), str(NO_VALUE));
