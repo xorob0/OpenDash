@@ -20,6 +20,7 @@ import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { measureText } from '../design/advances.ts';
 import { cells, monoWidth, textBox } from '../design/metrics.ts';
+import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
@@ -47,7 +48,7 @@ import {
   windKmh,
   NO_TIME,
 } from '../second/values.ts';
-import { ds } from '../tokens.ts';
+import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, aheadBehind, timespanToSeconds, toShortTime } = ncalc;
 
@@ -630,7 +631,9 @@ const leftCornerFields = (): BandField[] => [
 const cornerLamps = (): { id: string; text: string; on: string; colour: `#${string}` }[] => [
   { id: 'drs', text: 'DRS', on: eq(isnull(game('DRSAvailable'), num(0)), num(1)), colour: ds.purpose.flag.green },
   { id: 'p2p', text: 'P2P', on: eq(isnull(raw('PushToPass'), num(0)), num(1)), colour: ds.purpose.flag.blue },
-  { id: 'spt', text: 'SPT', on: ncalc.ne(isnull(game('CarLeftRight'), num(0)), num(1)), colour: ds.purpose.flag.yellow },
+  // The spotter is caution amber and not the flag's yellow, which every sheet that lights it draws:
+  // a car beside you is a thing to be careful of rather than a yellow flag.
+  { id: 'spt', text: 'SPT', on: ncalc.ne(isnull(game('CarLeftRight'), num(0)), num(1)), colour: ds.color.caution.primary },
 ];
 
 /** The two clocks in the right corner. */
@@ -660,14 +663,15 @@ export function bandCornerWidths(frame: Rect): { left: number; right: number } {
 const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, densityOf('zone').small, ds.size.label, LABEL_ROW, FIELD_GAP);
 
 /**
- * The room a lamp takes: the word, and the padding of the chip the canvas draws around it.
+ * The room a lamp takes: the word, the 7 px either side of it, and the chip's own outline.
  *
- * The chip itself -- 20 px tall with a 1 px outline in the lamp's colour -- waits on a bound
- * `BorderStyle.BorderColor`, which the format research says SimHub honours and `elements/band.ts`
- * does not yet offer. Until it does the word is drawn where the chip would put it, so that adding
- * the outline moves nothing.
+ * The chip is 20 px tall with a 1 px border, and the border and the word carry one colour between
+ * them: a lamp is lit or dim as a whole, and an outline left bright around a dim word would read
+ * as a lamp half on.
  */
 const LAMP_PAD_X = 7;
+const LAMP_HEIGHT = 20;
+const LAMP_BORDER = 1;
 const lampWidth = (): number => Math.ceil(measureText('BarlowMedium', 'DRS', ds.size.labelSm)) + 2 + 2 * (LAMP_PAD_X + 1);
 
 export function bandCorners(frame: Rect, prefix: string): Item[] {
@@ -722,14 +726,19 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
         id: each.id,
         width: lamp,
         present: each.on,
-        draw: (at) => [
-          label(`${prefix}${each.id}`, each.text, at.x, top + (blockHeight - ds.size.labelSm) / 2, lamp, {
-            size: ds.size.labelSm,
-            hAlign: 'center',
-            color: ds.color.text.dim,
-            colorBind: dimUnless(at.litBind, each.colour),
-          }),
-        ],
+        draw: (at) => {
+          const lit = dimUnless(at.litBind, each.colour);
+          const chip = { left: at.x, top: top + (blockHeight - LAMP_HEIGHT) / 2, width: lamp, height: LAMP_HEIGHT };
+          return [
+            band(`${prefix}${each.id}.chip`, chip, TRANSPARENT, { border: { color: ds.color.text.dim, width: LAMP_BORDER, colorBind: lit } }),
+            label(`${prefix}${each.id}`, each.text, at.x, top + (blockHeight - ds.size.labelSm) / 2, lamp, {
+              size: ds.size.labelSm,
+              hAlign: 'center',
+              color: ds.color.text.dim,
+              colorBind: lit,
+            }),
+          ];
+        },
       })),
       { left: x, width: lamps.length * lamp + LAMP_GAP * (lamps.length - 1), gap: LAMP_GAP, when: 'dim', align: 'left' },
     ).items,

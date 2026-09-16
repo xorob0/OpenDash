@@ -54,11 +54,12 @@ export type Binding = FormulaBinding | GradientBinding;
  * Bindable targets. The key is the SimHub property name exactly as it appears in the JSON.
  * Not every target makes sense on every item kind; the validator checks that.
  *
- * `BorderColor` is absent, and that is a fact about the spelling rather than about the capability.
- * SimHub's BindingHelper resolves a target with `item.GetType().GetProperty(name)`, so an
- * item-level `Bindings.BorderColor` finds nothing and is silently ignored. The property lives on
- * `BorderStyle`, which is an `IBindable` carrying bindings of its own, and SimHub evaluates those
- * every frame. A border can therefore be bound; this model does not do it yet.
+ * `BorderColor` is here but belongs to no item kind, which is a fact about the spelling rather than
+ * about the capability. SimHub's BindingHelper resolves a target with
+ * `item.GetType().GetProperty(name)`, so an item-level `Bindings.BorderColor` finds nothing and is
+ * silently ignored; the property lives on `BorderStyle`, which is an `IBindable` carrying bindings
+ * of its own that SimHub evaluates every frame. `Border.colorBinding` is where a bound border is
+ * written, and the validator refuses the item-level spelling on every kind.
  * See docs/decisions/0011-personalisation.md.
  */
 export type BindingTarget =
@@ -90,6 +91,8 @@ export type BindingTarget =
   | 'UseAlternateStyle'
   /** Radar: pixels per metre are `10 x Scale`. */
   | 'Scale'
+  /** A border's colour, which is written inside `BorderStyle` and never on the item. */
+  | 'BorderColor'
   /** Web page: the URL. */
   | 'StartAddress'
   /** Layer: the total number of rows a repeated layer stamps. */
@@ -113,6 +116,14 @@ export interface Border {
   right?: number;
   /** One value for all corners, or per corner. */
   radius?: number | { topLeft: number; topRight: number; bottomLeft: number; bottomRight: number };
+  /**
+   * A formula for the border's colour, evaluated every frame like any other binding.
+   *
+   * It is written into `BorderStyle`'s own `Bindings` rather than the item's, which is the only
+   * spelling SimHub reads; `color` is still set, because that is what the editor shows and what
+   * the border falls back to. A chip whose outline and ink change together is what this is for.
+   */
+  colorBinding?: Binding;
 }
 
 export interface ItemBase {
