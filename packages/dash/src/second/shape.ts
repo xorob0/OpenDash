@@ -75,13 +75,11 @@ export function columnsAt(shape: Shape): number {
   return 3;
 }
 
-/**
- * What a short box does is not a second rule here. It is `archetypeOf` in
- * `modules/shedding.ts`, which hands a short box the drawing of the next shape down -- `grid` to a
- * wide one, `tall narrow` to the rest -- because what a short box has is room for less, and the
- * declaration is where "less" is written down page by page. A predicate here saying a short box
- * keeps one rank said the same thing a second time and in other words, and nothing read it.
- */
+// What a short box does is not a second rule here. It is `archetypeOf` in `modules/shedding.ts`,
+// which hands a short box the drawing of the next shape down -- `grid` to a wide one, `tall narrow`
+// to the rest -- because what a short box has is room for less, and the declaration is where "less"
+// is written down page by page. A predicate here saying a short box keeps one rank said the same
+// thing a second time and in other words, and nothing read it.
 
 /** Whether the lead value of a page is promoted a size, which a tall box can afford. */
 export const promotesLead = (shape: Shape): boolean => shape.height === 'tall';
