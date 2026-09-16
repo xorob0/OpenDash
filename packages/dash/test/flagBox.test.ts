@@ -24,6 +24,7 @@ import { buildContainerObject, serializeProfile, validateProfile, walkContainers
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
 import { eitherLadder, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
+import { overRev as overRevStrip } from '../src/leds/ladder.ts';
 import { flagFrames, FLAG_PALETTE, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
 import { buildFlagBoxProfile, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
 import { CAR_BOTH, CAR_LEFT, CAR_RIGHT, pitStates, spotterStates, warningStates } from '../src/leds/states.ts';
@@ -48,6 +49,33 @@ const litOf = (colorBind: string | undefined): string => {
   const m = /^if\((.*), '#[0-9A-F]{6}', '#[0-9A-F]{6}'\)$/.exec(colorBind ?? '');
   if (m?.[1] === undefined) throw new Error(`not a segment colour bind: ${colorBind}`);
   return m[1];
+};
+
+/**
+ * A shift expression evaluated against one frame of telemetry, a property absent from the frame
+ * standing for a property the sim did not publish.
+ *
+ * String equality against the rev bar is what the flash is pinned by below, and it cannot tell a
+ * digit and a bar that are wrong together from two that are right: that is exactly how the
+ * fallback ladder kept flashing in the last gear through a green suite. Covers the whole of what
+ * `shift.ts` emits and nothing besides -- property reads, `isnull`, `max`, the comparisons,
+ * `and` / `or` / `!` and arithmetic -- and throws on anything wider rather than guessing.
+ */
+const evaluateShift = (expression: string, telemetry: Record<string, number>): boolean => {
+  const js = expression
+    .replace(/\[([A-Za-z0-9_.]+)\]/g, (_, name: string) => `P(${JSON.stringify(name)})`)
+    .replace(/\bisnull\(/g, 'nz(')
+    .replace(/\bmax\(/g, 'Math.max(')
+    .replace(/\band\b/g, '&&')
+    .replace(/\bor\b/g, '||')
+    .replace(/ = /g, ' === ');
+  const words = js.replace(/P\("[^"]*"\)/g, '0').match(/[A-Za-z_][A-Za-z_.]*/g) ?? [];
+  const unknown = words.filter((w) => w !== 'nz' && w !== 'Math.max');
+  if (unknown.length > 0) throw new Error(`evaluateShift does not cover ${unknown.join(', ')} in ${expression}`);
+  const read = (name: string): number | null => telemetry[name] ?? null;
+  const result: unknown = new Function('P', 'nz', `return (${js});`)(read, (v: number | null, d: number) => v ?? d);
+  if (typeof result !== 'boolean') throw new Error(`not a condition: ${expression}`);
+  return result;
 };
 
 const profile = buildFlagBoxProfile();
@@ -458,6 +486,44 @@ describe('the gear, as the resting state', () => {
     expect(text).toInclude(flash);
     // Entering the top band is a different question from flashing in it, and stays one.
     expect(flash).not.toBe(shiftBands().find((b) => b.id === 'redline')?.raised);
+  });
+
+  test('the digit is steady in the last gear on the fallback ladder as well as on the car own', () => {
+    // The defect the pin above could not see. It compares the digit's string with the bar's, so
+    // one wrong expression on both sides agrees with itself and passes; the last-gear exception sat
+    // on the mirror half only, and a car publishing zeros for its four RPMs is on the other half by
+    // construction -- `mirrorAvailable` asks for a first light above zero. So this asks the
+    // expression what it answers, frame by frame, rather than what it is spelled like.
+    const overRev = all.find((c) => c.description === 'Gear redline over-rev');
+    const flash = overRev?.kind === 'when' ? String(overRev.formula) : '';
+
+    const zeros = Object.fromEntries(Object.values(SHIFT_RPM_PROPERTIES).map((p) => [p, 0]));
+    const frame = (props: Record<string, number>): Record<string, number> => ({ ...zeros, [GEAR_COUNT_PROPERTY]: 6, ...props });
+    const GEAR = 'DataCorePlugin.GameRawData.Telemetry.Gear';
+    const RPMS = 'DataCorePlugin.GameData.Rpms';
+    const REDLINE_REACHED = 'DataCorePlugin.GameData.CarSettings_RPMRedLineReached';
+    const ladder = { [SHIFT_RPM_PROPERTIES.first]: 6000, [SHIFT_RPM_PROPERTIES.shift]: 7000, [SHIFT_RPM_PROPERTIES.last]: 7500, [SHIFT_RPM_PROPERTIES.blink]: 7800 };
+
+    // The four RPMs at zero is the fallback, which is the half the guard was missing.
+    const fallback = frame({ [REDLINE_REACHED]: 1, [GEAR]: 5 });
+    expect(evaluateShift(mirrorAvailable(), fallback)).toBe(false);
+    expect(evaluateShift(flash, fallback)).toBe(true);
+    expect(evaluateShift(flash, { ...fallback, [GEAR]: 6 })).toBe(false);
+    // Off redline it is steady whatever the gear, so the guard has not swallowed the flash itself.
+    expect(evaluateShift(flash, { ...fallback, [REDLINE_REACHED]: 0 })).toBe(false);
+
+    // And the car's own ladder, which behaved, goes on behaving: over the blink RPM and below the
+    // last gear it flashes, and in the last gear it does not.
+    const own = frame({ ...ladder, [RPMS]: 7900, [GEAR]: 5 });
+    expect(evaluateShift(mirrorAvailable(), own)).toBe(true);
+    expect(evaluateShift(flash, own)).toBe(true);
+    expect(evaluateShift(flash, { ...own, [GEAR]: 6 })).toBe(false);
+    // A car that declares no gear count keeps flashing, which is what `lastGear` promises.
+    expect(evaluateShift(flash, { ...own, [GEAR]: 6, [GEAR_COUNT_PROPERTY]: 0 })).toBe(true);
+
+    // One expression rather than three: the strip's fallback over-rev is the digit's, character
+    // for character, and the bar's is pinned against the digit by the test above.
+    expect(revSegmentOptions(14, 15).simhub.blinkBind).toBe(overRevStrip('simhub'));
   });
 
   test('the flashing glyphs are the ones under the over-rev condition', () => {

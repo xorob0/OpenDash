@@ -25,7 +25,7 @@ import { ncalc } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
 import { setting } from '../contract.ts';
 import { segment, type SegmentOptions } from '../elements/segment.ts';
-import { mirrorAvailable, mirrorOverRev, mirrorStageLit, overRevEither, simhubRedline, simhubStageLit, stageEntered } from '../shift.ts';
+import { mirrorAvailable, mirrorOverRev, mirrorStageLit, overRevEither, simhubOverRev, simhubStageLit, stageEntered } from '../shift.ts';
 import { ds } from '../tokens.ts';
 
 const { game, gt, num, iff, str, not, and } = ncalc;
@@ -133,7 +133,7 @@ export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
 
   return {
     shift: { colorBind: litColor(mirrorStageLit(stage, local, stageCount), color), ...flash(mirrorOverRev()) },
-    simhub: { colorBind: litColor(simhubStageLit(stage, local, stageCount), color), ...flash(simhubRedline()) },
+    simhub: { colorBind: litColor(simhubStageLit(stage, local, stageCount), color), ...flash(simhubOverRev()) },
     rpm: { colorBind: litColor(rpmLit, litColourOf('rpm', k, count)) },
   };
 }

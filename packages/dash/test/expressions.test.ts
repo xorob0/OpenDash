@@ -270,7 +270,7 @@ describe('hero expressions', () => {
     expect(REDLINE_BLINK_MS).toBe(62);
   });
 
-  test("SimHub's bands are unchanged for a car that publishes no ladder of its own, and still flash at redline", () => {
+  test("SimHub's bands are unchanged for a car that publishes no ladder of its own, and flash at redline outside the last gear", () => {
     const [, simhub, rpm] = revBar({ left: 24, top: 12, width: 1872, height: 40, gap: 8 });
     if (simhub?.kind !== 'layer' || rpm?.kind !== 'layer') throw new Error('layers');
     const seg = (k: number) => segOf(simhub, k);
@@ -285,7 +285,10 @@ describe('hero expressions', () => {
     expect(expressionsOf(seg(4))).toEqual([`if(((${B(1)}) * (5)) > (4), '#00D96A', '#33383F')`]);
     expect(expressionsOf(seg(5))).toEqual([`if((${B(2)}) > (0), '#FFB300', '#33383F')`]);
     expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if(${REDLINE}, '#FF2D46', '#33383F')` });
-    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: REDLINE });
+    // ADR 0004's band is unchanged; its flash is not. The last-gear exception belongs to the flash
+    // rather than to the ladder, so the fallback half carries it too: a car that publishes zeros
+    // for its four RPMs lands here, and this is the half that went on strobing in top gear.
+    expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: `(${REDLINE}) and (!(${LAST_GEAR}))` });
     expect(seg(14).blink).toEqual({ delayMs: 62 });
 
     expect(expressionsOf(segOf(rpm, 3))).toEqual(["if(([DataCorePlugin.GameData.CarSettings_CurrentDisplayedRPMPercent]) > (20), '#8A9099', '#33383F')"]);
@@ -315,8 +318,11 @@ describe('hero expressions', () => {
 
     // The bands themselves are gear-independent: no gear appears in any segment's colour.
     for (const k of [0, 4, 5, 9, 10]) expect(segOf(shift, k).bindings?.BackgroundColor?.formula).not.toContain('Gear');
-    // SimHub's fallback is untouched by this: it never knew about gears either.
-    expect(segOf(simhub, 14).bindings?.BlinkEnabled?.formula).not.toContain('Gear');
+    // And the same on SimHub's fallback, which is the half that was missing it: the gear count is
+    // published by the sim rather than by the ladder, so which ladder a car is on cannot decide
+    // whether there is a shift to ask for. Its band is still gear-independent, as above.
+    expect(segOf(simhub, 14).bindings?.BlinkEnabled?.formula).toContain(`!(${LAST_GEAR})`);
+    expect(segOf(simhub, 14).bindings?.BackgroundColor?.formula).not.toContain('Gear');
   });
 
   test("the speedo's Redline prints the RPM the rev bar's top band lights at", () => {
