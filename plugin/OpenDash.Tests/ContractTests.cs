@@ -517,7 +517,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(match.Success, "FACE_SIZES not found in contract.ts");
             var sizes = Regex.Matches(
                 match.Groups["items"].Value,
-                @"width:\s*(?<w>\d+),\s*height:\s*(?<h>\d+),\s*body:\s*'(?<body>row|column)',\s*parts:\s*\[(?<parts>[^\]]*)\],\s*hasBar:\s*(?<bar>true|false),\s*barFieldsPerEnd:\s*(?<per>\d+)");
+                @"width:\s*(?<w>\d+),\s*height:\s*(?<h>\d+),\s*body:\s*'(?<body>row|column)',\s*parts:\s*\[(?<parts>[^\]]*)\],\s*hasBar:\s*(?<bar>true|false),\s*barFieldsPerEnd:\s*(?<per>\d+),"
+                    + @"\s*rows:\s*\{\s*revBar:\s*(?<revBar>\d+),\s*bar:\s*(?<barRow>\d+),\s*body:\s*(?<bodyRow>\d+),\s*band:\s*(?<band>\d+)\s*\}");
             Assert.Equal(Contract.FaceSizes.Count, sizes.Count);
             for (var i = 0; i < sizes.Count; i++)
             {
@@ -529,6 +530,20 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(face.BarFieldsPerEnd, int.Parse(sizes[i].Groups["per"].Value, CultureInfo.InvariantCulture));
                 var parts = sizes[i].Groups["parts"].Value.Split(',').Select(v => int.Parse(v.Trim(), CultureInfo.InvariantCulture)).ToArray();
                 Assert.Equal(face.Parts, parts);
+                // The four rows a plan of the face scales from. zoneFace.test.ts holds these against
+                // the rectangles in zones/faces/*.ts, so checking them here against contract.ts reaches
+                // the drawings without this file having to parse eight layouts, one of which is derived
+                // from another and carries no numbers of its own.
+                Assert.Equal(face.RevBarHeight, int.Parse(sizes[i].Groups["revBar"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.BarHeight, int.Parse(sizes[i].Groups["barRow"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.BodyHeight, int.Parse(sizes[i].Groups["bodyRow"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.BandHeight, int.Parse(sizes[i].Groups["band"].Value, CultureInfo.InvariantCulture));
+                // A face with no bar has no bar row, and every other row is there to be drawn.
+                Assert.Equal(face.HasBar, face.BarHeight > 0);
+                Assert.True(face.RevBarHeight > 0 && face.BodyHeight > 0 && face.BandHeight > 0);
+                // And the rows add up to the face, one seam between each pair that is drawn.
+                var seams = face.HasBar ? 2 : 1;
+                Assert.Equal(face.Height - seams, face.RevBarHeight + face.BarHeight + face.BodyHeight + face.BandHeight);
             }
             // The nano is the one face with no bar, and the portrait the one with a stacked body and a
             // single field per end. Stated here because both are what the panel has to draw differently.
