@@ -20,6 +20,7 @@ import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
 import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { pitLimiter } from '../components/pitLimiter.ts';
+import { popUps } from '../components/popUp.ts';
 import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
 import { layoutWithoutRevBar, rectOf, type ZoneLayout } from './layout.ts';
@@ -127,6 +128,13 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
   // The limiter covers zone A rather than taking room of its own: it is true for seconds at a time
   // and it is the one thing that matters while it is. Drawn last, so it is over the zone.
   items.push(...pitLimiter(z.pitLimiter, 'pitLimiter'));
+
+  // A pop-up covers the hero, which on this face is zone A: the gear and the speed are what a
+  // driver can give up for the three seconds a lap time is worth more than either. The box is
+  // centred on that rectangle rather than placed, so it clears the limiter banner at the top of the
+  // column, the bar of settled values above it and band D below, where a flag has the better claim
+  // on the same sixty pixels. Drawn after the limiter, which is the only other thing over a zone.
+  items.push(...popUps(z.zoneA, 'popUp'));
 
   return items;
 }

@@ -20,4 +20,27 @@ export { gear, GEAR_SIZES, GEAR_CHARS } from './gear.ts';
 export { flagStrip, flagVisible, FLAG_PRIORITY, FLAG_BLINK_MS, BLACK_FLAG_BORDER, FLAG_STRIP_STYLES, type FlagProperty, type FlagStripStyle } from './flagStrip.ts';
 export { flagRing, CHEQUER_COUNT, CHEQUER_STEP, CHEQUER_SIZE } from './flagRing.ts';
 export { pitLimiter, PIT_LIMITER_BLINK_MS } from './pitLimiter.ts';
+export {
+  popUp,
+  popUps,
+  popUpFit,
+  popUpFrame,
+  popUpVisible,
+  POP_UPS,
+  POP_UP_WIDTH,
+  POP_UP_HEIGHT,
+  POP_UP_RULE,
+  POP_UP_PAD_X,
+  POP_UP_GAP,
+  POP_UP_VALUE_SIZE,
+  POP_UP_SECONDARY_SIZE,
+  POP_UP_SECONDS,
+  LAP_POP_UP,
+  FUEL_POP_UP,
+  DRS_POP_UP,
+  type PopUpSpec,
+  type PopUpLabel,
+  type PopUpText,
+  type PopUpFit,
+} from './popUp.ts';
 export { listRow, listRowHeight, LIST_ROW, type ListRowSpec, type ListRowValue } from './listRow.ts';
