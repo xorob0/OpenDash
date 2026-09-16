@@ -723,7 +723,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildCompanionPane(ScreenInstance screen)
         {
-            const int columns = 3;
+            var columns = PanelCompanionPlan.ModuleColumns;
             var rows = (Modules.Count + columns - 1) / columns;
             var grid = new Grid { Width = BodyWidth, HorizontalAlignment = HorizontalAlignment.Left };
             for (var c = 0; c < columns; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -742,14 +742,32 @@ namespace OpenDashPlugin
                     + "a module that is off is skipped. Energy, Damage and Track rivals are off because iRacing publishes "
                     + "none of their data; switch them on for a sim that does.",
                     BodyWidth),
-                grid);
+                grid,
+                BuildCompanionWheelButtons(screen));
         }
 
-        /// <summary>"07 Tyres" and its toggle; the description is the tooltip, so the grid stays readable.</summary>
+        /// <summary>
+        /// The one button a companion has.
+        /// </summary>
+        /// <remarks>
+        /// One row rather than the wrap of four a face carries, because a companion shows one module at a
+        /// time and the only thing a wheel button does to it is advance it, past whatever the grid above
+        /// has turned off. The editor draws the row as unbound until somebody binds it, which is the state
+        /// this screen is in until then.
+        /// </remarks>
+        private FrameworkElement BuildCompanionWheelButtons(ScreenInstance screen)
+        {
+            return Ui.Section("Wheel buttons on this screen",
+                Ui.Row(
+                    Ui.Label("Next module"),
+                    BuildBinder(Contract.NextModuleActionFor(screen.Namespace), screen.Name + " · next module")));
+        }
+
+        /// <summary>"Tyres" and its toggle. The number and the description are the tooltip: the grid reads
+        /// as a column of names, and the header's "n / 21" can still be matched to a row.</summary>
         private FrameworkElement BuildModuleRow(ScreenInstance screen, Module module)
         {
-            var name = Ui.Text(module.Number.ToString("00") + "  " + module.Name, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary);
-            name.VerticalAlignment = VerticalAlignment.Center;
+            var name = Ui.Body(module.Name);
             var index = module.Number - 1;
             var toggle = BuildToggle(screen.Modules != null && index < screen.Modules.Length && screen.Modules[index], on =>
             {
@@ -759,8 +777,8 @@ namespace OpenDashPlugin
             });
             toggle.HorizontalAlignment = HorizontalAlignment.Right;
             var row = Ui.Row(name, toggle);
-            row.Margin = new Thickness(0, 0, 24, 8);
-            row.ToolTip = module.Description;
+            row.Margin = new Thickness(0, 0, PanelCompanionPlan.ModuleColumnGap, PanelCompanionPlan.ModuleRowGap);
+            row.ToolTip = module.Number.ToString("00") + " · " + module.Description;
             return row;
         }
 

@@ -1,5 +1,5 @@
-// PanelPitWallPlan.cs: the picture of the three pit wall pages the Rig tab configures a screen on, and the
-// words that go under it, as numbers.
+// PanelPitWallPlan.cs: the picture of the three pit wall pages the Rig tab configures a screen on, the
+// words that go under it, and the companion grid beside it, as numbers.
 //
 // A pit wall's zones are letters, and a letter is a position: zone C is wherever the Tower page draws it.
 // The panel therefore says where each zone is twice, once as a miniature of every page and once as a
@@ -12,6 +12,10 @@
 // Apart from SettingsControl.Panes.cs for the reason PanelFacePlan.cs is apart from it: the panel is WPF
 // and the net8.0 test project cannot compile a line of it, so the geometry lives where the tests can hold
 // it against the canvas. Pure: no WPF types.
+//
+// PanelCompanionPlan is at the foot of the same file because a companion carries three numbers and no
+// geometry at all, which is too little to be a file of its own; it is here rather than in PanelMetrics.cs
+// only because the two panes were rebuilt together.
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -207,4 +211,15 @@ namespace OpenDashPlugin
         }
     }
 
+    /// <summary>The companion's grid of modules, which has no picture and so no plan beyond three numbers.</summary>
+    public static class PanelCompanionPlan
+    {
+        /// <summary>Two columns of eleven and ten rather than three of seven: the name is a body line and
+        /// not a label, and three columns of it do not leave room for the toggle at the panel's width.</summary>
+        public const int ModuleColumns = 2;
+
+        public const double ModuleRowGap = 12;
+
+        public const double ModuleColumnGap = 40;
+    }
 }
