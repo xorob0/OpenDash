@@ -396,7 +396,7 @@ function blockTop(height: number, valueFs: number, labelFs: number, labelRow: nu
 
 /** Width the unit after a value takes. Measured, not the remainder of the field: a field whose
  *  value fills its width left the unit a box narrower than its own glyph, and WPF clipped it. */
-const unitWidth = (field: BandField): number => (field.after ? Math.ceil(measureText('BarlowMedium', field.after, ds.size.labelSm)) + 2 : 0);
+const unitWidth = (field: BandField): number => (field.after ? Math.ceil(measureText('BarlowMedium', field.after.toUpperCase(), ds.size.labelSm)) + 2 : 0);
 
 /** Width the value of a field takes, the numerals sharing its label included. */
 function valueWidthOf(field: BandField, valueFs: number): number {

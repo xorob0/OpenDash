@@ -116,10 +116,10 @@ export const followerSize = (follower: Follower, d: DensitySpec, valueFs: number
   follower.size ?? (follower.kind === 'denominator' ? denominatorSize(valueFs) : d.labelSm);
 
 /**
- * Width of a field's follower. A unit is a proportional label, and an unbound one is drawn
- * upper-cased (the label element does that), so it is measured upper-cased too: "s" and "S" are not
- * the same width. A denominator is a numeral, so it is measured in the monospace cells its size
- * cuts, which is wider than its advances and never clips.
+ * Width of a field's follower. A unit is a proportional label drawn upper-cased, bound or not, so
+ * it is measured upper-cased too: "s" and "S" are not the same width, and neither are "km/h" and
+ * "KM/H". A denominator is a numeral, so it is measured in the monospace cells its size cuts, which
+ * is wider than its advances and never clips.
  */
 export function followerWidth(follower: Follower, d: DensitySpec, valueFs: number): number {
   const fs = followerSize(follower, d, valueFs);
@@ -127,7 +127,7 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
     const mono = cells('SemiBold', fs);
     return monoWidth(mono, charsOfText(follower.text, mono));
   }
-  const drawn = follower.bind ? (follower.widest ?? follower.text) : follower.text.toUpperCase();
+  const drawn = (follower.bind ? (follower.widest ?? follower.text) : follower.text).toUpperCase();
   return Math.ceil(measureText('BarlowMedium', drawn, fs)) + 1;
 }
 
