@@ -47,24 +47,33 @@ export const CORNERS = ['fl', 'fr', 'rl', 'rr'] as const;
 /** Gap between the two columns. */
 const COLUMN_GAP = ds.space[4];
 
-/** Gap between a cell's numeral and the sub-value under it. Off the `space` scale, as `READOUT_GAP` is. */
+/**
+ * The gaps of a grid whose cells carry a sub-value, which the canvas draws two pixels wider each
+ * way than the plain grid's 4 and 16: a row is two lines tall there and wants the air. Off the
+ * `space` scale, as `READOUT_GAP` is, and the canvas is their citation.
+ */
+const SUB_ROW_GAP = 6;
+const SUB_COLUMN_GAP = 18;
+
+/** Gap between a cell's numeral and the sub-value under it. */
 const SUB_GAP = 2;
 
 /** Width of one column of the grid in `slot` at `rung`: the inner width less the gap, halved. */
-export const gridColumnWidth = (slot: Rect, rung: RungSpec): number => (cardFrame(slot, rung).innerWidth - COLUMN_GAP) / 2;
+export const gridColumnWidth = (slot: Rect, rung: RungSpec, columnGap: number = COLUMN_GAP): number => (cardFrame(slot, rung).innerWidth - columnGap) / 2;
 
 export function grid2x2(slot: Rect, rung: RungSpec, prefix: string, lbl: LabelSpec, cellSpecs: readonly [CellSpec, CellSpec, CellSpec, CellSpec]): Item[] {
   const f = cardFrame(slot, rung);
   const labelFs = ds.size.label;
-  const rowGap = ds.space[1];
   // All four or none: a grid with a sub-value under one numeral and not the next reads as a fault.
   const subFs = ds.size.labelSm;
   const withSubs = rung.rung === 'L' && cellSpecs.every((c) => c.sub !== undefined);
+  const rowGap = withSubs ? SUB_ROW_GAP : ds.space[1];
+  const columnGap = withSubs ? SUB_COLUMN_GAP : COLUMN_GAP;
   const fs = withSubs ? ds.size.valueSm : rung.grid;
   const rowHeight = withSubs ? fs + SUB_GAP + subFs : fs;
   const top = centredTop(slot, labelFs + rowGap + rowHeight + rowGap + rowHeight);
-  const colWidth = gridColumnWidth(slot, rung);
-  const xs = [f.x, f.x + colWidth + COLUMN_GAP] as const;
+  const colWidth = gridColumnWidth(slot, rung, columnGap);
+  const xs = [f.x, f.x + colWidth + columnGap] as const;
   const row0 = top + labelFs + rowGap;
   const ys = [row0, row0 + rowHeight + rowGap] as const;
   const items: Item[] = [label(`${prefix}label`, lbl.text, f.x, top, f.innerWidth, { bind: lbl.bind })];
@@ -72,10 +81,10 @@ export function grid2x2(slot: Rect, rung: RungSpec, prefix: string, lbl: LabelSp
     const x = xs[i % 2] ?? f.x;
     const y = ys[i < 2 ? 0 : 1];
     const name = `${prefix}${CORNERS[i] ?? String(i)}`;
-    const right = i % 2 === 0 ? x + colWidth + COLUMN_GAP : slot.left + slot.width - rung.padding.x;
+    const right = i % 2 === 0 ? x + colWidth + columnGap : slot.left + slot.width - rung.padding.x;
     items.push(
       numeral(name, cell.sample, x, y, fs, cell.chars, {
-        maxWidth: i % 2 === 0 ? colWidth + COLUMN_GAP : slot.left + slot.width - x,
+        maxWidth: i % 2 === 0 ? colWidth + columnGap : slot.left + slot.width - x,
         bind: cell.bind,
         color: cell.color,
         colorBind: cell.colorBind,
