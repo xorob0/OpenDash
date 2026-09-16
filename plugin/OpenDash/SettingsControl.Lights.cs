@@ -1,6 +1,6 @@
 // SettingsControl.Lights.cs: the Lights tab -- the flag box, the four matrix contents and the strips.
 //
-// A tab rather than a card in the rig's row. XOR-231 settles that a light device "is the same shape of
+// A tab rather than a card in the rig's row. #282 settles that a light device "is the same shape of
 // thing as a screen", which is true of the settings model and not of a user: a screen is a rectangle
 // with zones, a box is 64 LEDs with a mounting side, and one row of cards mixing them would have to
 // explain itself. docs/design/plugin.md records the divergence from the canvas.

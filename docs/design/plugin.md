@@ -21,7 +21,7 @@ on `PluginComponents`. It was drawn before the lights wave and shows three tabs 
 and Install; this file is ahead of it on two points, said here rather than changed there because the
 canvas is the author's:
 
-- **Lights is a fourth tab, not a section.** [XOR-231](https://linear.app/xorob/issue/XOR-231) settles
+- **Lights is a fourth tab, not a section.** [#282](https://github.com/xorob0/OpenDash/issues/282) settles
   that a light device "is the same shape of thing as a screen", which argued for putting a flag box
   card in the same row as the screens. It is not done, because a screen and a box are the same shape
   to *the settings model* and nothing alike to a user: a screen is a rectangle with zones, a box is
@@ -32,7 +32,7 @@ canvas is the author's:
 
 ### Three tokens are owed
 
-[XOR-125](https://linear.app/xorob/issue/XOR-125) names `panel.tabs`, `control.tab` and
+[#176](https://github.com/xorob0/OpenDash/issues/176) names `panel.tabs`, `control.tab` and
 `control.screenCard` as tokens. They are not in `design/tokens.json`, and that file is the author's
 rather than something a build writes into, so the tab bar and the screen card are composed from the
 tokens that do exist — `control.height`, `radius.sm`, `purpose.ui.*`, `color.surface.*`. Nothing
@@ -109,11 +109,11 @@ be found.
 The name is prefilled from the size, and from the size and a numeral when the rig already has one.
 The sentence about the second copy appears only when it is true.
 
-**What the sizes list should become.** [XOR-34](https://linear.app/xorob/issue/XOR-34) wants the sizes
+**What the sizes list should become.** [#85](https://github.com/xorob0/OpenDash/issues/85) wants the sizes
 SimHub reports it is driving offered first, with the rest behind "something else", and it is right
 that a flat list of fourteen resolutions is the thing a new user gives up on. It is not built here,
 because nothing in the SDK research says whether SimHub exposes the displays to a plugin. That is
-the first thing XOR-34 has to check.
+the first thing #85 has to check.
 
 ### Removing one
 
@@ -126,7 +126,7 @@ with one sentence.
 A screen whose folder is gone — deleted in SimHub, renamed by hand, or never written because the
 add failed — **keeps its card**, marked, with a button to write the package back. Dropping it would
 destroy the zone setup behind it and hide the thing that needs fixing, which is the same reasoning
-[XOR-125](https://linear.app/xorob/issue/XOR-125) applies to a failed install.
+[#176](https://github.com/xorob0/OpenDash/issues/176) applies to a failed install.
 
 ### The pane of a face
 
@@ -222,7 +222,7 @@ The pane says so rather than letting a user switch one on and wonder why it is b
 The twelve-slot picture, unchanged, for anyone running an `openDash slots <size>` package. It is on
 its own screen card rather than in a section of its own, which is the whole reason the card model
 survives the redesign without cluttering it: you see it only if you installed one. It leaves with
-the cards in [XOR-95](https://linear.app/xorob/issue/XOR-95).
+the cards in [#146](https://github.com/xorob0/OpenDash/issues/146).
 
 ## Data
 
@@ -248,7 +248,7 @@ These apply to every screen
 
 The rev bar is three states in one control rather than a toggle and a second toggle under it: what
 the top of the face carries is one decision, and a driver whose wheel already has LEDs across it
-wants the third of them (XOR-138).
+wants the third of them (#189).
 
 ## Lights
 
@@ -334,7 +334,7 @@ carries the verb (*Install*, *Update*, *Reinstall*) and the line above it says w
 now, so pressing it is never a guess. The path stays under it as the fallback for when SimHub's
 matrix settings cannot be reached. See the amendment to ADR 0013.
 
-**One group per matrix**, prefixed, the way [XOR-124](https://linear.app/xorob/issue/XOR-124)
+**One group per matrix**, prefixed, the way [#175](https://github.com/xorob0/OpenDash/issues/175)
 settled that a screen owns its settings. A device is the same shape of thing. People do own two
 boxes — one in each corner of a monitor stand, one on flags and one on the gear — and that setup
 has to be configurable without either box guessing.
@@ -407,5 +407,5 @@ version it is.
 **An empty rig is the first run.** The Rig tab shows the add card alone over a line saying nothing is
 installed yet. There is no wizard to dismiss and no "never show this again" flag, because the empty
 state stops appearing exactly when it stops being true — which is
-[XOR-34](https://linear.app/xorob/issue/XOR-34)'s whole design, and the reason it is one fewer
+[#85](https://github.com/xorob0/OpenDash/issues/85)'s whole design, and the reason it is one fewer
 surface to build.

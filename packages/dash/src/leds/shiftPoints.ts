@@ -1,7 +1,7 @@
 /**
  * The per-gear shift table, and where it sits among the places a ladder can come from.
  *
- * ADR 0014 settled that openDash mirrors the car rather than carrying a table, and XOR-233 amended
+ * ADR 0014 settled that openDash mirrors the car rather than carrying a table, and #284 amended
  * it: derived by default, a table overriding where one exists. This module is the table half.
  *
  * **The precedence, highest first, and what of it is built.** This is a description of the code as

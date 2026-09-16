@@ -4,7 +4,7 @@
  * One list, because the face, the pit wall and the flag box rank the same conditions and two
  * lists would eventually disagree about which of two live flags wins. The face draws a subset of
  * it — `FLAG_PRIORITY` in components/flagStrip.ts is derived from this file's order rather than
- * restated — and the 8x8 box draws all of it. XOR-58 folds the rest of the alert catalogue in
+ * restated — and the 8x8 box draws all of it. #109 folds the rest of the alert catalogue in
  * here; this is the flag half of it.
  *
  * **What is here is what iRacing publishes.** A drawn alert that never fires is worse than an

@@ -72,7 +72,7 @@ const rungs = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContai
  *
  * These come *after* the two derived ladders so that they compose over them: a car in the table
  * gets its measured gear, and every other car and gear keeps the ladder iRacing publishes. That is
- * the "derived by default, table overrides" of XOR-233, and it is why an empty table costs nothing
+ * the "derived by default, table overrides" of #284, and it is why an empty table costs nothing
  * — no entries, no containers, no change to any profile.
  *
  * A car keyed here is matched on `CarModel` rather than by a `Groups.GameCarModelGroup`, because
@@ -331,7 +331,7 @@ export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedP
   // Every native Status.* container tests GameRunning itself; CustomStatusContainer does not, and
   // its IsActiveBase catches a throwing expression and returns its default of 1.0 — so with the sim
   // closed, where the properties are null, a bare CustomStatus lights up. One native group gates
-  // the lot. What the strip does when the game is NOT running is XOR-249.
+  // the lot. What the strip does when the game is NOT running is #300.
   const running: leds.LedContainer = {
     kind: 'raw',
     containerType: 'Groups.GameRunningGroup',

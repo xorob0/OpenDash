@@ -4,7 +4,7 @@
  * This is a type of its own rather than optional fields on `Layout`, and that is deliberate. Making
  * `slots` and `slotSize` optional would touch every one of the sixteen files that import the rung,
  * every card, and every test that reads a slot rect, for a change that is meant to add a face
- * rather than disturb ten working ones. Two types, one of which is retired whole in XOR-95, is the
+ * rather than disturb ten working ones. Two types, one of which is retired whole in #146, is the
  * cheaper shape and the revertible one.
  *
  * The numbers come from the artboards, read off them rather than derived: `design/canvas/Dash.dc.html`
@@ -65,7 +65,7 @@ export const zoneLayoutDescription = (width: number, height: number): string => 
 
 // --- The face with no rev bar ----------------------------------------------------------------
 //
-// XOR-138. A driver whose wheel already has LEDs across its top does not want a second set on the
+// #189. A driver whose wheel already has LEDs across its top does not want a second set on the
 // screen, and hiding the segments alone leaves the well lit by nothing: a recess at the top of the
 // screen holding no light, with the first real content some way down from the edge. On the nano
 // that recess and its gap are a twelfth of the screen.
@@ -74,12 +74,12 @@ export const zoneLayoutDescription = (width: number, height: number): string => 
 // alternative was binding `Top` and `Height` on the parts below the well, and it was refused twice
 // over: `Height` is bound in no shipping dashboard we have seen, and a box whose height is decided
 // at runtime is a box `textFit.test.ts` and `secondScreens.test.ts` cannot measure against. Two
-// geometries measure as easily as one. XOR-73 (ADR 0011) put positional personalisation in its
+// geometries measure as easily as one. #124 (ADR 0011) put positional personalisation in its
 // second bucket; this is that bucket answered with a build-time flag rather than a binding.
 //
 // **These rectangles are derived and the canvas has not signed them off.** Every other rect in this
 // directory is read off an artboard, and `docs/design/zones.md` §10 records the disagreement: what
-// the canvas owes is which of the three answers this is, and XOR-138 is where that is tracked. The
+// the canvas owes is which of the three answers this is, and #189 is where that is tracked. The
 // derivation below is deliberately one rule with no free parameters, so that replacing it with
 // eight drawn tables is a deletion rather than an unpicking.
 

@@ -28,7 +28,7 @@ import {
 export interface ValidateProfileOptions extends Partial<ValidateOptions> {
   /**
    * How many LEDs the device has. When given, an effect whose `StartPosition` plus `LedCount`
-   * runs past the end fails — the rule XOR-250 asks for, and the reason it is an error rather
+   * runs past the end fails — the rule #301 asks for, and the reason it is an error rather
    * than a warning is that nothing else would ever tell you.
    */
   ledCount?: number;

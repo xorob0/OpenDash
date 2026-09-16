@@ -43,7 +43,7 @@ Two segment layers are emitted, one per mode, with their visibility bound to the
 values, not positions along a percentage bar. If SimHub ever exposes the band widths, a
 positional rendering can be added as a third mode without touching the cards or the plugin.
 
-**Amended 2026-09-13 (XOR-138).** The setting these layers read is now `OpenDash.RevBar`, whose
+**Amended 2026-09-13 (#189).** The setting these layers read is now `OpenDash.RevBar`, whose
 three values are `shift`, `rpm` and `off`; `ShiftLights` stays attached as its deprecated alias and
 is what `RevBar` falls back through. The two states above are unchanged and are still two layers:
 `off` is not a third layer, because drawing nothing is not a layer. On a rectangular zone face it
@@ -51,7 +51,7 @@ selects a second arrangement of the whole screen, with the well's room given bac
 everything that has no such arrangement — the rev arc, the companion's speedo module — it falls back
 to the plain RPM bar rather than going dark. The plugin copy no longer says "the rev bar stays".
 
-**Amended again the same day (XOR-230).** [ADR 0014](0014-the-shift-model.md) made the shift model
+**Amended again the same day (#281).** [ADR 0014](0014-the-shift-model.md) made the shift model
 the car's own four RPMs, with the bands above as the fallback, and the count of layers moved with
 it: a rev surface now emits **three**, not two. The amendment above is still right about the thing
 it was about, and the two statements are easy to read as a contradiction, so they are reconciled

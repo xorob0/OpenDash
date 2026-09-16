@@ -18,7 +18,7 @@
  * `off` is not one of the three, because drawing nothing is not a layer. A face that carries no
  * rev bar is a different arrangement of the whole screen, which `zones/face.ts` builds as a
  * second screen, and the surfaces that have no such arrangement -- the rev arc, the companion's
- * speedo -- fall back to the plain RPM bar rather than going dark. XOR-138.
+ * speedo -- fall back to the plain RPM bar rather than going dark. #189.
  */
 import type { Hex, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -54,7 +54,7 @@ const litColor = (lit: Expr, color: Hex): Expr => iff(lit, str(color), str(ds.pu
  * somewhere.
  *
  * The flash is carried the same way and is a *separate* threshold from the band, which is the
- * correction XOR-233's review forced: see {@link ShiftBand.blink}.
+ * correction #284's review forced: see {@link ShiftBand.blink}.
  */
 export interface ShiftBand {
   id: 'redline' | 'stage2' | 'stage1' | 'rest';
@@ -64,7 +64,7 @@ export interface ShiftBand {
   /**
    * When this band flashes, or null for a band that never does.
    *
-   * An expression rather than a boolean, and that is the whole of XOR-233's review finding. The
+   * An expression rather than a boolean, and that is the whole of #284's review finding. The
    * redline band is *entered* at `Last` and *flashes* at `max(Blink, Last)`, and it stops flashing
    * in the last gear; a consumer handed a boolean has no way to know that and flashes on the band
    * instead — early, and in a gear the bar deliberately leaves solid. Carrying the expression here

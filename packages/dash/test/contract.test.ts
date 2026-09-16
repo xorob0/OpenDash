@@ -99,7 +99,7 @@ describe('settings', () => {
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
     expect(props[15]).toBe('OpenDash.Slot12');
-    // The zones are declared here and read by the face from XOR-85. Slot01 to Slot12 stay beside
+    // The zones are declared here and read by the face from #136. Slot01 to Slot12 stay beside
     // them until the card path is retired, because ten faces still read them.
     // Appended to the shared group rather than beside ShiftLights, which has shipped at index 0.
     expect(props[4 + SLOT_MAX]).toBe('OpenDash.RevBar');
@@ -203,7 +203,7 @@ const pluginSource = (file: string): string => readFileSync(path.resolve(import.
 /**
  * The settings panel as one string.
  *
- * It is four tabs across six partial classes since XOR-125, so a test that named SettingsControl.cs
+ * It is four tabs across six partial classes since #176, so a test that named SettingsControl.cs
  * was reading a sixth of it and went green on the strips having moved to the Lights tab. The whole
  * panel is what these assertions mean: a setting is offered somewhere a user can reach it.
  */

@@ -29,7 +29,7 @@ export const LEADERBOARD_COLUMNS: readonly ColumnId[] = ['pos', 'num', 'name', '
  * row its next column instead, which is what this measurement makes it do.
  *
  * It is a bound and not a guarantee. A name of unusually wide letters is half again as wide as this
- * one at the same length, and nothing here truncates; XOR-121 owns what a name does when it is
+ * one at the same length, and nothing here truncates; #172 owns what a name does when it is
  * longer than any column will ever be.
  */
 const NAME_TO_FIT = 'Tomasz Kowalczyk';

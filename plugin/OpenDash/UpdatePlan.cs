@@ -33,7 +33,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Only folders already installed here are considered. A release publishes more packages than any one user
-        /// has, and adding a screen size somebody never asked for is the dashboard manager's business (XOR-33), not
+        /// has, and adding a screen size somebody never asked for is the dashboard manager's business (#84), not
         /// an update's. The arithmetic is real rather than hypothetical: the build produces twenty-two packages and
         /// v0.1.0-rc.2 published fourteen, so both directions of mismatch already exist.
         /// </remarks>

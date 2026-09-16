@@ -137,7 +137,7 @@ const relative: readonly BandField[] = [
 
 /**
  * D8 Car: the telltale row belongs here, and the pictograms need the generator's image item
- * (XOR-115) before XOR-97 can draw them. Until then this is the readings the lamps would sit
+ * (#166) before #148 can draw them. Until then this is the readings the lamps would sit
  * beside, so the page is worth cycling to rather than an empty step in the ring.
  */
 const car: readonly BandField[] = [

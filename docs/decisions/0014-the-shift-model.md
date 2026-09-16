@@ -13,7 +13,7 @@ SimHub exposes was correct. What changed is that SimHub is no longer the only th
 percentages. That reading was right, and the bar it produced is honest about what those three
 properties mean.
 
-What was not known then is where they come from. [XOR-224](../research/simhub-leds-format.md)
+What was not known then is where they come from. [#275](../research/simhub-leds-format.md)
 went looking, and the answer changes what the bar should be built on.
 
 **iRacing publishes the car's own shift-light RPMs.** The session string carries, per car,
@@ -66,7 +66,7 @@ rendering is unchanged and only its source moved.
 **Where the definition lives: an expression, in one module.** `packages/dash/src/shift.ts` is the
 only place the four property names appear, and a test fails if a second file mentions
 `DriverCarSL*RPM`. The generator emits the same expressions into the `.djson` and, when the LED
-work lands, into the `.ledsprofile`, because XOR-224 established that a profile's formulas are the
+work lands, into the `.ledsprofile`, because #275 established that a profile's formulas are the
 same NCalc with the same `isnull()`.
 
 This is deliberately *not* a plugin property, and [ADR 0009](0009-does-the-plugin-compute.md) is
@@ -124,10 +124,10 @@ sufficient and it adds nothing they do not already carry.
 names. Supporting a second sim's ladder is a third branch, not a change to this one, and it should
 wait until somebody has actually driven that sim.
 
-**Per-gear shift points.** Settled above for XOR-233: one ladder, the last gear excepted. What
+**Per-gear shift points.** Settled above for #284: one ladder, the last gear excepted. What
 would reopen it is a car where the single ladder is visibly wrong in a gear that is not the last —
 the Mercedes-AMG GT4, whose manual says the first LED moves with the selected gear and quotes its
-ladder for third only, is the known candidate, and XOR-170 hits the same question from the theme
+ladder for third only, is the known candidate, and #221 hits the same question from the theme
 side. If that car cannot be reproduced faithfully without per-gear thresholds, the two tickets
 should agree on one answer before either moves.
 
@@ -234,7 +234,7 @@ driven and written down.
 
 ## Corrected, 2026-09-13: which of this is built, and which of it was only written down
 
-A review of XOR-233 read the two amendments above against the code and found three statements in
+A review of #284 read the two amendments above against the code and found three statements in
 the present tense that nothing implemented. Nothing is being decided here and no behaviour changes:
 this section replaces description with fact, so that the next reader is not misled the same way.
 Where a rung is not built, it says so plainly rather than describing it as though it were.

@@ -86,7 +86,7 @@ namespace OpenDashPlugin.Tests
             // The zone face's groups follow, one per face that ships, each naming its own screen so
             // that two faces on a rig are configured apart.
             // Appended to the shared group, not inserted beside ShiftLights: the four names above and
-            // the twelve slots have shipped and this test asserts them by index. XOR-119, XOR-138.
+            // the twelve slots have shipped and this test asserts them by index. #170, #189.
             Assert.Equal("RevBar", names[16]);
             Assert.Contains("RevBar", Contract.SharedPropertyNames());
 

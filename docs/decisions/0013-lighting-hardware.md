@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-13
 **Status:** Accepted. Adds a fourth kind of artefact to "What ships" in [scope.md](../scope.md)
-and is the record [XOR-225](https://linear.app/xorob/issue/XOR-225) asked for. Depends on
+and is the record [#276](https://github.com/xorob0/OpenDash/issues/276) asked for. Depends on
 [the format research](../research/simhub-leds-format.md), which is what made it answerable.
 
 ## Context
@@ -89,9 +89,9 @@ The cost is a manual step openDash does not impose anywhere else, and it is a re
 people will never take it, and the box will sit dark for them. That is accepted. The alternative
 was writing into a file SimHub owns, on hardware the user did not ask us to touch.
 
-This is narrower than [XOR-147](https://linear.app/xorob/issue/XOR-147), which turns the installer
+This is narrower than [#198](https://github.com/xorob0/OpenDash/issues/198), which turns the installer
 into a picker for themed packages. A picker chooses among things openDash installs; the profile is
-not one of them, so it does not appear in the picker and XOR-147 does not need amending.
+not one of them, so it does not appear in the picker and #198 does not need amending.
 
 ### A profile works without the plugin
 
