@@ -22,7 +22,7 @@ the thing that is wrong when the two disagree.
 | 0012 | [Update checks, and what leaves the user's machine](0012-update-checks.md) | openDash asks GitHub what the newest release is, sends nothing about the user, and never installs without being told |
 | 0013 | [openDash lights hardware, and the flag box is where it starts](0013-lighting-hardware.md) | An 8x8 matrix profile is build output like a package, but the user imports it rather than the plugin installing it |
 | 0014 | [The shift model is the car's own](0014-the-shift-model.md) | iRacing publishes the car's shift-light RPMs and SimHub ignores them; one definition drives the bar, the arc, the flag box and the strip. Amends 0004 |
-| 0017 | [The car's own lights, from a table openDash does not carry](0018-the-cars-own-lights.md) | The pattern and the colours are mirrored too, from a table the plugin fetches and openDash never ships. Amends 0014, reopens 0009, extends 0012 |
+| 0018 | [The car's own lights, from a table openDash does not carry](0018-the-cars-own-lights.md) | The pattern and the colours are mirrored too, from a table the plugin fetches and openDash never ships. Amends 0014, reopens 0009, extends 0012 |
 
 ## Reserved
 
@@ -43,6 +43,11 @@ body still naming the old number is amended rather than rewritten, which is why 
 | 0010 | Where alert priority is decided | XOR-56 |
 | 0015 | What a car theme is, and the scope line it has to move | XOR-142 |
 | 0016 | How several hundred themed packages reach the user | XOR-146 |
+
+And once more on 2026-09-16, between two branches rather than two tickets: this record and "A
+screen is an instance" were both written as 0017, neither knowing about the other, and the lights
+one moved to 0018 because the screens one reached main first. Same lesson as above, and the same
+remedy: take the number when the ticket is opened.
 
 ## Writing one
 
