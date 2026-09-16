@@ -91,6 +91,20 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
     if (gapLeft > z.zoneB.left) items.push(rule(name, gapLeft, z.zoneB.top, 1, z.zoneB.height));
   }
 
+  // The same pixel across the face: the artboards leave an empty row above every row of the body
+  // and above band D, and draw the rule in it. Read off the rects rather than tabulated per face,
+  // so that the portrait face, which stacks its zones into four rows, and the arrangement that
+  // gives the rev bar's room back are both right without a second table.
+  const rowTops = [...new Set([z.zoneA.top, z.zoneB.top, z.zoneC.top])].sort((a, b) => a - b);
+  const startingAt = (top: number): string => (['A', 'B', 'C'] as const).filter((zone) => rectOf(layout, zone).top === top).join('');
+  const across: [string, number][] = rowTops.map((top, i) => [i === 0 ? 'rule.body' : `rule.zone${startingAt(top)}`, top]);
+  across.push(['rule.band', z.band.top]);
+  for (const [name, top] of across) {
+    // A rule is a boundary between two parts, and the top edge of the face is not one: the nano
+    // with its rev bar off starts its body on row 1, with only the face's margin above it.
+    if (top > 1) items.push(rule(name, 0, top - 1, layout.width, 1));
+  }
+
   const face = sizeOf(layout);
   for (const zone of FACE_ZONE_LETTERS) {
     items.push(zoneWidget(`zone${zone}`, face, zone, rectOf(layout, zone)));

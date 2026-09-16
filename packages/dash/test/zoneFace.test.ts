@@ -21,7 +21,8 @@ import {
   zoneCounterReadings,
   zoneProperties,
 } from '../src/contract.ts';
-import { validatePackage, type Dashboard, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { validatePackage, type Dashboard, type RectangleItem, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { ds } from '../src/tokens.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
@@ -51,6 +52,11 @@ import {
   zoneFace1920x480,
   zoneFace600x686,
   zoneFace800x286,
+  zoneFace1280x400,
+  zoneFace1280x480,
+  zoneFace1280x720,
+  zoneFace850x480,
+  type ZoneLayout,
 } from '../src/zones/index.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
@@ -336,6 +342,63 @@ describe('the parts the face draws itself', () => {
     // It carries no widget, which is what "does not cycle" means in the scene graph.
     const widgets = faceItems(zoneFace1920x480).filter((i) => i.kind === 'widget');
     expect(widgets.every((w) => !w.name.startsWith('bar'))).toBe(true);
+  });
+});
+
+/**
+ * The face is ruled across as well as down. The build drew the two vertical rules between the zones
+ * from the first zone face and neither of the horizontal ones, although every rectangular artboard
+ * separates the bar from the body and the body from band D with the same pixel.
+ */
+describe('the hairlines across the face', () => {
+  const hairlines = (layout: ZoneLayout, revBar: boolean): RectangleItem[] =>
+    faceItems(layout, { revBar }).filter((i): i is RectangleItem => i.kind === 'rect' && i.name.startsWith('rule.') && i.rect.height === 1);
+
+  test('every face rules the row above each zone row and above band D, in surface.raised', () => {
+    for (const face of ZONE_FACES) {
+      for (const [layout, on] of [
+        [face, true],
+        [layoutWithoutRevBar(face), false],
+      ] as const) {
+        const z = layout.zones;
+        // One row per distinct zone top -- one on a face whose body is a row, three on the portrait
+        // face that stacks its zones -- and one for the band. The nano with its rev bar off starts
+        // its body on row 1, where a rule would be the face's top edge rather than a boundary.
+        const wanted = [...new Set([z.zoneA.top, z.zoneB.top, z.zoneC.top, z.band.top])].sort((a, b) => a - b).filter((top) => top > 1);
+        const drawn = hairlines(layout, on);
+        expect({ face: face.folder, revBar: on, tops: drawn.map((r) => r.rect.top) }).toMatchObject({ tops: wanted.map((top) => top - 1) });
+        for (const r of drawn) {
+          expect({ face: face.folder, rule: r.name, rect: r.rect, colour: r.backgroundColor }).toMatchObject({
+            rect: { left: 0, width: layout.width, height: 1 },
+            colour: ds.color.surface.raised,
+          });
+        }
+      }
+    }
+  });
+
+  test('and they land where the artboards draw them', () => {
+    // Read off the artboards, which place each as `left: 0; width: <face>; height: 1px;
+    // background: #1C1F24`. Literal here for the same reason every other rect in this file is.
+    const drawn = (layout: ZoneLayout): number[] => hairlines(layout, true).map((r) => r.rect.top);
+    expect(drawn(zoneFace1920x480)).toEqual([104, 419]);
+    expect(drawn(zoneFace1280x480)).toEqual([98, 419]);
+    expect(drawn(zoneFace1280x400)).toEqual([86, 345]);
+    expect(drawn(zoneFace1280x720)).toEqual([104, 659]);
+    expect(drawn(zoneFace850x480)).toEqual([90, 419]);
+    expect(drawn(zoneFace800x286)).toEqual([32, 227]);
+    expect(drawn(zoneFace600x686)).toEqual([82, 317, 478, 629]);
+  });
+
+  test('each sits in an empty row, over nothing and under nothing', () => {
+    for (const face of ZONE_FACES) {
+      const z = face.zones;
+      const parts = [z.revBarWell, ...(z.bar ? [z.bar] : []), z.zoneA, z.zoneB, z.zoneC, z.band];
+      for (const r of hairlines(face, true)) {
+        const clash = parts.filter((p) => r.rect.top >= p.top && r.rect.top < p.top + p.height);
+        expect({ face: face.folder, rule: r.name, row: r.rect.top, clash }).toMatchObject({ clash: [] });
+      }
+    }
   });
 });
 
