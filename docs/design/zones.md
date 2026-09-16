@@ -358,6 +358,16 @@ This is a decision the canvas does not make. It was forced by the first photogra
 face, where the five cells that had no shedding rule were drawn straight over the right-hand
 fields: BIAS on POSITION, ABS on the slash of "3 / 24".
 
+Two of the seven cells do not read what their label promises, and settling them belongs to the
+canvas rather than to the build. DIFF is bound to the rear anti-roll bar, which the car settings
+page already draws under the label ARB R, so that one reading is published twice under two names.
+SLIP, moreover, is bound to the throttle shape, which is a throttle map rather than a slip target.
+SimHub normalises neither a differential nor a slip setting, and a car that offers either publishes
+it under a name of its own, so the question cannot be settled by looking a property up: what is
+required is a statement of which in-car adjustment each of the two cells is meant to show. Until
+that statement exists both cells are drawn as they are, and the disagreement is recorded here
+rather than resolved quietly in the code.
+
 The bar is the one region of the face that is not a zone and does not cycle. It is settled by
 definition, and that is what earns it the space.
 
