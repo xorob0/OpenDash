@@ -65,11 +65,20 @@ Five parts, each of which is the answer to one of the refusals above.
 The data is CC BY-NC-SA 4.0 and this repository is MIT; vendoring it would put non-commercial
 share-alike numbers into an MIT tree and into every generated profile, and it would break the rule
 `data/shift-points.json` states about measurements openDash has not made. So openDash ships none of
-it. The plugin fetches the upstream manifest and the current car's file onto the user's machine,
-caches them under its own folder, and credits Lovely Sim Racing in the lights panel.
+it. The plugin fetches it onto the user's machine instead, caches it under its own folder, and
+credits Lovely Sim Racing in the lights panel.
 
 This is better than a snapshot on its own terms as well: a car measured next month works without a
 release, and the numbers stay the upstream's to correct.
+
+**One archive of every car, rather than one car at a time.** The obvious shape is to ask for the
+car the driver just got into, and it is the wrong one: it would tell a CDN which car this user is
+driving and when, every time they tried a new one. That is a session detail leaving the machine,
+which is the line [ADR 0012](0012-update-checks.md) exists to keep, and no amount of "it is only a
+car name" makes it a thing openDash should send. One archive asks the question every other user
+asks and discloses nothing about this one. It also fails better: a car works the first time it is
+driven, offline, in a session that never reaches the network at all. It costs 386 KB, once,
+refreshed at most weekly, and the user's existing update-check switch governs it.
 
 `data/shift-points.json` is unchanged and keeps its own purpose — a car **openDash itself** has
 measured, contributed as a reviewable pull request.
