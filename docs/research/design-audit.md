@@ -191,6 +191,46 @@ settle rather than an implementer's.
   34. Either that band grows by two pixels, or the nano is the one face whose band is written a
   size smaller than the rest, which a driver would notice only beside another face.
 
+### What the second round left for you
+
+The packages above closed what the code could close. These are the points where the code could not
+decide, grouped by where they arose. Each is a sentence the author can answer in a line.
+
+- **Band D's telltales.** The twelve lamps are built and four of them have a source: the engine, the
+  fuel can, the limiter and, through the shared threshold, low fuel. Nine have none, and the wiper's
+  count has none either, so they are drawn dark rather than bound to a guess. Nineteen pictograms are
+  missing, with no icon named anywhere in the canvas. Besides that, the five engine readings that
+  used to stand on that page, water, oil, oil pressure, fuel pressure and voltage, are now drawn
+  nowhere at all, and the recommendation is a module of their own rather than a return to the band.
+  The engine lamp's red is a choice rather than a drawing, the artboard showing it dark.
+- **The licence badge.** The element exists and consumes the token that nothing consumed. Nothing
+  publishes a licence class or a safety rating, so it is bound to nothing. Two things block a
+  caller even once a source appears: the `a` and `b` steps carry no fill although every drawing
+  fills them, and the ramp asks for Barlow at 600 and 700 where the packages ship Medium and Bold,
+  which the build refuses. A live class also cannot change weight, a font weight not being bindable,
+  so a bound badge is six badges behind six visibility expressions.
+- **The steering dial.** The catalogue turns an arc and fixes the mark at the top. Neither half is
+  expressible, there being no arc and no bindable rotation, so the drawing is inverted: the rim
+  stands still and the mark runs round it. The recommendation is to accept that rather than
+  rasterise an arc.
+- **The telemetry traces.** The axis footer reads `Earlier`, `Time`, `Now`, because a number of
+  seconds cannot be backed while the window is a sample count against a refresh interval the
+  dashboard does not fix. The gear trace is pinned from minus one to eight, a chart's maximum being
+  a number rather than an expression, and it reads SimHub's gear word rather than the raw number so
+  that every other simulator does not trace a flat line.
+- **The lights.** The pit lane is a third whole-strip state the canvas does not name. The brake
+  gradient fills the side groups in the same red as the car lamp's warnings, so an oil pressure
+  warning is invisible under braking. Oil pressure and water temperature share one colour and one
+  rate on the car lamp, as do the black and the chequered flag on the race lamp. The traction
+  control level, on a car whose dial is set, owns the aid lamp permanently and hides the four
+  conditions beneath it. Twelve shapes have no sides at all, so a flag there still takes the whole
+  run.
+- **The panel's control kit.** The section gap is 20 in the tokens, in the panel tests and on the
+  Plugin sheet, while the brief asked for 28; nothing was moved. Five tab files still pass a caption
+  width the default now carries. Five values the canvas draws have no token and are literals: the
+  44 px tab, the field's 9 and 6 padding, the 620 caption, the 11 px caption size and the 12 px
+  chevron, and there is no monospace family shipped for the lights table.
+
 ## 4. The work, in packages
 
 The 1581 gaps group into 150 packages that can be built independently. A package owns a set of
