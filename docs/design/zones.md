@@ -195,6 +195,17 @@ the other.
 - **Width** picks the column set and the rank width.
 - **Height** picks the row count, and whether the lead values are promoted.
 
+**Where "nothing is ever scaled down" gives.** The rule is about a rank with something left to shed
+and it holds there. It cannot hold for a rank with nothing left, because a value that neither sheds
+nor shrinks is a value WPF clips. Five places therefore shrink as a floor, each argued where it
+stands: `second/field.ts`, when one field is left and shedding it would leave the page empty;
+`second/wheel.ts`, where a tyre corner is two numbers and a bar and none of them is secondary;
+`second/sectors.ts`, where a sector time steps down a ladder until it fits its third of the box;
+`zones/bandPages.ts`, where a band rank is one row; and `second/placeholder.ts`, for the line of
+prose saying a reading is missing, which clipped would be the worst of both. A reader who finds one
+of them has found the floor of the rule rather than a breach of it, and the canvas owes the same
+qualification.
+
 **Rule 20.** *A rank fills the box it is given. It grows until it meets an edge, and there are
 three: the height of the box, the width of the box, and the next size up its density ramp.*
 
@@ -255,6 +266,12 @@ The four shapes the catalogue draws, which are the test fixtures:
 
 A fifth band, `strip`, survives these because the pit wall already hands a module 607 × 158 and
 1007 × 211, and it is not on the canvas. Say so in the code rather than pretending it is.
+
+A `short` box is given no fifth drawing of its own. It takes the drawing of the next shape down —
+a wide one takes `grid`, a medium or narrow one takes `tall narrow` — because what a short box has
+is room for less, and §5 is where "less" is written page by page. That is the whole of the rule,
+and it lives in `archetypeOf`; a predicate beside the bands saying that a short box keeps one rank
+stated it a second time in other words, so it is gone.
 
 **Rule 18.** *A drawing is cut from its box. Never placed in it at a fixed size.* A tyre is as
 tall as the readings beside it; a car is capped at a third of the zone width however tall the box
@@ -431,6 +448,72 @@ Pages with nothing to shed, and why:
 A drawing is cut from its box rather than shed (rule 18), and a page that says it has no data is
 one line of prose with nothing in it to drop.
 
+### Where the build keeps more than the drawing
+
+The table is the catalogue read off page by page, and in five places it is deliberately not what the
+catalogue draws. Each of them is a decision rather than a drift, so each is recorded here: a reader
+holding a drawing against a zone should find the argument rather than suspect a bug.
+
+- **Lap times at `tall narrow`.** Four values where the drawing has two, which §10 argues from the
+  234 px of a real zone the drawing leaves empty. The catalogue owes the redraw.
+- **Fuel at `wide` and at `tall`.** The last lap, this lap and the five-lap average, where the zone
+  drawing carries one per-lap cell. The three come from the companion artboard, which is what the
+  `wide` row is for; the narrower shapes keep the average alone, since one number three ways is
+  still one number.
+- **Leaderboard at `wide`.** The best and the last lap, two columns the zone drawing does not carry
+  and the companion's list does. The trade runs the other way as well: the drawing gives the row a
+  rating column, and neither list declares one.
+- **Stint at `wide` and at `tall`.** The driver, where the drawing closes the page with the pit
+  window. The window is not a field the module builds, and a handover is what the recap is read for.
+- **Car settings at every shape.** The module draws the seven settings iRacing exposes and the
+  drawing draws ten, so what is kept is the proportion rather than the count: `tall narrow` drops
+  the three drawn last, which leaves four here against the drawing's seven.
+
+Everywhere else the drawing names a field the module does not build, which is the opposite case and
+is not a deviation: delta's three sector deltas, the rating on a list row, the pit window, the
+steering readout on the inputs page. They are simply not in the table, because the table is about
+the module.
+
+### The parts that are not fields
+
+A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap history
+is rows under a header, pit view's four corner toggles are what the drawing writes as the one line
+`Tyres · RIGHTS`, and tyres closes its corners with the caption saying where its pressures come
+from. The catalogue draws each of these at some shapes and not at others, so they are declared the
+same way a field is, in `PARTS` beside the table above. An empty cell is a part the drawing does not
+carry at that shape.
+
+| № | Page | `wide` | `grid` | `tall narrow` | `tall` |
+|---|---|---|---|---|---|
+| 2 | Delta | `bar` · `scale` | `bar` · `scale` |  | `bar` · `scale` |
+| 7 | Tyres | `footer` | `footer` |  | `footer` |
+| 8 | Pit view | `tyres` | `tyres` |  |  |
+| 19 | Lap history | `head` | `head` |  |  |
+
+Two tables rather than one because they answer two questions: the first is what a rank sheds, this
+is what furniture the page keeps around it, and a page may appear in both. Until they were
+declared, a narrow box lost them to `rowsThatFit` instead, which is arithmetic arriving at a design
+decision one pixel at a time, and in the tyres caption's case arriving at the wrong one: the module
+sized its two rows to the frame exactly, so the caption was dropped at every size the build
+produces rather than at the one shape the catalogue drops it.
+
+The catalogue also draws a steering readout on the inputs page at `wide` and at `grid`. It is not
+in the table because the module does not build one, and a part a page cannot draw would be a line
+nobody will notice is dead.
+
+### A page that takes another page's drawing
+
+The medium height band runs from 200 to 400 px and holds both the catalogue's `grid 430 × 300` and
+the 1280 × 400 face's zone body, which is 437 × 214. Two pages cannot be drawn the same way in
+both, and `FaceVariants1280x400` marks them: car settings draws seven cells where 214 px has room
+for four, and lap history draws a header row where 214 px would rather have one more lap. **Both
+take the `tall narrow` drawing in a `grid` box shorter than 260 px**, which is the floor between
+that face's two arrangements, 214 and 248 px, and the 1280 × 480 face's 276 px, drawn from the
+`grid` sheet.
+
+A floor for two pages rather than a fifth shape for all of them, because a fifth column on the
+table would repeat the fourth on nineteen rows.
+
 What a rank does with a field that is **not there at all** is a different question from this one,
 and the answer is in [§11](#11-a-field-that-is-not-there).
 
@@ -562,6 +645,14 @@ comparison is by page **id** and not page number, because the four catalogues ov
 track page and module 13 are one drawing under two numbers, and a comparison by number would miss
 exactly the duplicate a driver would notice.
 
+The quick glance is a fifth participant in that comparison, and it reads "Zone C and the quick
+glance both show the track." It is compared against each zone's *start* page rather than against
+the whole cycle, exactly as the zones are compared with each other, because a glance set to a page
+a zone can cycle to is something somebody may well want and warning about it would be a false alarm
+on every second rig. The page is named with an article and a lower-case noun, "the relative", save
+where a name lists what a page draws rather than naming one thing: "Gear, speed, revs" does not read
+after an article, so it keeps the spelling the drop-down uses.
+
 ---
 
 ## 8. What a zone does when its page changes
@@ -619,6 +710,7 @@ a mistake in this document.
 | The hero that never moves | The Main artboard reads "Gear, speed, rev bar, flag and pit limiter are fixed per layout. Every other value is a card". **It predates the model**: zone A cycles four pages under ADR 0006, so the gear gives way to the speed or to the track map on a button press, and the speed was card 12 rather than part of the hero even under the model the sentence describes. Only the rev bar, the flag and the pit limiter are fixed on the zone face. The sentence wants marking superseded, as the DashComponents slot numbers already are. |
 | DashComponents' zone A | The component sheet calls zone A "fixed on every layout" and describes the rev bar 40 tall in its well over a 1 px rule, the gear alone, a flag band 40 tall at the bottom edge and the limiter above the gear. That is the card face, which still builds and still draws precisely that. **The zone face follows the Zones artboards instead**: a 56 px bar of settled values takes the place of the rule under the rev bar, the segments are 32 tall inside a 40 px well, and the flag takes band D's sixty pixels rather than a strip of its own. The section wants the same superseded marking as its slot numbers. |
 | The same five parts on every face | The catalogue's anatomy says the five parts differ only in size from one rectangular face to the next. Two of the per-size artboards draw otherwise: 800 × 286 has no bar at all, which leaves four parts, and 600 × 686 stacks A over B over C rather than setting B beside A beside C. **The per-size artboards are taken**, being the more specific drawing, and §1 tabulates both departures. |
+| The gap chips on the face sheets | Each `FaceVariants` sheet counts the pages that do not fit its rectangle as the catalogue draws them, and the 1280 × 720 and 1280 × 480 sheets give every one of the twenty-one a shed count of nought. The catalogue's own `tall` drawings do shed: sectors keeps two of its three lap times, a leaderboard row loses its best and its last, and the opponents blocks lose the car number. **The drawings are taken**, since §5 was read off them; the counts are annotation over the top of them. |
 | Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [readability-pass.md](readability-pass.md). |
 | Session's sixth field | The catalogue labels it *Est. laps* at `wide` and at `tall`, where the build labels it *Laps left*. **The build's label is kept**, on two grounds. Firstly, the value behind it is `RemainingLaps`, which is the session's own count of laps still to run, and no research note here describes that property as an estimate, so *Est.* would be a claim the datum does not make. Secondly, *Est. laps* is already the label of the fuel page's sixth field, where it carries `Computed.Fuel_RemainingLaps`, that is to say the range left in the tank; two pages drawing the same two words over two different quantities is precisely the confusion the rename would introduce. Either the catalogue renames this one, or the session field is rebound to something that is genuinely estimated. |
 | Session's third rank | The catalogue draws Strength, Incidents and Cars at `wide` and at `tall`, and **two of the three are built**. Strength of field is left out under [ADR 0009](../decisions/0009-does-the-plugin-compute.md), which found it published by SimHub in no form at all and struck it from the bar's catalogue of end fields for the same reason. The row is therefore two fields wide rather than three, and it closes over the hole the way [§11](#11-a-field-that-is-not-there) describes. |

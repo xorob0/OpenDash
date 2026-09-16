@@ -22,8 +22,13 @@ export type SessionProgress = 'auto' | 'laps' | 'time';
 /**
  * What the middle of an RGB strip shows. The sides carry brake in the default, which is what the
  * hardware makers put there and what DNR puts on the same LEDs.
+ *
+ * Four, not five. `rpmOnly` lit the same centre as `rpm` and differed only in leaving the sides
+ * dark, which is a decision about the sides rather than about the centre, so it is retired into
+ * `rpm`; {@link RETIRED_LED_CENTRE} is what a settings file written before the retirement carries,
+ * and the plugin migrates it rather than letting a strip match no group and go dark.
  */
-export type LedCentre = 'rpm' | 'rpmOnly' | 'brake' | 'throttleBrake' | 'fuel';
+export type LedCentre = 'rpm' | 'brake' | 'throttleBrake' | 'fuel';
 /**
  * How the rev ladder fills the strip. It decides the *look*, never the *when*: the thresholds are
  * the car's own either way (ADR 0014), and a style only chooses which LED takes which rung and
@@ -53,8 +58,11 @@ export const REV_BAR_SETTING = 'RevBar';
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
-export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'rpmOnly', 'brake', 'throttleBrake', 'fuel'];
+export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'brake', 'throttleBrake', 'fuel'];
 export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['leftToRight', 'meetInMiddle', 'f1'];
+
+/** The fifth centre, retired into `rpm`. Named so that the plugin can migrate it rather than guess. */
+export const RETIRED_LED_CENTRE = 'rpmOnly';
 
 export const DEFAULTS = {
   ShiftLights: true,
@@ -64,6 +72,7 @@ export const DEFAULTS = {
   SessionProgress: 'auto' as SessionProgress,
   LedCentre: 'rpm' as LedCentre,
   LedRpmStyle: 'leftToRight' as LedRpmStyle,
+  LedFlagAnimation: true,
 } as const;
 
 /** `Slot01` .. `Slot12` for a 1-based slot index. */
@@ -108,7 +117,7 @@ export function dashProperties(): string[] {
 
 /** The properties only a generated LED profile reads. ADR 0013. */
 export function ledProperties(): string[] {
-  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING].map(propertyName);
+  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING].map(propertyName);
 }
 
 /** The name of the setting choosing what the middle of a strip shows. */
@@ -117,11 +126,23 @@ export const LED_CENTRE_SETTING = 'LedCentre';
 /** The name of the setting choosing how the rev ladder fills the strip. */
 export const LED_RPM_STYLE_SETTING = 'LedRpmStyle';
 
+/**
+ * Whether a flag on a strip moves at all.
+ *
+ * On, because movement is what a flag is read by at the edge of vision. Off holds every flag from
+ * the frame it would have settled on and never turns one off, which is what a driver who finds a
+ * blinking rim distracting is actually asking for; it is a switch rather than a rate, because a
+ * rate is the standard's decision and not the driver's.
+ *
+ * Appended after the two the strips already read rather than inserted beside them, for the reason
+ * `RevBar` is appended to the shared group: both halves of the contract are pinned in order.
+ */
+export const LED_FLAG_ANIMATION_SETTING = 'LedFlagAnimation';
+
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
-  const modules = MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
   const pitWall = [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING];
-  return [...modules, ...pitWall].map(propertyName);
+  return [...companionProperties(), ...pitWall].map(propertyName);
 }
 
 /** Every property the plugin exposes, in the order the plugin attaches them. */
@@ -167,6 +188,8 @@ export const setting = {
   ledCentre: (): Expr => isnull(prop(propertyName(LED_CENTRE_SETTING)), str(DEFAULTS.LedCentre)),
   /** `isnull([OpenDash.LedRpmStyle], 'leftToRight')` */
   ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
+  /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
+  ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
 };
 
 
@@ -188,14 +211,14 @@ export const setting = {
  * reads it back, so the two cannot disagree.
  */
 export const FACE_SIZES: readonly FaceSize[] = [
-  { width: 1920, height: 480, body: 'row', parts: [769, 380, 769], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 1280, height: 480, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 1280, height: 400, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 850, height: 480, body: 'row', parts: [274, 300, 274], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 800, height: 480, body: 'row', parts: [249, 300, 249], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 1280, height: 720, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 800, height: 286, body: 'row', parts: [269, 260, 269], hasBar: false, barFieldsPerEnd: 2 },
-  { width: 600, height: 686, body: 'column', parts: [234, 160, 150], hasBar: true, barFieldsPerEnd: 1 },
+  { width: 1920, height: 480, body: 'row', parts: [769, 380, 769], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 48, bar: 56, body: 314, band: 60 } },
+  { width: 1280, height: 480, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 44, bar: 54, body: 320, band: 60 } },
+  { width: 1280, height: 400, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 36, bar: 50, body: 258, band: 54 } },
+  { width: 850, height: 480, body: 'row', parts: [274, 300, 274], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 40, bar: 50, body: 328, band: 60 } },
+  { width: 800, height: 480, body: 'row', parts: [249, 300, 249], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 40, bar: 50, body: 328, band: 60 } },
+  { width: 1280, height: 720, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 48, bar: 56, body: 554, band: 60 } },
+  { width: 800, height: 286, body: 'row', parts: [269, 260, 269], hasBar: false, barFieldsPerEnd: 2, rows: { revBar: 33, bar: 0, body: 194, band: 58 } },
+  { width: 600, height: 686, body: 'column', parts: [234, 160, 150], hasBar: true, barFieldsPerEnd: 1, rows: { revBar: 36, bar: 46, body: 546, band: 56 } },
 ];
 
 /**
@@ -217,6 +240,28 @@ export interface FaceSize {
   hasBar: boolean;
   /** Two per end on a wide face, one in portrait. */
   barFieldsPerEnd: 1 | 2;
+  /** The heights of the four rows the face stacks, which is what a plan of it scales from. */
+  rows: FaceRows;
+}
+
+/**
+ * The four rows of a face, from the top: the strip the rev bar sits in, the bar, the body the three
+ * zones share, and band D.
+ *
+ * Here for the same reason `parts` is: the plugin draws a plan of the face and cannot read a layout
+ * file, and a plan whose rows are four constants draws a 1920 x 480 face's 48, 56, 314 and 60 as 19,
+ * 24, 150 and 26. `zoneFace.test.ts` holds each number against the real rectangles in
+ * `zones/faces/*.ts`, so a face that is redrawn cannot leave its plan behind.
+ *
+ * `bar` is zero on the nano, which has no bar. `body` counts the whole region the three zones
+ * occupy, the one-pixel seams between them included, so that a portrait face whose zones are
+ * stacked measures the same way as a wide one whose zones are side by side.
+ */
+export interface FaceRows {
+  revBar: number;
+  bar: number;
+  body: number;
+  band: number;
 }
 
 /** The zone letters of a face's body, in the order that body draws them. */
@@ -357,6 +402,30 @@ export const quickGlanceSettingName = (face: FaceSize): string => `${facePrefix(
 /** Zone C on the track page, which is what a glance is usually for. */
 export const DEFAULT_QUICK_GLANCE = 2 * 100 + 12;
 
+/**
+ * How a face draws a flag: over the band it shares with whatever else has a claim on those sixty
+ * pixels, or over the whole face.
+ *
+ * `band` is the default because it is what the face has always drawn and because a flag that takes
+ * the screen also takes the gear with it. `full` is for the driver who wants a flag to be the only
+ * thing on the face while it is up, which is the choice the nano's fifty-eight pixel band cannot
+ * offer on its own.
+ */
+export type FlagFormat = 'band' | 'full';
+export const FLAG_FORMATS: readonly FlagFormat[] = ['band', 'full'];
+export const DEFAULT_FLAG_FORMAT: FlagFormat = 'band';
+
+/**
+ * `Face1920x480FlagFormat`.
+ *
+ * Per screen and not per rig, declared beside the zones for the reason the zones are: a rig with a
+ * 1920 on the dash and an 850 on the rim is two screens read at two distances, and the one in the
+ * driver's peripheral vision is exactly the one a full-face flag is for. `facePropertyNames` puts
+ * it last, after the glance, because the names before it have shipped and both halves of the
+ * contract assert the group by index.
+ */
+export const flagFormatSettingName = (face: FaceSize): string => `${facePrefix(face)}FlagFormat`;
+
 export const quickGlanceValue = (zone: FaceZone, page: number): number => FACE_ZONE_LETTERS.indexOf(zone) * 100 + page;
 export const quickGlanceZone = (value: number): FaceZone => FACE_ZONE_LETTERS[Math.floor(value / 100)] ?? 'A';
 export const quickGlancePage = (value: number): number => value % 100;
@@ -375,13 +444,17 @@ export const zone = {
   barField: (face: FaceSize, slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(face, slot))), num(DEFAULT_BAR_FIELDS[slot])),
   /** `isnull([OpenDash.Face1920x480ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
   classOnly: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(face, z))), String(DEFAULT_ZONE_CLASS_ONLY)),
+  /** `isnull([OpenDash.Face1920x480FlagFormat], 'band')`: how this face draws a flag. */
+  flagFormat: (face: FaceSize): Expr => isnull(prop(propertyName(flagFormatSettingName(face))), str(DEFAULT_FLAG_FORMAT)),
+  /** `isnull([OpenDash.Face1920x480FlagFormat], 'band') = 'full'`: whether this face is in the given format. */
+  flagFormatIs: (face: FaceSize, format: FlagFormat): Expr => eq(zone.flagFormat(face), str(format)),
 };
 
 /** Every property one face reads, which is the group the plugin attaches for it. */
 export function facePropertyNames(face: FaceSize): string[] {
   const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
-  return [...perZone, ...bar, quickGlanceSettingName(face)];
+  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face)];
 }
 
 /** Every zone property of every face that ships. */
@@ -483,7 +556,7 @@ export function screenProperties(prefix: string): string[] {
   if (prefix === PIT_WALL_PREFIX) {
     return [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING].map(propertyName);
   }
-  if (prefix === COMPANION_PREFIX) return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)).map(propertyName);
+  if (prefix === COMPANION_PREFIX) return companionProperties().map(propertyName);
   throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
 }
 
@@ -606,6 +679,19 @@ export function moduleAt(number: number): ModuleMeta {
 export function moduleSettingName(number: number): string {
   moduleAt(number);
   return `CompanionModule${String(number).padStart(2, '0')}`;
+}
+
+/**
+ * Every property the companion owns, in the order the plugin attaches them.
+ *
+ * The modules alone, for now. The plugin also decides which module the companion opens on and which
+ * one a held button shows, and it holds both, but neither is a property yet: a second-screen
+ * property has to be *read* by a package, which `secondScreens.test.ts` enforces, and the companion
+ * cannot read a page setting while it is twenty-one top-level screens that SimHub itself pages. The
+ * change that makes it one paged screen is the change that declares them.
+ */
+export function companionProperties(): string[] {
+  return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
 }
 
 /**
@@ -775,6 +861,19 @@ export const LIGHTS_BRIGHTNESS_SETTING = 'LightsBrightness';
 export const LIGHTS_NIGHT_BRIGHTNESS_SETTING = 'LightsNightBrightness';
 export const LIGHTS_NIGHT_MODE_SETTING = 'LightsNightMode';
 
+/**
+ * How few laps of fuel is low, for every light openDash drives rather than for the box alone.
+ *
+ * Named `Lights*` for the reason the three above are: one threshold answers "am I low" for the
+ * strip, the rev bar and the box, and three copies of it would be three places to disagree.
+ * {@link FLAG_BOX_LOW_FUEL_LAPS_SETTING} is the name that shipped and is not retired with it:
+ * it stays attached as the deprecated alias {@link flagBox.lowFuelLaps} falls back through, so
+ * that a rig set up against rc.2 keeps the number its driver chose. ADR 0003 makes a published
+ * property name a public interface, and XOR-119 is the rule that one does not vanish without a
+ * release of warning.
+ */
+export const LIGHTS_LOW_FUEL_LAPS_SETTING = 'LightsLowFuelLaps';
+
 /** Flag-box-specific, because they are about this box rather than about lights in general. */
 export const FLAG_BOX_CRITICAL_ONLY_SETTING = 'FlagBoxCriticalOnly';
 export const FLAG_BOX_GEAR_SETTING = 'FlagBoxGear';
@@ -836,8 +935,17 @@ export const flagBox = {
   criticalOnly: (): Expr => isnull(prop(propertyName(FLAG_BOX_CRITICAL_ONLY_SETTING)), String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
   /** `isnull([OpenDash.FlagBoxGear], true)`: the gear as the resting state. */
   gear: (): Expr => isnull(prop(propertyName(FLAG_BOX_GEAR_SETTING)), String(DEFAULT_FLAG_BOX_GEAR)),
-  /** `isnull([OpenDash.FlagBoxLowFuelLaps], 2)`. */
-  lowFuelLaps: (): Expr => isnull(prop(propertyName(FLAG_BOX_LOW_FUEL_LAPS_SETTING)), num(DEFAULT_FLAG_BOX_LOW_FUEL_LAPS)),
+  /**
+   * `isnull([OpenDash.LightsLowFuelLaps], isnull([OpenDash.FlagBoxLowFuelLaps], 2))`: how few laps
+   * of fuel is low, for every light rather than for the box alone.
+   *
+   * Two fallbacks deep, exactly as {@link setting.revBar} is and for the same reason. The inner one
+   * is the deprecated alias, so that a profile installed beside an rc.2 plugin -- which attaches
+   * `FlagBoxLowFuelLaps` and not `LightsLowFuelLaps` -- still reads the number that user set; the
+   * innermost is the default a profile without any plugin shows.
+   */
+  lowFuelLaps: (): Expr =>
+    isnull(prop(propertyName(LIGHTS_LOW_FUEL_LAPS_SETTING)), isnull(prop(propertyName(FLAG_BOX_LOW_FUEL_LAPS_SETTING)), num(DEFAULT_FLAG_BOX_LOW_FUEL_LAPS))),
   /**
    * The oil threshold, defaulted **per unit**: the default is looked up from SimHub's own
    * `TemperatureUnit` inside the expression, so a driver in Fahrenheit gets 248 rather than 120.
@@ -866,6 +974,10 @@ export function flagBoxProperties(): string[] {
     FLAG_BOX_LOW_FUEL_LAPS_SETTING,
     FLAG_BOX_OIL_TEMP_SETTING,
     FLAG_BOX_WATER_TEMP_SETTING,
+    // Appended rather than placed beside the other Lights* names: this list is pinned in order by
+    // packages/dash/test/declared-properties.txt, and both halves of the contract assert its head
+    // by index, so a new name joins the end of the group and is never inserted into it.
+    LIGHTS_LOW_FUEL_LAPS_SETTING,
   ];
   const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
   return [...global, ...perMatrix].map(propertyName);

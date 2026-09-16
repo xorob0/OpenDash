@@ -116,23 +116,31 @@ describe('the families a package ships', () => {
     expect(weights).toContain('Bold');
   });
 
-  test('the label family ships Medium', () => {
+  test('the label family ships Medium and the Bold a flag band is named in', () => {
+    // A label is Medium everywhere but on the flag band, which the artboards set in 700; the face
+    // has to be carried rather than synthesised, since design/advances.ts measures it and the fit
+    // tests believe what it measures.
     const weights = shipped()
       .filter((f) => familyOfFile(f) === ds.font.label)
       .map(weightOfFile);
     expect(weights).toContain('Medium');
+    expect(weights).toContain('Bold');
   });
 
-  test('a face package ships three faces and a second screen four', () => {
+  test('a face package ships four faces and a second screen four', () => {
     // What the sheets' nine declared weights mean here. A package ships the faces it is drawn in
     // rather than the faces it might ask for, so nine files would be six that no item names and
     // whose advances nothing measures; build.ts holds the other side of the rule, refusing a
-    // package that draws a weight absent from these lists. The fourth is the pit wall wordmark's
-    // Light, which the companions carry too because one list serves both screens.
+    // package that draws a weight absent from these lists. The fourth of a face is the flag band's
+    // name, which the artboards set in 700 against the 500 of every other label; the fourth of a
+    // screen is the pit wall wordmark's Light, which the companions carry too because one list
+    // serves both screens.
     const faces = (files: string[]): string[] => files.map((f) => `${familyOfFile(f)} ${weightOfFile(f)}`).sort();
-    const face = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`];
-    expect(faces(fontsForPackage())).toEqual([...face].sort());
-    expect(faces(fontsForScreens())).toEqual([...face, `${ds.font.data} Light`].sort());
+    const shared = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`];
+    // The face's fourth is the flag band's name; a second screen draws no flag band and takes the
+    // wordmark's Light instead.
+    expect(faces(fontsForPackage())).toEqual([...shared, `${ds.font.label} Bold`].sort());
+    expect(faces(fontsForScreens())).toEqual([...shared, `${ds.font.data} Light`].sort());
   });
 
   test('the vendored originals are left exactly as they were downloaded', () => {

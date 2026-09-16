@@ -83,7 +83,7 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-const FONT_FILES = [`${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/openDashDisplay-Bold.ttf`, `${FONTS_DIR}/openDashDisplay-SemiBold.ttf`];
+const FONT_FILES = [`${FONTS_DIR}/Barlow-Bold.ttf`, `${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/openDashDisplay-Bold.ttf`, `${FONTS_DIR}/openDashDisplay-SemiBold.ttf`];
 
 const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -267,7 +267,7 @@ describe('widget build on disk', () => {
    * them under a family WPF will not fold into Barlow. What has to hold is that the difference is
    * exactly the rename and nothing else, which is checked by doing the rename here and comparing.
    */
-  test('the bundled fonts are the three face fonts as fonts/ holds them, renamed, in every package', () => {
+  test('the bundled fonts are the face fonts as fonts/ holds them, renamed, in every package', () => {
     for (const folder of FOLDERS) {
       const fontsDir = join(widget.out, folder, FONTS_DIR);
       expect(readdirSync(fontsDir).sort()).toEqual(FACE_FONT_FILES.map(renamedFileName).sort());
@@ -589,10 +589,17 @@ describe('the faces a package draws', () => {
     }
   });
 
-  test('the faces drawn are the three the tokens name, and the wordmark Light on a pit wall', () => {
+  test('the faces drawn are the three the tokens name, the flag name in Bold, and the wordmark Light on a pit wall', () => {
     const drawn = (folder: string): string[] => drawnBy(folder).map(([family, weight]) => `${family} ${weight}`).sort();
     const face = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`].sort();
-    for (const folder of [...FOLDERS, ...ZONE_FOLDERS]) expect([folder, drawn(join(widget.out, folder))]).toEqual([folder, face]);
+    // The flag band writes its name in the artboards' 700. The round faces name no flag, drawing
+    // the ring instead, and the nano's card face draws no label at all, so those three keep the
+    // three the tokens name.
+    const NO_FLAG_NAME = ['openDash 480 round', 'openDash 800 round', 'openDash slots 800x286'];
+    for (const folder of [...FOLDERS, ...ZONE_FOLDERS]) {
+      const expected = NO_FLAG_NAME.includes(folder) ? face : [...face, `${ds.font.label} Bold`].sort();
+      expect([folder, drawn(join(widget.out, folder))]).toEqual([folder, expected]);
+    }
     for (const screen of SCREEN_PACKAGES) {
       const wordmark = screen.kind === 'pitwall' ? [`${ds.font.data} Light`] : [];
       expect([screen.folder, drawn(join(second.out, screen.folder))]).toEqual([screen.folder, [...face, ...wordmark].sort()]);
