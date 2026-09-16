@@ -123,6 +123,18 @@ describe('the families a package ships', () => {
     expect(weights).toContain('Medium');
   });
 
+  test('a face package ships three faces and a second screen four', () => {
+    // What the sheets' nine declared weights mean here. A package ships the faces it is drawn in
+    // rather than the faces it might ask for, so nine files would be six that no item names and
+    // whose advances nothing measures; build.ts holds the other side of the rule, refusing a
+    // package that draws a weight absent from these lists. The fourth is the pit wall wordmark's
+    // Light, which the companions carry too because one list serves both screens.
+    const faces = (files: string[]): string[] => files.map((f) => `${familyOfFile(f)} ${weightOfFile(f)}`).sort();
+    const face = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`];
+    expect(faces(fontsForPackage())).toEqual([...face].sort());
+    expect(faces(fontsForScreens())).toEqual([...face, `${ds.font.data} Light`].sort());
+  });
+
   test('the vendored originals are left exactly as they were downloaded', () => {
     // The renaming happens on the way into a package, so what the repository holds stays upstream
     // Barlow and a later `fonts/` refresh does not have to be re-patched by hand.

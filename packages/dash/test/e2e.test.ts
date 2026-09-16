@@ -29,7 +29,7 @@ import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
 import { fontsForPanel, needsRename, renameFamily, renamedFileName } from '../src/design/fontFiles.ts';
 import { FONT_LICENCE } from '../src/design/notices.ts';
-import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, leds, listFiles, PACKAGE_EXTENSION, readZip, stableGuid } from '../src/generator.ts';
+import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, leds, listFiles, PACKAGE_EXTENSION, readZip, stableGuid, subfamilyHasWeight } from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
 import { SCREEN_PACKAGES } from '../src/screens/index.ts';
@@ -39,6 +39,8 @@ import { ALL_SHAPES, deviceLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { ds } from '../src/tokens.ts';
+import { itemsOf } from '../src/walk.ts';
+import { familyOf, fontName, loadFont, NAME_ID } from '../../../tools/measure-font/measure.ts';
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 interface JsonItem {
@@ -533,6 +535,53 @@ describe('second screens on disk', () => {
   });
 });
 
+describe('the faces a package draws', () => {
+  /** Every package folder the two builds wrote: the card faces, the zone faces and the four screens. */
+  const written = (): string[] => [...[...FOLDERS, ...ZONE_FOLDERS].map((f) => join(widget.out, f)), ...SCREEN_PACKAGES.map((s) => join(second.out, s.folder))];
+
+  /** The faces a written folder ships, read out of the name table of each file in `_SHFonts/`. */
+  const facesOf = (folder: string): { family: string; subfamily: string }[] =>
+    readdirSync(join(folder, FONTS_DIR))
+      .filter((f) => f.toLowerCase().endsWith('.ttf'))
+      .map((f) => {
+        const font = loadFont(join(folder, FONTS_DIR, f));
+        return { family: familyOf(font) ?? '', subfamily: fontName(font, NAME_ID.typographicSubfamily) ?? fontName(font, NAME_ID.subfamily) ?? '' };
+      });
+
+  /** Every distinct family and weight the written .djson files of a folder draw in. */
+  const drawnBy = (folder: string): [family: string, weight: string][] => {
+    const drawn = new Map<string, [string, string]>();
+    for (const file of djsonFiles(folder)) {
+      for (const item of itemsOfDocument(readJson(file))) {
+        if (typeof item.Font === 'string' && typeof item.FontWeight === 'string') drawn.set(`${item.Font} ${item.FontWeight}`, [item.Font, item.FontWeight]);
+      }
+    }
+    return [...drawn.values()];
+  };
+
+  test('every weight a package draws is a file that package ships', () => {
+    // The gate in build.ts refuses this on the model; this asks it of what SimHub would actually
+    // import, since a face is shipped only once it is in `_SHFonts/`. A weight with no file is
+    // resolved by WPF to whatever it can find, so every advance in design/advances.ts, and the fit
+    // textFit.test.ts proved with it, would belong to a face the package does not carry.
+    for (const folder of written()) {
+      const faces = facesOf(folder);
+      const unshipped = drawnBy(folder).filter(([family, weight]) => !faces.some((f) => f.family === family && subfamilyHasWeight(f.subfamily, weight)));
+      expect({ folder: basename(folder), unshipped }).toEqual({ folder: basename(folder), unshipped: [] });
+    }
+  });
+
+  test('the faces drawn are the three the tokens name, and the wordmark Light on a pit wall', () => {
+    const drawn = (folder: string): string[] => drawnBy(folder).map(([family, weight]) => `${family} ${weight}`).sort();
+    const face = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`].sort();
+    for (const folder of [...FOLDERS, ...ZONE_FOLDERS]) expect([folder, drawn(join(widget.out, folder))]).toEqual([folder, face]);
+    for (const screen of SCREEN_PACKAGES) {
+      const wordmark = screen.kind === 'pitwall' ? [`${ds.font.data} Light`] : [];
+      expect([screen.folder, drawn(join(second.out, screen.folder))]).toEqual([screen.folder, [...face, ...wordmark].sort()]);
+    }
+  });
+});
+
 describe('validation gate', () => {
   test('a package that fails validation throws and writes nothing', () => {
     const rules = layout1920x480.rules;
@@ -558,6 +607,22 @@ describe('validation gate', () => {
       validateOrThrow(pkg);
     } catch (e) {
       expect((e as BuildError).issues.map((i) => i.code)).toEqual(['property/undeclared']);
+    }
+  });
+
+  test('an item drawn in a weight the package does not ship is an error', () => {
+    // A warning would be printed and the package written anyway, which is how a run measured in
+    // one face and drawn in another would reach a rig. Light is the case at hand: the second
+    // screens ship it for the wordmark and a face package does not.
+    const pkg = buildPackage(layout1920x480, { version: '0.0.0-test' });
+    const text = itemsOf(pkg.dashboards[0]!).find((i) => i.kind === 'text');
+    expect(text).toBeDefined();
+    text!.fontWeight = 'Light';
+    expect(() => validateOrThrow(pkg)).toThrow(/does not ship/);
+    try {
+      validateOrThrow(pkg);
+    } catch (e) {
+      expect((e as BuildError).issues.map((i) => i.code)).toEqual(['font/weight-missing']);
     }
   });
 

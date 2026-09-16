@@ -158,6 +158,16 @@ export function readVersion(file: string = VERSION_FILE): string {
 }
 
 /**
+ * The two font warnings this build refuses to print and carry on from. A run drawn in a family or
+ * a weight the package does not bundle is resolved by WPF to whatever it can find, so the advances
+ * in design/advances.ts, and the fit textFit.test.ts proved with them, describe a face that never
+ * shipped; that is the failure the family renaming in design/fontFiles.ts was introduced to end.
+ * The generator can only warn, because a package it validates need not carry its own fonts at all,
+ * and one built here always does.
+ */
+const FONT_ERROR_CODES: readonly string[] = ['font/missing', 'font/weight-missing'];
+
+/**
  * Validates against the contract's declared properties; throws a BuildError on errors, returns the
  * warnings.
  *
@@ -166,6 +176,11 @@ export function readVersion(file: string = VERSION_FILE): string {
  * so being declared proves nothing here; without this rule a package could read the screen beside
  * it and only a rig with two screens would ever show it. A card face passes nothing, because it
  * owns no group and reads the modes and the slots alone.
+ *
+ * {@link FONT_ERROR_CODES} is why a package that draws a weight it does not ship fails here rather
+ * than logging a warning: what a package ships is the set of faces it draws in, and a weight added
+ * to an item has to be added to FACE_FONT_FILES or SCREEN_FONT_FILES, and measured into
+ * design/advances.ts, before anything can be drawn in it.
  */
 export function validateOrThrow(pkg: DashPackage, screen?: string): ValidationIssue[] {
   const result = validatePackage(pkg, {
@@ -176,6 +191,11 @@ export function validateOrThrow(pkg: DashPackage, screen?: string): ValidationIs
   if (!result.ok) {
     const n = result.errors.length;
     throw new BuildError(`package ${pkg.folderName} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
+  }
+  const faces = result.warnings.filter((w) => FONT_ERROR_CODES.includes(w.code));
+  if (faces.length > 0) {
+    const n = faces.length;
+    throw new BuildError(`package ${pkg.folderName} draws in ${n} face${n === 1 ? '' : 's'} it does not ship:\n${formatIssues(faces)}`, faces);
   }
   return result.warnings;
 }

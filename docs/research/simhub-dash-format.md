@@ -424,7 +424,10 @@ Verified on the VM on 2026-09-12: one 240 x 180 source drawn by three items into
 inside it. `Opacity` is a percentage, as it is on every other item.
 
 Fonts are referenced by family name in `Font`, with `FontWeight` taking WPF weight names such
-as `Normal`, `SemiBold`, `Bold` and `Black`, and the files are shipped in `_SHFonts/`. Blumlaut
+as `Normal`, `SemiBold`, `Bold` and `Black`, and the files are shipped in `_SHFonts/`. `Font`
+holds one family rather than a stack, so a fallback such as Arial Narrow or system-ui cannot be
+expressed at all: what a package does not ship is resolved by WPF to whatever it can find rather
+than to a named alternative, which is why a weight has to be bundled before it may be drawn. Blumlaut
 ships `D-DINCondensed-Bold.ttf`; Daniel Newman ships Reddit Mono, Reddit Sans and Inter.
 
 ### No letter spacing
