@@ -4,9 +4,9 @@
  * window is the sample count times the refresh interval, which is why the plot's own width sets
  * the count rather than a caller asking for seconds.
  *
- * The hairlines at the quarters are drawn behind the series, with a rule closing the plot for the
- * panels the canvas draws one under, and a legend row is added when there is more than one series,
- * because unlabelled colours are a guess.
+ * The hairlines are drawn behind the series, with a rule closing the plot for the panels the canvas
+ * draws one under, and a legend row is added when there is more than one series, because unlabelled
+ * colours are a guess.
  *
  * What a ChartItem will not do is end a line: it carries a colour, a thickness and a sample count
  * and nothing about joins or caps, so the round ones the canvas draws are square here and a
@@ -34,9 +34,19 @@ export interface Series {
   useMaximum?: boolean;
 }
 
+/**
+ * Which hairlines a plot carries behind its series.
+ *
+ * `quarters` is the telemetry panel's grid and the default, because four plots read against each
+ * other need the same ruling. `mid` is the one line the wide car-telemetry zone draws, where a
+ * pedal is read as full, half or nothing and three lines are three more than that needs. `none` is
+ * a plot with a scale of its own beside it.
+ */
+export type TraceGrid = 'none' | 'mid' | 'quarters';
+
 export interface TraceOptions {
-  /** Draw the quarter hairlines. */
-  grid?: boolean;
+  /** Which hairlines are drawn behind the series. Quarters by default. */
+  grid?: TraceGrid;
   /**
    * Close the plot with a rule along its bottom edge. The pit wall's telemetry panels are drawn
    * with one and the inputs page is not: a panel is a plot with a title over it and needs a floor,
@@ -59,6 +69,9 @@ export interface TraceOptions {
 
 /** A sample every six pixels: the canvas draws about a hundred points across a 570 px plot. */
 const SAMPLE_PITCH = 6;
+
+/** Where each mode's hairlines sit, as fractions of the plot's height. */
+const GRID_LINES: Record<TraceGrid, readonly number[]> = { none: [], mid: [0.5], quarters: [0.25, 0.5, 0.75] };
 
 /**
  * Samples a plot of this width keeps, which is also the window it covers: the count times the
@@ -131,8 +144,9 @@ export function trace(name: string, frame: Rect, series: readonly Series[], dens
   const showLegend = (opts.legend ?? series.length > 1) && series.length > 0;
   const plot = showLegend ? rect(frame.left, frame.top, frame.width, Math.max(0, frame.height - LEGEND_HEIGHT - 4)) : frame;
   const items: Item[] = [];
-  if (opts.grid ?? true) {
-    for (const [i, fraction] of [0.25, 0.5, 0.75].entries()) {
+  const lines = GRID_LINES[opts.grid ?? 'quarters'];
+  if (lines.length > 0) {
+    for (const [i, fraction] of lines.entries()) {
       items.push(band(`${name}.grid${i}`, rect(plot.left, Math.round(plot.top + fraction * plot.height), plot.width, 1), ds.color.surface.raised));
     }
     if (opts.baseline ?? true) items.push(band(`${name}.baseline`, rect(plot.left, plot.top + plot.height - 1, plot.width, 1), ds.color.text.dim));
