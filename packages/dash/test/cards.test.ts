@@ -44,7 +44,7 @@ describe('cards', () => {
     const items = CARDS[1]!.build(rect(0, 0, 255, 187), 'x.');
     const [label, value] = items;
     if (label?.kind !== 'text' || value?.kind !== 'text') throw new Error('readout');
-    expect(label.rect).toEqual({ left: 16, top: 51, width: 223, height: 19 });
+    expect(label.rect).toEqual({ left: 16, top: 50, width: 223, height: 19 });
     // 220 px of cells plus the slack that keeps WPF from clipping the last glyph.
     expect(value.rect).toEqual({ left: 16, top: 65, width: 224, height: 78 });
     expect(value.fontSize).toBe(64);

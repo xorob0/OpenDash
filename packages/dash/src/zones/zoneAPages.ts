@@ -47,7 +47,10 @@ function gearSpeedRevs(frame: Rect, prefix: string): Item[] {
   const labelH = d.labelSm;
   const below = speedH + labelH + revsH + d.fieldGap * 3;
   const gearBox = rect(frame.left, frame.top, frame.width, Math.max(72, frame.height - below - d.gapY));
-  const size = gearSizeIn(gearBox);
+  // `gearSizeIn` has a floor of 72, and a 72 px gear is drawn in an 88 px line box: on the nano's
+  // 260 x 194 zone the box left under the speed is 84 px and the gear started a pixel above the
+  // canvas. The floor is for a box that has the room; this is the box that does not.
+  const size = Math.min(gearSizeIn(gearBox), Math.floor(gearBox.height / LINE_SPACING));
 
   const items: Item[] = [...neighbours(gearBox, size, prefix), ...gearComponent(gearBox, size, `${prefix}main`)];
 

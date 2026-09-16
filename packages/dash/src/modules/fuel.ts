@@ -33,9 +33,16 @@ const lowFuel = () => lt(fuelLapsLeft(), num(1));
 
 const consumption = (value: string, guard: string) => ({ sample: '2.84', bind: iff(guard, fmt(value, '0.00'), str(NO_VALUE)), chars: CHARS.consumption });
 
+/**
+ * A bar drawn under a value is four pixels tall on the canvas, on the companion as on a zone. The
+ * density's `bar` is the six-pixel one that sits beside a label, which is the tyre wear's shape and
+ * not this one.
+ */
+const VALUE_BAR = 4;
+
 export const fuel = defineModule('fuel', (ctx) => {
   const d = densityOf(ctx.density);
-  const gaugeHeight = d.bar;
+  const gaugeHeight = VALUE_BAR;
   return stack(
     ctx.frame,
     [

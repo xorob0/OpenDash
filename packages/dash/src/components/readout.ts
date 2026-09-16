@@ -1,6 +1,6 @@
 /**
  * readout: a label with a numeral under it, the block centred vertically in the slot.
- * Block height = label + 4 + value; the label sits at the block top and the value 19 below (at L).
+ * Block height = label + 5 + value; the label sits at the block top and the value 20 below (at L).
  */
 import type { Hex, Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
@@ -10,6 +10,12 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
 import { cardFrame, centredTop } from './frame.ts';
+
+/**
+ * Gap between a readout's label row and its value row, the same 5 px the canvas draws between the
+ * two rows of a second-screen field. Off the `space` scale, which goes 4 then 8.
+ */
+export const READOUT_GAP = 5;
 
 export interface LabelSpec {
   /** Literal text (upper-cased) or, with `bind`, the design-time sample. */
@@ -39,7 +45,7 @@ export interface ReadoutGeometry {
 export function readoutGeometry(slot: Rect, rung: RungSpec): ReadoutGeometry {
   const f = cardFrame(slot, rung);
   const labelFs = ds.size.label;
-  const gap = ds.space[1];
+  const gap = READOUT_GAP;
   const top = centredTop(slot, labelFs + gap + rung.value);
   return { x: f.x, innerWidth: f.innerWidth, labelY: top, valueY: top + labelFs + gap, valueFs: rung.value };
 }
