@@ -21,7 +21,8 @@ import { densityOf } from '../second/density.ts';
 import { fieldWidth } from '../second/field.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
 import { SECTORS, sectorColour } from '../second/sectors.ts';
-import { blockRow, defineModule, fieldsRow, fld, pageKeeps } from './module.ts';
+import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './module.ts';
+import { archetypeOf } from './shedding.ts';
 import { stack, type StackRow } from '../second/layout.ts';
 import { CHARS, deltaColour, referenceDelta, referenceLabel, sectorDelta } from '../second/values.ts';
 
@@ -136,6 +137,9 @@ export const delta = defineModule('delta', (ctx) => {
       ),
     ],
     ctx.density,
-    ROW_GAP,
+    // The one page the catalogue centres at three shapes and spreads at the fourth: a number, a
+    // bar and a scale read as one object and are set as one, until a tall zone has room to put the
+    // sectors on its bottom edge.
+    { gap: ROW_GAP, justify: archetypeOf(shapeIn(ctx)) === 'tall' ? 'spaceBetween' : 'centre' },
   );
 });
