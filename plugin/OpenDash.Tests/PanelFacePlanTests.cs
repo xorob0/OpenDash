@@ -41,6 +41,26 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(9, PanelFacePlan.CellGap);
         }
 
+        /// <summary>The controls the picture carries, at the sizes the canvas draws them: the two ends of
+        /// the bar, band D's row, the count of a cycle, and the bindings under the picture.</summary>
+        [Fact]
+        public void The_controls_inside_the_picture_are_the_sizes_the_canvas_draws()
+        {
+            Assert.Equal(132, PanelFacePlan.BarEndLeftWidth);
+            Assert.Equal(146, PanelFacePlan.BarEndRightWidth);
+            Assert.Equal(150, PanelFacePlan.BandSelectWidth);
+            Assert.Equal(10, PanelFacePlan.BandGap);
+            Assert.Equal(11, PanelFacePlan.CountCaptionSize);
+            Assert.Equal(12, PanelFacePlan.CountChevronSize);
+            Assert.Equal(22, PanelFacePlan.BindingGap);
+            Assert.Equal(200, PanelFacePlan.GlanceSelectWidth);
+            Assert.Equal(12, PanelFacePlan.GlanceBinderGap);
+            Assert.True(PanelFacePlan.CountCaptionSize < Theme.SizeLabel,
+                "a count is set smaller than a value, which is what tells the two apart in a cell");
+            Assert.True(PanelFacePlan.CountChevronSize < Theme.IconSize,
+                "and under a chevron smaller than every other icon on the panel");
+        }
+
         /// <summary>The rows the face's own rectangles are too small to carry are the two that hold a
         /// control: the bar's least is the short control height rather than a number of its own.</summary>
         [Fact]
