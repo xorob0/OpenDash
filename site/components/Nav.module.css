@@ -1,0 +1,194 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--color-surface-base) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--slow) var(--ease);
+}
+
+/* Rule 8: the rule is the whole boundary. It appears only when there is something above to divide. */
+.scrolled {
+  border-bottom-color: var(--color-surface-raised);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  height: 60px;
+}
+
+.home {
+  flex: none;
+  transition: opacity var(--fast) var(--ease);
+}
+
+.home:hover {
+  opacity: 0.75;
+}
+
+.links {
+  display: none;
+  align-items: center;
+  gap: var(--space-5);
+  margin-inline-start: auto;
+}
+
+.link {
+  position: relative;
+  font-size: var(--size-small);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding-block: 4px;
+  transition: color var(--fast) var(--ease);
+}
+
+.link:hover {
+  color: var(--color-text-primary);
+}
+
+/*
+ * The current page is marked with a rule under it rather than with a colour, because cyan is
+ * identity and a nav item is not an action. The rule grows from nothing on hover, which is the one
+ * piece of motion the header has.
+ */
+.link::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--fast) var(--ease);
+}
+
+.link:hover::after {
+  transform: scaleX(1);
+}
+
+.link[aria-current='page'] {
+  color: var(--color-text-primary);
+}
+
+.link[aria-current='page']::after {
+  background: var(--purpose-ui-accent);
+  transform: scaleX(1);
+}
+
+.end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-inline-start: auto;
+}
+
+.links + .end {
+  margin-inline-start: 0;
+}
+
+/* The one primary action on the page, so the one place cyan is a fill. */
+.cta {
+  display: none;
+  padding: 7px var(--space-4);
+  font-size: var(--size-small);
+  font-weight: 500;
+  color: var(--purpose-ui-on-accent);
+  background: var(--purpose-ui-accent);
+  border-radius: var(--radius-sm);
+  transition: background var(--fast) var(--ease);
+}
+
+.cta:hover {
+  background: var(--color-brand-tint);
+}
+
+.toggle {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-inline-end: -8px;
+}
+
+/* Rule 12: icons are drawn, not typed. Two 1.5 px strokes that cross into a close mark. */
+.bars,
+.bars::before,
+.bars::after {
+  display: block;
+  width: 20px;
+  height: 1.5px;
+  background: var(--color-text-primary);
+  transition: transform var(--fast) var(--ease), opacity var(--fast) var(--ease);
+}
+
+.bars {
+  position: relative;
+}
+
+.bars::before,
+.bars::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+}
+
+.bars::before {
+  top: -6px;
+}
+
+.bars::after {
+  top: 6px;
+}
+
+.bars[data-open] {
+  background: transparent;
+}
+
+.bars[data-open]::before {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.bars[data-open]::after {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.menu {
+  border-top: 1px solid var(--color-surface-raised);
+  padding-block: var(--space-2) var(--space-4);
+}
+
+.menuLink {
+  display: block;
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--color-surface-raised);
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  transition: color var(--fast) var(--ease);
+}
+
+.menuLink:last-child {
+  border-bottom: 0;
+  color: var(--purpose-ui-accent);
+}
+
+.menuLink:hover {
+  color: var(--purpose-ui-accent);
+}
+
+@media (min-width: 62rem) {
+  .links,
+  .cta {
+    display: flex;
+  }
+
+  .toggle,
+  .menu {
+    display: none;
+  }
+}
