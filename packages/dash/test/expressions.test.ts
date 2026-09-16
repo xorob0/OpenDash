@@ -22,6 +22,21 @@ const textItem = (id: string, name: string): TextItem => {
   if (!item || item.kind !== 'text') throw new Error(`${id}.${name} is not a text item`);
   return item;
 };
+/**
+ * A numeric NCalc formula evaluated in JavaScript, every property read standing for `value`.
+ *
+ * A formula that is arithmetic rather than a string is worth what it computes, and the dial's two
+ * are the whole of its movement. `isnull` is NCalc's and the rest are the maths library, which is
+ * .NET's and therefore JavaScript's to six decimals.
+ */
+const evaluateNumber = (formula: string, value: number): number => {
+  const js = formula
+    .replace(/\[[^\]]+\]/g, String(value))
+    .replace(/\bisnull\(/g, 'nz(')
+    .replace(/\b(sin|cos|min|max)\(/g, 'Math.$1(');
+  return Number(new Function('nz', `return ${js};`)((v: number, fallback: number) => v ?? fallback));
+};
+
 const formulaOf = (item: TextItem, target: 'Text' | 'TextColor' | 'Left' | 'Visible'): string => {
   const b = item.bindings?.[target];
   if (!b || b.mode !== 'formula' || typeof b.formula !== 'string') throw new Error(`${item.name} has no ${target} formula`);
@@ -408,5 +423,41 @@ describe('module expressions', () => {
     expect(colour).not.toContain(`if(${ncalc.lt(delta, ncalc.num(0))}, '#00D96A'`);
     expect(sectorIsZero(1)).toBe(ncalc.eq(delta, ncalc.num(0)));
     expect(sectorIsSlower(1)).toBe(ncalc.gt(delta, ncalc.num(0)));
+  });
+
+  /**
+   * The steering mark, which is a position rather than a rotation because a rotation does not bind.
+   *
+   * The two formulas are the whole of the dial's movement, so what they are worth is where they put
+   * the mark: at the top of the rim on a wheel that is straight, at the right of it a quarter turn
+   * clockwise, and at the left a quarter turn the other way. Evaluating them is the only way to
+   * catch a sine and a cosine that have been exchanged, which reads as a dial that is right at the
+   * two locks and wrong everywhere between them.
+   */
+  test('the steering mark rides the rim at the wheel angle, top dead centre when the wheel is straight', () => {
+    const module = MODULES.find((m) => m.id === 'inputs')!;
+    const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
+    const mark = [...walkItems(module.build({ frame: box, density: 'zone', prefix: 'inputs.' }))].find((i) => i.name === 'inputs.steer.mark');
+    if (!mark || mark.kind !== 'rect') throw new Error('inputs.steer.mark is not a rect');
+    // Rounded, because a quarter turn's cosine is 6e-17 rather than nought in either language.
+    const place = (n: number): number => Math.round(n * 1e6) / 1e6 + 0;
+    const at = (angle: number): { left: number; top: number } => ({
+      left: place(evaluateNumber(mark.bindings!.Left!.formula as string, angle)),
+      top: place(evaluateNumber(mark.bindings!.Top!.formula as string, angle)),
+    });
+    expect(at(0)).toEqual({ left: mark.rect.left, top: mark.rect.top });
+    // A quarter turn clockwise puts it at the right of the rim, level with the centre, and the same
+    // turn the other way puts it at the left, the two being the radius either side of top dead
+    // centre. The radius is what the drop from the top gives.
+    const right = at(Math.PI / 2);
+    const left = at(-Math.PI / 2);
+    const radius = right.top - mark.rect.top;
+    expect(radius).toBeGreaterThan(0);
+    expect(right).toEqual({ left: mark.rect.left + radius, top: mark.rect.top + radius });
+    expect(left).toEqual({ left: mark.rect.left - radius, top: mark.rect.top + radius });
+    expect(at(Math.PI)).toEqual({ left: mark.rect.left, top: mark.rect.top + 2 * radius });
+    // Past full lock the mark stops rather than coming round again, which would read as a smaller
+    // angle than the wheel is actually at.
+    expect(at(10)).toEqual(at(values.STEERING_RANGE));
   });
 });
