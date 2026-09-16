@@ -21,6 +21,7 @@ import { validatePackage, type Dashboard, type Item, type TextItem, type WidgetI
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
+import { field, type Follower } from '../src/second/field.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
 import { rect } from '../src/design/geometry.ts';
@@ -349,6 +350,31 @@ describe('every module fits the box it is given', () => {
       }
     });
   }
+});
+
+describe('the small text that follows a value', () => {
+  const followerOf = (follower: Follower, fs: number): TextItem => {
+    const spec = { name: 'f', label: 'Fuel', value: { sample: '38.4', chars: { digits: 3, specials: 1 }, fs, follower } };
+    const drawn = field(spec, 0, 200, 'companion').find((i) => i.name.endsWith('.unit') || i.name.endsWith('.denominator'));
+    if (drawn?.kind !== 'text') throw new Error('no follower drawn');
+    return drawn;
+  };
+
+  // The colour was lost by a spread: `field` builds its options with `color: follower.color`, so a
+  // follower with no colour of its own passed the key as `undefined` and the unit element's default
+  // was overwritten with it, leaving every unit in text.label #5A6069.
+  test('a unit with no colour of its own is text.secondary, at the density small size', () => {
+    const drawn = followerOf({ text: 'L' }, 64);
+    expect({ color: drawn.textColor, size: drawn.fontSize, font: drawn.font }).toEqual({
+      color: ds.color.text.secondary,
+      size: ds.size.labelSm,
+      font: ds.font.label,
+    });
+  });
+
+  test('a unit keeps a colour it does declare', () => {
+    expect(followerOf({ text: 'L', color: ds.color.text.primary }, 64).textColor).toBe(ds.color.text.primary);
+  });
 });
 
 describe('what iRacing cannot answer', () => {

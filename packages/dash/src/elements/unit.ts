@@ -14,5 +14,9 @@ import { ds } from '../tokens.ts';
 export type UnitOptions = LabelOptions;
 
 export function unit(name: string, text: string, x: number, y: number, width: number, opts: UnitOptions = {}): TextItem {
-  return label(name, text, x, y, width, { size: ds.size.labelSm, color: ds.color.text.secondary, ...opts });
+  // Resolved key by key rather than spread over the defaults. A caller that builds its options
+  // object unconditionally — `{ color: follower.color }` in `second/field.ts` — passes the key with
+  // the value `undefined`, the spread overwrote text.secondary with it, and `label` then fell back
+  // to text.label: every unit following a value was drawn #5A6069 where the canvas draws #8A9099.
+  return label(name, text, x, y, width, { ...opts, size: opts.size ?? ds.size.labelSm, color: opts.color ?? ds.color.text.secondary });
 }
