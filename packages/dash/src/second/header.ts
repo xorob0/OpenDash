@@ -151,7 +151,11 @@ export function panel(name: string, spec: PanelSpec, density: Density = 'zone'):
   const padY = spec.padY ?? 14;
   const titleY = spec.frame.top + padY;
   const items: Item[] = [
-    label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX, { size: d.labelSm, color: ds.color.text.secondary }),
+    // A panel title is the sheet's plain small label and takes its colour, where a zone title is
+    // the one label the sheet overrides to the brighter secondary: on the pit wall zones every
+    // title carries `color: #8A9099` inline and the counter beside it does not, which is the whole
+    // difference between the two chromes.
+    label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX, { size: d.labelSm, color: ds.color.text.label }),
   ];
   const bodyTop = titleY + d.labelSm + ds.space[2];
   return {
