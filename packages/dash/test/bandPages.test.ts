@@ -12,8 +12,10 @@
  * against its own new number.
  */
 import { describe, expect, test } from 'bun:test';
-import type { Item, TextItem } from '../src/generator.ts';
-import { BAND_PAGES, bandCorners, bandCornerWidths, bandMetrics, bandPageItems } from '../src/zones/bandPages.ts';
+import type { DrawableItem, Item, RectangleItem, TextItem } from '../src/generator.ts';
+import { BAND_PAGES, BAND_PAGE_IDS, bandCorners, bandCornerWidths, bandMetrics, bandPageItems, bandPageRoom } from '../src/zones/bandPages.ts';
+import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } from '../src/zones/telltales.ts';
+import { assetNamed } from '../src/design/assets.ts';
 import { ds } from '../src/tokens.ts';
 
 const BANDS = {
@@ -27,6 +29,9 @@ const BANDS = {
 } as const;
 
 const textsIn = (items: readonly Item[]): TextItem[] => items.filter((i): i is TextItem => i.kind === 'text');
+
+/** Everything the band draws that carries a box, which on D8 is the lamps rather than any text. */
+const drawablesIn = (items: readonly Item[]): DrawableItem[] => items.filter((i): i is DrawableItem => i.kind !== 'layer');
 
 const pageTexts = (face: keyof typeof BANDS, page: string): TextItem[] => {
   const band = BANDS[face];
@@ -205,11 +210,153 @@ describe('the fields the catalogue draws on each page', () => {
     expect(named(items, 'ahead.position').textColor).toBe(ds.color.text.label);
   });
 
+  test('D8 Car is not a page of fields at all, so it is not among them', () => {
+    expect(Object.keys(BAND_PAGES)).not.toContain(TELLTALE_PAGE);
+    expect(BAND_PAGE_IDS[BAND_PAGE_IDS.length - 1]).toBe(TELLTALE_PAGE);
+  });
+
   test('a fuel time is minutes and seconds, not an hour that is nearly always zero', () => {
     expect(BAND_PAGES.fuel!.find((f) => f.id === 'time')!.sample).toBe('08:46');
     const bind = BAND_PAGES.fuel!.find((f) => f.id === 'time')!.bind;
     expect(bind).toContain("'--:--'");
     expect(bind).not.toContain('3600');
+  });
+});
+
+/**
+ * D8, the telltale rank, against the band of `design/canvas/Dash1280x480.dc.html`, which is the one
+ * artboard that draws it: twelve lamps of 38 by 32 with a 1 px edge, 10 apart, centred in what the
+ * corner blocks leave, and a 20 px pictogram in each.
+ *
+ * Two of the drawing's parts are absences rather than departures, and the tests say which: the
+ * pictogram files are not in the repository, and seven of the twelve lamps have nothing that lights
+ * them. Both are recorded in docs/design/zones.md §10.
+ */
+describe('D8, the telltale rank', () => {
+  const page = (face: keyof typeof BANDS): Item[] => {
+    const band = BANDS[face];
+    return bandPageItems(TELLTALE_PAGE, band, '', band.corners);
+  };
+  const chipsOn = (face: keyof typeof BANDS): RectangleItem[] =>
+    page(face).filter((i): i is RectangleItem => i.kind === 'rect' && i.name.endsWith('.chip'));
+  const edgeOn = (chips: readonly RectangleItem[], id: string): string | undefined => {
+    const formula = chips.find((i) => i.name === `${id}.chip`)?.border?.colorBinding?.formula;
+    return typeof formula === 'string' ? formula : undefined;
+  };
+
+  test('the rank is the artboard’s twelve lamps, in its order', () => {
+    expect(TELLTALES.map((lamp) => lamp.id)).toEqual([
+      'tyreLines',
+      'tyreSlant',
+      'wiper',
+      'surface',
+      'abs',
+      'esp',
+      'engine',
+      'fuel',
+      'battery',
+      'limiter',
+      'pressure',
+      'door',
+    ]);
+    expect(chipsOn('1280x480').map((i) => i.name)).toEqual(TELLTALES.map((lamp) => `${lamp.id}.chip`));
+  });
+
+  test('a lamp is a 38 by 32 box with a 1 px edge, ten apart and centred on the band', () => {
+    const band = BANDS['1280x480'];
+    const chips = chipsOn('1280x480');
+    for (const chip of chips) {
+      expect({ name: chip.name, width: chip.rect.width, height: chip.rect.height }).toEqual({ name: chip.name, width: 38, height: 32 });
+      // The dark edge is a shade further back than the dark pictogram, so a rank of dark lamps
+      // reads as a row of empty boxes rather than a row of grey ones.
+      expect(chip.border).toMatchObject({ top: 1, bottom: 1, left: 1, right: 1, color: ds.color.surface.raised });
+      expect({ name: chip.name, top: chip.rect.top }).toEqual({ name: chip.name, top: band.top + (band.height - 32) / 2 });
+    }
+    for (let i = 1; i < chips.length; i++) {
+      expect(chips[i]!.rect.left - (chips[i - 1]!.rect.left + chips[i - 1]!.rect.width)).toBe(TELLTALE_GAP);
+    }
+  });
+
+  test('the rank is centred in what the corner blocks leave, not in the whole band', () => {
+    for (const face of ['1920x480', '1280x480', '1280x720'] as const) {
+      const chips = chipsOn(face);
+      const room = bandPageRoom(BANDS[face], true);
+      const left = chips[0]!.rect.left - room.left;
+      const right = room.left + room.width - (chips[chips.length - 1]!.rect.left + 38);
+      // Within the pixel a box is rounded to: an odd remainder cannot be halved onto the grid.
+      expect({ face, clear: left > 0, even: Math.abs(left - right) <= 1 }).toEqual({ face, clear: true, even: true });
+    }
+  });
+
+  test('the colours the artboard draws lit are the telltale tokens, lamp by lamp', () => {
+    const drawn: Record<string, `#${string}`> = {
+      tyreLines: ds.purpose.telltale.info,
+      tyreSlant: ds.purpose.telltale.good,
+      wiper: ds.purpose.telltale.caution,
+      surface: ds.purpose.telltale.caution,
+      fuel: ds.purpose.telltale.danger,
+      limiter: ds.purpose.telltale.neutral,
+    };
+    for (const [id, colour] of Object.entries(drawn)) {
+      const lamp = TELLTALES.find((each) => each.id === id)!;
+      expect({ id, colour: lamp.lit === undefined ? undefined : ds.purpose.telltale[lamp.lit] }).toEqual({ id, colour });
+    }
+  });
+
+  test('a lamp with a source binds its edge to it; one without carries no binding at all', () => {
+    const chips = chipsOn('1280x480');
+    expect(edgeOn(chips, 'limiter')).toContain('PitLimiterOn');
+    expect(edgeOn(chips, 'limiter')).toContain(ds.purpose.telltale.neutral);
+    expect(edgeOn(chips, 'limiter')).toContain(ds.color.surface.raised);
+    expect(edgeOn(chips, 'fuel')).toContain('Fuel_RemainingLaps');
+    expect(edgeOn(chips, 'engine')).toContain('EngineWarnings');
+    // Recording the colour the drawing gives a lamp is not the same as having something to light
+    // it: the nine below are drawn dark and bind nothing until the author answers §10.
+    for (const id of ['tyreLines', 'tyreSlant', 'wiper', 'surface', 'abs', 'esp', 'battery', 'pressure', 'door']) {
+      expect({ id, edge: edgeOn(chips, id) }).toEqual({ id, edge: undefined });
+    }
+  });
+
+  test('a lamp keeps its place, so nothing in the rank hides or moves', () => {
+    for (const chip of chipsOn('1920x480')) {
+      expect({ name: chip.name, hides: chip.bindings?.Visible !== undefined, moves: chip.bindings?.Left !== undefined }).toEqual({
+        name: chip.name,
+        hides: false,
+        moves: false,
+      });
+    }
+  });
+
+  test('a band too narrow for twelve sheds from the tail rather than drawing outside', () => {
+    const wide = chipsOn('1920x480').map((i) => i.name);
+    const narrow = chipsOn('600x686').map((i) => i.name);
+    expect(narrow.length).toBeLessThan(wide.length);
+    expect(wide.slice(0, narrow.length)).toEqual(narrow);
+  });
+
+  test('the pictograms are one file per colour, and the rank draws whichever the registry holds', () => {
+    // An ImageItem carries no tint, so a lamp that can light owes two files and a lamp nothing
+    // lights owes one. None of them is in the repository yet, which is why the lamps are boxes.
+    const wanted = telltaleArtwork();
+    expect(new Set(wanted).size).toBe(wanted.length);
+    const fuel = TELLTALES.find((lamp) => lamp.id === 'fuel')!;
+    expect(wanted).toContain(telltaleArt(fuel, 'danger'));
+    expect(wanted).toContain(telltaleArt(fuel, 'off'));
+    for (const item of page('1280x480')) {
+      if (item.kind !== 'image') continue;
+      expect({ name: item.name, named: wanted.includes(item.image), registered: assetNamed(item.image) !== undefined }).toEqual({
+        name: item.name,
+        named: true,
+        registered: true,
+      });
+    }
+  });
+
+  test('the count the artboard draws on the wiper waits on a source, as the relative page’s flag does', () => {
+    expect(TELLTALES.find((lamp) => lamp.id === 'wiper')!.count).toBe('2');
+    // Nothing publishes a wiper state, so the lamp never lights and its count is never drawn: a
+    // number under a dark lamp is a number nobody measured.
+    expect(textsIn(page('1280x480'))).toEqual([]);
   });
 });
 
@@ -286,8 +433,10 @@ describe('the corner blocks at the ends of the band', () => {
     for (const [face, band] of Object.entries(BANDS)) {
       if (!band.corners) continue;
       const taken = bandCornerWidths(band);
-      for (const page of Object.keys(BAND_PAGES)) {
-        const items = pageTexts(face as keyof typeof BANDS, page);
+      // Every page of the cycle, and every box of it rather than only its texts: D8 is twelve lamps
+      // whose boxes are what reaches towards the corners.
+      for (const page of BAND_PAGE_IDS) {
+        const items = drawablesIn(bandPageItems(page, band, '', band.corners));
         const left = Math.min(...items.map((i) => i.rect.left));
         const right = Math.max(...items.map((i) => i.rect.left + i.rect.width));
         expect({ face, page, clearOfLeft: left >= band.left + taken.left + 22 }).toMatchObject({ clearOfLeft: true });
