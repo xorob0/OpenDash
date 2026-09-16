@@ -32,7 +32,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
         [
           fld(ctx, 'laps', 'Laps', { sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.position, fs: d.mid }),
           fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid }),
-          fld(ctx, 'delta', 'Delta to best', { sample: '\u22120.21', bind: signed(delta, '0.00'), chars: CHARS.delta, fs: d.mid, colorBind: deltaColour(delta) }),
+          fld(ctx, 'delta', 'Delta to your best', { sample: '\u22120.21', bind: signed(delta, '0.00'), chars: CHARS.delta, fs: d.mid, colorBind: deltaColour(delta) }),
         ],
         ctx,
       ),
