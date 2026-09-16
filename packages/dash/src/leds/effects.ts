@@ -28,25 +28,23 @@ import type { Expr } from '../bind.ts';
 import { FLAG_PRIORITY, flagVisible, type FlagProperty } from '../components/flagStrip.ts';
 import { ds } from '../tokens.ts';
 import { OVER_REV_BLINK_MS } from './ladder.ts';
+import { type EffectRole, type Lamp } from './lamps.ts';
 
 const { add, and, eq, game, gt, isnull, not, num, or, prop, raw } = ncalc;
-
-/** Where an effect sits on the strip. */
-export type EffectPlacement =
-  /** The left-hand group of LEDs. */
-  | 'left'
-  /** The right-hand group. */
-  | 'right'
-  /** Both side groups at once. */
-  | 'sides'
-  /** The whole strip, drawn over everything below it. */
-  | 'all';
 
 export interface LedEffect {
   id: string;
   /** What it is called in the panel and in the profile. */
   label: string;
-  placement: EffectPlacement;
+  /**
+   * Which lamp it lands on, or `strip` for the whole run. A `strip` effect blanks what is
+   * underneath rather than composing over it: an effect that takes every LED says what it means
+   * only if nothing else shows through, and it is the one thing the canvas allows to hide the
+   * ladder.
+   */
+  role: EffectRole;
+  /** For an effect about one side of the car, the only side it lights. */
+  side?: 'left' | 'right';
   /** When it lights. */
   when: Expr;
   color: string;
@@ -54,11 +52,6 @@ export interface LedEffect {
   blinkWhen?: Expr;
   blinkColor?: string;
   blinkDelayMs?: number;
-  /**
-   * Blank what is underneath rather than composing over it. An effect that takes the whole strip
-   * says what it means only if nothing else shows through.
-   */
-  exclusive?: boolean;
   /** The SimHub property this reads, for the guide and for the test that keeps the two honest. */
   source: string;
 }
@@ -104,30 +97,39 @@ const FLAG_COLORS: Record<FlagProperty, string> = {
 /** Half period of the yellow flag's flash on a strip, the 2 Hz the band uses. */
 export const FLAG_BLINK_MS = 250;
 
-/** One effect per flag, highest priority last so that it composes on top. */
+/**
+ * One effect per flag, highest priority last so that it composes on top.
+ *
+ * A flag lives on the race lamp and on nothing else. It used to take the whole strip and blank it,
+ * which is how a blue flag held for a minute took the rev ladder with it — the note the whole
+ * lights review started from. What it costs is that a shape with no lamps has nowhere to put a
+ * flag; `rpmStrip.ts` keeps the whole run there rather than dropping it, which is the behaviour a
+ * brow has today and is not this change's to settle.
+ */
 export const flagEffects = (): LedEffect[] =>
   [...FLAG_PRIORITY]
     .reverse()
     .map((flag) => ({
       id: `flag.${flag.replace('Flag_', '').toLowerCase()}`,
       label: `${flag.replace('Flag_', '')} flag`,
-      placement: 'all' as const,
+      role: 'race' as const,
       when: flagVisible(flag),
       color: FLAG_COLORS[flag] ?? ds.purpose.flag.white,
-      exclusive: true,
       source: `DataCorePlugin.GameData.${flag}`,
       ...(flag === 'Flag_Yellow' ? { blinkWhen: flagVisible(flag), blinkColor: ds.purpose.flag.yellow, blinkDelayMs: FLAG_BLINK_MS } : {}),
     }));
 
 /**
  * The catalogue, in composition order: what is later shows over what is earlier, which is how a
- * strip ranks two live things without a priority field of its own.
+ * strip ranks two live things without a priority field of its own. The three warnings a car raises
+ * about itself carry the `car` role and everything a car does for its driver carries `aid`, which
+ * is the distinction the lamps are built on: a car warning always outranks an aid.
  */
 export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'abs',
     label: 'ABS active',
-    placement: 'sides',
+    role: 'aid',
     when: gt(g('ABSActive'), num(0)),
     color: ds.color.info.primary,
     source: 'DataCorePlugin.GameData.ABSActive',
@@ -135,7 +137,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'tc',
     label: 'Traction control',
-    placement: 'sides',
+    role: 'aid',
     // One light carrying both facts, so it degrades rather than going dark. Steady means the dial is
     // set above zero, which every sim including iRacing fills; blinking means TC is actually cutting
     // in, which iRacing does not publish (GD_TCActive() is [NotAvailable] return 0) and other readers
@@ -151,7 +153,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'ers',
     label: 'ERS charge',
-    placement: 'sides',
+    role: 'aid',
     // ERS is also where KERS lands: SimHub models no KERS of its own — the string does not occur in
     // any of its assemblies — and normalises every hybrid store into this one percentage.
     when: gt(g('ERSPercent'), num(0)),
@@ -165,7 +167,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'drs',
     label: 'DRS',
-    placement: 'sides',
+    role: 'aid',
     when: or(on('DRSAvailable'), on('DRSEnabled')),
     color: ds.color.good.primary,
     // Available is a steady light and open is a flashing one, which is how a driver tells them apart.
@@ -177,7 +179,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'p2p',
     label: 'Push to pass',
-    placement: 'sides',
+    role: 'aid',
     when: gt(isnull(prop('DataCorePlugin.GameRawData.Telemetry.PlayerP2P_Count'), num(0)), num(0)),
     color: ds.purpose.alert.p2p,
     blinkWhen: eq(isnull(prop('DataCorePlugin.GameData.PushToPassActive'), num(0)), num(1)),
@@ -188,7 +190,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'headlightFlash',
     label: 'Headlight flash',
-    placement: 'sides',
+    role: 'aid',
     // The only source there is: SimHub normalises nothing for this, and a car without the control
     // does not publish the var at all, so the read has to survive the property being absent.
     when: gt(t('dcHeadlightFlash'), num(0)),
@@ -198,7 +200,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'lowFuel',
     label: 'Low fuel',
-    placement: 'sides',
+    role: 'car',
     when: lowFuel(),
     color: ds.purpose.fuel.low,
     blinkWhen: lowFuel(),
@@ -209,7 +211,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'waterTemp',
     label: 'Water temperature warning',
-    placement: 'sides',
+    role: 'car',
     // iRacing's EngineWarnings bitfield, bit 1. There is no normalised SimHub property for it, and
     // no oil-temperature or water-pressure bit exists at all — see NOT_ON_IRACING.
     when: engineWarning(1),
@@ -219,7 +221,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
   {
     id: 'oilPressure',
     label: 'Oil pressure warning',
-    placement: 'sides',
+    role: 'car',
     when: engineWarning(4),
     color: ds.color.danger.primary,
     source: 'DataCorePlugin.GameRawData.Telemetry.EngineWarnings bit 4 (OilPressureWarning)',
@@ -241,7 +243,8 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
   {
     id: 'spotter.left',
     label: 'Car alongside, left',
-    placement: 'left',
+    role: 'side',
+    side: 'left',
     when: gt(g('SpotterCarLeft'), num(0)),
     color: ds.color.caution.primary,
     blinkWhen: and(gt(g('SpotterCarLeft'), num(0)), gt(g('SpotterCarRight'), num(0))),
@@ -252,7 +255,8 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
   {
     id: 'spotter.right',
     label: 'Car alongside, right',
-    placement: 'right',
+    role: 'side',
+    side: 'right',
     when: gt(g('SpotterCarRight'), num(0)),
     color: ds.color.caution.primary,
     blinkWhen: and(gt(g('SpotterCarLeft'), num(0)), gt(g('SpotterCarRight'), num(0))),
@@ -263,7 +267,7 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
 ];
 
 /**
- * The turn indicators, on the side being signalled — the same placement rule as the spotters, and
+ * The turn indicators, on the side being signalled — the same rule as the spotters, and
  * for the same reason: a light about a side belongs on that side.
  *
  * Best effort. `TurnIndicatorLeft` and `TurnIndicatorRight` are real `StatusDataBase` members and
@@ -276,7 +280,8 @@ export const TURN_EFFECTS: readonly LedEffect[] = [
   {
     id: 'turn.left',
     label: 'Indicating left',
-    placement: 'left',
+    role: 'side',
+    side: 'left',
     when: gt(g('TurnIndicatorLeft'), num(0)),
     color: ds.color.caution.primary,
     blinkWhen: gt(g('TurnIndicatorLeft'), num(0)),
@@ -287,7 +292,8 @@ export const TURN_EFFECTS: readonly LedEffect[] = [
   {
     id: 'turn.right',
     label: 'Indicating right',
-    placement: 'right',
+    role: 'side',
+    side: 'right',
     when: gt(g('TurnIndicatorRight'), num(0)),
     color: ds.color.caution.primary,
     blinkWhen: gt(g('TurnIndicatorRight'), num(0)),
@@ -302,35 +308,32 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
   {
     id: 'pit.lane',
     label: 'In the pit lane',
-    placement: 'all',
+    role: 'strip',
     when: and(on('IsInPitLane'), not(pitSpeeding())),
     color: ds.purpose.pitLimiter,
-    exclusive: true,
     source: 'DataCorePlugin.GameData.IsInPitLane',
   },
   {
     id: 'pit.limiter',
     label: 'Pit limiter on',
-    placement: 'all',
+    role: 'strip',
     when: on('PitLimiterOn'),
     color: ds.purpose.pitLimiter,
     blinkWhen: on('PitLimiterOn'),
     blinkColor: ds.purpose.pitLimiter,
     blinkDelayMs: OVER_REV_BLINK_MS * 3,
-    exclusive: true,
     source: 'DataCorePlugin.GameData.PitLimiterOn',
   },
   {
     id: 'pit.speeding',
     label: 'Speeding in the pit lane',
-    placement: 'all',
+    role: 'strip',
     // Composed, because SimHub publishes no speeding property: in the lane, a known limit, over it.
     when: pitSpeeding(),
     color: ds.color.danger.primary,
     blinkWhen: pitSpeeding(),
     blinkColor: ds.color.danger.primary,
     blinkDelayMs: OVER_REV_BLINK_MS,
-    exclusive: true,
     source: 'IsInPitLane + SpeedLocal + PitLimiterSpeed (SimHub publishes no speeding property)',
   },
 ];
@@ -389,16 +392,46 @@ export const NO_PROPERTY: readonly { effect: string; reason: string; nearest: st
   },
 ];
 
-/** Every effect the catalogue ships, in composition order: later shows over earlier. */
-export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...TURN_EFFECTS, ...SPOTTER_EFFECTS, ...PIT_EFFECTS, ...flagEffects()];
+/**
+ * Every effect the catalogue ships, in composition order: later shows over earlier.
+ *
+ * The pit family is last because it is the only thing the canvas lets take the whole strip, and
+ * something that takes the whole strip has to be the thing nothing paints over. It used to sit
+ * ahead of the flags, so a flag — exclusive itself at the time — blanked the limiter.
+ */
+export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...TURN_EFFECTS, ...SPOTTER_EFFECTS, ...flagEffects(), ...PIT_EFFECTS];
 
-/** One effect as a container, over the run of LEDs its placement gives it. */
-export const effectContainer = (effect: LedEffect, startPosition: number, ledCount: number): leds.LedContainer => ({
+/**
+ * What one lamp of one side draws, highest rank first.
+ *
+ * The rank inside a role is the catalogue's own order read backwards, because composition order was
+ * already the ranking — later shows over earlier — so stating it here is meant to change nothing a
+ * driver has already seen. What is new is the rank *between* roles: a shared lamp takes its roles in
+ * the order the lamp carries them, which is what puts every car warning ahead of every aid at three
+ * lamps a side and ahead of every flag at two.
+ */
+export const lampConditions = (lamp: Lamp, side: 'left' | 'right'): LedEffect[] =>
+  lamp.carries.flatMap((role) =>
+    ALL_EFFECTS()
+      .filter((e) => e.role === role && (e.side === undefined || e.side === side) && (lamp.only === undefined || lamp.only.includes(e.id)))
+      .reverse(),
+  );
+
+/**
+ * One effect as a container, over the run of LEDs its role gives it.
+ *
+ * `above` is what outranks it on the same lamp. The conditions of a lamp are emitted lowest rank
+ * first, so SimHub's merge would already leave the highest on top; the explicit `not()` of each
+ * higher condition is what makes that readable in a diff rather than a property of the order the
+ * children happen to be in. `profile.ts` guards the flag box's layers the same way and for the same
+ * reason.
+ */
+export const effectContainer = (effect: LedEffect, startPosition: number, ledCount: number, above: readonly Expr[] = []): leds.LedContainer => ({
   kind: 'customStatus',
   description: effect.label,
   startPosition,
   ledCount,
   color: effect.color,
-  enabledFormula: { expression: effect.when },
+  enabledFormula: { expression: above.length === 0 ? effect.when : and(effect.when, ...above.map(not)) },
   ...(effect.blinkWhen ? { blinkFormula: { expression: effect.blinkWhen }, blinkColor: effect.blinkColor ?? effect.color, blinkDelayMs: effect.blinkDelayMs } : {}),
 });

@@ -11,6 +11,7 @@ import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, rever
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, rungFlashes } from '../src/leds/ladder.ts';
 import { ALL_EFFECTS, BEST_EFFORT, NO_PROPERTY, PIT_SPEEDING_MARGIN, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects } from '../src/leds/effects.ts';
+import { lampsOf } from '../src/leds/lamps.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
@@ -135,13 +136,15 @@ describe('the effect catalogue', () => {
     expect(yellow.when).toContain('[DataCorePlugin.GameData.Flag_Black]) = (0)');
     expect(yellow.when).toContain('[DataCorePlugin.GameData.Flag_Yellow]) = (1)');
     expect(yellow.blinkWhen).toBeTruthy();
-    for (const e of flagEffects()) expect({ id: e.id, exclusive: e.exclusive }).toMatchObject({ exclusive: true });
+    // A flag lives on the race lamp and on nothing else, so none of them takes the strip any more:
+    // that is what stopped a blue flag held for a minute from taking the rev ladder with it.
+    for (const e of flagEffects()) expect({ id: e.id, role: e.role }).toMatchObject({ role: 'race' });
   });
 
   test('the spotters light the side the car is actually on', () => {
     const [left, right] = SPOTTER_EFFECTS;
-    expect(left!.placement).toBe('left');
-    expect(right!.placement).toBe('right');
+    expect({ role: left!.role, side: left!.side }).toEqual({ role: 'side', side: 'left' });
+    expect({ role: right!.role, side: right!.side }).toEqual({ role: 'side', side: 'right' });
     expect(left!.when).toContain('SpotterCarLeft');
     expect(right!.when).toContain('SpotterCarRight');
     // Both sides at once is the conjunction, because SimHub publishes no "both" of any kind.
@@ -186,7 +189,10 @@ describe('the effect catalogue', () => {
   });
 
   test('the turn indicators signal on the side being signalled, like the spotters', () => {
-    expect(TURN_EFFECTS.map((e) => e.placement)).toEqual(['left', 'right']);
+    expect(TURN_EFFECTS.map((e) => [e.role, e.side])).toEqual([
+      ['side', 'left'],
+      ['side', 'right'],
+    ]);
     expect(TURN_EFFECTS[0]!.when).toContain('TurnIndicatorLeft');
     expect(TURN_EFFECTS[1]!.when).toContain('TurnIndicatorRight');
   });
@@ -212,12 +218,15 @@ describe('the effect catalogue', () => {
     expect(text).toContain('GameRawData.Telemetry.dcHeadlightFlash');
   });
 
-  test('a sides effect is dropped on a shape with no sides rather than moved onto the rev LEDs', () => {
+  test('a shape with no sides has no lamps, so what needs one is dropped rather than moved onto the rev LEDs', () => {
+    expect(lampsOf(shapeById('brow-25')!)).toEqual([]);
     const brow = textOf(profileFor('brow-25'));
     // The spotters and the assists have nowhere to go on a brow...
     expect(brow).not.toContain('Car alongside, left');
     expect(brow).not.toContain('ABS active');
-    // ...but a whole-strip effect still applies, because a brow has a whole strip.
+    expect(brow).not.toContain('lamp');
+    // ...but the flags keep the whole run there, which is what every shape did before the lamps
+    // arrived and is what a brow keeps until whether a bare run derives lamps of its own is decided.
     expect(brow).toContain('Yellow flag');
     expect(brow).toContain('Pit limiter on');
   });
