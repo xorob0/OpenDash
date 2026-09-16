@@ -211,14 +211,14 @@ export const setting = {
  * reads it back, so the two cannot disagree.
  */
 export const FACE_SIZES: readonly FaceSize[] = [
-  { width: 1920, height: 480, body: 'row', parts: [769, 380, 769], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 1280, height: 480, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 1280, height: 400, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 850, height: 480, body: 'row', parts: [274, 300, 274], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 800, height: 480, body: 'row', parts: [249, 300, 249], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 1280, height: 720, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2 },
-  { width: 800, height: 286, body: 'row', parts: [269, 260, 269], hasBar: false, barFieldsPerEnd: 2 },
-  { width: 600, height: 686, body: 'column', parts: [234, 160, 150], hasBar: true, barFieldsPerEnd: 1 },
+  { width: 1920, height: 480, body: 'row', parts: [769, 380, 769], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 48, bar: 56, body: 314, band: 60 } },
+  { width: 1280, height: 480, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 44, bar: 54, body: 320, band: 60 } },
+  { width: 1280, height: 400, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 36, bar: 50, body: 258, band: 54 } },
+  { width: 850, height: 480, body: 'row', parts: [274, 300, 274], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 40, bar: 50, body: 328, band: 60 } },
+  { width: 800, height: 480, body: 'row', parts: [249, 300, 249], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 40, bar: 50, body: 328, band: 60 } },
+  { width: 1280, height: 720, body: 'row', parts: [469, 340, 469], hasBar: true, barFieldsPerEnd: 2, rows: { revBar: 48, bar: 56, body: 554, band: 60 } },
+  { width: 800, height: 286, body: 'row', parts: [269, 260, 269], hasBar: false, barFieldsPerEnd: 2, rows: { revBar: 33, bar: 0, body: 194, band: 58 } },
+  { width: 600, height: 686, body: 'column', parts: [234, 160, 150], hasBar: true, barFieldsPerEnd: 1, rows: { revBar: 36, bar: 46, body: 546, band: 56 } },
 ];
 
 /**
@@ -240,6 +240,28 @@ export interface FaceSize {
   hasBar: boolean;
   /** Two per end on a wide face, one in portrait. */
   barFieldsPerEnd: 1 | 2;
+  /** The heights of the four rows the face stacks, which is what a plan of it scales from. */
+  rows: FaceRows;
+}
+
+/**
+ * The four rows of a face, from the top: the strip the rev bar sits in, the bar, the body the three
+ * zones share, and band D.
+ *
+ * Here for the same reason `parts` is: the plugin draws a plan of the face and cannot read a layout
+ * file, and a plan whose rows are four constants draws a 1920 x 480 face's 48, 56, 314 and 60 as 19,
+ * 24, 150 and 26. `zoneFace.test.ts` holds each number against the real rectangles in
+ * `zones/faces/*.ts`, so a face that is redrawn cannot leave its plan behind.
+ *
+ * `bar` is zero on the nano, which has no bar. `body` counts the whole region the three zones
+ * occupy, the one-pixel seams between them included, so that a portrait face whose zones are
+ * stacked measures the same way as a wide one whose zones are side by side.
+ */
+export interface FaceRows {
+  revBar: number;
+  bar: number;
+  body: number;
+  band: number;
 }
 
 /** The zone letters of a face's body, in the order that body draws them. */

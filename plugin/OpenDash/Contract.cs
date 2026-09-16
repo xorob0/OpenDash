@@ -250,7 +250,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public struct FaceSize
         {
-            public FaceSize(int width, int height, FaceBody body, int[] parts, bool hasBar, int barFieldsPerEnd)
+            public FaceSize(int width, int height, FaceBody body, int[] parts, bool hasBar, int barFieldsPerEnd, int revBarHeight, int barHeight, int bodyHeight, int bandHeight)
             {
                 Width = width;
                 Height = height;
@@ -258,6 +258,10 @@ namespace OpenDashPlugin
                 Parts = parts;
                 HasBar = hasBar;
                 BarFieldsPerEnd = barFieldsPerEnd;
+                RevBarHeight = revBarHeight;
+                BarHeight = barHeight;
+                BodyHeight = bodyHeight;
+                BandHeight = bandHeight;
             }
 
             public int Width { get; }
@@ -272,6 +276,27 @@ namespace OpenDashPlugin
 
             /// <summary>Two per end on a wide face, one in portrait.</summary>
             public int BarFieldsPerEnd { get; }
+
+            /// <summary>
+            /// The heights of the four rows the face stacks, from the top: the strip the rev bar sits
+            /// in, the bar, the body the three zones share, and band D. Mirrors `rows` in FACE_SIZES.
+            /// </summary>
+            /// <remarks>
+            /// Carried for the same reason Parts is: the panel draws a plan of the face and cannot read
+            /// a layout file, and a plan whose rows are four constants drew a 1920 x 480 face's 48, 56,
+            /// 314 and 60 as 19, 24, 150 and 26. A plan scales these by its own width over Width.
+            ///
+            /// BarHeight is zero on the nano, which has no bar. BodyHeight counts the whole region the
+            /// three zones occupy, the one-pixel seams between them included, so that a portrait face
+            /// whose zones are stacked measures the same way as a wide one whose zones are side by side.
+            /// </remarks>
+            public int RevBarHeight { get; }
+
+            public int BarHeight { get; }
+
+            public int BodyHeight { get; }
+
+            public int BandHeight { get; }
 
             /// <summary>The zone letters of the body, in the order it draws them.</summary>
             public string[] BodyOrder
@@ -288,14 +313,14 @@ namespace OpenDashPlugin
         /// </summary>
         public static readonly IReadOnlyList<FaceSize> FaceSizes = new[]
         {
-            new FaceSize(1920, 480, FaceBody.Row, new[] { 769, 380, 769 }, true, 2),
-            new FaceSize(1280, 480, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
-            new FaceSize(1280, 400, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
-            new FaceSize(850, 480, FaceBody.Row, new[] { 274, 300, 274 }, true, 2),
-            new FaceSize(800, 480, FaceBody.Row, new[] { 249, 300, 249 }, true, 2),
-            new FaceSize(1280, 720, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
-            new FaceSize(800, 286, FaceBody.Row, new[] { 269, 260, 269 }, false, 2),
-            new FaceSize(600, 686, FaceBody.Column, new[] { 234, 160, 150 }, true, 1),
+            new FaceSize(1920, 480, FaceBody.Row, new[] { 769, 380, 769 }, true, 2, 48, 56, 314, 60),
+            new FaceSize(1280, 480, FaceBody.Row, new[] { 469, 340, 469 }, true, 2, 44, 54, 320, 60),
+            new FaceSize(1280, 400, FaceBody.Row, new[] { 469, 340, 469 }, true, 2, 36, 50, 258, 54),
+            new FaceSize(850, 480, FaceBody.Row, new[] { 274, 300, 274 }, true, 2, 40, 50, 328, 60),
+            new FaceSize(800, 480, FaceBody.Row, new[] { 249, 300, 249 }, true, 2, 40, 50, 328, 60),
+            new FaceSize(1280, 720, FaceBody.Row, new[] { 469, 340, 469 }, true, 2, 48, 56, 554, 60),
+            new FaceSize(800, 286, FaceBody.Row, new[] { 269, 260, 269 }, false, 2, 33, 0, 194, 58),
+            new FaceSize(600, 686, FaceBody.Column, new[] { 234, 160, 150 }, true, 1, 36, 46, 546, 56),
         };
 
         /// <summary>The face a rig is most likely to have, and where a pre-face setting is migrated to.</summary>
