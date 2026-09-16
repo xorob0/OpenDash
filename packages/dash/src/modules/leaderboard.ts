@@ -45,17 +45,19 @@ export const drawsHeader = (density: Density): boolean => density === 'companion
  */
 const NEVER_DROPPED: readonly ColumnId[] = ['pos', 'gap'];
 
+/** The floor the canvas puts under the flexible driver column: below it the row sheds a column. */
+const MINIMUM_NAME = 60;
+
 /** The columns that fit `width`: drops the last droppable one until the row is no wider than its box. */
 export function fittingColumns(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number): ColumnId[] {
   const kept = [...columns];
   const h = rowHeight ?? tableRowHeight(density);
-  // A row fits when every fixed column plus a column wide enough for a driver code fits.
-  const minimumName = 60;
   for (;;) {
     const widths = columnWidths(kept, width, density, h);
     const nameIndex = kept.indexOf('name');
-    const name = nameIndex < 0 ? minimumName : (widths[nameIndex] ?? 0);
-    if (name >= minimumName) break;
+    // A row with no name column has nothing left to flex, so it fits by construction.
+    const name = nameIndex < 0 ? MINIMUM_NAME : (widths[nameIndex] ?? 0);
+    if (name >= MINIMUM_NAME) break;
     const droppable = kept.map((id, i) => ({ id, i })).filter(({ id }) => !NEVER_DROPPED.includes(id));
     const last = droppable[droppable.length - 1];
     if (!last) break;
