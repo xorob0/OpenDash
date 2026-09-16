@@ -28,6 +28,7 @@ import {
   foreignProperties,
   pagesForZone,
 } from '../src/contract.ts';
+import { packImages } from '../src/build.ts';
 import { buildPackage, fontsForPackage } from '../src/dashboard.ts';
 import { LAYOUTS } from '../src/layouts/index.ts';
 import { buildScreenPackage, SCREEN_PACKAGES } from '../src/screens/index.ts';
@@ -49,11 +50,21 @@ const zoneFacePackage = (face: (typeof ZONE_FACES)[number]): DashPackage => {
   return { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
 };
 
+/**
+ * A package as the build hands it to the validator, which is after `packImages` has declared on
+ * each dashboard the artwork its own items draw. A builder returns items and never sees the
+ * dashboard they land on, so a package validated before that step reports every picture as missing.
+ */
+const composed = (pkg: DashPackage): DashPackage => {
+  packImages(pkg);
+  return pkg;
+};
+
 /** Every package the build produces, rebuilt for each test that breaks one. */
 const everyPackage = (): OwnedPackage[] => [
-  ...LAYOUTS.map((layout) => ({ pkg: buildPackage(layout, { version: OPTS.version, simHubVersion: OPTS.simHubVersion, strategy: 'widget' as const }) })),
-  ...ZONE_FACES.map((face) => ({ pkg: zoneFacePackage(face), screen: facePrefix(sizeOf(face)) })),
-  ...SCREEN_PACKAGES.map((screen) => ({ pkg: buildScreenPackage(screen, OPTS), screen: screen.kind === 'pitwall' ? PIT_WALL_PREFIX : COMPANION_PREFIX })),
+  ...LAYOUTS.map((layout) => ({ pkg: composed(buildPackage(layout, { version: OPTS.version, simHubVersion: OPTS.simHubVersion, strategy: 'widget' as const })) })),
+  ...ZONE_FACES.map((face) => ({ pkg: composed(zoneFacePackage(face)), screen: facePrefix(sizeOf(face)) })),
+  ...SCREEN_PACKAGES.map((screen) => ({ pkg: composed(buildScreenPackage(screen, OPTS)), screen: screen.kind === 'pitwall' ? PIT_WALL_PREFIX : COMPANION_PREFIX })),
 ];
 
 /** The zone path alone, which is what the assertions about zones measure. */

@@ -32,9 +32,17 @@ import type { Rect } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { cellOverruns } from './monoGlyphs.ts';
 import { ds } from '../src/tokens.ts';
+import { packImages } from '../src/build.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
-const PACKAGES = SCREEN_PACKAGES.map((def) => ({ def, pkg: buildScreenPackage(def, OPTS) }));
+// Through `packImages`, which is the step between building a package and validating one: a builder
+// returns items and never sees the dashboard they land on, so the artwork an item draws is declared
+// from what was drawn. A package validated before that reports every picture as missing.
+const PACKAGES = SCREEN_PACKAGES.map((def) => {
+  const pkg = buildScreenPackage(def, OPTS);
+  packImages(pkg);
+  return { def, pkg };
+});
 const BRAND = /#00E5FF/i;
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */

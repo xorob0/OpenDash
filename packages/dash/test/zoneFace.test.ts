@@ -27,6 +27,7 @@ import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING, boxSlack, textBox } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
+import { packImages } from '../src/build.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { rect, type Rect } from '../src/design/geometry.ts';
@@ -335,6 +336,9 @@ describe('the face reads what it declares and nothing else', () => {
   test('every package validates with no error and no warning', () => {
     for (const { face, built } of BUILT) {
       const pkg = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+      // As the build validates one: `packImages` first, which declares on each dashboard the
+      // artwork its own items draw, since no builder sees the dashboard its items land on.
+      packImages(pkg);
       const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
       expect({ folder: face.folder, errors: result.errors }).toMatchObject({ errors: [] });
       expect({ folder: face.folder, warnings: result.warnings }).toMatchObject({ warnings: [] });
