@@ -234,6 +234,15 @@ export const carSector = (idx: Expr, sector: number): Expr => sectorTime(ncalc.d
 export const carStintLaps = (idx: Expr): Expr => fmt(isnull(driver('lapsdonesincelastpitout', idx), num(0)), '0');
 export const carPitCount = (idx: Expr): Expr => fmt(isnull(driver('pitcount', idx), num(0)), '0');
 export const carCompound = (idx: Expr): Expr => isnull(driver('fronttyrecompound', idx), str(''));
+/**
+ * A driver's iRating, which is the only rating SimHub publishes per car.
+ *
+ * The canvas draws two further marks beside it, the licence class and the safety rating, and
+ * iRacing knows both; SimHub's `driver*` family carries neither, and nothing else here has been
+ * verified to. The badge in `elements/badge.ts` is therefore drawn against the tokens and bound to
+ * nothing, and `purpose.rating`'s gain and loss wait on a change to the rating that no reader
+ * publishes and that a dashboard, keeping no history, cannot work out for itself.
+ */
 export const carRating = (idx: Expr): Expr => ratingK(driver('iracingirating', idx));
 
 // --- Session, car and environment -----------------------------------------------------------

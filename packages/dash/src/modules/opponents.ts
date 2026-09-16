@@ -26,7 +26,13 @@
  *
  * The nationality flag and the licence badge with its safety rating are the canvas's other two
  * pieces of the identity row and are absent for want of their sources: a flag is an image asset
- * (XOR-115) and `second/table.ts` records that no reader for the iRacing licence has been verified.
+ * (XOR-115), and the badge is drawn now -- `elements/badge.ts` reads the licence ramp -- but
+ * nothing publishes a class to put in it, which `second/values.ts` records. A badge added here
+ * would also have to take its turn in the shedding order, since both blocks shed together.
+ *
+ * The rating the gap row carries is the iRating, and it is written as a label on the gap's own
+ * baseline because that is what the canvas writes there; the 15 px rating the type sheet names is
+ * the safety rating that sits beside the badge, and it waits on the same missing source.
  */
 import { ncalc } from '../generator.ts';
 import { label } from '../elements/label.ts';
