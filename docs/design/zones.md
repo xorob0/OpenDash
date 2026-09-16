@@ -25,7 +25,7 @@ The same five parts on every rectangular face. Only their sizes change.
 | | |
 |---|---|
 | **Rev bar** | Shift lights in a recessed well, full width, never moves. It can be turned off entirely, in which case the face is drawn in its second arrangement and the well's room goes to the zones. |
-| **The bar** | What the car is set to and where the session is: a field at each end that a driver may swap, and a settings strip between them that hides what the game does not expose. |
+| **The bar** | What the car is set to and where the session is: two fields at each end that a driver may swap, one per end at 600 × 686, and a settings strip between them that hides what the game does not expose. |
 | **Zone B** | A page from the catalogue of twenty-one. |
 | **Zone A** | The one read by reflex: gear, gear and speed, speed, or the track. |
 | **Zone C** | A page from the same catalogue of twenty-one. |
@@ -39,6 +39,13 @@ There is **no row of page dots**. The zone letter and the page name say what is 
 
 Read from the artboards. Every number is a rect of `left, top, width x height` on the face's own
 canvas.
+
+One part is separated from the next by a single pixel rather than by a gap. Every artboard leaves
+an empty row above each row of the body and above band D, and an empty column between the zones,
+and draws a 1 px rule in `surface.raised` in it: at 1280 × 480 those rows are y 98 and y 419, and
+on the portrait face, which stacks its zones, there are four of them, at y 82, 317, 478 and 629.
+The build reads the rows off the rects rather than tabulating them, so that the arrangement below,
+which no artboard gives, is ruled by the same rule.
 
 **1920 × 480** — `Dash.dc.html`, the reference face
 
@@ -139,6 +146,9 @@ The rule, in `zonesWithoutRevBar`:
   C keep both their rectangles and their zone dashboards.
 - Band D does not move: it is measured from the bottom edge and the bottom edge has not changed. The
   pit limiter moves with zone A, because that is what it is drawn over.
+- The rules rise with the parts they separate, since they are read off the rects. The nano is the
+  one face where the body then starts on row 1, leaving no row above it for a rule to sit in, so
+  that arrangement draws the rule above band D and none above its body.
 
 | Face | Given back | Of the height | Bar | Body |
 |---|---|---|---|---|
@@ -549,15 +559,43 @@ a mistake in this document.
 
 | | |
 |---|---|
-| Band D's page count | The catalogue heading reads "band D · seven pages" and the drawings are D1 through D8. **Eight is taken**, because the drawings are more specific than the caption, and the mask is sized for eight either way. |
-| The bar's fields | Described as "three fields a driver may swap", specced as one per end, and drawn as two per end on every face. **Two per end is taken**, because that is what is drawn. |
+| Band D's page count | The catalogue heading reads "band D · seven pages", its anatomy row reads "fuel by default, and six more pages", and the drawings are D1 through D8. **Eight is taken**, because the drawings are more specific than the captions and the mask is sized for eight either way. D8 is nonetheless the one page built short of what it is for: it draws the readings the telltale row would sit beside, and the lamps themselves wait on the generator's image item (XOR-115) before XOR-97 can draw them. |
+| The bar's fields | The catalogue's anatomy says "three fields a driver may swap", the bar section of that same artboard says each end is one field, and every face artboard draws two at each end. **Two per end is taken**, because that is what is drawn; §1 and §3 above both say so now, the first of them having repeated the one-per-end caption until this row was written. The catalogue those fields are chosen from is ten entries where the artboard draws eleven, strength of field being the one that went, under [ADR 0009](../decisions/0009-does-the-plugin-compute.md), because SimHub publishes it in no form at all. |
 | Zone C's capacity | Stated as ten drivers at 1920; seven rows are drawn. |
 | Page dots | `pageIndicator` is still in the component list, against "there is no row of page dots". |
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
-| The face with no rev bar | XOR-138 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
+| The face with no rev bar | XOR-138 offered three answers, namely leave the gap, reclaim it, or give the band to something else, and said the artboards would choose. Since the second pass of 15 September the FaceVariants sheets do draw the third state and both arrangements beside each other, so this row no longer reads as it did. What the rev-bar-off drawing still carries, however, is the rev bar itself: an 822 × 28 rectangle at (14, 6) on the 850 sheet, a 576 × 24 one at (12, 6) on the 600, underneath a bar that has already risen into its room. **The caption is taken over the rectangle**, and `faceItems` leaves the well and the segments out entirely rather than hiding them; `Plugin.dc.html`, for its part, still reads "the rev bar stays". Reclaim is taken for the room, because the gap reads as a mis-crop and on the nano it is a ninth of the screen, and the rectangles in §1 remain derived by one rule and remain the thing to delete when drawn ones arrive. |
+| The slot counts in the titles | `canvas.json` titles the 1920 × 480 artboard "MVP · 12 slots" and the 1280 × 720 one "wheel screens · 12 slots", while what each draws underneath is the five-part zone face [ADR 0006](../decisions/0006-the-zone-face.md) settled, and `Dash.dc.html` keeps `.slotbox`, `.card` and `.grid4` in its stylesheet with nothing using them. **The drawing is taken**: a `ZoneLayout` declares no slot count at all, and twelve matches nothing on the 1280 × 720 body either, whose bar draws eleven readouts and whose band draws ten and three lamps. The twelve-slot package does still build beside the zone face, since `LAYOUTS` keeps `layout1920x480` and `build.ts` walks both lists until XOR-95 retires the card path. |
+| The six slots of the 850 | The same convention gives 850 × 480 "5in · 6 slots", and nothing six-fold is drawn there. The only reading that yields six is the parts themselves, that is to say the bar's left end, its settings strip and its right end, then zones B and C and band D. **The parts are taken**, because that is what the artboard draws and what `faceItems` composes; the count is vocabulary left over from the model the face replaced. |
+| The "D grid" chip | Every FaceVariants sheet chips band D as `grid`, whereas the band it draws is 1280 × 60, or 800 × 58 on the nano, which `second/shape.ts` bands as wide and short rather than as the 430 × 300 the `grid` archetype is. **Neither is taken, because the band does not consult the shape model at all**: `bandPages.ts` draws one centred rank for a wide short box, and only zones B and C ask `shapeOf` for their page. The 600 × 686 sheet chips its own zones B and C the same way, and they measure 600 × 160 and 600 × 150, which is wide and short again. |
+| The strip at 850 × 480 and 800 × 480 | Both artboards caption five cells, namely slip, TC, cut, bias and ABS, and the build keeps two at 850 and one at 800, as the table in §3 says. **The measurement is taken**, and the cause is not the strip but the ends: each end is laid out from its own edge for the widest entry the catalogue holds rather than for the entry actually selected, so what the strip is left with at those two widths is two cells and one. Raising the count therefore means narrowing the reserved end or measuring the strip's values below the size the end fields use, and the canvas has made neither decision. The 600 × 686 sheet is the same disagreement one cell smaller, drawing five cells in fixed 54 px columns with a 12 px gap and a 28 px value where the build measures each cell, spaces them by 24 and draws them at 34, which sheds cut and leaves four. |
+| The 600 × 686 well | The size's own chip names a 36 px well above the bar. The artboard draws the well at 6, 2, 588 × 32 with the segments at 12, 6, 576 × 24, and the bar begins at y 36, so that 36 is the room above the bar, being a 2 px face margin, the 32 px well and a 2 px gap, rather than the height of anything. **The artboard is taken** and §1 tabulates the 32. Were the well itself meant to be 36, the rect in `faces/600x686.ts` would move and `revBarReclaim` would become 38, which moves the second arrangement's table as well. |
+| Zone A, centred or filled | The face artboards centre zone A's block in its column, `justify-content: center` with a 198 px gear in a 320 px column at 1280 × 480, while the FaceVariants sheets caption the same zone "Zone A fills its column. Padding stays; empty height does not". **Both are taken, page by page**, which is exactly the disagreement: A1 sizes its gear to whatever the speed and the revs leave and A4 cuts the map from the box, so those two fill, whereas A2 and A3 centre what they draw in the column. |
+| The hero that never moves | The Main artboard reads "Gear, speed, rev bar, flag and pit limiter are fixed per layout. Every other value is a card". **It predates the model**: zone A cycles four pages under ADR 0006, so the gear gives way to the speed or to the track map on a button press, and the speed was card 12 rather than part of the hero even under the model the sentence describes. Only the rev bar, the flag and the pit limiter are fixed on the zone face. The sentence wants marking superseded, as the DashComponents slot numbers already are. |
+| DashComponents' zone A | The component sheet calls zone A "fixed on every layout" and describes the rev bar 40 tall in its well over a 1 px rule, the gear alone, a flag band 40 tall at the bottom edge and the limiter above the gear. That is the card face, which still builds and still draws precisely that. **The zone face follows the Zones artboards instead**: a 56 px bar of settled values takes the place of the rule under the rev bar, the segments are 32 tall inside a 40 px well, and the flag takes band D's sixty pixels rather than a strip of its own. The section wants the same superseded marking as its slot numbers. |
+| The same five parts on every face | The catalogue's anatomy says the five parts differ only in size from one rectangular face to the next. Two of the per-size artboards draw otherwise: 800 × 286 has no bar at all, which leaves four parts, and 600 × 686 stacks A over B over C rather than setting B beside A beside C. **The per-size artboards are taken**, being the more specific drawing, and §1 tabulates both departures. |
 | Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [readability-pass.md](readability-pass.md). |
+
+### Every variant the 1280 × 480 sheet lists
+
+`FaceVariants1280x480.dc.html` is captioned "Every variant this size can be in, and every page each
+of its zones can show", which is a stronger claim than the two screens `faceScreen` builds, so the
+list is worth reading item by item. The same sheet exists at each of the other seven sizes and
+lists the same things.
+
+| What the sheet draws | Where the build stands |
+|---|---|
+| The two arrangements, rev bar on and rev bar off | **Built**, as the two screens of one `.djson` with complementary `ScreenEnabledExpression`s. |
+| Zone A's four pages, A1 to A4 | **Built**, as `zoneface-zoneA-340x320` and again at 340 × 361 for the second arrangement. Three of the four carry a `proposed` chip on the sheet and are built regardless, the fourth being the catalogue's own track page. |
+| Twenty-one pages for zone B and twenty-one for zone C | **Built**, as the one `zoneface-module-469x320` both zones point at, and again at 469 × 361. |
+| Band D's eight pages, D1 to D8 | **Built**, as `zoneface-band-1280x60`. What D8 is still short of is in the table above. |
+| The flag over the band, in six colours | **Built**: `flagStrip` draws black, chequered, yellow, blue, white and green over band D's rectangle, and the black flag fills with `surface.base` rather than with its own token. |
+| A full-screen flag over zones B, A and C, with `OpenDash.FlagFormat` set to band or full | **Deferred.** It is chipped proposed, and it is a further pair of arrangements rather than an option on the two that exist: a screen cannot resize its neighbours at run time, so the format would be built the way the rev bar is, as more screens with complementary expressions, and the property would carry a face's prefix like the zone settings. The contract declares no such property today. |
+| The chips "bar: 2 fields per end" and "band corners: yes" | **Built**: `barFieldsPerEnd` is 2 and `bandCorners` is true at this size. |
+| The chips "A grid", "B grid", "C grid" and "D grid" | Three of the four are what `shapeOf` returns for those rectangles. The fourth is the disagreement recorded above. |
+| A growth factor per page of zones B and C, from ×1.08 to ×2.07 | **Recorded, not checked.** A rank grows by rule 20 until it meets the width, the height or the next size on its ramp, and nothing compares the factor it reaches against the factor the sheet chips. |
 
 ---
 
