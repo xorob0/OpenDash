@@ -16,7 +16,8 @@
  * in scope.md is that a module which reads something iRacing does not publish **says so rather than
  * drawing a zero**, and it is about a readout: `0.00` on a screen asserts a measurement that was
  * never taken. An LED that stays dark asserts nothing. So an effect whose property exists is shipped
- * and simply does not light, and {@link BEST_EFFORT} records which those are and why.
+ * wherever it earns its lamp and simply does not light, and {@link BEST_EFFORT} records which those
+ * are and why.
  *
  * **What is not shipped is what has no property at all**, in any sim: there is no headlight or beam
  * field in `StatusDataBase`, no `KERS` member anywhere in SimHub 9.12.6, and no water pressure. A
@@ -243,6 +244,8 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     // Both temperature bits of iRacing's EngineWarnings word: 1 for water and 0x0040 for oil. The
     // second has existed since 2021 season 2, and this file used to deny it outright under
     // NO_PROPERTY, which is a claim the review corrected rather than a property that arrived.
+    // docs/research/simhub-led-sources.md still carries the old claim in two places and wants the
+    // same correction; it is not this file's to make.
     when: or(engineWarning(1), engineWarning(64)),
     color: ds.color.caution.primary,
     blinkWhen: or(engineWarning(1), engineWarning(64)),
@@ -431,7 +434,7 @@ export const NO_PROPERTY: readonly { effect: string; reason: string; nearest: st
   {
     effect: 'Headlights on, off, low or high beam',
     reason: 'StatusDataBase has no headlight, light or beam member — a grep of the decompiled GameReaderCommon.dll finds zero — and iRacing publishes no such variable. The only "Headlights" string in SimHub.Plugins.dll is a controller button role.',
-    nearest: 'The flash-to-pass toggle, GameRawData.Telemetry.dcHeadlightFlash, which is shipped.',
+    nearest: 'The flash-to-pass toggle, GameRawData.Telemetry.dcHeadlightFlash, which exists and which DROPPED explains is not drawn.',
   },
   {
     effect: 'Water pressure',
