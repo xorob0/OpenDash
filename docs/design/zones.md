@@ -493,16 +493,17 @@ the module.
 
 A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap history
 is rows under a header, pit view's four corner toggles are what the drawing writes as the one line
-`Tyres · RIGHTS`, and tyres closes its corners with the caption saying where its pressures come
-from. The catalogue draws each of these at some shapes and not at others, so they are declared the
-same way a field is, in `PARTS` beside the table above. An empty cell is a part the drawing does not
-carry at that shape.
+`Tyres · RIGHTS`, tyres closes its corners with the caption saying where its pressures come from,
+and inputs puts the steering after its three pedals. The catalogue draws each of these at some
+shapes and not at others, so they are declared the same way a field is, in `PARTS` beside the table
+above. An empty cell is a part the drawing does not carry at that shape.
 
 | № | Page | `wide` | `grid` | `tall narrow` | `tall` |
 |---|---|---|---|---|---|
 | 2 | Delta | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` |  | `bar` · `scale` · `rule` |
 | 7 | Tyres | `footer` | `footer` |  | `footer` |
 | 8 | Pit view | `tyres` | `tyres` |  |  |
+| 10 | Inputs | `steer` | `steer` |  |  |
 | 19 | Lap history | `head` | `head` |  |  |
 
 Two tables rather than one because they answer two questions: the first is what a rank sheds, this

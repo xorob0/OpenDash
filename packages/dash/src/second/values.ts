@@ -277,6 +277,8 @@ export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));
 export const clutch = (): Expr => isnull(game('Clutch'), num(0));
 export const steering = (): Expr => isnull(raw('SteeringWheelAngle'), num(0));
+/** Radians of wheel angle either side of centre a full-lock reading is drawn to. */
+export const STEERING_RANGE = 3.5;
 export const brakeBias = (): Expr => isnull(game('BrakeBias'), num(0));
 export const tcLevel = (): Expr => game('TCLevel');
 export const absLevel = (): Expr => game('ABSLevel');

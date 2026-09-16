@@ -479,6 +479,66 @@ describe('the track module has a titled and a titleless form', () => {
   });
 });
 
+describe('the inputs page', () => {
+  const build = (w: number, h: number, density: Density = 'zone'): Item[] => MODULES.find((m) => m.id === 'inputs')!.build({ frame: rect(0, 0, w, h), density, prefix: 'inputs.' });
+  const named = (items: Item[], name: string): Item => items.find((i) => i.name === name)!;
+
+  test('gives each pedal its own reading, drawn at the density small size', () => {
+    const at = (w: number, h: number, density: Density): { text: string; fontSize: number }[] =>
+      build(w, h, density)
+        .filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'))
+        .map((i) => ({ text: i.text, fontSize: i.fontSize }));
+    // Three different numbers: Dash Studio draws the samples, and three identical ones said
+    // nothing about which bar belongs to which pedal.
+    expect(at(802, 336, 'companion')).toEqual([
+      { text: '76', fontSize: 34 },
+      { text: '12', fontSize: 34 },
+      { text: '0', fontSize: 34 },
+    ]);
+    expect(at(607, 158, 'zone').map((v) => v.fontSize)).toEqual([24, 24, 24]);
+    // d.tiny is 14 at compact, which density.ts's own comment puts below the readable floor.
+    expect(at(245, 156, 'compact').map((v) => v.fontSize)).toEqual([18, 18, 18]);
+  });
+
+  test('draws the bars at the width the catalogue gives them and no legend under the plot', () => {
+    const barsOf = (w: number, h: number, density: Density): number[] => build(w, h, density).filter((i) => i.name.endsWith('.bar')).map((i) => (i as { rect: Rect }).rect.width);
+    expect(barsOf(802, 336, 'companion')).toEqual([20, 20, 20]);
+    expect(barsOf(607, 158, 'zone')).toEqual([16, 16, 16]);
+    // Every line has its own bar and its own number beside it in the same colour, so a legend row
+    // would repeat the labelling and cost the plot 18 px of height.
+    expect(build(802, 336, 'companion').filter((i) => /\.(legend|swatch)$/.test(i.name))).toEqual([]);
+  });
+
+  test('takes its sample count from the plot it is given rather than from the density', () => {
+    const pointsOf = (w: number, h: number, density: Density): number[] => build(w, h, density).filter((i) => i.kind === 'chart').map((i) => (i as { pointsCount?: number }).pointsCount!);
+    // The canvas draws 101 points across a 566 px plot, which is a sample every six pixels; the
+    // companion's plot is what the bars, the numbers and the steering leave it.
+    expect(pointsOf(802, 336, 'companion')).toEqual([82, 82, 82]);
+    // And a zone that is not wide enough to be finer keeps the floor rather than a shorter window.
+    expect(pointsOf(245, 156, 'compact')).toEqual([60, 60, 60]);
+  });
+
+  test('ends with the steering, which is a declared part the narrow shapes drop', () => {
+    const steerIn = (items: Item[]): string[] => items.filter((i) => i.name.startsWith('inputs.steer')).map((i) => i.name);
+    expect(steerIn(build(600, 280))).toEqual(['inputs.steer.track', 'inputs.steer.marker', 'inputs.steer.label']);
+    expect(steerIn(build(430, 300))).toHaveLength(3);
+    expect(steerIn(build(274, 300))).toEqual([]);
+    expect(steerIn(build(360, 470))).toEqual([]);
+  });
+
+  test('and positions its marker from the wheel angle, since SimHub binds no rotation', () => {
+    const items = build(600, 280);
+    const marker = named(items, 'inputs.steer.marker');
+    const formula = marker.bindings?.Left?.formula ?? '';
+    expect(formula).toContain('SteeringWheelAngle');
+    // Clamped to the lock the pit wall's own steering trace is drawn at, so full lock is the end
+    // of the track and not a marker somewhere off the page.
+    expect(formula).toContain('min(max(');
+    expect(formula).toContain('3.5');
+    expect((named(items, 'inputs.steer.label') as TextItem).text).toBe('STEER');
+  });
+});
+
 describe('the radar is cut from its box', () => {
   const build = (w: number, h: number, density: Density = 'zone'): Item[] => MODULES.find((m) => m.id === 'radar')!.build({ frame: rect(0, 0, w, h), density, prefix: 'radar.' });
   const radarIn = (items: Item[]): RadarItem => items.find((i): i is RadarItem => i.kind === 'radar')!;
