@@ -22,6 +22,9 @@ const { eq, ne, str } = ncalc;
 
 export const WEB_VIEW_MESSAGE = 'Web view · address set in the plugin';
 
+/** Width of the car-telemetry page's settings grid, which the canvas draws at a fixed 380 px. */
+const SETTINGS_WIDTH = 380;
+
 /** The browser page: the box and its "no address" state, then the browser itself. */
 export function webView(ctx: ModuleContext): Item[] {
   const d = densityOf(ctx.density);
@@ -63,7 +66,10 @@ export function webView(ctx: ModuleContext): Item[] {
  */
 export function carTelemetry(ctx: ModuleContext): Item[] {
   const d = densityOf(ctx.density);
-  const gridWidth = Math.min(380, Math.round(ctx.frame.width * 0.34));
+  // The canvas's settings column, or half of what is left where the body is too narrow for 380 to
+  // leave the traces the larger half. A share of the width instead capped it at 342 on the 1039 px
+  // zone the tower page carries, which is a column the canvas never asked for.
+  const gridWidth = Math.min(SETTINGS_WIDTH, Math.round((ctx.frame.width - d.gapX) / 2));
   const plotWidth = Math.max(0, ctx.frame.width - gridWidth - d.gapX);
   const series: Series[] = [
     { name: 'Throttle', color: ds.purpose.delta.faster, bind: throttle(), min: 0, max: 100 },
