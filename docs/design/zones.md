@@ -404,7 +404,7 @@ does not fit still sheds afterwards: a declared set is a design decision and a b
 | № | Page | `wide` | `grid` | `tall narrow` | `tall` |
 |---|---|---|---|---|---|
 | 1 | Lap times | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` · `average5` · `position` · `stintLap` · `s1` · `s2` · `s3` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` |
-| 2 | Delta | `delta` | `delta` | `delta` | `delta` |
+| 2 | Delta | `delta` · `bar` · `scale` · `rule` · `s1` · `s2` · `s3` | `delta` · `bar` · `scale` · `rule` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `bar` · `scale` · `rule` · `s1` · `s2` · `s3` |
 | 3 | Sectors | `yourBest` · `last` · `sessionBest` | `yourBest` · `last` · `sessionBest` | `yourBest` · `last` | `last` · `sessionBest` |
 | 4 | Speedo | `speed` · `rpm` · `redline` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
 | 5 | Fuel | `level` · `time` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` | `level` · `time` · `toAdd` · `average` | `level` · `time` · `toAdd` · `average` | `level` · `time` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` |

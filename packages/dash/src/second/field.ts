@@ -37,6 +37,12 @@ export interface Follower {
   gap?: number;
   /** The size it is drawn at, for a caption that is neither a unit nor a proportion of the value. */
   size?: number;
+  /**
+   * The longest text `bind` can produce, and what the follower is measured by. Without it a bound
+   * follower is measured by the sample it happens to carry, which is how the delta's caption came
+   * to reserve the width of "VS SESSION BEST" and draw "VS ALL-TIME BEST" into it.
+   */
+  widest?: string;
   bind?: Expr;
   color?: Hex;
   visibleBind?: Expr;
@@ -121,7 +127,7 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
     const mono = cells('SemiBold', fs);
     return monoWidth(mono, charsOfText(follower.text, mono));
   }
-  const drawn = follower.bind ? follower.text : follower.text.toUpperCase();
+  const drawn = follower.bind ? (follower.widest ?? follower.text) : follower.text.toUpperCase();
   return Math.ceil(measureText('BarlowMedium', drawn, fs)) + 1;
 }
 
@@ -242,7 +248,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
     items.push(
       follower.kind === 'denominator'
         ? denominator(`${spec.name}.denominator`, follower.text, followerX, y, fs, box, opts)
-        : unit(`${spec.name}.unit`, follower.text, followerX, y, box, { size: fs, color: follower.color, ...opts }),
+        : unit(`${spec.name}.unit`, follower.text, followerX, y, box, { size: fs, color: follower.color, widest: follower.widest, ...opts }),
     );
   }
   return items;

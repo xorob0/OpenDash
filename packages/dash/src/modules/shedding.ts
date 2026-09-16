@@ -77,9 +77,16 @@ export const SHEDDING: Record<string, Shedding> = {
     tallNarrow: ['last', 'sessionBest', 'yourBest', 'delta'],
     tall: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
   }),
-  // One value and a bar it is drawn against; there is nothing secondary to lose. The catalogue
-  // draws three sector deltas under the bar that this page does not build yet (XOR-171).
-  delta: fields({ wide: ['delta'], grid: ['delta'], tallNarrow: ['delta'], tall: ['delta'] }),
+  // The number, the bar it is drawn against, the scale under it, a rule, and the same comparison
+  // sector by sector. A zone narrow enough for one column keeps the number and the sectors and
+  // drops the picture: the bar and the scale are the two the catalogue takes off at `tall narrow`,
+  // and the rule goes with them because it is what separates the scale from the sectors.
+  delta: fields({
+    wide: ['delta', 'bar', 'scale', 'rule', 's1', 's2', 's3'],
+    grid: ['delta', 'bar', 'scale', 'rule', 's1', 's2', 's3'],
+    tallNarrow: ['delta', 's1', 's2', 's3'],
+    tall: ['delta', 'bar', 'scale', 'rule', 's1', 's2', 's3'],
+  }),
   // The three sectors are the page and stay at every shape. Of the three lap times under them the
   // drawings keep two, and not the same two: your own best and the last lap in a narrow zone, the
   // last lap and the session best in a tall one.
