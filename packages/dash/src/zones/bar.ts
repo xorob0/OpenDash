@@ -142,8 +142,19 @@ interface StripCell {
 }
 
 /**
- * The strip, in the order the canvas draws it. Slip and Cut are iRacing's own names for the two
- * traction settings a GT3 car exposes separately from TC level.
+ * The strip, in the order the canvas draws it. Cut is `dcTractionControl2`, the second traction
+ * dial a GT3 car exposes beside TC level.
+ *
+ * Two of the seven read a property their label does not name, and both are left alone because
+ * settling them is a drawing decision rather than a lookup. Diff reads `dcAntiRollRear`, which
+ * `modules/carSettings.ts` already draws under the label ARB R, so the bar and page 09 publish one
+ * number under two names. Slip reads `dcThrottleShape`, which is the throttle map. Neither a
+ * differential nor a slip target is normalised by SimHub, and the iRacing variable set recorded in
+ * `tools/irsdk-emulator/Catalog.cs` holds no such field, so a car that has either publishes it
+ * under a name of its own and the binding cannot be looked up. `docs/design/zones.md` section 3
+ * records the disagreement.
+ *
+ * TODO: bind Diff and Slip once the canvas says which in-car adjustment each shows, or rename them.
  */
 export const STRIP_CELLS: readonly StripCell[] = [
   { id: 'slip', label: 'Slip', sample: '4', expr: raw('dcThrottleShape'), pattern: '0' },
