@@ -9,3 +9,4 @@ export { band, type BandOptions } from './band.ts';
 export { dot, DOT_SIZE, type DotOptions } from './dot.ts';
 export { bar, BAR_HEIGHT } from './bar.ts';
 export { ring, type RingOptions } from './ring.ts';
+export { badge, badgeWidth, BADGE_HEIGHT, BADGE_SIZE, LICENCE_CLASSES, LICENCE_LETTERS, type BadgeOptions, type LicenceClass } from './badge.ts';
