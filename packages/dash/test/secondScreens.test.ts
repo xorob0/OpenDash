@@ -623,21 +623,25 @@ describe('the inputs page', () => {
 
   test('ends with the steering, which is a declared part the narrow shapes drop', () => {
     const steerIn = (items: Item[]): string[] => items.filter((i) => i.name.startsWith('inputs.steer')).map((i) => i.name);
-    expect(steerIn(build(600, 280))).toEqual(['inputs.steer.track', 'inputs.steer.marker', 'inputs.steer.label']);
+    expect(steerIn(build(600, 280))).toEqual(['inputs.steer.rim', 'inputs.steer.mark', 'inputs.steer.label']);
     expect(steerIn(build(430, 300))).toHaveLength(3);
     expect(steerIn(build(274, 300))).toEqual([]);
     expect(steerIn(build(360, 470))).toEqual([]);
   });
 
-  test('and positions its marker from the wheel angle, since SimHub binds no rotation', () => {
+  test('and moves the mark round the rim rather than turning the rim, since SimHub binds no rotation', () => {
     const items = build(600, 280);
-    const marker = named(items, 'inputs.steer.marker');
-    const formula = marker.bindings?.Left?.formula ?? '';
-    expect(formula).toContain('SteeringWheelAngle');
-    // Clamped to the lock the pit wall's own steering trace is drawn at, so full lock is the end
-    // of the track and not a marker somewhere off the page.
-    expect(formula).toContain('min(max(');
-    expect(formula).toContain('3.5');
+    const mark = named(items, 'inputs.steer.mark');
+    const left = mark.bindings?.Left?.formula ?? '';
+    const top = mark.bindings?.Top?.formula ?? '';
+    expect(left).toContain('SteeringWheelAngle');
+    expect(left).toContain('sin(');
+    expect(top).toContain('cos(');
+    // Clamped to the lock the pit wall's own steering trace is drawn at, so full lock is full lock
+    // and not a mark that has come round past the top again.
+    expect(left).toContain('min(max(');
+    expect(left).toContain('3.5');
+    // Where the two formulas put the mark on a wheel that is straight is expressions.test.ts.
     expect((named(items, 'inputs.steer.label') as TextItem).text).toBe('STEER');
   });
 });

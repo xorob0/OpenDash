@@ -10,22 +10,18 @@
  * the whole panel, which is the pit wall's telemetry page.
  */
 import { ncalc } from '../generator.ts';
-import { withBindings } from '../bind.ts';
-import { measureText } from '../design/advances.ts';
-import { rect, type Rect } from '../design/geometry.ts';
+import { rect } from '../design/geometry.ts';
 import { densityOf } from '../second/density.ts';
 import { barGauge } from '../second/gauge.ts';
+import { STEERING_DIAL, steeringDial } from '../second/steering.ts';
 import { trace, type Series } from '../second/trace.ts';
-import { CHARS, STEERING_RANGE, brake, clutch, steering, throttle } from '../second/values.ts';
+import { CHARS, brake, clutch, throttle } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { band } from '../elements/band.ts';
-import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
-import type { Item } from '../generator.ts';
 import { cells, monoWidth } from '../design/metrics.ts';
 import { defineModule, drawnAt, pageKeeps } from './module.ts';
 
-const { add, div, fmt, max, min, mul, num } = ncalc;
+const { fmt } = ncalc;
 
 /**
  * The three pedals, in the order the design draws them, each with the reading the catalogue puts
@@ -47,14 +43,11 @@ const BAR = { wide: 20, narrow: 16, gap: 10 } as const;
 const GROUP_GAP = ds.space[4];
 
 /**
- * The steering indicator: the canvas's 96 px dial, drawn as a track with a marker running along it.
- *
- * SimHub draws no arc, and `Rotation` is a number written at build time rather than one of the
- * binding targets, so a ring with a dot that turns is not expressible. A position is: `Left`
- * binds, so the marker runs from lock to lock along a track of the width the dial had.
- * `docs/second-screens.md` records the dial itself.
+ * Room left between the plot's edges and the three polylines, which the catalogue draws at four
+ * pixels. A 2 px line at either end of its range is drawn half outside the plot and clipped, so a
+ * pedal held flat reads a pixel thinner than the same pedal halfway down.
  */
-const STEER = { width: 96, marker: 4, gap: 6 } as const;
+const TRACE_INSET = 4;
 
 export const inputs = defineModule('inputs', (ctx) => {
   const d = densityOf(ctx.density);
@@ -70,10 +63,10 @@ export const inputs = defineModule('inputs', (ctx) => {
   const columnWidth = Math.max(barWidth, valueWidth);
   const barsWidth = PEDALS.length * columnWidth + (PEDALS.length - 1) * BAR.gap;
   const steers = pageKeeps('steer', ctx);
-  const steerWidth = steers ? STEER.width + GROUP_GAP : 0;
+  const steerWidth = steers ? STEERING_DIAL.size + GROUP_GAP : 0;
   const plotWidth = Math.max(0, ctx.frame.width - barsWidth - steerWidth - GROUP_GAP);
   const series: Series[] = PEDALS.map((pedal) => ({ name: pedal.name, color: pedal.color, bind: pedal.value(), min: 0, max: 100 }));
-  const items = trace(`${ctx.prefix}trace`, rect(ctx.frame.left, ctx.frame.top, plotWidth, ctx.frame.height), series, ctx.density, { legend: false, baseline: false });
+  const items = trace(`${ctx.prefix}trace`, rect(ctx.frame.left, ctx.frame.top, plotWidth, ctx.frame.height), series, ctx.density, { legend: false, baseline: false, inset: TRACE_INSET });
   const barsTop = ctx.frame.top;
   const barsHeight = Math.max(0, ctx.frame.height - valueHeight);
   const barsLeft = ctx.frame.left + plotWidth + GROUP_GAP;
@@ -92,26 +85,6 @@ export const inputs = defineModule('inputs', (ctx) => {
       }),
     );
   });
-  if (steers) items.push(...steerColumn(ctx.prefix, rect(barsLeft + barsWidth + GROUP_GAP, barsTop, STEER.width, barsHeight), valueFs, d.labelSm, d.fieldGap));
+  if (steers) items.push(...steeringDial(`${ctx.prefix}steer`, rect(barsLeft + barsWidth + GROUP_GAP, barsTop, STEERING_DIAL.size, barsHeight), d.labelSm));
   return items;
 });
-
-/** The track, the marker on it and the word under it, centred in the column the bars leave. */
-function steerColumn(prefix: string, frame: Rect, valueFs: number, labelFs: number, fieldGap: number): Item[] {
-  const trackHeight = Math.max(2, Math.round(valueFs / 6));
-  const trackTop = frame.top + Math.round((frame.height - trackHeight) / 2);
-  const travel = frame.width - STEER.marker;
-  const centre = frame.left + travel / 2;
-  // Radians of wheel angle, clamped to the lock the pit wall's own steering trace is drawn at, then
-  // mapped onto the half travel either side of centre.
-  const clamped = min(max(steering(), num(-STEERING_RANGE)), num(STEERING_RANGE));
-  const labelWidth = Math.ceil(measureText('BarlowMedium', 'STEER', labelFs));
-  return [
-    band(`${prefix}steer.track`, rect(frame.left, trackTop, frame.width, trackHeight), ds.color.text.dim),
-    {
-      ...band(`${prefix}steer.marker`, rect(Math.round(centre), trackTop - STEER.gap, STEER.marker, trackHeight + 2 * STEER.gap), ds.color.text.primary),
-      ...withBindings({ Left: add(num(centre), mul(div(clamped, num(STEERING_RANGE)), num(travel / 2))) }),
-    },
-    label(`${prefix}steer.label`, 'Steer', frame.left + Math.round((frame.width - labelWidth) / 2), trackTop + trackHeight + STEER.gap + fieldGap, labelWidth, { size: labelFs }),
-  ];
-}
