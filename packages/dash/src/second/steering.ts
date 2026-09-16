@@ -38,9 +38,9 @@ const { add, max, min, mul, num, sub } = ncalc;
 export const STEERING_DIAL = { size: 96, radius: 44, stroke: 3, mark: 6, labelGap: 6 } as const;
 
 /**
- * NCalc's trigonometry, which `ncalc.ts` carries no helper for. Both callers hand it radians, which
- * is what `sin` and `cos` read and what iRacing publishes for an angle: a conversion either way
- * would be a constant in the file and a chance to get the direction of it wrong.
+ * NCalc's trigonometry, which `ncalc.ts` carries no helper for. The angle is in radians, which is
+ * what `sin` and `cos` read and what iRacing publishes: a conversion either way would be a constant
+ * in every formula and a chance to get the direction of it wrong.
  */
 const sin = (a: Expr): Expr => `sin(${a})`;
 const cos = (a: Expr): Expr => `cos(${a})`;
@@ -50,7 +50,7 @@ const cos = (a: Expr): Expr => `cos(${a})`;
  * the top. It is drawn at top dead centre, which is where a zero angle puts it and therefore what
  * Dash Studio shows against a sim that is not running.
  */
-export function markOnCircle(name: string, face: Circle, size: number, color: Hex, angle: Expr): RectangleItem {
+function markOnCircle(name: string, face: Circle, size: number, color: Hex, angle: Expr): RectangleItem {
   return {
     ...band(name, onCircle(face, 0, { width: size, height: size }), color),
     ...withBindings({
