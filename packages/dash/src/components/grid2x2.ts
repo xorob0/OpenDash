@@ -7,7 +7,8 @@
  *
  * A cell may carry a second, smaller value under its numeral: the tread left under a tyre
  * temperature. The canvas draws that at rung L only, where the slot has the height for two rows of
- * it, and the numeral then takes the smaller size the other rungs draw so the pair fits the card.
+ * it; the numeral then takes the smaller size the other rungs draw so the pair fits the card, and
+ * the gaps go to the 6 and 18 the canvas gives a grid of two-line cells.
  */
 import type { Hex, Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
