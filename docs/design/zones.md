@@ -440,10 +440,17 @@ drawn at 1920 × 480, 1280 × 480, 1280 × 400 and 1280 × 720, and absent at 85
 600 × 686. The threshold is those drawings, not a round number.
 
 **A page sheds its last field before the rank overflows**, with nothing spread to fill. The rank is
-packed and centred in what the corners leave, never in the whole band. No shipped page reaches that
-limit: the widest catalogue entry holds five fields, and five fit at 600 × 56, which is the
-narrowest band. The shedding rule is therefore a guarantee about a page that grows, not a
-description of one that exists.
+packed and centred in what the side padding, the zone letter and the corners leave, never in the
+whole band. The artboards draw the shedding rather than only describing it: the fuel page is seven
+fields at 1920, six at 1280, five in the catalogue's 1200-wide reference and three at 600, and the
+build sheds the sixth at 1280 because the corner blocks it measures are wider than the ones the
+drawing sketches.
+
+**The gaps and sizes are each face's own.** Band D is padded 16 px at the sides and 12 in portrait,
+its three groups sit 22 apart, a corner block's two fields 18, and a page's fields 34 at the three
+1280 faces, 26 at 1920, 850 and the nano and 18 at 600. A label sits 5 px above its value and a
+unit 5 px after it. `bandMetrics` in `packages/dash/src/zones/bandPages.ts` is that table, read off
+the band of each face's artboard.
 
 **A flag takes the band over.** While a flag is out, the flag has the band, because an alert
 outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so the same sixty
@@ -556,6 +563,7 @@ a mistake in this document.
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
+| Band D's value size | Every 60 and 58 px band draws its page values at 34 px over a 13 px label, 5 px apart. WPF's line box around a 34 px value runs 60.6 px from the top of that label, so the band clips it by a pixel. **The value shrinks** — 32 at 60, 30 at 58 — because a clipped numeral reads as a rendering fault. The band would have to grow, or the drawing come down; the 54 and 56 px bands draw 24 and are honoured exactly. |
 | The face with no rev bar | XOR-138 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
 | Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [readability-pass.md](readability-pass.md). |
 
