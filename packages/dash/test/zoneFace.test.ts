@@ -757,7 +757,10 @@ describe('what the face does with a field that is not there', () => {
     const items = textsIn(settings.build({ frame: rect(0, 0, 600, 280), density: 'zone', prefix: '' }));
     const abs = items.find((i) => i.name === 'abs.value')!;
     expect(bound(abs, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))');
-    expect(bound(abs, 'Left')).toContain('dcTractionControl');
+    // `abs` opens the second line of the three-column grid, so the cell that has to move when the
+    // car has no ABS is the one drawn after it rather than `abs` itself.
+    const arbRear = items.find((i) => i.name === 'arbRear.value')!;
+    expect(bound(arbRear, 'Left')).toContain('dcABS');
   });
 
   test('the corner lamps dim in place rather than vanishing', () => {
