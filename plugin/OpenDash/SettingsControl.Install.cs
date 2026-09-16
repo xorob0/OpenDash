@@ -35,51 +35,6 @@ namespace OpenDashPlugin
             return Ui.VStack(0, BuildPackageSection(), BuildPluginSection());
         }
 
-        /// <summary>
-        /// One row per package the build carries: what it is, whether the rig has it, and a button.
-        /// </summary>
-        /// <remarks>
-        /// A package can be on the rig more than once now, so the row says how many screens use it rather
-        /// than "installed". Add here does exactly what Add on the Rig tab does, because they are one
-        /// list seen from two sides.
-        /// </remarks>
-        private FrameworkElement BuildPackageSection()
-        {
-            var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-            var rows = new List<UIElement>
-            {
-                Ui.Caption(
-                    "One package per size, installed into SimHub DashTemplates. Adding one here makes it a screen; "
-                    + "its settings are its own.",
-                    BodyWidth),
-            };
-            if (catalogue.Count == 0)
-            {
-                rows.Add(Ui.Caption("This build of openDash carries no dashboard packages. See plugin/OpenDash/Resources/README.md.", BodyWidth));
-                return Ui.Section("Screens openDash can install", rows.ToArray());
-            }
-
-            foreach (var entry in catalogue)
-            {
-                var captured = entry;
-                var used = Settings.RigScreens().Count(screen =>
-                    string.Equals(screen.Kind, captured.Kind, StringComparison.Ordinal)
-                    && screen.Width == captured.Width
-                    && screen.Height == captured.Height);
-                var state = used == 0 ? "Not on your rig"
-                    : used == 1 ? "1 screen"
-                    : used + " screens";
-                var add = BuildSecondaryButton(used == 0 ? "Add" : "Add another", "Make a screen from this package.");
-                add.Click += (sender, args) => AddScreen(captured, null);
-                rows.Add(Ui.Row(
-                    Ui.VStack(4,
-                        Ui.Body(Describe(captured)),
-                        Ui.Caption(captured.Folder + (used == 0 ? string.Empty : " · " + state), 460)),
-                    add));
-            }
-            return Ui.Section("Screens openDash can install", rows.ToArray());
-        }
-
         private FrameworkElement BuildPluginSection()
         {
             dashboardTitle = Ui.Body("OpenDash");
