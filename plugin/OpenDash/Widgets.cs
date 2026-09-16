@@ -16,12 +16,14 @@ namespace OpenDashPlugin
 {
     internal static class Ui
     {
-        // Icons from PluginComponents.dc.html: 16 px, 1.5 stroke, square caps, mitre joins.
-        public const string WarningIcon = "M8 2l6.5 11.5h-13zM8 6.5v3.5M8 11.5v.5";
-        public const string ExternalLinkIcon = "M6.5 3.5H3.5v9h9V9.5M9 3h4v4M13 3l-6 6";
-        public const string RefreshIcon = "M13 8a5 5 0 0 1-8.7 3.4M3 8a5 5 0 0 1 8.7-3.4M11.5 2v3h-3M4.5 14v-3h3";
+        // Every path lives in PanelIcons, which a test holds against PluginComponents.dc.html
+        // character for character; this file is the one no test compiles, so a path written here
+        // was a path nothing checked. The names stay, because the call sites read better for them.
+        public const string WarningIcon = PanelIcons.Alert;
+        public const string ExternalLinkIcon = PanelIcons.External;
+        public const string RefreshIcon = PanelIcons.Refresh;
         /// <summary>The chevron a drop-down carries, as the canvas draws it.</summary>
-        public const string ChevronIcon = "M4 6l4 4 4-4";
+        public const string ChevronIcon = PanelIcons.Chevron;
 
         // The kind icons and the plus, which live in PanelMetrics.cs so that a test can hold them against
         // the canvas character for character; a path is geometry, and this file is the one no test compiles.
@@ -303,13 +305,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A stroked icon from the canvas's SVG path data, drawn at its 16 px native size.</summary>
-        public static Path Icon(string pathData, string hex, double size = Theme.IconSize)
+        public static Path Icon(string pathData, string hex, double size = PanelIcons.SizeInControl)
         {
             return new Path
             {
                 Data = Geometry.Parse(pathData),
                 Stroke = Brush(hex),
-                StrokeThickness = 1.5,
+                StrokeThickness = PanelIcons.StrokeWeight,
                 StrokeStartLineCap = PenLineCap.Square,
                 StrokeEndLineCap = PenLineCap.Square,
                 StrokeLineJoin = PenLineJoin.Miter,
