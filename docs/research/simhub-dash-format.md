@@ -423,6 +423,17 @@ Verified on the VM on 2026-09-12: one 240 x 180 source drawn by three items into
 240 x 240 and 96 x 72 fills each rect, so the image is stretched to the box rather than letterboxed
 inside it. `Opacity` is a percentage, as it is on every other item.
 
+**An image carries no colour of its own.** Read off the committed `plugin/lib/SimHub.Plugins.dll`
+on 2026-09-16: `ImageItem` declares `Image`, `AutoSize`, `AutoSizeScale` and `ImageData`, which is
+the decoded `ImageSource` and is not serialised, and nothing else. Its whole chain above,
+`GraphicalDash.Models.DrawableItem` then `GDashItemBindingBase` then `BindingBase`, offers exactly
+one colour, `BackgroundColor`, plus a `BorderStyle`; `BackgroundColor` paints the item's box behind
+the picture and not the picture. A lamp that is amber when it lights and grey when it does not is
+therefore two files, one per state, and not one file recoloured. `Visible` is declared on that same
+`DrawableItem` beside `Left`, `Top`, `Width` and `Height`, so it binds as it does on any other item,
+which is how the two files are drawn: two items at the same rect, each hidden by its own
+expression.
+
 Fonts are referenced by family name in `Font`, with `FontWeight` taking WPF weight names such
 as `Normal`, `SemiBold`, `Bold` and `Black`, and the files are shipped in `_SHFonts/`. Blumlaut
 ships `D-DINCondensed-Bold.ttf`; Daniel Newman ships Reddit Mono, Reddit Sans and Inter.
