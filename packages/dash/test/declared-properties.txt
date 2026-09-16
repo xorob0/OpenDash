@@ -231,6 +231,7 @@ OpenDash.FlagBoxGear
 OpenDash.FlagBoxLowFuelLaps
 OpenDash.FlagBoxOilTemp
 OpenDash.FlagBoxWaterTemp
+OpenDash.LightsLowFuelLaps
 OpenDash.FlagBoxMatrix1Rest
 OpenDash.FlagBoxMatrix1Flags
 OpenDash.FlagBoxMatrix1Pit
