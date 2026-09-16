@@ -98,11 +98,14 @@ const WIDEST_SESSION_LABEL = 'OFFLINE TESTING';
 /**
  * The session panel: how long is left, where you are in the field, where you are in your class.
  *
- * Three fields rather than the five this used to draw. The portrait sheet folds the session type
- * into the label of the time left, which is the reading a pit wall wants, and the lap is in the
- * header of every page already. The landscape sheet still draws five at 46 px, and no arrangement
- * of them fits: five fields measured against their character budgets come to 820 px across a 599 px
- * body, and a 46 px value needs 70 px of a 59 px body. See the report for the author.
+ * Three fields rather than the five this used to draw, and the portrait sheet's rather than the
+ * landscape one's. The portrait sheet folds the session type into the label of the time left, which
+ * is the reading a pit wall wants, and the lap is in the header of every page already.
+ *
+ * The landscape sheet still draws five at 46 px, and no arrangement of those fits the panel it
+ * declares: measured against their character budgets the five come to 820 px across a 599 px body,
+ * and a single 46 px value needs 70 px of a 59 px one. Drawing the portrait set on both pages is
+ * therefore a choice between two sheets rather than a deviation from one.
  */
 export function sessionPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
