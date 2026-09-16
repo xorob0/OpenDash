@@ -61,7 +61,7 @@ namespace OpenDashPlugin
         {
             var cell = new Border
             {
-                Padding = new Thickness(16, 0, 16, 0),
+                Padding = new Thickness(Theme.PaddingX, 0, Theme.PaddingX, 0),
                 Background = System.Windows.Media.Brushes.Transparent,
                 BorderBrush = Ui.Brush(Theme.Border),
                 BorderThickness = new Thickness(0, 0, last ? 0 : 1, 0),

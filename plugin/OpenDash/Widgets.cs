@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -61,10 +62,13 @@ namespace OpenDashPlugin
             };
         }
 
-        /// <summary>.ui on the canvas: Barlow 14, text.primary.</summary>
+        /// <summary>.ui on the canvas: Barlow 14, text.primary, line height 1.45.</summary>
         public static TextBlock Body(string text)
         {
-            return Text(text, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
+            var block = Text(text, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
+            block.LineHeight = Math.Round(Theme.SizeBody * 1.45, 1);
+            block.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+            return block;
         }
 
         /// <summary>.cap on the canvas: Barlow 13, text.secondary, wrapping at 460 px, line height 1.45.</summary>
@@ -79,22 +83,33 @@ namespace OpenDashPlugin
             return block;
         }
 
-        /// <summary>.num on the canvas: openDash Display SemiBold, which is Barlow Condensed.</summary>
-        public static TextBlock Numeral(string text, double size, string hex)
+        /// <summary>.num on the canvas: openDash Display SemiBold, which is Barlow Condensed, tracked
+        /// -0.01 em and on the tabular figures the face carries, so that a value that ticks does not
+        /// shift the ones beside it.</summary>
+        public static StackPanel Numeral(string text, double size, string hex)
         {
-            return Text(text, size, FontWeights.SemiBold, hex, PanelFonts.Data);
+            var panel = Tracked(text, size, FontWeights.SemiBold, hex, Theme.TrackingNumeral, PanelFonts.Data);
+            Typography.SetNumeralAlignment(panel, FontNumeralAlignment.Tabular);
+            return panel;
         }
 
-        /// <summary>.lbl on the canvas: Barlow Medium 12, uppercase, 0.14 em tracking. WPF has no letter spacing,
-        /// so every character is its own TextBlock followed by the tracking as a right margin.</summary>
+        /// <summary>.lbl on the canvas: Barlow Medium 12, uppercase, 0.14 em tracking.</summary>
         public static StackPanel Label(string text, string hex = Theme.TextLabel, double size = Theme.SizeLabel)
         {
+            return Tracked(text.ToUpperInvariant(), size, FontWeights.Medium, hex, Theme.TrackingLabel);
+        }
+
+        /// <summary>The tracking WPF gives no property for: every character is its own TextBlock and carries
+        /// the spacing as a right margin, negative where the token is. A stack of glyphs cannot trim or wrap,
+        /// so this is for the short fixed runs the canvas tracks -- a label, a numeral, the wordmark.</summary>
+        public static StackPanel Tracked(string text, double size, FontWeight weight, string hex, double tracking, FontFamily family = null)
+        {
             var panel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            var tracking = Math.Round(size * Theme.TrackingLabel, 2);
-            foreach (var character in text.ToUpperInvariant())
+            var spacing = Math.Round(size * tracking, 2);
+            foreach (var character in text)
             {
-                var glyph = Text(character.ToString(), size, FontWeights.Medium, hex);
-                glyph.Margin = new Thickness(0, 0, tracking, 0);
+                var glyph = Text(character.ToString(), size, weight, hex, family);
+                glyph.Margin = new Thickness(0, 0, spacing, 0);
                 panel.Children.Add(glyph);
             }
             return panel;
@@ -293,6 +308,37 @@ namespace OpenDashPlugin
             };
         }
 
+        // Focus and hover
+        //
+        // A control openDash templates itself keeps none of what WPF and SimHub draw around a control:
+        // the bare Border below is the whole of the drop button and the card, so the ring a keyboard
+        // needs and the answer a pointer expects are drawn here or nowhere.
+
+        /// <summary>The focus visual: control.focusRing of ui.focus, held its own offset clear of the
+        /// control. A focus visual is an adorner, so the ring costs the layout nothing and cannot nudge
+        /// the row it is in, which is what lets a 24 px control carry one without crowding its text.</summary>
+        private static Style FocusRing()
+        {
+            var ring = new FrameworkElementFactory(typeof(Border));
+            ring.SetValue(Border.BorderBrushProperty, Brush(Theme.Focus));
+            ring.SetValue(Border.BorderThicknessProperty, new Thickness(Theme.FocusRing));
+            ring.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius + Theme.FocusRingOffset));
+            ring.SetValue(FrameworkElement.MarginProperty, new Thickness(-(Theme.FocusRingOffset + Theme.FocusRing)));
+            var style = new Style(typeof(Control));
+            style.Setters.Add(new Setter(Control.TemplateProperty, new ControlTemplate(typeof(Control)) { VisualTree = ring }));
+            return style;
+        }
+
+        /// <summary>The pointer's answer on such a control: the outline lightens to ui.accentHover, the
+        /// one state the canvas gives the accent. SimHub's own styles bring a hover of their own, so this
+        /// goes on the controls openDash draws and on none of theirs.</summary>
+        private static Trigger HoverOutline()
+        {
+            var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            over.Setters.Add(new Setter(Border.BorderBrushProperty, Brush(Theme.AccentHover), "chrome"));
+            return over;
+        }
+
         // Drop-downs
 
         /// <summary>
@@ -327,6 +373,7 @@ namespace OpenDashPlugin
                 Content = row,
                 Cursor = Cursors.Hand,
                 ToolTip = tooltip,
+                FocusVisualStyle = FocusRing(),
             };
             // SimHub's ToggleButton style is a switch, so the drop button keeps the plain one and paints
             // itself; asking for the styled template here would draw a slider where a box belongs.
@@ -343,10 +390,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A border around the content and nothing else: no chrome, no checked state, because the
-        /// button's own brushes are the canvas's field and the popup below it is the affordance.</summary>
+        /// button's own brushes are the canvas's field and the popup below it is the affordance. The outline
+        /// under the pointer is all a shut field has to say that it is a control.</summary>
         private static ControlTemplate DropButtonTemplate()
         {
-            var border = new FrameworkElementFactory(typeof(Border));
+            var border = new FrameworkElementFactory(typeof(Border), "chrome");
             border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
             border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
             border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
@@ -355,7 +403,9 @@ namespace OpenDashPlugin
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
             presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
             border.AppendChild(presenter);
-            return new ControlTemplate(typeof(ToggleButton)) { VisualTree = border };
+            var template = new ControlTemplate(typeof(ToggleButton)) { VisualTree = border };
+            template.Triggers.Add(HoverOutline());
+            return template;
         }
 
         /// <summary>The panel a drop button opens: raised surface, a border, 12 px of padding, and it
@@ -486,20 +536,6 @@ namespace OpenDashPlugin
             return template;
         }
 
-        /// <summary>The focus visual: two pixels of accent, two pixels clear of the button. A focus visual
-        /// is drawn in the adorner layer, so the ring costs the layout nothing and cannot nudge a row.</summary>
-        private static Style FocusRing()
-        {
-            var ring = new FrameworkElementFactory(typeof(Border));
-            ring.SetValue(Border.BorderBrushProperty, Brush(Theme.Accent));
-            ring.SetValue(Border.BorderThicknessProperty, new Thickness(PanelMetrics.FocusRingWeight));
-            ring.SetValue(Border.CornerRadiusProperty, new CornerRadius(PanelMetrics.Radius + PanelMetrics.FocusRingOffset));
-            ring.SetValue(FrameworkElement.MarginProperty, new Thickness(-(PanelMetrics.FocusRingOffset + PanelMetrics.FocusRingWeight)));
-            var style = new Style(typeof(Control));
-            style.Setters.Add(new Setter(Control.TemplateProperty, new ControlTemplate(typeof(Control)) { VisualTree = ring }));
-            return style;
-        }
-
         // Tabs, cards and groups
         //
         // XOR-125 names panel.tabs, control.tab and control.screenCard as tokens. They are not in
@@ -622,17 +658,18 @@ namespace OpenDashPlugin
                 Content = content,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Center,
+                FocusVisualStyle = FocusRing(),
             };
             button.Template = CardTemplate();
             button.Click += (sender, args) => clicked();
             return button;
         }
 
-        /// <summary>A border around the content and nothing else, as the drop button's template is: SimHub's
-        /// button styles paint a chrome these do not want.</summary>
+        /// <summary>A border around the content and nothing else, as the drop button's template is, and with
+        /// the same outline under the pointer: SimHub's button styles paint a chrome these do not want.</summary>
         private static ControlTemplate CardTemplate()
         {
-            var border = new FrameworkElementFactory(typeof(Border));
+            var border = new FrameworkElementFactory(typeof(Border), "chrome");
             border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
             border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
             border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
@@ -640,7 +677,9 @@ namespace OpenDashPlugin
             border.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
             border.AppendChild(presenter);
-            return new ControlTemplate(typeof(Button)) { VisualTree = border };
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = border };
+            template.Triggers.Add(HoverOutline());
+            return template;
         }
 
         /// <summary>
