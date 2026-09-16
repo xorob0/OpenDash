@@ -37,6 +37,9 @@ import type { Expr } from '../bind.ts';
 import { flagBox, flagBoxMatrix, FLAG_BOX_MATRICES, type FlagBoxMatrix } from '../contract.ts';
 import { conditionVisible, flagsShown, noFlagShown, type FlagCondition } from '../flags.ts';
 import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
+// The ignition read is telemetry and lives with the rest of it, so that the box's standby mark and
+// anything else that comes to answer the same condition cannot read it two different ways.
+import { ignitionOn } from '../second/values.ts';
 import { gearGroup } from './gear.ts';
 import { noneRaised, pitStates, spotterStates, stateContainers, warningStates } from './states.ts';
 import { flagFrames, ignitionOffFrames } from './glyphs.ts';
@@ -174,12 +177,6 @@ export function pruneEmpty(containers: readonly MatrixContainer[]): MatrixContai
 export function flagBoxContainers(): MatrixContainer[] {
   return pruneEmpty(flagBoxTree());
 }
-
-/**
- * Whether the car is switched on. SimHub normalises it from the sim, so this is one of the few
- * places the box reads `GameData` rather than iRacing's raw telemetry.
- */
-export const ignitionOn = (): Expr => ncalc.game('EngineIgnitionOn');
 
 /** The tree as declared, empty branches included. `flagBoxContainers` is what the build writes. */
 export function flagBoxTree(): MatrixContainer[] {
