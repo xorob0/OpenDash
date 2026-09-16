@@ -222,9 +222,18 @@ namespace OpenDashPlugin
             public string CarName;
             public string[] Runs;
 
+            /// <summary>
+            /// No mirror, shared rather than made.
+            ///
+            /// <para>It is returned on every frame the mirror is off, which at SimHub's data rate is
+            /// sixty allocations a second for the whole time somebody is using one of openDash's own
+            /// styles. It never changes, so there is one of it.</para>
+            /// </summary>
+            public static readonly Frame None = new Frame { Ready = false, CarName = null, Runs = null };
+
             public static Frame Dark()
             {
-                return new Frame { Ready = false, CarName = null, Runs = null };
+                return None;
             }
         }
     }
