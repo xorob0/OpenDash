@@ -57,7 +57,8 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>Walks a dotted path; a node with a "value" yields it, and a string of the form {a.b.c} is an alias.</summary>
+        /// <summary>Walks a dotted path; a node with a "value" yields it, a key sitting beside that "value" is
+        /// reached by naming it (control.focusRing.offset), and a string of the form {a.b.c} is an alias.</summary>
         private static JsonElement Resolve(JsonElement root, string path, int depth)
         {
             if (depth > 10) throw new InvalidDataException("alias loop at " + path);
