@@ -11,6 +11,7 @@ import { setting } from '../src/contract.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
+import * as values from '../src/second/values.ts';
 import type { TextItem } from '../src/generator.ts';
 
 const slot = rect(0, 0, 255, 187);
@@ -129,6 +130,50 @@ describe('card expressions', () => {
       "('PRESSURES ') + (ucase(isnull([DataCorePlugin.GameData.TyrePressureUnit], 'Psi'))) + (' · LAST STOP')",
     );
     expect(formulaOf(textItem('tyrePressures', 'rr'), 'Text')).toContain("format(isnull([DataCorePlugin.GameData.TyrePressureRearRight], 0), '0.0')");
+  });
+});
+
+describe('second-screen values', () => {
+  test('a relative gap is three decimals signed with the typographic minus', () => {
+    const gap = values.carRelativeGap('1');
+    expect(gap).toContain("format(driverrelativegaptoplayer(1), '0.000', true)");
+    expect(gap).toContain("'-', '−'");
+  });
+
+  test('the no-data lap time is one placeholder of the same shape as the time it stands in for', () => {
+    expect(values.NO_TIME).toBe('−:−−.−−−');
+    expect(values.NO_TIME).toHaveLength('1:42.905'.length);
+    expect(values.noTime(1)).toHaveLength('1:42.3'.length);
+    expect(values.lapTime('[T]', 1)).toContain(`'${values.noTime(1)}'`);
+  });
+
+  test('a unit reaches the screen as the word the face draws, not the name of its enum', () => {
+    expect(values.speedUnit()).toBe("if((isnull([DataCorePlugin.GameData.SpeedLocalUnit], 'KMH')) = ('MPH'), 'mph', 'km/h')");
+    expect(values.fuelUnit()).toContain("'gal'");
+    expect(values.fuelUnit()).toContain("'L'");
+    expect(values.pressureUnit()).toContain("'kPa'");
+  });
+
+  test('the five-lap average reads the five history slots and waits for all five', () => {
+    const average = values.average5();
+    for (const slot of [1, 2, 3, 4, 5]) expect(average).toContain(`('PersistantTrackerPlugin.PreviousLap_') + (format(${slot}, '00'))`);
+    expect(average).not.toContain("format(6, '00')");
+    expect(average).toContain('/ (5)');
+    expect(average).toContain(`'${values.NO_TIME}'`);
+  });
+
+  test("a tyre wears to its worst section, and to SimHub's own figure where there are no sections", () => {
+    const wear = values.tyreWearMin('FrontLeft');
+    expect(wear).toBe(
+      'if(isnull([DataCorePlugin.GameRawData.Telemetry.LFwearM]), isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0), ' +
+        '(min([DataCorePlugin.GameRawData.Telemetry.LFwearL], min([DataCorePlugin.GameRawData.Telemetry.LFwearM], ' +
+        '[DataCorePlugin.GameRawData.Telemetry.LFwearR]))) * (100))',
+    );
+  });
+
+  test('the grip status is upper-cased, and MODERATE is the word a box is cut for', () => {
+    expect(values.trackGrip()).toBe("ucase(isnull([DataCorePlugin.GameData.TrackGripStatus], '--'))");
+    expect(values.GRIP_WIDEST).toBe('MODERATE');
   });
 });
 
