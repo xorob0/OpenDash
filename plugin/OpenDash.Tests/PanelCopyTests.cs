@@ -17,6 +17,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Add a screen", PanelCopy.AddScreen);
         }
 
+        /// <summary>
+        /// The empty rig's sentence explains what adding a screen does and does not say the rig is empty,
+        /// because the pill above it already has.
+        /// </summary>
+        [Fact]
+        public void The_empty_rig_explains_rather_than_announcing()
+        {
+            Assert.DoesNotContain("no screens", PanelCopy.EmptyRig, System.StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("empty", PanelCopy.EmptyRig, System.StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("openDash installs its dashboard into SimHub", PanelCopy.EmptyRig, System.StringComparison.Ordinal);
+            Assert.EndsWith(".", PanelCopy.EmptyRig, System.StringComparison.Ordinal);
+        }
+
         [Fact]
         public void Progress_says_the_word_and_the_number_the_canvas_shows()
         {

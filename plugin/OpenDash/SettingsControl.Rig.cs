@@ -25,7 +25,6 @@ namespace OpenDashPlugin
         private readonly Dictionary<string, ComboBox> zoneSelects = new Dictionary<string, ComboBox>();
         private readonly Dictionary<string, ToggleButton> zoneMaskButtons = new Dictionary<string, ToggleButton>();
         private readonly Dictionary<string, List<CheckBox>> zoneMaskBoxes = new Dictionary<string, List<CheckBox>>();
-        private readonly Dictionary<string, CheckBox> zoneClassBoxes = new Dictionary<string, CheckBox>();
         private readonly Dictionary<string, ToggleButton> barEndButtons = new Dictionary<string, ToggleButton>();
         private TextBlock faceWarningText;
         private FrameworkElement faceWarningRow;
@@ -158,9 +157,7 @@ namespace OpenDashPlugin
             var pill = Ui.StatusPill(Theme.TextDim, "No screens yet", Theme.TextLabel);
             // The pill states the rig is empty, so the sentence under it no longer says so as well: it
             // is the explanation of what adding a screen does, not a second announcement.
-            var text = Ui.Caption(
-                "Add the one your rig actually has and openDash installs its dashboard into SimHub; "
-                + "everything else on this page is about the screens you have added.");
+            var text = Ui.Caption(PanelCopy.EmptyRig);
             var stack = Ui.VStack(4, pill, text);
             stack.Margin = new Thickness(0, 4, 0, 0);
             return stack;
