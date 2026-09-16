@@ -1,14 +1,18 @@
 /**
- * A markdown renderer for exactly the subset CHANGELOG.md uses, and nothing else.
+ * A markdown parser for exactly the subset CHANGELOG.md uses, and nothing else.
  *
  * A general markdown library would be the obvious answer, and it is the wrong one here for a
  * reason worth writing down: the only markdown this site renders is one file in this repository,
- * written by the people who maintain this repository, and a renderer that accepts exactly what that
- * file contains fails loudly on anything else rather than silently producing something unexpected.
- * It also means no `dangerouslySetInnerHTML` anywhere on the site — every node below is a React
- * element, so a changelog entry cannot inject markup even in principle.
+ * written by the people who maintain this repository, and a parser that accepts exactly what that
+ * file contains is easier to be sure of than one that accepts everything. It also means no
+ * `dangerouslySetInnerHTML` anywhere on the site — this returns data, the component turns it into
+ * elements, and a changelog entry cannot inject markup even in principle.
  *
- * The subset, which `toBlocks` and `renderInline` between them cover:
+ * It returns data rather than React nodes deliberately. The presentation belongs to the component,
+ * and a parser with no React import is one the repository's own `bun test` can run without the
+ * site's dependencies installed.
+ *
+ * The subset, which `toBlocks` and `toInline` between them cover:
  *
  *   ### Heading        a group within a release: Added, Changed, Fixed, Known
  *   - item             a bullet, which may wrap onto indented continuation lines
@@ -22,13 +26,19 @@
  * text. That is a deliberate floor rather than a bug: the text still reads, and the missing
  * formatting is visible enough in review to be noticed and either added here or avoided there.
  */
-import type { ReactNode } from 'react';
-import { createElement, Fragment } from 'react';
 
 export type Block =
   | { kind: 'heading'; text: string }
   | { kind: 'list'; items: string[] }
   | { kind: 'paragraph'; text: string };
+
+export type Inline =
+  | { kind: 'text'; text: string }
+  | { kind: 'strong'; text: string }
+  | { kind: 'em'; text: string }
+  | { kind: 'code'; text: string }
+  /** `href` is absent for a repository-relative target, which the site has nowhere to point at. */
+  | { kind: 'link'; text: string; href?: string };
 
 /**
  * Split a release body into blocks.
@@ -91,45 +101,40 @@ export function toBlocks(markdown: string): Block[] {
 }
 
 /**
- * Inline markup, as React nodes.
+ * Inline markup, as a flat run of spans.
  *
  * One pass with one alternation, so the forms cannot nest and cannot be mistaken for one another:
  * whichever opens first wins, and its own closing delimiter ends it. Nesting is not in the subset
- * because the changelog does not use it, and a renderer that half-supports it is worse than one
- * that does not.
+ * because the changelog does not use it, and a parser that half-supports it is worse than one that
+ * does not.
  *
  * `**bold**` is listed before `*italic*` because the alternation is ordered and the double
- * delimiter has to be tried first — the other way round, every bold run would render as an italic
- * empty string wrapped in stray asterisks.
+ * delimiter has to be tried first — the other way round, every bold run would come back as an
+ * italic empty string between stray asterisks, and the changelog is full of bold.
  */
-export function renderInline(text: string): ReactNode {
+export function toInline(text: string): Inline[] {
   const pattern = /\*\*([^*]+)\*\*|\*([^*\s][^*]*)\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)/g;
-  const nodes: ReactNode[] = [];
+  const spans: Inline[] = [];
   let last = 0;
   let match: RegExpExecArray | null;
-  let key = 0;
 
   while ((match = pattern.exec(text)) !== null) {
-    if (match.index > last) nodes.push(text.slice(last, match.index));
-    const [, bold, italic, code, linkText, href] = match;
-    if (bold !== undefined) {
-      nodes.push(createElement('strong', { key: key++ }, bold));
-    } else if (italic !== undefined) {
-      nodes.push(createElement('em', { key: key++ }, italic));
-    } else if (code !== undefined) {
-      nodes.push(createElement('code', { key: key++ }, code));
-    } else if (linkText !== undefined && href !== undefined) {
+    if (match.index > last) spans.push({ kind: 'text', text: text.slice(last, match.index) });
+    const [, strong, em, code, linkText, href] = match;
+    if (strong !== undefined) spans.push({ kind: 'strong', text: strong });
+    else if (em !== undefined) spans.push({ kind: 'em', text: em });
+    else if (code !== undefined) spans.push({ kind: 'code', text: code });
+    else if (linkText !== undefined && href !== undefined) {
       // A changelog link is usually relative to the repository, which this site is not. Only an
-      // absolute one is made a link; the rest keep their text, which is what the reader needs.
-      nodes.push(
-        /^https?:\/\//.test(href)
-          ? createElement('a', { key: key++, href, className: 'link', rel: 'noopener' }, linkText)
-          : createElement(Fragment, { key: key++ }, linkText),
-      );
+      // absolute one keeps its href; the rest keep their text, which is what the reader needs.
+      spans.push(/^https?:\/\//.test(href) ? { kind: 'link', text: linkText, href } : { kind: 'link', text: linkText });
     }
     last = pattern.lastIndex;
   }
 
-  if (last < text.length) nodes.push(text.slice(last));
-  return nodes.length === 1 ? nodes[0] : createElement(Fragment, null, ...nodes);
+  if (last < text.length) spans.push({ kind: 'text', text: text.slice(last) });
+  return spans;
 }
+
+/** The words a run of spans carries, with the markup gone. For tests and for a plain-text fallback. */
+export const plainText = (spans: readonly Inline[]): string => spans.map((s) => s.text).join('');
