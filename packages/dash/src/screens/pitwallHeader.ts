@@ -3,10 +3,13 @@
  *
  * The right-hand groups are laid out from the right edge in a fixed order, each measured from its
  * own text, so a longer session name or a three-digit incident count never pushes another group
- * off the screen. Track state is the canvas's seventh group and is not drawn here: SimHub does
- * publish `TrackGripStatus`, which band D and the track module both bind, but it is a word that
- * changes over a session rather than over a lap, and the header is what an engineer reads on
- * every page. The page that wants it has it.
+ * off the screen. They are laid out before the left-hand cluster, because the page name is the one
+ * text on the strip whose width is known at build time and is therefore what gives way when the
+ * two sides meet: the portrait header once drew "OFFLINE TESTING" over "PIT WALL · PORTRAIT".
+ *
+ * The seventh group is the track state, which SimHub publishes as `TrackGripStatus` and which band
+ * D and the track module bind as well. The compact portrait header drops it along with the wind and
+ * the sim clock, which is room the 1080 px strip does not have.
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -20,7 +23,7 @@ import { rule } from '../elements/rule.ts';
 import { FLAG_PRIORITY, flagVisible } from '../components/flagStrip.ts';
 import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
-import { CHARS, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionTimeLeft, sessionType, simClock, totalLaps, windKmh } from '../second/values.ts';
+import { CHARS, GRIP_WIDEST, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionTimeLeft, sessionType, simClock, totalLaps, trackGrip, windKmh } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { concat, str, fmt, iff, gt, num, isnull, isNull, not, ucase } = ncalc;
@@ -101,42 +104,56 @@ export function wordmark(name: string, x: number, top: number, fs: number): { it
   };
 }
 
+/** A word of the data face, under the small label the group is read by. */
+interface RunSpec {
+  label?: string;
+  sample: string;
+  widest: string;
+  bind: Expr;
+}
+
 /**
  * One run of the data face, measured from its own widest string rather than from monospace cells.
  *
- * The wind reads "12 km/h", and a value that carries its unit cannot be monospaced: the "m" is one
- * of the characters `font.cell.excluded` names as overrunning the digit cell, so the run is drawn
- * proportionally and the group measures it with the advances.
+ * The wind reads "12 km/h" and the track state reads "MODERATE", and neither can be monospaced: the
+ * "m" both carry is one of the characters `font.cell.excluded` names as overrunning the digit cell,
+ * so the run is drawn proportionally and the group measures it with the advances.
  */
-function dataRun(name: string, sample: string, widest: string, bind: Expr, fs: number): { width: number; draw(x: number, top: number): Item[] } {
-  const width = Math.ceil(measureText('BarlowCondensedSemiBold', widest, fs)) + 2;
+function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { width: number; draw(x: number, top: number): Item[] } {
+  const gap = ds.space[2];
+  const labelWidth = spec.label === undefined ? 0 : Math.ceil(measureText('BarlowMedium', spec.label.toUpperCase(), labelSize)) + 2;
+  const runWidth = Math.ceil(measureText('BarlowCondensedSemiBold', spec.widest, fs)) + 2;
+  const runOffset = spec.label === undefined ? 0 : labelWidth + gap;
   return {
-    width,
+    width: runOffset + runWidth,
     draw(x: number, top: number): Item[] {
       const box = textBox(top, fs);
-      return [
-        {
-          kind: 'text',
-          name: `${name}.0`,
-          rect: roundRect({ left: x, top: box.top, width, height: box.height }),
-          text: sample,
-          widest,
-          font: ds.font.data,
-          fontWeight: 'SemiBold',
-          fontSize: fs,
-          textColor: ds.color.text.primary,
-          hAlign: 'left',
-          vAlign: 'top',
-          backgroundColor: TRANSPARENT,
-          ...withBindings({ Text: bind }),
-        },
-      ];
+      const items: Item[] = [];
+      if (spec.label !== undefined) {
+        items.push(label(`${name}.0`, spec.label, x, canvasYForBaseline(canvasBaseline(top, fs), labelSize), labelWidth, { size: labelSize }));
+      }
+      items.push({
+        kind: 'text',
+        name: `${name}.${spec.label === undefined ? 0 : 1}`,
+        rect: roundRect({ left: x + runOffset, top: box.top, width: runWidth, height: box.height }),
+        text: spec.sample,
+        widest: spec.widest,
+        font: ds.font.data,
+        fontWeight: 'SemiBold',
+        fontSize: fs,
+        textColor: ds.color.text.primary,
+        hAlign: 'left',
+        vAlign: 'top',
+        backgroundColor: TRANSPARENT,
+        ...withBindings({ Text: spec.bind }),
+      });
+      return items;
     },
   };
 }
 
 /** A right-hand group: a run of inline parts, or one proportional run of the data face. */
-type HeaderGroup = { id: string; parts: InlinePart[]; run?: undefined } | { id: string; parts?: undefined; run: { sample: string; widest: string; bind: Expr } };
+type HeaderGroup = { id: string; parts: InlinePart[]; run?: undefined } | { id: string; parts?: undefined; run: RunSpec };
 
 export interface PitWallHeaderSpec {
   frame: Rect;
@@ -155,7 +172,8 @@ export interface PitWallHeaderSpec {
 
 /**
  * The header. Left: wordmark, page name, page squares. Right, from the right edge inwards: the two
- * clocks, the wind, the incident count, the flag, the time left and the session and lap.
+ * clocks, the wind, the track state, the incident count, the flag, the time left and the session
+ * and lap.
  */
 export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'zone' = 'zone'): Item[] {
   const d = densityOf(density);
@@ -164,24 +182,6 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   const top = Math.round(frame.top + (frame.height - fs) / 2);
   const labelY = canvasYForBaseline(canvasBaseline(top, fs), d.labelSm);
   const items: Item[] = [];
-
-  const mark = wordmark(`${name}.wordmark`, frame.left + PIT_WALL_HEADER.padX, top - 2, 28);
-  items.push(...mark.items);
-  let x = frame.left + PIT_WALL_HEADER.padX + mark.width + PIT_WALL_HEADER.gap;
-  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName.toUpperCase(), d.labelSm)) + 2;
-  items.push(label(`${name}.page`, spec.pageName, x, labelY, pageWidth, { size: d.labelSm, color: ds.color.text.secondary }));
-  x += pageWidth + PIT_WALL_HEADER.gap;
-  if (spec.pages > 1) {
-    for (let i = 0; i < spec.pages; i++) {
-      items.push(
-        band(
-          `${name}.square${i + 1}`,
-          rect(x + i * (PAGE_SQUARE.size + PAGE_SQUARE.gap), Math.round(top + (fs - PAGE_SQUARE.size) / 2), PAGE_SQUARE.size, PAGE_SQUARE.size),
-          i + 1 === spec.page ? ds.color.text.primary : ds.color.text.dim,
-        ),
-      );
-    }
-  }
 
   const compact = spec.compact ?? false;
   const hasLimit = not(isNull(incidentLimit()));
@@ -230,6 +230,10 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       ],
     },
     {
+      id: 'track',
+      run: { label: 'TRACK', sample: 'DRY', widest: GRIP_WIDEST, bind: trackGrip() },
+    },
+    {
       id: 'wind',
       run: { sample: '12 km/h', widest: WIDEST_WIND, bind: concat(fmt(windKmh(), '0'), str(' km/h')) },
     },
@@ -248,16 +252,40 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     },
   ];
 
-  const shown = compact ? groups.filter((g) => g.id !== 'wind') : groups;
+  const shown = compact ? groups.filter((g) => g.id !== 'wind' && g.id !== 'track') : groups;
+  const readouts: Item[] = [];
   let right = frame.left + frame.width - PIT_WALL_HEADER.padX;
   for (const group of [...shown].reverse()) {
-    const g = group.run
-      ? dataRun(`${name}.${group.id}`, group.run.sample, group.run.widest, group.run.bind, fs)
-      : inlineGroup(`${name}.${group.id}`, group.parts, fs, density);
+    const g = group.run ? dataRun(`${name}.${group.id}`, group.run, fs, d.labelSm) : inlineGroup(`${name}.${group.id}`, group.parts, fs, density);
     right -= g.width;
-    items.push(...g.draw(right, top));
+    readouts.push(...g.draw(right, top));
     right -= PIT_WALL_HEADER.groupGap;
   }
+
+  const mark = wordmark(`${name}.wordmark`, frame.left + PIT_WALL_HEADER.padX, top - 2, 28);
+  items.push(...mark.items);
+  let x = frame.left + PIT_WALL_HEADER.padX + mark.width + PIT_WALL_HEADER.gap;
+  const squares = spec.pages > 1 ? spec.pages * PAGE_SQUARE.size + (spec.pages - 1) * PAGE_SQUARE.gap : 0;
+  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName.toUpperCase(), d.labelSm)) + 2;
+  // What the readouts left, the squares included: they say which page this is, which the name only
+  // repeats. A name that does not fit is dropped whole rather than cut to the room, since WPF would
+  // clip it mid-word and the strip would read "PIT WALL · PORTR".
+  const room = right + PIT_WALL_HEADER.groupGap - PIT_WALL_HEADER.gap - x;
+  if (pageWidth + (squares > 0 ? PIT_WALL_HEADER.gap + squares : 0) <= room) {
+    items.push(label(`${name}.page`, spec.pageName, x, labelY, pageWidth, { size: d.labelSm, color: ds.color.text.secondary }));
+    x += pageWidth + PIT_WALL_HEADER.gap;
+  }
+  for (let i = 0; i < (squares > 0 ? spec.pages : 0); i++) {
+    items.push(
+      band(
+        `${name}.square${i + 1}`,
+        rect(x + i * (PAGE_SQUARE.size + PAGE_SQUARE.gap), Math.round(top + (fs - PAGE_SQUARE.size) / 2), PAGE_SQUARE.size, PAGE_SQUARE.size),
+        i + 1 === spec.page ? ds.color.text.primary : ds.color.text.dim,
+      ),
+    );
+  }
+
+  items.push(...readouts);
   items.push(rule(`${name}.rule`, frame.left, frame.top + frame.height - 1, frame.width, 1));
   return items;
 }
