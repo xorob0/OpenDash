@@ -21,12 +21,14 @@ namespace OpenDashPlugin
         // Plugin UI (brand cyan is allowed here and nowhere on the dash face)
         public const string Accent = "#33D9F2"; // purpose.ui.accent
         public const string AccentHover = "#5CE1F5"; // purpose.ui.accentHover
+        public const string Focus = "#33D9F2"; // purpose.ui.focus
         public const string OnAccent = "#0A0B0D"; // purpose.ui.onAccent
         public const string Border = "#33383F"; // purpose.ui.border
         public const string Rule = "#1C1F24"; // purpose.ui.rule
         public const string Hover = "#1C1F24"; // purpose.ui.hover
         public const string Field = "#14161A"; // purpose.ui.field
         public const string Caution = "#FFB300"; // color.caution.primary
+        public const string Danger = "#FF2D46"; // color.danger.primary
 
         // Install status dot
         public const string StatusUpToDate = "#00D96A"; // purpose.status.upToDate
@@ -43,12 +45,17 @@ namespace OpenDashPlugin
         public const double SizeSmall = 13; // font.size.ui.small
         public const double SizeLabel = 12; // font.size.ui.label
         public const double SizeNumeral = 16; // font.size.ui.numeral
+        public const double SizeNumeralLg = 24; // font.size.ui.numeralLg
         public const double TrackingLabel = 0.14; // font.tracking.label
+        public const double TrackingNumeral = -0.01; // font.tracking.numeral
 
         // Controls
         public const double ControlHeight = 32; // control.height
         public const double ControlHeightSm = 24; // control.heightSm
+        public const double PaddingX = 16; // control.paddingX
         public const double IconSize = 16; // control.icon
+        public const double FocusRing = 2; // control.focusRing
+        public const double FocusRingOffset = 2; // control.focusRing.offset
         public const double Radius = 2; // radius.sm
     }
 }
