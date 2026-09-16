@@ -1,0 +1,37 @@
+.top {
+  padding-block: clamp(3rem, 1rem + 6vw, 6rem) 0;
+}
+
+.block > :global(.page) > * + * {
+  margin-top: var(--space-6);
+}
+
+.pair {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section);
+}
+
+.item {
+  min-width: 0;
+}
+
+.after {
+  max-width: var(--measure);
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+
+@media (min-width: 62rem) {
+  /* The landscape companion and the portrait one, sized by their own aspect rather than to a row. */
+  .pair {
+    grid-template-columns: 850fr 480fr;
+  }
+}
