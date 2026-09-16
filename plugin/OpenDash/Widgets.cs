@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -72,22 +73,33 @@ namespace OpenDashPlugin
             return block;
         }
 
-        /// <summary>.num on the canvas: openDash Display SemiBold, which is Barlow Condensed.</summary>
-        public static TextBlock Numeral(string text, double size, string hex)
+        /// <summary>.num on the canvas: openDash Display SemiBold, which is Barlow Condensed, tracked
+        /// -0.01 em and on the tabular figures the face carries, so that a value that ticks does not
+        /// shift the ones beside it.</summary>
+        public static StackPanel Numeral(string text, double size, string hex)
         {
-            return Text(text, size, FontWeights.SemiBold, hex, PanelFonts.Data);
+            var panel = Tracked(text, size, FontWeights.SemiBold, hex, Theme.TrackingNumeral, PanelFonts.Data);
+            Typography.SetNumeralAlignment(panel, FontNumeralAlignment.Tabular);
+            return panel;
         }
 
-        /// <summary>.lbl on the canvas: Barlow Medium 12, uppercase, 0.14 em tracking. WPF has no letter spacing,
-        /// so every character is its own TextBlock followed by the tracking as a right margin.</summary>
+        /// <summary>.lbl on the canvas: Barlow Medium 12, uppercase, 0.14 em tracking.</summary>
         public static StackPanel Label(string text, string hex = Theme.TextLabel, double size = Theme.SizeLabel)
         {
+            return Tracked(text.ToUpperInvariant(), size, FontWeights.Medium, hex, Theme.TrackingLabel);
+        }
+
+        /// <summary>The tracking WPF gives no property for: every character is its own TextBlock and carries
+        /// the spacing as a right margin, negative where the token is. A stack of glyphs cannot trim or wrap,
+        /// so this is for the short fixed runs the canvas tracks -- a label, a numeral, the wordmark.</summary>
+        public static StackPanel Tracked(string text, double size, FontWeight weight, string hex, double tracking, FontFamily family = null)
+        {
             var panel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            var tracking = Math.Round(size * Theme.TrackingLabel, 2);
-            foreach (var character in text.ToUpperInvariant())
+            var spacing = Math.Round(size * tracking, 2);
+            foreach (var character in text)
             {
-                var glyph = Text(character.ToString(), size, FontWeights.Medium, hex);
-                glyph.Margin = new Thickness(0, 0, tracking, 0);
+                var glyph = Text(character.ToString(), size, weight, hex, family);
+                glyph.Margin = new Thickness(0, 0, spacing, 0);
                 panel.Children.Add(glyph);
             }
             return panel;
