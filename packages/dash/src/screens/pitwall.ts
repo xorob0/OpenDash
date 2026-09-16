@@ -336,11 +336,17 @@ export function telemetryPage(width: number, height: number): Screen {
     items.push(rule(`telemetry.${spec.id}.rule`, 0, y, plotWidth, 1));
     y += 1;
   });
+  // The axis is time, not lap distance: a ChartItem appends one sample per tick and draws the buffer
+  // oldest to newest, so the left edge is simply the oldest sample the plot still holds. How long
+  // that is depends on the refresh interval, which the dashboard does not fix, so the label says
+  // which end is which rather than naming a window it cannot promise. The canvas asks for "0 %",
+  // "Lap distance" and "100 %", and a percentage of a lap over a time axis means nothing; drawing
+  // one would need the plugin to publish a series resampled against distance.
   const footerY = y + (footerHeight - d.labelSm) / 2;
   items.push(
-    label('telemetry.axisStart', '0 %', 20, footerY, 60, { size: d.labelSm }),
-    label('telemetry.axisName', 'TIME', 0, footerY, plotWidth, { size: d.labelSm, hAlign: 'center' }),
-    label('telemetry.axisEnd', 'NOW', plotWidth - 80, footerY, 60, { size: d.labelSm, hAlign: 'right' }),
+    label('telemetry.axisStart', 'Earlier', 20, footerY, 60, { size: d.labelSm }),
+    label('telemetry.axisName', 'Time', 0, footerY, plotWidth, { size: d.labelSm, hAlign: 'center' }),
+    label('telemetry.axisEnd', 'Now', plotWidth - 80, footerY, 60, { size: d.labelSm, hAlign: 'right' }),
     vRule('telemetry.columnRule', plotWidth, bodyTop, bodyHeight),
   );
   const zoneHeight = Math.floor((bodyHeight - 2) / 3);
