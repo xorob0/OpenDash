@@ -48,11 +48,9 @@ export function webView(ctx: ModuleContext): Item[] {
     label(`${ctx.prefix}empty`, WEB_VIEW_MESSAGE, ctx.frame.left, ctx.frame.top + (ctx.frame.height - d.labelSm) / 2, ctx.frame.width, {
       size: d.labelSm,
       hAlign: 'center',
-      // Prose rather than a field label: the canvas writes it in sentence case and `label`
-      // upper-cases a literal, so the message is bound to keep the case it was written in. Both
-      // bindings are handed to the element, since a second `withBindings` spread would replace the
-      // first rather than add to it.
-      bind: str(WEB_VIEW_MESSAGE),
+      // Prose rather than a field label: the canvas writes it in sentence case, and `label`
+      // upper-cases a literal unless the caller declines it.
+      case: 'asIs',
       visibleBind: empty,
     }),
     page,
