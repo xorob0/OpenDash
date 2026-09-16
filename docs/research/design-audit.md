@@ -227,9 +227,46 @@ decide, grouped by where they arose. Each is a sentence the author can answer in
   run.
 - **The panel's control kit.** The section gap is 20 in the tokens, in the panel tests and on the
   Plugin sheet, while the brief asked for 28; nothing was moved. Five tab files still pass a caption
-  width the default now carries. Five values the canvas draws have no token and are literals: the
-  44 px tab, the field's 9 and 6 padding, the 620 caption, the 11 px caption size and the 12 px
-  chevron, and there is no monospace family shipped for the lights table.
+  width the default now carries. Six values were reported as ones the canvas draws without a token,
+  and searching all twenty-five artboards for them found something else: the canvas states none of
+  the six, and contradicts two of them. It draws a field padding of 10 left and 8 right, where the
+  code writes 9 and 6 and says the two are the canvas's own. It annotates the select's chevron at
+  16, which is what the code draws, where the note asked for 12. It draws no tab strip at all, caps
+  the panel's captions at 460 rather than 620, sets no 11 px type on either panel sheet, and carries
+  exactly two letter-spacings, neither of them 0.1. So the field padding and the chevron are real
+  disagreements to settle, and the other four are numbers the panel needs and the canvas has never
+  drawn. There is also no monospace family shipped for the lights table.
+
+### What the third round left for you
+
+- **Three icons the panel draws that no artboard carries.** The plus and the phone are drawn today
+  and the button glyph is drawn nowhere; the sheet should gain them, or the list of eleven should
+  become the eight the sheet declares. Separately, a standalone icon is meant to be 20 px where five
+  call sites draw 16, and raising it alone would clip rather than scale, the icon being drawn with
+  no stretch.
+- **Three colour tokens point somewhere else than the sheets.** There is no `purpose.spotter`, so
+  the spotter lamp keeps the amber the turn indicator has left. `purpose.fuel.low` resolves to the
+  danger red where the canvas asks for amber, so low fuel and oil pressure are now told apart by
+  their blink rate alone. `purpose.alert.p2p` is white while the canvas draws push to pass green on
+  the face, so the strip and the face disagree.
+- **The pop-up is wider than the zone it belongs to.** The canvas draws a 560 px box and says it
+  never covers a slot, and no zone A on any artboard is wider than 380, so a landscape face has it
+  reaching about 90 px into zones B and C. It is centred on zone A and covers none of the rev bar,
+  the bar, the limiter banner or band D, which is the reading that keeps the canvas's box.
+- **A timed pop-up needs the plugin.** The duration the canvas gives cannot be honoured by a scene
+  graph: the lap pop-up rides a condition that lasts three seconds by itself, while the fuel and the
+  aid pop-ups would need an edge-triggered flag the plugin publishes and clears, which reopens
+  decision record 0009. Push to pass is also missing from every recorded trace, so its pop-up cannot
+  ship until the rig is recorded again.
+- **The low-fuel condition is now written in three places**, on the telltale lamp, on the strip and
+  on the pop-up. Decision record 0009 says a derivation reaching three drawings belongs behind one
+  name.
+- **The redline flash now stops in the last gear on every surface**, the digit, the bar and the
+  strip, rather than on the digit alone. No canvas statement covers the bar or the strip there, and
+  a steady digit beside a strobing bar in one rig is the divergence that was fixed once already.
+- **A portrait face's miniature is now as tall as the rule makes it**, about 963 px against the 410
+  it used to be, because the picture is drawn to one rule for every face. Capping it needs a height
+  the canvas does not give, so it scrolls.
 
 ## 4. The work, in packages
 
