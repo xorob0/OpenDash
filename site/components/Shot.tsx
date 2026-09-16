@@ -7,8 +7,11 @@
  * pixels actually are, so a reader can tell that the 850 is a smaller screen rather than a smaller
  * picture of the same screen.
  *
- * The frame is a 1 px rule, never a box with a shadow, and the image is never upscaled past 1:1 —
- * a dash face blown up past its own pixels looks soft in a way the panel never does.
+ * The frame is a 1 px rule, never a box with a shadow, and the frame is capped at the capture's own
+ * pixel width so a face is never drawn larger than the panel it was photographed on. That cap is
+ * what makes a gallery of faces legible as a gallery: a 480 round beside a 1920 face reads as the
+ * much smaller screen it is, instead of both filling the column and looking like the same product
+ * at two crops. It also stops the small ones going soft, which is what upscaling a dash face does.
  *
  * A wide face is pannable on a phone. Fitting a 1920 x 480 strip into a 358 px column leaves it
  * 89 px tall, which is not a screenshot of a dashboard so much as a picture of where one was. Below
@@ -42,7 +45,7 @@ export function Shot({ src, alt, width, height, caption, round, priority, sizes 
     <figure className={styles.figure}>
       <div
         className={[styles.frame, round ? styles.round : '', pannable ? styles.pan : ''].filter(Boolean).join(' ')}
-        style={{ aspectRatio: `${width} / ${height}` }}
+        style={{ aspectRatio: `${width} / ${height}`, maxWidth: `${width}px` }}
       >
         <Image
           src={src}
