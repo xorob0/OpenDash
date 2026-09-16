@@ -96,17 +96,26 @@ has to be configurable without either box guessing.
 on the right is worse than no box, so the side is a setting with no clever default: `Both` is the
 single-box answer and shows both edges of the panel.
 
-**The strips get two rows and no group per device.** A matrix is a box somebody owns and so has a
+**The strips get a few rows and no group per device.** A matrix is a box somebody owns and so has a
 group of its own; a strip is a length, and openDash generates one profile per strip shape rather
 than per box. What a driver picks is therefore the profile, and `OpenDash.LedCentre` and
-`OpenDash.LedRpmStyle` say what whichever profile they picked shows. They are the only two
-properties a generated `.ledsprofile` reads that are not the flag box's, and they went a whole pull
-request declared by the TypeScript and attached by nothing, which is a strip permanently on its
-defaults; `packages/dash/test/declared-properties.txt` is the pin that now fails when the two
-halves of the contract disagree.
+`OpenDash.LedRpmStyle` say what whichever profile they picked shows. They went a whole pull request
+declared by the TypeScript and attached by nothing, which is a strip permanently on its defaults;
+`packages/dash/test/declared-properties.txt` is the pin that now fails when the two halves of the
+contract disagree.
 
-The centre is a drop-down and the style a segmented bar, because five options is past the two or
-three `Segmented.cs` is drawn for and a `ComboBox` is the panel's control for a choice from a list.
+Both are drop-downs: five centres and four styles are past the two or three `Segmented.cs` is drawn
+for, and a `ComboBox` is the panel's control for a choice from a list.
+
+**The car's own bar is a style rather than a switch**, and it is the default (ADR 0017). A driver who
+wants one look in every car picks one of openDash's three; everybody else gets the lights of the car
+they are in, and a car openDash has no table for falls back without them choosing anything. The fit
+row beneath it means nothing under the other three, which is a cost of putting it on the same page
+and is cheaper than a page of its own for one setting.
+
+**Whose measurements they are is on the page.** The tables are fetched rather than shipped and are
+CC BY-NC-SA 4.0, so the attribution is a caption under the strip rows, naming the project and the
+licence. It is the one row on this page that is there for a reason other than configuring something.
 
 **Rotation and serpentine are not on this page.** They are SimHub device settings, decided by the
 corner the data cable enters, and duplicating them here would produce two places that disagree.
