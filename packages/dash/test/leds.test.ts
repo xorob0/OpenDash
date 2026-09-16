@@ -175,6 +175,12 @@ describe('the effect catalogue', () => {
     expect(speeding.when).toContain('SpeedLocal');
     expect(speeding.when).toContain(`(${PIT_SPEEDING_MARGIN})`);
     expect(speeding.source).toContain('SimHub publishes no speeding property');
+    // Speeding and the limiter are the two states that take the whole strip, so between them the
+    // rate is most of what the driver reads: fast for a penalty accruing now, slow for a state they
+    // chose and are holding. They ran at 62 ms and 186 ms, which were a tier above the fast one and
+    // a rate belonging to neither.
+    const limiter = ALL_EFFECTS().find((e) => e.id === 'pit.limiter')!;
+    expect({ speeding: speeding.blinkDelayMs, limiter: limiter.blinkDelayMs }).toEqual({ speeding: FAST_BLINK_MS, limiter: SLOW_BLINK_MS });
   });
 
   test('the TC light reads the intervention alone, and is therefore dark on iRacing', () => {
@@ -388,6 +394,40 @@ describe('every generated profile', () => {
         }
       }
     }
+  });
+
+  test('gives every blink an off phase, on a rung as much as on a lamp', () => {
+    // The catalogue has a test of its own for this, and it could not see the rev ladder: `rungs()`
+    // wrote the top band's own red into both Color and BlinkingColor, SimHub's StaticColorContainerBase
+    // alternated a hex with itself, and the over-rev flash was never a flash. Walking the containers
+    // is what closes that, since it measures what is emitted rather than what the catalogue declares.
+    for (const shape of ALL_SHAPES) {
+      for (const c of walk(rpmStripProfile(shape, stableGuid(`t/${shape.id}`)).containers)) {
+        const row = c as unknown as Record<string, unknown>;
+        if (row.blinkFormula === undefined) continue;
+        const at = `${shape.id} ${String(row.description)}`;
+        expect({ at, blinkColor: row.blinkColor }).toMatchObject({ blinkColor: expect.any(String) });
+        expect({ at, same: row.blinkColor === row.color }).toMatchObject({ same: false });
+        // Not transparent either: the merge drops transparent pixels, so the rev ladder underneath
+        // would show through the gap and the off phase would read as whatever is below it.
+        expect({ at, transparent: row.blinkColor === leds.LED_TRANSPARENT }).toMatchObject({ transparent: false });
+        expect({ at, opaque: /^#[0-9A-Fa-f]{6}$/.test(String(row.blinkColor)) }).toMatchObject({ opaque: true });
+      }
+    }
+  });
+
+  test('blinks at two rates and no third, because a strip is hardware', () => {
+    // Four rates shipped: 62, 124, 186 and 248 ms, each a multiple of the over-rev constant, plus the
+    // flag band's own 250. Two is what the eye sorts at speed, and a rate that is neither is read as
+    // one of them anyway, so a third is a distinction the driver cannot collect.
+    const delays = new Set<number>();
+    for (const shape of ALL_SHAPES) {
+      for (const c of walk(rpmStripProfile(shape, stableGuid(`t/${shape.id}`)).containers)) {
+        const delay = (c as unknown as Record<string, unknown>).blinkDelayMs;
+        if (typeof delay === 'number') delays.add(delay);
+      }
+    }
+    expect([...delays].sort((a, b) => a - b)).toEqual([FAST_BLINK_MS, SLOW_BLINK_MS]);
   });
 
   test('offers every centre function and carries a stable id', () => {
