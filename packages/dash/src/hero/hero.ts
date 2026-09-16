@@ -5,13 +5,16 @@
  * limiter block above the gear. Every other value, speed included, is a card in a slot.
  */
 import type { Item, Rect } from '../generator.ts';
+import { band } from '../elements/band.ts';
 import { flagRing } from '../components/flagRing.ts';
 import { flagStrip, type FlagStripStyle } from '../components/flagStrip.ts';
 import { gear } from '../components/gear.ts';
 import { pitLimiter } from '../components/pitLimiter.ts';
 import { revArc, type RevArcFrame } from '../components/revArc.ts';
-import { revBar, type RevBarFrame } from '../components/revBar.ts';
+import { REV_WELL_PAD_X, REV_WELL_PAD_Y, revBar, type RevBarFrame } from '../components/revBar.ts';
 import type { Circle } from '../design/geometry.ts';
+import { rect } from '../design/geometry.ts';
+import { ds } from '../tokens.ts';
 
 export type RevVariant = ({ kind: 'revBar' } & RevBarFrame) | ({ kind: 'revArc' } & RevArcFrame);
 
@@ -31,10 +34,24 @@ export interface HeroGeometry {
   flags: FlagVariant;
 }
 
+/**
+ * The recessed ground the segments sit in: the segment row grown by the margin every zone artboard
+ * draws around it.
+ *
+ * The card faces drew their segments on the bare ground, which made them the odd ones out rather
+ * than a second design: `purpose.block.well` is defined as the recessed ground behind a gauge, and
+ * the rev bar is the gauge the whole face is built around.
+ */
+const wellUnder = (bar: RevBarFrame): Rect =>
+  rect(Math.max(0, bar.left - REV_WELL_PAD_X), Math.max(0, bar.top - REV_WELL_PAD_Y), bar.width + 2 * REV_WELL_PAD_X, bar.height + 2 * REV_WELL_PAD_Y);
+
 export function revItems(rev: RevVariant): Item[] {
   switch (rev.kind) {
     case 'revBar':
-      return revBar(rev);
+      return [band('rev.well', wellUnder(rev), ds.purpose.block.well), ...revBar(rev)];
+    // A round face draws its segments on an arc, where a rectangular well would be a box behind a
+    // curve. Whether the rim takes an annular well of its own is the author's, and until it is
+    // settled the two round faces keep the bare ground they have always had.
     case 'revArc':
       return revArc(rev);
   }
