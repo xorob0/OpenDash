@@ -14,6 +14,7 @@ import { withBindings } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { canvasBaseline, canvasYForBaseline, cells, monoWidth } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
+import { dot, DOT_SIZE } from '../elements/dot.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { rule } from '../elements/rule.ts';
@@ -26,8 +27,11 @@ const { concat, str, fmt, iff, gt, num } = ncalc;
 
 /** Height of the companion header, and the padding either side of it. */
 export const COMPANION_HEADER = { height: 56, padX: 24, gap: 12, groupGap: 20 } as const;
-/** Page dots: a square per module. */
-export const PAGE_DOT = { size: 6, gap: 6 } as const;
+/**
+ * Page dots: a square per module, at the dot element's own size. The page-indicator sheet draws
+ * them 8 where the element sheet draws 6, which is why the size is passed rather than assumed.
+ */
+export const PAGE_DOT = { size: DOT_SIZE, gap: 6 } as const;
 
 /** A value with a small denominator after it, as the header draws "P4 / 24". */
 function pair(
@@ -125,11 +129,7 @@ export function pageDots(name: string, frame: Rect, count: number, active: numbe
   const x = Math.round(frame.left + (frame.width - width) / 2);
   const y = Math.round(frame.top + (frame.height - PAGE_DOT.size) / 2);
   return Array.from({ length: count }, (_, i) =>
-    band(
-      `${name}.dot${String(i + 1).padStart(2, '0')}`,
-      rect(x + i * (PAGE_DOT.size + PAGE_DOT.gap), y, PAGE_DOT.size, PAGE_DOT.size),
-      i + 1 === active ? ds.color.text.primary : ds.color.text.dim,
-    ),
+    dot(`${name}.dot${String(i + 1).padStart(2, '0')}`, x + i * (PAGE_DOT.size + PAGE_DOT.gap), y, i + 1 === active ? ds.color.text.primary : ds.color.text.dim, { size: PAGE_DOT.size }),
   );
 }
 
