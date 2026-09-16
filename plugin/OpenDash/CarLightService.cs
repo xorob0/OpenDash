@@ -1,6 +1,6 @@
 // CarLightService.cs: the tables in memory, the car on screen, and the strings the profile reads.
 //
-// This is the part ADR 0017 reopened ADR 0009 for. It is the only place in openDash that computes
+// This is the part ADR 0018 reopened ADR 0009 for. It is the only place in openDash that computes
 // from telemetry, and it computes exactly one thing: what colour each LED of a strip should be, for
 // the car the driver is sitting in, in the gear they are in, right now. There is no SimHub property
 // to derive that from, no expression that could hold an 85-car table, and no NCalc clock to flash

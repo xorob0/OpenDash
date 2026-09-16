@@ -1,7 +1,7 @@
 /**
  * The car's own bar, on a strip.
  *
- * This is the profile half of [ADR 0017](../../../../docs/decisions/0017-the-cars-own-lights.md), and
+ * This is the profile half of [ADR 0018](../../../../docs/decisions/0018-the-cars-own-lights.md), and
  * it is deliberately the thin half. Nothing here knows how many LEDs a car has, what colour they
  * are, what order they light in or how fast they flash: the plugin knows all of that, from a table
  * it fetches, and publishes one run of colours per frame. What is generated is a row of

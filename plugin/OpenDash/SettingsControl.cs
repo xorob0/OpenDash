@@ -1003,7 +1003,7 @@ namespace OpenDashPlugin
         /// profile reads them through isnull() and nothing else writes them.
         ///
         /// The attribution at the bottom is not decoration. The car tables are somebody else's work
-        /// under CC BY-NC-SA 4.0 (ADR 0017), and a user is entitled to know whose numbers are lighting
+        /// under CC BY-NC-SA 4.0 (ADR 0018), and a user is entitled to know whose numbers are lighting
         /// their wheel.
         /// </summary>
         private IEnumerable<UIElement> BuildStripRows()

@@ -4,7 +4,7 @@
 // pattern a driver can name -- left to right, meet in the middle, three blocks, one at a time, all
 // red, green-yellow-red, a gap in the middle, a single shift lamp -- comes out of it without a case
 // for any of them, because the pattern is the thresholds and the colours rather than a mode. That
-// is the whole argument of ADR 0017 in one file.
+// is the whole argument of ADR 0018 in one file.
 //
 // No SimHub or WPF types: compiled into OpenDash.Tests, which is where the placement rules are
 // pinned. The clock is a parameter for the same reason.

@@ -153,7 +153,7 @@ namespace OpenDashPlugin
 
         /// <summary>How the rev ladder fills a strip: "car", "leftToRight", "meetInMiddle" or "f1".
         /// The three openDash styles are the look only; the thresholds are the car's own whichever is
-        /// set (ADR 0014). "car" is the car's whole bar, from the fetched table (ADR 0017).</summary>
+        /// set (ADR 0014). "car" is the car's whole bar, from the fetched table (ADR 0018).</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
 
         /// <summary>What a mirrored bar does on a strip that is not the car's length: "stretch" fills

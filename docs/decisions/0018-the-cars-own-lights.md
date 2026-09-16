@@ -1,4 +1,4 @@
-# ADR 0017: The car's own lights, from a table openDash does not carry
+# ADR 0018: The car's own lights, from a table openDash does not carry
 
 **Date:** 2026-09-16
 **Status:** Accepted. Amends [ADR 0014](0014-the-shift-model.md), which stands: its two ladders are

@@ -32,7 +32,7 @@ including any that the plugin does not install.
   - `Car bar size` decides what happens when the car's bar and your strip are different lengths:
     fill the strip, or draw the bar at its own length in the middle of it. A bar that fills from
     both ends still does at any strip length.
-  - [ADR 0017](docs/decisions/0017-the-cars-own-lights.md) records the four standing refusals this
+  - [ADR 0018](docs/decisions/0018-the-cars-own-lights.md) records the four standing refusals this
     moved, including the one that said the plugin does not compute.
 - The rev bar can be turned **off entirely**, for a wheel or DDU that already has LEDs across its
   top. `OpenDash.RevBar` carries the three states — `shift`, `rpm`, `off` — and the General row in
