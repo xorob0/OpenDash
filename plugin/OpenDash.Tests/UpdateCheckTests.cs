@@ -197,5 +197,56 @@ namespace OpenDashPlugin.Tests
             // An offer is always worth showing, asked for or not.
             Assert.True(UpdateCheck.Conclude("0.1.0", new[] { Release("v0.2.0") }, manual: false).IsVisible);
         }
+
+        /// <summary>
+        /// The whole table the "This plugin" pill is read off, which is every install status against every update
+        /// state. The two facts it exists for are that an offer from either source turns the pill amber, and that a
+        /// check which is off, pending or unanswered never changes what the disk says.
+        /// </summary>
+        [Theory]
+        // Nothing has been asked, so the disk answers alone.
+        [InlineData(InstallStatus.UpToDate, UpdateState.Idle, InstallStatus.UpToDate)]
+        [InlineData(InstallStatus.UpdateAvailable, UpdateState.Idle, InstallStatus.UpdateAvailable)]
+        [InlineData(InstallStatus.NotInstalled, UpdateState.Idle, InstallStatus.NotInstalled)]
+        [InlineData(InstallStatus.Failed, UpdateState.Idle, InstallStatus.Failed)]
+        // The setting is off. Nothing was fetched, so the pill may not imply anything was.
+        [InlineData(InstallStatus.UpToDate, UpdateState.Disabled, InstallStatus.UpToDate)]
+        [InlineData(InstallStatus.UpdateAvailable, UpdateState.Disabled, InstallStatus.UpdateAvailable)]
+        [InlineData(InstallStatus.NotInstalled, UpdateState.Disabled, InstallStatus.NotInstalled)]
+        [InlineData(InstallStatus.Failed, UpdateState.Disabled, InstallStatus.Failed)]
+        // The question is still open.
+        [InlineData(InstallStatus.UpToDate, UpdateState.Checking, InstallStatus.UpToDate)]
+        [InlineData(InstallStatus.UpdateAvailable, UpdateState.Checking, InstallStatus.UpdateAvailable)]
+        [InlineData(InstallStatus.NotInstalled, UpdateState.Checking, InstallStatus.NotInstalled)]
+        [InlineData(InstallStatus.Failed, UpdateState.Checking, InstallStatus.Failed)]
+        // Asked and not answered, which is a state rather than a fault and therefore says nothing new.
+        [InlineData(InstallStatus.UpToDate, UpdateState.Unreachable, InstallStatus.UpToDate)]
+        [InlineData(InstallStatus.UpdateAvailable, UpdateState.Unreachable, InstallStatus.UpdateAvailable)]
+        [InlineData(InstallStatus.NotInstalled, UpdateState.Unreachable, InstallStatus.NotInstalled)]
+        [InlineData(InstallStatus.Failed, UpdateState.Unreachable, InstallStatus.Failed)]
+        // GitHub has nothing newer, so again the disk answers alone.
+        [InlineData(InstallStatus.UpToDate, UpdateState.UpToDate, InstallStatus.UpToDate)]
+        [InlineData(InstallStatus.UpdateAvailable, UpdateState.UpToDate, InstallStatus.UpdateAvailable)]
+        [InlineData(InstallStatus.NotInstalled, UpdateState.UpToDate, InstallStatus.NotInstalled)]
+        [InlineData(InstallStatus.Failed, UpdateState.UpToDate, InstallStatus.Failed)]
+        // A release is waiting. It turns an otherwise clean pill amber and is outranked by the two worse states,
+        // because a dashboard that is missing or that failed to install is the more urgent of the two facts.
+        [InlineData(InstallStatus.UpToDate, UpdateState.UpdateAvailable, InstallStatus.UpdateAvailable)]
+        [InlineData(InstallStatus.UpdateAvailable, UpdateState.UpdateAvailable, InstallStatus.UpdateAvailable)]
+        [InlineData(InstallStatus.NotInstalled, UpdateState.UpdateAvailable, InstallStatus.NotInstalled)]
+        [InlineData(InstallStatus.Failed, UpdateState.UpdateAvailable, InstallStatus.Failed)]
+        public void The_pill_takes_the_worse_of_the_disk_and_the_release(InstallStatus installed, UpdateState update, InstallStatus expected)
+        {
+            Assert.Equal(expected, DashboardInstaller.PillStatus(installed, update));
+        }
+
+        [Fact]
+        public void An_offer_from_either_source_reaches_the_pill_as_the_amber_label()
+        {
+            // The label is what a person actually reads, so the two halves of the fix are said once in those terms:
+            // a disk behind the embedded copy, and a disk that matches it while GitHub holds something newer.
+            Assert.Equal("Update available", DashboardInstaller.PillStatus(InstallStatus.UpdateAvailable, UpdateState.UpToDate).Label());
+            Assert.Equal("Update available", DashboardInstaller.PillStatus(InstallStatus.UpToDate, UpdateState.UpdateAvailable).Label());
+        }
     }
 }
