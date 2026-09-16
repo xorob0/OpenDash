@@ -272,9 +272,11 @@ describe('docs/design/zones.md carries the same table', () => {
 describe('at every zone body the build produces, the ids drawn are the ids declared', () => {
   /** Page by page, what a real zone body drops although the table kept it. */
   const UNDECLARED: Record<string, readonly string[]> = {
-    // A fourth lap time does not fit a 214 px body beside three others at their grown size, so the
-    // rank sheds the delta the `grid` drawing keeps. readability-pass.md §1 owns the redraw.
-    '1280x400 469x258 lapTimes': ['delta'],
+    // A fourth lap time does not fit a 156 px body beside three others at their grown size, so the
+    // rank sheds the delta the `grid` drawing keeps. readability-pass.md §1 owns the redraw. The
+    // 1280 x 400 zone left this list when the face took the artboards' frame: 22 px of header
+    // inside 6 px of padding gives it 445 by 220 where the pit wall's 28 over 16 gave 437 by 214,
+    // and the fourth time fits in the six pixels.
     '800x286 269x194 lapTimes': ['delta'],
     // The refuel figure and the five-lap average are the last two fields of a rank the 600 x 686
     // face's 114 px zones have no room for: two ranks plus the level bar need about 124 px at the
@@ -288,15 +290,22 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     '800x286 269x194 opponents': ['behind.gap', 'behind.name'],
     '600x686 600x160 opponents': ['behind.gap', 'behind.name', 'behind.num', 'behind.class', 'behind.detail'],
     '600x686 600x150 opponents': ['behind.gap', 'behind.name', 'behind.num', 'behind.class', 'behind.detail'],
-    // The two anti-roll bars are the cells the 124 px band cannot hold.
+    // The two anti-roll bars are the cells the 122 px band cannot hold.
     '600x686 600x160 carSettings': ['arbFront', 'arbRear'],
     '600x686 600x150 carSettings': ['arbFront', 'arbRear'],
-    // Zone C of the 600 x 686 face is 114 px, ten less than zone B, and that is where a second row
-    // stops fitting at all: the delta loses its scale and the sectors their three lap times. The
-    // stint lost its two stops here until its lead came off `d.hero`, a size the rank could not
-    // shrink from to make room, which is readability-pass.md §13 and the line this list loses.
+    // Zone C of the 600 x 686 face is where a second row stops fitting at all: the delta loses its
+    // scale and the sectors their three lap times. Zone B joins it on the delta now that the frame
+    // takes the artboards' 6 by 12 padding rather than the 16 it had, which is six pixels of body
+    // height and eight of width; by the same six pixels the session loses its lap and its time
+    // left, and the stint the two stops its lead coming off `d.hero` had just bought back. Those
+    // three are the readability pass's subject rather than the frame's: readability-pass.md §9,
+    // §13 and §2.
+    '600x686 600x160 delta': ['scale'],
     '600x686 600x150 delta': ['scale'],
+    '600x686 600x150 lapTimes': ['delta'],
     '600x686 600x150 sectors': ['yourBest', 'last', 'sessionBest'],
+    '600x686 600x150 session': ['lap', 'timeLeft'],
+    '600x686 600x150 stint': ['stops', 'lastStop'],
     // The nano's session keeps the position and the class, which is what the page is read for, and
     // sheds the lap and the time left: its two counters each carry a denominator now, and a
     // denominator at 0.7 of a value is wider than the small label it replaced.
@@ -314,8 +323,9 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
           if (seen.has(key)) continue;
           const density = densityForBox(zone.size);
           // The body a zone really gives its page. Neither the counter nor the letter moves it:
-          // `zoneFrame` cuts the body from the frame and the density alone.
-          const { body } = zoneFrame('zone', { frame: rect(0, 0, zone.size.width, zone.size.height), title: 'Lap times', counter: { kind: 'reserved', widest: '21 / 21' } }, density);
+          // `zoneFrame` cuts the body from the frame, the density and the chrome, and a face zone's
+          // chrome is the artboards' 22 px row inside 6px 12px rather than the pit wall's.
+          const { body } = zoneFrame('zone', { frame: rect(0, 0, zone.size.width, zone.size.height), title: 'Lap times', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
           seen.set(key, { body, density });
         }
       }

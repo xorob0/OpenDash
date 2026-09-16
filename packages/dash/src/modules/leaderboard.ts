@@ -39,11 +39,14 @@ export const drawsHeader = (density: Density): boolean => density === 'companion
  *
  * `fittingColumns` used to pop from the end until a full name fitted, and with the gap drawn last
  * that is the column that paid: at 229 x 292 the leaderboard lost the gap and became a list of
- * names, which is readability-pass.md §11. A page keeps its position and its gap whatever else it
- * has to give up; the name that no longer fits becomes the three-letter code `table.ts` draws when
- * its column is too narrow for a name, which costs a column nothing.
+ * names, which is readability-pass.md §11. The name is here for the same reason from the other
+ * side: once the zone frame took the artboards' 12 px of padding the body came down to 225, the
+ * name was the last droppable column left, and the page became a list of gaps belonging to nobody.
+ * A page keeps its position, its name and its gap whatever else it has to give up; a name whose
+ * column is too narrow for a name becomes the three-letter code `table.ts` draws, which costs a
+ * column nothing, and the loop stops when the three are all that is left.
  */
-const NEVER_DROPPED: readonly ColumnId[] = ['pos', 'gap'];
+const NEVER_DROPPED: readonly ColumnId[] = ['pos', 'name', 'gap'];
 
 /** The floor the canvas puts under the flexible driver column: below it the row sheds a column. */
 const MINIMUM_NAME = 60;
