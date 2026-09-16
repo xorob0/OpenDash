@@ -385,22 +385,38 @@ A long name cannot cost the page its gap column, the row height answers the box 
 
 ## 12 — Opponents: the gap is large and the name beside it is 13 px
 
-`modules/opponents.ts` draws two blocks — ahead and behind — each a gap at `d.big`, a name at
-`d.small`, a car number at `d.small`, and a line of detail. Both blocks are `blockRow`s with a rule
-between them, so rule 20 does not reach the page.
+**Settled.** `modules/opponents.ts` used to draw two blocks, ahead and behind, each of them a gap at
+`d.big` with a name and a car number at `d.small` and a line of detail under them, and both of them
+were `blockRow`s with a rule between.
 
-The catalogue draws the gap at 46 px and the name at **13 px**, which is smaller than the build's
-`d.small` (24 at `zone`, 18 at `compact`). So the canvas and the build disagree, and both make the
-name hard to read. This is the same question as the relative's driver code and should be answered
-once for both.
+The name is `d.name` now, which is 15 on the companion and 13 in a zone, and is therefore the size
+the catalogue draws it at on both ramps. That is the same token the list pages set a driver code in,
+so the question is answered once for the two of them; moreover the name is a `label()` in Barlow
+Medium inside the 64 px box the canvas fixes, rather than the monospaced numeral it was.
 
-At `tall narrow` the catalogue keeps the code and the gap and nothing else, which the shedding table
-has. At `tall` it keeps the class and the detail line and drops the number.
+Rule 20 was declined here rather than wired in, which is the one part of this ticket that did not
+end where it began. One could think that a page with slack over it should spend it, since that is
+what the rule is for. In reality the catalogue names this page's gap at every shape it draws, 64 on
+the companion, 46 in a zone and 34 on the compact faces, and those three are exactly the three
+densities' `big`: a stack that spent its slack on the next rung up would draw 64 where the sheet
+writes 46 at every one of them. Thus the room a tall zone leaves over two blocks stays slack. The
+growth chips on the face sheets measure the face against the catalogue and not the drawing inside
+it, which `FaceVariants1280x480` records in its own note.
 
-### Done when
+What a short box does instead is shed, and it sheds the two cars' lines in pairs, the table naming
+`ahead.gap` beside `behind.gap` and so on down the row, so that a box with no room for an identity
+row loses both identity rows rather than losing the car behind entirely. Only a box too short for
+two headings and two gaps moves the size at all, and then it moves it for both cars at once.
+Besides, a wide box too short to stack in, zone C of the 600 by 686 face being 576 by 112, takes the
+side-by-side arrangement the canvas gives the wide zone and draws both cars whole.
 
-The name size is decided together with the relative's, the two blocks grow with the box, and the
-`tall` / `tall narrow` sets are confirmed against a real zone.
+### Still open
+
+The licence badge and its safety rating, which the catalogue draws on the identity row and at
+`tall` in place of a class chip. No reader for the iRacing licence has been verified, so the
+shedding table keeps the last lap in the badge's place and `docs/second-screens.md` carries the
+reason; the direction triangle and the nationality flag are open for the same kind of reason, being
+a shape SimHub does not draw and an image asset respectively.
 
 ---
 
