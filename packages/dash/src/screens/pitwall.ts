@@ -114,7 +114,9 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
     labelWidest: 'VS ALL-TIME BEST',
   });
   const deltaWidth = 160;
-  const barHeight = 10;
+  // The canvas's track, which the gauge's own overhangs then turn into 20 px graduations and a
+  // 24 px centre marker; a 10 px track drew both two pixels short of the sheet.
+  const barHeight = 12;
   const topHeight = d.label + d.fieldGap + d.big;
   const barWidth = Math.max(0, body.width - deltaWidth - d.gapX);
   const sectorTop = body.top + topHeight + Math.round(d.gapY / 2);
@@ -165,7 +167,10 @@ export function trackPanel(name: string, frame: Rect): Item[] {
 
 /** The five traces of the telemetry page, top to bottom. */
 export const TELEMETRY_TRACES: { id: string; title: string; series: () => Series[]; weight: number }[] = [
-  { id: 'speed', title: 'Speed', weight: 1.3, series: () => [{ name: 'Speed', color: ds.color.text.primary, bind: speed(), min: 0, max: 300 }] },
+  // The speed trace carries its unit in the title, which is where the sheet puts it. It is written
+  // rather than bound, because a panel title is a literal and the sim's own unit setting is not
+  // read here; a rig set to miles is the one case this is wrong for.
+  { id: 'speed', title: 'Speed · km/h', weight: 1.3, series: () => [{ name: 'Speed', color: ds.color.text.primary, bind: speed(), min: 0, max: 300 }] },
   { id: 'rpm', title: 'RPM', weight: 1, series: () => [{ name: 'RPM', color: ds.color.text.primary, bind: rpm(), min: 0, useMaximum: false }] },
   {
     id: 'pedals',
@@ -182,7 +187,7 @@ export const TELEMETRY_TRACES: { id: string; title: string; series: () => Series
 
 /** A trace panel: its title and legend, then the plot. */
 export function tracePanel(name: string, frame: Rect, spec: (typeof TELEMETRY_TRACES)[number]): Item[] {
-  const { items, body } = panel(name, { frame, title: spec.title, padY: 10 });
+  const { items, body } = panel(name, { frame, title: spec.title });
   return [...items, ...trace(`${name}.trace`, body, spec.series(), DENSITY, { legend: spec.series().length > 1 })];
 }
 
