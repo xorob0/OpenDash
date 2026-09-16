@@ -112,10 +112,10 @@ export const SHEDDING: Record<string, Shedding> = {
   // Where you are and how long is left survive; the session name and the laps left are what a
   // driver can infer from the rest.
   session: fields({
-    wide: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft'],
+    wide: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft', 'incidents', 'cars'],
     grid: ['position', 'class', 'lap', 'timeLeft'],
     tallNarrow: ['position', 'class', 'lap', 'timeLeft'],
-    tall: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft'],
+    tall: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft', 'incidents', 'cars'],
   }),
   radar: nothing('the cars beside you, cut from the box; rule 18'),
   track: nothing('the map, cut from the box; rule 18'),
