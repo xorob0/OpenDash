@@ -1,0 +1,199 @@
+/* ------------------------------------------------------------------ hero */
+.hero {
+  padding-block: clamp(3rem, 1rem + 7vw, 7rem) 0;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+/*
+ * Alpha is stated, not warned about. Caution is the meaning the token layer already has for
+ * "a thing you should know before you rely on it", so the badge reads it rather than inventing one.
+ */
+.alpha {
+  color: var(--color-caution-primary);
+}
+
+.headline {
+  margin-bottom: var(--space-5);
+  max-width: 14ch;
+}
+
+.lede {
+  font-size: clamp(1.0625rem, 1rem + 0.45vw, 1.3125rem);
+  max-width: 54ch;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+/* Rule 3: one primary action per surface is where cyan becomes a fill. */
+.primary {
+  padding: 12px var(--space-5);
+  font-weight: 500;
+  color: var(--purpose-ui-on-accent);
+  background: var(--purpose-ui-accent);
+  border-radius: var(--radius-sm);
+  transition: background var(--fast) var(--ease);
+}
+
+.primary:hover {
+  background: var(--color-brand-tint);
+}
+
+.secondary {
+  padding: 12px var(--space-5);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  border: 1px solid var(--purpose-ui-border);
+  border-radius: var(--radius-sm);
+  transition:
+    border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+.secondary:hover {
+  border-color: var(--color-text-secondary);
+  background: var(--purpose-ui-hover);
+}
+
+.heroShot {
+  margin-top: clamp(2.5rem, 1rem + 5vw, 5rem);
+}
+
+.note {
+  margin-top: var(--space-4);
+  max-width: 68ch;
+  font-size: var(--size-small);
+  color: var(--color-text-label);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ sections */
+.block > :global(.page) > * + * {
+  margin-top: var(--space-5);
+}
+
+.title {
+  max-width: 22ch;
+}
+
+.anatomy {
+  margin-top: var(--space-6) !important;
+}
+
+/* ------------------------------------------------------------------ the page catalogue */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-raised);
+}
+
+/*
+ * The catalogue is a row of equal boxes divided by 1 px gaps that read as rules, which is what the
+ * canvas does with a row of driver marks and for the same reason: they are one kind of thing, so
+ * none of them may look more important than another.
+ */
+.chip {
+  flex: 1 1 auto;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-base);
+  font-size: var(--size-small);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  transition: background var(--fast) var(--ease);
+}
+
+.chip:hover {
+  background: var(--color-surface-zone);
+}
+
+/* A module that ships off is drawn dim rather than hidden, exactly as an unlit telltale is. */
+.chip[data-off] {
+  color: var(--color-text-dim);
+}
+
+.chipNote {
+  margin-top: var(--space-4);
+  max-width: var(--measure);
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ three kinds */
+.kinds {
+  display: grid;
+  gap: var(--space-6);
+  margin-top: var(--space-6) !important;
+}
+
+.kind {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.kind h3 {
+  margin-top: var(--space-2);
+}
+
+@media (min-width: 62rem) {
+  .kinds {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+  }
+}
+
+/* ------------------------------------------------------------------ sizes */
+.sizes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 1px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-raised);
+}
+
+.size {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-4);
+  background: var(--color-surface-base);
+  transition: background var(--fast) var(--ease);
+}
+
+.size:hover {
+  background: var(--color-surface-zone);
+}
+
+.sizeNum {
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-text-primary);
+}
+
+.sizeKind {
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-label);
+}
+
+/* ------------------------------------------------------------------ close */
+.close > :global(.page) > * > * + * {
+  margin-top: var(--space-5);
+}

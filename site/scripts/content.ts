@@ -46,10 +46,19 @@ export interface SitePackage {
  */
 const SUPERSEDED = /^openDash slots /;
 
-export function sitePackages(manifest: { packages: SitePackage[] }): SitePackage[] {
+/** The manifest's own shape, of which the site uses five fields. */
+interface ManifestEntry {
+  folder: string;
+  kind: SitePackage['kind'];
+  width: number;
+  height: number;
+  file: string;
+}
+
+export function sitePackages(manifest: { packages: ManifestEntry[] }): SitePackage[] {
   return manifest.packages
     .filter((p) => !SUPERSEDED.test(p.folder))
-    .map((p) => ({ ...p, round: /round/.test(p.folder) }));
+    .map(({ folder, kind, width, height, file }) => ({ folder, kind, width, height, file, round: /round/.test(folder) }));
 }
 
 /** A downloadable file: what it is called, what it weighs, and which package it carries. */
@@ -103,7 +112,7 @@ export function releases(markdown: string): Release[] {
 if (import.meta.main) {
   const manifestPath = path.join(buildDir, 'manifest.json');
   const manifest = existsSync(manifestPath)
-    ? (JSON.parse(await Bun.file(manifestPath).text()) as { version: string; simHubVersion: string; packages: SitePackage[] })
+    ? (JSON.parse(await Bun.file(manifestPath).text()) as { version: string; simHubVersion: string; packages: ManifestEntry[] })
     : null;
   const version = (await Bun.file(path.join(repoRoot, 'VERSION')).text()).trim();
   const changelog = await Bun.file(path.join(repoRoot, 'CHANGELOG.md')).text();

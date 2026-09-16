@@ -288,3 +288,21 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------- skip link */
+.skip {
+  position: absolute;
+  inset-inline-start: var(--gutter);
+  top: 0;
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  background: var(--purpose-ui-accent);
+  color: var(--purpose-ui-on-accent);
+  font-weight: 500;
+  transform: translateY(-140%);
+  transition: transform var(--fast) var(--ease);
+}
+
+.skip:focus-visible {
+  transform: none;
+}

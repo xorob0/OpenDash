@@ -1,0 +1,144 @@
+.top {
+  padding-block: clamp(3rem, 1rem + 6vw, 6rem) 0;
+}
+
+.block > :global(.page) > * + * {
+  margin-top: var(--space-5);
+}
+
+/* ------------------------------------------------------------------ the table */
+/*
+ * A table is the one place on this site where rows are filled rather than ruled, because a row of a
+ * long table is a list row, which is one of the three fills the design system allows. The stripe is
+ * surface.zone, exactly as a list row on the pit wall is.
+ */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-surface-raised);
+}
+
+.table {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table caption {
+  padding: var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--color-surface-raised);
+}
+
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-surface-raised);
+  vertical-align: top;
+}
+
+.table thead th {
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-label);
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr {
+  transition: background var(--fast) var(--ease);
+}
+
+.table tbody tr:hover {
+  background: var(--color-surface-zone);
+}
+
+.table tbody th {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+/* The two sizes a first-time reader should be steered to are marked with a rule, not a fill. */
+.table tbody tr[data-emphasis] th {
+  box-shadow: inset 2px 0 0 var(--purpose-ui-accent);
+}
+
+.table td.num {
+  color: var(--color-text-primary);
+  font-size: 1.0625rem;
+  white-space: nowrap;
+}
+
+.kind {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.what {
+  color: var(--color-text-secondary);
+  min-width: 22rem;
+}
+
+.tag {
+  font-style: normal;
+  color: var(--purpose-ui-accent);
+}
+
+.after {
+  max-width: var(--measure);
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+
+/* ------------------------------------------------------------------ the gallery */
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.itemHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-surface-raised);
+}
+
+.itemName {
+  color: var(--color-text-primary);
+}
+
+.itemNote {
+  max-width: 56ch;
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+
+@media (min-width: 62rem) {
+  .itemHead {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-6);
+  }
+
+  .itemNote {
+    text-align: right;
+    max-width: 48ch;
+  }
+}
