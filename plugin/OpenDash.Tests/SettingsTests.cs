@@ -1197,7 +1197,7 @@ namespace OpenDashPlugin.Tests
         public void A_new_install_has_an_empty_rig_and_an_upgrade_keeps_what_is_installed()
         {
             // A settings file that has never installed anything is a new install, and its empty rig is
-            // the state the panel teaches from (XOR-34). Nothing has to be dismissed.
+            // the state the panel teaches from (#85). Nothing has to be dismissed.
             var fresh = new OpenDashSettings();
             fresh.Normalise();
             Assert.Empty(fresh.RigScreens());

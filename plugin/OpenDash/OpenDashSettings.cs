@@ -493,7 +493,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// A file that has never installed anything is a new install, and its rig is empty: that is the
-        /// first-run state the panel teaches from, and XOR-34's point that an empty rig is one fewer
+        /// first-run state the panel teaches from, and #85's point that an empty rig is one fewer
         /// surface than a wizard.
         ///
         /// Any other file gets one screen per folder openDash has written, because those are the

@@ -34,7 +34,7 @@ const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
  * **below** the card, at y=422. Clicking a hovered row does not start the dashboard; it opens the
  * Quick run popup, which is drawn under the card with its header at 390 and "Windowed", the item
  * this wants, as the first entry at 422. Both were re-measured against a screenshot of the real
- * list while XOR-252 was open and are right; anything that looks wrong about a Start click landing
+ * list while #303 was open and are right; anything that looks wrong about a Start click landing
  * forty pixels past the bottom of a 78 pixel card is this popup.
  *
  * `lastUsedBand` is the second first row. Dash Studio draws a "Last used" strip above the list

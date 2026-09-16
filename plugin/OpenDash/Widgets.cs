@@ -333,7 +333,7 @@ namespace OpenDashPlugin
 
         // Tabs, cards and groups
         //
-        // XOR-125 names panel.tabs, control.tab and control.screenCard as tokens. They are not in
+        // #176 names panel.tabs, control.tab and control.screenCard as tokens. They are not in
         // design/tokens.json, and design/ is the author's rather than something a build writes into, so
         // these compose from the tokens that do exist and docs/design/plugin.md records that the three
         // are still owed. Nothing here invents a colour: every value is a Theme constant.

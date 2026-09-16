@@ -4,14 +4,14 @@
 **Status:** Accepted. Amends [ADR 0003](0003-plugin-settings-through-properties.md), which made a
 property name a public interface, and [ADR 0011](0011-personalisation.md), whose "nothing
 regenerates a package on the user's machine" line is narrowed rather than broken. Settles the shape
-of [XOR-125](https://linear.app/xorob/issue/XOR-125).
+of [#176](https://github.com/xorob0/OpenDash/issues/176).
 
 ## Context
 
 Two screens of the same size cannot be configured apart, and the reason is not in OpenDash's design.
 
 `Contract.FacePrefix` keys a face's settings by its size, so `Faces["Face1280x480"]` is one entry
-whatever the rig holds. That was deliberate — [XOR-124](https://linear.app/xorob/issue/XOR-124) put
+whatever the rig holds. That was deliberate — [#175](https://github.com/xorob0/OpenDash/issues/175) put
 it there so that a 1920 on the dash and an 850 on the rim stopped sharing one set of zones — and it
 fixed the case it was aimed at. It does not reach the case where the two screens are the same size,
 and a driver with a wheel screen and a dash screen of the same model is an ordinary rig, not an
@@ -173,7 +173,7 @@ that this will happen.
 
 **Whether SimHub tells a plugin what displays it is driving.** The add flow is much better if the
 sizes the machine actually has are offered first, and
-[XOR-34](https://linear.app/xorob/issue/XOR-34) already says the whole improvement over a flat list
+[#85](https://github.com/xorob0/OpenDash/issues/85) already says the whole improvement over a flat list
 rests on it. Nothing in `docs/research/simhub-plugin-sdk.md` says whether the SDK exposes it. Until
 somebody checks, the add flow offers the full catalogue and nothing is ordered cleverly.
 
