@@ -134,11 +134,13 @@ export function renameFamily(bytes: Uint8Array): number {
 /**
  * The faces the settings panel draws in, which no dashboard bundles: the panel is WPF too, and it
  * asks for the same family, so it needs the same renamed files. Barlow Regular is the panel's own
- * body face and is here because this is the one list of what a release ships.
+ * body face and is here because this is the one list of what a release ships; Barlow SemiBold is the
+ * weight the panel's headings ask for, which WPF would otherwise synthesise out of Medium.
  */
 export const PANEL_FONT_FILES = [
   'Barlow-Regular.ttf',
   'Barlow-Medium.ttf',
+  'Barlow-SemiBold.ttf',
   'BarlowCondensed-Light.ttf',
   'BarlowCondensed-SemiBold.ttf',
   'BarlowCondensed-Bold.ttf',

@@ -465,7 +465,7 @@ namespace OpenDashPlugin
         /// <summary>The add card: the one card that is an action rather than a thing.</summary>
         public static Button AddCard(Action clicked)
         {
-            var plus = Text("+", 20, FontWeights.Light, Theme.Accent);
+            var plus = Text("+", Theme.SizeTitle, FontWeights.Medium, Theme.Accent);
             plus.HorizontalAlignment = HorizontalAlignment.Center;
             var text = Label("Add a screen", Theme.TextSecondary);
             text.HorizontalAlignment = HorizontalAlignment.Center;
