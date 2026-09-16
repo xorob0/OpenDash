@@ -255,6 +255,26 @@ describe('the pit wall', () => {
   });
 });
 
+describe('the two chromes', () => {
+  test('a panel title is the plain label grey and a zone title the brighter secondary', () => {
+    // The sheets differ by one inline override: every pit wall zone title carries `color: #8A9099`
+    // and the counter beside it does not, while a panel title carries nothing and takes the small
+    // label's own #5A6069. Reading the two as one colour is what drew every panel title too bright.
+    const titlesOf = (isZone: boolean): TextItem[] =>
+      PACKAGES.flatMap((p) =>
+        p.pkg.dashboards
+          .filter((d) => d.name.startsWith('zones') === isZone)
+          .flatMap((d) => d.screens.flatMap((s) => [...walkItems(s.items)])),
+      ).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.title'));
+    const panels = titlesOf(false);
+    const zones = titlesOf(true);
+    expect(panels.length).toBeGreaterThan(0);
+    expect(zones.length).toBeGreaterThan(0);
+    expect([...new Set(panels.map((i) => i.textColor))]).toEqual([ds.color.text.label]);
+    expect([...new Set(zones.map((i) => i.textColor))]).toEqual([ds.color.text.secondary]);
+  });
+});
+
 describe('the tables', () => {
   const all: Item[] = PACKAGES.flatMap((p) => p.pkg.dashboards.flatMap((d) => itemsOf(d)));
   const repeated = all.filter((i) => i.kind === 'layer' && (i.repetitions ?? 0) > 0);
