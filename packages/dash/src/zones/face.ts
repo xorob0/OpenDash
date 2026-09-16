@@ -76,7 +76,7 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
   if (withRevBar) {
     // The well the rev bar has sat in since the first token file named it, and which was never drawn.
     items.push(band('well', z.revBarWell, ds.purpose.block.well));
-    items.push(...revBar({ left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: ds.space[2] }, 'revBar'));
+    items.push(...revBar({ left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: layout.revBarGap }, 'revBar'));
   }
 
   if (z.bar && layout.bar) {
