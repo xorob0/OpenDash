@@ -20,10 +20,11 @@ import { rect, roundRect } from '../design/geometry.ts';
 import { measureText } from '../design/advances.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
+import { CAR_MIN_WIDTH, carTopView, carTopViewSize, type CarPaint } from '../second/carTopView.ts';
 import { densityOf } from '../second/density.ts';
 import { levelGauge } from '../second/gauge.ts';
 import { fieldBlockHeight, fieldWidth, planLines, type FieldSpec } from '../second/field.ts';
-import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
+import { ROW_TAIL, rowsThatFit, stack, type StackRow } from '../second/layout.ts';
 import { columnsAt, promotesLead } from '../second/shape.ts';
 import {
   CHARS,
@@ -38,6 +39,7 @@ import {
   pitServiceFlag,
   pitServiceProgress,
   pitTyreSelection,
+  type Corner,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './module.ts';
@@ -76,6 +78,13 @@ const BAR_HEIGHT = 6;
 
 /** Padding round a label's measured advances, so that WPF has a pixel in hand at either end. */
 const LABEL_SLACK = 2;
+
+/**
+ * Between the car and the column beside it: the canvas draws 24 at the two shapes that set the two
+ * numbers side by side and 14 at the two that stack them, a stacked column buying its width back
+ * out of the gap.
+ */
+const CAR_GAP = { pair: ds.space[5], stacked: 14 };
 
 interface Toggle {
   id: string;
@@ -163,6 +172,16 @@ const cornerOption = (toggle: Toggle): Option => {
   };
 };
 
+/**
+ * The same answer painted on the car, which is where the catalogue puts it: the corner block is
+ * `text.primary` under a tick once that wheel is down for a change, and `text.label` while it stays
+ * on. The toggle beside the list says which corner in words; the block says where on the car.
+ */
+const cornerPaint = (corner: Corner): CarPaint & { tick: Expr } => {
+  const on = pitServiceFlag(PIT_SERVICE_BITS[corner]);
+  return { color: ds.color.text.label, bind: iff(on, str(ds.color.text.primary), str(ds.color.text.label)), tick: on };
+};
+
 /** The summary the catalogue writes beside `Tyres`, measured by the widest word it can produce. */
 const tyresOption = (fs: number): Option => {
   const widest = TYRE_SELECTIONS.reduce((worst, word) => (measureText('BarlowMedium', word, fs) > measureText('BarlowMedium', worst, fs) ? word : worst));
@@ -201,15 +220,15 @@ export const pitView = defineModule('pitView', (ctx) => {
   const widthOf = (option: Measured): number => option.textWidth + STATE_GAP + option.stateWidth;
   const lineHeight = Math.max(BADGE, d.labelSm);
 
-  /** The options wrapped to the frame, in the order the catalogue lists them. */
-  const wrapped = (at: readonly Measured[]): Measured[][] => {
+  /** The options wrapped to the column, in the order the catalogue lists them. */
+  const wrapped = (at: readonly Measured[], box: Rect): Measured[][] => {
     const rows: Measured[][] = [];
     let row: Measured[] = [];
     let used = 0;
     for (const option of at) {
       const w = widthOf(option);
       const needed = row.length === 0 ? w : used + OPTION_GAP + w;
-      if (row.length > 0 && needed > ctx.frame.width) {
+      if (row.length > 0 && needed > box.width) {
         rows.push(row);
         row = [option];
         used = w;
@@ -227,9 +246,9 @@ export const pitView = defineModule('pitView', (ctx) => {
   // WPF clips it to "TEAR-OF" and the row reads as a rendering fault. What the row declares is what
   // a box too short sheds from it, corner by corner and least important last in the order, so that
   // the bar under it survives a zone the wrap alone would have cost it.
-  const optionsRow = (at: readonly Measured[]): StackRow | undefined => {
+  const optionsRow = (at: readonly Measured[], box: Rect): StackRow | undefined => {
     if (at.length === 0) return undefined;
-    const rows = wrapped(at);
+    const rows = wrapped(at, box);
     const height = rows.length * lineHeight + Math.max(0, rows.length - 1) * OPTION_GAP;
     return {
       height,
@@ -238,7 +257,7 @@ export const pitView = defineModule('pitView', (ctx) => {
         const items: Item[] = [];
         rows.forEach((row, rowIndex) => {
           const rowTop = top + rowIndex * (lineHeight + OPTION_GAP);
-          let x = ctx.frame.left;
+          let x = box.left;
           for (const option of row) {
             const name = `${ctx.prefix}${option.id}`;
             items.push(
@@ -253,12 +272,10 @@ export const pitView = defineModule('pitView', (ctx) => {
       shed: {
         ids: at.map((option) => option.id),
         order: measured.map((option) => option.id),
-        without: (ids) => optionsRow(at.filter((option) => !ids.includes(option.id))),
+        without: (ids) => optionsRow(at.filter((option) => !ids.includes(option.id)), box),
       },
     };
   };
-  const optionsBlock = optionsRow(measured);
-  const optionsHeight = optionsBlock?.height ?? 0;
 
   // The catalogue sets the two numbers side by side wherever the column count allows a pair and
   // stacks them in a box tall enough to make them large, which is its `tall` drawing.
@@ -282,33 +299,82 @@ export const pitView = defineModule('pitView', (ctx) => {
     }),
   ];
 
-  // What the options and the bar leave the numbers, which is the height they are cut from. The two
-  // tails are the stack's own reservation at either end of a block it centres.
-  const room = ctx.frame.height - 2 * ROW_TAIL - optionsHeight - BAR_HEIGHT - 2 * d.gapY;
   const ceiling = Math.round(d.hero * (promotesLead(shape) ? TALL_PROMOTION : 1));
-  const linesOf = (at: readonly FieldSpec[]): FieldSpec[][] => planLines(at, ctx.frame.width, ctx.density, { plan: 'grid', columns, gap: GRID_GAP });
-  let lead = d.tiny;
-  for (let fs = ceiling; fs > d.tiny; fs--) {
-    const at = specsAt(fs);
-    const lines = linesOf(at);
-    // A grid whose cell cannot hold a field falls back to the greedy wrap, which draws a value off
-    // the right edge rather than smaller; the size that fits the cell is the size the page takes.
-    if (lines.some((line) => line.some((spec) => fieldWidth(spec, ctx.density) > ctx.frame.width))) continue;
-    if (fieldBlockHeight(lines, ctx.density, GRID_LINE_GAP) > room) continue;
-    lead = fs;
-    break;
-  }
 
-  const stackRows: StackRow[] = [fieldsRow(specsAt(lead), ctx, rowOptions)];
-  if (optionsBlock) stackRows.push(optionsBlock);
-  return stack(
-    ctx.frame,
-    [
-      ...stackRows,
+  /**
+   * The page's column, laid out in whatever the drawing beside it leaves.
+   *
+   * The shape travels with the column rather than being read off it again, because the shape is a
+   * property of the zone: a `grid` box whose column is narrow is still a `grid` box, and letting
+   * the narrowing move the archetype would have the car take the tyre summary off the list.
+   */
+  const column = (box: Rect): { rows: StackRow[]; lead: number } => {
+    const inner = { ...ctx, frame: box, shape };
+    const optionsBlock = optionsRow(measured, box);
+    // What the options and the bar leave the numbers, which is the height they are cut from. The
+    // two tails are the stack's own reservation at either end of a block it centres.
+    const room = box.height - 2 * ROW_TAIL - (optionsBlock?.height ?? 0) - BAR_HEIGHT - 2 * d.gapY;
+    const linesOf = (at: readonly FieldSpec[]): FieldSpec[][] => planLines(at, box.width, ctx.density, { plan: 'grid', columns, gap: GRID_GAP });
+    let lead = d.tiny;
+    for (let fs = ceiling; fs > d.tiny; fs--) {
+      const at = specsAt(fs);
+      const lines = linesOf(at);
+      // A grid whose cell cannot hold a field falls back to the greedy wrap, which draws a value
+      // off the right edge rather than smaller; the size that fits the cell is the page's size.
+      if (lines.some((line) => line.some((spec) => fieldWidth(spec, ctx.density) > box.width))) continue;
+      if (fieldBlockHeight(lines, ctx.density, GRID_LINE_GAP) > room) continue;
+      lead = fs;
+      break;
+    }
+    const rows: StackRow[] = [fieldsRow(specsAt(lead), inner, rowOptions)];
+    if (optionsBlock) rows.push(optionsBlock);
+    rows.push(
       blockRow(BAR_HEIGHT, (bottom) => [
-        levelGauge(`${ctx.prefix}gauge`, rect(ctx.frame.left, bottom - BAR_HEIGHT, ctx.frame.width, BAR_HEIGHT), pitServiceProgress(), { value: 62 }),
+        levelGauge(`${ctx.prefix}gauge`, rect(box.left, bottom - BAR_HEIGHT, box.width, BAR_HEIGHT), pitServiceProgress(), { value: 62 }),
       ]),
-    ],
-    ctx.density,
-  );
+    );
+    return { rows, lead };
+  };
+
+  /** What a stack still draws in a box this tall, which is what the drawing beside it may not cost. */
+  const survivors = (rows: readonly StackRow[], box: Rect): number => rowsThatFit(rows, box.height, d.gapY).reduce((n, row) => n + (row.shed?.ids.length ?? 0), 0);
+
+  const gap = columns === 1 ? CAR_GAP.stacked : CAR_GAP.pair;
+  const beside = (width: number): Rect => rect(ctx.frame.left + width + gap, ctx.frame.top, ctx.frame.width - width - gap, ctx.frame.height);
+  const whole = column(ctx.frame);
+
+  // The catalogue draws the car first and the column of everything else beside it, and the car is
+  // cut from the box rather than placed at a size (rule 18): at most a third of the frame's width,
+  // and no wider than the page can pay for.
+  //
+  // What it may not buy that room with is the page. The quantity keeps the size the box alone gave
+  // it -- sized the other way round, a third first, a 360 by 470 zone drew the catalogue's 96 px
+  // refuel at 93 -- and the option row keeps every word it had, the words beside the toggles being
+  // what make a tear-off, a repair or a single corner legible. A wrap onto another line is not a
+  // loss and is what a narrow column does; a shed toggle is, and it is the car that goes first.
+  //
+  // Neither cost falls as the car narrows, so the widest car the page can pay for is found by
+  // halving the range rather than by trying every pixel of it.
+  const affordable = (width: number): { rows: StackRow[]; lead: number } | undefined => {
+    const box = beside(width);
+    if (box.width <= 0) return undefined;
+    const at = column(box);
+    return at.lead >= whole.lead && survivors(at.rows, box) >= survivors(whole.rows, ctx.frame) ? at : undefined;
+  };
+  let drawn: { width: number; rows: StackRow[] } | undefined;
+  let low = CAR_MIN_WIDTH;
+  let high = carTopViewSize(ctx.frame).width;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const at = affordable(mid);
+    if (at === undefined) high = mid - 1;
+    else {
+      drawn = { width: mid, rows: at.rows };
+      low = mid + 1;
+    }
+  }
+  if (drawn === undefined) return stack(ctx.frame, whole.rows, ctx.density);
+  const car = carTopViewSize(ctx.frame, drawn.width);
+  const carBox = rect(ctx.frame.left, ctx.frame.top + Math.round((ctx.frame.height - car.height) / 2), car.width, car.height);
+  return [...carTopView(`${ctx.prefix}car`, carBox, { wheel: cornerPaint }), ...stack(beside(drawn.width), drawn.rows, ctx.density)];
 });
