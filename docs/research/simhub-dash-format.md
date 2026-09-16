@@ -433,6 +433,21 @@ No text item in any of the roughly thirty `.djson` files examined carries a lett
 tracking or kerning property, and the only `Spacing` key found belongs to `GroupItem`. Label
 tracking is therefore not expressible on the dashboard face.
 
+### The generated map's widths and radii are doubles (2026-09-16)
+
+`GeneratedStaticMapItem` derives from `GeneratedMapItemBase`, which declares `TrackWidth`,
+`TrackBorderWidth`, `MinimumTrackWidth` and `MinimumTrackBorderWidth` as `Double`, and the
+`PlayerStyle` it carries for the player and for the opponents declares `DotRadius`,
+`DotBorderThickness` and `LabelFontSize` the same way. A fractional width is therefore written and
+read without loss, which is why the track module draws the design's 2.5 px outline rather than
+rounding it to three. Read from the metadata of the `SimHub.Plugins.dll` committed under
+`plugin/lib`, which is the 9.12.6 assembly the spike decompiled.
+
+The same class is where the map's shape limits come from: it holds exactly two styles, one for the
+player and one for every opponent, and a style is a dot with a radius and a border. Square markers,
+sector markers and a colour for one named car are consequently not expressible;
+`OverrideColorsWithCarClassColors` is the only per-car colouring on offer and openDash refuses it.
+
 ### Community precedent for source in git
 
 Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over `**/*.djson`

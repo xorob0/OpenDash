@@ -4,6 +4,10 @@
  * The map comes from SimHub's recorded outline, so it appears once a lap has been recorded for the
  * track. Class colours are off: identity on these screens is a labelled chip, and a map full of
  * iRacing's class colours would fight the state colours this design reserves.
+ *
+ * The cars are round because SimHub's map item carries one player style and one opponent style,
+ * each a dot with a radius: the design's square markers, and the two coloured cars it draws beside
+ * the grey ones, are not expressible and are left out rather than approximated.
  */
 import { ncalc } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
@@ -18,23 +22,24 @@ const { concat, fmt, str, ucase } = ncalc;
 
 export const track = defineModule('track', (ctx) => {
   const d = densityOf(ctx.density);
-  const titleHeight = d.labelSm;
-  const mapTop = ctx.frame.top + titleHeight + d.fieldGap * 2;
+  const titled = ctx.title !== false;
+  const mapTop = titled ? ctx.frame.top + d.labelSm + d.fieldGap * 2 : ctx.frame.top;
   const map: StaticMapItem = {
     kind: 'staticMap',
     name: `${ctx.prefix}map`,
     rect: rect(ctx.frame.left, mapTop, ctx.frame.width, Math.max(0, ctx.frame.top + ctx.frame.height - mapTop)),
-    trackColor: ds.color.surface.raised,
-    trackWidth: ctx.density === 'companion' ? 10 : 6,
+    trackColor: ds.color.text.dim,
+    trackWidth: 2.5,
     trackBorderColor: ds.color.text.dim,
-    trackBorderWidth: 1,
+    trackBorderWidth: 0,
     mapShadow: false,
     overrideColorsWithCarClassColors: false,
     displayPerClassPosition: false,
-    playerStyle: { dotColor: ds.color.text.primary, dotRadius: 12, dotBorderThickness: 2, dotBorderColor: ds.color.surface.base, labelFontSize: 1, labelColor: ds.color.surface.base },
-    opponentStyle: { dotColor: ds.color.text.secondary, dotRadius: 9, dotBorderThickness: 0, dotBorderColor: ds.color.surface.base, labelFontSize: 1, labelColor: ds.color.surface.base },
+    playerStyle: { dotColor: ds.color.text.primary, dotRadius: 4, dotBorderThickness: 1, dotBorderColor: ds.color.surface.base, labelFontSize: 1, labelColor: ds.color.surface.base },
+    opponentStyle: { dotColor: ds.color.text.secondary, dotRadius: 3, dotBorderThickness: 0, dotBorderColor: ds.color.surface.base, labelFontSize: 1, labelColor: ds.color.surface.base },
     startLine: { color: ds.color.text.primary, enabled: true, width: 3, height: 16 },
   };
+  if (!titled) return [map];
   return [
     label(`${ctx.prefix}title`, 'VALMONT PARK · 4.1 KM', ctx.frame.left, ctx.frame.top, ctx.frame.width, {
       size: d.labelSm,

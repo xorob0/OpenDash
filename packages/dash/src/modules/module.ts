@@ -44,6 +44,12 @@ export interface ModuleContext {
    * the page: the companion and the pit wall pass nothing and list everybody, as they always have.
    */
   classOnly?: Expr;
+  /**
+   * False drops a page's own title line and gives the drawing the whole frame. A zone of the dash
+   * face already names the page it is showing, so repeating the name inside the frame costs a line
+   * the drawing wants; the companion and the pit wall pass nothing and keep their titles.
+   */
+  title?: boolean;
 }
 
 /** The shape a context is drawn at, derived from its frame unless the caller named one. */
