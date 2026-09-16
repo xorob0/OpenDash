@@ -14,7 +14,7 @@ import { label } from '../elements/label.ts';
 import { rect } from '../design/geometry.ts';
 import { densityOf } from '../second/density.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
-import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
+import { blockRow, defineModule, fieldsRow, fld, pageKeeps } from './module.ts';
 import { stack } from '../second/layout.ts';
 import { CHARS, deltaColour, referenceDelta, referenceLabel } from '../second/values.ts';
 
@@ -28,6 +28,11 @@ export const delta = defineModule('delta', (ctx) => {
   const value = referenceDelta();
   const barHeight = 10;
   const scaleHeight = d.labelSm;
+  // The bar and the scale under it are two rows of a three-row page, and a zone one column wide
+  // spends them on the number instead: that is the catalogue's `tall narrow` drawing, and it used
+  // to be `rowsThatFit` arriving at the same place by measurement.
+  const bar = pageKeeps('bar', ctx);
+  const scale = pageKeeps('scale', ctx);
   return stack(
     ctx.frame,
     [
@@ -40,8 +45,8 @@ export const delta = defineModule('delta', (ctx) => {
         ],
         ctx,
       ),
-      blockRow(barHeight + 12, (bottom) => centreZeroGauge(`${ctx.prefix}bar`, rect(ctx.frame.left, bottom - barHeight - 6, ctx.frame.width, barHeight), value, { range: DELTA_RANGE })),
-      blockRow(scaleHeight, (bottom) => {
+      blockRow(bar ? barHeight + 12 : 0, (bottom) => centreZeroGauge(`${ctx.prefix}bar`, rect(ctx.frame.left, bottom - barHeight - 6, ctx.frame.width, barHeight), value, { range: DELTA_RANGE })),
+      blockRow(scale ? scaleHeight : 0, (bottom) => {
         const y = bottom - scaleHeight;
         const marks: { text: string; at: number; color?: string }[] = [
           { text: `\u2212${DELTA_RANGE.toFixed(1)}`, at: 0 },
@@ -54,7 +59,7 @@ export const delta = defineModule('delta', (ctx) => {
           const width = Math.ceil(measureText('BarlowMedium', mark.text, d.labelSm)) + 2;
           const centre = ctx.frame.left + mark.at * ctx.frame.width;
           const x = Math.round(Math.min(Math.max(centre - width / 2, ctx.frame.left), ctx.frame.left + ctx.frame.width - width));
-          return label(`${ctx.prefix}scale${i}`, mark.text, x, y, width, { size: d.labelSm, color: mark.color as `#${string}` | undefined });
+          return label(`${ctx.prefix}scale.${i}`, mark.text, x, y, width, { size: d.labelSm, color: mark.color as `#${string}` | undefined });
         });
       }),
     ],
