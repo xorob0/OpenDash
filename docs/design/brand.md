@@ -102,6 +102,15 @@ Condensed" as a *stretch* of Barlow, which a `.djson` has no way to ask back, so
 came out about a fifth too wide. Same outlines, renamed on the way into a package; the vendored
 files are untouched.
 
+A package carries the faces it is drawn in rather than every weight the two families offer, which
+means Barlow Medium for labels and the display family at SemiBold and Bold for numerals, to which
+the second screens add Light for the pit wall wordmark. The restriction follows from correctness
+rather than from package size, since a weight drawn without its file is resolved by WPF to whatever
+it can find, and every advance in `packages/dash/src/design/advances.ts` then measures a face that
+never shipped. The build therefore refuses a package that draws a weight it does not carry, so that
+a further weight has to be added to `FACE_FONT_FILES` or `SCREEN_FONT_FILES`, and measured, prior
+to being drawn.
+
 ## Form
 
 - Hard edges. Radius 0 by default, since race dashes are not rounded.
