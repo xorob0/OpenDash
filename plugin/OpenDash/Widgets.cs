@@ -55,10 +55,13 @@ namespace OpenDashPlugin
             };
         }
 
-        /// <summary>.ui on the canvas: Barlow 14, text.primary.</summary>
+        /// <summary>.ui on the canvas: Barlow 14, text.primary, line height 1.45.</summary>
         public static TextBlock Body(string text)
         {
-            return Text(text, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
+            var block = Text(text, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);
+            block.LineHeight = Math.Round(Theme.SizeBody * 1.45, 1);
+            block.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+            return block;
         }
 
         /// <summary>.cap on the canvas: Barlow 13, text.secondary, wrapping at 460 px, line height 1.45.</summary>
@@ -166,7 +169,8 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        /// <summary>A section: 1 px rule on top, 24 px vertical padding, a tracked label and its rows 14 px apart.</summary>
+        /// <summary>A section: 1 px rule on top, half of space.6 either side of it so that two sections sit
+        /// 32 px apart and not twice that, a tracked label and its rows 14 px apart.</summary>
         public static Border Section(string label, params UIElement[] rows)
         {
             var children = new List<UIElement> { Label(label) };
@@ -175,7 +179,7 @@ namespace OpenDashPlugin
             {
                 BorderBrush = Brush(Theme.Rule),
                 BorderThickness = new Thickness(0, 1, 0, 0),
-                Padding = new Thickness(0, 24, 0, 24),
+                Padding = new Thickness(0, 16, 0, 16),
                 Child = VStack(14, children.ToArray()),
             };
         }
