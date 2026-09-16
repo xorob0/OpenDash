@@ -314,16 +314,33 @@ namespace OpenDashPlugin
         // the bare Border below is the whole of the drop button and the card, so the ring a keyboard
         // needs and the answer a pointer expects are drawn here or nowhere.
 
-        /// <summary>The focus visual: control.focusRing of ui.focus, held its own offset clear of the
-        /// control. A focus visual is an adorner, so the ring costs the layout nothing and cannot nudge
-        /// the row it is in, which is what lets a 24 px control carry one without crowding its text.</summary>
-        private static Style FocusRing()
+        /// <summary>
+        /// The focus visual: control.focusRing of ui.focus, held its own offset clear of the control.
+        /// </summary>
+        /// <remarks>
+        /// The canvas draws it as two shadows, `0 0 0 2px surface.base, 0 0 0 4px ui.focus`, so the offset
+        /// is painted rather than left clear: over the panel's own ground the two read the same, and over a
+        /// card or a flyout only the painted one holds the ring off what is under it.
+        ///
+        /// A focus visual is an adorner, so the ring costs the layout nothing and cannot nudge the row it
+        /// is in, which is what lets a 24 px control carry one without crowding its text. It is public
+        /// because the controls SimHub draws for the panel -- the toggle, the list -- have to be given it
+        /// by hand; the ones drawn here take it from the factories below.
+        /// </remarks>
+        public static Style FocusRing()
         {
+            var offset = new FrameworkElementFactory(typeof(Border));
+            offset.SetValue(Border.BorderBrushProperty, Brush(Theme.SurfaceBase));
+            offset.SetValue(Border.BorderThicknessProperty, new Thickness(Theme.FocusRingOffset));
+            offset.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius + Theme.FocusRingOffset));
+
             var ring = new FrameworkElementFactory(typeof(Border));
             ring.SetValue(Border.BorderBrushProperty, Brush(Theme.Focus));
             ring.SetValue(Border.BorderThicknessProperty, new Thickness(Theme.FocusRing));
-            ring.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius + Theme.FocusRingOffset));
+            ring.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius + Theme.FocusRingOffset + Theme.FocusRing));
             ring.SetValue(FrameworkElement.MarginProperty, new Thickness(-(Theme.FocusRingOffset + Theme.FocusRing)));
+            ring.AppendChild(offset);
+
             var style = new Style(typeof(Control));
             style.Setters.Add(new Setter(Control.TemplateProperty, new ControlTemplate(typeof(Control)) { VisualTree = ring }));
             return style;
@@ -337,6 +354,62 @@ namespace OpenDashPlugin
             var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
             over.Setters.Add(new Setter(Border.BorderBrushProperty, Brush(Theme.AccentHover), "chrome"));
             return over;
+        }
+
+        // Fields
+        //
+        // The select, the drop button and the text box are one shape on the canvas, so they are one
+        // description here. The two paddings are the canvas's own and the token file carries neither;
+        // docs/design/plugin.md is where the panel's owed tokens are recorded.
+
+        private const double FieldPaddingLeft = 9;
+        private const double FieldPaddingRight = 6;
+
+        /// <summary>
+        /// The chrome every field-shaped control carries: ui.field under a one pixel ui.border at the
+        /// panel's radius, the canvas's padding, and the focus ring. The value is 14 in the full height
+        /// and 12 in the short one, which is the canvas's own pairing rather than a choice made here.
+        /// </summary>
+        /// <remarks>
+        /// A TextBox is given a template as well, because Control has no CornerRadius and WPF's own
+        /// template has none to bind. A ComboBox keeps SimHub's: the template that would round its box
+        /// supplies the list under it too, and half a replacement would leave the box openDash's and the
+        /// list SimHub's. That corner is therefore recorded as SimHub's rather than approximated here.
+        /// </remarks>
+        public static void Field(Control control, double height = Theme.ControlHeight)
+        {
+            control.Height = height;
+            control.Padding = new Thickness(FieldPaddingLeft, 0, FieldPaddingRight, 0);
+            control.Background = Brush(Theme.Field);
+            control.BorderBrush = Brush(Theme.Border);
+            control.BorderThickness = new Thickness(PanelMetrics.BorderWeight);
+            control.Foreground = Brush(Theme.TextPrimary);
+            control.FontFamily = PanelFonts.Label;
+            control.FontSize = height <= Theme.ControlHeightSm ? Theme.SizeLabel : Theme.SizeBody;
+            control.VerticalContentAlignment = VerticalAlignment.Center;
+            control.FocusVisualStyle = FocusRing();
+            var box = control as TextBox;
+            if (box != null) box.Template = FieldTemplate();
+        }
+
+        /// <summary>The field's own chrome around whatever the control puts inside it, which for a TextBox
+        /// is the content host WPF looks for by name.</summary>
+        private static ControlTemplate FieldTemplate()
+        {
+            var border = new FrameworkElementFactory(typeof(Border), "chrome");
+            border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+            border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+            border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
+            border.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(Theme.Radius));
+            var host = new FrameworkElementFactory(typeof(ScrollViewer), "PART_ContentHost");
+            host.SetValue(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden);
+            host.SetValue(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden);
+            host.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            border.AppendChild(host);
+            var template = new ControlTemplate(typeof(TextBox)) { VisualTree = border };
+            template.Triggers.Add(HoverOutline());
+            return template;
         }
 
         // Drop-downs
@@ -362,19 +435,12 @@ namespace OpenDashPlugin
             var button = new ToggleButton
             {
                 Width = width,
-                Height = Theme.ControlHeightSm,
-                Padding = new Thickness(10, 0, 8, 0),
-                Background = Brush(Theme.Field),
-                BorderBrush = Brush(Theme.Border),
-                BorderThickness = new Thickness(1),
-                Foreground = Brush(Theme.TextPrimary),
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Center,
                 Content = row,
                 Cursor = Cursors.Hand,
                 ToolTip = tooltip,
-                FocusVisualStyle = FocusRing(),
             };
+            Field(button, Theme.ControlHeightSm);
             // SimHub's ToggleButton style is a switch, so the drop button keeps the plain one and paints
             // itself; asking for the styled template here would draw a slider where a box belongs.
             button.Template = DropButtonTemplate();
@@ -423,6 +489,7 @@ namespace OpenDashPlugin
                     Background = Brush(Theme.SurfaceRaised),
                     BorderBrush = Brush(Theme.Border),
                     BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(Theme.Radius),
                     Padding = new Thickness(12),
                     Margin = new Thickness(0, 2, 0, 0),
                     Child = content,
