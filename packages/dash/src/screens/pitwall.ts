@@ -14,7 +14,7 @@ import { rect } from '../design/geometry.ts';
 import { rule } from '../elements/rule.ts';
 import { label } from '../elements/label.ts';
 import { densityOf } from '../second/density.ts';
-import { drawFieldBlock, fitFields, type FieldSpec } from '../second/field.ts';
+import { fieldRowFitted, fitFields, rowHeight, type FieldSpec } from '../second/field.ts';
 import { panel, PANEL_TITLE_HEIGHT } from '../second/header.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
 import { sectorFields } from '../second/sectors.ts';
@@ -32,7 +32,6 @@ import {
   classOpponentCount,
   clock,
   clutch,
-  currentLap,
   deltaColour,
   estimatedLap,
   fieldSize,
@@ -51,13 +50,12 @@ import {
   speed,
   steering,
   throttle,
-  totalLaps,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
 
-const { fmt, concat, str, iff, eq, gt, num, isnull, driver, game } = ncalc;
+const { fmt, concat, str, iff, eq, gt, num, isnull, ucase, driver, game } = ncalc;
 
 /** A pit wall panel draws at zone density: 24 px numerals, 13 px labels. */
 const DENSITY = 'zone' as const;
@@ -70,29 +68,64 @@ function fieldsIn(prefix: string, body: Rect, specs: readonly FieldSpec[]): Item
   return fitFields(specs, body, DENSITY);
 }
 
-/** The session panel: which race, how long is left, where you are in it. */
+/**
+ * One row of fields across a panel body, drawn from its top edge.
+ *
+ * `fitFields` is the wrong instrument for a fixed panel. It answers a box that is too short by
+ * shedding fields and then by shrinking what survives, which is right for a zone drawing whichever
+ * page the driver put in it and wrong here: these fields are what the panel exists to draw, and a
+ * Session panel keeping only "Race" has lost its point. So the row is explicit and sheds nothing.
+ *
+ * It is drawn downwards from the top rather than up from the bottom because the sheet's own panel
+ * heights leave out the five pixels between a label and its value: `PitWall1920x1080.dc.html` gives
+ * Session 108 where 14 + 13 + 8 + 13 + 46 + 14 comes to 108 only with that gap dropped, and Lap
+ * data 96 the same way. A row hung from the bottom would answer those five pixels by climbing into
+ * the title; hung from the top it spends the last of the bottom padding instead, which is what the
+ * sheet does too, and stays inside the panel frame either way.
+ */
+function panelRow(body: Rect, specs: readonly FieldSpec[], gap?: number): Item[] {
+  return fieldRowFitted(specs, body.left, body.top + rowHeight(specs, DENSITY), body.width, DENSITY, { gap }).items;
+}
+
+/**
+ * The longest session name the panel's first label can draw, which is what its box is measured by.
+ *
+ * `pitwallHeader.ts` measures the same list for the same property; the two constants stay apart
+ * because neither file owns the other, and `values.ts` is where a third consumer would put it.
+ */
+const WIDEST_SESSION_LABEL = 'OFFLINE TESTING';
+
+/**
+ * The session panel: how long is left, where you are in the field, where you are in your class.
+ *
+ * Three fields rather than the five this used to draw. The portrait sheet folds the session type
+ * into the label of the time left, which is the reading a pit wall wants, and the lap is in the
+ * header of every page already. The landscape sheet still draws five at 46 px, and no arrangement
+ * of them fits: five fields measured against their character budgets come to 820 px across a 599 px
+ * body, and a 46 px value needs 70 px of a 59 px body. See the report for the author.
+ */
 export function sessionPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Session' });
   const classPosition = isnull(driver('classposition', player()), num(0));
   return [
     ...items,
-    ...fieldsIn(name, body, [
-      fld(ctxOf(body, `${name}.`), 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: d.big }),
-      fld(ctxOf(body, `${name}.`), 'left', 'Time left', { sample: '0:42:15', bind: iff(isTimedSession(), clock(sessionTimeLeft()), str('-:--:--')), chars: CHARS.clock, fs: d.big }),
-      fld(ctxOf(body, `${name}.`), 'lap', 'Lap', {
-        sample: '12',
-        bind: fmt(currentLap(), '0'),
-        chars: CHARS.position,
-        fs: d.big,
-        follower: { text: '/ 30', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
-      }),
+    ...panelRow(body, [
+      fld(
+        ctxOf(body, `${name}.`),
+        'left',
+        'Race',
+        { sample: '0:42:15', bind: iff(isTimedSession(), clock(sessionTimeLeft()), str('-:--:--')), chars: CHARS.clock, fs: d.mid },
+        { labelBind: ucase(sessionType()), labelWidest: WIDEST_SESSION_LABEL },
+      ),
       fld(ctxOf(body, `${name}.`), 'position', 'Position', {
         sample: '4',
         bind: fmt(carPosition(player()), '0'),
         chars: CHARS.position,
-        fs: d.big,
-        follower: { text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
+        fs: d.mid,
+        // A denominator rather than a unit: the sheet scales "/ 24" with the value it follows -- 23
+        // beside 34, 32 beside the landscape sheet's 46 -- where a unit is the density's 13 px.
+        follower: { text: '/ 24', kind: 'denominator', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
       }),
       fld(
         ctxOf(body, `${name}.`),
@@ -130,23 +163,42 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
   ];
 }
 
-/** The lap data panel: what the last lap was, what your best is, what this one is heading for. */
+/** The canvas sets the lap times of the Lap data panel closer than a row of fields, at 20 px. */
+const LAP_DATA_GAP = 20;
+
+/**
+ * The lap data panel: what the last lap was, what your best is, what this one is heading for.
+ *
+ * The session best has gone to the Track panel, which is where both landscape sheets draw it and
+ * the only place it was ever read against the board's own purple.
+ */
 export function lapDataPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Lap data' });
   const ctx = ctxOf(body, `${name}.`);
   return [
     ...items,
-    ...fieldsIn(name, body, [
-      fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid }),
-      fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: d.mid }),
-      fld(ctx, 'last', 'Last', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: d.mid }),
-      fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
-    ]),
+    ...panelRow(
+      body,
+      [
+        fld(ctx, 'estimated', 'Est.', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid }),
+        fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: d.mid }),
+        fld(ctx, 'last', 'Last', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: d.mid }),
+      ],
+      LAP_DATA_GAP,
+    ),
   ];
 }
 
-/** The track panel: the map, with the conditions and the car's assists beside it. */
+/**
+ * The track panel: the map, with the session best, the conditions and the car's assists beside it.
+ *
+ * Both landscape sheets draw the session best in this panel and draw it larger than the conditions,
+ * so it leads the column rather than closing it: a greedy wrap that lists it last puts it on the
+ * second line beside the brake bias, which buries the one lap the whole board is read against. The
+ * track's name and its surface state are the map's own header row, where `track.ts` already draws
+ * them, and are not repeated here.
+ */
 export function trackPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Track' });
@@ -157,6 +209,7 @@ export function trackPanel(name: string, frame: Rect): Item[] {
     ...items,
     ...track.build({ frame: rect(body.left, body.top, mapWidth, body.height), density: DENSITY, prefix: `${name}.map.` }),
     ...fieldsIn(name, right, [
+      fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
       fld(ctx, 'air', 'Air', { sample: '24', bind: fmt(airTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
       fld(ctx, 'road', 'Road', { sample: '31', bind: fmt(roadTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
       fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }),
@@ -273,11 +326,14 @@ export function racePage(width: number, height: number): Screen {
   const boardWidth = 1280;
   const columnLeft = boardWidth + 1;
   const columnWidth = width - columnLeft;
+  // The artboard's own four heights. They come to 602 with their rules, which leaves 414 of the
+  // 1016 px body for the two zones and the rule between them; the sheet spends 403 there and leaves
+  // the last eleven pixels unaccounted, so the zones are a few pixels taller here than drawn.
   const panels = [
-    { id: 'session', height: 104, draw: sessionPanel },
-    { id: 'lapDelta', height: 150, draw: lapDeltaPanel },
-    { id: 'lapData', height: 92, draw: lapDataPanel },
-    { id: 'track', height: 260, draw: trackPanel },
+    { id: 'session', height: 108, draw: sessionPanel },
+    { id: 'lapDelta', height: 158, draw: lapDeltaPanel },
+    { id: 'lapData', height: 96, draw: lapDataPanel },
+    { id: 'track', height: 236, draw: trackPanel },
   ];
   const items: Item[] = [
     ...pitWallHeader('race.header', { frame: header, pageName: 'Pit wall · race', page: 1, pages: 3 }),
