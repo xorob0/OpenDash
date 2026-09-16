@@ -25,8 +25,11 @@
     <Compile Include="../OpenDash/PackageExtractor.cs" Link="Plugin/PackageExtractor.cs" />
     <Compile Include="../OpenDash/DashboardInstaller.Core.cs" Link="Plugin/DashboardInstaller.Core.cs" />
     <Compile Include="../OpenDash/Theme.cs" Link="Plugin/Theme.cs" />
-    <Compile Include="../OpenDash/PanelMetrics.cs" Link="Plugin/PanelMetrics.cs" />
-    <Compile Include="../OpenDash/PanelCopy.cs" Link="Plugin/PanelCopy.cs" />
+    <!-- The panel's pure halves, by pattern rather than by name, so that the next one to be lifted out of
+         Widgets.cs arrives with its test and without a line here. PanelFonts.cs is the exception and has
+         to stay excluded: it hands WPF a FontFamily, so the wildcard would pull System.Windows.Media into
+         a net8.0 project that has no such thing. -->
+    <Compile Include="../OpenDash/Panel*.cs" Exclude="../OpenDash/PanelFonts.cs" Link="Plugin/%(Filename)%(Extension)" />
     <Compile Include="../OpenDash/Mark.cs" Link="Plugin/Mark.cs" />
     <Compile Include="../OpenDash/ReleaseFeed.cs" Link="Plugin/ReleaseFeed.cs" />
     <Compile Include="../OpenDash/UpdateCheck.cs" Link="Plugin/UpdateCheck.cs" />

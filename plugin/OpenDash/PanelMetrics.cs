@@ -13,21 +13,15 @@ namespace OpenDashPlugin
 {
     public static class PanelMetrics
     {
-        // Icons, from the canvas's icon row: a 16 x 16 box, 1.5 stroke, square caps, mitre joins. The `d`
-        // strings are the canvas's own rather than a transcription, which is what stops the two copies
-        // drifting -- the same join MarkShape.PathData makes with media/logo.svg.
+        // The icons the cards draw. The paths themselves are in PanelIcons.cs, which is where the whole
+        // set lives and where the test that holds them against the sheet can reach them; these four are
+        // the names the card and the add card ask for, and they stay here so that the kind table below
+        // reads as one thing.
 
-        /// <summary>A face is a display: a screen on a stand.</summary>
-        public const string DisplayIcon = "M2 3h12v8H2zM6 13.5h4";
-
-        /// <summary>A pit wall is a grid: four squares, because it is four pages of zones.</summary>
-        public const string GridIcon = "M2.5 2.5h4v4h-4zM9.5 2.5h4v4h-4zM2.5 9.5h4v4h-4zM9.5 9.5h4v4h-4z";
-
-        /// <summary>A companion is a phone.</summary>
-        public const string PhoneIcon = "M4.5 1.5h7v13h-7zM6.5 12.5h3";
-
-        /// <summary>The plus the add card carries.</summary>
-        public const string PlusIcon = "M8 3v10M3 8h10";
+        public const string DisplayIcon = PanelIcons.Display;
+        public const string GridIcon = PanelIcons.Grid;
+        public const string PhoneIcon = PanelIcons.Phone;
+        public const string PlusIcon = PanelIcons.Plus;
 
         /// <summary>
         /// The icon a screen of each kind is drawn with, and null for a kind the canvas gives none.
