@@ -307,19 +307,17 @@ namespace OpenDashPlugin
             return box;
         }
 
+        /// <summary>
+        /// A secondary action, which until now was SimHub's SHButtonPrimary in spite of the name.
+        /// </summary>
+        /// <remarks>
+        /// The canvas allows one primary per panel, so a page of eight accented buttons says nothing about
+        /// which of them is the thing to press. These are the outline the canvas draws instead; Ui.PrimaryButton
+        /// is what the one accented action of a page asks for.
+        /// </remarks>
         private static Button BuildSecondaryButton(string content, string tooltip)
         {
-            Button button;
-            try
-            {
-                button = new SHButtonPrimary();
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("SHButtonPrimary is unavailable; using a plain button: " + ex.Message);
-                button = new Button();
-            }
-            button.Content = content;
+            var button = Ui.OutlineButton(content);
             button.MinWidth = 96;
             button.ToolTip = tooltip;
             return button;

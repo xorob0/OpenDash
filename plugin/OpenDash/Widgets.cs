@@ -22,6 +22,13 @@ namespace OpenDashPlugin
         /// <summary>The chevron a drop-down carries, as the canvas draws it.</summary>
         public const string ChevronIcon = "M4 6l4 4 4-4";
 
+        // The kind icons and the plus, which live in PanelMetrics.cs so that a test can hold them against
+        // the canvas character for character; a path is geometry, and this file is the one no test compiles.
+        public const string DisplayIcon = PanelMetrics.DisplayIcon;
+        public const string GridIcon = PanelMetrics.GridIcon;
+        public const string PhoneIcon = PanelMetrics.PhoneIcon;
+        public const string PlusIcon = PanelMetrics.PlusIcon;
+
         private static readonly Dictionary<string, SolidColorBrush> Brushes = new Dictionary<string, SolidColorBrush>();
 
         /// <summary>A frozen brush for a #RRGGBB token value, cached per colour.</summary>
@@ -154,26 +161,89 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        /// <summary>A section: 1 px rule on top, 24 px vertical padding, a tracked label and its rows 14 px apart.</summary>
+        /// <summary>A section: 1 px rule on top, 28 px of padding, a tracked label and its rows 20 px apart,
+        /// which is the canvas's .sec. Every tab is built out of these, so the numbers reflow the panel.</summary>
         public static Border Section(string label, params UIElement[] rows)
         {
             var children = new List<UIElement> { Label(label) };
             children.AddRange(rows);
             return new Border
             {
-                BorderBrush = Brush(Theme.Rule),
-                BorderThickness = new Thickness(0, 1, 0, 0),
-                Padding = new Thickness(0, 24, 0, 24),
-                Child = VStack(14, children.ToArray()),
+                BorderBrush = Brush(PanelMetrics.SectionRule),
+                BorderThickness = new Thickness(0, PanelMetrics.BorderWeight, 0, 0),
+                Padding = new Thickness(0, PanelMetrics.SectionPadding, 0, PanelMetrics.SectionPadding),
+                Child = VStack(PanelMetrics.SectionGap, children.ToArray()),
             };
         }
 
-        // Marks
+        /// <summary>
+        /// A row of the Install tab: what the thing is on the left, the state it is in and the action on
+        /// the right, over a one pixel rule.
+        /// </summary>
+        /// <remarks>
+        /// A 28 px button and a 24 px pill inside 40 leave nothing above or below them, so the row carries
+        /// no vertical padding of its own and the rule is what separates one from the next.
+        /// </remarks>
+        public static Border InstallRow(string iconPath, string name, string caption, FrameworkElement pill, FrameworkElement button)
+        {
+            var text = VStack(0, Body(name), Label(caption, Theme.TextLabel));
+            var left = iconPath == null
+                ? (FrameworkElement)text
+                : HStack(PanelMetrics.RowIconGap, Icon(iconPath, Theme.TextLabel), text);
+            var row = Row(left, HStack(PanelMetrics.RowRightGap, pill, button));
+            row.Height = PanelMetrics.RowHeight;
+            return new Border
+            {
+                BorderBrush = Brush(PanelMetrics.RowRule),
+                BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),
+                Child = row,
+            };
+        }
+
+        // Marks and status
 
         /// <summary>The 6 px square status dot.</summary>
         public static Rectangle Dot(string hex)
         {
-            return new Rectangle { Width = 6, Height = 6, Fill = Brush(hex), VerticalAlignment = VerticalAlignment.Center };
+            return new Rectangle
+            {
+                Width = PanelMetrics.DotSize,
+                Height = PanelMetrics.DotSize,
+                Fill = Brush(hex),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+        }
+
+        /// <summary>A status: the dot and its tracked label, in the 24 px pill the canvas draws. The height
+        /// is the whole of what a pill adds, and it is what keeps a row of them on one baseline.</summary>
+        public static StackPanel StatusPill(string dotHex, string label, string labelHex)
+        {
+            var pill = HStack(PanelMetrics.PillGap, Dot(dotHex), Label(label, labelHex));
+            pill.Height = PanelMetrics.PillHeight;
+            return pill;
+        }
+
+        /// <summary>What a run reports while it is running: the word, the percentage it has reached, and a
+        /// 4 px accent bar under them. Accent, because the app is working rather than warning.</summary>
+        public static FrameworkElement Progress(double fraction, double width = PanelMetrics.ProgressWidth)
+        {
+            var head = Row(Label(PanelCopy.Installing, Theme.TextPrimary),
+                Numeral(PanelCopy.Percent(fraction), Theme.SizeNumeral, Theme.TextSecondary));
+            var track = new Border
+            {
+                Height = PanelMetrics.ProgressBarHeight,
+                Background = Brush(Theme.SurfaceRaised),
+                Child = new Rectangle
+                {
+                    Width = PanelMetrics.ProgressFill(fraction, width),
+                    Height = PanelMetrics.ProgressBarHeight,
+                    Fill = Brush(Theme.Accent),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                },
+            };
+            var stack = VStack(PanelMetrics.ProgressGap, head, track);
+            stack.Width = width;
+            return stack;
         }
 
         /// <summary>
@@ -331,17 +401,116 @@ namespace OpenDashPlugin
             return host;
         }
 
+        // Buttons
+        //
+        // The canvas draws one primary per panel and asks for everything else as an outline or a link,
+        // which is a distinction SHButtonPrimary cannot make. Leaving SimHub's style costs its hover, focus
+        // and disabled chrome, and the panel disables a button for the length of a run, so these draw all
+        // four states themselves: the ground changes under the pointer, focus is a ring in the adorner
+        // layer, and a disabled button keeps the canvas's 40 %.
+
+        /// <summary>The one accented action of a page: an update, and nothing beside it.</summary>
+        public static Button PrimaryButton(string text, double height = PanelMetrics.ButtonHeight)
+        {
+            return Chrome(text, height, null, Brush(Theme.Accent), Brush(Theme.AccentHover), null, Theme.OnAccent);
+        }
+
+        /// <summary>Every other action: the panel's own ground inside an outline. The leading icon is what
+        /// Reinstall carries.</summary>
+        public static Button OutlineButton(string text, double height = PanelMetrics.ButtonHeight, string iconPath = null)
+        {
+            return Chrome(text, height, iconPath, System.Windows.Media.Brushes.Transparent, Brush(Theme.Hover), Brush(Theme.Border), Theme.TextPrimary);
+        }
+
+        /// <summary>A text-only action, the ink carrying it: accent for a link, danger for a destructive
+        /// one. No ground, no outline and no padding, so it does not read as a button in a row of them.</summary>
+        public static Button LinkButton(string text, string hex = Theme.Accent)
+        {
+            var button = Chrome(text, PanelMetrics.ButtonHeight, null, System.Windows.Media.Brushes.Transparent, null, null, hex);
+            button.Padding = new Thickness(0);
+            return button;
+        }
+
+        private static Button Chrome(string text, double height, string iconPath, Brush background, Brush hover, Brush border, string ink)
+        {
+            return new Button
+            {
+                Height = height,
+                Padding = new Thickness(PanelMetrics.ButtonPaddingX, 0, PanelMetrics.ButtonPaddingX, 0),
+                Background = background,
+                BorderBrush = border ?? System.Windows.Media.Brushes.Transparent,
+                BorderThickness = new Thickness(border == null ? 0 : PanelMetrics.BorderWeight),
+                Foreground = Brush(ink),
+                FontFamily = PanelFonts.Label,
+                FontSize = Theme.SizeBody,
+                FontWeight = FontWeights.Medium,
+                Cursor = Cursors.Hand,
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                // A bare string when there is no icon, because a caller that rewrites the label for the
+                // length of a run -- "Updating…" and back again -- would otherwise replace the TextBlock
+                // and lose the face with it. The button's own type properties draw it.
+                Content = iconPath == null
+                    ? (object)text
+                    : HStack(PanelMetrics.ButtonIconGap, Icon(iconPath, ink), Text(text, Theme.SizeBody, FontWeights.Medium, ink)),
+                Template = ButtonTemplate(hover),
+                FocusVisualStyle = FocusRing(),
+            };
+        }
+
+        /// <summary>The button's own chrome: the border the control's brushes describe, and the two states
+        /// a trigger can carry. A null hover is a link, which has no ground to change.</summary>
+        private static ControlTemplate ButtonTemplate(Brush hover)
+        {
+            var border = new FrameworkElementFactory(typeof(Border), "chrome");
+            border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+            border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+            border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
+            border.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(PanelMetrics.Radius));
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            border.AppendChild(presenter);
+
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = border };
+            if (hover != null)
+            {
+                var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+                over.Setters.Add(new Setter(Border.BackgroundProperty, hover, "chrome"));
+                template.Triggers.Add(over);
+            }
+            var disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
+            disabled.Setters.Add(new Setter(UIElement.OpacityProperty, PanelMetrics.DisabledOpacity, "chrome"));
+            template.Triggers.Add(disabled);
+            return template;
+        }
+
+        /// <summary>The focus visual: two pixels of accent, two pixels clear of the button. A focus visual
+        /// is drawn in the adorner layer, so the ring costs the layout nothing and cannot nudge a row.</summary>
+        private static Style FocusRing()
+        {
+            var ring = new FrameworkElementFactory(typeof(Border));
+            ring.SetValue(Border.BorderBrushProperty, Brush(Theme.Accent));
+            ring.SetValue(Border.BorderThicknessProperty, new Thickness(PanelMetrics.FocusRingWeight));
+            ring.SetValue(Border.CornerRadiusProperty, new CornerRadius(PanelMetrics.Radius + PanelMetrics.FocusRingOffset));
+            ring.SetValue(FrameworkElement.MarginProperty, new Thickness(-(PanelMetrics.FocusRingOffset + PanelMetrics.FocusRingWeight)));
+            var style = new Style(typeof(Control));
+            style.Setters.Add(new Setter(Control.TemplateProperty, new ControlTemplate(typeof(Control)) { VisualTree = ring }));
+            return style;
+        }
+
         // Tabs, cards and groups
         //
         // XOR-125 names panel.tabs, control.tab and control.screenCard as tokens. They are not in
         // design/tokens.json, and design/ is the author's rather than something a build writes into, so
         // these compose from the tokens that do exist and docs/design/plugin.md records that the three
-        // are still owed. Nothing here invents a colour: every value is a Theme constant.
+        // are still owed. Nothing here invents a colour: every value is a Theme constant. The card's own
+        // geometry is in PanelMetrics.cs, where a test can hold it against the canvas; the tab's is here,
+        // because nothing but this file has asked for it yet.
 
         public const double TabHeight = 40;
         public const double TabUnderline = 2;
-        public const double CardWidth = 168;
-        public const double CardHeight = 66;
 
         /// <summary>
         /// One tab. Selected carries the accent underline and the primary ink; the rest are secondary.
@@ -384,60 +553,75 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A screen's card: the name, the size and the kind, with a dot when something is wrong.
+        /// A screen's card: the kind as an icon, the name over the size, and a dot when something is wrong.
         /// </summary>
         /// <remarks>
         /// The card says what a rig is made of and nothing more. Everything about the screen -- the
         /// folder, the namespace, the zones -- is in the pane below it, because a row of cards is read
         /// at a glance and a card carrying four facts is not.
+        ///
+        /// The kind used to be a tracked word along the card's foot, which is what made the card 66 tall.
+        /// It is the icon on the left now, and the two things the foot carried have moved to the size line:
+        /// the dot a failed install shows, and the word for the one kind the canvas draws no icon for.
+        ///
+        /// Selected decides the ink as well as the brushes, so the rows are built here, where the flag is
+        /// in hand, rather than in the shell.
         /// </remarks>
         public static Button Card(string name, string size, string kind, bool selected, string dot, Action clicked)
         {
-            var title = Text(name, Theme.SizeBody, FontWeights.SemiBold, Theme.TextPrimary);
+            var colours = PanelMetrics.Card(selected);
+            var title = Text(name, Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
             title.TextTrimming = TextTrimming.CharacterEllipsis;
             title.TextWrapping = TextWrapping.NoWrap;
-            var rows = VStack(2, title, Text(size, Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary));
-            rows.VerticalAlignment = VerticalAlignment.Top;
 
-            var foot = kind == null
-                ? (UIElement)new Border()
-                : (dot == null ? (UIElement)Label(kind) : HStack(6, Dot(dot), Label(kind)));
-            var dock = new DockPanel { LastChildFill = false };
-            DockPanel.SetDock(rows, Dock.Top);
-            DockPanel.SetDock(foot, Dock.Bottom);
-            dock.Children.Add(rows);
-            dock.Children.Add(foot);
+            UIElement line = Label(PanelCopy.SizeLine(kind, size), colours.SizeLabel);
+            if (dot != null) line = HStack(6, Dot(dot), line);
+            var rows = VStack(PanelMetrics.CardLineGap, title, line);
 
-            return CardShell(dock, selected, clicked, Brush(selected ? Theme.SurfaceRaised : Theme.SurfaceZone), Brush(selected ? Theme.Accent : Theme.Border));
+            var body = new DockPanel { LastChildFill = true };
+            var kindIcon = PanelMetrics.KindIcon(kind);
+            if (kindIcon != null)
+            {
+                var icon = Icon(kindIcon, colours.Icon);
+                icon.Margin = new Thickness(0, 0, PanelMetrics.CardIconGap, 0);
+                DockPanel.SetDock(icon, Dock.Left);
+                body.Children.Add(icon);
+            }
+            body.Children.Add(rows);
+
+            var background = colours.Fill == null ? System.Windows.Media.Brushes.Transparent : Brush(colours.Fill);
+            return CardShell(body, clicked, background, Brush(colours.Border), PanelMetrics.CardMinWidth);
         }
 
-        /// <summary>The add card: the one card that is an action rather than a thing.</summary>
+        /// <summary>The add card: the one card that is an action rather than a thing, and the only one with
+        /// a dashed frame, because nothing is installed until a screen is chosen.</summary>
         public static Button AddCard(Action clicked)
         {
-            var plus = Text("+", 20, FontWeights.Light, Theme.Accent);
-            plus.HorizontalAlignment = HorizontalAlignment.Center;
-            var text = Label("Add a screen", Theme.TextSecondary);
-            text.HorizontalAlignment = HorizontalAlignment.Center;
-            var stack = VStack(4, plus, text);
-            stack.VerticalAlignment = VerticalAlignment.Center;
-            return CardShell(stack, false, clicked, System.Windows.Media.Brushes.Transparent, Brush(Theme.Border));
+            var row = HStack(PanelMetrics.AddCardGap,
+                Icon(PlusIcon, Theme.Accent),
+                Text(PanelCopy.AddScreen, Theme.SizeBody, FontWeights.Medium, Theme.Accent));
+            row.HorizontalAlignment = HorizontalAlignment.Center;
+            var card = CardShell(row, clicked, System.Windows.Media.Brushes.Transparent,
+                System.Windows.Media.Brushes.Transparent, PanelMetrics.AddCardMinWidth);
+            card.Template = DashedCardTemplate();
+            return card;
         }
 
-        private static Button CardShell(UIElement content, bool selected, Action clicked, Brush background, Brush border)
+        private static Button CardShell(UIElement content, Action clicked, Brush background, Brush border, double minWidth)
         {
             var button = new Button
             {
-                Width = CardWidth,
-                Height = CardHeight,
+                MinWidth = minWidth,
+                Height = PanelMetrics.CardHeight,
                 Margin = new Thickness(0, 0, 10, 10),
-                Padding = new Thickness(12, 10, 12, 10),
+                Padding = new Thickness(PanelMetrics.CardPaddingX, 0, PanelMetrics.CardPaddingX, 0),
                 Background = background,
                 BorderBrush = border,
-                BorderThickness = new Thickness(1, 1, 1, selected ? 2 : 1),
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
                 Cursor = Cursors.Hand,
                 Content = content,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Center,
             };
             button.Template = CardTemplate();
             button.Click += (sender, args) => clicked();
@@ -457,6 +641,39 @@ namespace OpenDashPlugin
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
             border.AppendChild(presenter);
             return new ControlTemplate(typeof(Button)) { VisualTree = border };
+        }
+
+        /// <summary>
+        /// The add card's frame, which is the same card drawn with a dashed edge.
+        /// </summary>
+        /// <remarks>
+        /// A dash cannot come from Border.BorderBrush, so the frame is a Rectangle over the content and the
+        /// click target stays the button underneath it. A Rectangle centres its stroke on its own edge, so
+        /// half of it would fall outside the card without the margin. Once the card at rest is transparent
+        /// too, these dashes are the only thing telling a screen from the action that adds one.
+        /// </remarks>
+        private static ControlTemplate DashedCardTemplate()
+        {
+            var dashes = new DoubleCollection { PanelMetrics.DashOn, PanelMetrics.DashOff };
+            dashes.Freeze();
+            var frame = new FrameworkElementFactory(typeof(Rectangle));
+            frame.SetValue(Shape.StrokeProperty, Brush(Theme.Border));
+            frame.SetValue(Shape.StrokeThicknessProperty, PanelMetrics.BorderWeight);
+            frame.SetValue(Shape.StrokeDashArrayProperty, dashes);
+            frame.SetValue(Rectangle.RadiusXProperty, PanelMetrics.Radius);
+            frame.SetValue(Rectangle.RadiusYProperty, PanelMetrics.Radius);
+            frame.SetValue(FrameworkElement.MarginProperty, new Thickness(PanelMetrics.BorderWeight / 2));
+            frame.SetValue(UIElement.IsHitTestVisibleProperty, false);
+
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(FrameworkElement.MarginProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            presenter.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+
+            var host = new FrameworkElementFactory(typeof(Grid));
+            host.AppendChild(presenter);
+            host.AppendChild(frame);
+            return new ControlTemplate(typeof(Button)) { VisualTree = host };
         }
 
         private static ControlTemplate BareButtonTemplate()

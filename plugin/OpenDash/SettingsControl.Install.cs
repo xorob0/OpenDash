@@ -332,7 +332,7 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>SimHub's primary button (SHButtonPrimary); a plain button when the type cannot be created.</summary>
+        /// <summary>An outline button, as every action on the panel but the one primary is.</summary>
         private Button BuildReinstallButton()
         {
             var button = BuildSecondaryButton("Reinstall", "Write every dashboard your rig has into DashTemplates again. Your settings are kept.");
@@ -435,7 +435,7 @@ namespace OpenDashPlugin
                     label = Theme.TextLabel;
                     break;
             }
-            statusHost.Child = Ui.HStack(8, Ui.Dot(dot), Ui.Label(installer.Status.Label(), label));
+            statusHost.Child = Ui.StatusPill(dot, installer.Status.Label(), label);
             statusHost.ToolTip = installer.HasEmbeddedPackage
                 ? (installer.Packages.Count > 0 ? installer.PackageReport() : installer.LastError)
                 : "This build of the plugin carries no dashboard package.";
