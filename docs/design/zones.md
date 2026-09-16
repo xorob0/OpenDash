@@ -510,6 +510,14 @@ comparison is by page **id** and not page number, because the four catalogues ov
 track page and module 13 are one drawing under two numbers, and a comparison by number would miss
 exactly the duplicate a driver would notice.
 
+The quick glance is a fifth participant in that comparison, and it reads "Zone C and the quick
+glance both show the track." It is compared against each zone's *start* page rather than against
+the whole cycle, exactly as the zones are compared with each other, because a glance set to a page
+a zone can cycle to is something somebody may well want and warning about it would be a false alarm
+on every second rig. The page is named with an article and a lower-case noun, "the relative", save
+where a name lists what a page draws rather than naming one thing: "Gear, speed, revs" does not read
+after an article, so it keeps the spelling the drop-down uses.
+
 ---
 
 ## 8. What a zone does when its page changes

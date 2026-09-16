@@ -391,7 +391,8 @@ namespace OpenDashPlugin.Tests
             Assert.Single(clashes);
             Assert.Equal("relative", clashes[0].PageId);
             Assert.Equal(new[] { "B", "C" }, clashes[0].Zones);
-            Assert.Equal("Zone B and zone C both show Relative.", clashes[0].Message());
+            // An article and a lower-case noun, as the canvas writes it, rather than the catalogue name.
+            Assert.Equal("Zone B and zone C both show the relative.", clashes[0].Message());
             // Reported, not prevented: both zones keep the page.
             Assert.Equal(14, settings.FaceZoneStart(Face, "B"));
             Assert.Equal(14, settings.FaceZoneStart(Face, "C"));
@@ -404,7 +405,25 @@ namespace OpenDashPlugin.Tests
             var settings = new OpenDashSettings();
             settings.SetFaceZoneStart(Face, "A", 3);
             settings.SetFaceZoneStart(Face, "B", 12);
-            Assert.Equal("Zone A and zone B both show Track.", FacePageClash.Warning(settings.Face(Face)));
+            // The glance is moved off the track so that this reads about the two catalogues alone; that
+            // it defaults to the track and would join in is the next test's business.
+            settings.SetQuickGlance(Face, Contract.QuickGlanceValue(0, 2));
+            Assert.Equal("Zone A and zone B both show the track.", FacePageClash.Warning(settings.Face(Face)));
+        }
+
+        [Fact]
+        public void A_page_that_does_not_read_after_an_article_keeps_its_catalogue_name()
+        {
+            // "the gear, speed, revs" is not a sentence, and no short noun for that page exists to
+            // invent, so it is spelled the way the panel's own drop-down spells it.
+            Assert.Equal("Gear, speed, revs", FacePageClash.DisplayName("Gear, speed, revs"));
+            Assert.Equal("the relative", FacePageClash.DisplayName("Relative"));
+            Assert.Equal("the lap times", FacePageClash.DisplayName("Lap times"));
+            // No two zones can land on that page today -- only zone A's catalogue holds it -- so the
+            // sentence is pinned on the clash itself rather than on a face that cannot be arranged.
+            Assert.Equal(
+                "Zone A and zone B both show Gear, speed, revs.",
+                new FacePageClash("gearSpeedRevs", "Gear, speed, revs", new[] { "A", "B" }).Message());
         }
 
         [Fact]
@@ -418,13 +437,48 @@ namespace OpenDashPlugin.Tests
             var clashes = settings.FaceClashes(Face);
             Assert.Single(clashes);
             Assert.Equal(new[] { "B", "C", "D" }, clashes[0].Zones);
-            Assert.Equal("Zone B, zone C and zone D all show Fuel.", clashes[0].Message());
+            Assert.Equal("Zone B, zone C and zone D all show the fuel.", clashes[0].Message());
         }
 
         [Fact]
         public void A_face_with_nothing_in_common_warns_about_nothing()
         {
+            // The defaults included: zone C opens on the relative and the glance is set to the track,
+            // so the fifth participant agrees with nobody.
             Assert.Equal(string.Empty, FacePageClash.Warning(new OpenDashSettings().Face(Face)));
+        }
+
+        [Fact]
+        public void The_quick_glance_is_the_fifth_participant_and_is_said_by_name()
+        {
+            // The glance is compared against each zone's start page by page id, as the zones are
+            // compared with each other, and the line is shown rather than blocking the setting.
+            var settings = new OpenDashSettings();
+            settings.SetQuickGlance(Face, Contract.QuickGlanceValue(2, 12));
+            settings.SetFaceZoneStart(Face, "C", 12);
+            var clashes = settings.FaceClashes(Face);
+            Assert.Single(clashes);
+            Assert.Equal("track", clashes[0].PageId);
+            Assert.Equal(new[] { "C" }, clashes[0].Zones);
+            Assert.True(clashes[0].Glance);
+            Assert.Equal("Zone C and the quick glance both show the track.", clashes[0].Message());
+            // Said, not prevented: the zone keeps the page and so does the glance.
+            Assert.Equal(12, settings.FaceZoneStart(Face, "C"));
+            Assert.Equal(Contract.QuickGlanceValue(2, 12), settings.QuickGlanceOf(Face));
+
+            // By id and not by number: zone A's page 3 and module 13 are one drawing, so a glance held
+            // on zone A's track page clashes with a zone B showing module 13.
+            var across = new OpenDashSettings();
+            across.SetQuickGlance(Face, Contract.QuickGlanceValue(0, 3));
+            across.SetFaceZoneStart(Face, "B", 12);
+            Assert.Equal("Zone B and the quick glance both show the track.", FacePageClash.Warning(across.Face(Face)));
+
+            // And three participants read as a list, the glance last.
+            var three = new OpenDashSettings();
+            three.SetQuickGlance(Face, Contract.QuickGlanceValue(2, 12));
+            three.SetFaceZoneStart(Face, "B", 12);
+            three.SetFaceZoneStart(Face, "C", 12);
+            Assert.Equal("Zone B, zone C and the quick glance all show the track.", FacePageClash.Warning(three.Face(Face)));
         }
 
         [Fact]
