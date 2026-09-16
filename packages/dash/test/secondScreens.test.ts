@@ -502,8 +502,12 @@ describe('the inputs page', () => {
 
   test('draws the bars at the width the catalogue gives them and no legend under the plot', () => {
     const barsOf = (w: number, h: number, density: Density): number[] => build(w, h, density).filter((i) => i.name.endsWith('.bar')).map((i) => (i as { rect: Rect }).rect.width);
+    // 20 at the fullest drawing and 16 at the other three, which follows the catalogue rather than
+    // the density: the 1920 x 480 face's wide zone is drawn at 20 and its 469 px grid zone at 16.
     expect(barsOf(802, 336, 'companion')).toEqual([20, 20, 20]);
+    expect(barsOf(737, 270, 'zone')).toEqual([20, 20, 20]);
     expect(barsOf(607, 158, 'zone')).toEqual([16, 16, 16]);
+    expect(barsOf(437, 510, 'zone')).toEqual([16, 16, 16]);
     // Every line has its own bar and its own number beside it in the same colour, so a legend row
     // would repeat the labelling and cost the plot 18 px of height.
     expect(build(802, 336, 'companion').filter((i) => /\.(legend|swatch)$/.test(i.name))).toEqual([]);
@@ -513,7 +517,7 @@ describe('the inputs page', () => {
     const pointsOf = (w: number, h: number, density: Density): number[] => build(w, h, density).filter((i) => i.kind === 'chart').map((i) => (i as { pointsCount?: number }).pointsCount!);
     // The canvas draws 101 points across a 566 px plot, which is a sample every six pixels; the
     // companion's plot is what the bars, the numbers and the steering leave it.
-    expect(pointsOf(802, 336, 'companion')).toEqual([82, 82, 82]);
+    expect(pointsOf(802, 336, 'companion')).toEqual([85, 85, 85]);
     // And a zone that is not wide enough to be finer keeps the floor rather than a shorter window.
     expect(pointsOf(245, 156, 'compact')).toEqual([60, 60, 60]);
   });
