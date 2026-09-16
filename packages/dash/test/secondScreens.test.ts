@@ -19,6 +19,7 @@ import {
 } from '../src/contract.ts';
 import { validatePackage, type Dashboard, type Item, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
+import { packImages } from '../src/build.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
@@ -34,7 +35,13 @@ import { cellOverruns } from './monoGlyphs.ts';
 import { ds } from '../src/tokens.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
-const PACKAGES = SCREEN_PACKAGES.map((def) => ({ def, pkg: buildScreenPackage(def, OPTS) }));
+// Composed the way `build.ts` composes them, the image step included: a package whose items draw a
+// picture declares it before it is validated, or the validator reads the drawing as a hole.
+const PACKAGES = SCREEN_PACKAGES.map((def) => {
+  const pkg = buildScreenPackage(def, OPTS);
+  packImages(pkg);
+  return { def, pkg };
+});
 const BRAND = /#00E5FF/i;
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
