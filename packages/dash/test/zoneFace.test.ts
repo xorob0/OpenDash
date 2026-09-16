@@ -32,6 +32,7 @@ import { MODULES } from '../src/modules/index.ts';
 import { rect, type Rect } from '../src/design/geometry.ts';
 import { densityForBox } from '../src/second/density.ts';
 import { shapeOf } from '../src/second/shape.ts';
+import { archetypeOf, type Archetype } from '../src/modules/shedding.ts';
 import { zoneFrame, zoneFrameMetrics } from '../src/second/header.ts';
 import {
   BAR_FIELD_SPECS,
@@ -55,6 +56,7 @@ import {
   zoneFace1920x480,
   zoneFace600x686,
   zoneFace800x286,
+  zoneFace800x480,
   zoneFace1280x400,
   zoneFace1280x480,
   zoneFace1280x720,
@@ -141,6 +143,94 @@ describe('the reference face is the artboard', () => {
     expect(z.revBar.top).toBeGreaterThanOrEqual(z.revBarWell.top);
     expect(z.revBar.left + z.revBar.width).toBeLessThanOrEqual(z.revBarWell.left + z.revBarWell.width);
   });
+});
+
+/**
+ * The two faces whose rectangles the sheets fix and nothing held.
+ *
+ * 1280 x 720 is drawn like any other face and only its three widths were ever compared to anything,
+ * against the contract, which is a second copy of the same three numbers. 800 x 480 has no artboard
+ * at all and computes its six rects from 850 x 480, so an edit to the 850 sheet carried into
+ * `faces/850x480.ts` would move the 800 face and nothing would fail. The FaceVariants sheets now
+ * write both down, so they are written down here.
+ */
+describe('the two faces the sheets fix and no test held', () => {
+  test('1280 x 720 is 1240 x 32 of rev bar over a 1280 x 56 bar', () => {
+    const z = zoneFace1280x720.zones;
+    expect(z.revBarWell).toEqual({ left: 14, top: 4, width: 1252, height: 40 });
+    expect(z.revBar).toEqual({ left: 20, top: 8, width: 1240, height: 32 });
+    expect(z.bar).toEqual({ left: 0, top: 48, width: 1280, height: 56 });
+  });
+
+  test('and its three zones sit at y 105, 554 tall, a pixel apart', () => {
+    const z = zoneFace1280x720.zones;
+    expect(z.zoneB).toEqual({ left: 0, top: 105, width: 469, height: 554 });
+    expect(z.zoneA).toEqual({ left: 470, top: 105, width: 340, height: 554 });
+    expect(z.zoneC).toEqual({ left: 811, top: 105, width: 469, height: 554 });
+    expect(z.band).toEqual({ left: 0, top: 660, width: 1280, height: 60 });
+  });
+
+  test('800 x 480 comes out as the sheet draws it, although it is derived from 850', () => {
+    const z = zoneFace800x480.zones;
+    expect(z.revBar).toEqual({ left: 14, top: 6, width: 772, height: 28 });
+    expect(z.bar).toEqual({ left: 0, top: 40, width: 800, height: 50 });
+    expect(z.zoneB).toEqual({ left: 0, top: 91, width: 249, height: 328 });
+    expect(z.zoneA).toEqual({ left: 250, top: 91, width: 300, height: 328 });
+    expect(z.zoneC).toEqual({ left: 551, top: 91, width: 249, height: 328 });
+    expect(z.band).toEqual({ left: 0, top: 420, width: 800, height: 60 });
+  });
+
+  test('and every landscape face leaves the same pixel between its parts', () => {
+    // Generalised from the reference face, which is the only one that had it: the gutter the rules
+    // are drawn in is a fact about all six of them.
+    for (const face of ZONE_FACES) {
+      const z = face.zones;
+      if (z.zoneA.left === z.zoneB.left) continue;
+      expect({ face: face.folder, ba: z.zoneB.left + z.zoneB.width }).toEqual({ face: face.folder, ba: z.zoneA.left - 1 });
+      expect({ face: face.folder, ac: z.zoneA.left + z.zoneA.width }).toEqual({ face: face.folder, ac: z.zoneC.left - 1 });
+      expect({ face: face.folder, right: z.zoneC.left + z.zoneC.width }).toEqual({ face: face.folder, right: face.width });
+      expect({ face: face.folder, underBar: z.zoneB.top - 1 }).toEqual({ face: face.folder, underBar: z.bar ? z.bar.top + z.bar.height : z.zoneB.top - 1 });
+      expect({ face: face.folder, overBand: z.zoneB.top + z.zoneB.height }).toEqual({ face: face.folder, overBand: z.band.top - 1 });
+    }
+  });
+});
+
+/**
+ * The shape chips each FaceVariants sheet carries in its header row.
+ *
+ * They are **box-shape labels**, and they say nothing about how a zone sheds: only zones B and C
+ * consult the archetype, zone A only on its map page, and band D never, being one rank across a
+ * wide short box whatever the model would call it. §10 of `docs/design/zones.md` records that for
+ * the "D grid" chip. What the chips do fix is the arithmetic of `shapeOf` and `archetypeOf` against
+ * the rectangles the faces draw, which is what this table holds.
+ */
+describe('every zone is the shape its face sheet chips it', () => {
+  const CHIPS: Record<string, readonly [Archetype, Archetype, Archetype, Archetype]> = {
+    openDash: ['grid', 'wide', 'wide', 'grid'],
+    'openDash 1280x480': ['grid', 'grid', 'grid', 'grid'],
+    'openDash 1280x400': ['grid', 'grid', 'grid', 'grid'],
+    'openDash 1280x720': ['tall', 'tall', 'tall', 'grid'],
+    'openDash 850x480': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'openDash 800x480': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'openDash 800x286': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'openDash 600x686': ['wide', 'grid', 'grid', 'grid'],
+  };
+
+  test('every face is chipped, and chipped once', () => {
+    expect(Object.keys(CHIPS).sort()).toEqual(ZONE_FACES.map((f) => f.folder).sort());
+  });
+
+  for (const face of ZONE_FACES) {
+    test(`${face.folder} draws the four shapes its sheet writes, with the rev bar on and off`, () => {
+      // Both arrangements, because the rev bar's room goes to the zones that start the body and a
+      // chip that held only for one of them would be half a label. It happens that no zone changes
+      // shape when it grows, which is worth knowing rather than assuming.
+      for (const layout of [face, layoutWithoutRevBar(face)]) {
+        const drawn = FACE_ZONE_LETTERS.map((zone) => archetypeOf(shapeOf(rectOf(layout, zone))));
+        expect({ face: face.folder, drawn }).toEqual({ face: face.folder, drawn: [...CHIPS[face.folder]!] });
+      }
+    });
+  }
 });
 
 describe('every zone cycles its own catalogue', () => {
