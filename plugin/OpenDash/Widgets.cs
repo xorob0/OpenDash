@@ -373,11 +373,12 @@ namespace OpenDashPlugin
         // Fields
         //
         // The select, the drop button and the text box are one shape on the canvas, so they are one
-        // description here. The two paddings are the canvas's own; design/tokens.json carries neither of
-        // them yet, and they are owed as tokens the way the panel's other geometry is.
+        // description here. The two paddings live in PanelMetrics, where a test holds them against the
+        // sheet; design/tokens.json carries neither of them yet, and they are owed as tokens the way the
+        // panel's other geometry is.
 
-        private const double FieldPaddingLeft = 9;
-        private const double FieldPaddingRight = 6;
+        private const double FieldPaddingLeft = PanelMetrics.FieldPaddingLeft;
+        private const double FieldPaddingRight = PanelMetrics.FieldPaddingRight;
 
         /// <summary>
         /// The chrome every field-shaped control carries: ui.field under a one pixel ui.border at the

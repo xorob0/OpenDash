@@ -180,5 +180,35 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, PanelMetrics.ProgressFill(-0.2, 240));
             Assert.Equal(240, PanelMetrics.ProgressFill(1.5, 240));
         }
+
+        /// <summary>
+        /// A field is padded as both panel sheets draw it, and they draw it the same way everywhere.
+        /// </summary>
+        /// <remarks>
+        /// Read from the sheets rather than written down, because Widgets.cs carried 9 and 6 and said in
+        /// a comment that the two were the canvas's own, which nothing compiled here could contradict.
+        /// The shorthand is `padding: 0 <right>px 0 <left>px`, so the assertion reads it in that order.
+        /// </remarks>
+        [Fact]
+        public void A_field_is_padded_as_both_panel_sheets_draw_it()
+        {
+            var seen = new System.Collections.Generic.HashSet<(string Right, string Left)>();
+            var count = 0;
+            foreach (var sheet in new[] { "Plugin.dc.html", "PluginComponents.dc.html" })
+            {
+                var path = System.IO.Path.Combine(RepoPaths.Root(), "design", "canvas", sheet);
+                foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(
+                             System.IO.File.ReadAllText(path), @"padding: 0 (\d+)px 0 (\d+)px"))
+                {
+                    seen.Add((m.Groups[1].Value, m.Groups[2].Value));
+                    count++;
+                }
+            }
+
+            Assert.True(count >= 20, $"the sheets drew a padded field {count} times");
+            var only = Assert.Single(seen);
+            Assert.Equal(PanelMetrics.FieldPaddingRight, double.Parse(only.Right, System.Globalization.CultureInfo.InvariantCulture));
+            Assert.Equal(PanelMetrics.FieldPaddingLeft, double.Parse(only.Left, System.Globalization.CultureInfo.InvariantCulture));
+        }
     }
 }
