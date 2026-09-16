@@ -118,6 +118,26 @@ settle rather than an implementer's.
   WPF line box, and the band is 60. Band D shrinks its value to 32 rather than clip; the settings bar
   keeps the overrun it has always had, because the box is transparent and digits have no descenders.
   The two should agree.
+- **The car settings page is drawn at two sizes and at one.** Five artboards set the car and the
+  cells at the same size, while the 1280 by 400 and the 800 by 480 sheets set the car one step above
+  them. The code draws the second reading. Which is it, since it is the page's whole hierarchy?
+- **The car cell wants a proportional word in a digit cell.** The canvas writes `GT3 · 12` as one
+  monospaced value, and a proportional `GT3` set in cells cut for digits clips, which is the failure
+  the module already records having had. The recommendation is to correct the sheet rather than the
+  code, and draw the class as a bound label over the number as the code does.
+- **The header's gaps are quoted twice.** The pit wall header sheet is read as 20 and 28 by the
+  audit and as 16 and 24 by the commit that set them from the same sheet. Both cannot be right.
+- **The components sheet says the rev bar is 40 px tall.** No face draws a 40 px segment: 40 is the
+  well at 1920 and the segments run 22 to 32 across the eight faces, which is what the zone
+  documentation tabulates and what every face sheet draws. The sheet most likely means the well.
+- **The track map and the class colours.** The catalogue asks for the map to colour cars by class,
+  while the pit wall colour list, the class token's own note and the map module all say it does not.
+  Three sources against one, so the recommendation is to correct the sheet.
+- **The spotter flanks are bars where the sheet draws arrows.** The asset mechanism to draw a real
+  triangle now exists, so the bar is a choice rather than a limit. The recommendation is to keep the
+  bar, which reads better at a glance than a 46 px arrow, and say so in the second screens document.
+- **The companion's bars are 6 px where the canvas fixes a bar at 4.** The tyre wear column is 6 as
+  well. Either the companion is entitled to its own ramp, or both come down to 4.
 - **The bar's DIFF cell draws the rear anti-roll bar.** The settings strip binds its `Diff` cell to
   the same raw property the car settings page draws as `ARB R`, so one number appears under two
   names on two pages and a driver reading DIFF is reading the anti-roll bar. `Slip` is the throttle
