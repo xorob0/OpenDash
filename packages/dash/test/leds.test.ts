@@ -10,7 +10,20 @@ import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES, RETIR
 import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, rungFlashes } from '../src/leds/ladder.ts';
-import { ALL_EFFECTS, BEST_EFFORT, NO_PROPERTY, PIT_SPEEDING_MARGIN, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects } from '../src/leds/effects.ts';
+import {
+  ALL_EFFECTS,
+  BEST_EFFORT,
+  DROPPED,
+  FAST_BLINK_MS,
+  NO_PROPERTY,
+  PIT_SPEEDING_MARGIN,
+  SIDE_EFFECTS,
+  SLOW_BLINK_MS,
+  SPOTTER_EFFECTS,
+  TURN_EFFECTS,
+  effectContainer,
+  flagEffects,
+} from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
@@ -141,15 +154,18 @@ describe('the effect catalogue', () => {
     for (const e of flagEffects()) expect({ id: e.id, role: e.role }).toMatchObject({ role: 'race' });
   });
 
-  test('the spotters light the side the car is actually on', () => {
+  test('the spotters light the side the car is actually on, steadily', () => {
     const [left, right] = SPOTTER_EFFECTS;
     expect({ role: left!.role, side: left!.side }).toEqual({ role: 'side', side: 'left' });
     expect({ role: right!.role, side: right!.side }).toEqual({ role: 'side', side: 'right' });
     expect(left!.when).toContain('SpotterCarLeft');
     expect(right!.when).toContain('SpotterCarRight');
-    // Both sides at once is the conjunction, because SimHub publishes no "both" of any kind.
-    expect(left!.blinkWhen).toContain('SpotterCarLeft');
-    expect(left!.blinkWhen).toContain('SpotterCarRight');
+    // This used to assert the both-sides blink, which read SpotterCarLeft and SpotterCarRight
+    // together and flashed both sides red. It is deliberately gone rather than relaxed: a side lamp
+    // is one LED now, so two of them lit already say what the blink was saying, and DROPPED records
+    // it as a judgement rather than leaving a reader to find an effect that quietly lost a field.
+    for (const e of SPOTTER_EFFECTS) expect({ id: e.id, blink: e.blinkWhen }).toMatchObject({ blink: undefined });
+    expect(DROPPED.map((d) => d.effect)).toContain('Car alongside on both sides');
   });
 
   test('pit speeding is composed, because SimHub publishes no speeding property', () => {
@@ -161,20 +177,25 @@ describe('the effect catalogue', () => {
     expect(speeding.source).toContain('SimHub publishes no speeding property');
   });
 
-  test('the TC light degrades rather than going dark: steady on the dial, blinking on the intervention', () => {
+  test('the TC light reads the intervention alone, and is therefore dark on iRacing', () => {
     const tc = SIDE_EFFECTS.find((e) => e.id === 'tc')!;
-    // TCLevel is filled on every sim including iRacing, so the light is never simply absent...
-    expect(tc.when).toContain('TCLevel');
-    // ...and TCActive is the intervention, which iRacing does not fill, so on iRacing it never blinks.
-    expect(tc.blinkWhen).toContain('TCActive');
-    expect(BEST_EFFORT.map((b) => b.effect)).toContain('TC intervening');
+    // This test used to assert the opposite — steady on TCLevel, blinking on TCActive — and the
+    // reversal is deliberate rather than a loosening. A light on the dial is on from the green flag
+    // to the flag on iRacing, which fills TCLevel and not TCActive, and a lamp that is always lit
+    // reports the setting rather than the car. The canvas forbids the dial in as many words.
+    expect(tc.when).toContain('TCActive');
+    expect(tc.when).not.toContain('TCLevel');
+    expect({ blink: tc.blinkWhen, color: tc.color }).toMatchObject({ blink: undefined, color: ds.color.info.primary });
+    // ...and the record says dark rather than steady, so the honesty note matches the behaviour.
+    const record = BEST_EFFORT.find((b) => b.effect === 'TC intervening')!;
+    expect(record.reason).toContain('dark');
+    expect(record.reason).not.toContain('is steady and never blinks');
   });
 
   test('the best-effort effects ship and read a real property, rather than being refused', () => {
     // The user's call: an LED that stays dark asserts nothing, unlike a readout drawing 0.00, so an
     // effect whose property exists ships and simply does not light on a sim that leaves it zero.
     const ids = ALL_EFFECTS().map((e) => e.id);
-    expect(ids).toContain('ers');
     expect(ids).toContain('turn.left');
     expect(ids).toContain('turn.right');
     for (const b of BEST_EFFORT) {
@@ -183,39 +204,121 @@ describe('the effect catalogue', () => {
     }
     // ...and each reaches a profile.
     const text = textOf(profileFor('4-14-4'));
-    for (const name of ['TCActive', 'TurnIndicatorLeft', 'TurnIndicatorRight', 'ERSPercent']) {
+    for (const name of ['TCActive', 'TurnIndicatorLeft', 'TurnIndicatorRight']) {
       expect({ name, inProfile: text.includes(name) }).toMatchObject({ inProfile: true });
     }
   });
 
-  test('the turn indicators signal on the side being signalled, like the spotters', () => {
+  test('the aid lamp draws the pair the way UN R121 and the manuals do: ABS amber, traction control blue', () => {
+    const by = (id: string): (typeof SIDE_EFFECTS)[number] => SIDE_EFFECTS.find((e) => e.id === id)!;
+    // The build drew the two the other way round, and the reversal is the point of this test: a
+    // driver who has read either lamp on a road car or in any other sim reads the swap as the other
+    // system intervening. Both are steady, because an intervention is a state and not an event.
+    expect({ abs: by('abs').color, tc: by('tc').color }).toEqual({ abs: ds.color.caution.primary, tc: ds.color.info.primary });
+    expect({ abs: by('abs').blinkWhen, tc: by('tc').blinkWhen }).toMatchObject({ abs: undefined, tc: undefined });
+  });
+
+  test('a condition with two states draws the second in a second colour, and one with one state in darkness', () => {
+    const drs = SIDE_EFFECTS.find((e) => e.id === 'drs')!;
+    const p2p = SIDE_EFFECTS.find((e) => e.id === 'p2p')!;
+    // Push to pass carries two facts: blue while one is in hand, green while one is being spent.
+    // Both were white before, which made the lamp one colour and the blink invisible on top of it.
+    expect({ color: p2p.color, blinkColor: p2p.blinkColor, delay: p2p.blinkDelayMs }).toMatchObject({
+      color: ds.color.info.primary,
+      blinkColor: ds.color.good.primary,
+      delay: FAST_BLINK_MS,
+    });
+    // DRS carries one fact in two rhythms, so its off phase is darkness rather than a second hue.
+    expect({ color: drs.color, blinkColor: drs.blinkColor, delay: drs.blinkDelayMs }).toMatchObject({
+      color: ds.color.good.primary,
+      blinkColor: undefined,
+      delay: FAST_BLINK_MS,
+    });
+  });
+
+  test('every blink has an off phase, which is the whole of what a blink is', () => {
+    // Defect 1 of the lights review: StaticColorContainerBase alternates Color with BlinkingColor,
+    // and every blinking effect wrote its own colour into both, so nothing on the strip has ever
+    // flashed. The off phase must also be opaque: the merge drops transparent pixels, and the rev
+    // ladder underneath would show through the gap.
+    for (const e of ALL_EFFECTS()) {
+      if (!e.blinkWhen) continue;
+      const c = effectContainer(e, 1, 1) as Extract<leds.LedContainer, { kind: 'customStatus' }>;
+      expect({ id: e.id, same: c.blinkColor === c.color }).toMatchObject({ same: false });
+      expect({ id: e.id, opaque: /^#[0-9A-F]{6}$/.test(String(c.blinkColor)) }).toMatchObject({ opaque: true });
+    }
+  });
+
+  test('the car lamp reads both temperature bits in amber, and oil pressure in red only while the engine turns', () => {
+    const temperature = SIDE_EFFECTS.find((e) => e.id === 'temperature')!;
+    expect({ color: temperature.color, delay: temperature.blinkDelayMs }).toMatchObject({ color: ds.color.caution.primary, delay: FAST_BLINK_MS });
+    // Bit 1 is water and 0x0040 is oil; one lamp takes both, because a single LED cannot say which
+    // fluid it is and the driver's answer to either is to lift and watch the gauge.
+    expect(temperature.when).toContain('EngineWarnings');
+    expect(temperature.when).toContain('(64)');
+    const oil = SIDE_EFFECTS.find((e) => e.id === 'oilPressure')!;
+    expect({ color: oil.color, delay: oil.blinkDelayMs }).toMatchObject({ color: ds.color.danger.primary, delay: FAST_BLINK_MS });
+    // A stopped engine sets the bit as readily as a failing one, so the lamp would otherwise be red
+    // in every garage and on every grid.
+    expect(oil.when).toContain('Rpms');
+  });
+
+  test('what is dropped has a property and no lamp, which is neither best effort nor an absence', () => {
+    // ERS and the headlight flash used to ship and used to be asserted present here. Both are gone
+    // on purpose: a store that empties is a bar rather than a lamp and could never light on iRacing,
+    // and the flash reports the driver's own button. Recording them as dropped rather than deleting
+    // the rows is what keeps the reversal readable — the claim being reversed is that any property
+    // that exists is worth an LED.
+    const ids = ALL_EFFECTS().map((e) => e.id);
+    for (const gone of ['ers', 'headlightFlash']) expect({ gone, shipped: ids.includes(gone) }).toMatchObject({ shipped: false });
+    expect(DROPPED.map((d) => d.effect)).toEqual(['ERS charge, and KERS with it', 'Headlight flash', 'Car alongside on both sides']);
+    for (const d of DROPPED) {
+      expect({ effect: d.effect, prop: d.property.startsWith('DataCorePlugin.') }).toMatchObject({ prop: true });
+      expect(d.reason.length).toBeGreaterThan(30);
+    }
+    // Nothing dropped reaches a profile, on any shape.
+    for (const shape of ALL_SHAPES) {
+      const text = leds.serializeProfile(rpmStripProfile(shape, stableGuid(`t/dropped/${shape.id}`)));
+      for (const dead of ['ERSPercent', 'dcHeadlightFlash']) expect({ shape: shape.id, dead, inProfile: text.includes(dead) }).toMatchObject({ inProfile: false });
+    }
+  });
+
+  test('the turn indicators signal on the side being signalled, like the spotters, and in the indicator green', () => {
     expect(TURN_EFFECTS.map((e) => [e.role, e.side])).toEqual([
       ['side', 'left'],
       ['side', 'right'],
     ]);
     expect(TURN_EFFECTS[0]!.when).toContain('TurnIndicatorLeft');
     expect(TURN_EFFECTS[1]!.when).toContain('TurnIndicatorRight');
+    // They used to be the spotter's amber at a multiple of the over-rev constant, which made rank 2
+    // of the side lamp the same light as rank 1 and tied its rate to the shift lights.
+    for (const e of TURN_EFFECTS) {
+      expect({ id: e.id, color: e.color, delay: e.blinkDelayMs }).toMatchObject({ color: ds.color.good.primary, delay: SLOW_BLINK_MS });
+    }
+    expect(SLOW_BLINK_MS).toBe(250);
+    expect(FAST_BLINK_MS).toBe(125);
   });
 
   test('what has no property anywhere is absent, and says what the nearest thing is', () => {
-    expect(NO_PROPERTY.map((n) => n.effect)).toEqual(
-      expect.arrayContaining(['Headlights on, off, low or high beam', 'Water pressure', 'Oil temperature warning']),
-    );
+    expect(NO_PROPERTY.map((n) => n.effect)).toEqual(expect.arrayContaining(['Headlights on, off, low or high beam', 'Water pressure']));
     for (const n of NO_PROPERTY) {
       expect(n.reason.length).toBeGreaterThan(30);
       expect(n.nearest.length).toBeGreaterThan(10);
     }
-    // KERS is not here: SimHub has no KERS member at all and folds every hybrid store into ERS,
-    // so it ships as the ERS light rather than as an absence.
+    // The oil temperature warning was here, denied on the claim that EngineWarnings has no such bit.
+    // It has carried 0x0040 since 2021 season 2, so the row was a false claim about iRacing rather
+    // than a real absence, and the bit is now read by the temperature lamp. This is a correction
+    // rather than a relaxation: the list has lost a row because the row was wrong.
+    expect(NO_PROPERTY.map((n) => n.effect)).not.toContain('Oil temperature warning');
+    const temperature = SIDE_EFFECTS.find((e) => e.id === 'temperature')!;
+    expect(temperature.source).toContain('64');
+    // KERS is not here either: SimHub has no KERS member at all and folds every hybrid store into
+    // ERS, so it is dropped with ERS rather than recorded as an absence.
     expect(NO_PROPERTY.map((n) => n.effect)).not.toContain('KERS');
-    expect(BEST_EFFORT.map((b) => b.effect).join(' ')).toContain('KERS');
-    // Nothing that has no property reaches a profile. Headlights need care: the flash-to-pass is a
-    // real raw variable and IS shipped, so what must be absent is a headlight *state* read, which
-    // would have to come through the normalised layer that has no such member.
+    expect(DROPPED.map((d) => d.effect).join(' ')).toContain('KERS');
+    // Nothing that has no property reaches a profile.
     const text = textOf(profileFor('4-14-4'));
     for (const dead of ['WaterPressure', 'KERS', 'GameData.Headlight']) expect({ dead, inProfile: text.includes(dead) }).toMatchObject({ inProfile: false });
-    // ...and the flash itself is there, read from the only place it exists.
-    expect(text).toContain('GameRawData.Telemetry.dcHeadlightFlash');
   });
 
   test('a shape with no sides has no lamps, so what needs one is dropped rather than moved onto the rev LEDs', () => {
@@ -273,6 +376,8 @@ describe('every generated profile', () => {
       ds.color.danger.primary,
       ds.color.info.primary,
       ds.color.neutral.primary,
+      // The off phase of a blink is a colour like any other and comes from the sheet like any other.
+      ds.color.surface.base,
     ]);
     for (const shape of ALL_SHAPES) {
       for (const c of walk(rpmStripProfile(shape, stableGuid(`t/${shape.id}`)).containers)) {
