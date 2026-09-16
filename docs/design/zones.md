@@ -433,6 +433,11 @@ everything the page carries, the companion artboard's fields included, which is 
 page is not changed by any of this. The declaration is read before the box is measured, and what
 does not fit still sheds afterwards: a declared set is a design decision and a box is a fact.
 
+The order inside a cell is importance, most important first, which is also the order a box too small
+takes fields off the end of. Opponents is the one row where that order interleaves, since its rank
+is two of the same thing: the car ahead's field and the car behind's twin are named together so that
+a short box sheds the same line from both cars rather than emptying one of them.
+
 | № | Page | `wide` | `grid` | `tall narrow` | `tall` |
 |---|---|---|---|---|---|
 | 1 | Lap times | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` · `average5` · `position` · `stintLap` · `s1` · `s2` · `s3` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` |
@@ -445,7 +450,7 @@ does not fit still sheds afterwards: a declared set is a design decision and a b
 | 11 | Session | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` | `position` · `class` · `lap` · `timeLeft` | `position` · `class` · `lap` · `timeLeft` | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` |
 | 14 | Leaderboard | `pos` · `num` · `name` · `class` · `gap` · `best` · `last` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
 | 15 | Relative | `pos` · `num` · `name` · `class` · `gap` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
-| 16 | Opponents | `ahead.gap` · `ahead.name` · `ahead.num` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.num` · `behind.class` · `behind.detail` | `ahead.gap` · `ahead.name` · `ahead.num` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.num` · `behind.class` · `behind.detail` | `ahead.gap` · `ahead.name` · `behind.gap` · `behind.name` | `ahead.gap` · `ahead.name` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.class` · `behind.detail` |
+| 16 | Opponents | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.num` · `behind.num` · `ahead.class` · `behind.class` · `ahead.lastLap` · `behind.lastLap` · `ahead.rating` · `behind.rating` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.num` · `behind.num` · `ahead.class` · `behind.class` · `ahead.lastLap` · `behind.lastLap` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.lastLap` · `behind.lastLap` |
 | 18 | Stint | `stintLaps` · `stintTime` · `completed` · `stops` · `lastStop` · `avgLap` · `driver` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stintTime` · `completed` · `stops` · `lastStop` · `avgLap` · `driver` |
 
 Pages with nothing to shed, and why:
@@ -483,6 +488,10 @@ holding a drawing against a zone should find the argument rather than suspect a 
 - **Car settings at every shape.** The module draws the seven settings iRacing exposes and the
   drawing draws ten, so what is kept is the proportion rather than the count: `tall narrow` drops
   the three drawn last, which leaves four here against the drawing's seven.
+- **Opponents at `tall`.** The last lap, where the drawing has a licence badge instead. The badge
+  is one the module has no read for, and the 12 px `B` the catalogue draws there is that badge and
+  not the class chip an earlier transcription of this row took it for, so the class does not appear
+  at that shape either.
 
 Everywhere else the drawing names a field the module does not build, which is the opposite case and
 is not a deviation: delta's three sector deltas, the rating on a list row, the pit window, the

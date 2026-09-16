@@ -382,6 +382,30 @@ describe('every module fits the box it is given', () => {
   }
 });
 
+/**
+ * The one page whose rank is two of the same thing, and the one way it can fail that no fit check
+ * catches: a page about the car ahead and the car behind that draws only the car ahead fits its box
+ * perfectly and has lost its subject.
+ *
+ * Three boxes used to draw one block — the nano's 245 by 156 and both of the 600 by 686 face's
+ * short zones — because each block was a fixed-height row and the stack dropped the second one
+ * whole rather than shedding a line from each.
+ */
+describe('the opponents page keeps both cars', () => {
+  const opponents = MODULES.find((m) => m.id === 'opponents')!;
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const names = opponents.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]).map((i) => i.name);
+      const drawn = (side: string): string[] => names.filter((name) => name.startsWith(`${side}.`)).map((name) => name.slice(side.length + 1).split('.')[0]!);
+      expect({ box: box.name, ahead: [...new Set(drawn('ahead'))] }).not.toEqual({ box: box.name, ahead: [] });
+      // The same pieces on both, never one car's gap without the other's: what a short box sheds,
+      // it sheds from the pair.
+      expect({ box: box.name, behind: [...new Set(drawn('behind'))] }).toEqual({ box: box.name, behind: [...new Set(drawn('ahead'))] });
+    });
+  }
+});
+
 describe('a bar drawn under a value', () => {
   const gaugeOf = (density: Density) => {
     const module = MODULES.find((m) => m.id === 'fuel')!;
