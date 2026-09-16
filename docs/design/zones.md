@@ -467,10 +467,17 @@ drawn at 1920 × 480, 1280 × 480, 1280 × 400 and 1280 × 720, and absent at 85
 600 × 686. The threshold is those drawings, not a round number.
 
 **A page sheds its last field before the rank overflows**, with nothing spread to fill. The rank is
-packed and centred in what the corners leave, never in the whole band. No shipped page reaches that
-limit: the widest catalogue entry holds five fields, and five fit at 600 × 56, which is the
-narrowest band. The shedding rule is therefore a guarantee about a page that grows, not a
-description of one that exists.
+packed and centred in what the side padding, the zone letter and the corners leave, never in the
+whole band. The artboards draw the shedding rather than only describing it: the fuel page is seven
+fields at 1920, six at 1280, five in the catalogue's 1200-wide reference and three at 600, and the
+build sheds the sixth at 1280 because the corner blocks it measures are wider than the ones the
+drawing sketches.
+
+**The gaps and sizes are each face's own.** Band D is padded 16 px at the sides and 12 in portrait,
+its three groups sit 22 apart, a corner block's two fields 18, and a page's fields 34 at the three
+1280 faces, 26 at 1920, 850 and the nano and 18 at 600. A label sits 5 px above its value and a
+unit 5 px after it. `bandMetrics` in `packages/dash/src/zones/bandPages.ts` is that table, read off
+the band of each face's artboard.
 
 **A flag takes the band over.** While a flag is out, the flag has the band, because an alert
 outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so the same sixty
@@ -583,6 +590,7 @@ a mistake in this document.
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
+| Band D's value size | Every 60 and 58 px band draws its page values at 34 px over a 13 px label, 5 px apart. WPF's line box around a 34 px value runs 60.6 px from the top of that label, so the band clips it by a pixel. **The value shrinks** — 32 at 60, 30 at 58 — because a clipped numeral reads as a rendering fault. The band would have to grow, or the drawing come down; the 54 and 56 px bands draw 24 and are honoured exactly. |
 | The face with no rev bar | XOR-138 offered three answers, namely leave the gap, reclaim it, or give the band to something else, and said the artboards would choose. Since the second pass of 15 September the FaceVariants sheets do draw the third state and both arrangements beside each other, so this row no longer reads as it did. What the rev-bar-off drawing still carries, however, is the rev bar itself: an 822 × 28 rectangle at (14, 6) on the 850 sheet, a 576 × 24 one at (12, 6) on the 600, underneath a bar that has already risen into its room. **The caption is taken over the rectangle**, and `faceItems` leaves the well and the segments out entirely rather than hiding them; `Plugin.dc.html`, for its part, still reads "the rev bar stays". Reclaim is taken for the room, because the gap reads as a mis-crop and on the nano it is a ninth of the screen, and the rectangles in §1 remain derived by one rule and remain the thing to delete when drawn ones arrive. |
 | The slot counts in the titles | `canvas.json` titles the 1920 × 480 artboard "MVP · 12 slots" and the 1280 × 720 one "wheel screens · 12 slots", while what each draws underneath is the five-part zone face [ADR 0006](../decisions/0006-the-zone-face.md) settled, and `Dash.dc.html` keeps `.slotbox`, `.card` and `.grid4` in its stylesheet with nothing using them. **The drawing is taken**: a `ZoneLayout` declares no slot count at all, and twelve matches nothing on the 1280 × 720 body either, whose bar draws eleven readouts and whose band draws ten and three lamps. The twelve-slot package does still build beside the zone face, since `LAYOUTS` keeps `layout1920x480` and `build.ts` walks both lists until XOR-95 retires the card path. |
 | The six slots of the 850 | The same convention gives 850 × 480 "5in · 6 slots", and nothing six-fold is drawn there. The only reading that yields six is the parts themselves, that is to say the bar's left end, its settings strip and its right end, then zones B and C and band D. **The parts are taken**, because that is what the artboard draws and what `faceItems` composes; the count is vocabulary left over from the model the face replaced. |
