@@ -1,30 +1,26 @@
 /**
- * The changelog renderer, against the markdown CHANGELOG.md actually contains.
+ * The changelog parser, against the markdown CHANGELOG.md actually contains.
  *
  * `lib/markdown.ts` deliberately covers a subset rather than the language, so the thing worth
- * testing is the edge of that subset: that the forms it claims are rendered, that the ones it does
+ * testing is the edge of that subset: that the forms it claims are parsed, that the ones it does
  * not claim survive as readable text, and that the two asterisk forms cannot be mistaken for one
- * another. The last is not hypothetical — `*italic*` listed before `**bold**` in the alternation
- * turns every bold run into an italic empty string between stray asterisks, and the changelog is
- * full of bold.
+ * another. The last is not hypothetical — `*italic*` ahead of `**bold**` in the alternation turns
+ * every bold run into an italic empty string between stray asterisks, and the changelog is full of
+ * bold.
+ *
+ * The parser returns data and imports nothing, so this runs under the repository's own `bun test`
+ * without the site's dependencies installed. That is the reason it returns data.
  */
 import { describe, expect, test } from 'bun:test';
-import { renderInline, toBlocks } from '../lib/markdown.ts';
+import { plainText, toBlocks, toInline, type Inline } from '../lib/markdown.ts';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-/** The rendered tree as a tag string, which is all these assertions need to see. */
-function render(node: unknown): string {
-  if (node === null || node === undefined || typeof node === 'boolean') return '';
-  if (typeof node === 'string' || typeof node === 'number') return String(node);
-  if (Array.isArray(node)) return node.map(render).join('');
-  const element = node as { type?: unknown; props?: { children?: unknown } };
-  const tag = typeof element.type === 'string' ? element.type : '';
-  const inner = render(element.props?.children);
-  return tag ? `<${tag}>${inner}</${tag}>` : inner;
-}
+/** The parsed run as a tag string, which is all these assertions need to see. */
+const shape = (spans: readonly Inline[]): string =>
+  spans.map((s) => (s.kind === 'text' ? s.text : `<${s.kind}>${s.text}</${s.kind}>`)).join('');
 
-describe('renderInline', () => {
+describe('toInline', () => {
   test.each([
     ['plain text', 'plain text'],
     ['a **bold** word', 'a <strong>bold</strong> word'],
@@ -32,33 +28,43 @@ describe('renderInline', () => {
     ['**bold** beside *italic*', '<strong>bold</strong> beside <em>italic</em>'],
     ['`OpenDash.RevBar` carries three states', '<code>OpenDash.RevBar</code> carries three states'],
     ['two **bold** runs **here**', 'two <strong>bold</strong> runs <strong>here</strong>'],
-  ])('renders %p', (input, expected) => {
-    expect(render(renderInline(input))).toBe(expected);
+    ['see [the docs](https://example.test/x)', 'see <link>the docs</link>'],
+    ['see [zones.md](docs/design/zones.md)', 'see <link>zones.md</link>'],
+  ])('parses %p', (input, expected) => {
+    expect(shape(toInline(input))).toBe(expected);
   });
 
-  test('an absolute link is a link', () => {
-    expect(render(renderInline('see [the docs](https://example.test/x)'))).toBe('see <a>the docs</a>');
+  test('an absolute link keeps its href', () => {
+    expect(toInline('[x](https://example.test/a)')).toEqual([
+      { kind: 'link', text: 'x', href: 'https://example.test/a' },
+    ]);
   });
 
-  test('a repository-relative link keeps its text and drops the href', () => {
-    // The site is not the repository, so `docs/design/zones.md` would 404. The words still read.
-    expect(render(renderInline('see [zones.md](docs/design/zones.md)'))).toBe('see zones.md');
+  test('a repository-relative link drops its href, because the site is not the repository', () => {
+    expect(toInline('[x](docs/x.md)')).toEqual([{ kind: 'link', text: 'x' }]);
   });
 
   test('multiplication is not emphasis', () => {
-    // `* ` with a space after it is a bullet elsewhere and arithmetic here; neither is an <em>.
-    expect(render(renderInline('44 rows of 480, 2 * 3 * 4'))).toBe('44 rows of 480, 2 * 3 * 4');
+    // `*` followed by a space is a bullet elsewhere and arithmetic here; neither is emphasis.
+    expect(shape(toInline('44 rows of 480, 2 * 3 * 4'))).toBe('44 rows of 480, 2 * 3 * 4');
   });
 
   test('an unclosed delimiter is left alone rather than swallowing the rest of the line', () => {
-    expect(render(renderInline('a **bold start that never ends'))).toBe('a **bold start that never ends');
+    expect(shape(toInline('a **bold start that never ends'))).toBe('a **bold start that never ends');
+  });
+
+  test('the words survive whatever the markup does', () => {
+    expect(plainText(toInline('a **bold** and `code` and [link](https://x.test)'))).toBe(
+      'a bold and code and link',
+    );
   });
 });
 
 describe('toBlocks', () => {
   test('a wrapped bullet is one item', () => {
-    const blocks = toBlocks('- one line\n  continued here\n- two');
-    expect(blocks).toEqual([{ kind: 'list', items: ['one line continued here', 'two'] }]);
+    expect(toBlocks('- one line\n  continued here\n- two')).toEqual([
+      { kind: 'list', items: ['one line continued here', 'two'] },
+    ]);
   });
 
   test('a wrapped paragraph is one paragraph', () => {
@@ -68,13 +74,15 @@ describe('toBlocks', () => {
   });
 
   test('a heading ends whatever was open', () => {
-    const blocks = toBlocks('intro text\n\n### Added\n\n- item');
-    expect(blocks.map((b) => b.kind)).toEqual(['paragraph', 'heading', 'list']);
+    expect(toBlocks('intro text\n\n### Added\n\n- item').map((b) => b.kind)).toEqual([
+      'paragraph',
+      'heading',
+      'list',
+    ]);
   });
 
   test('a blank line ends a list', () => {
-    const blocks = toBlocks('- one\n\n- two');
-    expect(blocks).toEqual([
+    expect(toBlocks('- one\n\n- two')).toEqual([
       { kind: 'list', items: ['one'] },
       { kind: 'list', items: ['two'] },
     ]);
@@ -83,40 +91,39 @@ describe('toBlocks', () => {
 
 describe('against the real changelog', () => {
   const changelog = readFileSync(path.resolve(import.meta.dir, '..', '..', 'CHANGELOG.md'), 'utf8');
+  /** Each `## ` section's body, which is what a release page shows and what CI cuts a release from. */
+  const bodies = changelog
+    .split(/^## /m)
+    .slice(1)
+    .map((section) => section.split('\n').slice(1).join('\n'));
 
-  test('every release body parses into blocks and loses no words', () => {
-    // A section is cut at each `## ` heading, which is what scripts/changelog.ts does for a release
-    // body. Whatever the renderer does to the markup, the words have to survive it.
-    const sections = changelog.split(/^## /m).slice(1);
-    expect(sections.length).toBeGreaterThan(0);
-    for (const section of sections) {
-      const body = section.split('\n').slice(1).join('\n');
-      const blocks = toBlocks(body);
-      const rendered = blocks
-        .map((b) => (b.kind === 'list' ? b.items.map((i) => render(renderInline(i))).join(' ') : render(renderInline(b.kind === 'heading' ? b.text : b.text))))
+  test('there is something to parse', () => {
+    expect(bodies.length).toBeGreaterThan(3);
+  });
+
+  test('no release body loses a word', () => {
+    for (const body of bodies) {
+      const parsed = toBlocks(body)
+        .map((b) => (b.kind === 'list' ? b.items : [b.text]))
+        .flat()
+        .map((line) => plainText(toInline(line)))
         .join(' ');
-      // Every word of the source, minus the markup characters, appears in the output.
       const words = body
         .replace(/[*`#\[\]()]/g, ' ')
         .split(/\s+/)
         .filter((w) => w.length > 3 && /^[A-Za-z]+$/.test(w));
-      const plain = rendered.replace(/<[^>]*>/g, ' ');
-      for (const word of new Set(words)) expect(plain).toContain(word);
+      for (const word of new Set(words)) expect(parsed).toContain(word);
     }
   });
 
-  test('no release body renders a stray asterisk', () => {
+  test('no release body leaves a stray asterisk', () => {
     // The symptom of the bold/italic ordering bug, and of an unbalanced delimiter in the source.
-    const sections = changelog.split(/^## /m).slice(1);
-    for (const section of sections) {
-      const body = section.split('\n').slice(1).join('\n');
+    for (const body of bodies) {
       for (const block of toBlocks(body)) {
-        const texts = block.kind === 'list' ? block.items : [block.text];
-        for (const text of texts) {
-          // A bare `*` between word characters is arithmetic or a literal, and is allowed; a `*`
-          // hugging a word is markup the renderer failed to consume.
-          expect(render(renderInline(text))).not.toMatch(/\*\w|\w\*/);
-        }
+        const lines = block.kind === 'list' ? block.items : [block.text];
+        // A bare `*` between spaces is arithmetic and allowed; one hugging a word is markup the
+        // parser failed to consume.
+        for (const line of lines) expect(shape(toInline(line))).not.toMatch(/\*\w|\w\*/);
       }
     }
   });
