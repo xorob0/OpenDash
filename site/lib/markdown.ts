@@ -14,6 +14,7 @@
  *   - item             a bullet, which may wrap onto indented continuation lines
  *   paragraph          one or more lines, ended by a blank line
  *   **bold**           emphasis
+ *   *italic*           the lighter emphasis, which the changelog uses sparingly
  *   `code`             a property name, a file name, a command
  *   [text](url)        a link
  *
@@ -92,13 +93,17 @@ export function toBlocks(markdown: string): Block[] {
 /**
  * Inline markup, as React nodes.
  *
- * One pass with one alternation, so the three forms cannot nest and cannot be mistaken for one
- * another: whichever opens first wins, and its own closing delimiter ends it. Nesting is not in the
- * subset because the changelog does not use it, and a renderer that half-supports it is worse than
- * one that does not.
+ * One pass with one alternation, so the forms cannot nest and cannot be mistaken for one another:
+ * whichever opens first wins, and its own closing delimiter ends it. Nesting is not in the subset
+ * because the changelog does not use it, and a renderer that half-supports it is worse than one
+ * that does not.
+ *
+ * `**bold**` is listed before `*italic*` because the alternation is ordered and the double
+ * delimiter has to be tried first — the other way round, every bold run would render as an italic
+ * empty string wrapped in stray asterisks.
  */
 export function renderInline(text: string): ReactNode {
-  const pattern = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)/g;
+  const pattern = /\*\*([^*]+)\*\*|\*([^*\s][^*]*)\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)/g;
   const nodes: ReactNode[] = [];
   let last = 0;
   let match: RegExpExecArray | null;
@@ -106,9 +111,11 @@ export function renderInline(text: string): ReactNode {
 
   while ((match = pattern.exec(text)) !== null) {
     if (match.index > last) nodes.push(text.slice(last, match.index));
-    const [, bold, code, linkText, href] = match;
+    const [, bold, italic, code, linkText, href] = match;
     if (bold !== undefined) {
       nodes.push(createElement('strong', { key: key++ }, bold));
+    } else if (italic !== undefined) {
+      nodes.push(createElement('em', { key: key++ }, italic));
     } else if (code !== undefined) {
       nodes.push(createElement('code', { key: key++ }, code));
     } else if (linkText !== undefined && href !== undefined) {
