@@ -28,6 +28,13 @@ describe('the gaps the canvas draws', () => {
   });
 });
 
+describe('the companion ramp', () => {
+  test('fields are 24 apart across and rows 16 apart down', () => {
+    const d = densityOf('companion');
+    expect({ gapX: d.gapX, gapY: d.gapY }).toEqual({ gapX: 24, gapY: 16 });
+  });
+});
+
 describe('the class chip', () => {
   test('is 20 high with 6 either side wherever a row can hold it', () => {
     for (const density of ['companion', 'zone', 'wide'] as const) {
