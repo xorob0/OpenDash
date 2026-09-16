@@ -230,6 +230,8 @@ export default function Home() {
         <div className="page">
           <Reveal>
             <h2 className={`h1 ${styles.title}`}>Nothing has to be configured to work.</h2>
+          </Reveal>
+          <Reveal delay={60} className={styles.closeBody}>
             <p className="prose">
               Every package carries a default layout by itself, so the shortest way to see openDash
               on a display is to double-click one file. The plugin is what makes that layout yours —
