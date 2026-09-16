@@ -97,7 +97,7 @@ namespace OpenDashPlugin
             {
                 var captured = screen;
                 var missing = !Installed(captured);
-                wrap.Children.Add(Ui.Card(
+                var card = Ui.Card(
                     captured.Name,
                     // A screen whose package is gone has no size to show, and "0 × 0" is worse than
                     // the folder it lives in.
@@ -111,7 +111,14 @@ namespace OpenDashPlugin
                     {
                         selected = captured.Namespace;
                         Redraw();
-                    }));
+                    });
+                // The card holds a minimum width rather than a fixed one, so a long name widens it rather
+                // than being cut short. Rename accepts a name of any length, though, and a card wider than
+                // the row it wraps inside is arranged past the panel's edge instead of wrapping; the row is
+                // therefore the ceiling, and a name that reaches it ellipsises, which is what the card's
+                // trimming is there for.
+                card.MaxWidth = BodyWidth;
+                wrap.Children.Add(card);
             }
             wrap.Children.Add(Ui.AddCard(ShowAddScreen));
             return wrap;
