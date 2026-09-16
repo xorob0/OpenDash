@@ -16,13 +16,19 @@ import { densityOf, type Density } from './density.ts';
 import { field, fieldWidth, type FieldSpec } from './field.ts';
 import { CHARS, hasTime, sectorDelta, sectorLast, sectorTime } from './values.ts';
 
-const { iff, and, lt, gt, eq, str, num, fmt, concat, timespanToSeconds, isnull } = ncalc;
+const { iff, and, lt, le, gt, eq, str, num, fmt, concat, timespanToSeconds, isnull } = ncalc;
 
 export const SECTORS = [1, 2, 3] as const;
 
 /**
- * A sector's colour: purple when it equals the session's best split, green when it beat your own
- * best of that sector, red when it did not, dim when there is no time yet.
+ * A sector's colour: purple when it equals the session's best split, green when it matched or beat
+ * your own best of that sector, red when it did not, dim when there is no time yet.
+ *
+ * Zero is green rather than red, and that is the whole of the boundary. A sector the driver has
+ * just improved becomes their own best of that sector, so `Sector<n>BestTime` equals
+ * `Sector<n>LastLapTime` and the delta is exactly 0.000 on the very lap the improvement happened.
+ * A strict `< 0` sends that lap to the slower branch and draws a new personal best in #FF2D46,
+ * which is the opposite of what the driver just did.
  */
 export function sectorColour(sector: number): Expr {
   const last = sectorLast(sector);
@@ -32,7 +38,7 @@ export function sectorColour(sector: number): Expr {
   return iff(
     ncalc.not(hasTime(last)),
     str(ds.color.text.dim),
-    iff(isSessionBest, str(ds.purpose.lap.sessionBest), iff(lt(delta, num(0)), str(ds.purpose.delta.faster), str(ds.purpose.delta.slower))),
+    iff(isSessionBest, str(ds.purpose.lap.sessionBest), iff(le(delta, num(0)), str(ds.purpose.delta.faster), str(ds.purpose.delta.slower))),
   );
 }
 
