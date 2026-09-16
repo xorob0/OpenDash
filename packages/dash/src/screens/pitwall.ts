@@ -9,16 +9,17 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';
+import type { Expr } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { rule } from '../elements/rule.ts';
 import { label } from '../elements/label.ts';
 import { densityOf } from '../second/density.ts';
 import { drawFieldBlock, fitFields, type FieldSpec } from '../second/field.ts';
-import { panel } from '../second/header.ts';
+import { panel, PANEL_TITLE_HEIGHT } from '../second/header.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
 import { sectorFields } from '../second/sectors.ts';
 import { table, type ColumnId } from '../second/table.ts';
-import { trace, type Series } from '../second/trace.ts';
+import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track } from '../modules/track.ts';
 import { fld, type ModuleContext } from '../modules/module.ts';
 import {
@@ -56,7 +57,7 @@ import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
 
-const { fmt, concat, str, iff, gt, num, isnull, driver, game } = ncalc;
+const { fmt, concat, str, iff, eq, gt, num, isnull, driver, game } = ncalc;
 
 /** A pit wall panel draws at zone density: 24 px numerals, 13 px labels. */
 const DENSITY = 'zone' as const;
@@ -165,25 +166,78 @@ export function trackPanel(name: string, frame: Rect): Item[] {
   ];
 }
 
-/** The five traces of the telemetry page, top to bottom. */
-export const TELEMETRY_TRACES: { id: string; title: string; series: () => Series[]; weight: number }[] = [
+/**
+ * Gears the trace's axis spans, reverse at the floor.
+ *
+ * A ChartItem's Maximum is a number in the file and not an expression, so the top cannot follow
+ * the car's own `DriverCarGearNumForward`; eight forward gears is above everything these sims
+ * publish, and a car with fewer simply never reaches the top of the plot. Autoscaling the top
+ * instead would move third gear up and down the plot as the window turned over, which on a screen
+ * read from a metre away is worse than unused headroom.
+ */
+const GEAR_RANGE = { min: -1, max: 8 } as const;
+
+/**
+ * The gear as a number, which is what a ChartItem samples.
+ *
+ * SimHub's `[Gear]` is a string ("R", "N", "1"), so it is mapped here. The numeric
+ * `GameRawData.Telemetry.Gear` that `shift.ts` reads would be one line instead, but only iRacing
+ * publishes it and every other sim would then trace a flat line at neutral, which is a picture of
+ * data that is not there. Neutral and anything unrecognised fall to zero.
+ */
+const gearNumber = (): Expr =>
+  Array.from({ length: GEAR_RANGE.max }, (_, i) => i + 1).reduce<Expr>(
+    (fallback, g) => iff(eq(game('Gear'), str(String(g))), num(g), fallback),
+    iff(eq(game('Gear'), str('R')), num(GEAR_RANGE.min), num(0)),
+  );
+
+/**
+ * The five traces of the telemetry page, top to bottom, each with the plot height its artboard
+ * declares. The heights are declared rather than shared out over the column, because the canvas
+ * gives the speed and pedal plots twice the gear plot and a column divided by weight gave every
+ * panel whatever was left over.
+ */
+export const TELEMETRY_TRACES: { id: string; title: string; series: () => Series[]; plot: number }[] = [
   // The speed trace carries its unit in the title, which is where the sheet puts it. It is written
   // rather than bound, because a panel title is a literal and the sim's own unit setting is not
   // read here; a rig set to miles is the one case this is wrong for.
-  { id: 'speed', title: 'Speed · km/h', weight: 1.3, series: () => [{ name: 'Speed', color: ds.color.text.primary, bind: speed(), min: 0, max: 300 }] },
-  { id: 'rpm', title: 'RPM', weight: 1, series: () => [{ name: 'RPM', color: ds.color.text.primary, bind: rpm(), min: 0, useMaximum: false }] },
+  { id: 'speed', title: 'Speed · km/h', plot: 180, series: () => [{ name: 'Speed', color: ds.color.text.primary, bind: speed(), min: 0, max: 300 }] },
+  { id: 'rpm', title: 'RPM', plot: 130, series: () => [{ name: 'RPM', color: ds.color.text.primary, bind: rpm(), min: 0, useMaximum: false }] },
+  // The canvas draws the gear as flat runs with a vertical step between them. A ChartItem is a ring
+  // buffer drawn oldest to newest with a straight line between consecutive samples, and it has no
+  // step mode, so each change of gear is drawn as a ramp one sample wide rather than as a riser.
+  // At this plot's ~207 samples that ramp is about six pixels, which is the honest limit; nothing
+  // here can close it, and faking it would need a second series per gear.
+  { id: 'gear', title: 'Gear', plot: 90, series: () => [{ name: 'Gear', color: ds.color.text.primary, bind: gearNumber(), min: GEAR_RANGE.min, max: GEAR_RANGE.max }] },
   {
     id: 'pedals',
-    title: 'Throttle, brake and clutch',
-    weight: 1.3,
+    title: 'Throttle, brake and clutch · %',
+    plot: 180,
     series: () => [
       { name: 'Throttle', color: ds.purpose.delta.faster, bind: throttle(), min: 0, max: 100 },
       { name: 'Brake', color: ds.purpose.delta.slower, bind: brake(), min: 0, max: 100 },
       { name: 'Clutch', color: ds.color.text.secondary, bind: clutch(), min: 0, max: 100 },
     ],
   },
-  { id: 'steering', title: 'Steering', weight: 1, series: () => [{ name: 'Steering', color: ds.color.text.primary, bind: steering(), min: -STEERING_RANGE, max: STEERING_RANGE }] },
+  { id: 'steering', title: 'Steering', plot: 110, series: () => [{ name: 'Steering', color: ds.color.text.primary, bind: steering(), min: -STEERING_RANGE, max: STEERING_RANGE }] },
 ];
+
+/**
+ * What a trace panel spends around its plot, which is what turns a declared plot height into the
+ * frame the page has to give it.
+ *
+ * `panel` pads 14 over the title row and 14 under the body, and `trace` takes a legend row and its
+ * gap off the bottom of the body wherever a panel carries more than one series. Both numbers are
+ * mirrored here rather than read, because neither module exports them; `telemetryTraces.test.ts`
+ * measures the built plots against the canvas so that a change to either is caught here rather
+ * than by WPF clipping a legend.
+ */
+const PANEL_PAD_Y = 14;
+const TRACE_LEGEND_ROW = LEGEND_HEIGHT + 4;
+
+/** The frame height a trace panel needs for the plot its spec declares. */
+export const tracePanelHeight = (spec: (typeof TELEMETRY_TRACES)[number]): number =>
+  spec.plot + 2 * PANEL_PAD_Y + PANEL_TITLE_HEIGHT + (spec.series().length > 1 ? TRACE_LEGEND_ROW : 0);
 
 /** A trace panel: its title and legend, then the plot. */
 export function tracePanel(name: string, frame: Rect, spec: (typeof TELEMETRY_TRACES)[number]): Item[] {
@@ -270,21 +324,29 @@ export function telemetryPage(width: number, height: number): Screen {
   const zoneLeft = plotWidth + 1;
   const zoneWidth = width - zoneLeft;
   const footerHeight = 25;
-  const weights = TELEMETRY_TRACES.reduce((sum, t) => sum + t.weight, 0);
-  const available = bodyHeight - footerHeight - TELEMETRY_TRACES.length;
   const items: Item[] = [...pitWallHeader('telemetry.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · telemetry', page: 3, pages: 3 })];
+  // The five panels, their rules and the footer come to less than the column, and what is left over
+  // stays background: growing the last panel to fill it would draw a steering plot the canvas never
+  // asked for, and the canvas's own heights are the point of declaring them.
   let y = bodyTop;
   TELEMETRY_TRACES.forEach((spec) => {
-    const h = Math.floor((available * spec.weight) / weights);
+    const h = tracePanelHeight(spec);
     items.push(...tracePanel(`telemetry.${spec.id}`, rect(0, y, plotWidth, h), spec));
     y += h;
     items.push(rule(`telemetry.${spec.id}.rule`, 0, y, plotWidth, 1));
     y += 1;
   });
+  // The axis is time, not lap distance: a ChartItem appends one sample per tick and draws the buffer
+  // oldest to newest, so the left edge is simply the oldest sample the plot still holds. How long
+  // that is depends on the refresh interval, which the dashboard does not fix, so the label says
+  // which end is which rather than naming a window it cannot promise. The canvas asks for "0 %",
+  // "Lap distance" and "100 %", and a percentage of a lap over a time axis means nothing; drawing
+  // one would need the plugin to publish a series resampled against distance.
+  const footerY = y + (footerHeight - d.labelSm) / 2;
   items.push(
-    label('telemetry.axisStart', '0 %', 20, y + (footerHeight - d.labelSm) / 2, 60, { size: d.labelSm }),
-    label('telemetry.axisName', 'TIME', 0, y + (footerHeight - d.labelSm) / 2, plotWidth, { size: d.labelSm, hAlign: 'center' }),
-    label('telemetry.axisEnd', 'NOW', plotWidth - 80, y + (footerHeight - d.labelSm) / 2, 60, { size: d.labelSm, hAlign: 'right' }),
+    label('telemetry.axisStart', 'Earlier', 20, footerY, 60, { size: d.labelSm }),
+    label('telemetry.axisName', 'Time', 0, footerY, plotWidth, { size: d.labelSm, hAlign: 'center' }),
+    label('telemetry.axisEnd', 'Now', plotWidth - 80, footerY, 60, { size: d.labelSm, hAlign: 'right' }),
     vRule('telemetry.columnRule', plotWidth, bodyTop, bodyHeight),
   );
   const zoneHeight = Math.floor((bodyHeight - 2) / 3);
