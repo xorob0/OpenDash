@@ -184,6 +184,17 @@ the other.
 - **Width** picks the column set and the rank width.
 - **Height** picks the row count, and whether the lead values are promoted.
 
+**Where "nothing is ever scaled down" gives.** The rule is about a rank with something left to shed
+and it holds there. It cannot hold for a rank with nothing left, because a value that neither sheds
+nor shrinks is a value WPF clips. Five places therefore shrink as a floor, each argued where it
+stands: `second/field.ts`, when one field is left and shedding it would leave the page empty;
+`second/wheel.ts`, where a tyre corner is two numbers and a bar and none of them is secondary;
+`second/sectors.ts`, where a sector time steps down a ladder until it fits its third of the box;
+`zones/bandPages.ts`, where a band rank is one row; and `second/placeholder.ts`, for the line of
+prose saying a reading is missing, which clipped would be the worst of both. A reader who finds one
+of them has found the floor of the rule rather than a breach of it, and the canvas owes the same
+qualification.
+
 **Rule 20.** *A rank fills the box it is given. It grows until it meets an edge, and there are
 three: the height of the box, the width of the box, and the next size up its density ramp.*
 
@@ -629,6 +640,7 @@ a mistake in this document.
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
 | The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
 | The face with no rev bar | XOR-138 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
+| The gap chips on the face sheets | Each `FaceVariants` sheet counts the pages that do not fit its rectangle as the catalogue draws them, and the 1280 × 720 and 1280 × 480 sheets give every one of the twenty-one a shed count of nought. The catalogue's own `tall` drawings do shed: sectors keeps two of its three lap times, a leaderboard row loses its best and its last, and the opponents blocks lose the car number. **The drawings are taken**, since §5 was read off them; the counts are annotation over the top of them. |
 | Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [readability-pass.md](readability-pass.md). |
 
 ---
