@@ -106,6 +106,9 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
       ),
     ],
     ctx.density,
-    portrait ? PORTRAIT_GROUP_GAP : {},
+    // The catalogue spreads this page's ranks over the zone and centres them in a zone of one
+    // column; the portrait companion centres its own column too, its artboard setting no height on
+    // the group. Everywhere else the first rank sits on the top edge and the last on the bottom.
+    { gap: portrait ? PORTRAIT_GROUP_GAP : undefined, justify: portrait || shapeIn(ctx).width === 'narrow' ? 'centre' : 'spaceBetween' },
   );
 });

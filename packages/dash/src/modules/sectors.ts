@@ -64,5 +64,8 @@ export const sectors = defineModule('sectors', (ctx) => {
       ),
     ],
     ctx.density,
+    // The catalogue spreads this page at every shape it draws it at: the sectors on the top edge
+    // of the zone and the times they add up to on the bottom.
+    { justify: 'spaceBetween' },
   );
 });
