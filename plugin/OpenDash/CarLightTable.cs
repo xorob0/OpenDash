@@ -66,8 +66,11 @@ namespace OpenDashPlugin
         /// <summary>Keyed by the gear as SimHub spells it: "R", "N", "1" ... "8".</summary>
         public Dictionary<string, CarLightGear> Gears { get; set; }
 
-        /// <summary>A colour that leaves an LED dark, in the spelling SimHub's ColorConverter reads.</summary>
-        public const string Transparent = "Transparent";
+        /// <summary>
+        /// A colour that leaves an LED dark. Spelled as hex rather than as the word, because every
+        /// colour the plugin publishes is exactly nine characters wide — see <see cref="Normalise"/>.
+        /// </summary>
+        public const string Transparent = "#00000000";
 
         /// <summary>
         /// Reads one car file, or returns null if it is not one.
@@ -104,8 +107,11 @@ namespace OpenDashPlugin
             // LEDs are what follows, so each array is one longer than the bar.
             var colors = Member(root, "ledColor");
             if (colors == null) return null;
-            var colorValues = Items(colors).Select(i => i.Value).ToArray();
+            var colorValues = Items(colors).Select(i => Normalise(i.Value)).ToArray();
             if (colorValues.Length != count + 1) return null;
+            // A colour nobody can read is a bar drawn in the wrong colours, which is worse than the
+            // ladder iRacing publishes. The whole car goes rather than one LED.
+            if (colorValues.Any(c => c == null)) return null;
 
             var gears = ParseGears(root, count);
             if (gears == null || gears.Count == 0) return null;
@@ -116,8 +122,8 @@ namespace OpenDashPlugin
                 CarName = Text(root, "carName") ?? carId,
                 LedCount = count,
                 BlinkIntervalMs = Math.Max(0, (int)(Number(root, "redlineBlinkInterval") ?? 0)),
-                BlinkColor = Color(colorValues[0]),
-                Colors = colorValues.Skip(1).Select(Color).ToArray(),
+                BlinkColor = colorValues[0],
+                Colors = colorValues.Skip(1).ToArray(),
                 Gears = gears,
             };
         }
@@ -149,11 +155,37 @@ namespace OpenDashPlugin
             return gears;
         }
 
-        /// <summary>A colour as the file spells it, or Transparent when it is empty or unreadable.</summary>
-        private static string Color(string value)
+        /// <summary>
+        /// A colour as exactly nine characters of <c>#AARRGGBB</c>, or null when it is not a colour.
+        ///
+        /// <para>The width is the point. The plugin publishes a whole run as one property and the
+        /// profile slices LED <c>k</c> out of it with <c>left(value, k * 9, 9)</c>, which needs every
+        /// field to be the same size — so the three spellings the format allows (<c>#AARRGGBB</c>,
+        /// <c>#RRGGBB</c> and an HTML colour name) are folded into one here rather than anywhere
+        /// later. Every colour in all 85 iRacing files today is already the first of the three; the
+        /// other two are read because the format says they are legal.</para>
+        ///
+        /// <para><c>Color.FromName</c> is System.Drawing.Primitives, which is in the framework on
+        /// net48 and net8.0 both and needs no GDI+ for a known colour — so this runs in the tests on
+        /// Linux as well as on the user's machine.</para>
+        /// </summary>
+        public static string Normalise(string value)
         {
             var text = (value ?? string.Empty).Trim();
-            return text.Length == 0 ? Transparent : text;
+            if (text.Length == 0) return Transparent;
+            if (text[0] == '#')
+            {
+                var hex = text.Substring(1);
+                if (!hex.All(Uri.IsHexDigit)) return null;
+                if (hex.Length == 8) return "#" + hex.ToUpperInvariant();
+                // #RRGGBB is opaque. Three-digit shorthand is not a spelling SimHub reads either
+                // (it parses to a transparent near-black), so it is refused rather than expanded.
+                if (hex.Length == 6) return "#FF" + hex.ToUpperInvariant();
+                return null;
+            }
+            var known = System.Drawing.Color.FromName(text);
+            if (!known.IsKnownColor) return null;
+            return string.Format("#{0:X2}{1:X2}{2:X2}{3:X2}", known.A, known.R, known.G, known.B);
         }
 
         private static XElement Member(XElement parent, string name)

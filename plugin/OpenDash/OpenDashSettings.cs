@@ -151,9 +151,14 @@ namespace OpenDashPlugin
         /// strip shape rather than per device and every shape reads this one name.</summary>
         public string LedCentre { get; set; } = Contract.DefaultLedCentre;
 
-        /// <summary>How the rev ladder fills a strip: "leftToRight", "meetInMiddle" or "f1". The look
-        /// only; the thresholds are the car's own whichever is set (ADR 0014).</summary>
+        /// <summary>How the rev ladder fills a strip: "car", "leftToRight", "meetInMiddle" or "f1".
+        /// The three openDash styles are the look only; the thresholds are the car's own whichever is
+        /// set (ADR 0014). "car" is the car's whole bar, from the fetched table (ADR 0017).</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
+
+        /// <summary>What a mirrored bar does on a strip that is not the car's length: "stretch" fills
+        /// the run, "exact" draws the bar at its own length in the middle of it.</summary>
+        public string LedMirrorFit { get; set; } = Contract.DefaultLedMirrorFit;
 
         /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
@@ -194,6 +199,7 @@ namespace OpenDashPlugin
             // legal one here rather than reaching the strip as itself.
             LedCentre = Contract.NormaliseChoice(LedCentre, Contract.LedCentres, Contract.DefaultLedCentre);
             LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+            LedMirrorFit = Contract.NormaliseChoice(LedMirrorFit, Contract.LedMirrorFits, Contract.DefaultLedMirrorFit);
         }
 
         private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)
@@ -653,6 +659,7 @@ namespace OpenDashPlugin
             FlagBoxSide = other.FlagBoxSide == null ? null : (string[])other.FlagBoxSide.Clone();
             LedCentre = other.LedCentre;
             LedRpmStyle = other.LedRpmStyle;
+            LedMirrorFit = other.LedMirrorFit;
             // Cloned rather than shared, so that the panel writing into its copy does not reach back
             // into the settings the plugin is reading from.
             Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
