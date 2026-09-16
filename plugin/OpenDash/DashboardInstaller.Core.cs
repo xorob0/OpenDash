@@ -179,13 +179,20 @@ namespace OpenDashPlugin
         /// <summary>The first failure of the last run; null when every package went through.</summary>
         public string LastError { get; private set; }
 
-        /// <summary>The Dashboard section's title: "OpenDash 0.1.0 · 10 dashboards". Just "OpenDash 0.1.0" when nothing
-        /// is embedded, so that a build without packages does not announce zero dashboards.</summary>
+        /// <summary>
+        /// The "This plugin" section's title: "openDash 0.1.0".
+        /// </summary>
+        /// <remarks>
+        /// The wordmark is written as the product writes it, with the lowercase d, because a section headed
+        /// "OpenDash" spells the name two ways on one page and the canvas spells it one way. The count of
+        /// dashboards used to follow the version and does not any more: the section is about the plugin rather
+        /// than about its packages, and the pill beside this line carries a tooltip naming every package and the
+        /// state each one is in, which says the same thing and says it usefully. `packageCount` is therefore not
+        /// read; it stays in the signature only while the panel still passes it.
+        /// </remarks>
         public static string Summary(string version, int packageCount)
         {
-            var title = "OpenDash " + version;
-            if (packageCount <= 0) return title;
-            return title + " · " + packageCount + (packageCount == 1 ? " dashboard" : " dashboards");
+            return "openDash " + version;
         }
 
         /// <summary>One line per package, for the status tooltip: which dashboard is in which state, and why it failed.</summary>
