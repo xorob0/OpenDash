@@ -8,6 +8,7 @@
  * renders: the note is a help, not a requirement.
  */
 import { PACKAGES } from './content.generated';
+import type { SitePackage } from '../scripts/content';
 
 export interface PackageNote {
   /** What it is, in a few words. Sentence case, no full stop; the table puts it in a cell. */
@@ -40,8 +41,32 @@ export const slug = (folder: string): string =>
 /** Where the capture of a package at a scenario lives. */
 export const shotFor = (folder: string, scenario = 'green'): string => `/shots/${slug(folder)}-${scenario}.png`;
 
-export const FACES = PACKAGES.filter((p) => p.kind === 'dash');
-export const SECOND_SCREENS = PACKAGES.filter((p) => p.kind !== 'dash');
+/**
+ * Reading order, which is not manifest order.
+ *
+ * The manifest lists packages in the order the build produces them, which puts the superseded card
+ * faces first and the two round faces before the reference one — an order that means something to
+ * the build and nothing to somebody choosing a screen. A reader wants the reference face first,
+ * then the rectangular faces widest to narrowest, then the round ones, which are a different
+ * shape rather than a smaller size, and the second screens last.
+ */
+const KIND_RANK: Record<SitePackage['kind'], number> = { dash: 0, companion: 1, pitwall: 2 };
+
+export function inReadingOrder(packages: readonly SitePackage[]): SitePackage[] {
+  return [...packages].sort((a, b) => {
+    if (KIND_RANK[a.kind] !== KIND_RANK[b.kind]) return KIND_RANK[a.kind] - KIND_RANK[b.kind];
+    // The reference face leads its kind whatever its numbers say.
+    if (a.folder === 'openDash') return -1;
+    if (b.folder === 'openDash') return 1;
+    if (a.round !== b.round) return a.round ? 1 : -1;
+    if (a.width !== b.width) return b.width - a.width;
+    return b.height - a.height;
+  });
+}
+
+export const ORDERED = inReadingOrder(PACKAGES);
+export const FACES = ORDERED.filter((p) => p.kind === 'dash');
+export const SECOND_SCREENS = ORDERED.filter((p) => p.kind !== 'dash');
 
 /** `1920 × 480`, or `480 round` for a face that is the display itself. */
 export const sizeLabel = (p: { width: number; height: number; round: boolean }): string =>

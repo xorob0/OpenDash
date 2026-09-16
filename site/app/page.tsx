@@ -2,10 +2,11 @@ import Link from 'next/link';
 import { Anatomy } from '../components/Anatomy';
 import { Reveal } from '../components/Reveal';
 import { Shot } from '../components/Shot';
-import { MODULES, PACKAGES, SIMHUB_VERSION, VERSION } from '../lib/content.generated';
+import { MODULES, SIMHUB_VERSION, VERSION } from '../lib/content.generated';
+import { ORDERED } from '../lib/packages';
 import styles from './page.module.css';
 
-const faces = PACKAGES.filter((p) => p.kind === 'dash');
+const faces = ORDERED.filter((p) => p.kind === 'dash');
 
 export default function Home() {
   return (
@@ -205,7 +206,7 @@ export default function Home() {
 
           <Reveal delay={80}>
             <ul className={styles.sizes}>
-              {PACKAGES.map((p) => (
+              {ORDERED.map((p) => (
                 <li key={p.folder} className={styles.size}>
                   <span className={`num ${styles.sizeNum}`}>
                     {p.round ? `${p.width} round` : `${p.width}×${p.height}`}

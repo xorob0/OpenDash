@@ -1,0 +1,10 @@
+# The image builds everything it serves from source, so nothing built locally should reach it: a
+# stale build/ copied in would be served as this version's downloads.
+build/
+**/node_modules
+**/.next
+.git
+.claude
+traces/
+site/out
+site/public/downloads

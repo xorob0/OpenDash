@@ -3,8 +3,7 @@ import Link from 'next/link';
 import { Reveal } from '../../components/Reveal';
 import { SectionHead } from '../../components/SectionHead';
 import { Shot } from '../../components/Shot';
-import { PACKAGES } from '../../lib/content.generated';
-import { FACES, NOTES, sizeLabel, shotFor } from '../../lib/packages';
+import { FACES, NOTES, ORDERED, sizeLabel, shotFor } from '../../lib/packages';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -59,7 +58,7 @@ export default function Dashes() {
                   </tr>
                 </thead>
                 <tbody>
-                  {PACKAGES.map((p) => {
+                  {ORDERED.map((p) => {
                     const note = NOTES[p.folder];
                     return (
                       <tr key={p.folder} data-emphasis={note?.emphasis}>
