@@ -118,6 +118,13 @@ settle rather than an implementer's.
   WPF line box, and the band is 60. Band D shrinks its value to 32 rather than clip; the settings bar
   keeps the overrun it has always had, because the box is transparent and digits have no descenders.
   The two should agree.
+- **The bar's DIFF cell draws the rear anti-roll bar.** The settings strip binds its `Diff` cell to
+  the same raw property the car settings page draws as `ARB R`, so one number appears under two
+  names on two pages and a driver reading DIFF is reading the anti-roll bar. `Slip` is the throttle
+  map in the same way. Neither can be closed from the code: the repository's own record of the
+  iRacing variables holds no differential field, and renaming the cell to `ARB R` would contradict
+  the canvas, which draws `Diff`. Either the two properties are named, or the DIFF cell is dropped,
+  which the strip already knows how to do; renaming it is the one answer that is wrong.
 - **The companion's flag band costs it a rank.** `ds.indicator.flagBand.heightSm` is 32 and the
   Companion 850 by 480 artboard draws that band 12 px tall. The twenty pixels come out of the module
   above it, which leaves the page 336 px of content where its fourth rank, the three sectors of the
