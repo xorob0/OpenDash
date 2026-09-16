@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
-import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES } from '../src/contract.ts';
+import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE } from '../src/contract.ts';
 import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, rungFlashes } from '../src/leds/ladder.ts';
@@ -275,10 +275,10 @@ describe('every generated profile', () => {
   test('offers every centre function and carries a stable id', () => {
     const text = textOf(profileFor('4-14-4'));
     for (const centre of LED_CENTRES) {
-      if (centre === 'rpm' || centre === 'rpmOnly') continue;
       expect({ centre, present: text.includes(`centre: ${centre}`) }).toMatchObject({ present: true });
     }
-    expect(text).toContain('centre: rpm or rpmOnly');
+    // Four functions and no fifth: rpmOnly was retired into rpm, so nothing gates on it any more.
+    expect(text).not.toContain(RETIRED_LED_CENTRE);
     // Ids are stableGuid of a path, so a rebuild never churns them and SimHub never sees a duplicate.
     const ids = ALL_SHAPES.map((s) => rpmStripProfile(s, stableGuid(`openDash/leds/${s.id}`)).profileId);
     expect(new Set(ids).size).toBe(ids.length);

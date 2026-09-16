@@ -37,7 +37,7 @@ import { ALL_EFFECTS, effectContainer, type LedEffect } from './effects.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
 
-const { and, eq, gt, not, num, or, str } = ncalc;
+const { and, eq, gt, not, num, str } = ncalc;
 
 /** `isnull([OpenDash.LedCentre], 'rpm') = '<which>'`, the gate on each centre function. */
 const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which));
@@ -198,22 +198,15 @@ const fuelBar = (count: number): leds.LedContainer[] => {
   }));
 };
 
-/**
- * The five things the centre can be, each behind its own setting value.
- *
- * `rpm` and `rpmOnly` share one rev tree gated on either, rather than carrying a copy each: they
- * differ only in whether the sides light, which is decided over in {@link sides}. The rev tree is
- * already three styles times two ladders, so a second copy of it would be the largest thing in the
- * file and would say nothing new.
- */
+/** The four things the centre can be, each behind its own setting value. */
 const centreFunctions = (count: number): leds.LedContainer[] => [
   {
     kind: 'conditionalGroup',
-    description: 'centre: rpm or rpmOnly',
-    trigger: { expression: or(centreIs('rpm'), centreIs('rpmOnly')) },
+    description: 'centre: rpm',
+    trigger: { expression: centreIs('rpm') },
     children: revCentre(count),
   },
-  ...LED_CENTRES.filter((which) => which !== 'rpm' && which !== 'rpmOnly').map((which) => ({
+  ...LED_CENTRES.filter((which) => which !== 'rpm').map((which) => ({
     kind: 'conditionalGroup' as const,
     description: `centre: ${which}`,
     trigger: { expression: centreIs(which) },
@@ -223,9 +216,8 @@ const centreFunctions = (count: number): leds.LedContainer[] => [
 ];
 
 /**
- * The sides: brake, and only under the default centre. `rpmOnly` is the setting for somebody who
- * wants the strip to say one thing, so its sides stay dark rather than being filled with something
- * they did not ask for.
+ * The sides: brake, and only under the default centre. Under any other centre they stay dark rather
+ * than being filled with something the driver did not ask for.
  */
 const sides = (shape: StripShape): leds.LedContainer[] => {
   if (shape.left === 0 && shape.right === 0) return [];

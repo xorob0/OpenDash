@@ -404,8 +404,15 @@ namespace OpenDashPlugin.Tests
             // profile per strip shape, and every shape reads the same two names.
             Assert.DoesNotContain(Contract.LedPropertyNames(), n => n.Contains("1") || n.Contains("2"));
 
-            Assert.Equal(new[] { "rpm", "rpmOnly", "brake", "throttleBrake", "fuel" }, Contract.LedCentres);
+            Assert.Equal(new[] { "rpm", "brake", "throttleBrake", "fuel" }, Contract.LedCentres);
             Assert.Equal(new[] { "leftToRight", "meetInMiddle", "f1" }, Contract.LedRpmStyles);
+            // The fifth centre is retired into the first, and migrated by name: the profile carries a
+            // conditional group per value, and a stored "rpmOnly" would match none of them.
+            Assert.DoesNotContain(Contract.RetiredLedCentre, Contract.LedCentres);
+            Assert.Equal("rpm", Contract.NormaliseLedCentre("rpmOnly"));
+            Assert.Equal("rpm", Contract.NormaliseLedCentre(" RPMONLY "));
+            Assert.Equal("fuel", Contract.NormaliseLedCentre("fuel"));
+            Assert.Equal("rpm", Contract.NormaliseLedCentre("sparkles"));
             // The defaults are members of their own sets, which is what makes an unrecognised value
             // safe to fall back from.
             Assert.Contains(Contract.DefaultLedCentre, Contract.LedCentres);

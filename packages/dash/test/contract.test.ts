@@ -15,6 +15,7 @@ import {
   ledProperties,
   LED_CENTRES,
   LED_CENTRE_SETTING,
+  RETIRED_LED_CENTRE,
   LED_RPM_STYLES,
   LED_RPM_STYLE_SETTING,
   flagBoxProperties,
@@ -241,6 +242,11 @@ describe('plugin mirror', () => {
     expect(source).toContain(`LedRpmStyles = ${csArray(LED_RPM_STYLES)};`);
     expect(source).toContain(`public const string DefaultLedCentre = "${DEFAULTS.LedCentre}";`);
     expect(source).toContain(`public const string DefaultLedRpmStyle = "${DEFAULTS.LedRpmStyle}";`);
+    // Four centres and the fifth named as retired, so that the plugin can migrate a stored rpmOnly
+    // rather than leave a strip matching no conditional group and going dark.
+    expect(LED_CENTRES).toEqual(['rpm', 'brake', 'throttleBrake', 'fuel']);
+    expect(LED_CENTRES).not.toContain(RETIRED_LED_CENTRE);
+    expect(source).toContain(`public const string RetiredLedCentre = "${RETIRED_LED_CENTRE}";`);
     // Attached, and offered on the panel. A property the plugin declares and never attaches is a
     // profile stuck on its isnull() default, which is exactly how these two shipped.
     const attach = pluginSource('OpenDash.cs');
