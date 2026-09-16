@@ -9,6 +9,12 @@
  *
  * The frame is a 1 px rule, never a box with a shadow, and the image is never upscaled past 1:1 —
  * a dash face blown up past its own pixels looks soft in a way the panel never does.
+ *
+ * A wide face is pannable on a phone. Fitting a 1920 x 480 strip into a 358 px column leaves it
+ * 89 px tall, which is not a screenshot of a dashboard so much as a picture of where one was. Below
+ * the breakpoint those are given a readable height and allowed to overflow their frame sideways, so
+ * the reader drags across the face instead of squinting at all of it at once. Anything squarer
+ * than 2.2:1 is legible fitted and is left alone.
  */
 import Image from 'next/image';
 import styles from './Shot.module.css';
@@ -27,10 +33,17 @@ export interface ShotProps {
   sizes?: string;
 }
 
+/** Wider than this and the picture is not legible fitted to a phone's column. */
+const PANNABLE_ASPECT = 2.2;
+
 export function Shot({ src, alt, width, height, caption, round, priority, sizes = '(min-width: 88rem) 84rem, 100vw' }: ShotProps) {
+  const pannable = !round && width / height > PANNABLE_ASPECT;
   return (
     <figure className={styles.figure}>
-      <div className={`${styles.frame} ${round ? styles.round : ''}`} style={{ aspectRatio: `${width} / ${height}` }}>
+      <div
+        className={[styles.frame, round ? styles.round : '', pannable ? styles.pan : ''].filter(Boolean).join(' ')}
+        style={{ aspectRatio: `${width} / ${height}` }}
+      >
         <Image
           src={src}
           alt={alt}

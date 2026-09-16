@@ -36,3 +36,35 @@
   text-transform: uppercase;
   color: var(--color-text-label);
 }
+
+/*
+ * The pannable case, phones only. The frame drops its aspect ratio for a height a face can be read
+ * at and becomes a horizontal scroller; the image takes that height and whatever width follows from
+ * it. Above the breakpoint the column is wide enough that none of this is needed, and the frame
+ * goes back to fitting the whole picture.
+ */
+@media (max-width: 47.99rem) {
+  .pan {
+    aspect-ratio: auto !important;
+    height: 46vw;
+    max-height: 15rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-text-dim) transparent;
+  }
+
+  /*
+   * `width: auto` against a fixed height is what scales the picture: an <img> with intrinsic
+   * dimensions takes the width its aspect implies, which is the width the scroller then pans over.
+   * `max-width: none` is the load-bearing line — the global `img { max-width: 100% }` would
+   * otherwise clamp it straight back to the column and there would be nothing to scroll.
+   */
+  .pan .img {
+    width: auto;
+    max-width: none;
+    height: 100%;
+    object-fit: contain;
+    object-position: left center;
+  }
+}
