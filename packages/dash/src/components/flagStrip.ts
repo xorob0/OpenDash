@@ -3,10 +3,11 @@
  * behaviour. One shows at a time in priority order black, chequered, yellow, blue, white, green;
  * nothing is drawn when no flag is out. Black is outlined, since a black band on this face is
  * invisible; chequered is a hard-edged check pattern (half the band high) with no label; yellow
- * flashes at 2 Hz. The nano's 12 px strip is too thin for a label, so its style drops the labels
- * and thins the black outline to 2 px.
+ * flashes at 2 Hz between its own fill and the face's ground, never between its fill and the page
+ * it covers. The nano's 12 px strip is too thin for a label, so its style drops the labels and
+ * thins the black outline to 2 px.
  */
-import type { Hex, Item, LayerItem, Rect } from '../generator.ts';
+import type { FontWeight, Hex, Item, LayerItem, Rect, RectangleItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
@@ -17,8 +18,16 @@ import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { game, eq, and, num } = ncalc;
 
-/** Border of the black flag's outline. */
+/**
+ * The band's border, which every artboard draws on every state as `border: 3px solid`, counted
+ * inside the box. The black flag draws it in the flag colour, because a dark band on a dark dash
+ * needs an edge to read as a band; a coloured state draws it in its own fill, where the artboards
+ * leave it transparent over the same fill, which is the same three pixels of that colour.
+ */
 export const BLACK_FLAG_BORDER = 3;
+
+/** The weight the artboards set the flag name in, against the 500 of every other label. */
+export const FLAG_NAME_WEIGHT: FontWeight = 'Bold';
 
 /** How a strip is dressed: whether the flag name is drawn on it, and how thick the black outline is. */
 export interface FlagStripStyle {
@@ -58,16 +67,45 @@ export function flagVisible(flag: FlagProperty): Expr {
 
 const labelY = (frame: Rect): number => frame.top + (frame.height - ds.size.label) / 2;
 
-/** The centred flag name, when the style draws one. */
+/**
+ * The centred flag name, when the style draws one. It is the one label on a face drawn in Bold
+ * rather than Medium, which is what every FaceVariants sheet sets it in: the band is read at a
+ * glance and from further away than a field label is.
+ */
 const flagLabel = (frame: Rect, style: FlagStripStyle, name: string, text: string, color: Hex): Item[] =>
-  style.labels ? [label(name, text, frame.left, labelY(frame), frame.width, { color, hAlign: 'center' })] : [];
+  style.labels ? [label(name, text, frame.left, labelY(frame), frame.width, { color, hAlign: 'center', weight: FLAG_NAME_WEIGHT })] : [];
 
-function solidFlag(frame: Rect, style: FlagStripStyle, prefix: string, id: string, flag: FlagProperty, color: Hex, text: string, blink: boolean): LayerItem {
+/**
+ * The off phase of a flashing band: the face's own ground, opaque, laid inside the border so that
+ * the band keeps its edge through the phase it is dark in.
+ */
+const flashBand = (name: string, frame: Rect): RectangleItem => {
+  const inset = BLACK_FLAG_BORDER;
+  return {
+    ...band(name, rect(frame.left + inset, frame.top + inset, frame.width - 2 * inset, frame.height - 2 * inset), ds.color.surface.base),
+    blink: { enabled: true, delayMs: FLAG_BLINK_MS },
+  };
+};
+
+/**
+ * A band filled with the flag's colour, named, and flashing where the flag flashes.
+ *
+ * The flash was `blink` on the layer, which serialises as `BlinkEnabled` on the group, so for half
+ * of every cycle nothing of the band was drawn and band D's fuel page read through a yellow flag.
+ * A flag takes the band over precisely so that the page underneath cannot be read, which is what
+ * the black flag was filled to obtain. So the ground and the name stay put and an opaque band
+ * flashes over them at the same 2 Hz: the state alternates between two things rather than between
+ * a thing and the page.
+ */
+function solidFlag(frame: Rect, style: FlagStripStyle, prefix: string, id: string, flag: FlagProperty, color: Hex, text: string, flash: boolean): LayerItem {
   return {
     kind: 'layer',
     name: `${prefix}.${id}`,
-    children: [band(`${prefix}.${id}.band`, frame, color), ...flagLabel(frame, style, `${prefix}.${id}.label`, text, ds.purpose.flag.onFlag)],
-    ...(blink ? { blink: { enabled: true, delayMs: FLAG_BLINK_MS } } : {}),
+    children: [
+      band(`${prefix}.${id}.band`, frame, color, { border: { color, width: BLACK_FLAG_BORDER } }),
+      ...flagLabel(frame, style, `${prefix}.${id}.label`, text, ds.purpose.flag.onFlag),
+      ...(flash ? [flashBand(`${prefix}.${id}.flash`, frame)] : []),
+    ],
     ...withBindings({ Visible: flagVisible(flag) }),
   };
 }

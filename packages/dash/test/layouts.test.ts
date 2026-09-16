@@ -575,7 +575,8 @@ describe('800 x 286 nano', () => {
         if (hasRect(child)) expect(contains(rect(0, 274, 800, 12), child.rect)).toBe(true);
       }
     }
-    for (const id of ['yellow', 'blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
+    for (const id of ['blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
+    expect(layerNamed(items, 'flag.yellow').children.map((c) => c.name)).toEqual(['flag.yellow.band', 'flag.yellow.flash']);
     const black = layerNamed(items, 'flag.black').children[0];
     if (black?.kind !== 'rect') throw new Error('black band');
     expect(black.border).toEqual({ color: '#F5F7FA', top: 2, bottom: 2, left: 2, right: 2 });
@@ -587,13 +588,16 @@ describe('800 x 286 nano', () => {
     expect(checks).toHaveLength(2 * Math.ceil(800 / 6 / 2));
     for (const c of checks) expect(c.rect.height).toBe(6);
     expect(checks.map((c) => c.rect.width).filter((w) => w !== 6)).toEqual([2]);
-    expect(layerNamed(items, 'flag.yellow').blink).toEqual({ enabled: true, delayMs: 250 });
+    // The flash is a band over the fill and not the layer: a blinking layer draws nothing for half
+    // of every cycle, and what a flag covers has to stay covered.
+    expect(layerNamed(items, 'flag.yellow').blink).toBeUndefined();
+    expect(layerNamed(items, 'flag.yellow').children[1]?.blink).toEqual({ enabled: true, delayMs: 250 });
   });
 
   test('the standard strip of the other faces keeps its labels and 3 px outline', () => {
     const standard = buildLayout(layout1280x480, opts).main.screens[0]!.items;
     const yellow = layerNamed(standard, 'flag.yellow');
-    expect(yellow.children.map((c) => c.name)).toEqual(['flag.yellow.band', 'flag.yellow.label']);
+    expect(yellow.children.map((c) => c.name)).toEqual(['flag.yellow.band', 'flag.yellow.label', 'flag.yellow.flash']);
     const black = layerNamed(standard, 'flag.black').children[0];
     if (black?.kind !== 'rect') throw new Error('black band');
     expect(black.border?.top).toBe(3);

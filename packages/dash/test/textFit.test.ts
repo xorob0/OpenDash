@@ -17,7 +17,7 @@ const opts = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
 const faceOf = (item: TextItem): MeasuredFace => {
-  if (item.font === 'Barlow') return 'BarlowMedium';
+  if (item.font === 'Barlow') return item.fontWeight === 'Bold' ? 'BarlowBold' : 'BarlowMedium';
   if (item.fontWeight === 'Bold') return 'BarlowCondensedBold';
   if (item.fontWeight === 'Light') return 'BarlowCondensedLight';
   return 'BarlowCondensedSemiBold';
