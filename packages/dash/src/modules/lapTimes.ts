@@ -56,22 +56,28 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
    * beside them. The catalogue's `tall` zone drawing stacks the same three times at one size, so
    * the shape alone does not say which of the two is being drawn; the instrument does.
    */
-  const portrait = ctx.density === 'companion' && shapeIn(ctx).height === 'tall';
+  const shape = shapeIn(ctx);
+  const portrait = ctx.density === 'companion' && shape.height === 'tall';
+  /**
+   * The catalogue's `grid` drawing, which is the one that gives the last lap a full-width line of
+   * its own and sets the two bests beside each other under it. A greedy wrap cannot produce it: at
+   * 430 px two lap times fit a line, so the most important of the three ends up sharing one.
+   */
+  const grid = shape.width === 'medium' && shape.height === 'medium';
+  const last = fld(ctx, 'last', 'Last lap', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: portrait ? d.hero : d.big });
+  const bests = [
+    fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.big, color: ds.purpose.lap.sessionBest }),
+    fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: d.big }),
+  ];
   const laps = fld(ctx, 'laps', 'Laps', { sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.position, fs: d.mid });
   const estimated = fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid });
   const toYourBest = fld(ctx, 'delta', 'Delta to your best', { sample: '\u22120.21', bind: signed(delta, '0.00'), chars: CHARS.delta, fs: d.mid, colorBind: deltaColour(delta) });
   return stack(
     ctx.frame,
     [
-      fieldsRow(
-        [
-          fld(ctx, 'last', 'Last lap', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: portrait ? d.hero : d.big }),
-          fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.big, color: ds.purpose.lap.sessionBest }),
-          fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: d.big }),
-        ],
-        ctx,
-        portrait ? { lines: 'perLine', lineGap: PORTRAIT_GROUP_GAP } : {},
-      ),
+      ...(grid
+        ? [fieldsRow([last], ctx), fieldsRow(bests, ctx, { lines: 'grid', columns: 2 })]
+        : [fieldsRow([last, ...bests], ctx, portrait ? { lines: 'perLine', lineGap: PORTRAIT_GROUP_GAP } : {})]),
       ...(portrait
         ? [fieldsRow([laps, estimated], ctx, { gap: PORTRAIT_PAIR_GAP, align: 'top' }), fieldsRow([toYourBest], ctx)]
         : [fieldsRow([laps, estimated, toYourBest], ctx)]),
