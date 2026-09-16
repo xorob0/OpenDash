@@ -6,7 +6,8 @@ same assembly [simhub-leds-format.md](simhub-leds-format.md) was read from — a
 bodies are quoted below. The iRacing half was established by enumerating every published table in
 the [Lovely Car Data](https://github.com/Lovely-Sim-Racing/lovely-car-data) database for iRacing
 (85 cars, fetched 2026-09-16) and counting; the numbers in this file are from that count, not from
-an impression.
+an impression. The fetch, the lookup and the expression were then **run on the test VM** against a
+real SimHub — see [Seen working](#seen-working) at the end.
 
 [simhub-led-sources.md](simhub-led-sources.md) says what drives an LED, property by property, and
 concludes that iRacing publishes no colour. That conclusion is correct and this file does not
@@ -41,7 +42,7 @@ four RPMs is a mirror of one gear of that car at best.
 | Project | Table | Shape |
 |---|---|---|
 | [Daniel Newman Racing](https://www.danielnewmanracing.com/products/led-profiles) | 600+ cars across seven sims, per gear. Paid | A SimHub **plugin** holds the data; per-device profiles are thin and bind to it |
-| [Lovely Car Data](https://github.com/Lovely-Sim-Racing/lovely-car-data) | 85 iRacing cars, per gear, per LED, per colour. CC BY-NC-SA 4.0 | Plain JSON per car, keyed on `DataCorePlugin.CarId` |
+| [Lovely Car Data](https://github.com/Lovely-Sim-Racing/lovely-car-data) | 85 iRacing cars, per gear, per LED, per colour. CC BY-NC-SA 4.0 | Plain JSON per car, keyed on the car's iRacing CarPath |
 | [ShiftLines / kapps](https://github.com/shinev01/rpm-lights-iracing-kapps), ATSR Hub EVO | consume Lovely | A sync script pulls from upstream and bundles a snapshot |
 | Fanatec App | "preloaded with precise LED patterns for a great number of popular cars" | Closed. Same idea, unreadable |
 | Everything else | none | Falls back to the four RPMs, which is where openDash is today |
@@ -83,7 +84,7 @@ driver who wants one look in every car.
 ```jsonc
 {
   "carName": "Porsche 992 Cup",
-  "carId": "porsche992cup",          // DataCorePlugin.CarId, verbatim, spaces and all
+  "carId": "porsche992cup",          // the CarPath, verbatim, spaces and all -- see below
   "carClass": "CUP",
   "ledNumber": 16,                   // LEDs on the car's own bar
   "redlineBlinkInterval": 200,       // ms; 0 means it does not blink
@@ -108,9 +109,14 @@ Facts a parser has to survive, each checked across all 85 files:
   HTML colour names, so both have to be read.
 - **The redline is not always above the last LED's threshold** — 3 rows of 755 have it below. Nothing
   may assume the ordering the other 752 have.
-- Cars are keyed by `carId`, which is SimHub's `DataCorePlugin.CarId` with its spaces intact
+- Cars are keyed by `carId`, which is the car's iRacing **CarPath** with its spaces intact
   (`"stockcars chevycamarozl12022"`); the *file name* is the hyphenated form. Match on the field,
   never on the path.
+- **`DataCorePlugin.CarId` is empty on iRacing**, although the upstream README names it as the key.
+  The value is on `DataCorePlugin.GameData.CarId` — `StatusDataBase.CarId`, which `ICarsReader`'s
+  `GD_CarId()` fills from the player's `CarPath`. Measured on the VM: with the emulator in a Porsche
+  992R GT3, `GameData.CarId` was `porsche992rgt3` and `DataCorePlugin.CarId` was null. A consumer
+  that follows the README's spelling finds no car, ever, and nothing says why.
 - Coverage is partial and always will be: a car released this month is in the table when somebody
   measures it, and the fallback is what every other car gets.
 
@@ -166,8 +172,29 @@ one per LED, at the cost of a Javascript body in a profile that is otherwise NCa
 marshalling assumption not yet tested on the VM. Kept as the collapse to make if the per-LED
 property family proves too noisy.
 
+## Seen working
+
+On the VM, 2026-09-16, against SimHub 9.12.6 and the emulator on the `race` scenario:
+
+- The plugin fetched the archive from codeload on first start and wrote **86 iRacing car files**
+  into `SimHub\OpenDash\CarLights`, with the stamp beside them. One request, no retry, nothing
+  about the session in it.
+- With the style set to `car` from the panel, `OpenDash.LedMirrorReady` went to **1** for
+  `porsche992rgt3`, matched out of the fetched table.
+- `left(isnull([OpenDash.LedMirror14], ''), 18, 9)` — the profile's own expression, typed into
+  SimHub's NCalc tester — returned **`#FF00FF00`**. Nine characters, the third LED, the car's green.
+- The whole 14-LED run read `#FF00FF00 #FF00FF00 #FF00FF00 #FFFFFF00 #FFFFFF00 …`: the 992's
+  sixteen-LED meet-in-the-middle bar resampled onto fourteen, in the car's own colours.
+- Changing gear moved the thresholds with it. At gear 2 and 7 406 rpm the bar was half lit; at gear
+  4 and 5 208 rpm every LED was `#00000000`, which is what a table whose fourth gear starts at
+  7 130 should do and what one ladder for the whole car could not.
+
 ## Not verified
 
+- **A physical strip.** Everything above stops at the property and the expression; no Arduino is
+  plugged into the VM, so `DynamicColor` turning `#FF00FF00` into a lit LED is still only the
+  decompiled `SetResultBase` quoted above. XOR-301 is the ticket for seeing lights without owning
+  hardware, and it is what would close this.
 - Whether a JS array from a `ScriptedContent` formula marshals to `object[]` as `ToColorArray`
   requires. Everything above about `DynamicColor` and `RPMSegments` was read from the bodies quoted;
   this one was not.
