@@ -300,9 +300,13 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     // The 220 px body holds the identity row or the class chip and the last lap, not both, so the
     // pair that goes is the one the catalogue's own `tall` drawing drops first.
     '1280x400 469x258 opponents': ['ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap'],
-    // The two anti-roll bars are the cells the 122 px band cannot hold.
-    '600x686 600x160 carSettings': ['arbFront', 'arbRear'],
-    '600x686 600x150 carSettings': ['arbFront', 'arbRear'],
+    // The mixture goes with the two anti-roll bars, which the 122 px band could not hold either.
+    // The cells are an equal-column grid now, so a line is three of them whatever their width:
+    // six cells are two lines and so are four, and the band has room for one. Shedding the pair
+    // the catalogue drops last no longer buys the line back, so the rank goes on to the cell above
+    // them in the table. readability-pass.md §7 owns the redraw of this page at a band this short.
+    '600x686 600x160 carSettings': ['mix', 'arbFront', 'arbRear'],
+    '600x686 600x150 carSettings': ['mix', 'arbFront', 'arbRear'],
     // Zone C of the 600 x 686 face is where a second row stops fitting at all, and zone B joins it
     // now that the frame takes the artboards' 6 by 12 padding rather than the 16 it had, which is
     // six pixels of body height and eight of width. The delta loses its three sector deltas, the
