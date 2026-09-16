@@ -238,9 +238,10 @@ export const PARTS: Record<string, Keeps> = {
   // The summary word and the four corner toggles beside it are the drawing's `Tyres · RIGHTS`;
   // the fast repair and the tear-off stay at every shape.
   pitView: { wide: ['tyres'], grid: ['tyres'], tallNarrow: [], tall: [] },
-  // The caption says the pressures are the ones the car left the box with. A column that narrow
-  // has no room to say it, and the catalogue closes the cell with the compound instead.
-  tyres: { wide: ['footer'], grid: ['footer'], tallNarrow: [], tall: ['footer'] },
+  // The captions say how the tread fills the drawing and what the tick on it means, and the chip
+  // over the grid names the compound. A column that narrow has room for neither, and the
+  // catalogue's `tall narrow` drawing is the four corners and nothing else.
+  tyres: { wide: ['footer', 'compound'], grid: ['footer', 'compound'], tallNarrow: [], tall: ['footer', 'compound'] },
   // The steering is a fourth column beside the three pedals, and the catalogue draws it at the two
   // shapes with the width for it. A narrow zone spends that width on the trace instead, which is
   // where pedal application is read as a shape.
