@@ -17,7 +17,12 @@ import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { game, eq, and, num } = ncalc;
 
-/** Border of the black flag's outline. */
+/**
+ * The band's border, which every artboard draws on every state as `border: 3px solid`, counted
+ * inside the box. The black flag draws it in the flag colour, because a dark band on a dark dash
+ * needs an edge to read as a band; a coloured state draws it in its own fill, where the artboards
+ * leave it transparent over the same fill, which is the same three pixels of that colour.
+ */
 export const BLACK_FLAG_BORDER = 3;
 
 /** The weight the artboards set the flag name in, against the 500 of every other label. */
@@ -73,7 +78,10 @@ function solidFlag(frame: Rect, style: FlagStripStyle, prefix: string, id: strin
   return {
     kind: 'layer',
     name: `${prefix}.${id}`,
-    children: [band(`${prefix}.${id}.band`, frame, color), ...flagLabel(frame, style, `${prefix}.${id}.label`, text, ds.purpose.flag.onFlag)],
+    children: [
+      band(`${prefix}.${id}.band`, frame, color, { border: { color, width: BLACK_FLAG_BORDER } }),
+      ...flagLabel(frame, style, `${prefix}.${id}.label`, text, ds.purpose.flag.onFlag),
+    ],
     ...(blink ? { blink: { enabled: true, delayMs: FLAG_BLINK_MS } } : {}),
     ...withBindings({ Visible: flagVisible(flag) }),
   };

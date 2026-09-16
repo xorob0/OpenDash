@@ -9,8 +9,8 @@
  * blinked the whole layer away twice a second.
  */
 import { describe, expect, test } from 'bun:test';
-import { FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
-import type { Item, LayerItem, TextItem } from '../src/generator.ts';
+import { BLACK_FLAG_BORDER, FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
+import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, type ZoneLayout } from '../src/zones/index.ts';
@@ -29,6 +29,12 @@ const layerOf = (face: ZoneLayout, id: string): LayerItem => {
 
 const labelsOf = (items: readonly Item[]): TextItem[] => [...walkItems(items)].filter((i): i is TextItem => i.kind === 'text');
 
+const bandOf = (face: ZoneLayout, id: string): RectangleItem => {
+  const fill = layerOf(face, id).children.find((c): c is RectangleItem => c.kind === 'rect' && c.name === `flag.${id}.band`);
+  if (!fill) throw new Error(`no band under the ${id} flag`);
+  return fill;
+};
+
 describe('the flag name', () => {
   for (const face of ZONE_FACES) {
     test(`${face.folder} writes every name in the label family at ${FLAG_NAME_WEIGHT}`, () => {
@@ -42,6 +48,25 @@ describe('the flag name', () => {
         expect({ id, font: name.font, weight: name.fontWeight }).toEqual({ id, font: ds.font.label, weight: FLAG_NAME_WEIGHT });
       }
       expect(labelsOf(layerOf(face, 'chequered').children)).toEqual([]);
+    });
+  }
+});
+
+describe('the coloured bands', () => {
+  for (const face of ZONE_FACES) {
+    test(`${face.folder} fills band D and borders it ${BLACK_FLAG_BORDER} px in its own fill`, () => {
+      // The artboards draw the border on every state and leave it transparent over the fill, which
+      // over that fill is these three pixels of it; what the code cannot do is omit the border on
+      // four states and carry it on one, which is what it did.
+      for (const id of COLOURED) {
+        const fill = bandOf(face, id);
+        const colour = ds.purpose.flag[id];
+        expect({ id, rect: fill.rect, colour: fill.backgroundColor }).toEqual({ id, rect: face.zones.band, colour });
+        expect({ id, border: fill.border }).toEqual({
+          id,
+          border: { color: colour, top: BLACK_FLAG_BORDER, bottom: BLACK_FLAG_BORDER, left: BLACK_FLAG_BORDER, right: BLACK_FLAG_BORDER },
+        });
+      }
     });
   }
 });

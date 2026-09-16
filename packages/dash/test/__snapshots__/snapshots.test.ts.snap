@@ -4376,7 +4376,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Height": 40,
         "Visible": true,
         "BackgroundColor": "#FFFFD400",
-        "BorderStyle": {},
+        "BorderStyle": {
+          "BorderColor": "#FFFFD400",
+          "BorderTop": 3,
+          "BorderBottom": 3,
+          "BorderLeft": 3,
+          "BorderRight": 3
+        },
         "Id": "392031bd-49a0-51f6-8eee-3358a53f4bc5",
         "Name": "flag.yellow.band",
         "RenderingSkip": 0,
@@ -4434,7 +4440,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Height": 40,
         "Visible": true,
         "BackgroundColor": "#FF2E7BFF",
-        "BorderStyle": {},
+        "BorderStyle": {
+          "BorderColor": "#FF2E7BFF",
+          "BorderTop": 3,
+          "BorderBottom": 3,
+          "BorderLeft": 3,
+          "BorderRight": 3
+        },
         "Id": "a6235717-c4e5-59b2-b2de-3c0f91d3b032",
         "Name": "flag.blue.band",
         "RenderingSkip": 0,
@@ -4492,7 +4504,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Height": 40,
         "Visible": true,
         "BackgroundColor": "#FFFFFFFF",
-        "BorderStyle": {},
+        "BorderStyle": {
+          "BorderColor": "#FFFFFFFF",
+          "BorderTop": 3,
+          "BorderBottom": 3,
+          "BorderLeft": 3,
+          "BorderRight": 3
+        },
         "Id": "31a3e3d4-6cf5-57c2-9fdd-41f96940adf3",
         "Name": "flag.white.band",
         "RenderingSkip": 0,
@@ -4550,7 +4568,13 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Height": 40,
         "Visible": true,
         "BackgroundColor": "#FF00D96A",
-        "BorderStyle": {},
+        "BorderStyle": {
+          "BorderColor": "#FF00D96A",
+          "BorderTop": 3,
+          "BorderBottom": 3,
+          "BorderLeft": 3,
+          "BorderRight": 3
+        },
         "Id": "28e019e3-1b32-595f-9493-cf360f273e8f",
         "Name": "flag.green.band",
         "RenderingSkip": 0,
@@ -7798,7 +7822,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFD400",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFD400",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "392031bd-49a0-51f6-8eee-3358a53f4bc5",
               "Name": "flag.yellow.band",
               "RenderingSkip": 0,
@@ -7856,7 +7886,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF2E7BFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF2E7BFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "a6235717-c4e5-59b2-b2de-3c0f91d3b032",
               "Name": "flag.blue.band",
               "RenderingSkip": 0,
@@ -7914,7 +7950,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFFFFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFFFFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "31a3e3d4-6cf5-57c2-9fdd-41f96940adf3",
               "Name": "flag.white.band",
               "RenderingSkip": 0,
@@ -7972,7 +8014,13 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF00D96A",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF00D96A",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "28e019e3-1b32-595f-9493-cf360f273e8f",
               "Name": "flag.green.band",
               "RenderingSkip": 0,
@@ -12884,7 +12932,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFD400",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFD400",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "2c965a3e-368b-5db2-a663-55d99cda1cba",
               "Name": "flag.yellow.band",
               "RenderingSkip": 0,
@@ -12942,7 +12996,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF2E7BFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF2E7BFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "98fe7a0a-a6cb-5bc3-afa7-3160996b0db8",
               "Name": "flag.blue.band",
               "RenderingSkip": 0,
@@ -13000,7 +13060,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFFFFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFFFFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "f1a54aba-87e4-5448-a90e-8a25714d2fa1",
               "Name": "flag.white.band",
               "RenderingSkip": 0,
@@ -13058,7 +13124,13 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF00D96A",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF00D96A",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "6ffa1e70-be36-5f15-906b-ce02658389a5",
               "Name": "flag.green.band",
               "RenderingSkip": 0,
@@ -18094,7 +18166,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Height": 32,
               "Visible": true,
               "BackgroundColor": "#FFFFD400",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFD400",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "d669da02-b7c6-5588-ac05-17c49c2725b2",
               "Name": "flag.yellow.band",
               "RenderingSkip": 0,
@@ -18152,7 +18230,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Height": 32,
               "Visible": true,
               "BackgroundColor": "#FF2E7BFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF2E7BFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "8544c285-a932-59dd-b53b-6ea399034e4f",
               "Name": "flag.blue.band",
               "RenderingSkip": 0,
@@ -18210,7 +18294,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Height": 32,
               "Visible": true,
               "BackgroundColor": "#FFFFFFFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFFFFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "81ab93a0-313e-5649-8a80-8425a85aa8fb",
               "Name": "flag.white.band",
               "RenderingSkip": 0,
@@ -18268,7 +18358,13 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Height": 32,
               "Visible": true,
               "BackgroundColor": "#FF00D96A",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF00D96A",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "b2f0e6e3-1711-565c-8f39-3abee20e992e",
               "Name": "flag.green.band",
               "RenderingSkip": 0,
@@ -22749,7 +22845,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFD400",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFD400",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "ba058419-9809-5519-9e34-d9b3bbede5b8",
               "Name": "flag.yellow.band",
               "RenderingSkip": 0,
@@ -22807,7 +22909,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF2E7BFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF2E7BFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "12347244-727a-52d0-a4dc-12b910cc1fb0",
               "Name": "flag.blue.band",
               "RenderingSkip": 0,
@@ -22865,7 +22973,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFFFFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFFFFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "6b68e998-cd74-53ac-8754-4f224880334b",
               "Name": "flag.white.band",
               "RenderingSkip": 0,
@@ -22923,7 +23037,13 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF00D96A",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF00D96A",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "b653ed1a-3e5e-51f6-bc6c-23fbeaedd62e",
               "Name": "flag.green.band",
               "RenderingSkip": 0,
@@ -27301,7 +27421,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFD400",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFD400",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "571968a2-d31d-54d2-995c-c11dbd641bdb",
               "Name": "flag.yellow.band",
               "RenderingSkip": 0,
@@ -27359,7 +27485,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF2E7BFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF2E7BFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "d80b2aa6-6981-53cc-a3ac-c73f72eac096",
               "Name": "flag.blue.band",
               "RenderingSkip": 0,
@@ -27417,7 +27549,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFFFFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFFFFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "a9e7553b-8d24-5051-aec6-36838a9eddec",
               "Name": "flag.white.band",
               "RenderingSkip": 0,
@@ -27475,7 +27613,13 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF00D96A",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF00D96A",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "d74507c2-5e99-56a1-8c4f-4bec9711795e",
               "Name": "flag.green.band",
               "RenderingSkip": 0,
@@ -32243,7 +32387,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFD400",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFD400",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "530cf4a8-dc21-5bdc-8f4c-bde2cfe5be66",
               "Name": "flag.yellow.band",
               "RenderingSkip": 0,
@@ -32301,7 +32451,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF2E7BFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF2E7BFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "40bc2ecd-7a75-54ae-9563-c94024c3d145",
               "Name": "flag.blue.band",
               "RenderingSkip": 0,
@@ -32359,7 +32515,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFFFFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFFFFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "140c0b57-d218-5abd-aae8-a89a394a0c2e",
               "Name": "flag.white.band",
               "RenderingSkip": 0,
@@ -32417,7 +32579,13 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF00D96A",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF00D96A",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "887f39b7-f076-59dc-882e-f72604e5a8fd",
               "Name": "flag.green.band",
               "RenderingSkip": 0,
@@ -38325,7 +38493,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Height": 12,
               "Visible": true,
               "BackgroundColor": "#FFFFD400",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFD400",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "5f90d77b-4b78-5ad7-95cf-7d2fe63a05ce",
               "Name": "flag.yellow.band",
               "RenderingSkip": 0,
@@ -38359,7 +38533,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Height": 12,
               "Visible": true,
               "BackgroundColor": "#FF2E7BFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF2E7BFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "42aa634d-e73a-5fe9-ae00-9b3e5a811126",
               "Name": "flag.blue.band",
               "RenderingSkip": 0,
@@ -38393,7 +38573,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Height": 12,
               "Visible": true,
               "BackgroundColor": "#FFFFFFFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFFFFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "42a37986-dbc1-566e-8d5f-863ba8f402ba",
               "Name": "flag.white.band",
               "RenderingSkip": 0,
@@ -38427,7 +38613,13 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               "Height": 12,
               "Visible": true,
               "BackgroundColor": "#FF00D96A",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF00D96A",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "6d69feda-cea9-5060-83ff-f52fab7b966f",
               "Name": "flag.green.band",
               "RenderingSkip": 0,
@@ -42543,7 +42735,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFD400",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFD400",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "bf6cc646-bbd7-53c3-b414-d24f666e6be2",
               "Name": "flag.yellow.band",
               "RenderingSkip": 0,
@@ -42601,7 +42799,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF2E7BFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF2E7BFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "d8ab08d7-3ab4-50de-af16-8482698a9f59",
               "Name": "flag.blue.band",
               "RenderingSkip": 0,
@@ -42659,7 +42863,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FFFFFFFF",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FFFFFFFF",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "371a193d-97ff-5399-a259-7f584b51539f",
               "Name": "flag.white.band",
               "RenderingSkip": 0,
@@ -42717,7 +42927,13 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Height": 40,
               "Visible": true,
               "BackgroundColor": "#FF00D96A",
-              "BorderStyle": {},
+              "BorderStyle": {
+                "BorderColor": "#FF00D96A",
+                "BorderTop": 3,
+                "BorderBottom": 3,
+                "BorderLeft": 3,
+                "BorderRight": 3
+              },
               "Id": "fcd89237-8c0e-50f9-ab35-5b1bd51bc460",
               "Name": "flag.green.band",
               "RenderingSkip": 0,
