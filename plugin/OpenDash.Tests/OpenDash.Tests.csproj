@@ -26,6 +26,7 @@
     <Compile Include="../OpenDash/DashboardInstaller.Core.cs" Link="Plugin/DashboardInstaller.Core.cs" />
     <Compile Include="../OpenDash/Theme.cs" Link="Plugin/Theme.cs" />
     <Compile Include="../OpenDash/PanelMetrics.cs" Link="Plugin/PanelMetrics.cs" />
+    <Compile Include="../OpenDash/PanelFacePlan.cs" Link="Plugin/PanelFacePlan.cs" />
     <Compile Include="../OpenDash/PanelCopy.cs" Link="Plugin/PanelCopy.cs" />
     <Compile Include="../OpenDash/Mark.cs" Link="Plugin/Mark.cs" />
     <Compile Include="../OpenDash/ReleaseFeed.cs" Link="Plugin/ReleaseFeed.cs" />
