@@ -9,10 +9,48 @@ Each release carries `OpenDash-plugin.zip`, which embeds and installs the dashbo
 to install, and one `.simhubdash` per package for anyone who wants a dashboard without the plugin,
 including any that the plugin does not install.
 
-## Unreleased
+From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
+strips, the brows and the flag box, together with a `manifest.json` listing everything published.
+
+## 0.2.0-rc.2 (2026-09-13)
+
+The candidate that lights the hardware around the screen, and that asks the car itself where its
+shift point is rather than deriving one from the redline. Nineteen profiles for RGB strips and
+brows are built beside the flag box's and published with this release, the rev bar can be switched
+off entirely on a rig whose wheel already carries LEDs, and the bar, the arc and the companion's
+speedo light at the four RPMs your sim publishes for the car you are driving. Besides the lights,
+the pages inside the zones grow to fill the box they are given, so a narrow face no longer draws a
+small table under a large empty space.
+
+If you are on 0.1.0-rc.3, this is the first release the Update button has to offer you: 0.1.0-rc.4
+and 0.2.0-rc.1 were prepared but neither was ever published, so the two sections beneath this one
+describe changes that reach you here as well. The 0.2.0-rc.1 section is the one to read first,
+because it replaces your dashboard with a different design rather than with a newer version of the
+same one, and it says what happens to the face you have installed.
 
 ### Added
 
+- **An RGB strip mirrors the shift lights of the car you are driving** — its LEDs, its colours, the
+  order they light in, and how fast it flashes, in the gear you are in. A Porsche Cup fills from
+  both ends inwards, a Next Gen stock car runs green to amber to red, a W13 finishes on a block of
+  five blue, and none of that is a setting: it is the car. `Rev style` is a drop-down now, with
+  `The car's own` as the default and openDash's three looks — left to right, meet in middle, F1 —
+  beside it for anyone who would rather have one look in every car.
+  - iRacing publishes no part of this. It publishes four RPMs per car and nothing about colour,
+    order, LED count or the gear, so the pattern comes from a measured table: the open
+    [Lovely Car Data](https://github.com/Lovely-Sim-Racing/lovely-car-data) project, by Lovely Sim
+    Racing, ATSR and Gomez Sim Industries, under CC BY-NC-SA 4.0. openDash ships none of it and
+    **fetches it once**, as one archive of every car rather than one car at a time, so nothing about
+    which car you are driving leaves your machine. Everything after that works offline. Turning
+    update checks off turns this off too.
+  - A car with no table, a rig with no plugin, or a driver who prefers one of the three looks all
+    get exactly what they got before: the ladder iRacing publishes for the car, or SimHub's bands
+    for a car that publishes none. Nothing is lost by the mirror being unavailable.
+  - `Car bar size` decides what happens when the car's bar and your strip are different lengths:
+    fill the strip, or draw the bar at its own length in the middle of it. A bar that fills from
+    both ends still does at any strip length.
+  - [ADR 0018](docs/decisions/0018-the-cars-own-lights.md) records the four standing refusals this
+    moved, including the one that said the plugin does not compute.
 - The rev bar can be turned **off entirely**, for a wheel or DDU that already has LEDs across its
   top. `OpenDash.RevBar` carries the three states — `shift`, `rpm`, `off` — and the General row in
   the plugin panel is now a three-way choice rather than a toggle. `OpenDash.ShiftLights` stays
@@ -58,6 +96,44 @@ including any that the plugin does not install.
   in the middle, or the F1 look that flashes the whole bar. A style never changes *when* a light
   comes on, only which LED takes which rung and what colour it is, so your car's own shift points
   survive whichever look you pick.
+- **A car whose shift point moves with the gear can be given a table.** `data/shift-points.json`
+  overrides the published ladder for a named car, gear by gear, and a gear left out of an entry
+  falls back to what the sim publishes for the car as a whole. It ships **empty**, which is
+  deliberate rather than unfinished: openDash does not carry measurements it has not made, and an
+  invented number puts a shift light in the wrong place with total confidence. What ships is the
+  mechanism, its validator and the rules for contributing an entry, so a car somebody has actually
+  measured can arrive as a reviewable pull request. A car that is not in the table gets the ladder
+  iRacing publishes for it, which is right for most cars.
+
+### Changed
+
+- **A page fills the zone it is given.** A page's type grows one step of its density ramp at a time
+  until it meets the height of its box, the width of its box or the top of the ramp, and it is
+  refused a step that would leave it in a more ragged wrap than it started in. Zone B of the
+  850 x 480 face drew two 34 px lap times across the top of it with most of the zone empty
+  underneath, which the README capture showed plainly; that page now stacks and fills. Three pages
+  moved and eighteen stayed where they were, and
+  [docs/design/readability-pass.md](docs/design/readability-pass.md) records the reason for each
+  one that stayed.
+- **The car settings strip is drawn at the size of the bar's other values.** Slip, TC, bias and ABS
+  were measured and drawn at the size of their own uppercase labels, and dimmed besides, which left
+  them small and faint between RACE, LAP, POSITION and CLASS at 34 px. The canvas had said 34 px on
+  the 1280 and 28 px on the 850 from the start, and the build now agrees with it. One consequence
+  is visible on the two narrowest faces: brake bias needs 58 px where it needed 30, so the
+  850 x 480 keeps TC and bias where it used to keep ABS as well, and the 800 x 480 keeps bias
+  alone.
+- Every release carries `manifest.json`, which lists the packages and the LED profiles it published
+  with the size, the slot count and the rung of each. It carries a `schemaVersion` of its own, so a
+  reader meeting one out in the world can tell which shape it is reading.
+
+### Known
+
+- **No profile openDash generates has yet been imported into a real SimHub**, and no strip, brow or
+  matrix has been lit by one. They are generated against the format read out of the decompiled
+  9.12.6 assemblies, their pictures are checked by tests and the whole catalogue can be driven in
+  the emulator, so for the moment "it parses" is a claim about Json.NET rather than about SimHub.
+  If you own any of this hardware, saying what it actually does is the most useful thing you could
+  report.
 
 ## 0.2.0-rc.1 (2026-09-13)
 

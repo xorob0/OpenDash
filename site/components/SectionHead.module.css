@@ -1,0 +1,37 @@
+.head {
+  display: grid;
+  gap: var(--space-5);
+  align-items: end;
+  margin-bottom: var(--space-6);
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.title {
+  max-width: 20ch;
+}
+
+.body {
+  max-width: 48ch;
+}
+
+.body > * + * {
+  margin-top: var(--space-3);
+}
+
+@media (min-width: 62rem) {
+  .head {
+    grid-template-columns: 1.15fr 1fr;
+    gap: var(--space-7);
+  }
+
+  /* The paragraph sits on the title's baseline, not under its cap height. */
+  .body {
+    padding-bottom: 0.35rem;
+  }
+}

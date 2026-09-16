@@ -6,10 +6,11 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
-import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES } from '../src/contract.ts';
+import { MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES, ledMirrorRunName, propertyName } from '../src/contract.ts';
 import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, rungFlashes } from '../src/leds/ladder.ts';
+import { canMirror, carCentre, mirrorRun } from '../src/leds/mirror.ts';
 import { ALL_EFFECTS, BEST_EFFORT, NO_PROPERTY, PIT_SPEEDING_MARGIN, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects } from '../src/leds/effects.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
@@ -109,6 +110,68 @@ describe('the rev ladder and its styles', () => {
     // CustomStatusContainer swallows the throw and falls back to 1.0.
     expect(text).toContain('isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)');
     expect(text).not.toMatch(/"Expression": "[^"]*\[DataCorePlugin\.GameData\.CarSettings_RPMShiftLight1\](?!,)/);
+  });
+});
+
+describe("the car's own lights", () => {
+  test('the plugin publishes a run for every length a shape actually has', () => {
+    // The silent failure this closes: a shape whose centre is not in the list would read a property
+    // nobody attaches, draw Color.Black on every LED of its mirror layer, and validate cleanly --
+    // because the property IS declared, just never for that length. The build refuses instead.
+    const needed = new Set<number>();
+    for (const s of ALL_SHAPES) {
+      needed.add(s.centre);
+      if (s.extraRuns) needed.add(s.extraRuns.length);
+    }
+    for (const length of needed) expect({ length, published: canMirror(length) }).toMatchObject({ published: true });
+    // And nothing published that no shape uses, so the list stays a description of the hardware.
+    for (const length of MIRROR_RUN_LENGTHS) expect({ length, used: needed.has(length) }).toMatchObject({ used: true });
+  });
+
+  test('a run nobody publishes is refused rather than generated', () => {
+    expect(() => mirrorRun(13)).toThrow(/MIRROR_RUN_LENGTHS/);
+  });
+
+  test('each LED slices its own colour out of the one string the plugin publishes', () => {
+    const run = mirrorRun(14);
+    expect(run).toHaveLength(14);
+    run.forEach((c, k) => {
+      expect(leds.containerTypeOf(c)).toBe('DynamicColor');
+      // left(value, startIndex, length) -- SimHub's three-argument form, not value-and-length.
+      expect((c as { colorFormula: { expression: string } }).colorFormula.expression).toBe(
+        `left(isnull([${propertyName(ledMirrorRunName(14))}], ''), ${k * MIRROR_COLOR_WIDTH}, ${MIRROR_COLOR_WIDTH})`,
+      );
+      // One LED each, in order, so the run the plugin packs is the run the strip draws.
+      expect({ start: (c as { startPosition?: number }).startPosition, count: (c as { ledCount: number }).ledCount }).toMatchObject({ start: k + 1, count: 1 });
+    });
+  });
+
+  test('the fallback is the exact complement of the mirror, so there is never both or neither', () => {
+    const [mirror, fallback] = carCentre(9, [{ kind: 'staticColor', ledCount: 9, color: 'Red' }]);
+    const ready = (mirror as { trigger: { expression: string } }).trigger.expression;
+    expect((fallback as { trigger: { expression: string } }).trigger.expression).toBe(`!(${ready})`);
+    // The mirror owns its run: an LED the car does not light is dark, not whatever was underneath.
+    expect(mirror).toMatchObject({ clearBackgroundWhenActive: true });
+  });
+
+  test('every profile carries the mirror above the two ladders, and the ladders unchanged beneath it', () => {
+    for (const shape of ALL_SHAPES) {
+      const text = textOf(rpmStripProfile(shape, stableGuid(`t/${shape.id}`)));
+      // The car's run, for this shape's centre.
+      expect({ shape: shape.id, has: text.includes(propertyName(ledMirrorRunName(shape.centre))) }).toMatchObject({ has: true });
+      // And the published ladder still underneath it, because a car with no table loses nothing.
+      expect({ shape: shape.id, has: text.includes(SHIFT_RPM_PROPERTIES.first) }).toMatchObject({ has: true });
+    }
+  });
+
+  test("the car's own bar is what a strip shows unless the driver says otherwise", () => {
+    // ADR 0018: openDash's opinion is that the car is right. The three openDash styles stay, for a
+    // driver who wants one look in every car -- and for every car with no table, which is what the
+    // fallback inside `car` draws.
+    expect(LED_RPM_STYLES[0]).toBe('car');
+    const text = textOf(profileFor('4-14-4'));
+    expect(text).toContain("isnull([OpenDash.LedRpmStyle], 'car')");
+    for (const style of LED_RPM_STYLES) expect(text).toContain(`style: ${style}`);
   });
 });
 
