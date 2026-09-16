@@ -28,7 +28,13 @@ namespace OpenDashPlugin
 
         private const double PageWidth = 960;
         private const double PagePadding = 32;
-        private const double BodyWidth = PageWidth - 2 * PagePadding;
+
+        /// <summary>The column a tab has to itself: the page less its own frame and its side padding.</summary>
+        private const double BodyWidth = PageWidth - 2 * PanelMetrics.BorderWeight - 2 * PagePadding;
+
+        /// <summary>What a button holds even when its word is short, so that two of them in a row are the
+        /// same size. The canvas draws it and design/tokens.json carries no control.minWidth for it.</summary>
+        private const double ButtonMinWidth = 96;
 
         private const string TabRig = "Rig";
         private const string TabData = "Data";
@@ -68,9 +74,20 @@ namespace OpenDashPlugin
             Check(manual: false);
         }
 
+        /// <summary>
+        /// The whole page: the frame the canvas draws, and inside it the header, the tab strip, the body
+        /// and a footer at the foot.
+        /// </summary>
+        /// <remarks>
+        /// The canvas draws the panel 1080 tall and nothing here sets a height. SimHub hands the control
+        /// to its own settings menu, whose window is whatever the user has dragged it to, so a fixed 1080
+        /// would clip the footer off a shorter one instead of shortening the page. The frame's MinHeight
+        /// is the viewport instead, which is the same drawing wherever it is tall enough and a page that
+        /// scrolls wherever it is not.
+        /// </remarks>
         private UIElement BuildPage()
         {
-            var page = new DockPanel { LastChildFill = true, MaxWidth = PageWidth, HorizontalAlignment = HorizontalAlignment.Left };
+            var page = new DockPanel { LastChildFill = true };
             var header = BuildHeader();
             DockPanel.SetDock(header, Dock.Top);
             var tabs = BuildTabBar();
@@ -86,14 +103,24 @@ namespace OpenDashPlugin
             page.Children.Add(footer);
             page.Children.Add(bodyHost);
 
+            var frame = new Border
+            {
+                BorderBrush = Ui.Brush(Theme.Rule),
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                MaxWidth = PageWidth,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Child = page,
+            };
             var scroller = new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = page,
+                Content = frame,
             };
             // The footer sits at the bottom of the viewport when the content is shorter (margin-top: auto).
-            page.SetBinding(MinHeightProperty, new Binding("ViewportHeight") { Source = scroller });
+            // The frame carries it rather than the page, or the two pixels of border would put the content
+            // past the viewport and leave a scrollbar on every short tab.
+            frame.SetBinding(MinHeightProperty, new Binding("ViewportHeight") { Source = scroller });
             return scroller;
         }
 
@@ -308,17 +335,62 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The one accented action a tab is allowed, which is the press somebody came to the tab to make.
+        /// </summary>
+        /// <remarks>
+        /// A second one on the same tab costs the first the whole of its meaning, so a tab that finds
+        /// itself wanting two has picked the wrong one rather than earned another.
+        /// </remarks>
+        private static Button BuildPrimaryButton(string content, string tooltip)
+        {
+            var button = Ui.PrimaryButton(content);
+            button.MinWidth = ButtonMinWidth;
+            button.ToolTip = tooltip;
+            return button;
+        }
+
+        /// <summary>
         /// A secondary action, which until now was SimHub's SHButtonPrimary in spite of the name.
         /// </summary>
         /// <remarks>
         /// The canvas allows one primary per panel, so a page of eight accented buttons says nothing about
-        /// which of them is the thing to press. These are the outline the canvas draws instead; Ui.PrimaryButton
-        /// is what the one accented action of a page asks for.
+        /// which of them is the thing to press. These are the outline the canvas draws instead;
+        /// BuildPrimaryButton is what the one accented action of a tab asks for.
         /// </remarks>
         private static Button BuildSecondaryButton(string content, string tooltip)
         {
             var button = Ui.OutlineButton(content);
-            button.MinWidth = 96;
+            button.MinWidth = ButtonMinWidth;
+            button.ToolTip = tooltip;
+            return button;
+        }
+
+        /// <summary>
+        /// The press that takes something away: the outline again, in danger.
+        /// </summary>
+        /// <remarks>
+        /// The colour is the whole of the difference. A destructive press sits in a row beside the one that
+        /// goes back, and a heavier ground would make the thing to avoid the loudest thing on the row.
+        /// </remarks>
+        private static Button BuildDestructiveButton(string content, string tooltip)
+        {
+            var button = Ui.DestructiveButton(content);
+            button.MinWidth = ButtonMinWidth;
+            button.ToolTip = tooltip;
+            return button;
+        }
+
+        /// <summary>
+        /// An action its ink alone carries: no ground, no outline, no padding and no minimum width.
+        /// </summary>
+        /// <remarks>
+        /// What the header over a screen offers, where Rename and Remove are about the thing already on
+        /// screen rather than about the page, and two outlines there would read as the page's own actions.
+        /// Danger is the ink the removing one takes.
+        /// </remarks>
+        private static Button BuildTextButton(string content, string tooltip, string hex = Theme.TextPrimary)
+        {
+            var button = Ui.LinkButton(content, hex);
             button.ToolTip = tooltip;
             return button;
         }
