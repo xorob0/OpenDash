@@ -18,6 +18,7 @@ namespace OpenDashPlugin
     {
         private TextBlock flagBoxLine;
         private Button flagBoxButton;
+        private TextBlock flagBoxButtonLabel;
         private Button flagBoxCopyButton;
         private TextBox flagBoxPath;
 
@@ -118,11 +119,18 @@ namespace OpenDashPlugin
         /// settings file (FlagBoxInstaller.cs); nothing here edits that file. It is a button rather
         /// than something that happens at startup because a profile paints hardware the user owns, and
         /// that is a thing to be asked about once rather than assumed -- ADR 0013.
+        ///
+        /// It is also the one accented press the tab is allowed: it is what somebody opens the Lights
+        /// tab to do, and everything else here is an outline.
         /// </summary>
         private FrameworkElement BuildFlagBoxRow()
         {
             flagBoxLine = Ui.Caption("", 460);
-            flagBoxButton = BuildSecondaryButton("Install into SimHub", "Adds openDash's profile to SimHub's matrix profiles. It never changes a profile you made yourself.");
+            flagBoxButton = BuildPrimaryButton(null, "Adds openDash's profile to SimHub's matrix profiles. It never changes a profile you made yourself.");
+            // The verb changes with what SimHub already holds, so the label is kept as a block of its own:
+            // rewriting the button's whole Content on every refresh would drop the icon beside it.
+            flagBoxButtonLabel = Ui.Text(FlagBoxInstallPlan.ButtonLabel(null), Theme.SizeBody, FontWeights.Medium, Theme.OnAccent);
+            flagBoxButton.Content = Ui.HStack(PanelMetrics.ButtonIconGap, Ui.Icon(PanelIcons.Install, Theme.OnAccent), flagBoxButtonLabel);
             flagBoxButton.Click += (sender, args) => InstallFlagBox();
 
             var text = Ui.VStack(4, Ui.Body("Flag box profile"), flagBoxLine);
@@ -142,8 +150,9 @@ namespace OpenDashPlugin
             var plan = SafePlan();
             flagBoxLine.Text = FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path);
             if (flagBoxButton == null) return;
-            flagBoxButton.Content = FlagBoxInstallPlan.ButtonLabel(plan);
-            // Nothing to press when there is no profile to install or nowhere to put it.
+            if (flagBoxButtonLabel != null) flagBoxButtonLabel.Text = FlagBoxInstallPlan.ButtonLabel(plan);
+            // Nothing to press when there is no profile to install or nowhere to put it. The kit draws the
+            // disabled state at the canvas's 40 per cent, so nothing here has to dim it.
             var usable = plan != null && plan.State != FlagBoxInstallState.NotEmbedded && plan.State != FlagBoxInstallState.Unavailable;
             flagBoxButton.IsEnabled = usable;
             // The by-hand route, offered only when the one-click one is not there. SimHub's import
@@ -198,14 +207,14 @@ namespace OpenDashPlugin
             var box = new TextBox
             {
                 Width = 320,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 IsReadOnly = true,
                 Text = plugin.FlagBox?.Path ?? string.Empty,
                 ToolTip = "Where openDash left the profile.",
             };
+            // The kit's field chrome, so a path that is read rather than typed still reads as the same
+            // shape as the number boxes above it, and carries the ring a keyboard needs.
+            Ui.Field(box, Theme.ControlHeightSm);
             flagBoxPath = box;
             return box;
         }
