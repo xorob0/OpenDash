@@ -11,6 +11,7 @@ import { setting } from '../src/contract.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
+import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
 import * as values from '../src/second/values.ts';
 import type { TextItem } from '../src/generator.ts';
 
@@ -369,5 +370,24 @@ describe('module expressions', () => {
     const value = moduleItem('lapTimes', 'delta.value');
     expect(formulaOf(value, 'Text')).toContain("'-', '\u2212'");
     expect(value.text).toBe('\u22120.21');
+  });
+
+  /**
+   * The four outcomes of a sector's colour, and the boundary between two of them.
+   *
+   * The lap on which a driver improves a sector leaves `Sector<n>BestTime` equal to
+   * `Sector<n>LastLapTime`, so the delta is exactly 0.000 on the one lap the improvement is worth
+   * showing. A strict `< 0` therefore drew every new personal best in the slower red, which is why
+   * the boundary rather than the colours is what this pins.
+   */
+  test('a sector is dim, purple, green or red, and a new personal best is green rather than red', () => {
+    const colour = formulaOf(moduleItem('sectors', 'sector.s1.value'), 'TextColor');
+    const delta = values.sectorDelta(1);
+    expect(colour).toContain(`if(!(${values.hasTime(values.sectorLast(1))}), '#33383F'`);
+    expect(colour).toContain("'#B14BFF'");
+    expect(colour).toContain(`if(${ncalc.le(delta, ncalc.num(0))}, '#00D96A', '#FF2D46')`);
+    expect(colour).not.toContain(`if(${ncalc.lt(delta, ncalc.num(0))}, '#00D96A'`);
+    expect(sectorIsZero(1)).toBe(ncalc.eq(delta, ncalc.num(0)));
+    expect(sectorIsSlower(1)).toBe(ncalc.gt(delta, ncalc.num(0)));
   });
 });
