@@ -1,0 +1,100 @@
+.top {
+  padding-block: clamp(3rem, 1rem + 6vw, 6rem) 0;
+}
+
+.block > :global(.page) > * + * {
+  margin-top: var(--space-6);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-surface-raised);
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+  border-bottom: 1px solid var(--color-surface-raised);
+}
+
+.step > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/*
+ * Rule 6: the step number carries its rank by size, and stays quiet because it is an index. At 32px
+ * it is large text, which needs 3:1 rather than 4.5:1, so text.label clears it where text.dim does
+ * not clear either.
+ */
+.n {
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--color-text-label);
+}
+
+/* The one step people skip. Marked with a rule in caution, which is the meaning it has. */
+.important {
+  box-shadow: inset 2px 0 0 var(--color-caution-primary);
+  padding-inline-start: var(--space-4);
+}
+
+.important .n {
+  color: var(--color-caution-primary);
+}
+
+.code {
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--color-surface-zone);
+  border-inline-start: 2px solid var(--purpose-ui-accent);
+  overflow-x: auto;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
+.code code {
+  background: none;
+  padding: 0;
+}
+
+.notes {
+  display: grid;
+  gap: 1px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-raised);
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-surface-base);
+}
+
+.block :global(code) {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  padding: 1px 5px;
+  background: var(--color-surface-zone);
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+@media (min-width: 48rem) {
+  .step {
+    grid-template-columns: 4.5rem 1fr;
+  }
+
+  .notes {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -96,16 +96,23 @@ namespace OpenDashPlugin
         /// <summary>Card number per slot, index 0 is slot 1. Always Contract.SlotCount long after Normalise().</summary>
         public int[] Slots { get; set; } = Contract.DefaultSlots();
 
-        /// <summary>Whether each companion module is enabled, index 0 is module 1. Always Modules.Count long after Normalise().</summary>
+        // --- Read from a settings file written before a screen was an instance ------------------
+        //
+        // These were the whole of the companion's and the pit wall's state when there could be one of
+        // each. Since ADR 0017 they live on the screen that has them (ScreenInstance), and these are
+        // read once by MigratedRig() and never written again. They keep their initialisers so that a
+        // migration finds the defaults rather than nulls.
+
+        /// <summary>Pre-rig companion rotation. Migrated onto the companion screen.</summary>
         public bool[] Modules { get; set; } = Contract.DefaultModules();
 
-        /// <summary>Standard zone page per pit wall zone, index 0 is zone A. Always four long after Normalise().</summary>
+        /// <summary>Pre-rig pit wall zones. Migrated onto the pit wall screen.</summary>
         public int[] Zones { get; set; } = Contract.PitWallDefaultZones();
 
-        /// <summary>Wide zone page of the pit wall tower page.</summary>
+        /// <summary>Pre-rig wide zone. Migrated onto the pit wall screen.</summary>
         public int WideZone { get; set; } = Contract.DefaultWideZonePage;
 
-        /// <summary>Address of the web view zone page; empty until the user sets one.</summary>
+        /// <summary>Pre-rig web view address. Migrated onto the pit wall screen.</summary>
         public string WebViewUrl { get; set; } = Contract.DefaultWebViewUrl;
 
         // --- The lights ------------------------------------------------------------------------
@@ -151,9 +158,14 @@ namespace OpenDashPlugin
         /// strip shape rather than per device and every shape reads this one name.</summary>
         public string LedCentre { get; set; } = Contract.DefaultLedCentre;
 
-        /// <summary>How the rev ladder fills a strip: "leftToRight", "meetInMiddle" or "f1". The look
-        /// only; the thresholds are the car's own whichever is set (ADR 0014).</summary>
+        /// <summary>How the rev ladder fills a strip: "car", "leftToRight", "meetInMiddle" or "f1".
+        /// The three openDash styles are the look only; the thresholds are the car's own whichever is
+        /// set (ADR 0014). "car" is the car's whole bar, from the fetched table (ADR 0018).</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
+
+        /// <summary>What a mirrored bar does on a strip that is not the car's length: "stretch" fills
+        /// the run, "exact" draws the bar at its own length in the middle of it.</summary>
+        public string LedMirrorFit { get; set; } = Contract.DefaultLedMirrorFit;
 
         /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
@@ -194,6 +206,7 @@ namespace OpenDashPlugin
             // legal one here rather than reaching the strip as itself.
             LedCentre = Contract.NormaliseChoice(LedCentre, Contract.LedCentres, Contract.DefaultLedCentre);
             LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+            LedMirrorFit = Contract.NormaliseChoice(LedMirrorFit, Contract.LedMirrorFits, Contract.DefaultLedMirrorFit);
         }
 
         private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)
@@ -221,6 +234,22 @@ namespace OpenDashPlugin
         /// before the rig existed looks like, and what Normalise() reads as every screen OpenDash ships.
         /// </remarks>
         public List<string> Screens { get; set; }
+
+        /// <summary>
+        /// The rig: every screen the user has, in the order they were added.
+        /// </summary>
+        /// <remarks>
+        /// This replaces Screens and Faces together, and ADR 0017 is why. A screen is no longer a
+        /// resolution but an instance with a name, a kind, a size and a namespace of its own, so a rig
+        /// may hold two screens of one size and configure them apart.
+        ///
+        /// Null until Normalise() fills it, and deliberately not initialised here, for the reason
+        /// Screens gives: Json.NET's default ObjectCreationHandling adds to a collection a property
+        /// already holds rather than replacing it. Null therefore means "this file has never named a
+        /// rig", which is what a file written before ADR 0017 looks like, and is the signal MigrateRig()
+        /// reads.
+        /// </remarks>
+        public List<ScreenInstance> Rig { get; set; }
 
         // --- The dash face ---------------------------------------------------------------------
 
@@ -312,6 +341,7 @@ namespace OpenDashPlugin
             WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
             NormaliseScreens();
             NormaliseFace();
+            NormaliseRig();
         }
 
         /// <summary>
@@ -345,7 +375,7 @@ namespace OpenDashPlugin
         /// The rig, readable before Normalise() has filled it: a settings object that has never named one
         /// reads as every screen OpenDash ships, which is the same thing NormaliseScreens() writes.
         /// </summary>
-        private IEnumerable<string> Rig()
+        private IEnumerable<string> LegacyScreenPrefixes()
         {
             return Screens ?? Contract.ScreenPrefixes();
         }
@@ -354,7 +384,7 @@ namespace OpenDashPlugin
         public bool HasScreen(string screen)
         {
             if (screen == null) return false;
-            foreach (var known in Rig())
+            foreach (var known in LegacyScreenPrefixes())
             {
                 if (string.Equals(known, screen, StringComparison.Ordinal)) return true;
             }
@@ -364,7 +394,7 @@ namespace OpenDashPlugin
         /// <summary>The faces the rig has, in the order the settings name them. Safe to call before Normalise().</summary>
         public IEnumerable<Contract.FaceSize> RigFaces()
         {
-            foreach (var screen in Rig())
+            foreach (var screen in LegacyScreenPrefixes())
             {
                 if (Contract.IsKnownFacePrefix(screen)) yield return Contract.FaceForPrefix(screen);
             }
@@ -374,7 +404,7 @@ namespace OpenDashPlugin
         /// attaches exactly these, in this order, and ContractTests holds the two together.</summary>
         public IEnumerable<string> DeclaredProperties()
         {
-            return Contract.PropertyNames(Rig());
+            return Contract.PropertyNames(RigScreens());
         }
 
         /// <summary>
@@ -416,26 +446,307 @@ namespace OpenDashPlugin
             {
                 if (!Contract.IsKnownFacePrefix(prefix) || Faces[prefix] == null) Faces.Remove(prefix);
             }
-            // A face the rig has gained since the last save gets its group here, which is what makes a
-            // screen added later start from the defaults rather than from nothing. A group belonging to
-            // a face the rig no longer has is repaired and kept rather than deleted: removing a screen
-            // is something a user asks for, and Normalise() runs on every save.
-            foreach (var face in RigFaces()) Face(face);
             foreach (var state in Faces.Values) state.Normalise();
+            // Nothing else repairs or reads this dictionary. Since ADR 0017 a face's settings live on
+            // the screen that has them, and Faces is what a settings file written before that looks
+            // like: MigratedRig() empties it into the rig on the next line, and NormaliseRig() clears
+            // it once it has. Keeping a second copy in step was how the panel and the plugin came to
+            // disagree about what zone B was showing.
         }
 
-        /// <summary>What one face is set to, created with its defaults the first time it is asked for.</summary>
+        // --- The rig, as ADR 0017 shapes it ------------------------------------------------------
+
+        /// <summary>
+        /// Repairs the rig, and builds one from a settings file written before the rig existed.
+        /// </summary>
+        /// <remarks>
+        /// Runs after NormaliseFace(), because the migration reads the per-face groups it has just
+        /// repaired. Two screens may not share a namespace: that is the collision ADR 0017 exists to
+        /// stop, and a file that somehow carried one has the second dropped rather than allowed to
+        /// shadow the first.
+        /// </remarks>
+        private void NormaliseRig()
+        {
+            if (Rig == null) Rig = MigratedRig();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var kept = new List<ScreenInstance>();
+            foreach (var screen in Rig)
+            {
+                if (screen == null) continue;
+                screen.Normalise();
+                if (!seen.Add(screen.Namespace)) continue;
+                // Two cards both reading "1280 × 480" is a panel nobody can use, so a repeated name is
+                // made unique here rather than refused at the point somebody typed it.
+                screen.Name = PackageCatalogue.UniqueName(screen.Name, names);
+                names.Add(screen.Name);
+                kept.Add(screen);
+            }
+            Rig = kept;
+            // Spent: MigratedRig() has emptied it into the rig, and a second copy left behind would be
+            // serialised, read by something one day, and disagree.
+            if (Faces != null && Faces.Count > 0) Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
+        }
+
+        /// <summary>
+        /// The rig a settings file written before ADR 0017 describes.
+        /// </summary>
+        /// <remarks>
+        /// A file that has never installed anything is a new install, and its rig is empty: that is the
+        /// first-run state the panel teaches from, and XOR-34's point that an empty rig is one fewer
+        /// surface than a wizard.
+        ///
+        /// Any other file gets one screen per folder openDash has written, because those are the
+        /// dashboards the user actually has. Every one takes the stock namespace for its kind and size,
+        /// which is what carries the settings across: a face finds the group Faces already held under
+        /// that key, and the companion and the pit wall find the flat fields that were theirs when there
+        /// could be only one of each.
+        ///
+        /// Nothing is deleted. Older versions installed every package the plugin embeds, so an upgrading
+        /// user meets a rig of a dozen cards; the panel says why and offers to remove the ones they have
+        /// no screen for. Dropping them here instead would be this code deciding which dashboards
+        /// somebody wanted.
+        /// </remarks>
+        private List<ScreenInstance> MigratedRig()
+        {
+            var rig = new List<ScreenInstance>();
+            var folders = new List<string>();
+            if (FolderFingerprints != null) folders.AddRange(FolderFingerprints.Keys);
+            folders.Sort(StringComparer.OrdinalIgnoreCase);
+            foreach (var folder in folders)
+            {
+                if (string.IsNullOrEmpty(folder)) continue;
+                int width, height;
+                PackageCatalogue.SizeFromFolder(folder, out width, out height);
+                var screen = new ScreenInstance
+                {
+                    Kind = PackageCatalogue.Classify(folder, width, height),
+                    Width = width,
+                    Height = height,
+                    Folder = folder,
+                };
+                screen.Namespace = screen.StockNamespace;
+                screen.Name = screen.IsCompanion ? "Companion"
+                    : screen.IsPitWall ? "Pit wall"
+                    : width > 0 ? screen.SizeLabel
+                    : folder;
+                if (screen.IsFace && Faces != null)
+                {
+                    FaceSettings carried;
+                    if (Faces.TryGetValue(screen.Namespace, out carried) && carried != null) screen.Face = carried;
+                }
+                if (screen.IsCompanion) screen.Modules = Modules == null ? null : (bool[])Modules.Clone();
+                if (screen.IsPitWall)
+                {
+                    screen.Zones = Zones == null ? null : (int[])Zones.Clone();
+                    screen.WideZone = WideZone;
+                    screen.WebViewUrl = WebViewUrl;
+                }
+                rig.Add(screen);
+            }
+
+            // A face somebody configured but whose folder is not on record -- an install that failed,
+            // or a settings file carried between machines -- still becomes a screen. The zones are the
+            // part a user spent time on, and losing them because a fingerprint was missing would be the
+            // migration destroying exactly what it exists to carry.
+            if (Faces != null)
+            {
+                foreach (var entry in Faces)
+                {
+                    if (entry.Value == null || !Contract.IsKnownFacePrefix(entry.Key)) continue;
+                    if (rig.Any(screen => string.Equals(screen.Namespace, entry.Key, StringComparison.Ordinal))) continue;
+                    var face = Contract.FaceForPrefix(entry.Key);
+                    rig.Add(new ScreenInstance
+                    {
+                        Kind = Contract.KindFace,
+                        Width = face.Width,
+                        Height = face.Height,
+                        Namespace = entry.Key,
+                        Name = face.Width + " × " + face.Height,
+                        Face = entry.Value,
+                    });
+                }
+            }
+            return rig;
+        }
+
+        /// <summary>The rig, readable before Normalise() has filled it.</summary>
+        public IReadOnlyList<ScreenInstance> RigScreens() { return Rig ?? new List<ScreenInstance>(); }
+
+        /// <summary>The screen a namespace names, or null when the rig has none.</summary>
+        public ScreenInstance ScreenByNamespace(string ns)
+        {
+            if (ns == null || Rig == null) return null;
+            foreach (var screen in Rig)
+            {
+                if (screen != null && string.Equals(screen.Namespace, ns, StringComparison.Ordinal)) return screen;
+            }
+            return null;
+        }
+
+        /// <summary>The first screen of a kind, which is what a setting that was global before ADR 0017 reads.</summary>
+        public ScreenInstance FirstOfKind(string kind)
+        {
+            if (Rig == null) return null;
+            foreach (var screen in Rig)
+            {
+                if (screen != null && string.Equals(screen.Kind, kind, StringComparison.Ordinal)) return screen;
+            }
+            return null;
+        }
+
+        /// <summary>Every face on the rig, in rig order.</summary>
+        public IEnumerable<ScreenInstance> FaceScreens()
+        {
+            foreach (var screen in RigScreens())
+            {
+                if (screen.IsFace) yield return screen;
+            }
+        }
+
+        // The readers the attached properties go through. Each looks the screen up by namespace rather
+        // than closing over it, because the panel replaces the whole settings object when the user
+        // changes something and a delegate holding the old instance would report the old value for
+        // ever. Every one of them survives a namespace the rig no longer has, since an attached
+        // delegate outlives the screen it was attached for until SimHub restarts.
+
+        /// <summary>The screen a namespace names, or null. The name ScreenByNamespace reads badly inline.</summary>
+        public ScreenInstance ScreenOf(string ns) { return ScreenByNamespace(ns); }
+
+        /// <summary>One face's zones, or a default set when the rig no longer has that screen.</summary>
+        public FaceSettings ScreenFace(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen != null && screen.Face != null) return screen.Face;
+            // A removed screen's properties are still attached until SimHub restarts, so they must read
+            // something rather than throw on SimHub's data thread.
+            return Orphaned;
+        }
+
+        private static readonly FaceSettings Orphaned = NewOrphan();
+
+        private static FaceSettings NewOrphan()
+        {
+            var face = new FaceSettings();
+            face.Normalise();
+            return face;
+        }
+
+        public bool ScreenModule(string ns, int module)
+        {
+            var screen = ScreenByNamespace(ns);
+            var meta = OpenDashPlugin.Modules.ByNumber(module);
+            if (meta == null) return false;
+            if (screen == null || screen.Modules == null || module - 1 >= screen.Modules.Length) return meta.Enabled;
+            return screen.Modules[module - 1];
+        }
+
+        public int ScreenZone(string ns, string letter)
+        {
+            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
+            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
+            var screen = ScreenByNamespace(ns);
+            if (screen == null || screen.Zones == null || index >= screen.Zones.Length) return Contract.PitWallDefaultZonePages[index];
+            return Contract.NormaliseZonePage(screen.Zones[index], Contract.PitWallDefaultZonePages[index]);
+        }
+
+        public int ScreenWideZone(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultWideZonePage : Contract.NormaliseWideZonePage(screen.WideZone);
+        }
+
+        public string ScreenWebViewUrl(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultWebViewUrl : (screen.WebViewUrl ?? string.Empty);
+        }
+
+        /// <summary>Advances one zone of one screen, and returns the page it landed on.</summary>
+        public int CycleScreenZone(string ns, string letter)
+        {
+            return ScreenFace(ns).Cycle(letter);
+        }
+
+        /// <summary>Every zone of every face back on the page it opens on, which is what Init does.</summary>
+        public void OpenRigOnStartPages()
+        {
+            foreach (var screen in FaceScreens()) screen.Face.OpenOnStartPages();
+        }
+
+        /// <summary>Adds a screen and returns it, giving it a namespace and a folder nothing else holds.</summary>
+        public ScreenInstance AddScreen(PackageEntry entry, string name)
+        {
+            if (entry == null) throw new ArgumentNullException(nameof(entry));
+            if (Rig == null) Rig = new List<ScreenInstance>();
+            var taken = new List<string>();
+            var names = new List<string>();
+            foreach (var screen in Rig)
+            {
+                if (screen == null) continue;
+                taken.Add(screen.Namespace);
+                names.Add(screen.Name);
+            }
+            var wanted = string.IsNullOrWhiteSpace(name) ? entry.SizeLabel : name.Trim();
+            var added = PackageCatalogue.NewScreen(entry, PackageCatalogue.UniqueName(wanted, names), taken);
+            Rig.Add(added);
+            return added;
+        }
+
+        /// <summary>Removes a screen and its settings. The folder it owned is the installer's to delete.</summary>
+        public bool RemoveScreen(string ns)
+        {
+            if (Rig == null) return false;
+            for (var i = 0; i < Rig.Count; i++)
+            {
+                if (Rig[i] != null && string.Equals(Rig[i].Namespace, ns, StringComparison.Ordinal))
+                {
+                    Rig.RemoveAt(i);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// What the stock screen at a size is set to, created with its defaults if the rig has not got one.
+        /// </summary>
+        /// <remarks>
+        /// The compatibility view of the rig, for the callers that still name a face by its size: the
+        /// card path, and the tests that predate ADR 0017. It reaches only the screen holding the stock
+        /// namespace for that size, which is the one and only sense in which "the 1280x480 face" is
+        /// still a thing a rig has -- a second screen of that size has a namespace of its own and is
+        /// reachable only through the rig.
+        ///
+        /// Creating on demand is the pre-0017 behaviour kept deliberately, and it is safe because no
+        /// production path calls this any more: the plugin attaches, registers and cycles through the
+        /// rig. If one ever does, adding a card to somebody's rig from a property read is the bug to
+        /// look for.
+        /// </remarks>
         public FaceSettings Face(Contract.FaceSize face)
         {
-            if (Faces == null) Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
-            var prefix = Contract.FacePrefix(face);
-            FaceSettings state;
-            if (!Faces.TryGetValue(prefix, out state) || state == null)
+            var ns = Contract.FacePrefix(face);
+            var screen = ScreenByNamespace(ns);
+            if (screen == null)
             {
-                state = new FaceSettings();
-                Faces[prefix] = state;
+                if (Rig == null) Rig = new List<ScreenInstance>();
+                screen = new ScreenInstance
+                {
+                    Kind = Contract.KindFace,
+                    Width = face.Width,
+                    Height = face.Height,
+                    Namespace = ns,
+                    Name = face.Width + " × " + face.Height,
+                };
+                screen.Normalise();
+                Rig.Add(screen);
             }
-            return state;
+            if (screen.Face == null)
+            {
+                screen.Face = new FaceSettings();
+                screen.Face.Normalise();
+            }
+            return screen.Face;
         }
 
         /// <summary>What the top of the face carries, resolving a file written before the mode existed
@@ -523,7 +834,7 @@ namespace OpenDashPlugin
         /// <summary>Puts every zone of every face the rig has on the page it opens on, once, when the plugin starts.</summary>
         public void OpenOnStartPages()
         {
-            foreach (var face in RigFaces()) Face(face).OpenOnStartPages();
+            foreach (var screen in FaceScreens()) screen.Face.OpenOnStartPages();
         }
 
         /// <summary>Advances one zone of one face to its next enabled page and returns it.</summary>
@@ -537,9 +848,9 @@ namespace OpenDashPlugin
         {
             get
             {
-                foreach (var face in RigFaces())
+                foreach (var screen in FaceScreens())
                 {
-                    if (Face(face).GlanceHeld) return true;
+                    if (screen.Face.GlanceHeld) return true;
                 }
                 return false;
             }
@@ -556,50 +867,16 @@ namespace OpenDashPlugin
         /// </remarks>
         public void BeginQuickGlance()
         {
-            foreach (var face in RigFaces()) Face(face).BeginQuickGlance();
+            foreach (var screen in FaceScreens()) screen.Face.BeginQuickGlance();
         }
 
         public void EndQuickGlance()
         {
-            foreach (var face in RigFaces()) Face(face).EndQuickGlance();
+            foreach (var screen in FaceScreens()) screen.Face.EndQuickGlance();
         }
 
         /// <summary>Zones of one face showing the same page as another, which the panel says and allows.</summary>
         public IReadOnlyList<FacePageClash> FaceClashes(Contract.FaceSize face) => FacePageClash.Find(Face(face));
-
-        /// <summary>Whether a companion module is enabled, 1-based. Safe to call before Normalise().</summary>
-        public bool Module(int module)
-        {
-            var meta = OpenDashPlugin.Modules.ByNumber(module);
-            if (meta == null) return false;
-            var index = module - 1;
-            if (Modules == null || index >= Modules.Length) return meta.Enabled;
-            return Modules[index];
-        }
-
-        public void SetModule(int module, bool enabled)
-        {
-            if (!OpenDashPlugin.Modules.IsValidNumber(module)) throw new ArgumentOutOfRangeException(nameof(module));
-            if (Modules == null || Modules.Length != OpenDashPlugin.Modules.Count) Normalise();
-            Modules[module - 1] = enabled;
-        }
-
-        /// <summary>Page shown in a pit wall zone, by its letter. Safe to call before Normalise().</summary>
-        public int Zone(string letter)
-        {
-            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            if (Zones == null || index >= Zones.Length) return Contract.PitWallDefaultZonePages[index];
-            return Contract.NormaliseZonePage(Zones[index], Contract.PitWallDefaultZonePages[index]);
-        }
-
-        public void SetZone(string letter, int page)
-        {
-            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            if (Zones == null || Zones.Length != Contract.PitWallZoneLetters.Length) Normalise();
-            Zones[index] = Contract.NormaliseZonePage(page, Contract.PitWallDefaultZonePages[index]);
-        }
 
         /// <summary>Card number shown in a slot, 1-based. Safe to call before Normalise().</summary>
         public int Slot(int slot)
@@ -653,6 +930,7 @@ namespace OpenDashPlugin
             FlagBoxSide = other.FlagBoxSide == null ? null : (string[])other.FlagBoxSide.Clone();
             LedCentre = other.LedCentre;
             LedRpmStyle = other.LedRpmStyle;
+            LedMirrorFit = other.LedMirrorFit;
             // Cloned rather than shared, so that the panel writing into its copy does not reach back
             // into the settings the plugin is reading from.
             Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
@@ -663,6 +941,9 @@ namespace OpenDashPlugin
                     if (entry.Value != null) Faces[entry.Key] = entry.Value.Clone();
                 }
             }
+            // The rig is cloned screen by screen for the reason the faces above are: the panel writes
+            // into its copy, and a shared instance would reach back into the settings the plugin reads.
+            Rig = other.Rig == null ? null : other.Rig.Where(s => s != null).Select(s => s.Copy()).ToList();
             FaceZones = other.FaceZones == null ? null : (int[])other.FaceZones.Clone();
             FaceZoneMasks = other.FaceZoneMasks == null ? null : (int[])other.FaceZoneMasks.Clone();
             FaceZoneStarts = other.FaceZoneStarts == null ? null : (int[])other.FaceZoneStarts.Clone();

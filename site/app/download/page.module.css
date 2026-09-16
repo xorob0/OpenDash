@@ -1,0 +1,166 @@
+.top {
+  padding-block: clamp(3rem, 1rem + 6vw, 6rem) 0;
+}
+
+.block > :global(.page) > * + * {
+  margin-top: var(--space-6);
+}
+
+.pre {
+  color: var(--color-text-secondary);
+}
+
+.preTag {
+  color: var(--color-caution-primary);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ the two routes */
+.routes {
+  display: grid;
+  gap: 1px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-raised);
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+  padding: var(--space-6);
+  background: var(--color-surface-base);
+}
+
+/* The recommended route is marked by a rule in cyan along its top, not by a fill or a shadow. */
+.recommended {
+  box-shadow: inset 0 2px 0 var(--purpose-ui-accent);
+}
+
+.primary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding: 12px var(--space-5);
+  font-weight: 500;
+  color: var(--purpose-ui-on-accent);
+  background: var(--purpose-ui-accent);
+  border-radius: var(--radius-sm);
+  transition: background var(--fast) var(--ease);
+}
+
+.primary:hover {
+  background: var(--color-brand-tint);
+}
+
+.weight {
+  font-size: var(--size-small);
+  opacity: 0.75;
+}
+
+.hint {
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+  max-width: 46ch;
+  text-wrap: pretty;
+}
+
+.missing {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-zone);
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+}
+
+/* ------------------------------------------------------------------ the file list */
+.files {
+  display: grid;
+  gap: 1px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-raised);
+}
+
+.file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface-base);
+  transition: background var(--fast) var(--ease);
+}
+
+.file:hover {
+  background: var(--color-surface-zone);
+}
+
+.fileText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fileSize {
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.fileName {
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+}
+
+.fileNote {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  max-width: 58ch;
+}
+
+.get {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex: none;
+  padding: 9px var(--space-4);
+  font-size: var(--size-small);
+  font-weight: 500;
+  border: 1px solid var(--purpose-ui-border);
+  border-radius: var(--radius-sm);
+  transition:
+    border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.get:hover {
+  border-color: var(--purpose-ui-accent);
+  color: var(--purpose-ui-accent);
+}
+
+.absent {
+  flex: none;
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+}
+
+.body :global(code),
+.route :global(code),
+.hint :global(code) {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  padding: 1px 5px;
+  background: var(--color-surface-zone);
+  color: var(--color-text-primary);
+}
+
+@media (min-width: 62rem) {
+  .routes {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .file {
+    flex-wrap: nowrap;
+  }
+}

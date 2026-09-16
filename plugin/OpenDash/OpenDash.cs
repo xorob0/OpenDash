@@ -1,18 +1,25 @@
 // OpenDash.cs: the SimHub plugin. Installs the embedded dashboard on startup, exposes the settings as
-// [OpenDash.*] properties and offers the settings panel in SimHub's left menu. It renders nothing and reads
-// no telemetry (no IDataPlugin), by design: see docs/decisions/0003-plugin-settings-through-properties.md.
+// [OpenDash.*] properties and offers the settings panel in SimHub's left menu. It renders nothing:
+// see docs/decisions/0003-plugin-settings-through-properties.md.
+//
+// It does read telemetry, for exactly one thing. ADR 0018 reopened ADR 0009 -- "the plugin does not
+// compute" -- for the car's own LED bar, because there is no SimHub property to derive it from, no
+// expression that could hold an 85-car table and no NCalc clock to flash it with. DataUpdate below
+// is the whole of that: three values in, one frame of colours out, and nothing else in the plugin
+// reads a telemetry value.
 using System;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Controls;
 using System.Windows.Media;
+using GameReaderCommon;
 using SimHub.Plugins;
 
 namespace OpenDashPlugin
 {
     [PluginName("OpenDash")]
     [PluginAuthor("OpenDash contributors")]
-    public class OpenDash : IPlugin, IWPFSettingsV2
+    public class OpenDash : IDataPlugin, IWPFSettingsV2
     {
         /// <summary>SimHub stores the settings as PluginsData/Common/OpenDash.GeneralSettings.json.</summary>
         public const string SettingsKey = "GeneralSettings";
@@ -37,6 +44,18 @@ namespace OpenDashPlugin
 
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
+
+        /// <summary>
+        /// The measured car light tables, fetched onto the machine rather than shipped (ADR 0018).
+        /// Built on first use, like the installer, because it needs the SimHub root the settings name.
+        /// </summary>
+        public CarLightService CarLights =>
+            carLights ?? (carLights = new CarLightService(new ReleaseClient(Version), CarLightLibrary.FolderPath(Installer.SimHubRoot)));
+
+        private CarLightService carLights;
+
+        /// <summary>Monotonic milliseconds for the over-rev flash, which is the only thing openDash times.</summary>
+        private readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
 
         /// <summary>The embedded profile as JSON, which the lights page installs into SimHub.</summary>
         public string FlagBoxJson
@@ -79,7 +98,13 @@ namespace OpenDashPlugin
                 // Before installing, not after: a staging folder left by an interrupted update is a complete
                 // extracted dashboard sitting in DashTemplates, and they accumulate one per abandoned update.
                 PackageExtractor.RemoveOrphanedStaging(Installer.SimHubRoot, new SimHubInstallLog());
+                // The rig decides what is written. Before ADR 0017 this wrote every package the plugin
+                // embeds on every start, so a user who owned one screen found fourteen dashboards in
+                // SimHub's list; now a screen exists because somebody added it. Nothing outside the rig
+                // is deleted -- that is a thing a user asks for -- it is simply no longer rewritten.
+                Installer.Wanted = Settings.RigScreens().Select(screen => screen.Folder).Where(folder => folder != null).ToList();
                 Installer.EnsureInstalled(false);
+                WriteScreenFolders();
             }
             catch (Exception ex)
             {
@@ -96,10 +121,72 @@ namespace OpenDashPlugin
             }
             AttachProperties();
             AttachActions(pluginManager);
+            try
+            {
+                // Off the startup thread: it reads a folder and may fetch. CheckForUpdates is the
+                // user's one switch for whether openDash reaches the network at all (ADR 0012), and it
+                // covers this too -- with it off, whatever is already on disk is used and nothing is
+                // asked for.
+                CarLights.LoadInBackground(Settings.CheckForUpdates);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Loading the car light tables failed", ex);
+            }
             Log.Info("Dashboard status: " + Installer.Status);
             Log.Info(FlagBoxProfile.Summary(FlagBox));
             // The installer records what it wrote into each folder but never saves; this is the safe moment.
             SaveSettings();
+        }
+
+        /// <summary>
+        /// Writes the folder of any screen that has not got one.
+        /// </summary>
+        /// <remarks>
+        /// The stock screens are DashboardInstaller's, because their folder is a package's own and it
+        /// keeps them at the embedded version. A screen with a namespace of its own has a folder no
+        /// package writes, so it is written here -- once, when it is missing. A folder somebody deleted
+        /// comes back on the next start, which is the same promise the stock ones have always made; the
+        /// panel offers the same thing on a button for a user who does not want to restart to get it.
+        /// </remarks>
+        private void WriteScreenFolders()
+        {
+            var log = new SimHubInstallLog();
+            RepairScreenSizes(log);
+            foreach (var screen in Settings.RigScreens())
+            {
+                if (screen.IsStock) continue;
+                var result = ScreenInstaller.Write(screen, Installer.PackageSource, Installer.SimHubRoot, Installer.Record, log);
+                if (!result.Ok) Log.Warn("The screen " + screen.Name + " has no folder: " + result.Error);
+            }
+        }
+
+        /// <summary>
+        /// Gives a size to any screen that has none.
+        /// </summary>
+        /// <remarks>
+        /// A rig migrated from a settings file written before ADR 0017 takes its sizes from the folder
+        /// names, and "openDash Companion", "openDash Pit wall" and the round faces carry none, so those
+        /// screens arrived at 0 x 0 and their cards said so. The packages know: the size is in each
+        /// one's .djson.metadata. Matched on the folder, because that is the one thing a migrated screen
+        /// certainly has.
+        /// </remarks>
+        private void RepairScreenSizes(IInstallLog log)
+        {
+            if (!Settings.RigScreens().Any(screen => screen.Width <= 0 || screen.Height <= 0)) return;
+            var catalogue = PackageCatalogue.From(Installer.PackageSource, log);
+            foreach (var screen in Settings.RigScreens())
+            {
+                if (screen.Width > 0 && screen.Height > 0) continue;
+                var match = catalogue.FirstOrDefault(entry => string.Equals(entry.Folder, screen.Folder, StringComparison.OrdinalIgnoreCase));
+                if (match == null || match.Width <= 0) continue;
+                screen.Width = match.Width;
+                screen.Height = match.Height;
+                if (screen.Package == null) screen.Package = match.Package;
+                // The name was the folder because there was no size to call it by; a screen the user has
+                // renamed keeps whatever they chose.
+                if (string.Equals(screen.Name, screen.Folder, StringComparison.Ordinal)) screen.Name = screen.SizeLabel;
+            }
         }
 
         /// <summary>The lights, which no dashboard reads and the lighting profiles do. A profile the user
@@ -131,6 +218,48 @@ namespace OpenDashPlugin
             // ever draw the defaults its isnull() carries.
             this.AttachDelegate(Contract.LedCentre, () => Settings.LedCentre);
             this.AttachDelegate(Contract.LedRpmStyle, () => Settings.LedRpmStyle);
+            this.AttachDelegate(Contract.LedMirrorFit, () => Settings.LedMirrorFit);
+            // The mirror. Ready is the gate every strip profile's car layer hangs on, and each run is
+            // one fixed-width string the profile slices a colour out of with left(); DataUpdate fills
+            // them. With the tables absent or the car unmeasured, Ready stays 0 and the profile draws
+            // the ladder iRacing publishes, which is what it drew before any of this existed.
+            this.AttachDelegate(Contract.LedMirrorReady, () => CarLights.Ready ? 1 : 0);
+            foreach (var length in Contract.MirrorRunLengths)
+            {
+                var run = length;
+                this.AttachDelegate(Contract.LedMirrorRun(run), () => CarLights.Run(run));
+            }
+        }
+
+        /// <summary>
+        /// One frame of the car's own bar. The only telemetry openDash reads, and the only thing it
+        /// computes (ADR 0018).
+        ///
+        /// <para>It is called at SimHub's data rate, so it does the least it can: with the mirror off
+        /// or the sim closed it sets one field and returns, and the table lookup happens on a car
+        /// change rather than per frame. Nothing here may throw -- SimHub calls this from its own loop
+        /// and an exception here would be one per frame -- so the whole body is guarded and a failure
+        /// leaves the strip on the published ladder.</para>
+        /// </summary>
+        public void DataUpdate(PluginManager pluginManager, ref GameData data)
+        {
+            try
+            {
+                var telemetry = data == null ? null : data.NewData;
+                var on = data != null && data.GameRunning && telemetry != null && Settings.LedRpmStyle == Contract.LedRpmStyleCar;
+                CarLights.Update(
+                    on ? telemetry.CarId : null,
+                    on ? telemetry.Gear : null,
+                    on ? telemetry.Rpms : 0,
+                    Settings.LedMirrorFit == Contract.LedMirrorFitExact ? MirrorFit.Exact : MirrorFit.Stretch,
+                    on,
+                    clock.ElapsedMilliseconds);
+            }
+            catch (Exception)
+            {
+                // Once a frame, silently, and the strip falls back on its own: there is nothing useful
+                // to log sixty times a second and nothing to recover.
+            }
         }
 
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
@@ -233,41 +362,48 @@ namespace OpenDashPlugin
             // speedo read it too, and attached last of the shared group because ShiftLights is one of
             // the names this list has always opened with. #170, #189.
             this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
-            foreach (var face in Settings.RigFaces())
+            // One group per screen the rig holds, under that screen's own namespace, which is what lets
+            // two screens of one size be configured apart (ADR 0017). The screen object is captured
+            // rather than looked up per read: the panel replaces the settings object on every change, so
+            // a delegate that searched the rig by namespace would be searching a rig that has moved.
+            foreach (var screen in Settings.RigScreens())
             {
-                var capturedFace = face;
-                foreach (var letter in Contract.FaceZoneLetters)
+                var s = screen;
+                if (s.IsFace)
                 {
-                    var captured = letter;
-                    this.AttachDelegate(Contract.ZonePageProperty(capturedFace, captured), () => Settings.FaceZone(capturedFace, captured));
-                    this.AttachDelegate(Contract.ZoneMaskProperty(capturedFace, captured), () => Settings.FaceZoneMask(capturedFace, captured));
-                    this.AttachDelegate(Contract.ZoneStartProperty(capturedFace, captured), () => Settings.FaceZoneStart(capturedFace, captured));
-                    this.AttachDelegate(Contract.ZoneClassOnlyProperty(capturedFace, captured), () => Settings.FaceZoneIsClassOnly(capturedFace, captured));
+                    foreach (var letter in Contract.FaceZoneLetters)
+                    {
+                        var captured = letter;
+                        this.AttachDelegate(Contract.ZonePageProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Zone(captured));
+                        this.AttachDelegate(Contract.ZoneMaskProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Mask(captured));
+                        this.AttachDelegate(Contract.ZoneStartProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Start(captured));
+                        this.AttachDelegate(Contract.ZoneClassOnlyProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).IsClassOnly(captured));
+                    }
+                    foreach (var slot in Contract.BarSlots)
+                    {
+                        var captured = slot;
+                        this.AttachDelegate(Contract.BarFieldProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).BarField(captured));
+                    }
+                    this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
                 }
-                foreach (var slot in Contract.BarSlots)
+                else if (s.IsCompanion)
                 {
-                    var captured = slot;
-                    this.AttachDelegate(Contract.BarFieldProperty(capturedFace, captured), () => Settings.BarField(capturedFace, captured));
+                    for (var module = 1; module <= Modules.Count; module++)
+                    {
+                        var captured = module;
+                        this.AttachDelegate(Contract.ModuleProperty(s.Namespace, captured), () => Settings.ScreenModule(s.Namespace, captured));
+                    }
                 }
-                this.AttachDelegate(Contract.QuickGlanceProperty(capturedFace), () => Settings.QuickGlanceOf(capturedFace));
-            }
-            if (Settings.HasScreen(Contract.CompanionPrefix))
-            {
-                for (var module = 1; module <= Modules.Count; module++)
+                else if (s.IsPitWall)
                 {
-                    var captured = module;
-                    this.AttachDelegate(Contract.ModuleProperty(captured), () => Settings.Module(captured));
+                    foreach (var letter in Contract.PitWallZoneLetters)
+                    {
+                        var captured = letter;
+                        this.AttachDelegate(Contract.ZoneProperty(s.Namespace, captured), () => Settings.ScreenZone(s.Namespace, captured));
+                    }
+                    this.AttachDelegate(Contract.PitWallWideProperty(s.Namespace), () => Settings.ScreenWideZone(s.Namespace));
+                    this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
                 }
-            }
-            if (Settings.HasScreen(Contract.PitWallPrefix))
-            {
-                foreach (var letter in Contract.PitWallZoneLetters)
-                {
-                    var captured = letter;
-                    this.AttachDelegate(Contract.ZoneProperty(captured), () => Settings.Zone(captured));
-                }
-                this.AttachDelegate(Contract.PitWallWide, () => Settings.WideZone);
-                this.AttachDelegate(Contract.WebViewUrl, () => Settings.WebViewUrl);
             }
         }
 
@@ -286,19 +422,25 @@ namespace OpenDashPlugin
         /// </summary>
         private void AttachActions(PluginManager pluginManager)
         {
-            foreach (var face in Contract.FaceSizes)
+            // The rig's faces and not the catalogue's. An action a rig does not have is a button a
+            // driver may already have assigned, left bound to nothing, which is why this used to
+            // register all eight sizes whatever the rig was -- but a namespace a user typed cannot be
+            // enumerated ahead of time, so the rig is the only list there is once screens are
+            // instances (ADR 0017). The panel warns before a remove that a button bound to that screen
+            // will go quiet, which is the cost said out loud rather than designed around.
+            foreach (var screen in Settings.FaceScreens())
             {
-                var capturedFace = face;
+                var ns = screen.Namespace;
                 foreach (var letter in Contract.FaceZoneLetters)
                 {
                     var captured = letter;
-                    pluginManager.AddAction(Contract.CycleZoneAction(capturedFace, captured), typeof(OpenDash), (manager, name) => Settings.CycleFaceZone(capturedFace, captured), null);
+                    pluginManager.AddAction(Contract.CycleZoneAction(ns, captured), typeof(OpenDash), (manager, name) => Settings.CycleScreenZone(ns, captured), null);
                 }
                 pluginManager.AddAction(
-                    Contract.HoldQuickGlanceActionFor(capturedFace),
+                    Contract.HoldQuickGlanceActionFor(ns),
                     typeof(OpenDash),
-                    (manager, name) => Settings.Face(capturedFace).BeginQuickGlance(),
-                    (manager, name) => Settings.Face(capturedFace).EndQuickGlance());
+                    (manager, name) => Settings.ScreenFace(ns).BeginQuickGlance(),
+                    (manager, name) => Settings.ScreenFace(ns).EndQuickGlance());
             }
         }
     }

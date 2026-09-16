@@ -16,6 +16,9 @@
     <Compile Include="../OpenDash/Modules.cs" Link="Plugin/Modules.cs" />
     <Compile Include="../OpenDash/FacePages.cs" Link="Plugin/FacePages.cs" />
     <Compile Include="../OpenDash/FaceSettings.cs" Link="Plugin/FaceSettings.cs" />
+    <Compile Include="../OpenDash/ScreenInstance.cs" Link="Plugin/ScreenInstance.cs" />
+    <Compile Include="../OpenDash/PackageCatalogue.cs" Link="Plugin/PackageCatalogue.cs" />
+    <Compile Include="../OpenDash/ScreenInstaller.cs" Link="Plugin/ScreenInstaller.cs" />
     <Compile Include="../OpenDash/OpenDashSettings.cs" Link="Plugin/OpenDashSettings.cs" />
     <Compile Include="../OpenDash/Versioning.cs" Link="Plugin/Versioning.cs" />
     <Compile Include="../OpenDash/Installation.cs" Link="Plugin/Installation.cs" />
@@ -32,6 +35,10 @@
     <Compile Include="../OpenDash/UpdateService.cs" Link="Plugin/UpdateService.cs" />
     <Compile Include="../OpenDash/FlagBoxProfile.cs" Link="Plugin/FlagBoxProfile.cs" />
     <Compile Include="../OpenDash/FlagBoxInstallPlan.cs" Link="Plugin/FlagBoxInstallPlan.cs" />
+    <Compile Include="../OpenDash/CarLightTable.cs" Link="Plugin/CarLightTable.cs" />
+    <Compile Include="../OpenDash/CarLightMirror.cs" Link="Plugin/CarLightMirror.cs" />
+    <Compile Include="../OpenDash/CarLightLibrary.cs" Link="Plugin/CarLightLibrary.cs" />
+    <Compile Include="../OpenDash/CarLightService.cs" Link="Plugin/CarLightService.cs" />
   </ItemGroup>
 
   <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;
