@@ -116,11 +116,15 @@ describe('the families a package ships', () => {
     expect(weights).toContain('Bold');
   });
 
-  test('the label family ships Medium', () => {
+  test('the label family ships Medium and the Bold a flag band is named in', () => {
+    // A label is Medium everywhere but on the flag band, which the artboards set in 700; the face
+    // has to be carried rather than synthesised, since design/advances.ts measures it and the fit
+    // tests believe what it measures.
     const weights = shipped()
       .filter((f) => familyOfFile(f) === ds.font.label)
       .map(weightOfFile);
     expect(weights).toContain('Medium');
+    expect(weights).toContain('Bold');
   });
 
   test('the vendored originals are left exactly as they were downloaded', () => {

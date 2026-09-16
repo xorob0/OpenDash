@@ -36,7 +36,7 @@ const BRAND = /#00E5FF/i;
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
 const faceOf = (item: TextItem): MeasuredFace => {
-  if (item.font === 'Barlow') return 'BarlowMedium';
+  if (item.font === 'Barlow') return item.fontWeight === 'Bold' ? 'BarlowBold' : 'BarlowMedium';
   if (item.fontWeight === 'Bold') return 'BarlowCondensedBold';
   if (item.fontWeight === 'Light') return 'BarlowCondensedLight';
   return 'BarlowCondensedSemiBold';
