@@ -167,7 +167,7 @@ describe('the strip closes over what the game does not publish', () => {
   }
 
   test('a narrow face closes its shorter strip the same way', () => {
-    // 850 by 480 keeps two cells, so the arithmetic is a different one and worth its own case.
+    // 850 by 480 keeps four of the seven, so the arithmetic is a different one and worth its own case.
     const narrow = stripValues('openDash 850x480');
     expect(narrow.length).toBeGreaterThan(0);
     expect(narrow.length).toBeLessThan(values.length);

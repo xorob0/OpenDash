@@ -33,6 +33,7 @@ import { rect } from '../src/design/geometry.ts';
 import { shapeOf } from '../src/second/shape.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import {
+  BAR_FIELD_SPECS,
   BASE_FACE,
   FACE_SCREEN_NAME,
   FACE_SCREEN_NAME_NO_REV_BAR,
@@ -590,6 +591,35 @@ describe('the bar is drawn at the scale its artboard draws', () => {
       expect(lap('denominator').rect.top + scale.denominatorSize).toBe(value.rect.top + scale.valueSize);
     });
   }
+});
+
+/**
+ * The catalogue an end draws from, written as the zone catalogue artboard writes it. Ten fields
+ * rather than the artboard's eleven: strength of field is published by SimHub in no form at all
+ * and ADR 0009 settled that a field which can never have a value is not offered.
+ */
+describe('the bar draws the catalogue the artboard writes', () => {
+  test('ten fields, each with the label and the reading the artboard gives it', () => {
+    expect(BAR_FIELD_SPECS.map((spec) => [spec.label, spec.sample, spec.denominator?.sample ?? ''])).toEqual([
+      ['Race', '0:28:14', ''],
+      ['Lap', '4', '/ 32'],
+      ['Time left', '0:42:15', ''],
+      ['Clock', '14:32', ''],
+      ['Real time', '19:26', ''],
+      ['Position', '3', '/ 22'],
+      ['Class', 'GT3 · P4', ''],
+      ['Incidents', '3x', ''],
+      ['Air', '21.5', '°'],
+      ['Track', '27.6', '°'],
+    ]);
+  });
+
+  test('and shortens the one label the portrait artboard shortens', () => {
+    const labelOn = (face: typeof zoneFace600x686, slot: string): string =>
+      faceItems(face).find((i): i is TextItem => i.kind === 'text' && i.name === `bar.${slot}.position.label`)!.text;
+    expect(labelOn(zoneFace600x686, 'Right1')).toBe('POS');
+    expect(labelOn(zoneFace1920x480, 'Right1')).toBe('POSITION');
+  });
 });
 
 describe('the bar keeps its three blocks apart', () => {
