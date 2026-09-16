@@ -18,9 +18,12 @@ import { levelGauge } from '../second/gauge.ts';
 import { stack } from '../second/layout.ts';
 import { CHARS, NO_VALUE, PIT_SERVICE_BITS, fuelPercent, fuelUnit, inPitSeconds, isInPitLane, lastPitDuration, pitRefuelLitres, pitServiceFlag } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
+import { blockRow, defineModule, fieldsRow, fld, pageKeeps } from './module.ts';
 
 const { fmt, iff, isNull, str, not } = ncalc;
+
+/** The four the catalogue writes as one summary, `Tyres · RIGHTS`, and drops in a narrow box. */
+export const CORNER_TOGGLES: readonly string[] = ['FrontLeft', 'FrontRight', 'RearLeft', 'RearRight'];
 
 /** The six toggles of the pit box, in the order the black box lists them. */
 export const TOGGLES: { id: string; text: string; bit: number }[] = [
@@ -39,8 +42,11 @@ export const pitView = defineModule('pitView', (ctx) => {
   const gaugeHeight = d.bar;
   const refuel = pitRefuelLitres();
 
+  // Which corners are being changed is the page's own summary, and it is what a box one column
+  // wide drops: the fast repair and the tear-off stay at every shape, the corners do not.
+  const toggles = pageKeeps('tyres', ctx) ? TOGGLES : TOGGLES.filter((t) => !CORNER_TOGGLES.includes(t.id));
   /** Each toggle with the width its label really takes, so the wrap below can be measured. */
-  const measured = TOGGLES.map((t) => ({ ...t, textWidth: Math.ceil(measureText('BarlowMedium', t.text, d.labelSm)) + 2 }));
+  const measured = toggles.map((t) => ({ ...t, textWidth: Math.ceil(measureText('BarlowMedium', t.text, d.labelSm)) + 2 }));
   /** The toggles wrapped to the frame, in the order the black box lists them. */
   const toggleRows: (typeof measured)[] = [];
   {
@@ -86,8 +92,7 @@ export const pitView = defineModule('pitView', (ctx) => {
       // The six toggles wrap rather than running off the right edge. They used to be laid out on
       // one line whatever the width, which is fine at 600 and puts TEAR-OFF 8 px past the edge at
       // 360 -- where WPF clips it to "TEAR-OF" and the row reads as a rendering fault. The wrap is
-      // in importance order, so a box too short for two lines loses the tear-off and keeps the
-      // corners, which is the right way round.
+      // in importance order, so a box too short for two lines loses the tear-off before a corner.
       blockRow(toggleRows.length * toggleHeight + Math.max(0, toggleRows.length - 1) * d.fieldGap, (bottom) => {
         const blockHeight = toggleRows.length * toggleHeight + Math.max(0, toggleRows.length - 1) * d.fieldGap;
         const top = bottom - blockHeight;

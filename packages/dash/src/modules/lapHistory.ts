@@ -23,8 +23,8 @@ import { densityOf } from '../second/density.ts';
 import { rowCapacity } from '../second/table.ts';
 import { CHARS, PREVIOUS_LAP_SLOTS, currentLap, hasTime, lapTime, previousLap, previousLapDelta } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { defineModule, shapeIn } from './module.ts';
-import { archetypeOf, type Archetype } from './shedding.ts';
+import { defineModule, drawnAt, pageKeeps } from './module.ts';
+import type { Archetype } from './shedding.ts';
 
 const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull } = ncalc;
 
@@ -69,9 +69,10 @@ const columnWidth = (canvas: number, fs: number, chars: Chars, mono: Monospace):
 
 export const lapHistory = defineModule('lapHistory', (ctx) => {
   const d = densityOf(ctx.density);
-  const shape = archetypeOf(shapeIn(ctx));
+  const shape = drawnAt(ctx);
   const rowHeight = d.rowHeight;
-  const rows = Math.max(1, Math.min(PREVIOUS_LAP_SLOTS, ROWS[shape], rowCapacity(ctx.frame, ctx.density, true, rowHeight)));
+  const head = pageKeeps('head', ctx);
+  const rows = Math.max(1, Math.min(PREVIOUS_LAP_SLOTS, ROWS[shape], rowCapacity(ctx.frame, ctx.density, head, rowHeight)));
   // Row one is the most recent lap, which SimHub numbers 00, so the slot is the repeat index less one.
   const slot = sub(repeatIndex(), num(1));
   const time = previousLap(slot);
@@ -84,8 +85,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
   const deltaWidth = columnWidth(COLUMN.delta, fs, CHARS.delta, mono);
   const drawsDelta = shape === 'wide';
   const left = ctx.frame.left + PAD_X;
-  const top = ctx.frame.top + d.headerHeight;
-  const headTop = ctx.frame.top + (d.headerHeight - d.labelSm) / 2;
+  const top = ctx.frame.top + (head ? d.headerHeight : 0);
   const valueTop = top + (rowHeight - fs) / 2;
   const timeX = left + lapWidth + d.cellGap;
   // The catalogue spreads the delta to the right edge rather than packing it after the time, which
@@ -121,10 +121,11 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
       : []),
   ];
   const row: LayerItem = { kind: 'layer', name: `${ctx.prefix}row`, children, ...withBindings({ Visible: hasTime(time) }) };
+  const heading = (name: string, text: string, left: number, width: number, hAlign?: 'right'): Item =>
+    label(`${ctx.prefix}head.${name}`, text, left, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, width, { size: d.labelSm, hAlign });
   return [
-    label(`${ctx.prefix}head.lap`, 'LAP', left, headTop, lapWidth, { size: d.labelSm }),
-    label(`${ctx.prefix}head.time`, 'TIME', timeX, headTop, timeWidth, { size: d.labelSm }),
-    ...(drawsDelta ? [label(`${ctx.prefix}head.delta`, 'Δ BEST', deltaX, headTop, deltaWidth, { size: d.labelSm, hAlign: 'right' })] : []),
+    ...(head ? [heading('lap', 'LAP', left, lapWidth), heading('time', 'TIME', timeX, timeWidth)] : []),
+    ...(head && drawsDelta ? [heading('delta', 'Δ BEST', deltaX, deltaWidth, 'right')] : []),
     { kind: 'layer', name: `${ctx.prefix}rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight, repeatLeftOffset: 0 },
   ];
 });

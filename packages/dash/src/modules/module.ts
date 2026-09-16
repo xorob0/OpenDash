@@ -29,7 +29,7 @@ import { densityOf } from '../second/density.ts';
 import { fixedRow, type StackRow } from '../second/layout.ts';
 import type { Density } from '../second/density.ts';
 import { columnsAt, shapeOf, type Shape } from '../second/shape.ts';
-import { keepsAt, keepsPart, keptAt, keptIds } from './shedding.ts';
+import { archetypeFor, keepsAt, keepsPart, keptAt, keptIds, type Archetype } from './shedding.ts';
 
 export interface ModuleContext {
   /** The box the module draws into, padding already removed. */
@@ -68,6 +68,14 @@ export interface ModuleContext {
 
 /** The shape a context is drawn at, derived from its frame unless the caller named one. */
 export const shapeIn = (ctx: ModuleContext): Shape => ctx.shape ?? shapeOf(ctx.frame);
+
+/**
+ * The catalogue drawing this context takes, which is what every declaration is read at.
+ *
+ * Its shape's answer for twenty of the twenty-one pages, and for the two that ask, the drawing the
+ * canvas points at for a box that short. See `archetypeFor`.
+ */
+export const drawnAt = (ctx: ModuleContext): Archetype => archetypeFor(ctx.page, shapeIn(ctx), ctx.frame);
 
 export type ModuleBuilder = (ctx: ModuleContext) => Item[];
 
@@ -126,7 +134,7 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts:
   const { gap, lines: plan, columns, align, justify, lineGap: asked }: FieldsRowOptions = typeof opts === 'number' ? { gap: opts } : opts;
   const shape = shapeIn(ctx);
   const lineGap = asked ?? Math.round(densityOf(ctx.density).gapY / 2);
-  const kept = keptAt(specs, ctx.page, shape);
+  const kept = keptAt(specs, ctx.page, drawnAt(ctx));
   if (kept.length === 0) return fixedRow(0, () => []);
   const shapeColumns = columnsAt(shape);
   const columnCount = columns ?? shapeColumns;
@@ -166,7 +174,7 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts:
       },
       shed: {
         ids: at.map((spec) => spec.id ?? spec.name),
-        order: keepsAt(ctx.page, shape) ?? at.map((spec) => spec.id ?? spec.name),
+        order: keepsAt(ctx.page, drawnAt(ctx)) ?? at.map((spec) => spec.id ?? spec.name),
         without: (ids) => {
           const left = at.filter((spec) => !ids.includes(spec.id ?? spec.name));
           return left.length === 0 ? undefined : rowOf(left, raggedness(linesOf(left)));
@@ -186,10 +194,10 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts:
  * rows rather than six. What fits is still checked afterwards, because a declared column set is a
  * design decision and a box is a fact.
  */
-export const pageColumns = <T extends string>(all: readonly T[], ctx: ModuleContext): T[] => keptIds(all, ctx.page, shapeIn(ctx));
+export const pageColumns = <T extends string>(all: readonly T[], ctx: ModuleContext): T[] => keptIds(all, ctx.page, drawnAt(ctx));
 
 /** Whether this page keeps a part that is neither a field nor a column, at the shape it is drawn at. */
-export const pageKeeps = (id: string, ctx: ModuleContext): boolean => keepsPart(id, ctx.page, shapeIn(ctx));
+export const pageKeeps = (id: string, ctx: ModuleContext): boolean => keepsPart(id, ctx.page, drawnAt(ctx));
 
 /** A stack row of a fixed height drawn by the caller, e.g. a gauge or a strip. */
 export const blockRow = fixedRow;

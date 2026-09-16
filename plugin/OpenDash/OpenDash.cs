@@ -167,11 +167,16 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.LightsNightMode, () => Settings.LightsNightMode);
             this.AttachDelegate(Contract.FlagBoxCriticalOnly, () => Settings.FlagBoxCriticalOnly);
             this.AttachDelegate(Contract.FlagBoxGear, () => Settings.FlagBoxGear);
+            // One number under two names. LightsLowFuelLaps is what the contract reads first and
+            // FlagBoxLowFuelLaps is the name that shipped, so both carry the threshold the driver set
+            // and a profile of either vintage finds it. The field keeps the old spelling because that
+            // is what a settings file on disk is keyed by.
             this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
             // Zero means "not set": the profile then applies its own default, which is per unit, so a
             // driver in Fahrenheit who has never opened this page does not get a Celsius number.
             this.AttachDelegate(Contract.FlagBoxOilTemp, () => Settings.FlagBoxOilTemp == 0 ? (int?)null : Settings.FlagBoxOilTemp);
             this.AttachDelegate(Contract.FlagBoxWaterTemp, () => Settings.FlagBoxWaterTemp == 0 ? (int?)null : Settings.FlagBoxWaterTemp);
+            this.AttachDelegate(Contract.LightsLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 var m = matrix;
@@ -187,6 +192,7 @@ namespace OpenDashPlugin
             // ever draw the defaults its isnull() carries.
             this.AttachDelegate(Contract.LedCentre, () => Settings.LedCentre);
             this.AttachDelegate(Contract.LedRpmStyle, () => Settings.LedRpmStyle);
+            this.AttachDelegate(Contract.LedFlagAnimation, () => Settings.LedFlagAnimation);
         }
 
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
@@ -312,6 +318,7 @@ namespace OpenDashPlugin
                         this.AttachDelegate(Contract.BarFieldProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).BarField(captured));
                     }
                     this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
+                    this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
                 }
                 else if (s.IsCompanion)
                 {
@@ -335,7 +342,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The five actions a driver binds to a wheel button: one per zone, and one held for a glance.
+        /// The actions a driver binds to a wheel button: five per face, one per zone and one held for a
+        /// glance, and two per companion, the next module and a glance held on the same idiom.
         ///
         /// Registered through the PluginManager rather than through `this.AddAction`, and that is not
         /// a style choice. The extension method assigns null over the release callback before passing
@@ -368,6 +376,20 @@ namespace OpenDashPlugin
                     typeof(OpenDash),
                     (manager, name) => Settings.ScreenFace(ns).BeginQuickGlance(),
                     (manager, name) => Settings.ScreenFace(ns).EndQuickGlance());
+            }
+            // A companion has two of its own: one that advances it past the modules the rotation
+            // leaves off, and one held for a glance, which is the same pair a face has under other
+            // names. They go through the manager for the same reason the face's do.
+            foreach (var screen in Settings.RigScreens())
+            {
+                if (screen == null || !screen.IsCompanion) continue;
+                var ns = screen.Namespace;
+                pluginManager.AddAction(Contract.NextModuleActionFor(ns), typeof(OpenDash), (manager, name) => Settings.CycleScreenModule(ns), null);
+                pluginManager.AddAction(
+                    Contract.HoldQuickGlanceActionFor(ns),
+                    typeof(OpenDash),
+                    (manager, name) => Settings.BeginScreenGlance(ns),
+                    (manager, name) => Settings.EndScreenGlance(ns));
             }
         }
     }
