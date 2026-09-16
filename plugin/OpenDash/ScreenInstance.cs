@@ -64,6 +64,22 @@ namespace OpenDashPlugin
         /// <summary>Which modules are in the rotation. Null on a screen that is not a companion.</summary>
         public bool[] Modules { get; set; }
 
+        /// <summary>Module this companion is showing, as a page index. Live state, written by a wheel
+        /// button, and what the dashboard's widget follows.</summary>
+        public int CompanionPage { get; set; }
+
+        /// <summary>Module this companion opens on. A session begins where the driver set it to rather
+        /// than where they left it, which is the promise a face zone's start page makes too.</summary>
+        public int CompanionStart { get; set; }
+
+        /// <summary>Module a held button shows on this companion, released back to where it was.</summary>
+        public int CompanionQuickGlance { get; set; } = Contract.DefaultCompanionQuickGlance;
+
+        private int glanceRestore = -1;
+
+        /// <summary>Whether a glance is being held here; a second press while one is does nothing.</summary>
+        public bool GlanceHeld { get { return glanceRestore >= 0; } }
+
         public bool IsFace { get { return string.Equals(Kind, Contract.KindFace, StringComparison.Ordinal); } }
         public bool IsCompanion { get { return string.Equals(Kind, Contract.KindCompanion, StringComparison.Ordinal); } }
         public bool IsPitWall { get { return string.Equals(Kind, Contract.KindPitWall, StringComparison.Ordinal); } }
@@ -186,14 +202,94 @@ namespace OpenDashPlugin
 
             if (IsCompanion)
             {
+                // A null Modules array is a companion nothing has configured yet, so the whole group
+                // takes its defaults. Zero is a legal page, so neither the start nor the glance can
+                // tell "unset" from "the first module" on its own; the pit wall's zones are read the
+                // same way and for the same reason.
+                var fresh = Modules == null;
                 var modules = Contract.DefaultModules();
-                if (Modules != null)
+                if (!fresh)
                 {
                     for (var i = 0; i < modules.Length && i < Modules.Length; i++) modules[i] = Modules[i];
                 }
                 Modules = modules;
+
+                CompanionStart = fresh ? Contract.DefaultCompanionStart : Contract.NormalisePage(CompanionStart, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionStart);
+                CompanionStart = Contract.FirstEnabledFrom(CompanionStart, ModuleMask(), OpenDashPlugin.Modules.Count);
+                CompanionQuickGlance = fresh
+                    ? Contract.DefaultCompanionQuickGlance
+                    : Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
+                CompanionPage = fresh ? CompanionStart : Contract.NormalisePage(CompanionPage, OpenDashPlugin.Modules.Count, CompanionStart);
+                CompanionPage = Contract.FirstEnabledFrom(CompanionPage, ModuleMask(), OpenDashPlugin.Modules.Count);
             }
-            else Modules = null;
+            else
+            {
+                Modules = null;
+                CompanionPage = 0;
+                CompanionStart = 0;
+                CompanionQuickGlance = 0;
+            }
+        }
+
+        /// <summary>The rotation as a bit mask, bit 0 being module 1, so that a page can be advanced
+        /// past what is turned off with the arithmetic a zone's mask already uses.</summary>
+        private int ModuleMask()
+        {
+            var mask = 0;
+            if (Modules == null) return (1 << OpenDashPlugin.Modules.Count) - 1;
+            for (var i = 0; i < Modules.Length && i < OpenDashPlugin.Modules.Count; i++)
+            {
+                if (Modules[i]) mask |= 1 << i;
+            }
+            // A rotation with nothing left on has nothing to draw, so it reads as the whole catalogue
+            // rather than leaving the companion on a page its own button can never return to.
+            return mask == 0 ? (1 << OpenDashPlugin.Modules.Count) - 1 : mask;
+        }
+
+        /// <summary>Puts the companion on the module it opens on, which is what Init does to a face.</summary>
+        public void OpenOnStartModule()
+        {
+            if (!IsCompanion) return;
+            CompanionPage = Contract.FirstEnabledFrom(CompanionStart, ModuleMask(), OpenDashPlugin.Modules.Count);
+        }
+
+        /// <summary>
+        /// Advances to the next module the rotation leaves on, and returns it.
+        /// </summary>
+        /// <remarks>
+        /// Past the modules turned off, because the pane that turns one off is the same pane that
+        /// binds this button: a press that landed on a module the driver had switched off would show
+        /// a page the companion's own header counts as absent.
+        /// </remarks>
+        public int CycleModule()
+        {
+            if (!IsCompanion) return 0;
+            var count = OpenDashPlugin.Modules.Count;
+            CompanionPage = Contract.FirstEnabledFrom((CompanionPage + 1) % count, ModuleMask(), count);
+            return CompanionPage;
+        }
+
+        /// <summary>
+        /// Shows the glance module, remembering what was there.
+        /// </summary>
+        /// <remarks>
+        /// The module does not have to be one the rotation leaves on, exactly as a face's glance page
+        /// does not have to be one its mask enables: a glance is a thing a driver asked for by holding
+        /// a button, and the rotation is about what the button steps through.
+        /// </remarks>
+        public void BeginQuickGlance()
+        {
+            if (!IsCompanion || GlanceHeld) return;
+            glanceRestore = CompanionPage;
+            CompanionPage = Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
+        }
+
+        /// <summary>Puts the companion back where it was. A release with no press does nothing.</summary>
+        public void EndQuickGlance()
+        {
+            if (!GlanceHeld) return;
+            CompanionPage = glanceRestore;
+            glanceRestore = -1;
         }
 
         /// <summary>A copy, for the settings object's own clone.</summary>
@@ -214,6 +310,9 @@ namespace OpenDashPlugin
                 WideZone = WideZone,
                 WebViewUrl = WebViewUrl,
                 Modules = Modules == null ? null : (bool[])Modules.Clone(),
+                CompanionPage = CompanionPage,
+                CompanionStart = CompanionStart,
+                CompanionQuickGlance = CompanionQuickGlance,
             };
         }
     }

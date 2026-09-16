@@ -549,6 +549,26 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(actions, a => a.StartsWith("CycleZone", StringComparison.Ordinal));
         }
 
+        [Fact]
+        public void A_companion_owns_a_next_module_button_and_a_glance()
+        {
+            // The canvas draws "Next module" on the companion pane and nothing registered an action for
+            // it. The comment here used to say the panel reported it as not bound, which the panel did
+            // not do either: the pane had no wheel-button section at all.
+            Assert.Equal(
+                new[] { "CompanionNextModule", "CompanionHoldQuickGlance" },
+                Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix).ToArray());
+            Assert.Equal("RimNextModule", Contract.NextModuleActionFor("Rim"));
+            // Per instance like a face's, so a second companion on the rig moves on its own button.
+            Assert.Equal(new[] { "RimNextModule", "RimHoldQuickGlance" }, Contract.CompanionActionNames("Rim").ToArray());
+            // A pit wall has none: it is read by somebody who is not driving.
+            Assert.Empty(Contract.ScreenActionNames(Contract.KindPitWall, Contract.PitWallPrefix));
+            Assert.Empty(Contract.ScreenActionNames(Contract.KindSlots, "Slots480"));
+            // Lap times and the track map, counted from zero, so the track map is module 13 at page 12.
+            Assert.Equal("lapTimes", Modules.ByNumber(Contract.DefaultCompanionStart + 1).Id);
+            Assert.Equal("track", Modules.ByNumber(Contract.DefaultCompanionQuickGlance + 1).Id);
+        }
+
         /// <summary>The `id` fields of the page list that follows the given declaration.</summary>
         private static string[] PageIdsOf(string source, string declaration)
         {

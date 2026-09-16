@@ -419,7 +419,7 @@ namespace OpenDashPlugin
             }
             if (string.Equals(kind, KindCompanion, StringComparison.Ordinal))
             {
-                for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
+                foreach (var name in CompanionPropertyNames(ns)) yield return name;
                 yield break;
             }
             if (string.Equals(kind, KindPitWall, StringComparison.Ordinal))
@@ -440,9 +440,9 @@ namespace OpenDashPlugin
         public static IEnumerable<string> ScreenActionNames(string kind, string ns)
         {
             if (string.Equals(kind, KindFace, StringComparison.Ordinal)) return FaceActionNames(ns);
-            // Only a face has a button today. The canvas draws "Next module" on the companion pane and
-            // no such action is registered, so the panel says it is not bound rather than offering a
-            // binder for a name SimHub would never call.
+            if (string.Equals(kind, KindCompanion, StringComparison.Ordinal)) return CompanionActionNames(ns);
+            // A pit wall has none, and a slots face has none: neither cycles anything a thumb reaches
+            // for. Both are read by somebody who is not driving, or are arranged once with a mouse.
             return new string[0];
         }
 
@@ -455,7 +455,7 @@ namespace OpenDashPlugin
             }
             if (string.Equals(prefix, CompanionPrefix, StringComparison.Ordinal))
             {
-                for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(module);
+                foreach (var name in CompanionPropertyNames(CompanionPrefix)) yield return name;
                 yield break;
             }
             if (string.Equals(prefix, PitWallPrefix, StringComparison.Ordinal))
@@ -612,6 +612,9 @@ namespace OpenDashPlugin
         /// </summary>
         public const string HoldQuickGlanceAction = "HoldQuickGlance";
 
+        /// <summary>The companion's own button: advance to the next module the rotation leaves on.</summary>
+        public const string NextModuleAction = "NextModule";
+
         /// <summary>Action that advances one zone of one face: Face1920x480CycleZoneA.</summary>
         public static string CycleZoneAction(string ns, string letter)
         {
@@ -633,6 +636,12 @@ namespace OpenDashPlugin
         public static string HoldQuickGlanceActionFor(FaceSize face)
         {
             return HoldQuickGlanceActionFor(FacePrefix(face));
+        }
+
+        /// <summary>Action that advances one companion: CompanionNextModule.</summary>
+        public static string NextModuleActionFor(string ns)
+        {
+            return ns + NextModuleAction;
         }
 
         /// <summary>
@@ -843,6 +852,35 @@ namespace OpenDashPlugin
         public static string ModuleProperty(int module)
         {
             return ModuleProperty(CompanionPrefix, module);
+        }
+
+        /// <summary>The module a companion opens on, and the one a held button shows: lap times, which
+        /// is the first in page order, and the track map, which is what a glance is usually for. Both
+        /// count from zero, so the track map is module 13 at page 12.</summary>
+        public const int DefaultCompanionStart = 0;
+
+        public const int DefaultCompanionQuickGlance = 12;
+
+        /// <summary>
+        /// Every property one companion owns, in attachment order.
+        /// </summary>
+        /// <remarks>
+        /// The modules alone. The plugin also holds the module a companion is showing, the one it opens
+        /// on and the one a held button shows -- the two wheel actions move them -- but none of the
+        /// three is a property yet: a second-screen property has to be read by a package, which
+        /// packages/dash/test/secondScreens.test.ts enforces, and the companion cannot read a page
+        /// setting while it is twenty-one top-level screens that SimHub itself pages.
+        /// </remarks>
+        public static IEnumerable<string> CompanionPropertyNames(string ns)
+        {
+            for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
+        }
+
+        /// <summary>Every action one companion registers, in registration order.</summary>
+        public static IEnumerable<string> CompanionActionNames(string ns)
+        {
+            yield return NextModuleActionFor(ns);
+            yield return HoldQuickGlanceActionFor(ns);
         }
 
         /// <summary>Property name of a pit wall zone: PitWallZoneA .. PitWallZoneD.</summary>

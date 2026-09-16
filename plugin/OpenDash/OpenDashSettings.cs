@@ -647,6 +647,51 @@ namespace OpenDashPlugin
             return screen.Modules[module - 1];
         }
 
+        /// <summary>The module one companion is showing, or the default when the rig no longer has it.</summary>
+        public int ScreenCompanionPage(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionStart : Contract.NormalisePage(screen.CompanionPage, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionStart);
+        }
+
+        /// <summary>The module one companion opens on.</summary>
+        public int ScreenCompanionStart(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionStart : Contract.NormalisePage(screen.CompanionStart, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionStart);
+        }
+
+        /// <summary>The module a held button shows on one companion.</summary>
+        public int ScreenCompanionQuickGlance(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null
+                ? Contract.DefaultCompanionQuickGlance
+                : Contract.NormalisePage(screen.CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
+        }
+
+        /// <summary>Advances one companion to the next module its rotation leaves on.</summary>
+        public int CycleScreenModule(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            // A removed screen's actions are still bound until SimHub restarts, so a press has to do
+            // nothing rather than throw on SimHub's own thread.
+            return screen == null ? Contract.DefaultCompanionStart : screen.CycleModule();
+        }
+
+        /// <summary>Holds, and releases, one companion's glance.</summary>
+        public void BeginScreenGlance(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen != null) screen.BeginQuickGlance();
+        }
+
+        public void EndScreenGlance(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen != null) screen.EndQuickGlance();
+        }
+
         public int ScreenZone(string ns, string letter)
         {
             var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
@@ -837,10 +882,15 @@ namespace OpenDashPlugin
             Face(face).QuickGlance = Contract.NormaliseQuickGlance(value);
         }
 
-        /// <summary>Puts every zone of every face the rig has on the page it opens on, once, when the plugin starts.</summary>
+        /// <summary>Puts every zone of every face, and every companion, on the page it opens on, once,
+        /// when the plugin starts.</summary>
         public void OpenOnStartPages()
         {
             foreach (var screen in FaceScreens()) screen.Face.OpenOnStartPages();
+            foreach (var screen in RigScreens())
+            {
+                if (screen != null && screen.IsCompanion) screen.OpenOnStartModule();
+            }
         }
 
         /// <summary>Advances one zone of one face to its next enabled page and returns it.</summary>

@@ -1355,6 +1355,49 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_companion_opens_on_its_start_module_and_its_button_skips_what_is_off()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            settings.Normalise();
+            var companion = settings.ScreenOf("Companion");
+            Assert.Equal(Contract.DefaultCompanionStart, companion.CompanionStart);
+            Assert.Equal(Contract.DefaultCompanionQuickGlance, companion.CompanionQuickGlance);
+
+            // Modules 6, 20 and 21 are off by default -- iRacing carries none of their data -- so the
+            // button steps 4, then 6 to the next one that is on, which is 7.
+            companion.CompanionPage = 3;
+            Assert.Equal(4, settings.CycleScreenModule("Companion"));
+            companion.CompanionPage = 4;
+            Assert.Equal(6, settings.CycleScreenModule("Companion"));
+            // And it wraps over the two that are off at the end of the catalogue.
+            companion.CompanionPage = 18;
+            Assert.Equal(0, settings.CycleScreenModule("Companion"));
+
+            // A glance shows a module the rotation has turned off, because a glance is a thing the
+            // driver asked for by holding a button, and releasing puts the page back.
+            companion.CompanionPage = 2;
+            companion.CompanionQuickGlance = 5;
+            settings.BeginScreenGlance("Companion");
+            Assert.Equal(5, companion.CompanionPage);
+            settings.BeginScreenGlance("Companion");
+            settings.EndScreenGlance("Companion");
+            Assert.Equal(2, companion.CompanionPage);
+
+            // Init puts it back on the module it opens on, which is what that setting means.
+            companion.CompanionStart = 7;
+            companion.CompanionPage = 15;
+            settings.OpenOnStartPages();
+            Assert.Equal(7, companion.CompanionPage);
+
+            // A screen the rig no longer holds reads its defaults rather than throwing on SimHub's
+            // own thread, the way every other per-screen read does.
+            Assert.Equal(Contract.DefaultCompanionStart, settings.ScreenCompanionStart("Gone"));
+            Assert.Equal(Contract.DefaultCompanionQuickGlance, settings.ScreenCompanionQuickGlance("Gone"));
+            Assert.Equal(Contract.DefaultCompanionStart, settings.CycleScreenModule("Gone"));
+        }
+
+        [Fact]
         public void The_five_actions_are_named_as_verbs()
         {
             // Five per face, because two faces on one rig have to cycle apart.
