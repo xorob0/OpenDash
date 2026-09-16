@@ -62,19 +62,19 @@ namespace OpenDashPlugin.Tests
         {
             var names = Contract.PropertyNames().ToList();
             // Four settings, twelve slots, the rev bar mode, the zone face of every face that ships
-            // (four pages, four masks, four starts, four class filters, four bar fields and the
-            // glance), twenty-one companion modules, four pit wall zones, the wide zone, the URL,
-            // and the flag box.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
-            // Eight global flag box settings and six per matrix, the way every face carries its own
-            // group, and then the two the strips read.
+            // (four pages, four masks, four starts, four class filters, four bar fields, the glance
+            // and the flag format), twenty-one companion modules, four pit wall zones, the wide zone,
+            // the URL, and the flag box.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1;
+            // Nine global flag box settings and six per matrix, the way every face carries its own
+            // group, and then the three the strips read.
             Assert.Equal(
-                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 6 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 9 + Contract.FlagBoxMatrices.Count * 6 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
             // LedRpmStyle were declared by one side only.
-            Assert.Equal(246, names.Count);
+            Assert.Equal(256, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -97,6 +97,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(29).Take(4));
             Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(33).Take(4));
             Assert.Equal(p + "QuickGlance", names[37]);
+            Assert.Equal(p + "FlagFormat", names[38]);
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
@@ -106,7 +107,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
             Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LightsBrightness", "LightsNightBrightness", "LightsNightMode", "FlagBoxCriticalOnly", "FlagBoxGear",
-                "FlagBoxLowFuelLaps", "FlagBoxOilTemp", "FlagBoxWaterTemp" }, names.Skip(afterFaces + 21).Take(14));
+                "FlagBoxLowFuelLaps", "FlagBoxOilTemp", "FlagBoxWaterTemp", "LightsLowFuelLaps" }, names.Skip(afterFaces + 21).Take(15));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 
@@ -343,6 +344,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Face1920x480ZoneBClassOnly", Contract.ZoneClassOnlyProperty(face, "B"));
             Assert.Equal("Face1920x480BarRight2", Contract.BarFieldProperty(face, "Right2"));
             Assert.Equal("Face1920x480QuickGlance", Contract.QuickGlanceProperty(face));
+            // Per screen like the zones, so a rig can take a flag over the whole of one face and leave
+            // the other's band alone.
+            Assert.Equal("Face1920x480FlagFormat", Contract.FlagFormatProperty(face));
+            Assert.Equal(new[] { "band", "full" }, Contract.FlagFormats);
+            Assert.Equal("band", Contract.DefaultFlagFormat);
+            Assert.Contains(Contract.DefaultFlagFormat, Contract.FlagFormats);
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty(face, "E"));
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty(face, "Middle"));
         }
@@ -355,7 +362,12 @@ namespace OpenDashPlugin.Tests
             // the dash build. The strips follow the matrices, so the flag box's last name is the last
             // before them rather than the last of all.
             Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Except(Contract.LedPropertyNames()).Last());
-            Assert.Equal("LedRpmStyle", Contract.PropertyNames().Last());
+            // One threshold for the strip, the rev bar and the box, under the Lights* name; the box's
+            // own name stays attached as its deprecated alias, which is what a profile of the rc.2
+            // vintage reads and what the contract's second isnull() falls back to.
+            Assert.Contains(Contract.LightsLowFuelLaps, Contract.LightsPropertyNames());
+            Assert.Contains(Contract.FlagBoxLowFuelLaps, Contract.LightsPropertyNames());
+            Assert.Equal("LedFlagAnimation", Contract.PropertyNames().Last());
             Assert.True(Contract.DefaultFlagBoxGear);
             // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
             Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
@@ -397,15 +409,26 @@ namespace OpenDashPlugin.Tests
             // read them through isnull(), and the plugin had neither constant, delegate nor control, so
             // every strip could only ever draw its defaults. Both suites were green throughout, which
             // is why The_two_sides_declare_the_same_properties() exists below.
-            Assert.Equal(new[] { "LedCentre", "LedRpmStyle" }, Contract.LedPropertyNames());
+            Assert.Equal(new[] { "LedCentre", "LedRpmStyle", "LedFlagAnimation" }, Contract.LedPropertyNames());
             Assert.Contains(Contract.LedCentre, Contract.LightsPropertyNames());
             Assert.Contains(Contract.LedRpmStyle, Contract.LightsPropertyNames());
+            Assert.Contains(Contract.LedFlagAnimation, Contract.LightsPropertyNames());
+            // On: movement is what a flag is read by at the edge of vision, and off is the driver
+            // asking for a rim that holds rather than blinks.
+            Assert.True(Contract.DefaultLedFlagAnimation);
             // A rig setting rather than a per-device group, unlike a matrix: openDash generates one
             // profile per strip shape, and every shape reads the same two names.
             Assert.DoesNotContain(Contract.LedPropertyNames(), n => n.Contains("1") || n.Contains("2"));
 
-            Assert.Equal(new[] { "rpm", "rpmOnly", "brake", "throttleBrake", "fuel" }, Contract.LedCentres);
+            Assert.Equal(new[] { "rpm", "brake", "throttleBrake", "fuel" }, Contract.LedCentres);
             Assert.Equal(new[] { "leftToRight", "meetInMiddle", "f1" }, Contract.LedRpmStyles);
+            // The fifth centre is retired into the first, and migrated by name: the profile carries a
+            // conditional group per value, and a stored "rpmOnly" would match none of them.
+            Assert.DoesNotContain(Contract.RetiredLedCentre, Contract.LedCentres);
+            Assert.Equal("rpm", Contract.NormaliseLedCentre("rpmOnly"));
+            Assert.Equal("rpm", Contract.NormaliseLedCentre(" RPMONLY "));
+            Assert.Equal("fuel", Contract.NormaliseLedCentre("fuel"));
+            Assert.Equal("rpm", Contract.NormaliseLedCentre("sparkles"));
             // The defaults are members of their own sets, which is what makes an unrecognised value
             // safe to fall back from.
             Assert.Contains(Contract.DefaultLedCentre, Contract.LedCentres);
@@ -462,9 +485,9 @@ namespace OpenDashPlugin.Tests
                     Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
                 }
             }
-            // Twenty-one each: four zones times page, mask, start and class filter, four bar fields,
-            // and the glance.
-            Assert.Equal(21, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+            // Twenty-two each: four zones times page, mask, start and class filter, four bar fields,
+            // the glance and the flag format.
+            Assert.Equal(22, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
         }
 
         [Fact]
@@ -494,7 +517,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(match.Success, "FACE_SIZES not found in contract.ts");
             var sizes = Regex.Matches(
                 match.Groups["items"].Value,
-                @"width:\s*(?<w>\d+),\s*height:\s*(?<h>\d+),\s*body:\s*'(?<body>row|column)',\s*parts:\s*\[(?<parts>[^\]]*)\],\s*hasBar:\s*(?<bar>true|false),\s*barFieldsPerEnd:\s*(?<per>\d+)");
+                @"width:\s*(?<w>\d+),\s*height:\s*(?<h>\d+),\s*body:\s*'(?<body>row|column)',\s*parts:\s*\[(?<parts>[^\]]*)\],\s*hasBar:\s*(?<bar>true|false),\s*barFieldsPerEnd:\s*(?<per>\d+),"
+                    + @"\s*rows:\s*\{\s*revBar:\s*(?<revBar>\d+),\s*bar:\s*(?<barRow>\d+),\s*body:\s*(?<bodyRow>\d+),\s*band:\s*(?<band>\d+)\s*\}");
             Assert.Equal(Contract.FaceSizes.Count, sizes.Count);
             for (var i = 0; i < sizes.Count; i++)
             {
@@ -506,6 +530,20 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(face.BarFieldsPerEnd, int.Parse(sizes[i].Groups["per"].Value, CultureInfo.InvariantCulture));
                 var parts = sizes[i].Groups["parts"].Value.Split(',').Select(v => int.Parse(v.Trim(), CultureInfo.InvariantCulture)).ToArray();
                 Assert.Equal(face.Parts, parts);
+                // The four rows a plan of the face scales from. zoneFace.test.ts holds these against
+                // the rectangles in zones/faces/*.ts, so checking them here against contract.ts reaches
+                // the drawings without this file having to parse eight layouts, one of which is derived
+                // from another and carries no numbers of its own.
+                Assert.Equal(face.RevBarHeight, int.Parse(sizes[i].Groups["revBar"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.BarHeight, int.Parse(sizes[i].Groups["barRow"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.BodyHeight, int.Parse(sizes[i].Groups["bodyRow"].Value, CultureInfo.InvariantCulture));
+                Assert.Equal(face.BandHeight, int.Parse(sizes[i].Groups["band"].Value, CultureInfo.InvariantCulture));
+                // A face with no bar has no bar row, and every other row is there to be drawn.
+                Assert.Equal(face.HasBar, face.BarHeight > 0);
+                Assert.True(face.RevBarHeight > 0 && face.BodyHeight > 0 && face.BandHeight > 0);
+                // And the rows add up to the face, one seam between each pair that is drawn.
+                var seams = face.HasBar ? 2 : 1;
+                Assert.Equal(face.Height - seams, face.RevBarHeight + face.BarHeight + face.BodyHeight + face.BandHeight);
             }
             // The nano is the one face with no bar, and the portrait the one with a stacked body and a
             // single field per end. Stated here because both are what the panel has to draw differently.
@@ -524,6 +562,26 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Face600x686HoldQuickGlance", actions);
             // Nothing unprefixed: one action moving every face is what the prefix exists to prevent.
             Assert.DoesNotContain(actions, a => a.StartsWith("CycleZone", StringComparison.Ordinal));
+        }
+
+        [Fact]
+        public void A_companion_owns_a_next_module_button_and_a_glance()
+        {
+            // The canvas draws "Next module" on the companion pane and nothing registered an action for
+            // it. The comment here used to say the panel reported it as not bound, which the panel did
+            // not do either: the pane had no wheel-button section at all.
+            Assert.Equal(
+                new[] { "CompanionNextModule", "CompanionHoldQuickGlance" },
+                Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix).ToArray());
+            Assert.Equal("RimNextModule", Contract.NextModuleActionFor("Rim"));
+            // Per instance like a face's, so a second companion on the rig moves on its own button.
+            Assert.Equal(new[] { "RimNextModule", "RimHoldQuickGlance" }, Contract.CompanionActionNames("Rim").ToArray());
+            // A pit wall has none: it is read by somebody who is not driving.
+            Assert.Empty(Contract.ScreenActionNames(Contract.KindPitWall, Contract.PitWallPrefix));
+            Assert.Empty(Contract.ScreenActionNames(Contract.KindSlots, "Slots480"));
+            // Lap times and the track map, counted from zero, so the track map is module 13 at page 12.
+            Assert.Equal("lapTimes", Modules.ByNumber(Contract.DefaultCompanionStart + 1).Id);
+            Assert.Equal("track", Modules.ByNumber(Contract.DefaultCompanionQuickGlance + 1).Id);
         }
 
         /// <summary>The `id` fields of the page list that follows the given declaration.</summary>

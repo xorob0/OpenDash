@@ -153,14 +153,18 @@ namespace OpenDashPlugin
 
         public string[] FlagBoxSide { get; set; } = Contract.DefaultFlagBoxSides();
 
-        /// <summary>What the middle of an RGB strip shows: "rpm", "rpmOnly", "brake", "throttleBrake" or
-        /// "fuel". One value for the rig and not an array, because openDash generates one profile per
-        /// strip shape rather than per device and every shape reads this one name.</summary>
+        /// <summary>What the middle of an RGB strip shows: "rpm", "brake", "throttleBrake" or "fuel".
+        /// One value for the rig and not an array, because openDash generates one profile per strip
+        /// shape rather than per device and every shape reads this one name.</summary>
         public string LedCentre { get; set; } = Contract.DefaultLedCentre;
 
         /// <summary>How the rev ladder fills a strip: "leftToRight", "meetInMiddle" or "f1". The look
         /// only; the thresholds are the car's own whichever is set (ADR 0014).</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
+
+        /// <summary>Whether a flag on a strip moves. Off holds every flag from the frame it would have
+        /// settled on and never turns one off.</summary>
+        public bool LedFlagAnimation { get; set; } = Contract.DefaultLedFlagAnimation;
 
         /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
@@ -199,7 +203,7 @@ namespace OpenDashPlugin
             // No array to repair: the strips carry one value each for the whole rig. A profile reads
             // both through isnull() with its own default, so an unrecognised spelling has to become a
             // legal one here rather than reaching the strip as itself.
-            LedCentre = Contract.NormaliseChoice(LedCentre, Contract.LedCentres, Contract.DefaultLedCentre);
+            LedCentre = Contract.NormaliseLedCentre(LedCentre);
             LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
         }
 
@@ -626,6 +630,14 @@ namespace OpenDashPlugin
             return face;
         }
 
+        /// <summary>How one face draws a flag, or the default when the rig no longer has that screen.</summary>
+        public string ScreenFlagFormat(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen == null) return Contract.DefaultFlagFormat;
+            return Contract.NormaliseChoice(screen.FlagFormat, Contract.FlagFormats, Contract.DefaultFlagFormat);
+        }
+
         public bool ScreenModule(string ns, int module)
         {
             var screen = ScreenByNamespace(ns);
@@ -633,6 +645,51 @@ namespace OpenDashPlugin
             if (meta == null) return false;
             if (screen == null || screen.Modules == null || module - 1 >= screen.Modules.Length) return meta.Enabled;
             return screen.Modules[module - 1];
+        }
+
+        /// <summary>The module one companion is showing, or the default when the rig no longer has it.</summary>
+        public int ScreenCompanionPage(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionStart : Contract.NormalisePage(screen.CompanionPage, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionStart);
+        }
+
+        /// <summary>The module one companion opens on.</summary>
+        public int ScreenCompanionStart(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionStart : Contract.NormalisePage(screen.CompanionStart, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionStart);
+        }
+
+        /// <summary>The module a held button shows on one companion.</summary>
+        public int ScreenCompanionQuickGlance(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null
+                ? Contract.DefaultCompanionQuickGlance
+                : Contract.NormalisePage(screen.CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
+        }
+
+        /// <summary>Advances one companion to the next module its rotation leaves on.</summary>
+        public int CycleScreenModule(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            // A removed screen's actions are still bound until SimHub restarts, so a press has to do
+            // nothing rather than throw on SimHub's own thread.
+            return screen == null ? Contract.DefaultCompanionStart : screen.CycleModule();
+        }
+
+        /// <summary>Holds, and releases, one companion's glance.</summary>
+        public void BeginScreenGlance(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen != null) screen.BeginQuickGlance();
+        }
+
+        public void EndScreenGlance(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen != null) screen.EndQuickGlance();
         }
 
         public int ScreenZone(string ns, string letter)
@@ -825,10 +882,15 @@ namespace OpenDashPlugin
             Face(face).QuickGlance = Contract.NormaliseQuickGlance(value);
         }
 
-        /// <summary>Puts every zone of every face the rig has on the page it opens on, once, when the plugin starts.</summary>
+        /// <summary>Puts every zone of every face, and every companion, on the page it opens on, once,
+        /// when the plugin starts.</summary>
         public void OpenOnStartPages()
         {
             foreach (var screen in FaceScreens()) screen.Face.OpenOnStartPages();
+            foreach (var screen in RigScreens())
+            {
+                if (screen != null && screen.IsCompanion) screen.OpenOnStartModule();
+            }
         }
 
         /// <summary>Advances one zone of one face to its next enabled page and returns it.</summary>
@@ -924,6 +986,7 @@ namespace OpenDashPlugin
             FlagBoxSide = other.FlagBoxSide == null ? null : (string[])other.FlagBoxSide.Clone();
             LedCentre = other.LedCentre;
             LedRpmStyle = other.LedRpmStyle;
+            LedFlagAnimation = other.LedFlagAnimation;
             // Cloned rather than shared, so that the panel writing into its copy does not reach back
             // into the settings the plugin is reading from.
             Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
@@ -956,11 +1019,12 @@ namespace OpenDashPlugin
     /// </summary>
     public sealed class FacePageClash
     {
-        public FacePageClash(string pageId, string pageName, string[] zones)
+        public FacePageClash(string pageId, string pageName, string[] zones, bool glance = false)
         {
             PageId = pageId;
             PageName = pageName;
             Zones = zones;
+            Glance = glance;
         }
 
         public string PageId { get; }
@@ -970,41 +1034,83 @@ namespace OpenDashPlugin
         /// <summary>The zone letters showing it, in letter order.</summary>
         public string[] Zones { get; }
 
-        /// <summary>"Zone B and zone C both show Relative."</summary>
-        public string Message()
+        /// <summary>Whether the quick glance shows it too, which makes it a participant like a zone.</summary>
+        public bool Glance { get; }
+
+        /// <summary>
+        /// The page as the sentence spells it: "the relative".
+        /// </summary>
+        /// <remarks>
+        /// An article and a lower-case noun, because that is how the sentence reads aloud and how the
+        /// canvas writes it. A name that lists what a page draws rather than naming one thing keeps the
+        /// spelling the panel's own drop-down uses instead: "Gear, speed, revs" does not read after an
+        /// article, and no short noun for it exists to invent.
+        /// </remarks>
+        public static string DisplayName(string name)
         {
-            var letters = Zones.Select(z => "zone " + z).ToArray();
-            var list = letters.Length == 2
-                ? letters[0] + " and " + letters[1]
-                : string.Join(", ", letters.Take(letters.Length - 1)) + " and " + letters[letters.Length - 1];
-            var verb = letters.Length == 2 ? " both show " : " all show ";
-            return char.ToUpperInvariant(list[0]) + list.Substring(1) + verb + PageName + ".";
+            if (string.IsNullOrEmpty(name)) return name;
+            if (name.IndexOf(',') >= 0) return name;
+            return "the " + char.ToLowerInvariant(name[0]) + name.Substring(1);
         }
 
+        /// <summary>"Zone B and zone C both show the relative."</summary>
+        public string Message()
+        {
+            var parts = Zones.Select(z => "zone " + z).ToList();
+            if (Glance) parts.Add("the quick glance");
+            var list = parts.Count == 2
+                ? parts[0] + " and " + parts[1]
+                : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[parts.Count - 1];
+            var verb = parts.Count == 2 ? " both show " : " all show ";
+            return char.ToUpperInvariant(list[0]) + list.Substring(1) + verb + DisplayName(PageName) + ".";
+        }
+
+        /// <summary>
+        /// Every page two or more of the five participants show: the four zones' start pages, and the
+        /// quick glance.
+        /// </summary>
+        /// <remarks>
+        /// The glance is compared by page id and against each zone's *start* page, exactly as the zones
+        /// are compared with each other. By id because the four catalogues overlap, so zone A's track
+        /// page and module 13 are one drawing under two numbers; against the start page rather than the
+        /// whole cycle because a glance set to a page a zone can cycle to is a thing somebody may well
+        /// want, and warning about it would be a false alarm on every second rig.
+        /// </remarks>
         public static IReadOnlyList<FacePageClash> Find(FaceSettings face)
         {
             var result = new List<FacePageClash>();
             if (face == null) return result;
             var order = new List<string>();
             var byPage = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-            foreach (var letter in Contract.FaceZoneLetters)
+            var names = new Dictionary<string, string>(StringComparer.Ordinal);
+            var glanced = new HashSet<string>(StringComparer.Ordinal);
+            Action<string, string, string> add = (id, name, letter) =>
             {
-                var id = FacePages.IdOf(letter, face.Start(letter));
-                if (id == null) continue;
+                if (id == null) return;
                 List<string> zones;
                 if (!byPage.TryGetValue(id, out zones))
                 {
                     zones = new List<string>();
                     byPage[id] = zones;
+                    names[id] = name;
                     order.Add(id);
                 }
-                zones.Add(letter);
-            }
+                if (letter == null) glanced.Add(id);
+                else zones.Add(letter);
+            };
+            foreach (var letter in Contract.FaceZoneLetters) add(FacePages.IdOf(letter, face.Start(letter)), FacePages.NameOf(letter, face.Start(letter)), letter);
+
+            var glance = Contract.NormaliseQuickGlance(face.QuickGlance);
+            var glanceLetter = Contract.FaceZoneLetters[Contract.QuickGlanceZone(glance)];
+            var glancePage = Contract.QuickGlancePage(glance);
+            add(FacePages.IdOf(glanceLetter, glancePage), FacePages.NameOf(glanceLetter, glancePage), null);
+
             foreach (var id in order)
             {
                 var zones = byPage[id];
-                if (zones.Count < 2) continue;
-                result.Add(new FacePageClash(id, FacePages.NameOf(zones[0], face.Start(zones[0])), zones.ToArray()));
+                var showsGlance = glanced.Contains(id);
+                if (zones.Count + (showsGlance ? 1 : 0) < 2) continue;
+                result.Add(new FacePageClash(id, names[id], zones.ToArray(), showsGlance));
             }
             return result;
         }
