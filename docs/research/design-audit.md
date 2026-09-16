@@ -118,6 +118,14 @@ settle rather than an implementer's.
   WPF line box, and the band is 60. Band D shrinks its value to 32 rather than clip; the settings bar
   keeps the overrun it has always had, because the box is transparent and digits have no descenders.
   The two should agree.
+- **The nano's band is two pixels short of its own drawing.** Band D now draws the artboards' block
+  everywhere it fits: a 15 px label centred in a 13 px row, five pixels, and a 34 px value. Under
+  WPF that block wants 62 px, since the label's box opens two and a half pixels above its row and
+  the value's closes four and a half below its own, and a 60 px band holds it only once the block
+  stops being centred and rides up to the label's headroom, which is what every 60 px band draws.
+  The nano at 800 by 286 has 58 px, so its value comes down to 32 while its own artboard asks for
+  34. Either that band grows by two pixels, or the nano is the one face whose band is written a
+  size smaller than the rest, which a driver would notice only beside another face.
 
 ## 4. The work, in packages
 
