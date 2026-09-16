@@ -31,7 +31,7 @@
 import { ncalc } from '../generator.ts';
 import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
-import { canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
+import { MINUS, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
 import { measureText } from '../design/advances.ts';
 import { densityOf, rampOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
@@ -85,24 +85,31 @@ interface Side {
 }
 
 const SIDES: readonly Side[] = [
-  { id: 'ahead', offset: -1, heading: 'AHEAD', position: 3, gap: '-1.342', colour: ds.purpose.delta.faster },
+  { id: 'ahead', offset: -1, heading: 'AHEAD', position: 3, gap: `${MINUS}1.342`, colour: ds.purpose.delta.faster },
   { id: 'behind', offset: 1, heading: 'BEHIND', position: 5, gap: '+0.722', colour: ds.purpose.delta.slower },
 ];
 
-/** The labels that follow the gap on its baseline, by the piece that keeps each. */
+/**
+ * The labels that follow the gap on its baseline, by the piece that keeps each.
+ *
+ * The last lap carries its "Last" only where the catalogue writes one. The fullest drawing has room
+ * to say what the time is; `grid` and `tall` print it bare, a time beside a gap being unambiguous
+ * once the page has been read once, and that is the width the prefix costs spent on the reading.
+ */
 function details(ctx: ModuleContext, side: Side, keep: readonly string[]): { id: string; text: string; bind: Expr }[] {
   const idx = neighbour(side.offset);
   // The wide page is "Opponents · best and last", so its label carries the best lap as well as the
   // last one. The sheet writes "Last Best 1:42.994 · 1:43.234" and leaves which time is which to
   // the reader; the times say it themselves, 1:42.994 being the faster, so the best is drawn first.
   const best = ctx.density === 'wide';
+  const named = best || drawnAt(ctx) === 'wide';
   return [
     ...(keep.includes('lastLap')
       ? [
           {
             id: 'lastLap',
-            text: best ? 'Last Best 1:42.994 · 1:43.234' : 'Last 1:43.234',
-            bind: best ? concat(str('Last Best '), carBestLap(idx), str(' · '), carLastLap(idx)) : concat(str('Last '), carLastLap(idx)),
+            text: best ? 'Last Best 1:42.994 · 1:43.234' : named ? 'Last 1:43.234' : '1:43.234',
+            bind: best ? concat(str('Last Best '), carBestLap(idx), str(' · '), carLastLap(idx)) : named ? concat(str('Last '), carLastLap(idx)) : carLastLap(idx),
           },
         ]
       : []),
@@ -251,7 +258,9 @@ export const opponents = defineModule('opponents', (ctx) => {
     return {
       ...row,
       height: row.height + BLOCK_GAP + RULE,
-      draw: (bottom) => [rule(`${ctx.prefix}rule`, ctx.frame.left, bottom - row.height - BLOCK_GAP, ctx.frame.width, RULE), ...row.draw(bottom)],
+      // On the row's own top edge, so that the twelve the stack leaves above it and the twelve it
+      // leaves below are the same twelve the canvas puts either side of the line.
+      draw: (bottom) => [rule(`${ctx.prefix}rule`, ctx.frame.left, bottom - row.height - BLOCK_GAP - RULE, ctx.frame.width, RULE), ...row.draw(bottom)],
       ...(fill ? { fill: { ...fill, at: (factor: number) => ruled(fill.at(factor)) } } : {}),
       ...(shed ? { shed: { ...shed, without: (ids: readonly string[]) => ruled(shed.without(ids)) } } : {}),
     };
