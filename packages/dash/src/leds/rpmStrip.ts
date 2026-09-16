@@ -30,10 +30,10 @@ import type { Expr } from '../bind.ts';
 import { DEFAULTS, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
 import type { LedCentre, LedRpmStyle } from '../contract.ts';
 import { mirrorAvailable } from '../shift.ts';
-import { OVER_REV_BLINK_MS, ladderColors, ladderOrder, overRev, rungFlashes, rungLit, stepLit, type Ladder } from './ladder.ts';
+import { ladderColors, ladderOrder, overRev, rungFlashes, rungLit, stepLit, type Ladder } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { ALL_EFFECTS, effectContainer, lampConditions, type LedEffect } from './effects.ts';
+import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainer, lampConditions, type LedEffect } from './effects.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
@@ -46,7 +46,16 @@ const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which))
 /** `isnull([OpenDash.LedRpmStyle], 'leftToRight') = '<which>'`, the gate on each style. */
 const styleIs = (which: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(which));
 
-/** The rev ladder over `count` LEDs, in one style, under one of the two ladders. */
+/**
+ * The rev ladder over `count` LEDs, in one style, under one of the two ladders.
+ *
+ * A flashing rung alternates its band colour with {@link BLINK_OFF} rather than with `colors[2]`.
+ * Writing the top band's own red into both fields is what kept the over-rev flash from ever being
+ * seen, since `StaticColorContainerBase` alternates `Color` with `BlinkingColor` and both held one
+ * hex; under `f1`, where every rung flashes, the lower bands alternated green or red with the top
+ * band's blue, which reads as the bar changing colour rather than as a bar flashing. The rate is
+ * the catalogue's fast one, so over-rev is the same urgency on a rung that oil pressure is on a lamp.
+ */
 const rungs = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContainer[] => {
   const order = ladderOrder(style, count);
   const colors = ladderColors(style);
@@ -61,7 +70,7 @@ const rungs = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContai
       color: colors[band] ?? colors[2],
       enabledFormula: { expression: rungLit(which, rung, order.rungs) },
       ...(rungFlashes(style, rung, order.rungs)
-        ? { blinkFormula: { expression: overRev(which) }, blinkColor: colors[2], blinkDelayMs: OVER_REV_BLINK_MS }
+        ? { blinkFormula: { expression: overRev(which) }, blinkColor: BLINK_OFF, blinkDelayMs: FAST_BLINK_MS }
         : {}),
     };
   });
@@ -102,7 +111,7 @@ const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[]
             color: colors[band] ?? colors[2],
             enabledFormula: { expression: tabledStageLit(points, band, rung - bandStart, bandCount) },
             ...(rungFlashes(style, rung, order.rungs)
-              ? { blinkFormula: { expression: tabledOverRev(points) }, blinkColor: colors[2], blinkDelayMs: OVER_REV_BLINK_MS }
+              ? { blinkFormula: { expression: tabledOverRev(points) }, blinkColor: BLINK_OFF, blinkDelayMs: FAST_BLINK_MS }
               : {}),
           };
         }),
@@ -182,6 +191,10 @@ const throttleBrakeBar = (count: number): leds.LedContainer[] => {
 /**
  * The fuel gauge: a bar that empties, and blinks below five percent. `FuelPercent` is SimHub's own,
  * so there is nothing computed here.
+ *
+ * Slow, which is what the catalogue's own low-fuel lamp blinks at: one condition cannot be urgent on
+ * the centre and merely true on a lamp of the same strip. Its off phase is the low-fuel colour rather
+ * than darkness, because here the second colour is the fact being reported.
  */
 const fuelBar = (count: number): leds.LedContainer[] => {
   const percent = fuelPercent();
@@ -195,7 +208,7 @@ const fuelBar = (count: number): leds.LedContainer[] => {
     enabledFormula: { expression: stepLit(percent, k, count) },
     blinkFormula: { expression: and(low, stepLit(percent, k, count)) },
     blinkColor: ds.purpose.fuel.low,
-    blinkDelayMs: OVER_REV_BLINK_MS * 4,
+    blinkDelayMs: SLOW_BLINK_MS,
   }));
 };
 

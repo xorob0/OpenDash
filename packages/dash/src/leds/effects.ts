@@ -34,7 +34,6 @@ import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { FLAG_BLINK_MS, FLAG_PRIORITY, flagVisible, type FlagProperty } from '../components/flagStrip.ts';
 import { ds } from '../tokens.ts';
-import { OVER_REV_BLINK_MS } from './ladder.ts';
 import { type EffectRole, type Lamp } from './lamps.ts';
 
 const { add, and, eq, game, gt, isnull, not, num, or, prop, raw } = ncalc;
@@ -76,10 +75,15 @@ export interface LedEffect {
  * of them anyway, so a third would be a distinction the driver cannot collect.
  *
  * The slow one is the flag band's own, so a yellow on the face and a yellow on the strip flash
- * together rather than drifting against each other. Neither is derived from `OVER_REV_BLINK_MS`,
- * which was the previous arrangement and which tied every lamp on the strip to `shiftLights.flashHz`:
- * a change to the over-rev flash moved the indicators with it, which is the kind of coupling nobody
+ * together rather than drifting against each other. Neither is derived from `shiftLights.flashHz`,
+ * which was the previous arrangement and which tied every lamp on the strip to the over-rev flash:
+ * a change to the shift lights moved the indicators with it, which is the kind of coupling nobody
  * discovers until both are wrong.
+ *
+ * The rev ladder's own over-rev flash takes the fast rate too (`rpmStrip.ts`), so these two are the
+ * whole of what a strip blinks at. That leaves the strip at 4 Hz where the face's redline is still
+ * at `shiftLights.flashHz`, which is 8: the canvas moves that token to 4 and closes the gap, and the
+ * token is the author's to move.
  */
 export const SLOW_BLINK_MS = FLAG_BLINK_MS;
 export const FAST_BLINK_MS = Math.round(SLOW_BLINK_MS / 2);
@@ -94,8 +98,12 @@ export const FAST_BLINK_MS = Math.round(SLOW_BLINK_MS / 2);
  * the merge drops transparent pixels and the rev ladder underneath would show through the gap, so
  * the off phase takes the darkest opaque value the palette has, which is the nearest thing the
  * design system holds to an LED that is simply off.
+ *
+ * It is exported because the rev ladder had the same defect in the one file the catalogue does not
+ * reach: a top-band rung wrote its own red into both fields, so the over-rev flash was a red LED
+ * staying red. One value for both, or a driver learns two off phases.
  */
-const BLINK_OFF = ds.color.surface.base;
+export const BLINK_OFF = ds.color.surface.base;
 
 // --- sources, each verified rather than guessed ------------------------------------------------
 
@@ -361,8 +369,10 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
     role: 'strip',
     when: on('PitLimiterOn'),
     color: ds.purpose.pitLimiter,
+    // Slow: the limiter is a state the driver chose and is holding, not an event. It ran at 186 ms,
+    // a rate of its own that was neither of the two and that the eye sorts as whichever it is nearer.
     blinkWhen: on('PitLimiterOn'),
-    blinkDelayMs: OVER_REV_BLINK_MS * 3,
+    blinkDelayMs: SLOW_BLINK_MS,
     source: 'DataCorePlugin.GameData.PitLimiterOn',
   },
   {
@@ -372,8 +382,11 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
     // Composed, because SimHub publishes no speeding property: in the lane, a known limit, over it.
     when: pitSpeeding(),
     color: ds.color.danger.primary,
+    // Fast: a penalty is accruing while it is lit, which is the one thing on the strip the driver
+    // can end by acting this second. It ran at 62 ms, faster than anything else and read as urgency
+    // the tier above the one that exists.
     blinkWhen: pitSpeeding(),
-    blinkDelayMs: OVER_REV_BLINK_MS,
+    blinkDelayMs: FAST_BLINK_MS,
     source: 'IsInPitLane + SpeedLocal + PitLimiterSpeed (SimHub publishes no speeding property)',
   },
 ];
