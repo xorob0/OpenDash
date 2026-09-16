@@ -91,7 +91,7 @@ const ZONE: DensitySpec = {
   fieldGap: FIELD_GAP,
   rowHeight: 26,
   headerHeight: 20,
-  cellGap: 8,
+  cellGap: ds.space[3],
   bar: 4,
   chipHeight: 20,
   chipPadding: 6,

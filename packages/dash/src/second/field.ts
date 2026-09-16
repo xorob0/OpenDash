@@ -30,6 +30,13 @@ export interface Follower {
    * common case and the default.
    */
   kind?: 'unit' | 'denominator';
+  /**
+   * The gap this follower takes, where the canvas asks for one of its own: the delta's reference
+   * caption sits ten pixels after its value where a unit sits six. Defaults to the kind's.
+   */
+  gap?: number;
+  /** The size it is drawn at, for a caption that is neither a unit nor a proportion of the value. */
+  size?: number;
   bind?: Expr;
   color?: Hex;
   visibleBind?: Expr;
@@ -62,9 +69,22 @@ export interface FieldSpec {
   labelBind?: Expr;
   /** The longest label the binding can produce; what the field is measured by. Defaults to `label`. */
   labelWidest?: string;
+  /**
+   * Draws the label under the value rather than above it, which is how the catalogue captions a
+   * delta in a narrow zone: the number, then two pixels, then "vs session best". The field is still
+   * placed by its bottom edge, and with the label below that edge is the label's.
+   */
+  labelBelow?: boolean;
   value: FieldValue;
   visibleBind?: Expr;
 }
+
+/**
+ * Gap between a value and a label drawn under it. Two pixels on the catalogue, which is off the
+ * `space` scale, so the literal stays here with the canvas as its citation. A caption under a
+ * number is not the label above the next one: the pair reads as one thing and is set tight.
+ */
+export const LABEL_BELOW_GAP = 2;
 
 /**
  * Gap between a value and the unit after it. Six pixels on the canvas, which is off the `space`
@@ -83,7 +103,11 @@ export const DENOMINATOR_GAP = ds.space[2];
 export const denominatorSize = (valueFs: number): number => Math.floor(0.7 * valueFs);
 
 /** Gap a follower of this kind takes between itself and the value it follows. */
-export const followerGap = (follower: Follower): number => (follower.kind === 'denominator' ? DENOMINATOR_GAP : UNIT_GAP);
+export const followerGap = (follower: Follower): number => follower.gap ?? (follower.kind === 'denominator' ? DENOMINATOR_GAP : UNIT_GAP);
+
+/** The size a follower is drawn at: its own, the value's proportion, or the density's small label. */
+export const followerSize = (follower: Follower, d: DensitySpec, valueFs: number): number =>
+  follower.size ?? (follower.kind === 'denominator' ? denominatorSize(valueFs) : d.labelSm);
 
 /**
  * Width of a field's follower. A unit is a proportional label, and an unbound one is drawn
@@ -92,12 +116,13 @@ export const followerGap = (follower: Follower): number => (follower.kind === 'd
  * cuts, which is wider than its advances and never clips.
  */
 export function followerWidth(follower: Follower, d: DensitySpec, valueFs: number): number {
+  const fs = followerSize(follower, d, valueFs);
   if (follower.kind === 'denominator') {
-    const mono = cells('SemiBold', denominatorSize(valueFs));
+    const mono = cells('SemiBold', fs);
     return monoWidth(mono, charsOfText(follower.text, mono));
   }
   const drawn = follower.bind ? follower.text : follower.text.toUpperCase();
-  return Math.ceil(measureText('BarlowMedium', drawn, d.labelSm)) + 1;
+  return Math.ceil(measureText('BarlowMedium', drawn, fs)) + 1;
 }
 
 /** The cells a literal string takes: `.,:` get the narrow cell and everything else the wide one. */
@@ -136,27 +161,32 @@ export function fieldWidth(spec: FieldSpec, density: Density): number {
  */
 export function fieldHeight(spec: FieldSpec, density: Density): number {
   const d = densityOf(density);
-  const labelPart = spec.label === '' && spec.labelBind === undefined ? 0 : d.label + d.fieldGap;
-  const box = textBox(0, spec.value.fs);
-  const belowTheLine = Math.max(0, box.top + box.height - spec.value.fs);
-  return labelPart + spec.value.fs + belowTheLine;
+  const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
+  const labelPart = hasLabel ? d.label + (spec.labelBelow ? LABEL_BELOW_GAP : d.fieldGap) : 0;
+  return labelPart + spec.value.fs + fieldTail(spec, density);
 }
 
 /**
- * How far a field's value hangs below the bottom edge it is placed on.
+ * How far a field's last line hangs below the bottom edge it is placed on.
  *
  * The same tail `fieldHeight` counts, named on its own because a stack has to reserve it twice
  * over: a block is centred, so the room it may take is its box less this at each end. Two pixels
  * covered it while every value was a ramp size in a box with slack; a value that has grown into its
  * box is exactly where a constant stops covering it.
+ *
+ * The last line is the label where the label is below, so a caption's small tail is what is
+ * reserved rather than the tail of the number above it.
  */
-export function fieldTail(spec: FieldSpec): number {
-  const box = textBox(0, spec.value.fs);
-  return Math.max(0, box.top + box.height - spec.value.fs);
+export function fieldTail(spec: FieldSpec, density: Density): number {
+  const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
+  const fs = spec.labelBelow && hasLabel ? densityOf(density).label : spec.value.fs;
+  const box = textBox(0, fs);
+  return Math.max(0, box.top + box.height - fs);
 }
 
 /** The deepest tail of a set of fields. */
-export const fieldsTail = (specs: readonly FieldSpec[]): number => specs.reduce((tail, spec) => Math.max(tail, fieldTail(spec)), 0);
+export const fieldsTail = (specs: readonly FieldSpec[], density: Density): number =>
+  specs.reduce((tail, spec) => Math.max(tail, fieldTail(spec, density)), 0);
 
 /** Tallest of a set of fields, which is the height of the row they sit in. */
 export const rowHeight = (specs: readonly FieldSpec[], density: Density): number =>
@@ -172,12 +202,13 @@ export const rowHeight = (specs: readonly FieldSpec[], density: Density): number
 export function field(spec: FieldSpec, x: number, bottom: number, density: Density, maxWidth?: number, leftAt?: (dx?: number) => Expr | undefined): Item[] {
   const d = densityOf(density);
   const items: Item[] = [];
-  const valueY = bottom - spec.value.fs;
   const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
+  const below = hasLabel && spec.labelBelow === true;
+  const valueY = bottom - spec.value.fs - (below ? d.label + LABEL_BELOW_GAP : 0);
   const width = maxWidth ?? fieldWidth(spec, density);
   if (hasLabel) {
     items.push(
-      label(`${spec.name}.label`, spec.label, x, valueY - d.fieldGap - d.label, width, {
+      label(`${spec.name}.label`, spec.label, x, below ? bottom - d.label : valueY - d.fieldGap - d.label, width, {
         size: d.label,
         bind: spec.labelBind,
         visibleBind: spec.visibleBind,
@@ -200,7 +231,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   const follower = spec.value.follower;
   if (follower) {
     const followerX = x + Math.max(monoWidth(mono, spec.value.chars), monoWidth(mono, charsOfText(spec.value.sample, mono))) + followerGap(follower);
-    const fs = follower.kind === 'denominator' ? denominatorSize(spec.value.fs) : d.labelSm;
+    const fs = followerSize(follower, d, spec.value.fs);
     const y = canvasYForBaseline(canvasBaseline(valueY, spec.value.fs), fs);
     const box = Math.max(followerWidth(follower, d, spec.value.fs), x + width - followerX);
     const opts = {
@@ -235,6 +266,29 @@ export function fieldRow(specs: readonly FieldSpec[], x: number, bottom: number,
 }
 
 /**
+ * How a line of fields is set in the width and the height it is given.
+ *
+ * `align` is the vertical one. Fields share the baseline of the largest by default, which is what
+ * a row mixing a 116 px level with a 46 px time asks for; `top` shares the top edge instead, which
+ * is what the companion's laps and estimate are drawn on.
+ *
+ * `justify` is the horizontal one, and the default is the caller's business: a zone narrow enough
+ * for one column centres what is in it, and a wider one draws from its left edge.
+ *
+ * `columns` replaces the packed widths with that many equal cells, which is the catalogue's grid.
+ */
+export interface LineOptions {
+  gap?: number;
+  minGap?: number;
+  align?: 'baseline' | 'top';
+  justify?: 'left' | 'centre';
+  columns?: number;
+}
+
+/** The width of one cell of an equal-column grid, gaps taken out first. */
+export const cellWidth = (width: number, columns: number, gap: number): number => Math.floor((width - gap * Math.max(0, columns - 1)) / Math.max(1, columns));
+
+/**
  * A row of fields that is made to fit `width`: the gap shrinks (never below `minGap`) before
  * anything is dropped, and the row reports whether it still overflows so a module can choose a
  * shorter set of fields for a narrow zone.
@@ -245,15 +299,26 @@ export function fieldRowFitted(
   bottom: number,
   width: number,
   density: Density,
-  opts: { gap?: number; minGap?: number } = {},
+  opts: LineOptions = {},
 ): { items: Item[]; width: number; fits: boolean } {
   const d = densityOf(density);
   const preferred = opts.gap ?? d.gapX;
   const minGap = opts.minGap ?? ds.space[2];
-  const widths = specs.map((spec) => fieldWidth(spec, density));
+  const natural = specs.map((spec) => fieldWidth(spec, density));
+  const grid = opts.columns !== undefined && opts.columns > 0;
+  const cell = grid ? cellWidth(width, opts.columns ?? 1, preferred) : 0;
+  const widths = grid ? natural.map(() => cell) : natural;
   const total = widths.reduce((sum, w) => sum + w, 0);
   const gaps = Math.max(0, specs.length - 1);
-  const gap = gaps === 0 ? 0 : Math.max(minGap, Math.min(preferred, Math.floor((width - total) / gaps)));
+  const gap = grid ? preferred : gaps === 0 ? 0 : Math.max(minGap, Math.min(preferred, Math.floor((width - total) / gaps)));
+  // A top-aligned line hangs each field from the line's own top edge rather than from the baseline
+  // of the largest, so a 34 px value beside a 46 px one starts where it does rather than sitting
+  // on its line.
+  // The tail comes off again: a field is placed by the bottom of its last line box and `fieldHeight`
+  // counts the tail that hangs below it, so hanging a field from the line's top means its height
+  // less that tail.
+  const top = bottom - rowHeight(specs, density);
+  const bottomOf = (spec: FieldSpec): number => (opts.align === 'top' ? top + fieldHeight(spec, density) - fieldTail(spec, density) : bottom);
   // Placed as a rank so that a field the sim does not publish takes its space with it rather than
   // leaving a hole in the row. `atLeast` is every field: what this row keeps was decided by the
   // page's shedding order before it got here, and the gap above is how it answers a narrow box.
@@ -262,9 +327,9 @@ export function fieldRowFitted(
       id: spec.id ?? spec.name,
       width: widths[i] ?? 0,
       present: spec.visibleBind,
-      draw: (at) => field(spec, at.x, bottom, density, widths[i] ?? 0, at.leftAt),
+      draw: (at) => field(spec, at.x, bottomOf(spec), density, widths[i] ?? 0, at.leftAt),
     })),
-    { left: x, width, gap, when: 'close', align: 'left', atLeast: specs.length },
+    { left: x, width, gap, when: 'close', align: opts.justify === 'centre' ? 'centre' : 'left', atLeast: specs.length },
   );
   const used = gaps === 0 ? total : total + gap * gaps;
   return { items, width: used, fits: used <= width };
@@ -275,12 +340,12 @@ export function fieldRowFitted(
  * 432, so the same row of three lap times is one line on the first and two on the second. Fields
  * keep their order; a field wider than the whole box gets a line of its own.
  *
- * Greedy and not capped by `columnsAt`, which is a question worth answering here because the shape
- * model declares a column count and this ignores it. Wiring it as a cap was tried and cost car
- * settings two of its cells at 1280 x 400 and the sectors page its three lap times: a rank capped
- * narrower than it fits is a taller rank, and a taller rank is one `rowsThatFit` takes a row off.
- * What actually stacks a narrow zone is rule 20 -- two lap times fit side by side at 34 px and do
- * not at 46, so the rank wraps to one column on its way up.
+ * Greedy and not capped by `columnsAt`. Wiring it as a cap was tried and cost car settings two of
+ * its cells at 1280 x 400 and the sectors page its three lap times: a rank capped narrower than it
+ * fits is a taller rank, and a taller rank is one `rowsThatFit` takes a row off. What actually
+ * stacks a narrow zone is rule 20 -- two lap times fit side by side at 34 px and do not at 46, so
+ * the rank wraps to one column on its way up. A page that wants the shape's column count asks for
+ * it by name through `planLines`, where the cells are equal and the columns line up down the block.
  */
 export function wrapFields(specs: readonly FieldSpec[], width: number, density: Density, gap?: number): FieldSpec[][] {
   const step = gap ?? densityOf(density).gapX;
@@ -301,6 +366,41 @@ export function wrapFields(specs: readonly FieldSpec[], width: number, density: 
   }
   if (line.length > 0) lines.push(line);
   return lines;
+}
+
+/**
+ * How a rank is broken into lines.
+ *
+ * `wrap` is the greedy break above and the default. `perLine` gives every field a line of its own,
+ * which is how a page asks for one reading under another rather than beside it. `grid` fills lines
+ * of `columns` equal cells, which is what the catalogue draws a settings page with: cells that
+ * share an x down the block rather than lines packed to their own widths.
+ */
+export type LinePlan = 'wrap' | 'perLine' | 'grid';
+
+/** Fields in lines of `columns`, the last line short. */
+const chunk = (specs: readonly FieldSpec[], columns: number): FieldSpec[][] => {
+  const lines: FieldSpec[][] = [];
+  for (let i = 0; i < specs.length; i += columns) lines.push(specs.slice(i, i + columns));
+  return lines;
+};
+
+/**
+ * The lines a rank takes, by the plan it was asked for.
+ *
+ * A grid falls back to the greedy wrap when a field would be wider than the cell the grid cuts:
+ * a module is a function of its rectangle, so a grid that does not fit is a grid that is not drawn
+ * rather than one drawn over the edge.
+ */
+export function planLines(specs: readonly FieldSpec[], width: number, density: Density, opts: { plan?: LinePlan; columns?: number; gap?: number } = {}): FieldSpec[][] {
+  const gap = opts.gap ?? densityOf(density).gapX;
+  if (opts.plan === 'perLine') return specs.map((spec) => [spec]);
+  if (opts.plan === 'grid') {
+    const columns = Math.max(1, opts.columns ?? 1);
+    const cell = cellWidth(width, columns, gap);
+    if (specs.every((spec) => fieldWidth(spec, density) <= cell)) return chunk(specs, columns);
+  }
+  return wrapFields(specs, width, density, gap);
 }
 
 /**
@@ -347,7 +447,7 @@ export function drawFieldBlock(
   bottom: number,
   width: number,
   density: Density,
-  opts: { gap?: number; lineGap?: number } = {},
+  opts: LineOptions & { lineGap?: number } = {},
 ): Item[] {
   const d = densityOf(density);
   const lineGap = opts.lineGap ?? d.gapY;
@@ -358,7 +458,7 @@ export function drawFieldBlock(
   let y = top;
   lines.forEach((line, i) => {
     const h = heights[i] ?? 0;
-    items.push(...fieldRowFitted(line, x, y + h, width, density, { gap: opts.gap }).items);
+    items.push(...fieldRowFitted(line, x, y + h, width, density, opts).items);
     y += h + lineGap;
   });
   return items;

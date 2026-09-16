@@ -210,8 +210,10 @@ stretched to a rectangle. Three consequences worth knowing:
 - **All of the stack grows or none of it does.** A page whose sectors are a drawing and whose lap
   times are fields would otherwise grow the times alone until they matched the sectors above them.
 - **Growing is what stacks a narrow zone.** Two lap times fit side by side in a 254 px zone at
-  34 px and do not at 46 px, so the rank wraps to one column on its way up. `columnsAt` is still the
-  declaration of what a shape may hold; it is not a second mechanism.
+  34 px and do not at 46 px, so the rank wraps to one column on its way up. `columnsAt` is the
+  declaration of what a shape may hold rather than a cap on the wrap: it names the columns of a page
+  that asks for a grid, and it is what says a zone is down to one column and should centre what is
+  in it.
 - **A stack already too tall for its box does not grow.** It has nothing to spend, and rule 17 is
   about to take a row off it.
 - **A rank may not grow into a worse shape than it started in.** Almost every rank on the catalogue
@@ -225,6 +227,22 @@ The room a grown stack may take is its box less its own tail at each end, not th
 `ROW_TAIL` reserved: a WPF line box runs about a tenth of the font size below the row it sits on,
 which is two pixels at 24 px and seven at 75 px. A constant was enough while every value was a ramp
 size in a box with slack. A value grown into its box is exactly where it stops being enough.
+
+**How a rank is set out** is three questions rather than one. Its lines are the greedy wrap by
+default, one field to a line where the page asks for that, or an equal-column grid of `columnsAt`
+cells where the catalogue draws one. Within a line the fields share the baseline of the largest,
+because a row mixes sizes, unless the page asks them to share their top edge instead. The line then
+sits where the shape puts it: a zone narrow enough for one column centres what is in it, and a wider
+one draws from its left edge. A page may also spread its ranks over the whole height rather than
+centring them as one block, which is what the catalogue's own wrappers do for eight of the
+twenty-one pages; section 10 records that this choice belongs to the page and not to the shape.
+
+**What a box too short takes off is the page's declaration, not its last row.** The stack sheds the
+least important id the shedding table names, one at a time, and builds the rank again without it;
+only once nothing declared is left to shed does it drop a trailing row, which is how a gauge, a
+strip or a table goes, since none of those declares an id. Before this, a 249 × 158 zone took fuel's
+level gauge off with the average it sat under, although the table keeps the average and every
+drawing of the page has a gauge.
 
 The four shapes the catalogue draws, which are the test fixtures:
 
@@ -602,6 +620,9 @@ a mistake in this document.
 | DashComponents' zone A | The component sheet calls zone A "fixed on every layout" and describes the rev bar 40 tall in its well over a 1 px rule, the gear alone, a flag band 40 tall at the bottom edge and the limiter above the gear. That is the card face, which still builds and still draws precisely that. **The zone face follows the Zones artboards instead**: a 56 px bar of settled values takes the place of the rule under the rev bar, the segments are 32 tall inside a 40 px well, and the flag takes band D's sixty pixels rather than a strip of its own. The section wants the same superseded marking as its slot numbers. |
 | The same five parts on every face | The catalogue's anatomy says the five parts differ only in size from one rectangular face to the next. Two of the per-size artboards draw otherwise: 800 × 286 has no bar at all, which leaves four parts, and 600 × 686 stacks A over B over C rather than setting B beside A beside C. **The per-size artboards are taken**, being the more specific drawing, and §1 tabulates both departures. |
 | Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [readability-pass.md](readability-pass.md). |
+| The ramp ceiling at `tall` | Rule 20 stops a rank at the next size up its ramp, which is one step of about 1.35, while the catalogue promotes far harder at `tall`: lap times 46 to 88, the delta 64 to 132, the speedo 64 to 128, and fuel, sectors, stint and session 34 to 76. Either the ceiling is too low or the drawings are, and nobody has decided which; the ceiling stands until somebody does, since it is what keeps filling a box distinct from scaling into one. |
+| Spreading or centring | Whether a page spreads its ranks over the full height or centres them as one block is decided page by page on the catalogue and not by shape: sectors, fuel, session, stint, the speedo and car settings spread at all four shapes, lap times spreads at three and centres at `tall narrow`, the delta centres at three and spreads at `tall`, and the lists, the drawings and the pit view centre everywhere. The engine therefore takes it from the page (`justify: 'spaceBetween'` on `stack`) and centres by default. |
+| A short box's ranks | `keepsSecondaryRanks` says a short box keeps one rank, while `archetypeOf` hands a wide short box the `grid` answer, which keeps two. The code follows `archetypeOf`, and the helper is unused. Either the short boxes the build produces get a fifth declared answer, agreed with the canvas, or the helper goes so that one rule governs. |
 
 ### Every variant the 1280 × 480 sheet lists
 
