@@ -23,6 +23,10 @@ import {
   widthBandOf,
 } from '../src/second/shape.ts';
 import { densityOf, nextOnRamp, rampOf } from '../src/second/density.ts';
+import { fieldsRow } from '../src/modules/module.ts';
+import { rule } from '../src/elements/rule.ts';
+import { fixedRow, stack, type StackRow } from '../src/second/layout.ts';
+import type { FieldSpec } from '../src/second/field.ts';
 import { cellOverruns } from './monoGlyphs.ts';
 import type { Item, TextItem } from '../src/generator.ts';
 
@@ -145,6 +149,72 @@ describe('shedding comes before shrinking', () => {
     // one. What matters is still that the tight box shed instead of shrinking.
     expect(biggest(tight)).toBe(densityOf('zone').big);
     expect(biggest(roomy)).toBeGreaterThanOrEqual(biggest(tight));
+  });
+
+  test('and sheds what its page declares last rather than whichever row is last', () => {
+    // The nano's zone body. Fuel declares level, time, to add and the average at `tall narrow`, and
+    // draws a level gauge under them that the table does not name because it is not a field. The
+    // stack used to drop its trailing rows, so the gauge went with the average; the declaration now
+    // decides, the average goes first, and the page keeps the gauge the drawing has at every shape.
+    const fuel = MODULES.find((m) => m.id === 'fuel')!;
+    const names = fuel.build({ frame: rect(0, 0, 249, 158), density: 'compact', prefix: 'f.' }).flatMap((i) => [...walkItems([i])]).map((i) => i.name);
+    expect(names).toContain('f.gauge');
+    expect(names.some((n) => n.startsWith('f.level'))).toBe(true);
+  });
+});
+
+/**
+ * How a rank is set out in the line it takes: the plan, the alignment and the spread.
+ *
+ * The mechanism rather than a module. A page asks for one of these because the catalogue draws it,
+ * and what every page does with it is measured by `secondScreens.test.ts` and `textFit.test.ts`.
+ */
+describe('a rank is laid out for the shape of its box', () => {
+  const ctxAt = (width: number, height: number): Parameters<(typeof MODULES)[number]['build']>[0] => ({ frame: rect(0, 0, width, height), density: 'zone' as const, prefix: 'g.' });
+  const cell = (id: string, fs: number): FieldSpec => ({ name: `g.${id}`, id, label: id.toUpperCase(), value: { sample: '88', chars: { digits: 2, specials: 0 }, fs } });
+  const lefts = (items: readonly Item[], suffix: string): number[] =>
+    items.flatMap((i) => [...walkItems([i])]).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith(suffix)).map((i) => i.rect.left);
+
+  test('an equal-column grid puts every line on the same columns', () => {
+    const ctx = ctxAt(600, 280);
+    const specs = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => cell(id, densityOf('zone').mid));
+    const row = fieldsRow(specs, ctx, { lines: 'grid', columns: 3, gap: 20 });
+    const xs = lefts(row.draw(row.height), '.value');
+    expect(xs).toHaveLength(6);
+    // Two lines of three over the same three column edges, rather than two lines packed to their
+    // own widths.
+    expect(xs.slice(3)).toEqual(xs.slice(0, 3));
+    expect(new Set(xs).size).toBe(3);
+  });
+
+  test('one field per line is a line each, whatever the box would hold', () => {
+    const ctx = ctxAt(600, 280);
+    const specs = [cell('a', densityOf('zone').mid), cell('b', densityOf('zone').mid)];
+    const wrapped = fieldsRow(specs, ctx);
+    const perLine = fieldsRow(specs, ctx, { lines: 'perLine' });
+    expect(lefts(wrapped.draw(wrapped.height), '.value')).toHaveLength(2);
+    expect(perLine.height).toBeGreaterThan(wrapped.height);
+  });
+
+  test('a top-aligned line shares its top edge where a baseline one shares its baseline', () => {
+    const ctx = ctxAt(600, 280);
+    const specs = [cell('big', densityOf('zone').big), cell('small', densityOf('zone').small)];
+    const tops = (row: StackRow): number[] => row.draw(row.height).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.label')).map((i) => i.rect.top);
+    expect(new Set(tops(fieldsRow(specs, ctx, { align: 'top' }))).size).toBe(1);
+    expect(new Set(tops(fieldsRow(specs, ctx))).size).toBe(2);
+  });
+
+  test('a spread stack pushes its rows apart and a centred one keeps them together', () => {
+    const frame = rect(0, 0, 600, 300);
+    const rows = ['one', 'two'].map((name) => fixedRow(40, (bottom) => [rule(name, 0, bottom - 1, 10, 1)]));
+    const topsOf = (items: readonly Item[]): number[] => items.flatMap((i) => (i.kind === 'layer' ? [] : [i.rect.top]));
+    const spread = topsOf(stack(frame, rows, 'zone', { justify: 'spaceBetween' }));
+    const centred = topsOf(stack(frame, rows, 'zone'));
+    expect(spread[1]! - spread[0]!).toBeGreaterThan(centred[1]! - centred[0]!);
+    // The declared gap is a minimum rather than the distance, and the last row still ends inside
+    // the frame with its tail reserved.
+    expect(spread[1]!).toBeLessThanOrEqual(frame.height);
+    expect(spread[0]!).toBeGreaterThanOrEqual(frame.top);
   });
 });
 

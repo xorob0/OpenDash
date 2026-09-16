@@ -314,8 +314,11 @@ export function fieldRowFitted(
   // A top-aligned line hangs each field from the line's own top edge rather than from the baseline
   // of the largest, so a 34 px value beside a 46 px one starts where it does rather than sitting
   // on its line.
+  // The tail comes off again: a field is placed by the bottom of its last line box and `fieldHeight`
+  // counts the tail that hangs below it, so hanging a field from the line's top means its height
+  // less that tail.
   const top = bottom - rowHeight(specs, density);
-  const bottomOf = (spec: FieldSpec): number => (opts.align === 'top' ? top + fieldHeight(spec, density) : bottom);
+  const bottomOf = (spec: FieldSpec): number => (opts.align === 'top' ? top + fieldHeight(spec, density) - fieldTail(spec, density) : bottom);
   // Placed as a rank so that a field the sim does not publish takes its space with it rather than
   // leaving a hole in the row. `atLeast` is every field: what this row keeps was decided by the
   // page's shedding order before it got here, and the gap above is how it answers a narrow box.
