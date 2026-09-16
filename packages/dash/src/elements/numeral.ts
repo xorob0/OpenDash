@@ -10,6 +10,7 @@
  */
 import type { HAlign, Hex, Monospace, TextItem } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
+import { measureText, type MeasuredFace } from '../design/advances.ts';
 import { boxSlack, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { roundRect } from '../design/geometry.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
@@ -34,18 +35,29 @@ export interface NumeralOptions {
    * reason.
    */
   width?: number;
+  /**
+   * Set in the face's own advances rather than in cells, for the one kind of value that is not a
+   * number: the class and the position after it, drawn as "GT3 · P4" in a single run. A number
+   * keeps its cells, because a proportional one jitters as its digits change.
+   */
+  proportional?: boolean;
+  /** The widest string the binding can produce; a proportional value is measured from it. */
+  widest?: string;
   /** Text binding. `sample` is the design-time text. */
   bind?: Expr;
   visibleBind?: Expr;
   leftBind?: Expr;
 }
 
+/** The measured face a data weight is set in, for a value drawn proportionally. */
+const DATA_FACE: Record<DataWeight, MeasuredFace> = { SemiBold: 'BarlowCondensedSemiBold', Bold: 'BarlowCondensedBold' };
+
 /** A numeral whose canvas line box is (y, fs) at x, sized for `chars`. */
 export function numeral(name: string, sample: string, x: number, y: number, fs: number, chars: Chars, opts: NumeralOptions = {}): TextItem {
   const weight = opts.weight ?? 'SemiBold';
-  const mono = opts.mono ?? cells(weight, fs);
+  const mono = opts.proportional ? undefined : (opts.mono ?? cells(weight, fs));
   const box = textBox(y, fs);
-  const budget = monoWidth(mono, chars);
+  const budget = mono === undefined ? Math.ceil(measureText(DATA_FACE[weight], opts.widest ?? sample, fs)) : monoWidth(mono, chars);
   const wanted = budget + boxSlack(fs);
   // Floored, so that a box whose left rounds up still ends inside the room it was given.
   const capped = opts.maxWidth === undefined ? wanted : Math.max(budget, Math.min(wanted, Math.floor(opts.maxWidth)));
@@ -61,7 +73,8 @@ export function numeral(name: string, sample: string, x: number, y: number, fs: 
     textColor: opts.color ?? ds.color.text.primary,
     hAlign: opts.hAlign ?? 'left',
     vAlign: 'top',
-    monospace: mono,
+    ...(mono ? { monospace: mono } : {}),
+    ...(opts.widest ? { widest: opts.widest } : {}),
     backgroundColor: TRANSPARENT,
     ...withBindings({ Text: opts.bind, TextColor: opts.colorBind, Visible: opts.visibleBind, Left: opts.leftBind }),
   };

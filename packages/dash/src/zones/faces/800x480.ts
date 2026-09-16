@@ -27,6 +27,7 @@ export const zoneFace800x480: ZoneLayout = {
   background: ds.color.surface.base,
   bandCorners: false,
   barFieldsPerEnd: 2,
+  bar: zoneFace850x480.bar,
   zones: {
     revBarWell: rect(from.revBarWell.left, from.revBarWell.top, WIDTH - 2 * from.revBarWell.left, from.revBarWell.height),
     revBar: rect(from.revBar.left, from.revBar.top, WIDTH - 2 * from.revBar.left, from.revBar.height),

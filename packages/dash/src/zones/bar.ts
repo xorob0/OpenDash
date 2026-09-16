@@ -17,11 +17,11 @@ import { withBindings } from '../bind.ts';
 import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot, type FaceSize } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { cells, monoWidth } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
-import { densityOf } from '../second/density.ts';
 import { rank, type RankMember } from '../second/rank.ts';
+import type { BarScale } from './layout.ts';
 import {
   CHARS,
   absLevel,
@@ -47,16 +47,45 @@ import { ds } from '../tokens.ts';
 
 const { fmt, isnull, num, str, iff, eq, game, concat, raw } = ncalc;
 
+/**
+ * What every artboard draws the same way, whatever the bar's height: twenty pixels of side
+ * padding, a 13 px row for the 15 px label, five pixels under it, and six between a value and the
+ * dimmer denominator after it. The label is centred in a row two pixels shorter than its type, so
+ * the row rather than the font size is what the block is measured with.
+ *
+ * The sizes that do change with the face -- the value, the denominator, the strip column and the
+ * gap -- are `BarScale`, read off the face's own artboard.
+ */
+const PAD_X = 20;
+const LABEL_ROW = 13;
+const LABEL_GAP = 5;
+const DENOMINATOR_GAP = 6;
+
 /** One field of the bar's catalogue: a label, a value and how wide the value can get. */
 interface BarFieldSpec {
   id: string;
   label: string;
+  /** What the label reads where one field per end leaves the artboard room for a shorter word. */
+  short?: string;
   sample: string;
   bind: string;
-  chars: { digits: number; specials: number };
+  chars: Chars;
+  /**
+   * The widest string the value can draw, for a field that is a run of text rather than a number
+   * and is therefore set proportionally. `chars` then says what it would take in cells and is not
+   * what the field is measured by.
+   */
+  widest?: string;
   /** A second, dimmer value after the first, as "3 / 22" and "4 / 32" are drawn. */
-  denominator?: { sample: string; bind: string; chars: { digits: number; specials: number } };
+  denominator?: { sample: string; bind: string; chars: Chars };
 }
+
+/**
+ * The widest class and position the bar promises to draw: a four-character class name and a
+ * two-digit place. The field is measured from it rather than from cells, and at 600 x 686 it is
+ * also what leaves the strip room for its fifth cell, so widening it shortens the strip.
+ */
+const WIDEST_CLASS = 'LMP2 · P24';
 
 /** The ten fields an end of the bar can show. Ordered as the plugin lists them. */
 export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
@@ -75,13 +104,15 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
   {
     id: 'position',
     label: 'Position',
+    short: 'Pos',
     sample: '3',
     bind: fmt(isnull(game('Position'), num(0)), '0'),
     chars: CHARS.position,
     denominator: { sample: '/ 22', bind: concat(str('/ '), fmt(opponentCount(), '0')), chars: { digits: 4, specials: 1 } },
   },
-  { id: 'classPosition', label: 'Class', sample: 'GT3 P4', bind: concat(playerClass(), str(' P'), fmt(isnull(game('PlayerClassPosition'), classOpponentCount()), '0')), chars: { digits: 9, specials: 0 } },
-  { id: 'incidents', label: 'Incidents', sample: '3', bind: fmt(isnull(incidents(), num(0)), '0'), chars: CHARS.count, denominator: { sample: 'x', bind: str('x'), chars: { digits: 1, specials: 0 } } },
+  { id: 'classPosition', label: 'Class', sample: 'GT3 · P4', bind: concat(playerClass(), str(' · P'), fmt(isnull(game('PlayerClassPosition'), classOpponentCount()), '0')), chars: CHARS.classPosition, widest: WIDEST_CLASS },
+  // Four cells rather than the count's three: the x the artboard draws after the number takes one.
+  { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 } },
   { id: 'airTemp', label: 'Air', sample: '21.5', bind: fmt(airTemperature(), '0.0'), chars: CHARS.pressure, denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } } },
   { id: 'trackTemp', label: 'Track', sample: '27.6', bind: fmt(roadTemperature(), '0.0'), chars: CHARS.pressure, denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } } },
 ];
@@ -138,9 +169,19 @@ export const STRIP_CELLS: readonly StripCell[] = [
  */
 const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', 'map', 'diff'];
 
+/** What a strip cell's sample takes in cells: a reading with one decimal, or a bare number. */
+const cellChars = (cell: StripCell): Chars => ({ digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 });
+
+/** Width of the text a label is drawn with, with the pixel of room WPF needs not to clip it. */
+const labelWidth = (text: string): number => Math.ceil(measureText('BarlowMedium', text.toUpperCase(), ds.size.label)) + 2;
+
 /**
- * Width a strip cell takes: its label or its value, whichever is wider, rounded up to an even
- * number.
+ * Width a strip cell takes: the artboard's column, widened to a reading that does not fit it and
+ * rounded up to an even number.
+ *
+ * The column is fixed rather than measured so that the seven read as a rank of equal cells, which
+ * is what the artboards draw; "Bias 50.5" at 34 px is the one reading wider than the column it is
+ * given, and it takes the pixel it needs rather than losing its last digit.
  *
  * Even, because the strip is a centred rank that closes over what is missing, and `rank` centres
  * on `(width - total) / 2` twice over: once in the static rect, which `roundRect` rounds, and once
@@ -149,18 +190,23 @@ const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', '
  * arrangement the closing can produce -- not merely the one with every cell present -- on whole
  * pixels, and the binding agrees with the rect it was laid out from.
  */
-function stripCellWidth(cell: StripCell, valueFs: number, labelFs: number): number {
-  const value = monoWidth(cells('SemiBold', valueFs), { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 });
-  const text = Math.ceil(measureText('BarlowMedium', cell.label.toUpperCase(), labelFs)) + 2;
-  return 2 * Math.ceil(Math.max(value, text) / 2);
+function stripCellWidth(cell: StripCell, scale: BarScale): number {
+  const value = monoWidth(cells('SemiBold', scale.valueSize), cellChars(cell));
+  return 2 * Math.ceil(Math.max(value, labelWidth(cell.label), scale.stripCell) / 2);
 }
 
+/** Width a field's value takes: its cells, or its widest rendering where it is drawn proportionally. */
+const valueWidth = (spec: BarFieldSpec, fs: number): number =>
+  spec.widest === undefined ? monoWidth(cells('SemiBold', fs), spec.chars) : Math.ceil(measureText('BarlowCondensedSemiBold', spec.widest, fs));
+
+/** Width a field's denominator takes, and nothing for a field that has none. */
+const denominatorWidth = (spec: BarFieldSpec, fs: number): number =>
+  spec.denominator ? monoWidth(cells('SemiBold', fs), spec.denominator.chars) : 0;
+
 /** Width a bar end field takes: its value, its denominator, and the label above them. */
-function fieldWidth(spec: BarFieldSpec, valueFs: number, labelFs: number, smallFs: number): number {
-  const value = monoWidth(cells('SemiBold', valueFs), spec.chars);
-  const denominator = spec.denominator ? ds.space[2] + monoWidth(cells('SemiBold', smallFs), spec.denominator.chars) : 0;
-  const text = Math.ceil(measureText('BarlowMedium', spec.label.toUpperCase(), labelFs)) + 2;
-  return Math.ceil(Math.max(value + denominator, text));
+function fieldWidth(spec: BarFieldSpec, scale: BarScale): number {
+  const denominator = spec.denominator ? DENOMINATOR_GAP + denominatorWidth(spec, scale.denominatorSize) : 0;
+  return Math.ceil(Math.max(valueWidth(spec, scale.valueSize) + denominator, labelWidth(spec.label)));
 }
 
 export interface BarOptions {
@@ -168,6 +214,8 @@ export interface BarOptions {
   fieldsPerEnd: 1 | 2;
   /** The face this bar is drawn on, which is what its settings are named after. */
   face: FaceSize;
+  /** The sizes the face's artboard draws the bar at. */
+  scale: BarScale;
 }
 
 /**
@@ -179,16 +227,19 @@ export interface BarOptions {
  * complicated; the items cost nothing to draw and each is measured for what it actually shows.
  */
 export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
-  const d = densityOf('zone');
-  const valueFs = d.mid;
-  const smallFs = d.labelSm;
-  const labelFs = d.labelSm;
-  const padX = 20;
+  const { gap, valueSize, denominatorSize } = opts.scale;
+  const labelFs = ds.size.label;
   const items: Item[] = [];
 
-  const blockHeight = labelFs + d.fieldGap + valueFs;
+  const blockHeight = LABEL_ROW + LABEL_GAP + valueSize;
   const top = frame.top + Math.max(0, (frame.height - blockHeight) / 2);
-  const valueTop = top + labelFs + d.fieldGap;
+  // The label is set two pixels larger than the row it is centred in, so its line box starts a
+  // pixel above the row and the block is measured from the row rather than from the type.
+  const labelTop = top + (LABEL_ROW - labelFs) / 2;
+  const valueTop = top + LABEL_ROW + LABEL_GAP;
+  // A denominator sits on the value's baseline, which is where the artboard's `align-items:
+  // baseline` puts it and is not where a shorter line with the same top would sit.
+  const denominatorTop = canvasYForBaseline(canvasBaseline(valueTop, valueSize), denominatorSize);
 
   const slots: { slot: BarSlot; align: 'left' | 'right' }[] = [
     { slot: 'Left1', align: 'left' },
@@ -200,34 +251,46 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
 
   // Each end's fields are laid out from its own edge inwards, so the widest possible catalogue
   // entry decides the gap the strip gets rather than whichever happens to be selected.
-  const widest = Math.max(...BAR_FIELD_SPECS.map((s) => fieldWidth(s, valueFs, labelFs, smallFs)));
-  const endWidth = opts.fieldsPerEnd * widest + (opts.fieldsPerEnd - 1) * d.gapX;
+  const widest = Math.max(...BAR_FIELD_SPECS.map((s) => fieldWidth(s, opts.scale)));
+  const endWidth = opts.fieldsPerEnd * widest + (opts.fieldsPerEnd - 1) * gap;
 
   for (const { slot, align } of used) {
     const index = BAR_SLOTS.indexOf(slot);
     const withinEnd = index % 2;
     const x =
       align === 'left'
-        ? frame.left + padX + withinEnd * (widest + d.gapX)
-        : frame.left + frame.width - padX - endWidth + withinEnd * (widest + d.gapX);
+        ? frame.left + PAD_X + withinEnd * (widest + gap)
+        : frame.left + frame.width - PAD_X - endWidth + withinEnd * (widest + gap);
     for (const spec of BAR_FIELD_SPECS) {
       const visible = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
       const name = `${prefix}${slot}.${spec.id}`;
+      // One field per end is the portrait face, where the artboard has the room for "POS" and not
+      // for "POSITION".
+      const text = opts.fieldsPerEnd === 1 ? (spec.short ?? spec.label) : spec.label;
       items.push({
-        ...label(`${name}.label`, spec.label.toUpperCase(), x, top, widest, { size: labelFs }),
+        ...label(`${name}.label`, text.toUpperCase(), x, labelTop, widest, { size: labelFs, hAlign: align }),
         ...withBindings({ Visible: visible }),
       });
-      const valueWidth = monoWidth(cells('SemiBold', valueFs), spec.chars);
+      // A field of the right end is drawn flush to the right of its slot, as the artboard draws it:
+      // the denominator against the padding and the value one gap in front of it.
+      const value = valueWidth(spec, valueSize) + boxSlack(valueSize);
+      const denominator = denominatorWidth(spec, denominatorSize) + boxSlack(denominatorSize);
+      const after = spec.denominator ? DENOMINATOR_GAP + denominatorWidth(spec, denominatorSize) : 0;
       items.push({
-        ...numeral(`${name}.value`, spec.sample, x, valueTop, valueFs, spec.chars, { maxWidth: valueWidth + 4 }),
+        ...numeral(`${name}.value`, spec.sample, align === 'left' ? x : x + widest - after - value, valueTop, valueSize, spec.chars, {
+          width: value,
+          hAlign: align,
+          ...(spec.widest === undefined ? {} : { proportional: true, widest: spec.widest }),
+        }),
         ...withBindings({ Visible: visible, Text: spec.bind }),
       });
       if (spec.denominator) {
-        const dx = x + valueWidth + ds.space[2];
+        const dx = align === 'left' ? x + valueWidth(spec, valueSize) + DENOMINATOR_GAP : x + widest - denominator;
         items.push({
-          ...numeral(`${name}.denominator`, spec.denominator.sample, dx, valueTop + (valueFs - smallFs), smallFs, spec.denominator.chars, {
+          ...numeral(`${name}.denominator`, spec.denominator.sample, dx, denominatorTop, denominatorSize, spec.denominator.chars, {
             color: ds.color.text.secondary,
-            maxWidth: monoWidth(cells('SemiBold', smallFs), spec.denominator.chars) + 4,
+            width: denominator,
+            hAlign: align,
           }),
           ...withBindings({ Visible: visible, Text: spec.denominator.bind }),
         });
@@ -238,12 +301,12 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
   // The strip, centred in what the two ends leave. A setting the sim does not publish takes its
   // cell with it and the strip closes over the hole, which is the rank's `close` mode: an empty box
   // where a car has no differential is worse than a narrower strip.
-  const stripLeft = frame.left + padX + endWidth + d.gapX;
-  const stripRight = frame.left + frame.width - padX - endWidth - d.gapX;
+  const stripLeft = frame.left + PAD_X + endWidth + gap;
+  const stripRight = frame.left + frame.width - PAD_X - endWidth - gap;
   const stripWidth = Math.max(0, stripRight - stripLeft);
   const strip = rank(
     STRIP_CELLS.map((cell) => {
-      const w = stripCellWidth(cell, valueFs, labelFs);
+      const w = stripCellWidth(cell, opts.scale);
       const present = ncalc.not(ncalc.isNull(cell.present ?? cell.expr));
       const name = `${prefix}strip.${cell.id}`;
       return {
@@ -251,9 +314,10 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         width: w,
         present,
         draw: (at) => [
-          label(`${name}.label`, cell.label.toUpperCase(), at.x, top, w, { size: labelFs, leftBind: at.leftAt(), visibleBind: at.visibleBind }),
-          numeral(`${name}.value`, cell.sample, at.x, valueTop, valueFs, { digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 }, {
-            maxWidth: w + 4,
+          label(`${name}.label`, cell.label.toUpperCase(), at.x, labelTop, w, { size: labelFs, hAlign: 'center', leftBind: at.leftAt(), visibleBind: at.visibleBind }),
+          numeral(`${name}.value`, cell.sample, at.x, valueTop, valueSize, cellChars(cell), {
+            width: w,
+            hAlign: 'center',
             leftBind: at.leftAt(),
             visibleBind: at.visibleBind,
             // Emptied as well as hidden: a hidden item still holds its last text, and the strip is
@@ -265,7 +329,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
     }),
     // `atLeast: 0`: a bar with no room between its ends draws no strip at all, rather than one cell
     // over a field. The two ends are the settled values and they win the space.
-    { left: stripLeft, width: stripWidth, gap: d.gapX, when: 'close', shedOrder: STRIP_PRIORITY, atLeast: 0 },
+    { left: stripLeft, width: stripWidth, gap, when: 'close', shedOrder: STRIP_PRIORITY, atLeast: 0 },
   );
   items.push(...strip.items);
 
