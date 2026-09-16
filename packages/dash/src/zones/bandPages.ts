@@ -15,6 +15,10 @@
  *
  * The fields are read off `design/canvas/ZoneCatalogue.dc.html`, page by page, and the metrics off
  * the band of each face's own artboard.
+ *
+ * Seven of the eight pages are that. The eighth, D8 Car, is the twelve-lamp telltale rank, which is
+ * a rank of boxes rather than of fields and lives in `telltales.ts`; this file hands it the same
+ * room it gives a page of fields and otherwise leaves it alone.
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -26,6 +30,7 @@ import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
 import { dimUnless, rank, type RankMember } from '../second/rank.ts';
+import { TELLTALE_PAGE, telltaleItems } from './telltales.ts';
 import {
   CHARS,
   airTemperature,
@@ -214,33 +219,6 @@ const relative: readonly BandField[] = [
   },
 ];
 
-/**
- * D8 Car: the telltale row belongs here, and the pictograms need the generator's image item
- * (XOR-115) before XOR-97 can draw them. Until then this is the readings the lamps would sit
- * beside, so the page is worth cycling to rather than an empty step in the ring.
- */
-const car: readonly BandField[] = [
-  { id: 'water', label: 'Water', sample: '92', bind: fmt(isnull(game('WaterTemperature'), num(0)), '0'), chars: CHARS.temperature, after: '°' },
-  { id: 'oil', label: 'Oil', sample: '104', bind: fmt(isnull(game('OilTemperature'), num(0)), '0'), chars: CHARS.temperature, after: '°' },
-  // The three gauges below the temperatures are the ones a sim either wires or does not. They are
-  // removed rather than zeroed: 0.0 bar of oil pressure is a reading, and a wrong one.
-  { id: 'oilPressure', label: 'Oil pressure', sample: '4.2', ...optional(game('OilPressure'), '0.0'), chars: CHARS.consumption },
-  { id: 'fuelPressure', label: 'Fuel pressure', sample: '3.8', ...optional(raw('FuelPress'), '0.0'), chars: CHARS.consumption },
-  { id: 'voltage', label: 'Voltage', sample: '13.8', ...optional(raw('Voltage'), '0.0'), chars: CHARS.consumption },
-];
-
-/**
- * A reading the sim may not publish at all: what it draws, and what says it is there.
- *
- * The text is guarded as well as hidden. A hidden item's bindings are still evaluated every frame,
- * so formatting a null would put an error in SimHub's log once per frame for a car that simply has
- * no such sensor.
- */
-function optional(expr: string, pattern: string): { bind: string; present: string } {
-  const there = ncalc.not(ncalc.isNull(expr));
-  return { bind: iff(there, fmt(expr, pattern), str('')), present: there };
-}
-
 /** `--` when the sim publishes nothing, rather than a zero that reads as a reading. */
 function notAvailable(expr: string): string {
   return iff(ncalc.isNull(expr), str('--'), fmt(expr, '0.0'));
@@ -259,7 +237,13 @@ function fuelToEnergy(): string {
   return iff(gt(perLap, num(0)), fmt(div(fuelPerLap(), isnull(raw('VirtualEnergyPerLap'), num(1))), '0.00'), str('--'));
 }
 
-/** The eight pages, by the id the contract gives them. */
+/**
+ * Seven of the eight pages, by the id the contract gives them.
+ *
+ * D8 Car is the eighth and is not here, because it is not a rank of fields at all: it is the
+ * twelve-lamp telltale rank of `telltales.ts`, which is a rank of boxes and pictograms and shares
+ * only the centring. {@link BAND_PAGE_IDS} is the whole cycle.
+ */
 export const BAND_PAGES: Record<string, readonly BandField[]> = {
   fuel,
   energy,
@@ -268,7 +252,6 @@ export const BAND_PAGES: Record<string, readonly BandField[]> = {
   weather,
   sectors,
   relative,
-  car,
 };
 
 /**
@@ -490,6 +473,9 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
  * across 1920 px.
  */
 export function bandPageItems(id: string, frame: Rect, prefix: string, corners = false): Item[] {
+  const usable = bandPageRoom(frame, corners);
+  if (id === TELLTALE_PAGE) return telltaleItems(frame, prefix, usable);
+
   const fields = BAND_PAGES[id];
   if (!fields) throw new RangeError(`band D has no page "${id}"`);
   const m = bandMetrics(frame);
@@ -497,17 +483,25 @@ export function bandPageItems(id: string, frame: Rect, prefix: string, corners =
   const inline = INLINE_PAGES[id];
   const valueFs = inline ? inlineValueSize(frame.height, m.valueSize) : valueSizeFor(frame.height, m.valueSize, labelFs, LABEL_ROW, FIELD_GAP);
 
-  // The rank gets what the letter and the corner blocks leave, not the whole band. Centring in the
-  // whole band put the last field of D6 Sectors six pixels into the DRS lamp at 1280, where a page
-  // and a corner block drew over each other and only a photograph would have shown it.
-  const taken = corners ? bandCornerWidths(frame) : { left: m.padX + letterRoom(frame), right: m.padX };
-  const apart = corners ? BAND_GROUP_GAP : 0;
-  const usable = { left: frame.left + taken.left + apart, width: Math.max(0, frame.width - taken.left - taken.right - 2 * apart) };
-
   const geometry = blockGeometry(frame, valueFs, labelFs);
   const members = inline ? inlineMembers(fields, inline, prefix, frame, valueFs, labelFs) : fields.map((field) => bandMember(field, prefix, geometry));
 
   return rank(members, { left: usable.left, width: usable.width, gap: inline ? inline.gap : m.fieldGap, when: 'close' }).items;
+}
+
+/**
+ * The room a page has: what the side padding, the zone letter and the corner blocks leave.
+ *
+ * Centring in the whole band put the last field of D6 Sectors six pixels into the DRS lamp at 1280,
+ * where a page and a corner block drew over each other and only a photograph would have shown it.
+ * The telltale rank is centred in the same room, which is what puts twelve lamps between the
+ * corners rather than across them.
+ */
+export function bandPageRoom(frame: Rect, corners: boolean): { left: number; width: number } {
+  const m = bandMetrics(frame);
+  const taken = corners ? bandCornerWidths(frame) : { left: m.padX + letterRoom(frame), right: m.padX };
+  const apart = corners ? BAND_GROUP_GAP : 0;
+  return { left: frame.left + taken.left + apart, width: Math.max(0, frame.width - taken.left - taken.right - 2 * apart) };
 }
 
 /**
@@ -746,5 +740,5 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   return items;
 }
 
-/** Every page id band D can show, for a test that wants to walk them. */
-export const BAND_PAGE_IDS: readonly string[] = Object.keys(BAND_PAGES);
+/** Every page id band D can show, in cycle order, for a test that wants to walk them. */
+export const BAND_PAGE_IDS: readonly string[] = [...Object.keys(BAND_PAGES), TELLTALE_PAGE];
