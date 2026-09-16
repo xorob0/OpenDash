@@ -112,7 +112,9 @@ Nothing here is a placeholder for work that is pending. Each is a value the sim 
 | Class header bands | Per-class rows exist only for the player's class (above). |
 | The gain-and-loss bar on the opponents module | It needs a history of the gap, which neither SimHub nor a generated dashboard keeps. The gap itself, refreshed every frame, says the same thing. |
 | Incidents per car | iRacing carries them only in the session YAML, per entry rather than per leaderboard row. Your own count is in the pit wall header. |
-| Track state, strength of field | Neither exists as a SimHub property from iRacing. |
+| Track state, strength of field | Neither exists as a SimHub property from iRacing. The catalogue draws strength in the session module's third rank, which is therefore built two fields wide rather than three. |
+| Fuel used this stint (module 18) | SimHub publishes the last lap's consumption and the current lap's, and no figure at all for what the tank has given since the stop. Laps since the stop multiplied by the rolling average is an estimate wearing a measurement's label, so the field is left out rather than approximated. |
+| Per-lap fuel, and the fuel target drawn over it (module 19) | The previous-lap family carries ten lap times and their deltas to the session best, and no consumption beside them. Keeping one per lap would mean remembering between frames, which [decisions/0009-does-the-plugin-compute.md](decisions/0009-does-the-plugin-compute.md) refuses; the lap history therefore draws that delta where the catalogue draws fuel. |
 | Rank triangles, change ticks | SimHub draws rectangles, ellipses and text; a triangle is not among them. A 6 px square in the same colour, in the same place, carries the same meaning. |
 
 Three of those (energy, damage, track rivals) ship as modules that say so, off by default, because

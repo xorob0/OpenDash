@@ -147,10 +147,10 @@ export const SHEDDING: Record<string, Shedding> = {
   // Where you are and how long is left survive; the session name and the laps left are what a
   // driver can infer from the rest.
   session: fields({
-    wide: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft'],
+    wide: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft', 'incidents', 'cars'],
     grid: ['position', 'class', 'lap', 'timeLeft'],
     tallNarrow: ['position', 'class', 'lap', 'timeLeft'],
-    tall: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft'],
+    tall: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft', 'incidents', 'cars'],
   }),
   radar: nothing('the cars beside you, cut from the box; rule 18'),
   track: nothing('the map, cut from the box; rule 18'),
@@ -180,14 +180,15 @@ export const SHEDDING: Record<string, Shedding> = {
     tall: ['ahead.gap', 'ahead.name', 'ahead.class', 'ahead.detail', 'behind.gap', 'behind.name', 'behind.class', 'behind.detail'],
   }),
   gear: nothing('the gear, cut from the box; rule 18'),
-  // The stint is the laps and the stops. The time, the total and the driver are the recap.
+  // The stint is the laps and the stops. The time, the total, the average and the driver are the
+  // recap, and the driver goes first of those: a page read from the pit wall already knows whose.
   stint: fields({
-    wide: ['stintLaps', 'stintTime', 'completed', 'driver', 'stops', 'lastStop'],
+    wide: ['stintLaps', 'stintTime', 'completed', 'stops', 'lastStop', 'avgLap', 'driver'],
     grid: ['stintLaps', 'stops', 'lastStop'],
     tallNarrow: ['stintLaps', 'stops', 'lastStop'],
-    tall: ['stintLaps', 'stintTime', 'completed', 'driver', 'stops', 'lastStop'],
+    tall: ['stintLaps', 'stintTime', 'completed', 'stops', 'lastStop', 'avgLap', 'driver'],
   }),
-  lapHistory: nothing('three columns and as many rows as fit; there is no fourth to drop'),
+  lapHistory: nothing('lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops'),
   damage: nothing('one line of prose: iRacing publishes no damage'),
   trackRivals: nothing('one line of prose: SimHub times sectors, not segments'),
 };

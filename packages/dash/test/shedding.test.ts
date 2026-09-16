@@ -296,13 +296,11 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     '600x686 600x160 carSettings': ['arbFront', 'arbRear'],
     '600x686 600x150 carSettings': ['arbFront', 'arbRear'],
     // Zone C of the 600 x 686 face is 114 px, ten less than zone B, and that is where a second row
-    // stops fitting at all: the delta loses its scale, the sectors their three lap times, the
-    // stint its two stops.
+    // stops fitting at all: the delta loses its scale and the sectors their three lap times. The
+    // stint lost its two stops here until its lead came off `d.hero`, a size the rank could not
+    // shrink from to make room, which is readability-pass.md §13 and the line this list loses.
     '600x686 600x150 delta': ['scale'],
     '600x686 600x150 sectors': ['yourBest', 'last', 'sessionBest'],
-    '600x686 600x150 stint': ['stops', 'lastStop'],
-    // And zone B with it, for the same reason as fuel above.
-    '600x686 600x160 stint': ['stops', 'lastStop'],
     // The nano's session keeps the position and the class, which is what the page is read for, and
     // sheds the lap and the time left: its two counters each carry a denominator now, and a
     // denominator at 0.7 of a value is wider than the small label it replaced.

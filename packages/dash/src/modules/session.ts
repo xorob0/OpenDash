@@ -3,6 +3,11 @@
  *
  * Time left is only shown when the session has one: iRacing reports a week of remaining time for
  * a session that has none, which is why the value is guarded rather than formatted blindly.
+ *
+ * The third rank the catalogue draws is Strength, Incidents and Cars, and it is built here as two:
+ * strength of field is published by SimHub in no form at all, which is the one field
+ * [ADR 0009](../../../../docs/decisions/0009-does-the-plugin-compute.md) leaves out of the bar's
+ * catalogue for the same reason. A field that can never have a value is worse than no field.
  */
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
@@ -14,6 +19,7 @@ import {
   clock,
   currentLap,
   fieldSize,
+  incidents,
   isTimedSession,
   lapsLeft,
   player,
@@ -22,6 +28,7 @@ import {
   sessionType,
   totalLaps,
 } from '../second/values.ts';
+import { ds } from '../tokens.ts';
 import { defineModule, fieldsRow, fld } from './module.ts';
 
 const { fmt, iff, concat, str, gt, num, isnull, driver } = ncalc;
@@ -29,6 +36,7 @@ const { fmt, iff, concat, str, gt, num, isnull, driver } = ncalc;
 export const session = defineModule('session', (ctx) => {
   const d = densityOf(ctx.density);
   const classPosition = isnull(driver('classposition', player()), num(0));
+  const taken = isnull(incidents(), num(0));
   return stack(
     ctx.frame,
     [
@@ -67,6 +75,21 @@ export const session = defineModule('session', (ctx) => {
             fs: d.mid,
           }),
           fld(ctx, 'lapsLeft', 'Laps left', { sample: '18', bind: fmt(lapsLeft(), '0'), chars: CHARS.position, fs: d.mid }, { visibleBind: gt(lapsLeft(), num(0)) }),
+        ],
+        ctx,
+      ),
+      fieldsRow(
+        [
+          // Four cells rather than the count's three: the x the canvas draws after the number takes
+          // one, which is how `zones/bar.ts` budgets the same value.
+          fld(ctx, 'incidents', 'Incidents', {
+            sample: '3x',
+            bind: concat(fmt(taken, '0'), str('x')),
+            chars: { digits: 4, specials: 0 },
+            fs: d.small,
+            colorBind: iff(gt(taken, num(0)), str(ds.color.caution.primary), str(ds.color.text.primary)),
+          }),
+          fld(ctx, 'cars', 'Cars', { sample: '24', bind: fmt(fieldSize(), '0'), chars: CHARS.position, fs: d.small }),
         ],
         ctx,
       ),
