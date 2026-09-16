@@ -93,6 +93,14 @@ describe('a board is padded and ruled the way every pit wall artboard draws it',
       expect({ page: b.page, pitch: stamped?.kind === 'layer' ? stamped.repeatTopOffset : 0 }).toEqual({ page: b.page, pitch: b.rowHeight });
     });
 
+    test(`${b.page}: the rows open against the header rule rather than being centred under it`, () => {
+      // The board's column carries no `justify-content` on any of the four artboards, so a field
+      // shorter than the board leaves its empty rows at the foot. A list is the opposite case and
+      // `tables.test.ts` is where that one is pinned.
+      const band = box(b, '.row.background');
+      expect({ page: b.page, top: band.rect.top }).toEqual({ page: b.page, top: PIT_WALL_HEADER.height + b.header });
+    });
+
     test(`${b.page}: the name is Barlow 500 15 under numerals the row's height decides`, () => {
       const lead = b.rowHeight >= 32 ? 24 : 16;
       expect({ page: b.page, name: text(b, 'name').fontSize, font: text(b, 'name').font, weight: text(b, 'name').fontWeight }).toEqual({ page: b.page, name: 15, font: ds.font.label, weight: 'Medium' });
