@@ -120,8 +120,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildEmptyRig()
         {
-            var pill = Ui.HStack(8, Ui.Dot(Theme.TextDim), Ui.Label("No screens yet", Theme.TextLabel));
-            pill.Height = Theme.ControlHeightSm;
+            var pill = Ui.StatusPill(Theme.TextDim, "No screens yet", Theme.TextLabel);
             // The pill states the rig is empty, so the sentence under it no longer says so as well: it
             // is the explanation of what adding a screen does, not a second announcement.
             var text = Ui.Caption(
