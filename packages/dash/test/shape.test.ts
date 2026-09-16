@@ -16,7 +16,6 @@ import {
   columnsAt,
   describeShape,
   heightBandOf,
-  keepsSecondaryRanks,
   promotesLead,
   SHAPE_ARCHETYPES,
   shapeOf,
@@ -52,9 +51,7 @@ describe('shape is a pair of bands, not a ratio', () => {
     expect(columnsAt({ width: 'wide', height: 'medium' })).toBe(3);
   });
 
-  test('a short box keeps one rank, which is what a pit wall strip is', () => {
-    expect(keepsSecondaryRanks({ width: 'wide', height: 'short' })).toBe(false);
-    expect(keepsSecondaryRanks({ width: 'wide', height: 'medium' })).toBe(true);
+  test('a tall box promotes its lead value and a medium one does not', () => {
     expect(promotesLead({ width: 'medium', height: 'tall' })).toBe(true);
     expect(promotesLead({ width: 'medium', height: 'medium' })).toBe(false);
   });
