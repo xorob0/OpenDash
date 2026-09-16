@@ -94,6 +94,9 @@ const nothing = (why: string): Shedding => ({ kind: 'nothing', why });
  * three per-lap consumptions where the zone drawing gives it one -- the field is kept at `wide`,
  * the fullest form, and follows the drawing everywhere else. Where the drawing names a field the
  * module does not have yet, it is simply not here; the module is what this table is about.
+ *
+ * The five rows that deliberately keep more than the drawing are listed in `docs/design/zones.md`
+ * §5, so that a reader holding a drawing against a zone finds the argument rather than a bug.
  */
 export const SHEDDING: Record<string, Shedding> = {
   // Six values at `wide`, four at `grid`: the laps and the estimate go, and the delta stays,
