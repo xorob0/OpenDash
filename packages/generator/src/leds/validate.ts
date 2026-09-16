@@ -43,9 +43,11 @@ const expressionsOf = (c: LedContainer, path: string): { expr: LedExpression; pa
     ? at(c.trigger, 'TriggerFormula')
     : c.kind === 'customStatus'
       ? [...at(c.enabledFormula, 'EnabledFormula'), ...at(c.blinkFormula, 'BlinkFormula')]
-      : c.kind === 'scriptedContent'
-        ? at(c.contentFormula, 'ContentFormula')
-        : [];
+      : c.kind === 'dynamicColor'
+        ? at(c.colorFormula, 'ColorFormula')
+        : c.kind === 'scriptedContent'
+          ? at(c.contentFormula, 'ContentFormula')
+          : [];
 };
 
 /** Every colour a container names, so that none of them can be the shorthand SimHub misreads. */
