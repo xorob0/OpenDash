@@ -63,6 +63,13 @@ export const fmt = (value: Expr, pattern: string, addSign = false): Expr =>
   addSign ? `format(${value}, ${str(pattern)}, true)` : `format(${value}, ${str(pattern)})`;
 
 /**
+ * A signed value drawn with the typographic minus U+2212 rather than .NET's hyphen-minus, which is
+ * a short dash beside tabular figures and reads as a dropped stroke. The substitution happens after
+ * formatting because the sign comes out of `format`; the `+` `addSign` writes is kept as it is.
+ */
+export const signed = (value: Expr, pattern: string): Expr => replace(fmt(value, pattern, true), '-', '\u2212');
+
+/**
  * SimHub's lap time formatter. Output is `h:mm:ss.fff` above an hour, `m:ss.fff` with
  * `forceMinutes` (or when minutes > 0), `ss.fff` otherwise; `decimals` sets the fraction length.
  */
