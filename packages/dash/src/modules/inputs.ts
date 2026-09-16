@@ -12,7 +12,7 @@
 import { ncalc } from '../generator.ts';
 import { withBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { rect } from '../design/geometry.ts';
+import { rect, type Rect } from '../design/geometry.ts';
 import { densityOf } from '../second/density.ts';
 import { barGauge } from '../second/gauge.ts';
 import { trace, type Series } from '../second/trace.ts';
@@ -97,7 +97,7 @@ export const inputs = defineModule('inputs', (ctx) => {
 });
 
 /** The track, the marker on it and the word under it, centred in the column the bars leave. */
-function steerColumn(prefix: string, frame: { left: number; top: number; width: number; height: number }, valueFs: number, labelFs: number, fieldGap: number): Item[] {
+function steerColumn(prefix: string, frame: Rect, valueFs: number, labelFs: number, fieldGap: number): Item[] {
   const trackHeight = Math.max(2, Math.round(valueFs / 6));
   const trackTop = frame.top + Math.round((frame.height - trackHeight) / 2);
   const travel = frame.width - STEER.marker;
