@@ -141,9 +141,8 @@ export const LED_FLAG_ANIMATION_SETTING = 'LedFlagAnimation';
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
-  const modules = MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
   const pitWall = [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING];
-  return [...modules, ...pitWall].map(propertyName);
+  return [...companionProperties(), ...pitWall].map(propertyName);
 }
 
 /** Every property the plugin exposes, in the order the plugin attaches them. */
@@ -535,7 +534,7 @@ export function screenProperties(prefix: string): string[] {
   if (prefix === PIT_WALL_PREFIX) {
     return [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING].map(propertyName);
   }
-  if (prefix === COMPANION_PREFIX) return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)).map(propertyName);
+  if (prefix === COMPANION_PREFIX) return companionProperties().map(propertyName);
   throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
 }
 
@@ -658,6 +657,19 @@ export function moduleAt(number: number): ModuleMeta {
 export function moduleSettingName(number: number): string {
   moduleAt(number);
   return `CompanionModule${String(number).padStart(2, '0')}`;
+}
+
+/**
+ * Every property the companion owns, in the order the plugin attaches them.
+ *
+ * The modules alone, for now. The plugin also decides which module the companion opens on and which
+ * one a held button shows, and it holds both, but neither is a property yet: a second-screen
+ * property has to be *read* by a package, which `secondScreens.test.ts` enforces, and the companion
+ * cannot read a page setting while it is twenty-one top-level screens that SimHub itself pages. The
+ * change that makes it one paged screen is the change that declares them.
+ */
+export function companionProperties(): string[] {
+  return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
 }
 
 /**

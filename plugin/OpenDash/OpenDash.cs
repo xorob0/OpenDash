@@ -342,7 +342,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The five actions a driver binds to a wheel button: one per zone, and one held for a glance.
+        /// The actions a driver binds to a wheel button: five per face, one per zone and one held for a
+        /// glance, and two per companion, the next module and a glance held on the same idiom.
         ///
         /// Registered through the PluginManager rather than through `this.AddAction`, and that is not
         /// a style choice. The extension method assigns null over the release callback before passing
@@ -375,6 +376,20 @@ namespace OpenDashPlugin
                     typeof(OpenDash),
                     (manager, name) => Settings.ScreenFace(ns).BeginQuickGlance(),
                     (manager, name) => Settings.ScreenFace(ns).EndQuickGlance());
+            }
+            // A companion has two of its own: one that advances it past the modules the rotation
+            // leaves off, and one held for a glance, which is the same pair a face has under other
+            // names. They go through the manager for the same reason the face's do.
+            foreach (var screen in Settings.RigScreens())
+            {
+                if (screen == null || !screen.IsCompanion) continue;
+                var ns = screen.Namespace;
+                pluginManager.AddAction(Contract.NextModuleActionFor(ns), typeof(OpenDash), (manager, name) => Settings.CycleScreenModule(ns), null);
+                pluginManager.AddAction(
+                    Contract.HoldQuickGlanceActionFor(ns),
+                    typeof(OpenDash),
+                    (manager, name) => Settings.BeginScreenGlance(ns),
+                    (manager, name) => Settings.EndScreenGlance(ns));
             }
         }
     }
