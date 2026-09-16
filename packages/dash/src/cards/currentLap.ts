@@ -2,6 +2,7 @@
 import { ncalc } from '../generator.ts';
 import { readout } from '../components/readout.ts';
 import { ds } from '../tokens.ts';
+import { noTime } from '../second/values.ts';
 import { defineCard } from './card.ts';
 import { CURRENT_LAP_CHARS } from './chars.ts';
 
@@ -17,7 +18,7 @@ export const currentLap = defineCard('currentLap', (slot, rung, prefix, meta) =>
     { text: meta.label },
     {
       sample: '1:42.3',
-      bind: iff(noData, str('-:--.-'), toShortTime(t, 1, false, true)),
+      bind: iff(noData, str(noTime(1)), toShortTime(t, 1, false, true)),
       chars: CURRENT_LAP_CHARS,
       color: ds.purpose.lap.nominal,
       colorBind: iff(noData, str(ds.purpose.lap.noData), str(ds.purpose.lap.nominal)),

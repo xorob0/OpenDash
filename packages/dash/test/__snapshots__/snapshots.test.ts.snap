@@ -52,7 +52,7 @@ exports[`card snapshots card 0 currentLap 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+          "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
         },
         "Mode": 2
       },
@@ -123,7 +123,7 @@ exports[`card snapshots card 1 lastLap 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+          "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
         },
         "Mode": 2
       },
@@ -194,7 +194,7 @@ exports[`card snapshots card 2 bestLap 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+          "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
         },
         "Mode": 2
       },
@@ -8599,7 +8599,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -8690,7 +8690,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -8781,7 +8781,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -13608,7 +13608,7 @@ exports[`package snapshots openDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -13699,7 +13699,7 @@ exports[`package snapshots openDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -13790,7 +13790,7 @@ exports[`package snapshots openDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -18857,7 +18857,7 @@ exports[`package snapshots openDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -18948,7 +18948,7 @@ exports[`package snapshots openDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -19039,7 +19039,7 @@ exports[`package snapshots openDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -23493,7 +23493,7 @@ exports[`package snapshots openDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -23584,7 +23584,7 @@ exports[`package snapshots openDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -23675,7 +23675,7 @@ exports[`package snapshots openDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -28084,7 +28084,7 @@ exports[`package snapshots openDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -28175,7 +28175,7 @@ exports[`package snapshots openDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -28266,7 +28266,7 @@ exports[`package snapshots openDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -33239,7 +33239,7 @@ exports[`package snapshots openDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -33330,7 +33330,7 @@ exports[`package snapshots openDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -33421,7 +33421,7 @@ exports[`package snapshots openDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -39032,7 +39032,7 @@ exports[`package snapshots openDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -39123,7 +39123,7 @@ exports[`package snapshots openDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -39214,7 +39214,7 @@ exports[`package snapshots openDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -43443,7 +43443,7 @@ exports[`package snapshots openDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -43534,7 +43534,7 @@ exports[`package snapshots openDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -43625,7 +43625,7 @@ exports[`package snapshots openDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -47469,7 +47469,7 @@ exports[`package snapshots openDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -47560,7 +47560,7 @@ exports[`package snapshots openDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -47651,7 +47651,7 @@ exports[`package snapshots openDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -51611,7 +51611,7 @@ exports[`package snapshots openDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))"
               },
               "Mode": 2
             },
@@ -51702,7 +51702,7 @@ exports[`package snapshots openDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.LastLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true))"
               },
               "Mode": 2
             },
@@ -51793,7 +51793,7 @@ exports[`package snapshots openDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '-:--.---', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
+                "Expression": "if((timespantoseconds([DataCorePlugin.GameData.BestLapTime])) <= (0), '−:−−.−−−', toshorttime([DataCorePlugin.GameData.BestLapTime], 3, false, true))"
               },
               "Mode": 2
             },
