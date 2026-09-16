@@ -15,8 +15,15 @@ import { columnWidths, table, tableRowHeight, type ColumnId } from '../second/ta
 import { defineModule, pageColumns } from './module.ts';
 import type { Density } from '../second/density.ts';
 
-/** Every column this page has, in drawing order. Which of them a shape keeps is `shedding.ts`. */
-export const LEADERBOARD_COLUMNS: readonly ColumnId[] = ['pos', 'num', 'name', 'class', 'gap', 'best', 'last'];
+/**
+ * Every column this page has, in drawing order. Which of them a shape keeps is `shedding.ts`.
+ *
+ * The gap is drawn last, where the canvas draws it, after the two lap times. It used to sit before
+ * them so that `fittingColumns` popping the tail would drop the times first; the order is the
+ * canvas's now and the rule that the gap survives is written down in {@link NEVER_DROPPED} instead,
+ * which is the honest place for it.
+ */
+export const LEADERBOARD_COLUMNS: readonly ColumnId[] = ['pos', 'num', 'name', 'class', 'last', 'best', 'gap'];
 
 /**
  * Whether a table draws its header row.
