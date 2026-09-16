@@ -56,11 +56,11 @@ function linesThatFit(text: string, frame: Rect, size: number, step: number): st
 /**
  * A centred block in text.dim, the module's name first and then why there is nothing to show.
  *
- * The line is cut from the box rather than the box from the line (rule 18): the prose is set at the
- * density's label size, wraps where the box is narrow and sheds where it is short. It used to
- * shrink instead, a pixel at a time down to 8, which put the sentence under the readable floor the
- * density ramp exists to hold -- and a sentence explaining that a reading is missing, itself too
- * small to read, is the worst of both.
+ * The prose is cut from the box rather than sized to it (rule 18): it is set at the density's label
+ * size, wraps where the box is narrow and sheds where it is short. It used to shrink instead, a
+ * pixel at a time down to 8, which put the sentence under the readable floor the density ramp
+ * exists to hold -- and a sentence explaining that a reading is missing, itself too small to read,
+ * is the worst of both.
  */
 export function placeholder(name: string, text: string, frame: Rect, density: Density): Item[] {
   const size = densityOf(density).label;
