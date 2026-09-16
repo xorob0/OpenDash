@@ -142,6 +142,35 @@ describe('second-screen values', () => {
     expect(values.noTime(1)).toHaveLength('1:42.3'.length);
     expect(values.lapTime('[T]', 1)).toContain(`'${values.noTime(1)}'`);
   });
+
+  test('a unit reaches the screen as the word the face draws, not the name of its enum', () => {
+    expect(values.speedUnit()).toBe("if((isnull([DataCorePlugin.GameData.SpeedLocalUnit], 'KMH')) = ('MPH'), 'mph', 'km/h')");
+    expect(values.fuelUnit()).toContain("'gal'");
+    expect(values.fuelUnit()).toContain("'L'");
+    expect(values.pressureUnit()).toContain("'kPa'");
+  });
+
+  test('the five-lap average reads the five history slots and waits for all five', () => {
+    const average = values.average5();
+    for (const slot of [1, 2, 3, 4, 5]) expect(average).toContain(`('PersistantTrackerPlugin.PreviousLap_') + (format(${slot}, '00'))`);
+    expect(average).not.toContain("format(6, '00')");
+    expect(average).toContain('/ (5)');
+    expect(average).toContain(`'${values.NO_TIME}'`);
+  });
+
+  test("a tyre wears to its worst section, and to SimHub's own figure where there are no sections", () => {
+    const wear = values.tyreWearMin('FrontLeft');
+    expect(wear).toBe(
+      'if(isnull([DataCorePlugin.GameRawData.Telemetry.LFwearM]), isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0), ' +
+        '(min([DataCorePlugin.GameRawData.Telemetry.LFwearL], min([DataCorePlugin.GameRawData.Telemetry.LFwearM], ' +
+        '[DataCorePlugin.GameRawData.Telemetry.LFwearR]))) * (100))',
+    );
+  });
+
+  test('the grip status is upper-cased, and MODERATE is the word a box is cut for', () => {
+    expect(values.trackGrip()).toBe("ucase(isnull([DataCorePlugin.GameData.TrackGripStatus], '--'))");
+    expect(values.GRIP_WIDEST).toBe('MODERATE');
+  });
 });
 
 describe('hero expressions', () => {
