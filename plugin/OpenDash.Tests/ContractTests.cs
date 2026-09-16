@@ -62,10 +62,10 @@ namespace OpenDashPlugin.Tests
         {
             var names = Contract.PropertyNames().ToList();
             // Four settings, twelve slots, the rev bar mode, the zone face of every face that ships
-            // (four pages, four masks, four starts, four class filters, four bar fields and the
-            // glance), twenty-one companion modules, four pit wall zones, the wide zone, the URL,
-            // and the flag box.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
+            // (four pages, four masks, four starts, four class filters, four bar fields, the glance
+            // and the flag format), twenty-one companion modules, four pit wall zones, the wide zone,
+            // the URL, and the flag box.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1;
             // Nine global flag box settings and six per matrix, the way every face carries its own
             // group, and then the three the strips read.
             Assert.Equal(
@@ -74,7 +74,7 @@ namespace OpenDashPlugin.Tests
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
             // LedRpmStyle were declared by one side only.
-            Assert.Equal(248, names.Count);
+            Assert.Equal(256, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -97,6 +97,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(29).Take(4));
             Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(33).Take(4));
             Assert.Equal(p + "QuickGlance", names[37]);
+            Assert.Equal(p + "FlagFormat", names[38]);
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
@@ -343,6 +344,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Face1920x480ZoneBClassOnly", Contract.ZoneClassOnlyProperty(face, "B"));
             Assert.Equal("Face1920x480BarRight2", Contract.BarFieldProperty(face, "Right2"));
             Assert.Equal("Face1920x480QuickGlance", Contract.QuickGlanceProperty(face));
+            // Per screen like the zones, so a rig can take a flag over the whole of one face and leave
+            // the other's band alone.
+            Assert.Equal("Face1920x480FlagFormat", Contract.FlagFormatProperty(face));
+            Assert.Equal(new[] { "band", "full" }, Contract.FlagFormats);
+            Assert.Equal("band", Contract.DefaultFlagFormat);
+            Assert.Contains(Contract.DefaultFlagFormat, Contract.FlagFormats);
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.ZonePageProperty(face, "E"));
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.BarFieldProperty(face, "Middle"));
         }
@@ -478,9 +485,9 @@ namespace OpenDashPlugin.Tests
                     Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
                 }
             }
-            // Twenty-one each: four zones times page, mask, start and class filter, four bar fields,
-            // and the glance.
-            Assert.Equal(21, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+            // Twenty-two each: four zones times page, mask, start and class filter, four bar fields,
+            // the glance and the flag format.
+            Assert.Equal(22, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
         }
 
         [Fact]

@@ -381,6 +381,30 @@ export const quickGlanceSettingName = (face: FaceSize): string => `${facePrefix(
 /** Zone C on the track page, which is what a glance is usually for. */
 export const DEFAULT_QUICK_GLANCE = 2 * 100 + 12;
 
+/**
+ * How a face draws a flag: over the band it shares with whatever else has a claim on those sixty
+ * pixels, or over the whole face.
+ *
+ * `band` is the default because it is what the face has always drawn and because a flag that takes
+ * the screen also takes the gear with it. `full` is for the driver who wants a flag to be the only
+ * thing on the face while it is up, which is the choice the nano's fifty-eight pixel band cannot
+ * offer on its own.
+ */
+export type FlagFormat = 'band' | 'full';
+export const FLAG_FORMATS: readonly FlagFormat[] = ['band', 'full'];
+export const DEFAULT_FLAG_FORMAT: FlagFormat = 'band';
+
+/**
+ * `Face1920x480FlagFormat`.
+ *
+ * Per screen and not per rig, declared beside the zones for the reason the zones are: a rig with a
+ * 1920 on the dash and an 850 on the rim is two screens read at two distances, and the one in the
+ * driver's peripheral vision is exactly the one a full-face flag is for. `facePropertyNames` puts
+ * it last, after the glance, because the names before it have shipped and both halves of the
+ * contract assert the group by index.
+ */
+export const flagFormatSettingName = (face: FaceSize): string => `${facePrefix(face)}FlagFormat`;
+
 export const quickGlanceValue = (zone: FaceZone, page: number): number => FACE_ZONE_LETTERS.indexOf(zone) * 100 + page;
 export const quickGlanceZone = (value: number): FaceZone => FACE_ZONE_LETTERS[Math.floor(value / 100)] ?? 'A';
 export const quickGlancePage = (value: number): number => value % 100;
@@ -399,13 +423,17 @@ export const zone = {
   barField: (face: FaceSize, slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(face, slot))), num(DEFAULT_BAR_FIELDS[slot])),
   /** `isnull([OpenDash.Face1920x480ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
   classOnly: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(face, z))), String(DEFAULT_ZONE_CLASS_ONLY)),
+  /** `isnull([OpenDash.Face1920x480FlagFormat], 'band')`: how this face draws a flag. */
+  flagFormat: (face: FaceSize): Expr => isnull(prop(propertyName(flagFormatSettingName(face))), str(DEFAULT_FLAG_FORMAT)),
+  /** `isnull([OpenDash.Face1920x480FlagFormat], 'band') = 'full'`: whether this face is in the given format. */
+  flagFormatIs: (face: FaceSize, format: FlagFormat): Expr => eq(zone.flagFormat(face), str(format)),
 };
 
 /** Every property one face reads, which is the group the plugin attaches for it. */
 export function facePropertyNames(face: FaceSize): string[] {
   const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
-  return [...perZone, ...bar, quickGlanceSettingName(face)];
+  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face)];
 }
 
 /** Every zone property of every face that ships. */

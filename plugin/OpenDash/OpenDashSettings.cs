@@ -630,6 +630,14 @@ namespace OpenDashPlugin
             return face;
         }
 
+        /// <summary>How one face draws a flag, or the default when the rig no longer has that screen.</summary>
+        public string ScreenFlagFormat(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen == null) return Contract.DefaultFlagFormat;
+            return Contract.NormaliseChoice(screen.FlagFormat, Contract.FlagFormats, Contract.DefaultFlagFormat);
+        }
+
         public bool ScreenModule(string ns, int module)
         {
             var screen = ScreenByNamespace(ns);

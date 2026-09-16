@@ -49,6 +49,7 @@ OpenDash.Face1920x480BarLeft2
 OpenDash.Face1920x480BarRight1
 OpenDash.Face1920x480BarRight2
 OpenDash.Face1920x480QuickGlance
+OpenDash.Face1920x480FlagFormat
 OpenDash.Face1280x480ZoneA
 OpenDash.Face1280x480ZoneAPages
 OpenDash.Face1280x480ZoneAStart
@@ -70,6 +71,7 @@ OpenDash.Face1280x480BarLeft2
 OpenDash.Face1280x480BarRight1
 OpenDash.Face1280x480BarRight2
 OpenDash.Face1280x480QuickGlance
+OpenDash.Face1280x480FlagFormat
 OpenDash.Face1280x400ZoneA
 OpenDash.Face1280x400ZoneAPages
 OpenDash.Face1280x400ZoneAStart
@@ -91,6 +93,7 @@ OpenDash.Face1280x400BarLeft2
 OpenDash.Face1280x400BarRight1
 OpenDash.Face1280x400BarRight2
 OpenDash.Face1280x400QuickGlance
+OpenDash.Face1280x400FlagFormat
 OpenDash.Face850x480ZoneA
 OpenDash.Face850x480ZoneAPages
 OpenDash.Face850x480ZoneAStart
@@ -112,6 +115,7 @@ OpenDash.Face850x480BarLeft2
 OpenDash.Face850x480BarRight1
 OpenDash.Face850x480BarRight2
 OpenDash.Face850x480QuickGlance
+OpenDash.Face850x480FlagFormat
 OpenDash.Face800x480ZoneA
 OpenDash.Face800x480ZoneAPages
 OpenDash.Face800x480ZoneAStart
@@ -133,6 +137,7 @@ OpenDash.Face800x480BarLeft2
 OpenDash.Face800x480BarRight1
 OpenDash.Face800x480BarRight2
 OpenDash.Face800x480QuickGlance
+OpenDash.Face800x480FlagFormat
 OpenDash.Face1280x720ZoneA
 OpenDash.Face1280x720ZoneAPages
 OpenDash.Face1280x720ZoneAStart
@@ -154,6 +159,7 @@ OpenDash.Face1280x720BarLeft2
 OpenDash.Face1280x720BarRight1
 OpenDash.Face1280x720BarRight2
 OpenDash.Face1280x720QuickGlance
+OpenDash.Face1280x720FlagFormat
 OpenDash.Face800x286ZoneA
 OpenDash.Face800x286ZoneAPages
 OpenDash.Face800x286ZoneAStart
@@ -175,6 +181,7 @@ OpenDash.Face800x286BarLeft2
 OpenDash.Face800x286BarRight1
 OpenDash.Face800x286BarRight2
 OpenDash.Face800x286QuickGlance
+OpenDash.Face800x286FlagFormat
 OpenDash.Face600x686ZoneA
 OpenDash.Face600x686ZoneAPages
 OpenDash.Face600x686ZoneAStart
@@ -196,6 +203,7 @@ OpenDash.Face600x686BarLeft2
 OpenDash.Face600x686BarRight1
 OpenDash.Face600x686BarRight2
 OpenDash.Face600x686QuickGlance
+OpenDash.Face600x686FlagFormat
 OpenDash.CompanionModule01
 OpenDash.CompanionModule02
 OpenDash.CompanionModule03

@@ -42,6 +42,16 @@ namespace OpenDashPlugin
         /// <summary>The zones, the bar and the glance. Null on a screen that is not a face.</summary>
         public FaceSettings Face { get; set; }
 
+        /// <summary>
+        /// How this face draws a flag: "band" or "full". Null on a screen that is not a face.
+        /// </summary>
+        /// <remarks>
+        /// Here rather than on FaceSettings because it is a property of the screen and not of its
+        /// zones: it decides what happens to the whole face while a flag is up, and the zones it
+        /// covers have no say in it.
+        /// </remarks>
+        public string FlagFormat { get; set; }
+
         /// <summary>Page each pit wall data zone shows. Null on a screen that is not a pit wall.</summary>
         public int[] Zones { get; set; }
 
@@ -140,8 +150,13 @@ namespace OpenDashPlugin
             {
                 if (Face == null) Face = new FaceSettings();
                 Face.Normalise();
+                FlagFormat = Contract.NormaliseChoice(FlagFormat, Contract.FlagFormats, Contract.DefaultFlagFormat);
             }
-            else Face = null;
+            else
+            {
+                Face = null;
+                FlagFormat = null;
+            }
 
             if (IsPitWall)
             {
@@ -194,6 +209,7 @@ namespace OpenDashPlugin
                 Folder = Folder,
                 Package = Package,
                 Face = Face == null ? null : Face.Clone(),
+                FlagFormat = FlagFormat,
                 Zones = Zones == null ? null : (int[])Zones.Clone(),
                 WideZone = WideZone,
                 WebViewUrl = WebViewUrl,
