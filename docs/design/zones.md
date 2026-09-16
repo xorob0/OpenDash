@@ -494,24 +494,23 @@ holding a drawing against a zone should find the argument rather than suspect a 
   at that shape either.
 
 Everywhere else the drawing names a field the module does not build, which is the opposite case and
-is not a deviation: delta's three sector deltas, the rating on a list row, the pit window, the
-steering readout on the inputs page. They are simply not in the table, because the table is about
-the module.
+is not a deviation: delta's three sector deltas, the rating on a list row and the pit window. They
+are simply not in the table, because the table is about the module.
 
 ### The parts that are not fields
 
 A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap history
 is rows under a header, pit view's tyre service is the summary word the drawing writes as the one
 line `Tyres · RIGHTS` together with the four corner toggles that say which corner rather than which
-pair, tyres closes its corners with the caption saying where its pressures come from, and inputs
-puts the steering after its three pedals. The catalogue draws each of these at some shapes and not
-at others, so they are declared the same way a field is, in `PARTS` beside the table above. An empty
-cell is a part the drawing does not carry at that shape.
+pair, tyres sets its four corners under a compound chip and over the caption saying where its
+pressures come from, and inputs puts the steering after its three pedals. The catalogue draws each
+of these at some shapes and not at others, so they are declared the same way a field is, in `PARTS`
+beside the table above. An empty cell is a part the drawing does not carry at that shape.
 
 | № | Page | `wide` | `grid` | `tall narrow` | `tall` |
 |---|---|---|---|---|---|
 | 2 | Delta | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` |  | `bar` · `scale` · `rule` |
-| 7 | Tyres | `footer` | `footer` |  | `footer` |
+| 7 | Tyres | `footer` · `compound` | `footer` · `compound` |  | `footer` · `compound` |
 | 8 | Pit view | `tyres` | `tyres` |  |  |
 | 10 | Inputs | `steer` | `steer` |  |  |
 | 19 | Lap history | `head` | `head` |  |  |
@@ -522,10 +521,6 @@ declared, a narrow box lost them to `rowsThatFit` instead, which is arithmetic a
 decision one pixel at a time, and in the tyres caption's case arriving at the wrong one: the module
 sized its two rows to the frame exactly, so the caption was dropped at every size the build
 produces rather than at the one shape the catalogue drops it.
-
-The catalogue also draws a steering readout on the inputs page at `wide` and at `grid`. It is not
-in the table because the module does not build one, and a part a page cannot draw would be a line
-nobody will notice is dead.
 
 ### A page that takes another page's drawing
 

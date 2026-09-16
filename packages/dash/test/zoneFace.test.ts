@@ -338,6 +338,8 @@ describe('the face reads what it declares and nothing else', () => {
       // Composed the way `build.ts` composes it, the image step included: a dashboard that does not
       // declare the picture its own items draw is an `image/missing` rather than a drawing.
       const pkg = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+      // As the build validates one: `packImages` first, which declares on each dashboard the
+      // artwork its own items draw, since no builder sees the dashboard its items land on.
       packImages(pkg);
       const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
       expect({ folder: face.folder, errors: result.errors }).toMatchObject({ errors: [] });
