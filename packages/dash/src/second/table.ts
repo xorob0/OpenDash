@@ -32,7 +32,7 @@ import { numeral } from '../elements/numeral.ts';
 import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
-import { densityOf, isZone, type Density, type DensitySpec } from './density.ts';
+import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex } from './values.ts';
 
 const { iff, str, fmt, eq, ne, num, and, not, gt, abs, concat, left, ucase, isnull } = ncalc;
@@ -89,18 +89,21 @@ const BOARD_PAD_X = 16;
 const BOARD_HEADER_HEIGHT = 32;
 
 /**
- * Which of the two drawings a table is.
+ * A board butts its cells where a list spaces them.
  *
- * Its header tells them apart, and only on a pit wall page: a zone carries a title of its own and
- * no list on the catalogue or on a face artboard is headed at all, so a table that draws column
- * labels at a zone density is one of the three boards. The companion's leaderboard draws a legend
- * over the catalogue's row, which is the row it has drawn since the second screens shipped and
- * which no companion artboard contradicts.
+ * Neither `.trow` nor `.th` declares a `gap` on any of the four artboards, and their cells are
+ * `flex: none`, so a board's columns meet: what separates two values is the slack inside the wider
+ * of the two columns rather than a gap between them. That is not a detail. The race board's
+ * eighteen columns come to 1216 inside 1248 of padded frame, and twelve pixels seventeen times over
+ * is another 204, so the canvas's own column set only fits a board at this gap.
  */
-const isBoard = (density: Density, header: boolean): boolean => header && isZone(density);
+const BOARD_CELL_GAP = 0;
 
 /** Side padding of a row: the board's 16, or the catalogue's 6. */
 const padXOf = (board: boolean): number => (board ? BOARD_PAD_X : ROW_PAD_X);
+
+/** Gap between two cells of a row. */
+const cellGapOf = (board: boolean): number => (board ? BOARD_CELL_GAP : CELL_GAP);
 
 /** Gap between two rows. A board has none: its rows are flush and a 1 px rule closes each. */
 const rowGapOf = (board: boolean): number => (board ? 0 : ROW_GAP);
@@ -190,10 +193,11 @@ interface CellContext {
   align: HAlign;
 }
 
-/** What a column is measured against: the density it is drawn at and the type its row carries. */
+/** What a column is measured against: the density it is drawn at, the type its row carries, and which of the two drawings it belongs to. */
 interface RowSpec {
   d: DensitySpec;
   type: RowType;
+  board: boolean;
 }
 
 interface ColumnDef {
@@ -214,6 +218,17 @@ interface ColumnDef {
  * number: the column keeps the canvas's width as its floor and grows to hold what it can draw.
  */
 const cellColumn = (drawn: number, fs: number, chars: Chars): number => Math.max(drawn, monoWidth(cells('SemiBold', fs), chars));
+
+/**
+ * The width the canvas draws a column at, which depends on which of the two tables it is in.
+ *
+ * The catalogue and the pit wall artboards state a width per column each and they disagree on
+ * nearly all of them, because they are not the same drawing at two sizes: a list reads a 34 px
+ * position at arm's length in a 40 px column, and a board reads a 24 px one across a garage in a
+ * 44 px column with no gap to its neighbour. Both numbers are the canvas's own and both stay here,
+ * side by side, rather than one of them being derived from the other.
+ */
+const drawnWidth = (row: RowSpec, list: number, board: number): number => (row.board ? board : list);
 
 /** The colour of a cell the own row does not lift: dim for a car in the pit lane, secondary otherwise. */
 const inkBind = (ctx: CellContext): Expr => iff(ctx.inPit, str(ds.color.text.dim), str(ds.color.text.secondary));
@@ -332,14 +347,20 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
   pos: {
     header: 'Pos',
     align: 'right',
-    width: ({ type }) => cellColumn(40, type.lead, POSITION_CHARS),
+    width: (row) => cellColumn(drawnWidth(row, 40, 44), row.type.lead, POSITION_CHARS),
     cell: (ctx) =>
       cellValue(ctx, 'pos', 'P4', positionText(ctx.idx), POSITION_CHARS, {
         color: ds.color.text.label,
         colorBind: liftBind(ctx, str(ds.color.text.label)),
       }),
   },
-  rank: { header: '±', align: 'right', width: ({ type }) => cellColumn(40, type.minor, { digits: 2, specials: 0 }), cell: cellRank },
+  /**
+   * The rank, which is the one column the canvas states twice and not the same both times: a
+   * board's `.th` gives the label 34 and its `.trow` gives the cell 36. A column is laid out once
+   * for both rows, so the cell's number wins -- the cell is the half with a marker and a count in
+   * it, and a header label of ten pixels has nothing to lose to the two.
+   */
+  rank: { header: '±', align: 'right', width: (row) => cellColumn(drawnWidth(row, 40, 36), row.type.minor, { digits: 2, specials: 0 }), cell: cellRank },
   /**
    * The nationality flag, declared and unfilled.
    *
@@ -349,19 +370,28 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
    * per-car nationality this package has verified, so the column holds its place in the row and
    * draws nothing rather than being invented.
    */
-  flag: { header: '', align: 'left', width: () => 24, cell: () => [] },
+  flag: { header: '', align: 'left', width: (row) => drawnWidth(row, 24, 28), cell: () => [] },
   num: {
     header: '#',
     align: 'left',
-    width: ({ type }) => cellColumn(40, type.minor, CHARS.carNumber),
+    width: (row) => cellColumn(drawnWidth(row, 40, 44), row.type.minor, CHARS.carNumber),
     cell: (ctx) => cellValue(ctx, 'num', '22', carNumber(ctx.idx), CHARS.carNumber, { fs: ctx.type.minor, color: ds.color.text.label, colorBind: str(ds.color.text.label) }),
   },
-  /** The flexible column, with the floor the canvas gives it: below 60 px the row sheds instead. */
+  /**
+   * The flexible column, with the floor the canvas gives it: below 60 px the row sheds instead.
+   *
+   * The pit wall artboards fix it at 190 and let the row stop short of its right edge, which is the
+   * one number of a board this file does not take literally. Three of the eighteen columns the race
+   * board is headed for have no source to fill them, so a fixed 190 would end that row a sixth of
+   * the board from its edge rather than the thirty-two pixels the canvas leaves; the remainder goes
+   * to the name instead, which is the column WPF punishes for being narrow.
+   * `pitwallColumns.test.ts` holds it above the canvas's 190 so that the floor is what is checked.
+   */
   name: { header: 'Driver', align: 'left', width: () => 0, cell: cellName },
   class: {
     header: 'Class',
     align: 'left',
-    width: ({ d }) => Math.ceil(2 * d.chipPadding + 34),
+    width: (row) => drawnWidth(row, Math.ceil(2 * row.d.chipPadding + 34), 56),
     cell: (ctx) =>
       chip(`${ctx.name}.class`, 'GT3', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
         bind: chipText(carClass(ctx.idx)),
@@ -377,10 +407,11 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
    * has verified no reader for it, so the slot is declared and the cell draws nothing; `chip()`
    * takes the height and the text size the badge asks for, which is the half of it that is code.
    */
-  licence: { header: 'Licence', align: 'left', width: ({ type }) => (type.name >= 15 ? 62 : 30), cell: () => [] },
+  licence: { header: 'Licence', align: 'left', width: (row) => drawnWidth(row, row.type.name >= 15 ? 62 : 30, 86), cell: () => [] },
   gap: {
     header: 'Gap',
     align: 'right',
+    // The one column both drawings size the same, so it takes no board number of its own.
     width: ({ type }) => cellColumn(92, type.lead, CHARS.relativeGap),
     cell: (ctx) =>
       ctx.mode === 'relative'
@@ -389,26 +420,27 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
           cellValue(ctx, 'gap', '-5.886', iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
         : cellValue(ctx, 'gap', '+12.6', carRaceGap(ctx.idx), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
   },
-  int: { header: 'Int', align: 'right', width: ({ type }) => cellColumn(88, type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', carInterval(ctx.idx), CHARS.gap) },
-  last: { header: 'Last', align: 'right', width: ({ type }) => cellColumn(98, type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
+  int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', carInterval(ctx.idx), CHARS.gap) },
+  last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
   best: {
     header: 'Best',
     align: 'right',
-    width: ({ type }) => cellColumn(98, type.lead, CHARS.lapTime),
+    width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime),
     cell: (ctx) =>
       cellValue(ctx, 'best', '1:41.877', carBestLap(ctx.idx), CHARS.lapTime, {
         colorBind: iff(carIsSessionBest(ctx.idx), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },
-  s1: { header: 'S1', align: 'right', width: ({ type }) => cellColumn(72, type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's1', '28.41', carSector(ctx.idx, 1), CHARS.sector, { fs: ctx.type.minor }) },
-  s2: { header: 'S2', align: 'right', width: ({ type }) => cellColumn(72, type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's2', '41.07', carSector(ctx.idx, 2), CHARS.sector, { fs: ctx.type.minor }) },
-  s3: { header: 'S3', align: 'right', width: ({ type }) => cellColumn(72, type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's3', '32.83', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.type.minor }) },
+  s1: { header: 'S1', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's1', '28.41', carSector(ctx.idx, 1), CHARS.sector, { fs: ctx.type.minor }) },
+  s2: { header: 'S2', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's2', '41.07', carSector(ctx.idx, 2), CHARS.sector, { fs: ctx.type.minor }) },
+  s3: { header: 'S3', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's3', '32.83', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.type.minor }) },
+  /** No board draws it: the canvas's three pages spend the room on Nat, Licence and iRating instead. */
   stint: { header: 'Stint', align: 'right', width: ({ type }) => cellColumn(52, type.minor, { digits: 2, specials: 0 }), cell: (ctx) => cellValue(ctx, 'stint', '12', carStintLaps(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor }) },
-  pit: { header: 'Pit', align: 'right', width: ({ d }) => Math.ceil(2 * d.chipPadding + 26), cell: cellPit },
+  pit: { header: 'Pit', align: 'right', width: (row) => drawnWidth(row, Math.ceil(2 * row.d.chipPadding + 26), 44), cell: cellPit },
   tyre: {
     header: 'Tyre',
     align: 'right',
-    width: ({ d }) => compoundChipWidth(d),
+    width: (row) => drawnWidth(row, compoundChipWidth(row.d), 40),
     cell: (ctx) => {
       // A chip narrower than its column is drawn at the column's right edge, the way `cellPit`
       // draws its own: the column declares `right` and a chip filling it aligns nothing.
@@ -419,7 +451,14 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
       });
     },
   },
-  rating: { header: 'iR', align: 'right', width: ({ type }) => cellColumn(54, type.rating, CHARS.rating), cell: (ctx) => cellValue(ctx, 'rating', '4.6k', carRating(ctx.idx), CHARS.rating, { fs: ctx.type.rating }) },
+  // Headed by the word rather than by the abbreviation: every artboard that draws the column writes
+  // "iRating" over it, and 76 px holds the 48 the label takes at 13.
+  rating: {
+    header: 'iRating',
+    align: 'right',
+    width: (row) => cellColumn(drawnWidth(row, 54, 76), row.type.rating, CHARS.rating),
+    cell: (ctx) => cellValue(ctx, 'rating', '4.6k', carRating(ctx.idx), CHARS.rating, { fs: ctx.type.rating }),
+  },
 };
 
 export interface TableSpec {
@@ -433,6 +472,16 @@ export interface TableSpec {
   rows?: number;
   /** Draw the header row. On by default; the face zones draw none. */
   header?: boolean;
+  /**
+   * Which of the two drawings this table is: the pit wall's board, or the catalogue's list.
+   *
+   * Declared by the caller rather than inferred. It used to be read off the density and the header
+   * together -- a headed table at a zone density could only be a pit wall page -- which was true of
+   * the three callers there are and of nothing else: a zone that wanted a legend over its list, or
+   * a board without one, would have got the other drawing without asking for it. The three pages
+   * say so instead, and every other table keeps the list it already drew.
+   */
+  board?: boolean;
   /** Row height; {@link tableRowHeight} by default. */
   rowHeight?: number;
   /**
@@ -471,10 +520,10 @@ function rowIndexFor(spec: TableSpec, centre: number): Expr {
  */
 export function columnWidths(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number, board = false): number[] {
   const d = densityOf(density);
-  const row: RowSpec = { d, type: rowTypeOf(rowHeight ?? tableRowHeight(density), board) };
+  const row: RowSpec = { d, type: rowTypeOf(rowHeight ?? tableRowHeight(density), board), board };
   const raw = columns.map((id) => COLUMNS[id].width(row));
   const fixed = raw.reduce((sum, w) => sum + w, 0);
-  const gaps = CELL_GAP * Math.max(0, columns.length - 1);
+  const gaps = cellGapOf(board) * Math.max(0, columns.length - 1);
   const flexColumns = raw.filter((w) => w === 0).length;
   const spare = Math.max(0, width - 2 * padXOf(board) - fixed - gaps);
   return raw.map((w) => (w === 0 ? Math.floor(spare / Math.max(1, flexColumns)) : w));
@@ -495,8 +544,8 @@ export function rowCapacity(frame: Rect, density: Density, header: boolean, rowH
  * Kept apart from `rowCapacity` because lap history draws its own header at the density's height
  * and stacks its rows flush; this is what the two list pages count with.
  */
-export function rowsThatFit(frame: Rect, opts: { density: Density; header: boolean; rowHeight?: number }): number {
-  const board = isBoard(opts.density, opts.header);
+export function rowsThatFit(frame: Rect, opts: { density: Density; header: boolean; rowHeight?: number; board?: boolean }): number {
+  const board = opts.board ?? false;
   const h = opts.rowHeight ?? tableRowHeight(opts.density);
   const gap = rowGapOf(board);
   const body = frame.height - (opts.header ? headerHeightOf(board, h) : 0);
@@ -504,9 +553,9 @@ export function rowsThatFit(frame: Rect, opts: { density: Density; header: boole
 }
 
 /** The header row: a label per column, aligned as its cells are, closed on a board by its rule. */
-function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { height: number; padX: number; board: boolean }): Item[] {
+function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { height: number; padX: number; cellGap: number; board: boolean }): Item[] {
   const d = densityOf(spec.density);
-  const { height, padX, board } = geometry;
+  const { height, padX, cellGap, board } = geometry;
   const items: Item[] = board ? [rule(`${spec.name}.head.rule`, spec.frame.left, top + height - 1, spec.frame.width, 1)] : [];
   let x = spec.frame.left + padX;
   spec.columns.forEach((id, i) => {
@@ -518,7 +567,7 @@ function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { h
     const drawn = Math.ceil(measureText('BarlowMedium', text.toUpperCase(), d.labelSm));
     const left = column.align === 'right' ? x + width - drawn : x;
     items.push(label(`${spec.name}.head.${id}`, text, left, top + (height - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
-    x += width + CELL_GAP;
+    x += width + cellGap;
   });
   return items;
 }
@@ -531,12 +580,13 @@ export function table(spec: TableSpec): Item[] {
   const d = densityOf(spec.density);
   const header = spec.header ?? true;
   const rowHeight = spec.rowHeight ?? tableRowHeight(spec.density);
-  const board = isBoard(spec.density, header);
+  const board = spec.board ?? false;
   const padX = padXOf(board);
+  const cellGap = cellGapOf(board);
   const rowGap = rowGapOf(board);
   const headerHeight = headerHeightOf(board, rowHeight);
   const type = rowTypeOf(rowHeight, board);
-  const capacity = rowsThatFit(spec.frame, { density: spec.density, header, rowHeight });
+  const capacity = rowsThatFit(spec.frame, { density: spec.density, header, rowHeight, board });
   const rows = Math.max(1, Math.min(spec.rows ?? capacity, capacity));
   const widths = columnWidths(spec.columns, spec.frame.width, spec.density, rowHeight, board);
   const headTop = spec.frame.top + (header ? headerHeight : 0);
@@ -576,12 +626,12 @@ export function table(spec: TableSpec): Item[] {
         align: COLUMNS[id].align,
       }),
     );
-    x += width + CELL_GAP;
+    x += width + cellGap;
   });
 
   const row: LayerItem = { kind: 'layer', name: `${spec.name}.row`, children, ...withBindings({ Visible: carAvailable(idx) }) };
   const stamped: LayerItem = { kind: 'layer', name: `${spec.name}.rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + rowGap, repeatLeftOffset: 0 };
-  return [...(header ? headerRow(spec, widths, spec.frame.top, { height: headerHeight, padX, board }) : []), stamped];
+  return [...(header ? headerRow(spec, widths, spec.frame.top, { height: headerHeight, padX, cellGap, board }) : []), stamped];
 }
 
 /** Every column the tables can show, for the docs and for a test that keeps them in step. */

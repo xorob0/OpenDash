@@ -245,10 +245,20 @@ export function tracePanel(name: string, frame: Rect, spec: (typeof TELEMETRY_TR
   return [...items, ...trace(`${name}.trace`, body, spec.series(), DENSITY, { legend: spec.series().length > 1 })];
 }
 
-/** Columns of each page's leaderboard, in importance order. */
-export const RACE_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 'class', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'stint', 'pit', 'tyre'];
-export const TOWER_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 'class', 'gap', 'int', 'last', 'best', 'pit'];
-export const PORTRAIT_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 'class', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'pit', 'tyre'];
+/**
+ * Columns of each page's board, in the order its artboard heads them.
+ *
+ * Each list is its artboard's `.th` read left to right, less the three columns nothing can fill.
+ * Nat is a flag per country and Licence is the iRacing licence class with its safety rating, both
+ * of which live in the session YAML with no per-leaderboard-row reader, and Inc is the same for
+ * incident counts; `table.ts` holds a slot for the first two and draws nothing in either, and no
+ * page lists them while they are empty. What is left is the canvas's own order: the tower has no
+ * Int and no iRating, the portrait board trades the three sector columns for iRating, and the race
+ * board keeps its sectors and drops the stint count, which no artboard draws.
+ */
+export const RACE_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 'class', 'rating', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'pit', 'tyre'];
+export const TOWER_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 'class', 'gap', 'last', 'best', 'pit'];
+export const PORTRAIT_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 'class', 'rating', 'gap', 'int', 'last', 'best', 'pit', 'tyre'];
 
 /** Rows the pit wall tables stamp: a full grid of cars. */
 export const PIT_WALL_ROWS = 24;
@@ -271,7 +281,7 @@ export function racePage(width: number, height: number): Screen {
   ];
   const items: Item[] = [
     ...pitWallHeader('race.header', { frame: header, pageName: 'Pit wall · race', page: 1, pages: 3 }),
-    ...table({ name: 'race.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: RACE_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 34 }),
+    ...table({ name: 'race.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: RACE_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 34, board: true }),
     vRule('race.columnRule', boardWidth, bodyTop, bodyHeight),
   ];
   let y = bodyTop;
@@ -302,7 +312,7 @@ export function towerPage(width: number, height: number): Screen {
   const zoneWidth = Math.floor((columnWidth - 1) / 2);
   const items: Item[] = [
     ...pitWallHeader('tower.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · tower', page: 2, pages: 3 }),
-    ...table({ name: 'tower.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: TOWER_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 28 }),
+    ...table({ name: 'tower.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: TOWER_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 28, board: true }),
     vRule('tower.columnRule', boardWidth, bodyTop, bodyHeight),
     ...trackPanel('tower.track', rect(columnLeft, bodyTop, columnWidth, trackHeight)),
     rule('tower.trackRule', columnLeft, bodyTop + trackHeight, columnWidth, 1),
@@ -369,7 +379,7 @@ export function portraitPage(width: number, height: number): Screen {
   const half = Math.floor((width - 1) / 2);
   const items: Item[] = [
     ...pitWallHeader('portrait.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · portrait', page: 1, pages: 1, compact: true }),
-    ...table({ name: 'portrait.board', frame: rect(0, bodyTop, width, boardHeight), columns: PORTRAIT_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 32 }),
+    ...table({ name: 'portrait.board', frame: rect(0, bodyTop, width, boardHeight), columns: PORTRAIT_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 32, board: true }),
     rule('portrait.boardRule', 0, bodyTop + boardHeight, width, 1),
     ...sessionPanel('portrait.session', rect(0, panelTop, half, panelHeight)),
     vRule('portrait.panelRule', half, panelTop, panelHeight),

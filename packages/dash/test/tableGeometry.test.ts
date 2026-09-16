@@ -19,8 +19,13 @@ import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Item, RectangleItem, TextItem } from '../src/generator.ts';
 
-/** The gap between two cells of a row, which every artboard that draws a table draws the same. */
-const CELL_GAP = 12;
+/**
+ * The gap between two cells of a board's row, which is none: `.trow` declares no `gap` on any of
+ * the four artboards and its cells are `flex: none`, so two columns meet and what separates their
+ * values is the slack inside the wider of them. A list spaces its cells 12 apart instead, which
+ * `tables.test.ts` is where.
+ */
+const CELL_GAP = 0;
 
 interface Board {
   page: string;
