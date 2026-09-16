@@ -64,6 +64,7 @@ import {
   zoneFace850x480,
   type ZoneLayout,
 } from '../src/zones/index.ts';
+import { TELLTALES } from '../src/zones/telltales.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
 import { SAMPLE_LIT, stageOf } from '../src/components/revSegments.ts';
@@ -784,7 +785,8 @@ describe('what the first photograph of the face showed', () => {
 /**
  * A field the game does not publish is removed and the rank closes over the hole; a telltale that
  * is unlit keeps its place and goes dim. Both rules live in `second/rank.ts`, and these are the
- * three places on the face that ask for one of them.
+ * places on the face that ask for one of them: the bar's strip and band D's corner lamps for the
+ * one, band D's telltale rank for the other.
  */
 describe('what the face does with a field that is not there', () => {
   const band = { left: 0, top: 420, width: 1920, height: 60 };
@@ -809,14 +811,19 @@ describe('what the face does with a field that is not there', () => {
     expect(bound(items.find((i) => i.name === 'bar.strip.diff.value')!, 'Left')).toContain('dcTractionControl2');
   });
 
-  test("band D's car page removes a gauge the sim does not wire, and keeps the temperatures", () => {
-    const items = textsIn(bandPageItems('car', band, 'car.'));
-    const water = items.find((i) => i.name === 'car.water.value')!;
-    const voltage = items.find((i) => i.name === 'car.voltage.value')!;
-    expect(bound(voltage, 'Visible')).toContain('Voltage');
-    expect(bound(water, 'Visible')).toBeUndefined();
-    // The temperature does not vanish, but it does move: the rank recentres on what is left.
-    expect(bound(water, 'Left')).toContain('Voltage');
+  test("band D's telltale rank dims a lamp in place rather than closing over it", () => {
+    const chips = bandPageItems('car', band, 'car.').filter((i): i is RectangleItem => i.kind === 'rect' && i.name.endsWith('.chip'));
+    expect(chips).toHaveLength(TELLTALES.length);
+    // The lamp the pit limiter lights changes the colour of its edge and nothing else.
+    const limiter = chips.find((i) => i.name === 'car.limiter.chip')!;
+    expect(String(limiter.border?.colorBinding?.formula)).toContain('PitLimiterOn');
+    for (const chip of chips) {
+      expect({ name: chip.name, hides: chip.bindings?.Visible !== undefined, moves: chip.bindings?.Left !== undefined }).toEqual({
+        name: chip.name,
+        hides: false,
+        moves: false,
+      });
+    }
   });
 
   test("the strip asks the property that says the car has the setting, not the one it reads", () => {

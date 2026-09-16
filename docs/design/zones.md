@@ -614,6 +614,23 @@ its three groups sit 22 apart, a corner block's two fields 18, and a page's fiel
 unit 5 px after it. `bandMetrics` in `packages/dash/src/zones/bandPages.ts` is that table, read off
 the band of each face's artboard.
 
+**D8 is a rank of lamps rather than of fields.** The page carries the twelve telltales the
+1280 × 480 artboard draws, in its order: a tyre beside three straight lines, a tyre beside three
+slanted lines, the windscreen wiper, a car above two wavy tracks, ABS, ESP, the engine, a fuel can,
+the battery, the speed limiter, the tyre pressure warning and the car door. Each lamp is a 38 × 32
+box with a 1 px border and a 20 px pictogram centred in it, the border and the pictogram carrying one
+colour between them, and the lamps sit 10 px apart, centred in the same room a page of fields is
+centred in. A lamp that is not lit keeps its place and is drawn dark, which is the rule
+[§11](#11-a-field-that-is-not-there) states, whereas a band too narrow for twelve sheds from the
+tail, so that the 600 × 686 face draws eleven. The state colours are `purpose.telltale`, that is to
+say info blue, good green, caution amber, danger red and neutral white over a dark `off`, and they
+are the one place on the face where a colour is conventional rather than chosen, ISO 2575 having
+fixed them. `packages/dash/src/zones/telltales.ts` is the rank.
+
+Two parts of that drawing are absences rather than refusals, and [§10](#10-where-the-canvas-contradicts-itself)
+records each: the pictogram files are not in the repository, and nine of the twelve lamps have
+nothing that lights them.
+
 **A flag takes the band over.** While a flag is out, the flag has the band, because an alert
 outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so the same sixty
 pixels goes to whichever has the better claim. The band draws as a filled bar with a 3 px border
@@ -726,13 +743,14 @@ a mistake in this document.
 
 | | |
 |---|---|
-| Band D's page count | The catalogue heading reads "band D · seven pages", its anatomy row reads "fuel by default, and six more pages", and the drawings are D1 through D8. **Eight is taken**, because the drawings are more specific than the captions and the mask is sized for eight either way. D8 is nonetheless the one page built short of what it is for: it draws the readings the telltale row would sit beside, and the lamps themselves wait on the generator's image item (XOR-115) before XOR-97 can draw them. |
+| Band D's page count | The catalogue heading reads "band D · seven pages", its anatomy row reads "fuel by default, and six more pages", and the drawings are D1 through D8. **Eight is taken**, because the drawings are more specific than the captions and the mask is sized for eight either way. D8 now draws the twelve-lamp rank the artboard gives it, in place of the water, oil, oil pressure, fuel pressure and voltage readings it carried in the meantime. Those five are consequently drawn nowhere on the face any longer, no module of zones B and C carrying them either, and whether the face owes them a home of their own is the author's to say. |
 | The bar's fields | The catalogue's anatomy says "three fields a driver may swap", the bar section of that same artboard says each end is one field, and every face artboard draws two at each end. **Two per end is taken**, because that is what is drawn; §1 and §3 above both say so now, the first of them having repeated the one-per-end caption until this row was written. The catalogue those fields are chosen from is ten entries where the artboard draws eleven, strength of field being the one that went, under [ADR 0009](../decisions/0009-does-the-plugin-compute.md), because SimHub publishes it in no form at all. |
 | Zone C's capacity | Stated as ten drivers at 1920; seven rows are drawn. |
 | Page dots | `pageIndicator` is still in the component list, against "there is no row of page dots". |
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
-| The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before XOR-97 starts. |
+| The telltales' pictograms | Twenty-eight Material Design Icons are named on the canvas and the build "rasterises the chosen twelve", which are not listed, so the twelve are still owed as files. An `ImageItem` carries no tint, which the format research verifies, and a lamp therefore owes one file per colour it can be drawn in: nineteen in all, being a dark file for each of the twelve and a lit file for each of the seven that the drawing or a source gives a colour to. They are named `telltale-<lamp>-<state>` in `packages/dash/src/zones/telltales.ts`, and the rank draws whichever of them `design/assets.ts` holds, so the lamps gain their pictograms in the commit that brings the artwork together with its Apache 2.0 licence and the notice naming Pictogrammers. Until then a lamp is its box. |
+| What lights a telltale | Three of the twelve have a source and nine do not. The engine reads the `EngineWarnings` bits for water temperature and oil pressure, the fuel can reads the same low-fuel threshold every other light openDash drives reads, and the speed limiter reads `PitLimiterOn`. Nothing lights the two tyre lamps, the wiper, the car above the wavy tracks, ABS, ESP, the battery, the tyre pressure warning or the door: iRacing publishes no wiper, stability, tyre pressure or door state at all, `dcABS` is the level the driver has dialled in rather than an intervention, and a battery lamp reading the raw voltage would need a threshold nobody has chosen. **The nine are built and left dark**, because a dark lamp asserts nothing whereas a lamp bound to a property that means something else asserts the wrong thing. Which property lights each of them is the author's to answer, and two further answers are owed with it: the colour of the engine lamp, which the artboard draws dark and which is taken as danger red here because both bits it reads are failures rather than advisories, and the source of the count the artboard draws in the wiper's corner. That count is recorded in `telltales.ts` and is not drawn, for the reason the relative page's country flag is not drawn. |
 | Band D's value size | Every 60 and 58 px band draws its page values at 34 px over a 13 px label, 5 px apart. WPF's line box around a 34 px value runs 60.6 px from the top of that label, so the band clips it by a pixel. **The value shrinks** — 32 at 60, 30 at 58 — because a clipped numeral reads as a rendering fault. The band would have to grow, or the drawing come down; the 54 and 56 px bands draw 24 and are honoured exactly. |
 | The face with no rev bar | XOR-138 offered three answers, namely leave the gap, reclaim it, or give the band to something else, and said the artboards would choose. Since the second pass of 15 September the FaceVariants sheets do draw the third state and both arrangements beside each other, so this row no longer reads as it did. What the rev-bar-off drawing still carries, however, is the rev bar itself: an 822 × 28 rectangle at (14, 6) on the 850 sheet, a 576 × 24 one at (12, 6) on the 600, underneath a bar that has already risen into its room. **The caption is taken over the rectangle**, and `faceItems` leaves the well and the segments out entirely rather than hiding them; `Plugin.dc.html`, for its part, still reads "the rev bar stays". Reclaim is taken for the room, because the gap reads as a mis-crop and on the nano it is a ninth of the screen, and the rectangles in §1 remain derived by one rule and remain the thing to delete when drawn ones arrive. |
 | The slot counts in the titles | `canvas.json` titles the 1920 × 480 artboard "MVP · 12 slots" and the 1280 × 720 one "wheel screens · 12 slots", while what each draws underneath is the five-part zone face [ADR 0006](../decisions/0006-the-zone-face.md) settled, and `Dash.dc.html` keeps `.slotbox`, `.card` and `.grid4` in its stylesheet with nothing using them. **The drawing is taken**: a `ZoneLayout` declares no slot count at all, and twelve matches nothing on the 1280 × 720 body either, whose bar draws eleven readouts and whose band draws ten and three lamps. The twelve-slot package does still build beside the zone face, since `LAYOUTS` keeps `layout1920x480` and `build.ts` walks both lists until XOR-95 retires the card path. |
@@ -791,13 +809,18 @@ arise.
 **A field the sim does not publish is removed, and the rank closes over the hole.** The band says
 it plainly: nothing is spread to fill, the rank is packed and centred in what the corners leave.
 The bar's strip hides what the game does not expose, because a strip drawing an empty box for a
-setting iRacing has no property for is worse than a narrower strip. Band D's car page removes an
-oil pressure the sim does not wire rather than drawing 0.0, which is a reading and a wrong one.
+setting iRacing has no property for is worse than a narrower strip. Band D's pages are laid out
+under the same mode, although none of them carries an optional field today: the car page removed an
+oil pressure the sim does not wire rather than drawing 0.0, which is a reading and a wrong one, and
+it gave those readings up when D8 became the telltale rank.
 
 **A telltale that is unlit keeps its place and is drawn dim.** A lamp coming on is then a change of
 colour and not of layout: one that vanished and returned would move every lamp beside it at the
 moment the driver most needs to read them. DRS, push to pass and the spotter sit in the band's
-right-hand corner and behave this way.
+right-hand corner and behave this way, and so does the twelve-lamp rank of page D8, which is the
+case the rule was written for. A lamp that nothing publishes a state for is likewise drawn dark in
+its place rather than left out of the row, since a row of eleven would say something about the car
+that is not true.
 
 Both rules are deliberate and they contradict each other, which is why the choice is a mode of one
 component — `packages/dash/src/second/rank.ts`, `when: 'close'` or `when: 'dim'` — rather than a
