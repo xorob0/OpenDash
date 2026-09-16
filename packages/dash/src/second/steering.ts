@@ -21,6 +21,7 @@ import { ncalc } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { onCircle, type Circle, type Rect } from '../design/geometry.ts';
+import { textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { ring } from '../elements/ring.ts';
@@ -67,7 +68,13 @@ export function markOnCircle(name: string, face: Circle, size: number, color: He
  * turned further would carry the mark past the top again and read as a smaller angle than it is.
  */
 export function steeringDial(name: string, frame: Rect, labelSize: number): Item[] {
-  const labelRow = labelSize + STEERING_DIAL.labelGap;
+  const labelWidth = Math.ceil(measureText('BarlowMedium', 'STEER', labelSize));
+  // The word is shed rather than shrunk in a column too narrow for it: a dial is legible without
+  // being named and a clipped "STEE" names nothing. Its line box is taller than its size, and a row
+  // measured from the size instead puts the last of the word outside the frame.
+  const named = labelWidth <= frame.width;
+  const box = textBox(0, labelSize);
+  const labelRow = named ? box.height + STEERING_DIAL.labelGap : 0;
   // Even, so that the centre of a column of whole pixels is itself whole and the mark's two
   // formulas resolve to the integers the drawing was laid out on.
   const side = 2 * Math.floor(Math.max(0, Math.min(frame.width, frame.height - labelRow)) / 2);
@@ -79,12 +86,11 @@ export function steeringDial(name: string, frame: Rect, labelSize: number): Item
   const cx = Math.round(frame.left + frame.width / 2);
   const cy = top + side / 2;
   const clamped = min(max(steering(), num(-STEERING_RANGE)), num(STEERING_RANGE));
-  const labelWidth = Math.ceil(measureText('BarlowMedium', 'STEER', labelSize));
   return [
     // The stroke lies inside the ellipse's own rect, so the rim's square is the outer diameter and
     // the mark rides half a stroke inside it, on the circle the catalogue gives radius 44.
     ring(`${name}.rim`, { cx, cy, r: radius + stroke / 2 }, stroke, ds.color.text.label),
     markOnCircle(`${name}.mark`, { cx, cy, r: radius }, markSize, ds.color.text.primary, clamped),
-    label(`${name}.label`, 'Steer', cx - Math.round(labelWidth / 2), top + side + STEERING_DIAL.labelGap, labelWidth, { size: labelSize }),
+    ...(named ? [label(`${name}.label`, 'Steer', cx - Math.round(labelWidth / 2), top + side + STEERING_DIAL.labelGap - box.top, labelWidth, { size: labelSize })] : []),
   ];
 }
