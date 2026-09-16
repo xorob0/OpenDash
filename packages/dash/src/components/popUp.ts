@@ -37,7 +37,7 @@ import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { flagBox } from '../contract.ts';
-import { CHARS, hasTime, lapTime, lastLap, referenceDelta } from '../second/values.ts';
+import { CHARS, hasTime, lapTime, lastLap, referenceDelta, tankIsLow } from '../second/values.ts';
 import { FIT_LADDER } from '../second/field.ts';
 import { ds } from '../tokens.ts';
 import { FLAG_BLINK_MS } from './flagStrip.ts';
@@ -216,16 +216,6 @@ function popUpRun(name: string, text: PopUpText, x: number, y: number, fs: numbe
  * with a pop-up whose value is the no-data glyph.
  */
 const atTheLine = (): Expr => and(hasTime(lastLap()), lt(timespanToSeconds(isnull(game('CurrentLapTime'), num(0))), num(POP_UP_SECONDS)));
-
-/**
- * The tank under the threshold the driver set, written as the fuel telltale and the low-fuel LED
- * state write it: `LightsLowFuelLaps` with the box's deprecated name behind it, and a remaining-laps
- * read that defaults high so a sim computing none leaves the pop-up away rather than showing it on
- * every car. Written a third time rather than imported, because a component may read neither a zone
- * nor an LED profile; the third writing is the one that earns this a name of its own, in the sense
- * ADR 0009 gives to a derivation that has reached three items.
- */
-const tankIsLow = (): Expr => lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps());
 
 /** A SimHub status property, read the null-safe way the LED catalogue reads the same ones. */
 const on = (name: string): Expr => eq(isnull(game(name), num(0)), num(1));

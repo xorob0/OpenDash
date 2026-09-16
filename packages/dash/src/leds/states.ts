@@ -11,6 +11,7 @@ import { ncalc, type MatrixContainer, type MatrixFrame } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
 import { blinkFrames, still, type Grid, type Palette } from './glyph.ts';
+import { tankIsLow } from '../second/values.ts';
 
 const { and, eq, game, gt, lt, computed, not, num, str } = ncalc;
 
@@ -202,7 +203,7 @@ export function spotterStates(matrix: FlagBoxMatrix): BoxState[] {
 export const warningStates = (): BoxState[] => [
   { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBox.oilTemp()), grid: OIL_HOT, blink: true },
   { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBox.waterTemp()), grid: WATER_HOT, blink: true },
-  { id: 'lowFuel', raised: lt(ncalc.isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps()), grid: LOW_FUEL, blink: true },
+  { id: 'lowFuel', raised: tankIsLow(), grid: LOW_FUEL, blink: true },
 ];
 
 /** A temperature, defaulted so that a car which does not report one never trips a warning. */
