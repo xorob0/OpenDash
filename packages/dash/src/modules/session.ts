@@ -40,7 +40,7 @@ export const session = defineModule('session', (ctx) => {
             bind: fmt(carPosition(player()), '0'),
             chars: CHARS.position,
             fs: d.big,
-            follower: { text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
+            follower: { kind: 'denominator', text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
           }),
           fld(ctx, 'class', 'Class', {
             sample: 'GT3 · P4',
@@ -58,7 +58,7 @@ export const session = defineModule('session', (ctx) => {
             bind: fmt(currentLap(), '0'),
             chars: CHARS.position,
             fs: d.mid,
-            follower: { text: '/ 30', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
+            follower: { kind: 'denominator', text: '/ 30', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
           }),
           fld(ctx, 'timeLeft', 'Time left', {
             sample: '0:42:15',

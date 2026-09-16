@@ -25,6 +25,9 @@ const { fmt, isNull, not, concat, str, ucase, raw, game } = ncalc;
 const settingField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, present = expr): FieldSpec =>
   fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: not(isNull(present)) });
 
+/** The canvas sets a readout group's pairs 20 px apart, which is closer than a row of fields. */
+const SETTING_GAP = 20;
+
 export const carSettings = defineModule('carSettings', (ctx) => {
   const d = densityOf(ctx.density);
   return stack(
@@ -53,6 +56,7 @@ export const carSettings = defineModule('carSettings', (ctx) => {
           settingField(ctx, 'mix', 'Mix', fuelMixture(), '0', d.small),
         ],
         ctx,
+        SETTING_GAP,
       ),
       fieldsRow(
         [
@@ -60,6 +64,7 @@ export const carSettings = defineModule('carSettings', (ctx) => {
           settingField(ctx, 'arbRear', 'ARB R', antiRollRear(), '0', d.small),
         ],
         ctx,
+        SETTING_GAP,
       ),
     ],
     ctx.density,

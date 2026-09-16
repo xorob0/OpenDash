@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { measureText, type MeasuredFace } from '../src/design/advances.ts';
-import { LINE_SPACING } from '../src/design/metrics.ts';
+import { LINE_SPACING, cells, monoWidth } from '../src/design/metrics.ts';
 import {
   MODULE_CATALOGUE,
   MODULE_COUNT,
@@ -21,6 +21,7 @@ import { validatePackage, type Dashboard, type Item, type TextItem, type WidgetI
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
+import { DENOMINATOR_GAP, UNIT_GAP, field, type Follower } from '../src/second/field.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
 import { rect } from '../src/design/geometry.ts';
@@ -349,6 +350,74 @@ describe('every module fits the box it is given', () => {
       }
     });
   }
+});
+
+describe('a bar drawn under a value', () => {
+  const gaugeOf = (density: Density) => {
+    const module = MODULES.find((m) => m.id === 'fuel')!;
+    const items = module.build({ frame: rect(0, 0, 802, 336), density, prefix: 'fuel.' });
+    const drawn = items.find((i) => i.kind === 'linearGauge');
+    if (drawn?.kind !== 'linearGauge') throw new Error('no gauge drawn');
+    return drawn;
+  };
+
+  test('is four pixels tall on the companion as in a zone, with the canvas track and fill', () => {
+    for (const density of ['companion', 'zone'] as const) {
+      const drawn = gaugeOf(density);
+      expect({ density, height: drawn.rect.height, track: drawn.backgroundColor, fill: drawn.gaugeColor }).toEqual({
+        density,
+        height: 4,
+        track: ds.color.surface.raised,
+        fill: ds.color.text.primary,
+      });
+    }
+  });
+});
+
+describe('the small text that follows a value', () => {
+  const followerOf = (follower: Follower, fs: number): TextItem => {
+    const spec = { name: 'f', label: 'Fuel', value: { sample: '38.4', chars: { digits: 3, specials: 1 }, fs, follower } };
+    const drawn = field(spec, 0, 200, 'companion').find((i) => i.name.endsWith('.unit') || i.name.endsWith('.denominator'));
+    if (drawn?.kind !== 'text') throw new Error('no follower drawn');
+    return drawn;
+  };
+
+  // The colour was lost by a spread: `field` builds its options with `color: follower.color`, so a
+  // follower with no colour of its own passed the key as `undefined` and the unit element's default
+  // was overwritten with it, leaving every unit in text.label #5A6069.
+  test('a unit with no colour of its own is text.secondary, at the density small size', () => {
+    const drawn = followerOf({ text: 'L' }, 64);
+    expect({ color: drawn.textColor, size: drawn.fontSize, font: drawn.font }).toEqual({
+      color: ds.color.text.secondary,
+      size: ds.size.labelSm,
+      font: ds.font.label,
+    });
+  });
+
+  test('a unit keeps a colour it does declare', () => {
+    expect(followerOf({ text: 'L', color: ds.color.text.primary }, 64).textColor).toBe(ds.color.text.primary);
+  });
+
+  test('a unit sits six pixels after the value and a denominator eight', () => {
+    const valueEnd = monoWidth(cells('SemiBold', 64), { digits: 3, specials: 1 });
+    expect(followerOf({ text: 'L' }, 64).rect.left).toBe(Math.round(valueEnd + UNIT_GAP));
+    expect(followerOf({ kind: 'denominator', text: '/ 24' }, 64).rect.left).toBe(Math.round(valueEnd + DENOMINATOR_GAP));
+  });
+
+  test('a denominator is a numeral at 0.7 of the value it follows', () => {
+    for (const [valueFs, size] of [
+      [46, 32],
+      [64, 44],
+    ] as const) {
+      const drawn = followerOf({ kind: 'denominator', text: '/ 24' }, valueFs);
+      expect({ valueFs, size: drawn.fontSize, font: drawn.font, color: drawn.textColor }).toEqual({
+        valueFs,
+        size,
+        font: ds.font.data,
+        color: ds.color.text.secondary,
+      });
+    }
+  });
 });
 
 describe('what iRacing cannot answer', () => {

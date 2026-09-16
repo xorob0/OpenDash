@@ -11,6 +11,13 @@ import { ds } from '../tokens.ts';
 
 export type Density = 'companion' | 'zone' | 'compact' | 'wide';
 
+/**
+ * Gap between a field's label row and its value row. The canvas draws it as `gap: 5px` on the
+ * companion artboards and on the zone pages alike; 5 is not on the `space` scale, which stops at 4
+ * and then goes to 8, so the literal stays here with the canvas as its citation.
+ */
+const FIELD_GAP = 5;
+
 export interface DensitySpec {
   /** The one big number of a module: speed, fuel, the delta. */
   hero: number;
@@ -56,9 +63,9 @@ const COMPANION: DensitySpec = {
   label: ds.size.label,
   labelSm: ds.size.labelSm,
   name: 15,
-  gapX: ds.space[6],
-  gapY: 20,
-  fieldGap: ds.space[1],
+  gapX: ds.space[5],
+  gapY: ds.space[4],
+  fieldGap: FIELD_GAP,
   rowHeight: 38,
   headerHeight: 24,
   cellGap: 12,
@@ -81,13 +88,13 @@ const ZONE: DensitySpec = {
   name: 13,
   gapX: ds.space[5],
   gapY: 12,
-  fieldGap: ds.space[1],
+  fieldGap: FIELD_GAP,
   rowHeight: 26,
   headerHeight: 20,
   cellGap: 8,
   bar: 4,
-  chipHeight: 18,
-  chipPadding: 5,
+  chipHeight: 20,
+  chipPadding: 6,
   padX: 16,
   padY: 6,
   tracePoints: 600,
@@ -119,6 +126,8 @@ const COMPACT: DensitySpec = {
   rowHeight: 20,
   headerHeight: 16,
   cellGap: 6,
+  // The canvas draws the chip 20 high with 6 either side, which is what the other two densities
+  // give it. A 20 px row cannot hold a 20 px chip, so this ramp keeps its own pair.
   chipHeight: 15,
   chipPadding: 4,
   padX: 10,
