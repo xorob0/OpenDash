@@ -5,11 +5,20 @@
 }
 
 .stage {
-  position: relative;
-  aspect-ratio: 1920 / 480;
   background: var(--color-surface-inset);
   border: 1px solid var(--color-surface-raised);
   overflow: hidden;
+}
+
+/*
+ * The picture's own box. Everything positioned in percentages — the mask and the six hit regions —
+ * is a child of this rather than of the stage, so the percentages stay percentages of the face
+ * however wide the window onto it happens to be.
+ */
+.canvas {
+  position: relative;
+  aspect-ratio: 1920 / 480;
+  width: 100%;
 }
 
 .img {
@@ -124,5 +133,33 @@
   .text {
     min-height: 7rem;
     max-width: var(--measure);
+  }
+}
+
+/* On a phone the stage is a window onto a taller picture, and the face can be dragged across. */
+@media (max-width: 47.99rem) {
+  .stage {
+    height: 46vw;
+    max-height: 15rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-text-dim) transparent;
+  }
+
+  .canvas {
+    width: auto;
+    height: 100%;
+  }
+
+  .img {
+    width: auto;
+    max-width: none;
+    height: 100%;
+  }
+
+  /* The strip would otherwise be six items on one line, each too narrow to read or to hit. */
+  .tab {
+    flex: 1 1 33%;
   }
 }

@@ -11,6 +11,12 @@
  * It advances on its own until somebody touches it, and then stops for good: an explainer that
  * keeps moving while you are reading the item you chose is an explainer that is fighting you.
  * With reduced motion asked for it never advances at all, and every part is reachable by keyboard.
+ *
+ * On a phone the stage is a horizontal scroller and the picture is drawn at a height a face can be
+ * read at, which is why the image, the mask and the hit regions all live inside one `canvas`
+ * element rather than being positioned against the stage: the percentages have to be percentages
+ * of the picture, not of the window onto it. Choosing a part then scrolls it into view, so the tab
+ * strip keeps working as the control when the part itself is off to one side.
  */
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
@@ -84,7 +90,8 @@ const pct = (part: Part) => ({
 export function Anatomy({ src }: { src: string }) {
   const [active, setActive] = useState(0);
   const [held, setHeld] = useState(false);
-  const region = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const highlight = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (held) return;
@@ -92,6 +99,16 @@ export function Anatomy({ src }: { src: string }) {
     const timer = window.setInterval(() => setActive((i) => (i + 1) % PARTS.length), 4200);
     return () => window.clearInterval(timer);
   }, [held]);
+
+  // Bring the chosen part into view when the stage is narrower than the picture, which is the
+  // phone case. `nearest` so a part already on screen does not jump.
+  useEffect(() => {
+    const box = stage.current;
+    const mark = highlight.current;
+    if (!box || !mark) return;
+    if (box.scrollWidth <= box.clientWidth + 1) return;
+    mark.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [active]);
 
   const choose = (index: number) => {
     setActive(index);
@@ -102,37 +119,39 @@ export function Anatomy({ src }: { src: string }) {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.stage} ref={region}>
-        <Image
-          src={src}
-          alt="The openDash face at 1920 by 480, photographed rendering live telemetry in SimHub"
-          width={W}
-          height={H}
-          sizes="(min-width: 88rem) 84rem, 100vw"
-          className={styles.img}
-          priority
-        />
+      <div className={styles.stage} ref={stage}>
+        <div className={styles.canvas}>
+          <Image
+            src={src}
+            alt="The openDash face at 1920 by 480, photographed rendering live telemetry in SimHub"
+            width={W}
+            height={H}
+            sizes="(min-width: 88rem) 84rem, 100vw"
+            className={styles.img}
+            priority
+          />
 
-        {/*
-          The dimming is one element with a hole rather than four strips around the part: a
-          box-shadow spread far larger than the stage paints everything outside the highlight, so
-          the mask moves as a single animated rectangle and never seams at a corner.
-        */}
-        <div className={styles.mask} style={pct(part)} aria-hidden="true" />
+          {/*
+            The dimming is one element with a hole rather than four strips around the part: a
+            box-shadow spread far larger than the stage paints everything outside the highlight, so
+            the mask moves as a single animated rectangle and never seams at a corner.
+          */}
+          <div className={styles.mask} style={pct(part)} ref={highlight} aria-hidden="true" />
 
-        {PARTS.map((p, i) => (
-          <button
-            key={p.id}
-            className={styles.hit}
-            style={pct(p)}
-            onMouseEnter={() => choose(i)}
-            onFocus={() => choose(i)}
-            onClick={() => choose(i)}
-            aria-pressed={i === active}
-          >
-            <span className={styles.hitTag}>{p.tag}</span>
-          </button>
-        ))}
+          {PARTS.map((p, i) => (
+            <button
+              key={p.id}
+              className={styles.hit}
+              style={pct(p)}
+              onMouseEnter={() => choose(i)}
+              onFocus={() => choose(i)}
+              onClick={() => choose(i)}
+              aria-pressed={i === active}
+            >
+              <span className={styles.hitTag}>{p.tag}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className={styles.readout} aria-live="polite">
