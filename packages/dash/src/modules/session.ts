@@ -26,17 +26,22 @@ import {
   playerClass,
   sessionTimeLeft,
   sessionType,
+  showsTimeLeft,
   totalLaps,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, fieldsRow, fld } from './module.ts';
 
-const { fmt, iff, concat, str, gt, num, isnull, driver } = ncalc;
+const { fmt, iff, concat, str, gt, num, isnull, not, driver } = ncalc;
 
 export const session = defineModule('session', (ctx) => {
   const d = densityOf(ctx.density);
   const classPosition = isnull(driver('classposition', player()), num(0));
   const taken = isnull(incidents(), num(0));
+  // The Session progress setting was read by the legacy card alone, so a zone drew the lap and the
+  // time left side by side whatever the driver had chosen. One of the two answers the question and
+  // the rank closes over the other, which is what the setting is for.
+  const time = showsTimeLeft();
   return stack(
     ctx.frame,
     [
@@ -67,13 +72,13 @@ export const session = defineModule('session', (ctx) => {
             chars: CHARS.position,
             fs: d.mid,
             follower: { kind: 'denominator', text: '/ 30', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
-          }),
+          }, { visibleBind: not(time) }),
           fld(ctx, 'timeLeft', 'Time left', {
             sample: '0:42:15',
             bind: iff(isTimedSession(), clock(sessionTimeLeft()), str('-:--:--')),
             chars: CHARS.clock,
             fs: d.mid,
-          }),
+          }, { visibleBind: time }),
           fld(ctx, 'lapsLeft', 'Laps left', { sample: '18', bind: fmt(lapsLeft(), '0'), chars: CHARS.position, fs: d.mid }, { visibleBind: gt(lapsLeft(), num(0)) }),
         ],
         ctx,

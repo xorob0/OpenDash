@@ -255,6 +255,19 @@ export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLe
 /** iRacing reports a week of time left when a session is not timed. */
 export const UNTIMED_SECONDS = 86400;
 export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), lt(sessionTimeLeft(), num(UNTIMED_SECONDS)));
+
+/**
+ * Whether a page shows how much time is left rather than which lap it is, per `SessionProgress`.
+ *
+ * `time` and `laps` force the answer and `auto` takes it from the session. It lives here rather
+ * than beside either drawing, because the card and the module both read it and a setting answered
+ * twice is how the two came to disagree over what `auto` means: iRacing's `TotalLaps` is the
+ * leader's completed laps in a timed session, so the mode never keys off a lap count.
+ */
+export const showsTimeLeft = (): Expr => {
+  const mode = setting.sessionProgress();
+  return ncalc.or(eq(mode, str('time')), and(eq(mode, str('auto')), isTimedSession()));
+};
 export const opponentCount = (): Expr => isnull(game('OpponentsCount'), num(0));
 export const classOpponentCount = (): Expr => isnull(game('PlayerClassOpponentsCount'), num(0));
 
