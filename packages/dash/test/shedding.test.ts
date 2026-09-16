@@ -39,11 +39,12 @@ const drewColumn = (names: readonly string[], id: string): boolean => names.some
 /**
  * What proves a part was drawn, where the page does not draw it under its own name.
  *
- * Pit view's corner toggles are the one: the catalogue writes them as the single line
- * `Tyres · RIGHTS` and the module draws one toggle per corner, so the part is declared as the
- * drawing names it and proved by what the module draws.
+ * Pit view's tyre service is the one: the catalogue writes it as the single line `Tyres · RIGHTS`
+ * and the module draws that summary and one toggle per corner beside it, the summary saying which
+ * pair and the toggles which corner, so the part is declared as the drawing names it and proved by
+ * everything the module draws for it.
  */
-const PART_ITEMS: Record<string, readonly string[]> = { 'pitView.tyres': ['FrontLeft', 'FrontRight', 'RearLeft', 'RearRight'] };
+const PART_ITEMS: Record<string, readonly string[]> = { 'pitView.tyres': ['tyres', 'FrontLeft', 'FrontRight', 'RearLeft', 'RearRight'] };
 
 const drewPart = (names: readonly string[], page: string, id: string): boolean =>
   (PART_ITEMS[`${page}.${id}`] ?? [id]).every((item) => drewId(names, item));
