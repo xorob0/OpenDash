@@ -6,7 +6,7 @@
  * flashes at 2 Hz. The nano's 12 px strip is too thin for a label, so its style drops the labels
  * and thins the black outline to 2 px.
  */
-import type { Hex, Item, LayerItem, Rect } from '../generator.ts';
+import type { FontWeight, Hex, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
@@ -19,6 +19,9 @@ const { game, eq, and, num } = ncalc;
 
 /** Border of the black flag's outline. */
 export const BLACK_FLAG_BORDER = 3;
+
+/** The weight the artboards set the flag name in, against the 500 of every other label. */
+export const FLAG_NAME_WEIGHT: FontWeight = 'Bold';
 
 /** How a strip is dressed: whether the flag name is drawn on it, and how thick the black outline is. */
 export interface FlagStripStyle {
@@ -58,9 +61,13 @@ export function flagVisible(flag: FlagProperty): Expr {
 
 const labelY = (frame: Rect): number => frame.top + (frame.height - ds.size.label) / 2;
 
-/** The centred flag name, when the style draws one. */
+/**
+ * The centred flag name, when the style draws one. It is the one label on a face drawn in Bold
+ * rather than Medium, which is what every FaceVariants sheet sets it in: the band is read at a
+ * glance and from further away than a field label is.
+ */
 const flagLabel = (frame: Rect, style: FlagStripStyle, name: string, text: string, color: Hex): Item[] =>
-  style.labels ? [label(name, text, frame.left, labelY(frame), frame.width, { color, hAlign: 'center' })] : [];
+  style.labels ? [label(name, text, frame.left, labelY(frame), frame.width, { color, hAlign: 'center', weight: FLAG_NAME_WEIGHT })] : [];
 
 function solidFlag(frame: Rect, style: FlagStripStyle, prefix: string, id: string, flag: FlagProperty, color: Hex, text: string, blink: boolean): LayerItem {
   return {

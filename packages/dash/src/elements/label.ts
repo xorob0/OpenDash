@@ -3,7 +3,7 @@
  * Proportional, never monospaced. The box spans the available width and is top aligned so the
  * baseline lands where the canvas line box puts it.
  */
-import type { HAlign, Hex, TextItem } from '../generator.ts';
+import type { FontWeight, HAlign, Hex, TextItem } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { textBox } from '../design/metrics.ts';
@@ -14,6 +14,12 @@ export interface LabelOptions {
   /** Font size; ds.size.label by default. */
   size?: number;
   color?: Hex;
+  /**
+   * The face the label is drawn in; Medium by default. Only a weight the package ships and
+   * design/advances.ts measures can be asked for, since a run measured in one weight and drawn in
+   * another is clipped by WPF without a word.
+   */
+  weight?: FontWeight;
   /** TextColor binding, for a label whose ink says something: a telltale lit or unlit. */
   colorBind?: Expr;
   hAlign?: HAlign;
@@ -35,7 +41,7 @@ export function label(name: string, text: string, x: number, y: number, width: n
     rect: roundRect({ left: x, top: box.top, width, height: box.height }),
     text: opts.bind ? text : text.toUpperCase(),
     font: ds.font.label,
-    fontWeight: 'Medium',
+    fontWeight: opts.weight ?? 'Medium',
     fontSize: fs,
     textColor: opts.color ?? ds.color.text.label,
     hAlign: opts.hAlign ?? 'left',
