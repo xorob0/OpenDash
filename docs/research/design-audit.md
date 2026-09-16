@@ -104,6 +104,21 @@ below; these are the ones that block other work.
 - **dashround480-17 (default card half)** — The minus sign half is in the delta package; the default card half is not expressible under the present contract. The twelve Slot properties are shared by every card face, as ScreenInstance.cs:82 states and as OpenDashSettings.cs:97 stores them, one global …
 - **band page anatomy: lead-and-secondary row against the label-over-value rank (facevariants1280x480-41..-49, facevariants800x480-39..-47, facevariants1280x720-41..-48, facevariants800x286-42..-49, facevariants600x686-66..-70, facevariants1920x480-43..-46, facevariants850x480-46..-53, dash1280x400-31 field set, dash1280x720-25 field set)** — The canvas contradicts itself. The FaceVariants sheets draw every band page as one left-aligned row of a label, a lead value and a secondary value in #8A9099, at 330x28 and declared not to scale, whereas ZoneCatalogue.dc.html and every per-size Dash artboard …
 
+### What the merge left for you
+
+Two disagreements surfaced while the packages were being integrated, and both are the author's to
+settle rather than an implementer's.
+
+- **The section's padding.** The Foundations sheet says `space.6 · 32 · between plugin sections`,
+  while the Plugin artboard's own `.sec` says `padding-top: 28px; gap: 20px`. The code takes the
+  Plugin artboard, which is what `PanelMetricsTests` holds, and applies the padding above and below
+  the rule, so two sections sit 56 apart rather than 32. Either the artboard's 28 is the top padding
+  alone, or the Foundations figure is the one to draw.
+- **The bar's value overruns its bar.** A 34 px value over a 13 px label 5 px apart needs 60.6 px of
+  WPF line box, and the band is 60. Band D shrinks its value to 32 rather than clip; the settings bar
+  keeps the overrun it has always had, because the box is transparent and digits have no descenders.
+  The two should agree.
+
 ## 4. The work, in packages
 
 The 1581 gaps group into 150 packages that can be built independently. A package owns a set of
