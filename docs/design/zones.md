@@ -41,11 +41,12 @@ Read from the artboards. Every number is a rect of `left, top, width x height` o
 canvas.
 
 One part is separated from the next by a single pixel rather than by a gap. Every artboard leaves
-an empty row above each row of the body and above band D, and an empty column between the zones,
-and draws a 1 px rule in `surface.raised` in it: at 1280 × 480 those rows are y 98 and y 419, and
-on the portrait face, which stacks its zones, there are four of them, at y 82, 317, 478 and 629.
-The build reads the rows off the rects rather than tabulating them, so that the arrangement below,
-which no artboard gives, is ruled by the same rule.
+an empty row above each row of the body and above band D, and, where the body is a row of zones, an
+empty column between them, and it draws a 1 px rule in `surface.raised` in each: at 1280 × 480 the
+two rows are y 98 and y 419 and the two columns are x 469 and x 810, while the portrait face, which
+stacks its zones, has four rows, at y 82, 317, 478 and 629, and no column at all. The build reads
+those boundaries off the rects rather than tabulating them, so that the arrangement below, which no
+artboard gives, is ruled the same way.
 
 **1920 × 480** — `Dash.dc.html`, the reference face
 
