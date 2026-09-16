@@ -20,7 +20,10 @@ import type { ModuleContext } from './module.ts';
 
 const { eq, ne, str } = ncalc;
 
-export const WEB_VIEW_MESSAGE = 'WEB VIEW · SET THE ADDRESS IN THE PLUGIN';
+export const WEB_VIEW_MESSAGE = 'Web view · address set in the plugin';
+
+/** Width of the car-telemetry page's settings grid, which the canvas draws at a fixed 380 px. */
+const SETTINGS_WIDTH = 380;
 
 /** The browser page: the box and its "no address" state, then the browser itself. */
 export function webView(ctx: ModuleContext): Item[] {
@@ -42,13 +45,16 @@ export function webView(ctx: ModuleContext): Item[] {
       }),
       ...withBindings({ Visible: empty }),
     },
-    {
-      ...label(`${ctx.prefix}empty`, WEB_VIEW_MESSAGE, ctx.frame.left, ctx.frame.top + (ctx.frame.height - d.labelSm) / 2, ctx.frame.width, {
-        size: d.labelSm,
-        hAlign: 'center',
-      }),
-      ...withBindings({ Visible: empty }),
-    },
+    label(`${ctx.prefix}empty`, WEB_VIEW_MESSAGE, ctx.frame.left, ctx.frame.top + (ctx.frame.height - d.labelSm) / 2, ctx.frame.width, {
+      size: d.labelSm,
+      hAlign: 'center',
+      // Prose rather than a field label: the canvas writes it in sentence case and `label`
+      // upper-cases a literal, so the message is bound to keep the case it was written in. Both
+      // bindings are handed to the element, since a second `withBindings` spread would replace the
+      // first rather than add to it.
+      bind: str(WEB_VIEW_MESSAGE),
+      visibleBind: empty,
+    }),
     page,
   ];
 }
@@ -60,7 +66,10 @@ export function webView(ctx: ModuleContext): Item[] {
  */
 export function carTelemetry(ctx: ModuleContext): Item[] {
   const d = densityOf(ctx.density);
-  const gridWidth = Math.min(380, Math.round(ctx.frame.width * 0.34));
+  // The canvas's settings column, or half of what is left where the body is too narrow for 380 to
+  // leave the traces the larger half. A share of the width instead capped it at 342 on the 1039 px
+  // zone the tower page carries, which is a column the canvas never asked for.
+  const gridWidth = Math.min(SETTINGS_WIDTH, Math.round((ctx.frame.width - d.gapX) / 2));
   const plotWidth = Math.max(0, ctx.frame.width - gridWidth - d.gapX);
   const series: Series[] = [
     { name: 'Throttle', color: ds.purpose.delta.faster, bind: throttle(), min: 0, max: 100 },
