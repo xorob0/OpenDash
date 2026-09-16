@@ -93,8 +93,8 @@ const ZONE: DensitySpec = {
   headerHeight: 20,
   cellGap: 8,
   bar: 4,
-  chipHeight: 18,
-  chipPadding: 5,
+  chipHeight: 20,
+  chipPadding: 6,
   padX: 16,
   padY: 6,
   tracePoints: 600,
@@ -126,6 +126,8 @@ const COMPACT: DensitySpec = {
   rowHeight: 20,
   headerHeight: 16,
   cellGap: 6,
+  // The canvas draws the chip 20 high with 6 either side, which is what the other two densities
+  // give it. A 20 px row cannot hold a 20 px chip, so this ramp keeps its own pair.
   chipHeight: 15,
   chipPadding: 4,
   padX: 10,
