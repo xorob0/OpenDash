@@ -20,7 +20,7 @@ import type { ModuleContext } from './module.ts';
 
 const { eq, ne, str } = ncalc;
 
-export const WEB_VIEW_MESSAGE = 'WEB VIEW · SET THE ADDRESS IN THE PLUGIN';
+export const WEB_VIEW_MESSAGE = 'Web view · address set in the plugin';
 
 /** The browser page: the box and its "no address" state, then the browser itself. */
 export function webView(ctx: ModuleContext): Item[] {
@@ -42,13 +42,16 @@ export function webView(ctx: ModuleContext): Item[] {
       }),
       ...withBindings({ Visible: empty }),
     },
-    {
-      ...label(`${ctx.prefix}empty`, WEB_VIEW_MESSAGE, ctx.frame.left, ctx.frame.top + (ctx.frame.height - d.labelSm) / 2, ctx.frame.width, {
-        size: d.labelSm,
-        hAlign: 'center',
-      }),
-      ...withBindings({ Visible: empty }),
-    },
+    label(`${ctx.prefix}empty`, WEB_VIEW_MESSAGE, ctx.frame.left, ctx.frame.top + (ctx.frame.height - d.labelSm) / 2, ctx.frame.width, {
+      size: d.labelSm,
+      hAlign: 'center',
+      // Prose rather than a field label: the canvas writes it in sentence case and `label`
+      // upper-cases a literal, so the message is bound to keep the case it was written in. Both
+      // bindings are handed to the element, since a second `withBindings` spread would replace the
+      // first rather than add to it.
+      bind: str(WEB_VIEW_MESSAGE),
+      visibleBind: empty,
+    }),
     page,
   ];
 }
