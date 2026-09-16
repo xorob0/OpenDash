@@ -25,7 +25,7 @@ import { ncalc } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { cells, monoWidth, type Chars } from '../design/metrics.ts';
+import { cells, monoWidth, MINUS, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -416,8 +416,10 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
     cell: (ctx) =>
       ctx.mode === 'relative'
         ? // The own row is its own reference, so its gap is nought by definition rather than by
-          // whatever `relativegaptoplayer` answers for the player's own index.
-          cellValue(ctx, 'gap', '-5.886', iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
+          // whatever `relativegaptoplayer` answers for the player's own index. The sample carries
+          // the typographic minus `signed` substitutes, so that what Dash Studio shows at design
+          // time is the glyph the bound value draws rather than .NET's hyphen.
+          cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
         : cellValue(ctx, 'gap', '+12.6', carRaceGap(ctx.idx), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
   },
   int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', carInterval(ctx.idx), CHARS.gap) },
