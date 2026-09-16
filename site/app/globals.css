@@ -189,14 +189,26 @@ button {
   line-height: 1.25;
 }
 
-/* Rule 5: one label idiom. Barlow 500, uppercase, text.label, tracked 0.14em off the dash. */
+/*
+ * Rule 5: one label idiom. Barlow 500, uppercase, tracked 0.14em off the dash.
+ *
+ * The ink is the one part that does not carry over. `color.text.label` is #5A6069, which is
+ * 3.1:1 against surface.base — fine on a self-lit DDU read at arm's length in a dark cockpit,
+ * which is the viewing condition the dash palette was chosen for, and below the 4.5:1 a browser
+ * needs for small text on whatever screen at whatever brightness somebody reads this on. So the
+ * site's labels take the step above, text.secondary at 6.1:1, and the dash keeps its own.
+ *
+ * The same reasoning applies everywhere below: nothing under 18.66px on this site is set in
+ * text.label or text.dim, and those two are left for marks that are not read — a rule, a bullet,
+ * an ordinal beside something that already says what it is.
+ */
 .label {
   font-weight: 500;
   font-size: var(--size-label);
   line-height: 1;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
 }
 
 /* Rule 4: a numeral is always Barlow Condensed 600 or 700. */

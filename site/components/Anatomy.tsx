@@ -18,7 +18,7 @@
  * of the picture, not of the window onto it. Choosing a part then scrolls it into view, so the tab
  * strip keeps working as the control when the part itself is off to one side.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import Image from 'next/image';
 import styles from './Anatomy.module.css';
 
@@ -115,6 +115,16 @@ export function Anatomy({ src }: { src: string }) {
     setHeld(true);
   };
 
+  /** Arrow keys move between tabs and move focus with them, wrapping at both ends. */
+  const onTabKey = (index: number) => (event: KeyboardEvent<HTMLButtonElement>) => {
+    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : event.key === 'Home' ? -index : event.key === 'End' ? PARTS.length - 1 - index : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const next = (index + step + PARTS.length) % PARTS.length;
+    choose(next);
+    document.getElementById(`anatomy-tab-${PARTS[next]!.id}`)?.focus();
+  };
+
   const part = PARTS[active]!;
 
   return (
@@ -141,35 +151,58 @@ export function Anatomy({ src }: { src: string }) {
           {PARTS.map((p, i) => (
             <button
               key={p.id}
+              type="button"
               className={styles.hit}
               style={pct(p)}
               onMouseEnter={() => choose(i)}
-              onFocus={() => choose(i)}
               onClick={() => choose(i)}
-              aria-pressed={i === active}
-            >
-              <span className={styles.hitTag}>{p.tag}</span>
-            </button>
+              // The tab strip below is the keyboard control for exactly these six parts, so these
+              // stay out of the tab order rather than being a second set of six stops that say the
+              // same things. They are hidden from assistive technology for the same reason.
+              tabIndex={-1}
+              aria-hidden="true"
+            />
           ))}
         </div>
       </div>
 
-      <div className={styles.readout} aria-live="polite">
+      <div className={styles.readout}>
         <div className={styles.tabs} role="tablist" aria-label="The parts of the face">
           {PARTS.map((p, i) => (
             <button
               key={p.id}
+              id={`anatomy-tab-${p.id}`}
               role="tab"
+              type="button"
               aria-selected={i === active}
+              aria-controls="anatomy-panel"
+              // Only the selected tab is in the tab order; the arrow keys move between them, which
+              // is what the tablist pattern asks for and what stops six buttons from swallowing six
+              // presses of Tab on the way past.
+              tabIndex={i === active ? 0 : -1}
               className={styles.tab}
               onClick={() => choose(i)}
+              onKeyDown={onTabKey(i)}
             >
               {p.tag}
             </button>
           ))}
         </div>
 
-        <div className={styles.text} key={part.id}>
+        {/*
+          Re-keyed on the part, so React replaces the node and the swap animation runs again. The
+          live region is here rather than on the wrapper so that the announcement is the copy that
+          changed, not the whole component including the tab strip.
+        */}
+        <div
+          className={styles.text}
+          key={part.id}
+          id="anatomy-panel"
+          role="tabpanel"
+          aria-labelledby={`anatomy-tab-${part.id}`}
+          aria-live="polite"
+          tabIndex={0}
+        >
           <h3 className="h3">{part.name}</h3>
           <p className="prose">{part.body}</p>
         </div>
