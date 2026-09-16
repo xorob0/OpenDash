@@ -187,6 +187,7 @@ namespace OpenDashPlugin
             // ever draw the defaults its isnull() carries.
             this.AttachDelegate(Contract.LedCentre, () => Settings.LedCentre);
             this.AttachDelegate(Contract.LedRpmStyle, () => Settings.LedRpmStyle);
+            this.AttachDelegate(Contract.LedFlagAnimation, () => Settings.LedFlagAnimation);
         }
 
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>

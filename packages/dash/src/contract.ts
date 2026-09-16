@@ -72,6 +72,7 @@ export const DEFAULTS = {
   SessionProgress: 'auto' as SessionProgress,
   LedCentre: 'rpm' as LedCentre,
   LedRpmStyle: 'leftToRight' as LedRpmStyle,
+  LedFlagAnimation: true,
 } as const;
 
 /** `Slot01` .. `Slot12` for a 1-based slot index. */
@@ -116,7 +117,7 @@ export function dashProperties(): string[] {
 
 /** The properties only a generated LED profile reads. ADR 0013. */
 export function ledProperties(): string[] {
-  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING].map(propertyName);
+  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING].map(propertyName);
 }
 
 /** The name of the setting choosing what the middle of a strip shows. */
@@ -124,6 +125,19 @@ export const LED_CENTRE_SETTING = 'LedCentre';
 
 /** The name of the setting choosing how the rev ladder fills the strip. */
 export const LED_RPM_STYLE_SETTING = 'LedRpmStyle';
+
+/**
+ * Whether a flag on a strip moves at all.
+ *
+ * On, because movement is what a flag is read by at the edge of vision. Off holds every flag from
+ * the frame it would have settled on and never turns one off, which is what a driver who finds a
+ * blinking rim distracting is actually asking for; it is a switch rather than a rate, because a
+ * rate is the standard's decision and not the driver's.
+ *
+ * Appended after the two the strips already read rather than inserted beside them, for the reason
+ * `RevBar` is appended to the shared group: both halves of the contract are pinned in order.
+ */
+export const LED_FLAG_ANIMATION_SETTING = 'LedFlagAnimation';
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
@@ -175,6 +189,8 @@ export const setting = {
   ledCentre: (): Expr => isnull(prop(propertyName(LED_CENTRE_SETTING)), str(DEFAULTS.LedCentre)),
   /** `isnull([OpenDash.LedRpmStyle], 'leftToRight')` */
   ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
+  /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
+  ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
 };
 
 

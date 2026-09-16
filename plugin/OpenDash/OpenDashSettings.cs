@@ -162,6 +162,10 @@ namespace OpenDashPlugin
         /// only; the thresholds are the car's own whichever is set (ADR 0014).</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
 
+        /// <summary>Whether a flag on a strip moves. Off holds every flag from the frame it would have
+        /// settled on and never turns one off.</summary>
+        public bool LedFlagAnimation { get; set; } = Contract.DefaultLedFlagAnimation;
+
         /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
 
@@ -924,6 +928,7 @@ namespace OpenDashPlugin
             FlagBoxSide = other.FlagBoxSide == null ? null : (string[])other.FlagBoxSide.Clone();
             LedCentre = other.LedCentre;
             LedRpmStyle = other.LedRpmStyle;
+            LedFlagAnimation = other.LedFlagAnimation;
             // Cloned rather than shared, so that the panel writing into its copy does not reach back
             // into the settings the plugin is reading from.
             Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
