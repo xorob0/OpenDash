@@ -145,6 +145,34 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(paths.Length, paths.Distinct(StringComparer.Ordinal).Count());
         }
 
+        /// <summary>
+        /// The Install tab's Reinstall button, as design/canvas/Plugin.dc.html draws it.
+        /// </summary>
+        /// <remarks>
+        /// The component sheet spells the word "Reinstall" on its primary swatches, so a reader who has
+        /// only seen that sheet concludes this button is the tab's accented press and carries the install
+        /// icon. The page itself says otherwise on both counts, and the page is the drawing of the thing
+        /// rather than of the style; this holds the panel to it, since the button is WPF and no other test
+        /// here can compile a line of it.
+        /// </remarks>
+        [Fact]
+        public void The_reinstall_button_is_the_outline_the_page_draws_with_the_refresh_icon()
+        {
+            var page = File.ReadAllText(Path.Combine(RepoPaths.Root(), "design", "canvas", "Plugin.dc.html"));
+            var drawn = Regex.Matches(page, @"<div class=""btn"" style=""(?<style>[^""]*)""><svg[^>]*stroke=""(?<ink>#[0-9A-Fa-f]{6})""[^>]*><path d=""(?<d>[^""]+)""></path></svg>Reinstall</div>");
+            Assert.Single(drawn);
+
+            var button = drawn[0];
+            Assert.Equal(PanelIcons.Refresh, button.Groups["d"].Value);
+            Assert.Equal(Theme.TextPrimary, button.Groups["ink"].Value);
+
+            var style = button.Groups["style"].Value;
+            Assert.Contains("background: transparent", style, StringComparison.Ordinal);
+            Assert.Contains("color: " + Theme.TextPrimary, style, StringComparison.Ordinal);
+            Assert.Contains("border: 1px solid " + Theme.Border, style, StringComparison.Ordinal);
+            Assert.DoesNotContain(Theme.Accent, style, StringComparison.Ordinal);
+        }
+
         /// <summary>The four names the cards ask PanelMetrics for are these paths and not a second copy
         /// of them.</summary>
         [Fact]
