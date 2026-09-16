@@ -30,7 +30,7 @@ import type { Expr } from '../bind.ts';
 import { DEFAULTS, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
 import type { LedCentre, LedRpmStyle } from '../contract.ts';
 import { mirrorAvailable } from '../shift.ts';
-import { ladderColors, ladderOrder, overRev, rungFlashes, rungLit, stepLit, type Ladder } from './ladder.ts';
+import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainer, lampConditions, type LedEffect } from './effects.ts';
@@ -47,34 +47,66 @@ const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which))
 const styleIs = (which: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(which));
 
 /**
- * The rev ladder over `count` LEDs, in one style, under one of the two ladders.
- *
- * A flashing rung alternates its band colour with {@link BLINK_OFF} rather than with `colors[2]`.
- * Writing the top band's own red into both fields is what kept the over-rev flash from ever being
- * seen, since `StaticColorContainerBase` alternates `Color` with `BlinkingColor` and both held one
- * hex; under `f1`, where every rung flashes, the lower bands alternated green or red with the top
- * band's blue, which reads as the bar changing colour rather than as a bar flashing. The rate is
- * the catalogue's fast one, so over-rev is the same urgency on a rung that oil pressure is on a lamp.
+ * The condition of a container whose group has already decided it. A `CustomStatus` must carry an
+ * `EnabledFormula`, so there is no way to write "always" but to write it; repeating the group's own
+ * trigger in every child would be the same expression spelled `count` times and would read as a
+ * second decision.
  */
+const TRUE: Expr = 'true';
+
+/** The rev ladder over `count` LEDs, in one style, under one of the two ladders. */
 const rungs = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContainer[] => {
   const order = ladderOrder(style, count);
   const colors = ladderColors(style);
   return Array.from({ length: count }, (_, k) => {
     const rung = order.rungOf(k);
-    const band = Math.min(2, Math.floor((rung * 3) / order.rungs));
     return {
       kind: 'customStatus' as const,
       description: `rev ${String(k + 1).padStart(2, '0')}`,
       startPosition: k + 1,
       ledCount: 1,
-      color: colors[band] ?? colors[2],
+      color: colors[bandOf(rung, order.rungs)] ?? colors[2],
       enabledFormula: { expression: rungLit(which, rung, order.rungs) },
-      ...(rungFlashes(style, rung, order.rungs)
-        ? { blinkFormula: { expression: overRev(which) }, blinkColor: BLINK_OFF, blinkDelayMs: FAST_BLINK_MS }
-        : {}),
     };
   });
 };
+
+/**
+ * Over-rev: the whole run in one colour, flashing, over whatever the rungs beneath it were drawing.
+ *
+ * It is a layer rather than a property of the rungs, and that is three corrections in one shape.
+ * Over-rev is a state of the bar and not of its top band, so every style says it the same way and a
+ * driver who changes style changes the ladder's look and not what it tells them. It is one colour —
+ * {@link OVER_REV_COLOR} — rather than each rung's own, so the bar reads as having turned rather
+ * than as having brightened in places. And the off phase is {@link BLINK_OFF} rather than the
+ * colour itself: `StaticColorContainerBase` alternates `Color` with `BlinkingColor`, both fields
+ * held one hex on a flashing rung, and the over-rev flash had therefore never flashed at all.
+ *
+ * `clearBackgroundWhenActive` because a bar that is over-revving is not also a ladder part way up,
+ * and the rate is the catalogue's fast one, so over-rev is the same urgency on the centre that oil
+ * pressure is on a lamp. The gate is the trigger alone; each LED is then unconditionally its
+ * colour, which is what one LED of a bar that has all turned one colour is.
+ */
+const overRevLayer = (count: number, when: Expr): leds.LedContainer => ({
+  kind: 'conditionalGroup',
+  description: 'over-rev',
+  trigger: { expression: when },
+  clearBackgroundWhenActive: true,
+  children: Array.from({ length: count }, (_, k) => ({
+    kind: 'customStatus' as const,
+    description: `over-rev ${String(k + 1).padStart(2, '0')}`,
+    startPosition: k + 1,
+    ledCount: 1,
+    color: OVER_REV_COLOR,
+    enabledFormula: { expression: TRUE },
+    blinkFormula: { expression: TRUE },
+    blinkColor: BLINK_OFF,
+    blinkDelayMs: FAST_BLINK_MS,
+  })),
+});
+
+/** One derived ladder: its rungs, and the over-rev layer that takes the bar from them. */
+const ladderLayers = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContainer[] => [...rungs(count, style, which), overRevLayer(count, overRev(which))];
 
 /**
  * The measured overrides, one `Groups.CustomConditionalGroup` per car and gear the table covers.
@@ -98,23 +130,24 @@ const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[]
         description: `${car.name}, gear ${gear}`,
         trigger: { expression: tabledGear(model, gear) },
         clearBackgroundWhenActive: true,
-        children: Array.from({ length: count }, (_, k) => {
-          const rung = order.rungOf(k);
-          const band = Math.min(2, Math.floor((rung * 3) / order.rungs));
-          const bandStart = Array.from({ length: order.rungs }, (_, i) => i).findIndex((i) => Math.min(2, Math.floor((i * 3) / order.rungs)) === band);
-          const bandCount = Array.from({ length: order.rungs }, (_, i) => i).filter((i) => Math.min(2, Math.floor((i * 3) / order.rungs)) === band).length;
-          return {
-            kind: 'customStatus' as const,
-            description: `rev ${String(k + 1).padStart(2, '0')}`,
-            startPosition: k + 1,
-            ledCount: 1,
-            color: colors[band] ?? colors[2],
-            enabledFormula: { expression: tabledStageLit(points, band, rung - bandStart, bandCount) },
-            ...(rungFlashes(style, rung, order.rungs)
-              ? { blinkFormula: { expression: tabledOverRev(points) }, blinkColor: BLINK_OFF, blinkDelayMs: FAST_BLINK_MS }
-              : {}),
-          };
-        }),
+        children: [
+          ...Array.from({ length: count }, (_, k) => {
+            const rung = order.rungOf(k);
+            const band = bandOf(rung, order.rungs);
+            const span = bandSpan(band, order.rungs);
+            return {
+              kind: 'customStatus' as const,
+              description: `rev ${String(k + 1).padStart(2, '0')}`,
+              startPosition: k + 1,
+              ledCount: 1,
+              color: colors[band] ?? colors[2],
+              enabledFormula: { expression: tabledStageLit(points, band, rung - span.start, span.count) },
+            };
+          }),
+          // Inside the measured group rather than beside it, so that a car in the table over-revs on
+          // its own measured blink RPM and never on the one its ladder publishes.
+          overRevLayer(count, tabledOverRev(points)),
+        ],
       };
     }),
   );
@@ -136,13 +169,13 @@ const revCentre = (count: number): leds.LedContainer[] =>
         kind: 'conditionalGroup' as const,
         description: "the car's own shift lights",
         trigger: { expression: mirrorAvailable() },
-        children: rungs(count, style, 'mirror'),
+        children: ladderLayers(count, style, 'mirror'),
       },
       {
         kind: 'conditionalGroup' as const,
         description: "SimHub's bands, for a car that publishes no ladder",
         trigger: { expression: not(mirrorAvailable()) },
-        children: rungs(count, style, 'simhub'),
+        children: ladderLayers(count, style, 'simhub'),
       },
       // Last, so a measured gear composes over whichever ladder was derived for the car.
       ...tabledOverrides(count, style),
