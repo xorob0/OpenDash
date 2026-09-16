@@ -414,7 +414,7 @@ does not fit still sheds afterwards: a declared set is a design decision and a b
 | 14 | Leaderboard | `pos` · `num` · `name` · `class` · `gap` · `best` · `last` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
 | 15 | Relative | `pos` · `num` · `name` · `class` · `gap` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
 | 16 | Opponents | `ahead.gap` · `ahead.name` · `ahead.num` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.num` · `behind.class` · `behind.detail` | `ahead.gap` · `ahead.name` · `ahead.num` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.num` · `behind.class` · `behind.detail` | `ahead.gap` · `ahead.name` · `behind.gap` · `behind.name` | `ahead.gap` · `ahead.name` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.class` · `behind.detail` |
-| 18 | Stint | `stintLaps` · `stintTime` · `completed` · `driver` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stintTime` · `completed` · `driver` · `stops` · `lastStop` |
+| 18 | Stint | `stintLaps` · `stintTime` · `completed` · `stops` · `lastStop` · `avgLap` · `driver` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stintTime` · `completed` · `stops` · `lastStop` · `avgLap` · `driver` |
 
 Pages with nothing to shed, and why:
 
