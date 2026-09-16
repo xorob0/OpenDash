@@ -204,6 +204,21 @@ describe('the pit wall', () => {
     }
   });
 
+  test('a wide zone says so in its title, and a narrow one does not', () => {
+    // The same page is offered in both kinds and a pit wall carries both at once, so the title is
+    // where the two are told apart. The catalogue's own name stays clean, because it is also the
+    // label the plugin puts in its wide-zone dropdown.
+    const titleOf = (dashboard: Dashboard, screen: string): string => {
+      const item = itemsOf(dashboard).find((i): i is TextItem => i.kind === 'text' && i.name === `${screen}.title`);
+      if (!item) throw new Error(`no title on ${dashboard.name}/${screen}`);
+      return item.text;
+    };
+    const wide = landscape.pkg.dashboards.find((d) => d.name.startsWith('zones-wide'))!;
+    const narrow = landscape.pkg.dashboards.find((d) => d.name.startsWith('zones-') && !d.name.startsWith('zones-wide'))!;
+    for (const page of PIT_WALL_WIDE_ZONE_PAGES) expect(titleOf(wide, page.id)).toBe(`${page.name.toUpperCase()} · WIDE`);
+    for (const page of PIT_WALL_ZONE_PAGES) expect(titleOf(narrow, page.id)).toBe(page.name.toUpperCase());
+  });
+
   test('the portrait page is one screen with four zones', () => {
     const portrait = PACKAGES.find((p) => p.def.folder === 'openDash Pit wall portrait')!.pkg.dashboards[0]!;
     expect(portrait.screens.map((s) => s.name)).toEqual(['portrait']);
