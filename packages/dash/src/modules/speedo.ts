@@ -5,11 +5,14 @@
  * is the RPM that bar's top band lights at, so the number and the colour beside it agree.
  */
 import { ncalc } from '../generator.ts';
-import { revBar } from '../components/revBar.ts';
+import { REV_WELL_PAD_X, REV_WELL_PAD_Y, revBar } from '../components/revBar.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { CHARS, rpm, speed, speedUnit } from '../second/values.ts';
 import { redlineRpm } from '../shift.ts';
+import { band } from '../elements/band.ts';
+import { rect } from '../design/geometry.ts';
+import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 
 const { fmt } = ncalc;
@@ -37,7 +40,19 @@ export const speedo = defineModule('speedo', (ctx) => {
         ],
         ctx,
       ),
-      blockRow(barHeight, (bottom) => revBar({ left: ctx.frame.left, top: bottom - barHeight, width: ctx.frame.width, height: barHeight, gap }, `${ctx.prefix}rev`)),
+      // The segments in their well, as the face draws them. The row is the segments plus the well's
+      // margin rather than the segments alone, so that the bar keeps the height the density asked
+      // for and the eight pixels come out of what the fields above may grow into.
+      blockRow(barHeight + 2 * REV_WELL_PAD_Y, (bottom) => {
+        const well = rect(ctx.frame.left, bottom - barHeight - 2 * REV_WELL_PAD_Y, ctx.frame.width, barHeight + 2 * REV_WELL_PAD_Y);
+        return [
+          band(`${ctx.prefix}rev.well`, well, ds.purpose.block.well),
+          ...revBar(
+            { left: well.left + REV_WELL_PAD_X, top: well.top + REV_WELL_PAD_Y, width: well.width - 2 * REV_WELL_PAD_X, height: barHeight, gap },
+            `${ctx.prefix}rev`,
+          ),
+        ];
+      }),
     ],
     ctx.density,
   );
