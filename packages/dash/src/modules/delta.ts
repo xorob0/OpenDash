@@ -4,7 +4,8 @@
  * the number is never ambiguous.
  *
  * The bar covers two seconds either side. Beyond that the fill simply stays at the end: a driver
- * two seconds off does not need to know whether it is 2.1 or 2.4.
+ * two seconds off does not need to know whether it is 2.1 or 2.4. It stands ten high whatever the
+ * density, because the canvas draws one delta bar rather than a companion one and a zone one.
  */
 import { ncalc } from '../generator.ts';
 import { ds } from '../tokens.ts';
@@ -25,7 +26,7 @@ export const DELTA_RANGE = 2;
 export const delta = defineModule('delta', (ctx) => {
   const d = densityOf(ctx.density);
   const value = referenceDelta();
-  const barHeight = ctx.density === 'companion' ? 14 : 10;
+  const barHeight = 10;
   const scaleHeight = d.labelSm;
   return stack(
     ctx.frame,
