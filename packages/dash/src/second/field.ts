@@ -340,12 +340,12 @@ export function fieldRowFitted(
  * 432, so the same row of three lap times is one line on the first and two on the second. Fields
  * keep their order; a field wider than the whole box gets a line of its own.
  *
- * Greedy and not capped by `columnsAt`, which is a question worth answering here because the shape
- * model declares a column count and this ignores it. Wiring it as a cap was tried and cost car
- * settings two of its cells at 1280 x 400 and the sectors page its three lap times: a rank capped
- * narrower than it fits is a taller rank, and a taller rank is one `rowsThatFit` takes a row off.
- * What actually stacks a narrow zone is rule 20 -- two lap times fit side by side at 34 px and do
- * not at 46, so the rank wraps to one column on its way up.
+ * Greedy and not capped by `columnsAt`. Wiring it as a cap was tried and cost car settings two of
+ * its cells at 1280 x 400 and the sectors page its three lap times: a rank capped narrower than it
+ * fits is a taller rank, and a taller rank is one `rowsThatFit` takes a row off. What actually
+ * stacks a narrow zone is rule 20 -- two lap times fit side by side at 34 px and do not at 46, so
+ * the rank wraps to one column on its way up. A page that wants the shape's column count asks for
+ * it by name through `planLines`, where the cells are equal and the columns line up down the block.
  */
 export function wrapFields(specs: readonly FieldSpec[], width: number, density: Density, gap?: number): FieldSpec[][] {
   const step = gap ?? densityOf(density).gapX;
