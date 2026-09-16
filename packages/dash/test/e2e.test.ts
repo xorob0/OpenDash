@@ -727,9 +727,10 @@ describe('command line', () => {
  * The picture path, end to end: an item draws an asset, the packer declares it on the dashboard it
  * landed on, and the file reaches the archive inside the `.ressources` sidecar.
  *
- * Asserted on a package composed here rather than on a shipped one, because no drawing uses an
- * asset yet: the registry, the packer and the sidecar have to be known good before a telltale or a
- * tick is drawn against them, and this is the test that keeps them so.
+ * Asserted on a card package composed here rather than on a shipped one, because the card faces
+ * draw no picture of their own: the pit view's tick is the first drawing to use an asset, and it
+ * lands on the zone faces and the second screens instead. The registry, the packer and the sidecar
+ * are therefore kept known good on a package whose contents this test controls.
  */
 describe('an image asset reaches the archive', () => {
   const tick = imageOf(WHEEL_CHANGE_TICK);

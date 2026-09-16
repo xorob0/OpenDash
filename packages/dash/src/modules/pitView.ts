@@ -257,7 +257,8 @@ export const pitView = defineModule('pitView', (ctx) => {
       },
     };
   };
-  const optionsHeight = optionsRow(measured)?.height ?? 0;
+  const optionsBlock = optionsRow(measured);
+  const optionsHeight = optionsBlock?.height ?? 0;
 
   // The catalogue sets the two numbers side by side wherever the column count allows a pair and
   // stacks them in a box tall enough to make them large, which is its `tall` drawing.
@@ -298,13 +299,12 @@ export const pitView = defineModule('pitView', (ctx) => {
     break;
   }
 
-  const rows: StackRow[] = [fieldsRow(specsAt(lead), ctx, rowOptions)];
-  const drawn = optionsRow(measured);
-  if (drawn) rows.push(drawn);
+  const stackRows: StackRow[] = [fieldsRow(specsAt(lead), ctx, rowOptions)];
+  if (optionsBlock) stackRows.push(optionsBlock);
   return stack(
     ctx.frame,
     [
-      ...rows,
+      ...stackRows,
       blockRow(BAR_HEIGHT, (bottom) => [
         levelGauge(`${ctx.prefix}gauge`, rect(ctx.frame.left, bottom - BAR_HEIGHT, ctx.frame.width, BAR_HEIGHT), pitServiceProgress(), { value: 62 }),
       ]),
