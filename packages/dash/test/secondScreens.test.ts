@@ -17,7 +17,7 @@ import {
   secondScreen,
   secondScreenProperties,
 } from '../src/contract.ts';
-import { validatePackage, type Dashboard, type Item, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { validatePackage, type Dashboard, type Item, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
@@ -349,6 +349,24 @@ describe('every module fits the box it is given', () => {
       }
     });
   }
+});
+
+describe('the track module has a titled and a titleless form', () => {
+  const frame = rect(10, 20, 300, 200);
+  const build = (title?: boolean) => MODULES.find((m) => m.id === 'track')!.build({ frame, density: 'zone', prefix: 'track.', title });
+  const mapIn = (items: Item[]): StaticMapItem => items.find((i): i is StaticMapItem => i.kind === 'staticMap')!;
+
+  test('names the track above its map by default, which is what the companion and the pit wall draw', () => {
+    const items = build();
+    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.map']);
+    expect(mapIn(items).rect.top).toBeGreaterThan(frame.top);
+  });
+
+  test('gives the map the whole frame when the caller asks for no title', () => {
+    const items = build(false);
+    expect(items.map((i) => i.name)).toEqual(['track.map']);
+    expect(mapIn(items).rect).toMatchObject({ top: frame.top, height: frame.height });
+  });
 });
 
 describe('what iRacing cannot answer', () => {

@@ -22,8 +22,8 @@ const { concat, fmt, str, ucase } = ncalc;
 
 export const track = defineModule('track', (ctx) => {
   const d = densityOf(ctx.density);
-  const titleHeight = d.labelSm;
-  const mapTop = ctx.frame.top + titleHeight + d.fieldGap * 2;
+  const titled = ctx.title !== false;
+  const mapTop = titled ? ctx.frame.top + d.labelSm + d.fieldGap * 2 : ctx.frame.top;
   const map: StaticMapItem = {
     kind: 'staticMap',
     name: `${ctx.prefix}map`,
@@ -39,6 +39,7 @@ export const track = defineModule('track', (ctx) => {
     opponentStyle: { dotColor: ds.color.text.secondary, dotRadius: 3, dotBorderThickness: 0, dotBorderColor: ds.color.surface.base, labelFontSize: 1, labelColor: ds.color.surface.base },
     startLine: { color: ds.color.text.primary, enabled: true, width: 3, height: 16 },
   };
+  if (!titled) return [map];
   return [
     label(`${ctx.prefix}title`, 'VALMONT PARK · 4.1 KM', ctx.frame.left, ctx.frame.top, ctx.frame.width, {
       size: d.labelSm,
