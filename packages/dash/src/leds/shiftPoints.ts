@@ -46,12 +46,12 @@
 import table from '../../../../data/shift-points.json';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { rpms } from '../shift.ts';
+import { lastGear, rpms } from '../shift.ts';
 // The car a table entry is keyed by. One body, in `second/values.ts`; this file used to carry a
 // byte-identical second one, which is the defect ADR 0014 records for `gearRedline`.
 import { carModel } from '../second/values.ts';
 
-const { and, eq, game, gt, ge, isnull, num, raw, str } = ncalc;
+const { and, eq, game, gt, ge, isnull, not, num, raw, str } = ncalc;
 
 /** One gear's four thresholds, in RPM. */
 export interface GearShiftPoints {
@@ -141,5 +141,14 @@ export const tabledStageLit = (points: GearShiftPoints, stage: number, local: nu
       ? tabledBandLit(points.shift, points.last, local, count)
       : ge(rpms(), num(points.last));
 
-/** Over-rev, from one gear's measured thresholds. */
-export const tabledOverRev = (points: GearShiftPoints): Expr => ge(rpms(), num(points.blink));
+/**
+ * Over-rev, from one gear's measured thresholds — and not in the last gear, on the same terms as
+ * the two derived ladders.
+ *
+ * The exception belongs to the flash rather than to the source of the thresholds: a gear there is
+ * nothing to shift out of is a fact about the car, and whether the numbers were measured or
+ * published has no bearing on it. `lastGear()` is read from `../shift.ts` rather than spelled again
+ * here, because two spellings of one expression is how the flash came to differ between surfaces
+ * once already (ADR 0014).
+ */
+export const tabledOverRev = (points: GearShiftPoints): Expr => and(ge(rpms(), num(points.blink)), not(lastGear()));
