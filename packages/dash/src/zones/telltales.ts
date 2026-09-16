@@ -148,9 +148,6 @@ export const telltaleArt = (lamp: Telltale, state: TelltaleColour | 'off'): stri
 export const telltaleArtwork = (): string[] =>
   TELLTALES.flatMap((lamp) => (lamp.lit ? [telltaleArt(lamp, lamp.lit), telltaleArt(lamp, 'off')] : [telltaleArt(lamp, 'off')]));
 
-/** Width the rank takes with every lamp drawn, which is what a band is measured against. */
-export const telltaleRankWidth = (): number => TELLTALES.length * LAMP.width + TELLTALE_GAP * (TELLTALES.length - 1);
-
 /**
  * The rank drawn in `frame`, centred in the room `usable` leaves between the corner blocks.
  *
