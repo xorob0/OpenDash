@@ -35,6 +35,10 @@
     <Compile Include="../OpenDash/UpdateService.cs" Link="Plugin/UpdateService.cs" />
     <Compile Include="../OpenDash/FlagBoxProfile.cs" Link="Plugin/FlagBoxProfile.cs" />
     <Compile Include="../OpenDash/FlagBoxInstallPlan.cs" Link="Plugin/FlagBoxInstallPlan.cs" />
+    <Compile Include="../OpenDash/CarLightTable.cs" Link="Plugin/CarLightTable.cs" />
+    <Compile Include="../OpenDash/CarLightMirror.cs" Link="Plugin/CarLightMirror.cs" />
+    <Compile Include="../OpenDash/CarLightLibrary.cs" Link="Plugin/CarLightLibrary.cs" />
+    <Compile Include="../OpenDash/CarLightService.cs" Link="Plugin/CarLightService.cs" />
   </ItemGroup>
 
   <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;
