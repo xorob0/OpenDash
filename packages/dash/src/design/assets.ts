@@ -82,8 +82,25 @@ export interface DashAsset {
  */
 export const WHEEL_CHANGE_TICK: DashAsset = { name: 'wheel-change-tick', file: 'wheel-change-tick.png', source: 'openDash' };
 
+/**
+ * The two marks of a table's rank column: a car that has gained places, and one that has lost them.
+ *
+ * The canvas draws a 10 by 10 triangle, `M1 8h8L5 2z` pointing up and `M1 2h8L5 8z` pointing down,
+ * in a box of the same ten pixels. It is two files rather than one and a binding because an image
+ * carries no colour and no rotation: the direction and the ink are both in the pixels. They are
+ * rendered from `purpose.delta.faster` and `purpose.delta.slower`, so a move of either token means
+ * these files are rendered again; the count beside the mark reads its colour from the token as
+ * every other value does.
+ *
+ * Rendered at 40 rather than at 10. The mark is drawn at 10 px on all four artboards that head a
+ * rank column, and an image is stretched to its rect, so four times the drawn size is what keeps
+ * the diagonals clean on a panel a pit wall scales.
+ */
+export const RANK_UP: DashAsset = { name: 'rank-up', file: 'rank-up.png', source: 'openDash' };
+export const RANK_DOWN: DashAsset = { name: 'rank-down', file: 'rank-down.png', source: 'openDash' };
+
 /** Every asset a package may carry. */
-export const ASSETS: readonly DashAsset[] = [WHEEL_CHANGE_TICK];
+export const ASSETS: readonly DashAsset[] = [WHEEL_CHANGE_TICK, RANK_UP, RANK_DOWN];
 
 /** The asset an image item's `image` names, or undefined when nothing here claims it. */
 export const assetNamed = (name: string): DashAsset | undefined => ASSETS.find((asset) => asset.name === name);
