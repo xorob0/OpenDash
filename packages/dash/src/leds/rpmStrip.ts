@@ -35,6 +35,7 @@ import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../
 import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, effectContainer, type LedEffect } from './effects.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
+import { carCentre } from './mirror.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
 
 const { and, eq, gt, not, num, or, str } = ncalc;
@@ -117,27 +118,34 @@ const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[]
  * the strip is debugged.
  */
 const revCentre = (count: number): leds.LedContainer[] =>
-  LED_RPM_STYLES.map((style) => ({
-    kind: 'conditionalGroup' as const,
-    description: `style: ${style}`,
-    trigger: { expression: styleIs(style) },
-    children: [
+  LED_RPM_STYLES.map((style) => {
+    // `car` is the car's whole bar and is not one of the three looks: its LEDs, its colours, its
+    // order and its flash, from the table the plugin fetched (ADR 0017). Where there is no table it
+    // falls back to the ladder below, drawn the way `leftToRight` draws it -- which is the same tree
+    // the other three styles are, so the fallback is not a fourth thing to maintain.
+    const ladder: leds.LedContainer[] = [
       {
         kind: 'conditionalGroup' as const,
         description: "the car's own shift lights",
         trigger: { expression: mirrorAvailable() },
-        children: rungs(count, style, 'mirror'),
+        children: rungs(count, style === 'car' ? 'leftToRight' : style, 'mirror'),
       },
       {
         kind: 'conditionalGroup' as const,
         description: "SimHub's bands, for a car that publishes no ladder",
         trigger: { expression: not(mirrorAvailable()) },
-        children: rungs(count, style, 'simhub'),
+        children: rungs(count, style === 'car' ? 'leftToRight' : style, 'simhub'),
       },
       // Last, so a measured gear composes over whichever ladder was derived for the car.
-      ...tabledOverrides(count, style),
-    ],
-  }));
+      ...tabledOverrides(count, style === 'car' ? 'leftToRight' : style),
+    ];
+    return {
+      kind: 'conditionalGroup' as const,
+      description: `style: ${style}`,
+      trigger: { expression: styleIs(style) },
+      children: style === 'car' ? carCentre(count, ladder) : ladder,
+    };
+  });
 
 /** A progressive bar of `count` LEDs in one colour, driven by a 0..100 telemetry percentage. */
 const pedalBar = (count: number, value: Expr, color: string, label: string): leds.LedContainer[] =>
