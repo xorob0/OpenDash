@@ -208,6 +208,8 @@
 {"p":"OpenDash.Face850x480ZoneCClassOnly","v":false}
 {"p":"OpenDash.Face850x480ZoneCPages","v":2097151}
 {"p":"OpenDash.Face850x480ZoneD","v":0}
+{"p":"OpenDash.FlagBoxLowFuelLaps","v":2}
+{"p":"OpenDash.LightsLowFuelLaps","v":2}
 {"p":"OpenDash.PitWallWide","v":5}
 {"p":"OpenDash.PitWallZoneA","v":0}
 {"p":"OpenDash.PitWallZoneB","v":1}
