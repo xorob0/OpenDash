@@ -62,6 +62,9 @@ const WIDEST_INCIDENT_LIMIT = '/ unlimited';
 /** A lap total wider than three digits is not a race anyone drives. */
 const WIDEST_LAP_TOTAL = 'OF 999';
 
+/** The same total after the portrait's "Lap 12 / 30", which writes it as a denominator. */
+const WIDEST_LAP_DENOMINATOR = '/ 999';
+
 /**
  * The strongest wind the readout has room for, unit included. iRacing's weather generator stays
  * far below it, but the box is measured before the binding exists and WPF clips what does not fit.
@@ -140,7 +143,11 @@ export interface PitWallHeaderSpec {
   /** 1-based page and page count; a portrait dashboard has one page and draws no squares. */
   page: number;
   pages: number;
-  /** A narrow header drops the wind and the sim clock, which is what the portrait page needs. */
+  /**
+   * A narrow header for the portrait page: it drops the wind, the sim clock, the "local" after the
+   * wall clock and the incident limit, and writes the lap as "Lap 12 / 30" rather than the session
+   * name and "L12 of 30". Every one of those is room the 1080 px sheet does not have.
+   */
   compact?: boolean;
 }
 
@@ -174,19 +181,30 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     }
   }
 
+  const compact = spec.compact ?? false;
   const hasLimit = not(isNull(incidentLimit()));
+  const lapTotal = gt(totalLaps(), num(0));
   const groups: HeaderGroup[] = [
-    {
-      id: 'session',
-      parts: [
-        // Sized for "OFFLINE TESTING" and drawn from the right, so that the slack a short name
-        // leaves falls to the left, into the empty middle of the header, rather than opening a
-        // hole between the session name and the lap.
-        { kind: 'label', text: 'RACE', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: ucase(sessionType()) },
-        { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
-        { kind: 'label', text: 'OF 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('OF '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
-      ],
-    },
+    compact
+      ? {
+          id: 'lap',
+          parts: [
+            { kind: 'label', text: 'LAP' },
+            { kind: 'value', sample: '12', bind: fmt(currentLap(), '0'), chars: { digits: 3, specials: 0 } },
+            { kind: 'label', text: '/ 30', widest: WIDEST_LAP_DENOMINATOR, bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
+          ],
+        }
+      : {
+          id: 'session',
+          parts: [
+            // Sized for "OFFLINE TESTING" and drawn from the right, so that the slack a short name
+            // leaves falls to the left, into the empty middle of the header, rather than opening a
+            // hole between the session name and the lap.
+            { kind: 'label', text: 'RACE', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: ucase(sessionType()) },
+            { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
+            { kind: 'label', text: 'OF 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('OF '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
+          ],
+        },
     {
       id: 'timeLeft',
       parts: [
@@ -206,7 +224,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       parts: [
         { kind: 'label', text: 'INC' },
         { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.alert.incident },
-        { kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit },
+        ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit } as InlinePart]),
       ],
     },
     {
@@ -217,14 +235,18 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       id: 'clocks',
       parts: [
         { kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } },
-        { kind: 'label', text: 'LOCAL' },
-        { kind: 'value', sample: '15:07', bind: simClock(), chars: { digits: 5, specials: 1 } },
-        { kind: 'label', text: 'SIM' },
+        ...(compact
+          ? []
+          : ([
+              { kind: 'label', text: 'LOCAL' },
+              { kind: 'value', sample: '15:07', bind: simClock(), chars: { digits: 5, specials: 1 } },
+              { kind: 'label', text: 'SIM' },
+            ] as InlinePart[])),
       ],
     },
   ];
 
-  const shown = spec.compact ? groups.filter((g) => g.id !== 'wind' && g.id !== 'clocks').concat([{ id: 'clock', parts: [{ kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } }, { kind: 'label', text: 'LOCAL' }] }]) : groups;
+  const shown = compact ? groups.filter((g) => g.id !== 'wind') : groups;
   let right = frame.left + frame.width - PIT_WALL_HEADER.padX;
   for (const group of [...shown].reverse()) {
     const g = group.run
