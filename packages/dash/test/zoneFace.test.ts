@@ -219,6 +219,14 @@ describe('the contract describes the shape each face really has', () => {
       const order = bodyOrder(face).map((letter) => (letter === 'A' ? z.zoneA : letter === 'B' ? z.zoneB : z.zoneC));
       const drawn = order.map((r) => (stacked ? r.height : r.width));
       expect({ folder: layout.folder, parts: [...face.parts] }).toMatchObject({ parts: drawn });
+
+      // And the four rows the panel's plan scales from, which are the face's own and not constants.
+      // The body is the whole region the three zones occupy, the one-pixel seams included, so that a
+      // stacked body measures the same way as a body laid side by side.
+      const rows = { revBar: z.bar ? z.bar.top : order[0]!.top, bar: z.bar ? z.bar.height : 0, body: z.band.top - order[0]!.top - 1, band: z.band.height };
+      expect({ folder: layout.folder, rows: { ...face.rows } }).toMatchObject({ rows });
+      // And they add up to the face, seam by seam, which is what makes them a plan rather than a list.
+      expect({ folder: layout.folder, sum: rows.revBar + rows.bar + rows.body + rows.band }).toMatchObject({ sum: layout.height - (z.bar ? 2 : 1) });
     });
   }
 

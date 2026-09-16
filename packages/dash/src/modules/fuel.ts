@@ -1,8 +1,15 @@
 /**
- * Module 5, Fuel: what is in the tank, how long it lasts, what to add, and what each lap costs.
+ * Module 5, Fuel: what is in the tank, how long it lasts, how many laps it is worth, and what a
+ * stop and a lap cost.
  *
- * "To add" is the laps left times the average consumption, less what is in the tank, and never
- * negative. It is amber because it is an instruction to the crew rather than a reading.
+ * The lead rank is the tank, the time and the estimated laps, because the estimate is the number a
+ * driver reads before deciding whether to stop. It used to sit last, behind three spellings of one
+ * consumption.
+ *
+ * "Refuel" is the laps left times the average consumption, less what is in the tank, and never
+ * negative. It is caution amber rather than the low-fuel red because it is an instruction to the
+ * crew: the red belongs to the level and to the bar under it, and an instruction drawn in it reads
+ * as an alarm about the tank rather than as a figure to act on.
  */
 import { ncalc } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
@@ -52,33 +59,33 @@ export const fuel = defineModule('fuel', (ctx) => {
             sample: '38.4',
             bind: fmt(fuelLevel(), '0.0'),
             chars: CHARS.fuel,
-            fs: d.hero,
+            fs: d.big,
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
             follower: { text: 'L', bind: fuelUnit() },
           }),
-          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(fuelTimeLeft()), chars: CHARS.clock, fs: d.mid }),
-          fld(ctx, 'toAdd', 'To add', {
-            sample: '12.6',
-            bind: iff(gt(fuelPerLap(), num(0)), fmt(fuelToAdd(), '0.0'), str(NO_VALUE)),
-            chars: CHARS.fuel,
-            fs: d.mid,
-            color: ds.purpose.fuel.low,
+          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(fuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
+          fld(ctx, 'lapsLeft', 'Est. laps', {
+            sample: '11.2',
+            bind: iff(gt(fuelPerLap(), num(0)), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),
+            chars: CHARS.consumption,
+            fs: d.big,
+            colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
           }),
         ],
         ctx,
       ),
       fieldsRow(
         [
-          fld(ctx, 'lastLap', 'Last lap', { ...consumption(fuelLastLap(), gt(fuelLastLap(), num(0))), fs: d.small }),
-          fld(ctx, 'thisLap', 'This lap', { ...consumption(fuelThisLap(), gt(fuelThisLap(), num(0))), fs: d.small }),
-          fld(ctx, 'average', 'Average', { ...consumption(fuelPerLap(), gt(fuelPerLap(), num(0))), fs: d.small }),
-          fld(ctx, 'lapsLeft', 'Est. laps', {
-            sample: '11.2',
-            bind: iff(gt(fuelPerLap(), num(0)), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),
-            chars: CHARS.consumption,
-            fs: d.small,
-            colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
+          fld(ctx, 'toAdd', 'Refuel', {
+            sample: '12.6',
+            bind: iff(gt(fuelPerLap(), num(0)), fmt(fuelToAdd(), '0.0'), str(NO_VALUE)),
+            chars: CHARS.fuel,
+            fs: d.mid,
+            color: ds.color.caution.primary,
           }),
+          fld(ctx, 'average', 'Per lap', { ...consumption(fuelPerLap(), gt(fuelPerLap(), num(0))), fs: d.mid }),
+          fld(ctx, 'lastLap', 'Last lap', { ...consumption(fuelLastLap(), gt(fuelLastLap(), num(0))), fs: d.mid }),
+          fld(ctx, 'thisLap', 'This lap', { ...consumption(fuelThisLap(), gt(fuelThisLap(), num(0))), fs: d.mid }),
         ],
         ctx,
       ),
@@ -92,5 +99,8 @@ export const fuel = defineModule('fuel', (ctx) => {
       ),
     ],
     ctx.density,
+    // The catalogue draws this page with `justify-content: space-between` at every shape, so the
+    // height a zone has to spare goes between the ranks rather than around them.
+    { justify: 'spaceBetween' },
   );
 });
