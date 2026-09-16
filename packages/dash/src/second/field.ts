@@ -13,6 +13,7 @@ import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { SPECIAL_CHARS, canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
@@ -23,6 +24,19 @@ import { rank } from './rank.ts';
 /** A small text that follows a value on its baseline: a unit ("L", "km/h") or a denominator ("/ 24"). */
 export interface Follower {
   text: string;
+  /**
+   * Which of the two the canvas draws. A unit is a 13 px label six pixels after the value; a
+   * denominator is a numeral at a proportion of the value, eight pixels after it. Units are the
+   * common case and the default.
+   */
+  kind?: 'unit' | 'denominator';
+  /**
+   * The gap this follower takes, where the canvas asks for one of its own: the delta's reference
+   * caption sits ten pixels after its value where a unit sits six. Defaults to the kind's.
+   */
+  gap?: number;
+  /** The size it is drawn at, for a caption that is neither a unit nor a proportion of the value. */
+  size?: number;
   bind?: Expr;
   color?: Hex;
   visibleBind?: Expr;
@@ -59,16 +73,43 @@ export interface FieldSpec {
   visibleBind?: Expr;
 }
 
-/** Gap between a value and the small text that follows it. */
-export const FOLLOWER_GAP = ds.space[2];
+/**
+ * Gap between a value and the unit after it. Six pixels on the canvas, which is off the `space`
+ * scale (it goes 4 then 8), so the literal stays here with the canvas as its citation.
+ */
+export const UNIT_GAP = 6;
+
+/** Gap between a value and the denominator after it, which the canvas draws wider than a unit's. */
+export const DENOMINATOR_GAP = ds.space[2];
 
 /**
- * Width of a field's value, its follower included. An unbound follower is drawn upper-cased (the
- * label element does that), so it is measured upper-cased too: "s" and "S" are not the same width.
+ * The size a denominator is drawn at beside a value: the canvas scales it with the value rather
+ * than fixing it at the density's small label. 32 beside 46, 44 beside 64, 23 beside 34 and 53
+ * beside 76, which is 0.7 of the value floored at each of them.
  */
-export function followerWidth(follower: Follower, d: DensitySpec): number {
+export const denominatorSize = (valueFs: number): number => Math.floor(0.7 * valueFs);
+
+/** Gap a follower of this kind takes between itself and the value it follows. */
+export const followerGap = (follower: Follower): number => follower.gap ?? (follower.kind === 'denominator' ? DENOMINATOR_GAP : UNIT_GAP);
+
+/** The size a follower is drawn at: its own, the value's proportion, or the density's small label. */
+export const followerSize = (follower: Follower, d: DensitySpec, valueFs: number): number =>
+  follower.size ?? (follower.kind === 'denominator' ? denominatorSize(valueFs) : d.labelSm);
+
+/**
+ * Width of a field's follower. A unit is a proportional label, and an unbound one is drawn
+ * upper-cased (the label element does that), so it is measured upper-cased too: "s" and "S" are not
+ * the same width. A denominator is a numeral, so it is measured in the monospace cells its size
+ * cuts, which is wider than its advances and never clips.
+ */
+export function followerWidth(follower: Follower, d: DensitySpec, valueFs: number): number {
+  const fs = followerSize(follower, d, valueFs);
+  if (follower.kind === 'denominator') {
+    const mono = cells('SemiBold', fs);
+    return monoWidth(mono, charsOfText(follower.text, mono));
+  }
   const drawn = follower.bind ? follower.text : follower.text.toUpperCase();
-  return Math.ceil(measureText('BarlowMedium', drawn, d.labelSm)) + 1;
+  return Math.ceil(measureText('BarlowMedium', drawn, fs)) + 1;
 }
 
 /** The cells a literal string takes: `.,:` get the narrow cell and everything else the wide one. */
@@ -84,7 +125,7 @@ export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
   const width = Math.max(monoWidth(mono, spec.value.chars), monoWidth(mono, charsOfText(spec.value.sample, mono)));
   const follower = spec.value.follower;
   if (!follower) return width;
-  return width + FOLLOWER_GAP + followerWidth(follower, d);
+  return width + followerGap(follower) + followerWidth(follower, d, spec.value.fs);
 }
 
 /** Width a field needs: the wider of its label and its value. */
@@ -170,16 +211,19 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   );
   const follower = spec.value.follower;
   if (follower) {
-    const followerX = x + Math.max(monoWidth(mono, spec.value.chars), monoWidth(mono, charsOfText(spec.value.sample, mono))) + FOLLOWER_GAP;
-    const y = canvasYForBaseline(canvasBaseline(valueY, spec.value.fs), d.labelSm);
+    const followerX = x + Math.max(monoWidth(mono, spec.value.chars), monoWidth(mono, charsOfText(spec.value.sample, mono))) + followerGap(follower);
+    const fs = followerSize(follower, d, spec.value.fs);
+    const y = canvasYForBaseline(canvasBaseline(valueY, spec.value.fs), fs);
+    const box = Math.max(followerWidth(follower, d, spec.value.fs), x + width - followerX);
+    const opts = {
+      bind: follower.bind,
+      visibleBind: follower.visibleBind ?? spec.visibleBind,
+      leftBind: leftAt?.(followerX - x),
+    };
     items.push(
-      unit(`${spec.name}.unit`, follower.text, followerX, y, Math.max(followerWidth(follower, d), x + width - followerX), {
-        size: d.labelSm,
-        bind: follower.bind,
-        color: follower.color,
-        visibleBind: follower.visibleBind ?? spec.visibleBind,
-        leftBind: leftAt?.(followerX - x),
-      }),
+      follower.kind === 'denominator'
+        ? denominator(`${spec.name}.denominator`, follower.text, followerX, y, fs, box, opts)
+        : unit(`${spec.name}.unit`, follower.text, followerX, y, box, { size: fs, color: follower.color, ...opts }),
     );
   }
   return items;
