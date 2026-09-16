@@ -4365,7 +4365,6 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
     "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
     "Group": true,
     "Visible": true,
-    "BlinkEnabled": true,
     "Childrens": [
       {
         "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -4409,6 +4408,22 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "BorderStyle": {},
         "Id": "65b96010-6a91-5877-8210-ada2da9d8fff",
         "Name": "flag.yellow.label",
+        "RenderingSkip": 0,
+        "MinimumRefreshIntervalMS": 0
+      },
+      {
+        "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+        "IsRectangleItem": true,
+        "Left": 3,
+        "Top": 443,
+        "Width": 1914,
+        "Height": 34,
+        "Visible": true,
+        "BackgroundColor": "#FF0A0B0D",
+        "BlinkEnabled": true,
+        "BorderStyle": {},
+        "Id": "3cc633eb-d1bd-538a-a91c-6a1144de3372",
+        "Name": "flag.yellow.flash",
         "RenderingSkip": 0,
         "MinimumRefreshIntervalMS": 0
       }
@@ -7811,7 +7826,6 @@ exports[`dashboard snapshots openDash.djson 1`] = `
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
           "Group": true,
           "Visible": true,
-          "BlinkEnabled": true,
           "Childrens": [
             {
               "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -7855,6 +7869,22 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "BorderStyle": {},
               "Id": "65b96010-6a91-5877-8210-ada2da9d8fff",
               "Name": "flag.yellow.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+              "IsRectangleItem": true,
+              "Left": 3,
+              "Top": 443,
+              "Width": 1914,
+              "Height": 34,
+              "Visible": true,
+              "BackgroundColor": "#FF0A0B0D",
+              "BlinkEnabled": true,
+              "BorderStyle": {},
+              "Id": "3cc633eb-d1bd-538a-a91c-6a1144de3372",
+              "Name": "flag.yellow.flash",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -12921,7 +12951,6 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
           "Group": true,
           "Visible": true,
-          "BlinkEnabled": true,
           "Childrens": [
             {
               "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -12965,6 +12994,22 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "BorderStyle": {},
               "Id": "d63c9660-3932-5046-92b9-ef85f59c92a0",
               "Name": "flag.yellow.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+              "IsRectangleItem": true,
+              "Left": 3,
+              "Top": 443,
+              "Width": 1274,
+              "Height": 34,
+              "Visible": true,
+              "BackgroundColor": "#FF0A0B0D",
+              "BlinkEnabled": true,
+              "BorderStyle": {},
+              "Id": "9d11a9ff-1ac0-59ac-ad8c-9ebbbfe5b582",
+              "Name": "flag.yellow.flash",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -18155,7 +18200,6 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
           "Group": true,
           "Visible": true,
-          "BlinkEnabled": true,
           "Childrens": [
             {
               "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -18199,6 +18243,22 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "BorderStyle": {},
               "Id": "1d727b6b-a33f-56ba-b0e6-875e22ccd925",
               "Name": "flag.yellow.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+              "IsRectangleItem": true,
+              "Left": 3,
+              "Top": 371,
+              "Width": 1274,
+              "Height": 26,
+              "Visible": true,
+              "BackgroundColor": "#FF0A0B0D",
+              "BlinkEnabled": true,
+              "BorderStyle": {},
+              "Id": "4b239076-ac80-5981-9050-b845335a93d3",
+              "Name": "flag.yellow.flash",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -22834,7 +22894,6 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
           "Group": true,
           "Visible": true,
-          "BlinkEnabled": true,
           "Childrens": [
             {
               "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -22878,6 +22937,22 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "BorderStyle": {},
               "Id": "3e9bcf38-f90c-5048-b4f6-ff61b5b947af",
               "Name": "flag.yellow.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+              "IsRectangleItem": true,
+              "Left": 3,
+              "Top": 443,
+              "Width": 844,
+              "Height": 34,
+              "Visible": true,
+              "BackgroundColor": "#FF0A0B0D",
+              "BlinkEnabled": true,
+              "BorderStyle": {},
+              "Id": "307e3f3c-be8d-5dcc-92af-49fa7ffad98d",
+              "Name": "flag.yellow.flash",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -27410,7 +27485,6 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
           "Group": true,
           "Visible": true,
-          "BlinkEnabled": true,
           "Childrens": [
             {
               "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -27454,6 +27528,22 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "BorderStyle": {},
               "Id": "2a98f926-9943-50d3-a915-dc82e50f2bb4",
               "Name": "flag.yellow.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+              "IsRectangleItem": true,
+              "Left": 3,
+              "Top": 443,
+              "Width": 794,
+              "Height": 34,
+              "Visible": true,
+              "BackgroundColor": "#FF0A0B0D",
+              "BlinkEnabled": true,
+              "BorderStyle": {},
+              "Id": "54469b26-8ff0-5a65-b0fa-653dccac8cc2",
+              "Name": "flag.yellow.flash",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -32376,7 +32466,6 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
           "Group": true,
           "Visible": true,
-          "BlinkEnabled": true,
           "Childrens": [
             {
               "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -32420,6 +32509,22 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "BorderStyle": {},
               "Id": "895033cd-e124-583c-85e1-25e4a434ec74",
               "Name": "flag.yellow.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+              "IsRectangleItem": true,
+              "Left": 3,
+              "Top": 683,
+              "Width": 1274,
+              "Height": 34,
+              "Visible": true,
+              "BackgroundColor": "#FF0A0B0D",
+              "BlinkEnabled": true,
+              "BorderStyle": {},
+              "Id": "a72ce261-561b-5b99-8d32-70849ff38fa3",
+              "Name": "flag.yellow.flash",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -38482,7 +38587,6 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
           "Group": true,
           "Visible": true,
-          "BlinkEnabled": true,
           "Childrens": [
             {
               "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -38502,6 +38606,22 @@ exports[`package snapshots openDash slots 800x286/openDash slots 800x286.djson 1
               },
               "Id": "5f90d77b-4b78-5ad7-95cf-7d2fe63a05ce",
               "Name": "flag.yellow.band",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+              "IsRectangleItem": true,
+              "Left": 3,
+              "Top": 277,
+              "Width": 794,
+              "Height": 6,
+              "Visible": true,
+              "BackgroundColor": "#FF0A0B0D",
+              "BlinkEnabled": true,
+              "BorderStyle": {},
+              "Id": "cb4c6efa-570e-5913-be82-b4b12d929279",
+              "Name": "flag.yellow.flash",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -42724,7 +42844,6 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins",
           "Group": true,
           "Visible": true,
-          "BlinkEnabled": true,
           "Childrens": [
             {
               "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
@@ -42768,6 +42887,22 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "BorderStyle": {},
               "Id": "1c2561cb-4432-5c65-8b78-48c5e1cfc054",
               "Name": "flag.yellow.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.RectangleItem, SimHub.Plugins",
+              "IsRectangleItem": true,
+              "Left": 3,
+              "Top": 649,
+              "Width": 594,
+              "Height": 34,
+              "Visible": true,
+              "BackgroundColor": "#FF0A0B0D",
+              "BlinkEnabled": true,
+              "BorderStyle": {},
+              "Id": "61a5f237-f14d-5448-b80b-654c691a5128",
+              "Name": "flag.yellow.flash",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }

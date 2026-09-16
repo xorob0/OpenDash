@@ -9,7 +9,8 @@
  * blinked the whole layer away twice a second.
  */
 import { describe, expect, test } from 'bun:test';
-import { BLACK_FLAG_BORDER, FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
+import { BLACK_FLAG_BORDER, FLAG_BLINK_MS, FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
+import { contains } from '../src/design/geometry.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
@@ -69,4 +70,45 @@ describe('the coloured bands', () => {
       }
     });
   }
+});
+
+describe('the yellow flash', () => {
+  for (const face of ZONE_FACES) {
+    test(`${face.folder} is opaque in both phases, the page never showing through`, () => {
+      // The flash was BlinkEnabled on the whole layer, so half of every cycle drew no band at all
+      // and band D's page read through the flag that had taken it over. What blinks is one opaque
+      // band over another, at the rate design/tokens.json states.
+      const layer = layerOf(face, 'yellow');
+      expect(layer.blink).toBeUndefined();
+
+      const blinking = layer.children.filter((c) => c.blink?.enabled);
+      expect(blinking.map((c) => c.name)).toEqual(['flag.yellow.flash']);
+
+      const flash = blinking[0]!;
+      if (flash.kind !== 'rect') throw new Error('the flash is a band');
+      expect(flash.blink).toEqual({ enabled: true, delayMs: FLAG_BLINK_MS });
+      expect(flash.backgroundColor).toBe(ds.color.surface.base);
+      expect(contains(face.zones.band, flash.rect)).toBe(true);
+      // Last, so that it is drawn over the fill it alternates with rather than under it.
+      expect(layer.children[layer.children.length - 1]?.name).toBe(flash.name);
+
+      // The ground under it holds the whole band whichever phase the flash is in.
+      const ground = bandOf(face, 'yellow');
+      expect(ground.blink).toBeUndefined();
+      expect({ rect: ground.rect, colour: ground.backgroundColor }).toEqual({ rect: face.zones.band, colour: ds.purpose.flag.yellow });
+    });
+  }
+
+  test('and no other state flashes at all', () => {
+    for (const face of ZONE_FACES) {
+      for (const id of ['blue', 'white', 'green', 'black', 'chequered']) {
+        const layer = layerOf(face, id);
+        expect({ face: face.folder, id, blinking: [...walkItems([layer])].filter((i) => i.blink?.enabled).map((i) => i.name) }).toEqual({
+          face: face.folder,
+          id,
+          blinking: [],
+        });
+      }
+    }
+  });
 });
