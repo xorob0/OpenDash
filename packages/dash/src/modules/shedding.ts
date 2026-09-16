@@ -182,14 +182,23 @@ export const SHEDDING: Record<string, Shedding> = {
     tallNarrow: ['pos', 'name', 'gap'],
     tall: ['pos', 'num', 'name', 'class', 'gap'],
   }),
-  // Two blocks, each a gap with a name, a number, a class chip and a line of detail. A narrow zone
-  // keeps the gap and who it belongs to, which is the whole of what the page is for: the catalogue
-  // draws the code and the gap there and nothing else.
+  // Two blocks, each a gap with a name, a number, a class chip, the last lap and the rating. A
+  // narrow zone keeps the gap and who it belongs to, which is the whole of what the page is for:
+  // the catalogue draws the code and the gap there and nothing else.
+  //
+  // Named in pairs, the car ahead's field and the car behind's twin together, because this is the
+  // one page whose rank is two of the same thing. Shedding reads the order as importance, so an
+  // order that listed one car and then the other would take the whole of the second car off before
+  // it touched the first, and a page about the car ahead and the car behind would be drawing one
+  // of them. The pairs make a short box shed the same line from both.
+  //
+  // `tall` keeps the last lap where the drawing puts a licence badge this build has no read for,
+  // and no class chip: the catalogue's 12 px `B` there is the badge and not a class. zones.md §5.
   opponents: fields({
-    wide: ['ahead.gap', 'ahead.name', 'ahead.num', 'ahead.class', 'ahead.detail', 'behind.gap', 'behind.name', 'behind.num', 'behind.class', 'behind.detail'],
-    grid: ['ahead.gap', 'ahead.name', 'ahead.num', 'ahead.class', 'ahead.detail', 'behind.gap', 'behind.name', 'behind.num', 'behind.class', 'behind.detail'],
-    tallNarrow: ['ahead.gap', 'ahead.name', 'behind.gap', 'behind.name'],
-    tall: ['ahead.gap', 'ahead.name', 'ahead.class', 'ahead.detail', 'behind.gap', 'behind.name', 'behind.class', 'behind.detail'],
+    wide: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.num', 'behind.num', 'ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap', 'ahead.rating', 'behind.rating'],
+    grid: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.num', 'behind.num', 'ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap'],
+    tallNarrow: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name'],
+    tall: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.lastLap', 'behind.lastLap'],
   }),
   gear: nothing('the gear, cut from the box; rule 18'),
   // The stint is the laps and the stops. The time, the total, the average and the driver are the

@@ -290,11 +290,16 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     // over one line.
     '600x686 600x160 fuel': ['toAdd', 'average'],
     '600x686 600x150 fuel': ['toAdd', 'average'],
-    // Half the subject: a page about the car ahead and the car behind draws one of them. This is
-    // the clearest defect of the set, and it is the opponents block's own ticket.
-    '800x286 269x194 opponents': ['behind.gap', 'behind.name'],
-    '600x686 600x160 opponents': ['behind.gap', 'behind.name', 'behind.num', 'behind.class', 'behind.detail'],
-    '600x686 600x150 opponents': ['behind.gap', 'behind.name', 'behind.num', 'behind.class', 'behind.detail'],
+    // Both cars are drawn at every one of these now, and what is left is a line the two of them
+    // shed together. The nano's 156 px body holds two headings and two gaps at 34 px and not the
+    // driver codes between them: rule 17 takes the identity rather than the reading the page is
+    // for, and 34 is already the compact ramp's largest. The two 600 x 686 zones left this list
+    // when a wide box too short to stack took the side-by-side arrangement the canvas gives the
+    // wide zone, which draws both cars whole at 576 by 112.
+    '800x286 269x194 opponents': ['ahead.name', 'behind.name'],
+    // The 220 px body holds the identity row or the class chip and the last lap, not both, so the
+    // pair that goes is the one the catalogue's own `tall` drawing drops first.
+    '1280x400 469x258 opponents': ['ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap'],
     // The two anti-roll bars are the cells the 122 px band cannot hold.
     '600x686 600x160 carSettings': ['arbFront', 'arbRear'],
     '600x686 600x150 carSettings': ['arbFront', 'arbRear'],
