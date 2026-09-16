@@ -244,11 +244,16 @@ describe('widget build on disk', () => {
       const bytes = readFileSync(p.zipped.path);
       expect(Buffer.compare(bytes, p.zipped.bytes)).toBe(0);
       // A card face carries cards.djson; a zone face carries one dashboard per distinct zone
-      // rectangle and catalogue, which the package itself is the list of.
+      // rectangle and catalogue, which the package itself is the list of. A dashboard that draws a
+      // picture carries a third file, the sidecar the artwork travels in.
       const expected = [
         ...FONT_FILES,
         FONT_LICENCE.name,
-        ...p.pkg.dashboards.flatMap((d) => [`${d.name}.djson`, `${d.name}.djson.metadata`]),
+        ...p.pkg.dashboards.flatMap((d) => [
+          `${d.name}.djson`,
+          `${d.name}.djson.metadata`,
+          ...(d.images && d.images.length > 0 ? [`${d.name}${RESOURCES_EXTENSION}`] : []),
+        ]),
       ]
         .sort(byCodeUnit)
         .map((f) => `${folder}/${f}`);
