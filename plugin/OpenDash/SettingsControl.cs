@@ -101,8 +101,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildHeader()
         {
             var wordmark = Ui.HStack(0,
-                Ui.Text("Open", Theme.SizeWordmark, FontWeights.Light, Theme.TextPrimary, PanelFonts.Data),
-                Ui.Text("Dash", Theme.SizeWordmark, FontWeights.Bold, Theme.TextPrimary, PanelFonts.Data));
+                Ui.Tracked("open", Theme.SizeWordmark, FontWeights.Light, Theme.TextPrimary, Theme.TrackingNumeral, PanelFonts.Data),
+                Ui.Tracked("Dash", Theme.SizeWordmark, FontWeights.Bold, Theme.TextPrimary, Theme.TrackingNumeral, PanelFonts.Data));
             var left = Ui.HStack(12, Ui.Mark(), wordmark);
             var right = Ui.HStack(8, Ui.Label("Plugin"), Ui.Numeral(OpenDash.Version, Theme.SizeNumeral, Theme.TextSecondary));
             var grid = Ui.Row(left, right);

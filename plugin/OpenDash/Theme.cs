@@ -21,6 +21,7 @@ namespace OpenDashPlugin
         // Plugin UI (brand cyan is allowed here and nowhere on the dash face)
         public const string Accent = "#33D9F2"; // purpose.ui.accent
         public const string AccentHover = "#5CE1F5"; // purpose.ui.accentHover
+        public const string Focus = "#33D9F2"; // purpose.ui.focus
         public const string OnAccent = "#0A0B0D"; // purpose.ui.onAccent
         public const string Border = "#33383F"; // purpose.ui.border
         public const string Rule = "#1C1F24"; // purpose.ui.rule
@@ -44,7 +45,9 @@ namespace OpenDashPlugin
         public const double SizeSmall = 13; // font.size.ui.small
         public const double SizeLabel = 12; // font.size.ui.label
         public const double SizeNumeral = 16; // font.size.ui.numeral
+        public const double SizeNumeralLg = 24; // font.size.ui.numeralLg
         public const double TrackingLabel = 0.14; // font.tracking.label
+        public const double TrackingNumeral = -0.01; // font.tracking.numeral
 
         // Controls
         public const double ControlHeight = 32; // control.height

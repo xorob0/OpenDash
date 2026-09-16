@@ -12,8 +12,10 @@ namespace OpenDashPlugin.Tests
 {
     public class ThemeTests
     {
+        /// <summary>A constant and the token path its trailing comment names. The sign belongs to the
+        /// value, because a tracking token is negative and would otherwise go unread and unheld.</summary>
         private static readonly Regex Constant = new Regex(
-            @"public const (?<type>string|double) (?<name>\w+) = (?<value>""[^""]*""|[0-9.]+);\s*//\s*(?<path>[\w.]+)",
+            @"public const (?<type>string|double) (?<name>\w+) = (?<value>""[^""]*""|-?[0-9.]+);\s*//\s*(?<path>[\w.]+)",
             RegexOptions.Compiled);
 
         public static IEnumerable<object[]> Constants()
