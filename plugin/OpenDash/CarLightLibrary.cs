@@ -88,9 +88,15 @@ namespace OpenDashPlugin
         /// The key a car is looked up by: lower case, and everything that is not a letter or a digit
         /// folded to a hyphen.
         ///
-        /// <para>The files carry SimHub's CarId verbatim, spaces and all
+        /// <para>The files carry the car's iRacing CarPath verbatim, spaces and all
         /// ("stockcars chevycamarozl12022"), while the archive names the file for the hyphenated form.
         /// Folding both makes the lookup indifferent to which one it was given.</para>
+        ///
+        /// <para>What hands it over matters as much as the folding. The upstream README says the key
+        /// is <c>DataCorePlugin.CarId</c> and <b>that property is empty on iRacing</b>: the CarPath is
+        /// on <c>GameData.CarId</c> — <c>StatusDataBase.CarId</c>, which is what the plugin passes in.
+        /// Measured on the VM, in a Porsche 992R GT3: GameData.CarId was "porsche992rgt3" and
+        /// DataCorePlugin.CarId was null. Reading the documented one finds no car, ever, in silence.</para>
         /// </summary>
         public static string Key(string carId)
         {
