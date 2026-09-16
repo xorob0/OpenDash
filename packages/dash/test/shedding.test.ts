@@ -190,9 +190,11 @@ describe('the two the ticket works through', () => {
     expect(keepsAt('relative', 'tallNarrow')).toEqual(['pos', 'name', 'gap']);
     expect(keepsAt('relative', 'wide')).toEqual([...RELATIVE_COLUMNS]);
 
+    // Read off the row rather than the header: a zone table draws no header row, because no drawing
+    // on the catalogue or on any face artboard has one, so the cells are where a kept column shows.
     const narrow = namesAt('relative', 'tallNarrow');
-    expect(narrow.some((n) => n.includes('head.class'))).toBe(false);
-    expect(narrow.some((n) => n.includes('head.gap'))).toBe(true);
+    expect(narrow.some((n) => n.includes('row.class'))).toBe(false);
+    expect(narrow.some((n) => n.includes('row.gap'))).toBe(true);
   });
 });
 

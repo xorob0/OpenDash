@@ -25,7 +25,7 @@ import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, rowIndex } from './values.ts';
 
-const { iff, str, fmt, eq, ne, num, and, not, gt, abs } = ncalc;
+const { iff, str, fmt, eq, ne, num, and, not, gt, abs, concat, left, ucase, isnull } = ncalc;
 
 /** How a table picks the car on each row. */
 export type TableMode = 'full' | 'class' | 'relative';
@@ -33,9 +33,11 @@ export type TableMode = 'full' | 'class' | 'relative';
 export type ColumnId =
   | 'pos'
   | 'rank'
+  | 'flag'
   | 'num'
   | 'name'
   | 'class'
+  | 'licence'
   | 'gap'
   | 'int'
   | 'last'
@@ -47,6 +49,72 @@ export type ColumnId =
   | 'pit'
   | 'tyre'
   | 'rating';
+
+/**
+ * The row the canvas draws, which is not the density's row.
+ *
+ * `density.ts` gives a module the type ramp of the screen it is on; these five numbers are the
+ * table's own geometry and the canvas states them once for every artboard that draws a list: rows
+ * two apart rather than flush against a rule, six pixels of padding either side, twelve between
+ * cells, and a header row of sixteen where a header is drawn at all.
+ */
+const ROW_GAP = 2;
+const ROW_PAD_X = 6;
+const CELL_GAP = 12;
+const HEADER_HEIGHT = 16;
+
+/**
+ * How tall a row is at each density.
+ *
+ * Mechanism 1 of docs/design/readability-pass.md: a table answered a taller box with more rows of
+ * the same size, so a list page never filled its box and the relative -- the page a driver reads
+ * most -- drew the column that says *who* at the smallest size in the design. The row is declared
+ * here instead, and it is a ceiling rather than a ramp: a table types up to this and no further,
+ * and buys rows with whatever height is left.
+ */
+const ROW_HEIGHT: Record<Density, number> = { companion: 38, zone: 34, wide: 34, compact: 28 };
+
+/** The row height a table takes at a density unless its caller declares one. */
+export const tableRowHeight = (density: Density): number => ROW_HEIGHT[density];
+
+/** The sizes the cells of a row of this height are drawn at. */
+interface RowType {
+  /** Position, gap and the lap times: the numbers a driver reads across a row. */
+  lead: number;
+  /** The car number, which the companion's taller row promotes to the lead size. */
+  minor: number;
+  /** The iRating, which the canvas draws at one size wherever it appears. */
+  rating: number;
+  /** The driver name, which is Barlow Medium and never monospaced. */
+  name: number;
+}
+
+/**
+ * The type a row of this height carries.
+ *
+ * The canvas draws 34 / 24 in its 34 px row and steps both down one in the 28 px row a narrow zone
+ * takes; the companion's 38 px row promotes the car number to the position's size. The name stops
+ * at 13 rather than following the compact ramp down to 12, which `density.ts` itself calls the
+ * floor below which a label stops being readable at arm's length.
+ */
+function rowTypeOf(rowHeight: number): RowType {
+  if (rowHeight >= 38) return { lead: 34, minor: 34, rating: 24, name: 15 };
+  if (rowHeight >= 34) return { lead: 34, minor: 24, rating: 24, name: 13 };
+  return { lead: 24, minor: 16, rating: 24, name: 13 };
+}
+
+/**
+ * The name a flexible driver column is measured for: a full first and last name at the row's size.
+ *
+ * This used to be four characters' worth, which is a column that fits "Toma". WPF clips in silence,
+ * so what that produced was not a narrow column but a cut name: at 800 x 480 zone C drew "Tomasz
+ * Kowalcz" with the class chip hard against it. A column narrower than this draws the code form
+ * instead, and a row that cannot hold even that sheds a column.
+ */
+const NAME_TO_FIT = 'Tomasz Kowalczyk';
+
+/** A driver name cut to the three-letter code the narrow drawings show, upper-cased. */
+const driverCode = (idx: Expr): Expr => ucase(left(isnull(carName(idx), str('')), 3));
 
 interface CellContext {
   /** Item name prefix, unique within the screen. */
@@ -60,6 +128,8 @@ interface CellContext {
   height: number;
   d: DensitySpec;
   density: Density;
+  /** The sizes this row draws its cells at. */
+  type: RowType;
   /** True on the player's own row. */
   isPlayer: Expr;
   /** True when the car is in the pit lane, which dims its row. */
@@ -69,21 +139,40 @@ interface CellContext {
   align: HAlign;
 }
 
+/** What a column is measured against: the density it is drawn at and the type its row carries. */
+interface RowSpec {
+  d: DensitySpec;
+  type: RowType;
+}
+
 interface ColumnDef {
   header: string;
   align: HAlign;
-  /** Column width at a density; 0 makes the column take the row's remaining width. */
-  width: (d: DensitySpec) => number;
+  /** Column width in a row of this type; 0 makes the column take the row's remaining width. */
+  width: (row: RowSpec) => number;
   cell: (ctx: CellContext) => Item[];
 }
 
-/** The colour of an ordinary cell: bright on your row, dim for a car in the pit lane. */
-const inkBind = (ctx: CellContext): Expr =>
-  iff(ctx.isPlayer, str(ds.color.text.primary), iff(ctx.inPit, str(ds.color.text.dim), str(ds.color.text.secondary)));
+/**
+ * A monospaced column's width: the canvas's number, or what its widest value needs, whichever is
+ * larger.
+ *
+ * The canvas sizes each column from the sample it drew -- 40 px holds "P1" at 34 px and 92 px holds
+ * "−5.886" -- and a real field reaches P24 and a real gap reaches −12.345, which are a cell wider
+ * each. WPF clips whatever overruns `MaxTextWidth` in silence, so rule 19 wins over the drawn
+ * number: the column keeps the canvas's width as its floor and grows to hold what it can draw.
+ */
+const cellColumn = (drawn: number, fs: number, chars: Chars): number => Math.max(drawn, monoWidth(cells('SemiBold', fs), chars));
+
+/** The colour of a cell the own row does not lift: dim for a car in the pit lane, secondary otherwise. */
+const inkBind = (ctx: CellContext): Expr => iff(ctx.inPit, str(ds.color.text.dim), str(ds.color.text.secondary));
+
+/** The three cells the own row lifts: its position, its name and its gap. The rest keep their ink. */
+const liftBind = (ctx: CellContext, otherwise: Expr): Expr => iff(ctx.isPlayer, str(ds.color.text.primary), otherwise);
 
 /** A numeral cell, vertically centred in the row. */
 function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, chars: Chars, opts: { fs?: number; color?: string; colorBind?: Expr; align?: HAlign } = {}): Item[] {
-  const fs = opts.fs ?? ctx.d.small;
+  const fs = opts.fs ?? ctx.type.lead;
   const mono = cells('SemiBold', fs);
   const drawn = monoWidth(mono, chars);
   const align = opts.align ?? ctx.align;
@@ -100,16 +189,29 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
   ];
 }
 
-/** A proportional text cell: the driver name, which is Barlow Medium and never monospaced. */
+/**
+ * A proportional text cell: the driver name, which is Barlow Medium and never monospaced.
+ *
+ * Two forms, and the column picks between them rather than the renderer: a full name where the
+ * column can hold one, and the three-letter code the narrow drawings show where it cannot. WPF has
+ * no ellipsis to give -- it clips, and XOR-121 records that a name longer than its column has
+ * nowhere to go -- so the cut is made in NCalc, the way `chipText` cuts a class name. The own row
+ * says YOU, which is the one row a driver does not need to read a name to identify.
+ */
 function cellName(ctx: CellContext): Item[] {
-  const fs = ctx.d.name;
+  const fs = ctx.type.name;
+  const full = ctx.width >= Math.ceil(measureText('BarlowMedium', NAME_TO_FIT, fs));
+  const bind = iff(ctx.isPlayer, str('YOU'), full ? carName(ctx.idx) : driverCode(ctx.idx));
   return [
-    label(`${ctx.name}.name`, 'KLX', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
-      size: fs,
-      color: ds.color.text.secondary,
-      bind: carName(ctx.idx),
-    }),
-  ].map((item) => ({ ...item, ...withBindings({ Text: carName(ctx.idx), TextColor: inkBind(ctx) }) }));
+    {
+      ...label(`${ctx.name}.name`, 'KLX', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
+        size: fs,
+        color: ds.color.text.secondary,
+        bind,
+      }),
+      ...withBindings({ Text: bind, TextColor: liftBind(ctx, inkBind(ctx)) }),
+    },
+  ];
 }
 
 /**
@@ -120,7 +222,7 @@ function cellRank(ctx: CellContext): Item[] {
   const change = carRankChange(ctx.idx);
   const gained = gt(change, num(0));
   const moved = ne(change, num(0));
-  const fs = ctx.d.tiny;
+  const fs = ctx.type.minor;
   const mono = cells('SemiBold', fs);
   const countWidth = monoWidth(mono, { digits: 2, specials: 0 });
   const marker = 6;
@@ -150,7 +252,7 @@ function cellRank(ctx: CellContext): Item[] {
 function cellPit(ctx: CellContext): Item[] {
   const chipW = Math.min(ctx.width, chipWidth(ctx.density, 'PIT'));
   return [
-    ...cellValue(ctx, 'pit', '1', carPitCount(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.d.tiny, align: 'right' }).map((item) => ({
+    ...cellValue(ctx, 'pit', '1', carPitCount(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor, align: 'right' }).map((item) => ({
       ...item,
       ...withBindings({ Text: carPitCount(ctx.idx), TextColor: inkBind(ctx), Visible: not(ctx.inPit) }),
     })),
@@ -162,28 +264,46 @@ function cellPit(ctx: CellContext): Item[] {
   ];
 }
 
+/** The position, which the canvas prefixes with a P: `P4`, not `4`. */
+const positionText = (idx: Expr): Expr => concat(str('P'), fmt(carPosition(idx), '0'));
+
+/** `P` and two digits, all four of which are drawn in the digit cell: `P` is 0.457 em against 0.47. */
+const POSITION_CHARS: Chars = { digits: 3, specials: 0 };
+
 const COLUMNS: Record<ColumnId, ColumnDef> = {
   pos: {
-    header: 'POS',
+    header: 'Pos',
     align: 'right',
-    width: (d) => (d.small >= 30 ? 46 : 38),
+    width: ({ type }) => cellColumn(40, type.lead, POSITION_CHARS),
     cell: (ctx) =>
-      cellValue(ctx, 'pos', '4', fmt(carPosition(ctx.idx), '0'), CHARS.position, {
-        colorBind: iff(ctx.isPlayer, str(ds.color.text.primary), str(ds.color.text.label)),
+      cellValue(ctx, 'pos', 'P4', positionText(ctx.idx), POSITION_CHARS, {
+        color: ds.color.text.label,
+        colorBind: liftBind(ctx, str(ds.color.text.label)),
       }),
   },
-  rank: { header: '±', align: 'right', width: (d) => (d.small >= 30 ? 44 : 36), cell: cellRank },
+  rank: { header: '±', align: 'right', width: ({ type }) => cellColumn(40, type.minor, { digits: 2, specials: 0 }), cell: cellRank },
+  /**
+   * The nationality flag, declared and unfilled.
+   *
+   * The canvas draws an 18 by 13 tricolour in a 24 px cell, which is a picture and not a text:
+   * `design/assets.ts` is the mechanism, an `ImageItem` referencing a file the build packs. The
+   * artwork does not exist -- a flag per country, each owing a notice -- and SimHub publishes no
+   * per-car nationality this package has verified, so the column holds its place in the row and
+   * draws nothing rather than being invented.
+   */
+  flag: { header: '', align: 'left', width: () => 24, cell: () => [] },
   num: {
     header: '#',
     align: 'left',
-    width: (d) => (d.small >= 30 ? 52 : 44),
-    cell: (ctx) => cellValue(ctx, 'num', '22', carNumber(ctx.idx), CHARS.carNumber, { fs: ctx.d.tiny, color: ds.color.text.label, colorBind: str(ds.color.text.label) }),
+    width: ({ type }) => cellColumn(40, type.minor, CHARS.carNumber),
+    cell: (ctx) => cellValue(ctx, 'num', '22', carNumber(ctx.idx), CHARS.carNumber, { fs: ctx.type.minor, color: ds.color.text.label, colorBind: str(ds.color.text.label) }),
   },
-  name: { header: 'DRIVER', align: 'left', width: () => 0, cell: cellName },
+  /** The flexible column, with the floor the canvas gives it: below 60 px the row sheds instead. */
+  name: { header: 'Driver', align: 'left', width: () => 0, cell: cellName },
   class: {
-    header: 'CLASS',
+    header: 'Class',
     align: 'left',
-    width: (d) => Math.ceil(2 * d.chipPadding + 34),
+    width: ({ d }) => Math.ceil(2 * d.chipPadding + 34),
     cell: (ctx) =>
       chip(`${ctx.name}.class`, 'GT3', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
         bind: chipText(carClass(ctx.idx)),
@@ -191,42 +311,53 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
         width: Math.ceil(2 * ctx.d.chipPadding + 34),
       }),
   },
+  /**
+   * The licence badge and its safety rating, declared and unfilled.
+   *
+   * A 30 px cell on a zone row and 62 on the companion, holding an 18 px badge whose letter is the
+   * iRacing licence class. SimHub publishes the licence out of the session YAML and this package
+   * has verified no reader for it, so the slot is declared and the cell draws nothing; `chip()`
+   * takes the height and the text size the badge asks for, which is the half of it that is code.
+   */
+  licence: { header: 'Licence', align: 'left', width: ({ type }) => (type.name >= 15 ? 62 : 30), cell: () => [] },
   gap: {
-    header: 'GAP',
+    header: 'Gap',
     align: 'right',
-    width: (d) => (d.small >= 30 ? 100 : 82),
+    width: ({ type }) => cellColumn(92, type.lead, CHARS.relativeGap),
     cell: (ctx) =>
       ctx.mode === 'relative'
-        ? cellValue(ctx, 'gap', '-5.886', carRelativeGap(ctx.idx), CHARS.relativeGap)
-        : cellValue(ctx, 'gap', '+12.6', carRaceGap(ctx.idx), CHARS.gap),
+        ? // The own row is its own reference, so its gap is nought by definition rather than by
+          // whatever `relativegaptoplayer` answers for the player's own index.
+          cellValue(ctx, 'gap', '-5.886', iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
+        : cellValue(ctx, 'gap', '+12.6', carRaceGap(ctx.idx), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
   },
-  int: { header: 'INT', align: 'right', width: (d) => (d.small >= 30 ? 88 : 72), cell: (ctx) => cellValue(ctx, 'int', '+2.6', carInterval(ctx.idx), CHARS.gap) },
-  last: { header: 'LAST', align: 'right', width: (d) => (d.small >= 30 ? 118 : 92), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
+  int: { header: 'Int', align: 'right', width: ({ type }) => cellColumn(88, type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', carInterval(ctx.idx), CHARS.gap) },
+  last: { header: 'Last', align: 'right', width: ({ type }) => cellColumn(98, type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
   best: {
-    header: 'BEST',
+    header: 'Best',
     align: 'right',
-    width: (d) => (d.small >= 30 ? 118 : 92),
+    width: ({ type }) => cellColumn(98, type.lead, CHARS.lapTime),
     cell: (ctx) =>
       cellValue(ctx, 'best', '1:41.877', carBestLap(ctx.idx), CHARS.lapTime, {
         colorBind: iff(carIsSessionBest(ctx.idx), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },
-  s1: { header: 'S1', align: 'right', width: (d) => (d.small >= 30 ? 72 : 58), cell: (ctx) => cellValue(ctx, 's1', '28.41', carSector(ctx.idx, 1), CHARS.sector, { fs: ctx.d.tiny }) },
-  s2: { header: 'S2', align: 'right', width: (d) => (d.small >= 30 ? 72 : 58), cell: (ctx) => cellValue(ctx, 's2', '41.07', carSector(ctx.idx, 2), CHARS.sector, { fs: ctx.d.tiny }) },
-  s3: { header: 'S3', align: 'right', width: (d) => (d.small >= 30 ? 72 : 58), cell: (ctx) => cellValue(ctx, 's3', '32.83', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.d.tiny }) },
-  stint: { header: 'STINT', align: 'right', width: (d) => (d.small >= 30 ? 52 : 44), cell: (ctx) => cellValue(ctx, 'stint', '12', carStintLaps(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.d.tiny }) },
-  pit: { header: 'PIT', align: 'right', width: (d) => Math.ceil(2 * d.chipPadding + 26), cell: cellPit },
+  s1: { header: 'S1', align: 'right', width: ({ type }) => cellColumn(72, type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's1', '28.41', carSector(ctx.idx, 1), CHARS.sector, { fs: ctx.type.minor }) },
+  s2: { header: 'S2', align: 'right', width: ({ type }) => cellColumn(72, type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's2', '41.07', carSector(ctx.idx, 2), CHARS.sector, { fs: ctx.type.minor }) },
+  s3: { header: 'S3', align: 'right', width: ({ type }) => cellColumn(72, type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's3', '32.83', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.type.minor }) },
+  stint: { header: 'Stint', align: 'right', width: ({ type }) => cellColumn(52, type.minor, { digits: 2, specials: 0 }), cell: (ctx) => cellValue(ctx, 'stint', '12', carStintLaps(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor }) },
+  pit: { header: 'Pit', align: 'right', width: ({ d }) => Math.ceil(2 * d.chipPadding + 26), cell: cellPit },
   tyre: {
-    header: 'TYRE',
+    header: 'Tyre',
     align: 'right',
-    width: (d) => Math.ceil(2 * d.chipPadding + 14),
+    width: ({ d }) => Math.ceil(2 * d.chipPadding + 14),
     cell: (ctx) =>
       chip(`${ctx.name}.tyre`, 'M', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
         bind: chipText(carCompound(ctx.idx)),
         width: Math.ceil(2 * ctx.d.chipPadding + 14),
       }),
   },
-  rating: { header: 'RATING', align: 'right', width: (d) => (d.small >= 30 ? 80 : 66), cell: (ctx) => cellValue(ctx, 'rating', '2.4k', carRating(ctx.idx), CHARS.rating, { fs: ctx.d.tiny }) },
+  rating: { header: 'iR', align: 'right', width: ({ type }) => cellColumn(54, type.rating, CHARS.rating), cell: (ctx) => cellValue(ctx, 'rating', '4.6k', carRating(ctx.idx), CHARS.rating, { fs: ctx.type.rating }) },
 };
 
 export interface TableSpec {
@@ -238,9 +369,9 @@ export interface TableSpec {
   density: Density;
   /** Rows to stamp. Defaults to what the frame holds. */
   rows?: number;
-  /** Draw the header row. On by default. */
+  /** Draw the header row. On by default; the face zones draw none. */
   header?: boolean;
-  /** Row height; the density's by default. */
+  /** Row height; {@link tableRowHeight} by default. */
   rowHeight?: number;
   /**
    * When true, the table lists the player's own class rather than the whole field.
@@ -268,14 +399,21 @@ function rowIndexFor(spec: TableSpec, centre: number): Expr {
   return iff(spec.classOnly, inClass, whole);
 }
 
-/** The widths of a table's columns, the name column taking what is left. */
-export function columnWidths(columns: readonly ColumnId[], width: number, density: Density): number[] {
+/**
+ * The widths of a table's columns, the name column taking what is left of the padded row.
+ *
+ * The row is inset `ROW_PAD_X` either side, so the width the columns share is the frame's less
+ * that padding; a column laid out against the frame's own edge would start in the padding and end
+ * outside it.
+ */
+export function columnWidths(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number): number[] {
   const d = densityOf(density);
-  const raw = columns.map((id) => COLUMNS[id].width(d));
+  const row: RowSpec = { d, type: rowTypeOf(rowHeight ?? tableRowHeight(density)) };
+  const raw = columns.map((id) => COLUMNS[id].width(row));
   const fixed = raw.reduce((sum, w) => sum + w, 0);
-  const gaps = d.cellGap * Math.max(0, columns.length - 1);
+  const gaps = CELL_GAP * Math.max(0, columns.length - 1);
   const flexColumns = raw.filter((w) => w === 0).length;
-  const spare = Math.max(0, width - fixed - gaps);
+  const spare = Math.max(0, width - 2 * ROW_PAD_X - fixed - gaps);
   return raw.map((w) => (w === 0 ? Math.floor(spare / Math.max(1, flexColumns)) : w));
 }
 
@@ -287,19 +425,34 @@ export function rowCapacity(frame: Rect, density: Density, header: boolean, rowH
   return Math.max(0, Math.floor(body / h));
 }
 
+/**
+ * How many of the canvas's rows a box holds: the same question as {@link rowCapacity}, asked of the
+ * table's own row rather than the density's, with the 2 px between rows and the 16 px header.
+ *
+ * Kept apart from `rowCapacity` because lap history draws its own header at the density's height
+ * and stacks its rows flush; this is what the two list pages count with.
+ */
+export function rowsThatFit(frame: Rect, opts: { density: Density; header: boolean; rowHeight?: number }): number {
+  const h = opts.rowHeight ?? tableRowHeight(opts.density);
+  const body = frame.height - (opts.header ? HEADER_HEIGHT : 0);
+  return Math.max(0, Math.floor((body + ROW_GAP) / (h + ROW_GAP)));
+}
+
 /** The header row: a label per column, aligned as its cells are. */
 function headerRow(spec: TableSpec, widths: number[], top: number): Item[] {
   const d = densityOf(spec.density);
   const items: Item[] = [];
-  let x = spec.frame.left;
+  let x = spec.frame.left + ROW_PAD_X;
   spec.columns.forEach((id, i) => {
     const width = widths[i] ?? 0;
     const column = COLUMNS[id];
     const text = column.header;
-    const drawn = Math.ceil(measureText('BarlowMedium', text, d.labelSm));
+    // Measured as `label` draws it: a header carries no binding, so it is upper-cased on the way in
+    // and a box measured from the canvas's own capitalisation is a box the drawn text overruns.
+    const drawn = Math.ceil(measureText('BarlowMedium', text.toUpperCase(), d.labelSm));
     const left = column.align === 'right' ? x + width - drawn : x;
-    items.push(label(`${spec.name}.head.${id}`, text, left, top + (d.headerHeight - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
-    x += width + d.cellGap;
+    items.push(label(`${spec.name}.head.${id}`, text, left, top + (HEADER_HEIGHT - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
+    x += width + CELL_GAP;
   });
   return items;
 }
@@ -311,11 +464,16 @@ function headerRow(spec: TableSpec, widths: number[], top: number): Item[] {
 export function table(spec: TableSpec): Item[] {
   const d = densityOf(spec.density);
   const header = spec.header ?? true;
-  const rowHeight = spec.rowHeight ?? d.rowHeight;
-  const capacity = rowCapacity(spec.frame, spec.density, header, rowHeight);
+  const rowHeight = spec.rowHeight ?? tableRowHeight(spec.density);
+  const type = rowTypeOf(rowHeight);
+  const capacity = rowsThatFit(spec.frame, { density: spec.density, header, rowHeight });
   const rows = Math.max(1, Math.min(spec.rows ?? capacity, capacity));
-  const widths = columnWidths(spec.columns, spec.frame.width, spec.density);
-  const top = spec.frame.top + (header ? d.headerHeight : 0);
+  const widths = columnWidths(spec.columns, spec.frame.width, spec.density, rowHeight);
+  const headTop = spec.frame.top + (header ? HEADER_HEIGHT : 0);
+  // The canvas gives every list body `justify-content: center`, so what a declared row count leaves
+  // over is shared above and below the block rather than piled under it.
+  const body = spec.frame.height - (header ? HEADER_HEIGHT : 0);
+  const top = headTop + Math.max(0, Math.round((body - (rows * rowHeight + (rows - 1) * ROW_GAP)) / 2));
   // The player sits in the middle of a relative table, so the row index counts from that row.
   const centre = Math.ceil(rows / 2);
   const idx = rowIndexFor(spec, centre);
@@ -324,9 +482,8 @@ export function table(spec: TableSpec): Item[] {
 
   const children: Item[] = [
     { ...band(`${spec.name}.row.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), ...withBindings({ Visible: isPlayer }) },
-    band(`${spec.name}.row.rule`, rect(spec.frame.left, top + rowHeight - 1, spec.frame.width, 1), ds.color.surface.raised),
   ];
-  let x = spec.frame.left;
+  let x = spec.frame.left + ROW_PAD_X;
   spec.columns.forEach((id, i) => {
     const width = widths[i] ?? 0;
     children.push(
@@ -339,17 +496,18 @@ export function table(spec: TableSpec): Item[] {
         height: rowHeight,
         d,
         density: spec.density,
+        type,
         isPlayer,
         inPit,
         mode: spec.mode,
         align: COLUMNS[id].align,
       }),
     );
-    x += width + d.cellGap;
+    x += width + CELL_GAP;
   });
 
   const row: LayerItem = { kind: 'layer', name: `${spec.name}.row`, children, ...withBindings({ Visible: carAvailable(idx) }) };
-  const stamped: LayerItem = { kind: 'layer', name: `${spec.name}.rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight, repeatLeftOffset: 0 };
+  const stamped: LayerItem = { kind: 'layer', name: `${spec.name}.rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + ROW_GAP, repeatLeftOffset: 0 };
   return [...(header ? headerRow(spec, widths, spec.frame.top) : []), stamped];
 }
 
