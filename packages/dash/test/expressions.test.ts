@@ -92,8 +92,13 @@ describe('card expressions', () => {
 
   test('lap times use toshorttime with forced minutes and dim no-data glyphs', () => {
     expect(formulaOf(textItem('currentLap', 'value'), 'Text')).toBe(
-      "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))",
+      "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))",
     );
+    // One spelling of the placeholder, shared with the module pages, and a true minus in every
+    // cell: the cards wrote theirs with hyphens and one glyph fewer than the time it stands in for.
+    expect(values.NO_TIME).toBe('−:−−.−−−');
+    expect(formulaOf(textItem('lastLap', 'value'), 'Text')).toContain(`'${values.NO_TIME}'`);
+    expect(formulaOf(textItem('bestLap', 'value'), 'Text')).toContain(`'${values.NO_TIME}'`);
     expect(formulaOf(textItem('lastLap', 'value'), 'Text')).toContain('toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true)');
     expect(formulaOf(textItem('lastLap', 'value'), 'TextColor')).toContain("< (0.0005), '#B14BFF'");
     expect(formulaOf(textItem('bestLap', 'value'), 'TextColor')).not.toContain('#B14BFF');
