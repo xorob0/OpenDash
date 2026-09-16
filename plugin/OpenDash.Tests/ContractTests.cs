@@ -415,7 +415,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(Contract.DefaultLedRpmStyle, Contract.LedRpmStyles);
             Assert.Contains(Contract.DefaultLedMirrorFit, Contract.LedMirrorFits);
             Assert.Equal("rpm", Contract.DefaultLedCentre);
-            // The car's own, by default: ADR 0017's opinion is that the car is right, and a car with no
+            // The car's own, by default: ADR 0018's opinion is that the car is right, and a car with no
             // table falls back on its own without the driver choosing anything.
             Assert.Equal("car", Contract.DefaultLedRpmStyle);
             Assert.Equal("stretch", Contract.DefaultLedMirrorFit);

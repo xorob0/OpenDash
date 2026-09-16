@@ -1,6 +1,6 @@
 // CarLightLibrary.cs: getting the measured tables onto the user's machine, and finding one by car.
 //
-// ADR 0017 decided openDash carries none of this data: it is CC BY-NC-SA 4.0, this repository is
+// ADR 0018 decided openDash carries none of this data: it is CC BY-NC-SA 4.0, this repository is
 // MIT, and data/shift-points.json says openDash does not ship measurements it has not made. So the
 // tables are fetched, once, and everything after that is local.
 //

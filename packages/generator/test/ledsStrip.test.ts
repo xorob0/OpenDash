@@ -110,7 +110,7 @@ describe('containers', () => {
 
   test('a dynamic colour is LedCount and a ColorFormula, and nothing else', () => {
     // SimHub's own blink fields are deliberately not modelled: a mirrored bar blinks at the car's
-    // interval, which is a number the profile does not have and the plugin does (ADR 0017).
+    // interval, which is a number the profile does not have and the plugin does (ADR 0018).
     const o = leds.buildContainerObject({ kind: 'dynamicColor', ledCount: 1, colorFormula: { expression: "isnull([OpenDash.X], 'Transparent')" }, description: 'led 03' });
     expect(o).toEqual({
       Description: 'led 03',

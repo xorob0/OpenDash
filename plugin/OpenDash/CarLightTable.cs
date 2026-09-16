@@ -1,7 +1,7 @@
 // CarLightTable.cs: one car's own LED bar, as measured, and the reader that survives the files.
 //
 // The schema is Lovely Car Data's v2.0.0, written down in docs/research/iracing-led-patterns.md and
-// fetched rather than carried: ADR 0017 says why openDash ships none of it. This file knows the
+// fetched rather than carried: ADR 0018 says why openDash ships none of it. This file knows the
 // shape and nothing about where the bytes came from, so CarLightStore can be tested without a
 // socket and this can be tested without either.
 //

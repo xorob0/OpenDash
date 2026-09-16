@@ -146,7 +146,7 @@ export interface LedCustomStatus extends LedContainerBase {
  * `ParseValueOrDefault`, which evaluates the formula **as a string** and hands the result to
  * `ColorConverter.ConvertFromString` — so the expression yields `#AARRGGBB`, `#RRGGBB`, a named
  * colour or `Transparent`, and an unreadable one leaves the LED at the container's default rather
- * than throwing. That is the door a per-car pattern comes through (ADR 0017): one container per
+ * than throwing. That is the door a per-car pattern comes through (ADR 0018): one container per
  * LED, one property per LED, and nothing in the profile that knows what a car is.
  *
  * It carries SimHub's blink fields too, and openDash writes none of them: a mirror blinks at the

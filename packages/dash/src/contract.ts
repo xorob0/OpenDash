@@ -31,7 +31,7 @@ export type LedCentre = 'rpm' | 'rpmOnly' | 'brake' | 'throttleBrake' | 'fuel';
  * either way (ADR 0014), and a style only chooses which LED takes which rung and what colour it is.
  *
  * `car` is not one of those. It is the car's own bar -- its LEDs, its colours, its order, its
- * flash, in the gear it is in -- from a table the plugin fetches (ADR 0017), and it is the default
+ * flash, in the gear it is in -- from a table the plugin fetches (ADR 0018), and it is the default
  * because openDash's opinion is that the car is right. A car with no table, or a rig with no
  * plugin, falls back to the ladder iRacing publishes, drawn `leftToRight`.
  */

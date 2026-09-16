@@ -107,7 +107,7 @@ contract disagree.
 Both are drop-downs: five centres and four styles are past the two or three `Segmented.cs` is drawn
 for, and a `ComboBox` is the panel's control for a choice from a list.
 
-**The car's own bar is a style rather than a switch**, and it is the default (ADR 0017). A driver who
+**The car's own bar is a style rather than a switch**, and it is the default (ADR 0018). A driver who
 wants one look in every car picks one of openDash's three; everybody else gets the lights of the car
 they are in, and a car openDash has no table for falls back without them choosing anything. The fit
 row beneath it means nothing under the other three, which is a cost of putting it on the same page

@@ -120,7 +120,7 @@ const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[]
 const revCentre = (count: number): leds.LedContainer[] =>
   LED_RPM_STYLES.map((style) => {
     // `car` is the car's whole bar and is not one of the three looks: its LEDs, its colours, its
-    // order and its flash, from the table the plugin fetched (ADR 0017). Where there is no table it
+    // order and its flash, from the table the plugin fetched (ADR 0018). Where there is no table it
     // falls back to the ladder below, drawn the way `leftToRight` draws it -- which is the same tree
     // the other three styles are, so the fallback is not a fourth thing to maintain.
     const ladder: leds.LedContainer[] = [

@@ -199,7 +199,7 @@ namespace OpenDashPlugin
 
         /// <summary>How the rev ladder fills the strip. The three openDash styles decide the look and
         /// never the when: the thresholds are the car's own either way (ADR 0014). "car" is not one of
-        /// those -- it is the car's own bar, from the fetched table (ADR 0017). Mirrors LED_RPM_STYLES
+        /// those -- it is the car's own bar, from the fetched table (ADR 0018). Mirrors LED_RPM_STYLES
         /// in contract.ts.</summary>
         public static readonly string[] LedRpmStyles = { "car", "leftToRight", "meetInMiddle", "f1" };
 

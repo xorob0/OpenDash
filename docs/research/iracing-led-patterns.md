@@ -122,12 +122,12 @@ Facts a parser has to survive, each checked across all 85 files:
 
 **Licence.** CC BY-NC-SA 4.0. This repository is MIT, and `data/shift-points.json` says in its own
 `$meta` that openDash does not carry measurements it has not made. Both are reasons not to vendor a
-copy, and [ADR 0017](../decisions/0017-the-cars-own-lights.md) records what is done instead: the
+copy, and [ADR 0018](../decisions/0018-the-cars-own-lights.md) records what is done instead: the
 plugin fetches it onto the user's machine and openDash ships none of it.
 
 ## Where it can go, inside SimHub
 
-Three doors, all real, and the choice between them is [ADR 0017](../decisions/0017-the-cars-own-lights.md)'s.
+Three doors, all real, and the choice between them is [ADR 0018](../decisions/0018-the-cars-own-lights.md)'s.
 
 ### `RPMSegments` lights each segment independently
 

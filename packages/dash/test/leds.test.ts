@@ -165,7 +165,7 @@ describe("the car's own lights", () => {
   });
 
   test("the car's own bar is what a strip shows unless the driver says otherwise", () => {
-    // ADR 0017: openDash's opinion is that the car is right. The three openDash styles stay, for a
+    // ADR 0018: openDash's opinion is that the car is right. The three openDash styles stay, for a
     // driver who wants one look in every car -- and for every car with no table, which is what the
     // fallback inside `car` draws.
     expect(LED_RPM_STYLES[0]).toBe('car');

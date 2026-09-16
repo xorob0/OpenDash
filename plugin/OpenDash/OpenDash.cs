@@ -2,7 +2,7 @@
 // [OpenDash.*] properties and offers the settings panel in SimHub's left menu. It renders nothing:
 // see docs/decisions/0003-plugin-settings-through-properties.md.
 //
-// It does read telemetry, for exactly one thing. ADR 0017 reopened ADR 0009 -- "the plugin does not
+// It does read telemetry, for exactly one thing. ADR 0018 reopened ADR 0009 -- "the plugin does not
 // compute" -- for the car's own LED bar, because there is no SimHub property to derive it from, no
 // expression that could hold an 85-car table and no NCalc clock to flash it with. DataUpdate below
 // is the whole of that: three values in, one frame of colours out, and nothing else in the plugin
@@ -46,7 +46,7 @@ namespace OpenDashPlugin
         public FlagBoxResult FlagBox { get; private set; }
 
         /// <summary>
-        /// The measured car light tables, fetched onto the machine rather than shipped (ADR 0017).
+        /// The measured car light tables, fetched onto the machine rather than shipped (ADR 0018).
         /// Built on first use, like the installer, because it needs the SimHub root the settings name.
         /// </summary>
         public CarLightService CarLights =>
@@ -177,7 +177,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// One frame of the car's own bar. The only telemetry openDash reads, and the only thing it
-        /// computes (ADR 0017).
+        /// computes (ADR 0018).
         ///
         /// <para>It is called at SimHub's data rate, so it does the least it can: with the mirror off
         /// or the sim closed it sets one field and returns, and the table lookup happens on a car
