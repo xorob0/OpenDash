@@ -33,7 +33,8 @@ import { mirrorAvailable } from '../shift.ts';
 import { OVER_REV_BLINK_MS, ladderColors, ladderOrder, overRev, rungFlashes, rungLit, stepLit, type Ladder } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { ALL_EFFECTS, effectContainer, type LedEffect } from './effects.ts';
+import { ALL_EFFECTS, effectContainer, lampConditions, type LedEffect } from './effects.ts';
+import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
 
@@ -251,30 +252,48 @@ const sides = (shape: StripShape): leds.LedContainer[] => {
 /**
  * The effect catalogue placed on a shape.
  *
- * Composition order is the ranking: SimHub merges a container over the ones before it, so an
- * effect later in the list wins a tie. That is how a flag beats a spotter and a spotter beats the
- * rev ladder, without a priority field anywhere.
+ * Every condition that is not the pit family lands on one lamp of one LED, which `lamps.ts`
+ * allocates and which is the whole of the ranking: two live conditions on one lamp are resolved by
+ * the lamp's own order rather than by which of them happens to sit later in the catalogue, and two
+ * conditions on different lamps no longer contend at all.
  *
- * A `sides` effect on a shape with no sides — a brow, a bare run — has nowhere to go. It is
- * dropped rather than moved onto the centre, because a brow that flashes its rev LEDs for ABS is
- * saying the wrong thing with the right light.
+ * The lamps are emitted innermost first, so the side lamp — the outermost, and the only thing a
+ * side can say that the centre cannot — is written last on each side and nothing composed above it
+ * can take it.
+ *
+ * A condition whose lamp does not exist on this shape is dropped rather than moved onto the centre,
+ * because a brow that flashes its rev LEDs for ABS is saying the wrong thing with the right light.
+ * The flags are the exception: a shape with no lamps keeps them over the whole run, blanking it, as
+ * every shape did before the lamps arrived. Deriving lamps at the ends of a bare run would reverse
+ * a recorded decision (docs/research/lights-review.md), so a brow keeps what it has until that
+ * decision is made.
  */
 const effects = (shape: StripShape): leds.LedContainer[] => {
-  const runs = (effect: LedEffect): { start: number; count: number }[] => {
-    if (effect.placement === 'all') return [{ start: 1, count: stripLength(shape) }];
-    const left = shape.left > 0 ? [{ start: 1, count: shape.left }] : [];
-    const right = shape.right > 0 ? [{ start: rightStart(shape), count: shape.right }] : [];
-    return effect.placement === 'left' ? left : effect.placement === 'right' ? right : [...left, ...right];
+  const placed = lampsOf(shape);
+  const lampGroup = ({ side, lamp, position }: PlacedLamp): leds.LedContainer[] => {
+    const ranked = lampConditions(lamp, side);
+    if (ranked.length === 0) return [];
+    return [
+      {
+        kind: 'group',
+        description: `${side} ${lamp.label} lamp`,
+        startPosition: position,
+        children: ranked.map((effect, i) => effectContainer(effect, 1, 1, ranked.slice(0, i).map((higher) => higher.when))).reverse(),
+      },
+    ];
   };
-  return ALL_EFFECTS().flatMap((effect) => {
-    const placed = runs(effect);
-    if (placed.length === 0) return [];
-    const containers = placed.map(({ start, count }) => effectContainer(effect, start, count));
-    // An exclusive effect blanks what is under it, which is what a conditional group is for.
-    return effect.exclusive
-      ? [{ kind: 'conditionalGroup' as const, description: effect.label, trigger: { expression: effect.when }, clearBackgroundWhenActive: true, children: containers }]
-      : containers;
+  // The whole run, blanked: what a conditional group is for, and what the canvas allows the pit
+  // family alone.
+  const wholeRun = (effect: LedEffect): leds.LedContainer => ({
+    kind: 'conditionalGroup',
+    description: effect.label,
+    trigger: { expression: effect.when },
+    clearBackgroundWhenActive: true,
+    children: [effectContainer(effect, 1, stripLength(shape))],
   });
+  const lamps = [...placed].sort((a, b) => b.index - a.index).flatMap(lampGroup);
+  const whole = ALL_EFFECTS().filter((e) => e.role === 'strip' || (placed.length === 0 && e.role === 'race'));
+  return [...lamps, ...whole.map(wholeRun)];
 };
 
 /** What a strip profile is called, in SimHub's profile list. Keeps the slashes: `openDash 4/14/4`. */
