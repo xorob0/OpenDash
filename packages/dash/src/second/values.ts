@@ -32,6 +32,7 @@ const {
   isnull,
   toShortTime,
   timespanToSeconds,
+  secondsToTimespan,
   driver,
   playerPosition,
   aheadBehind,
@@ -43,10 +44,13 @@ const {
   truncate,
   mod,
   div,
+  add,
   sub,
   mul,
   max,
+  min,
   abs,
+  ucase,
   hms,
 } = ncalc;
 
@@ -210,6 +214,8 @@ export const carRating = (idx: Expr): Expr => ratingK(driver('iracingirating', i
 // --- Session, car and environment -----------------------------------------------------------
 
 export const currentLap = (): Expr => isnull(game('CurrentLap'), num(0));
+/** Laps completed, which is one behind the lap in progress for as long as a lap is in progress. */
+export const completedLaps = (): Expr => isnull(game('CompletedLaps'), num(0));
 export const totalLaps = (): Expr => isnull(game('TotalLaps'), num(0));
 export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLeft'));
 /** iRacing reports a week of time left when a session is not timed. */
@@ -222,7 +228,16 @@ export const classOpponentCount = (): Expr => isnull(game('PlayerClassOpponentsC
 export const fieldSize = (): Expr => iff(eq(setting.positionMode(), str('class')), classOpponentCount(), opponentCount());
 
 export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
-export const speedUnit = (): Expr => isnull(game('SpeedLocalUnit'), str(''));
+
+/**
+ * The unit words the faces draw.
+ *
+ * SimHub publishes a unit as the name of its enum member, `KMH`, `Liters`, `Kpa`, so a follower
+ * bound straight to one reads `kmh` beside a speed and `Liters` beside a fuel load, in a box cut
+ * for `km/h` and `L`. The written form is what the canvas draws and what the box was measured
+ * against, so the enum is mapped here rather than in each follower.
+ */
+export const speedUnit = (): Expr => iff(eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH')), str('mph'), str('km/h'));
 // Engine speed has one body, `rpms` in `shift.ts`, because the speedo prints it directly above a
 // rev bar that reads the same value: two spellings of one expression is how the redline came to
 // disagree with the bar it sits on. ADR 0014.
@@ -231,7 +246,7 @@ export const rpm = rpms;
 // lights at, and it lives in `shift.ts` as `redlineRpm` so that the number and the bar cannot
 // disagree. ADR 0014. This file used to carry a second body for it, reading SimHub's number
 // while the bar beside it read the car's.
-export const fuelUnit = (): Expr => isnull(game('FuelUnit'), str('L'));
+export const fuelUnit = (): Expr => iff(eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons')), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
 export const fuelPercent = (): Expr => isnull(game('FuelPercent'), num(0));
 export const fuelPerLap = (): Expr => isnull(computed('Fuel_LitersPerLap'), num(0));
@@ -259,6 +274,10 @@ export const airTemperature = (): Expr => isnull(game('AirTemperature'), num(0))
 export const roadTemperature = (): Expr => isnull(game('RoadTemperature'), num(0));
 export const trackName = (): Expr => isnull(game('TrackName'), str(''));
 export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0)), num(1000));
+/** The widest word the grip status takes, which is what a field measures its box against. */
+export const GRIP_WIDEST = 'MODERATE';
+/** The track's grip, upper-cased into the label face; `--` where the sim reports none. */
+export const trackGrip = (): Expr => ucase(isnull(game('TrackGripStatus'), str(NO_VALUE)));
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
 export const playerClass = (): Expr => isnull(game('CarClass'), str(''));
@@ -297,9 +316,31 @@ export const tyreTemperature = (corner: Corner): Expr => isnull(game(`TyreTemper
 export const tyrePressure = (corner: Corner): Expr => isnull(game(`TyrePressure${corner}`), num(0));
 /** Wear is reported as the percentage of tread left. */
 export const tyreWear = (corner: Corner): Expr => isnull(game(`TyreWear${corner}`), num(0));
+
+/** iRacing names a corner side first in its raw telemetry, `LF` where SimHub says `FrontLeft`. */
+const CORNER_PREFIX: Record<Corner, string> = { FrontLeft: 'LF', FrontRight: 'RF', RearLeft: 'LR', RearRight: 'RR' };
+
+/**
+ * The worst of a tyre's three tread sections, as a percentage.
+ *
+ * SimHub's own `TyreWear` is one figure for the corner, and a tyre is done when its most worn
+ * section is, not when its average is: a tyre worn on the inside shoulder and untouched elsewhere
+ * reads healthy as one figure. iRacing publishes the three sections as fractions of tread left, so
+ * the minimum of them is the figure the face draws; where they are absent, which is every sim but
+ * iRacing, the single figure is what there is.
+ */
+export const tyreWearMin = (corner: Corner): Expr => {
+  const section = (across: 'L' | 'M' | 'R'): Expr => raw(`${CORNER_PREFIX[corner]}wear${across}`);
+  return iff(ncalc.isNull(section('M')), tyreWear(corner), mul(min(section('L'), min(section('M'), section('R'))), num(100)));
+};
+
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
-export const pressureUnit = (): Expr => isnull(game('TyrePressureUnit'), str('psi'));
+/** `Psi`, `Kpa` or `Bar`, written the way the tyre pages draw it. */
+export const pressureUnit = (): Expr => {
+  const unit = isnull(game('TyrePressureUnit'), str('Psi'));
+  return iff(eq(unit, str('Kpa')), str('kPa'), iff(eq(unit, str('Bar')), str('bar'), str('psi')));
+};
 
 // --- Pit service (iRacing's raw black box) ------------------------------------------------------
 
@@ -324,6 +365,28 @@ export const previousLap = (slotExpr: Expr): Expr => propByName(concat(str('Pers
 /** The same lap's delta to the session best, in seconds. */
 export const previousLapDelta = (slotExpr: Expr): Expr =>
   propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00'), str('_DeltaToSessionBest')));
+
+/** How many laps the rolling average covers, and the number the field is named after. */
+export const AVERAGE_LAPS = 5;
+
+/**
+ * The mean of the last five laps, `m:ss.mmm`, or the no-data placeholder until there are five.
+ *
+ * The plugin computes nothing (ADR 0009), so the average is the expression: five lap-history
+ * slots read as seconds, summed and divided. A slot that has not been driven yet holds `00:00:00`
+ * rather than null, which would average in as a nought and read as a lap two seconds quicker than
+ * anything on the track, so every one of the five is required to hold a time before any of them
+ * is shown.
+ */
+export const average5 = (): Expr => {
+  const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => previousLap(num(i + 1)));
+  const seconds = slots.map((slot) => timespanToSeconds(slot));
+  return iff(
+    and(...slots.map((slot) => hasTime(slot))),
+    toShortTime(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS))), 3, false, true),
+    str(NO_TIME),
+  );
+};
 
 export const bestLap = (): Expr => game('BestLapTime');
 export const lastLap = (): Expr => game('LastLapTime');
