@@ -450,14 +450,32 @@ describe('the track module has a titled and a titleless form', () => {
 
   test('names the track above its map by default, which is what the companion and the pit wall draw', () => {
     const items = build();
-    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.map']);
+    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.state', 'track.map']);
     expect(mapIn(items).rect.top).toBeGreaterThan(frame.top);
+  });
+
+  test('puts the surface state at the right of that header, measured for its longest reading', () => {
+    const [title, state] = build() as [TextItem, TextItem];
+    expect({ hAlign: state.hAlign, widest: state.widest, text: state.text }).toEqual({ hAlign: 'right', widest: 'MODERATE', text: 'DRY' });
+    expect(state.bindings?.Text?.formula).toContain('TrackGripStatus');
+    // The name gives up the state's width rather than the two sharing the line: WPF clips, it does
+    // not reflow, so a long track name would otherwise be drawn straight through "MODERATE".
+    expect(state.rect.left + state.rect.width).toBe(frame.left + frame.width);
+    expect(title.rect.left + title.rect.width).toBeLessThanOrEqual(state.rect.left);
   });
 
   test('gives the map the whole frame when the caller asks for no title', () => {
     const items = build(false);
     expect(items.map((i) => i.name)).toEqual(['track.map']);
     expect(mapIn(items).rect).toMatchObject({ top: frame.top, height: frame.height });
+  });
+
+  test('strokes the circuit at a weight cut from the map rather than the same line in every box', () => {
+    const at = (w: number, h: number): number => mapIn(MODULES.find((m) => m.id === 'track')!.build({ frame: rect(0, 0, w, h), density: 'zone', prefix: 'track.', title: false })).trackWidth!;
+    // The catalogue's own 566 by 220 map is where the 2.5 came from; a pit wall zone and a tall
+    // face zone are the two that were drawing it at the same weight.
+    expect(at(566, 220)).toBe(2.5);
+    expect(at(607, 158)).toBeLessThan(at(445, 516));
   });
 });
 
