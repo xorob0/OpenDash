@@ -12,7 +12,7 @@
  * other label, and `flagBand.test.ts` is where that is held.
  */
 import { describe, expect, test } from 'bun:test';
-import { buildZoneFace, sizeOf, ZONE_FACES } from '../src/zones/index.ts';
+import { buildZoneFace, ZONE_FACES } from '../src/zones/index.ts';
 import { buildPackage } from '../src/dashboard.ts';
 import { LAYOUTS } from '../src/layouts/index.ts';
 import { walkItems } from '../src/walk.ts';
@@ -54,7 +54,7 @@ describe('only the gear is Bold', () => {
   test('the ghosts are drawn at the 0.42 of the gear the sheets draw', () => {
     // Three artboards draw a gear with its neighbours, at 204 over 85, 198 over 83 and 194 over 81,
     // which is 0.417, 0.419 and 0.418. They were drawn at 0.34, a fifth short.
-    const face = ZONE_FACES.find((f) => sizeOf(f) === '1280x720') ?? ZONE_FACES[0]!;
+    const face = ZONE_FACES.find((f) => f.folder.includes('1280x720')) ?? ZONE_FACES[0]!;
     const built = buildZoneFace(face, OPTS);
     const texts = textsOf([built.main, ...built.zones]);
     const gear = texts.find((i) => i.name === 'gearSpeedRevs.main.gear');
