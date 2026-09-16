@@ -165,7 +165,25 @@ describe('a rank fills the box it is given', () => {
     const lead = Math.max(...grown.map((i) => i.fontSize));
     expect(lead).toBeGreaterThan(densityOf('compact').big);
     // One column: two lap times fit side by side at 34 px and do not at 46, so growing wraps them.
-    expect(new Set(grown.map((i) => i.rect.left)).size).toBe(1);
+    // Counted by line rather than by a shared left edge, which stopped being the same question when
+    // a narrow zone began centring what is in it: the delta is narrower than a lap time, so it is
+    // centred at a different x while still having the line to itself.
+    expect(new Set(grown.map((i) => i.rect.top)).size).toBe(grown.length);
+  });
+
+  test('and a zone narrow enough for one column centres what is in it', () => {
+    // The two narrow bodies the build really produces: zone B of the 850 x 480 face and of the
+    // 800 x 480 one. Centred in the zone, not in its own glyphs, which is the fault zoneFace's own
+    // centring test is about -- so the measure is the middle of the box against the middle of the
+    // zone, taken on the widest value and on the narrowest.
+    for (const width of [254, 229]) {
+      const items = valuesOf(lapTimes().build({ frame: rect(0, 0, width, 292), density: 'compact', prefix: 'b.' }));
+      expect(items.length).toBeGreaterThan(1);
+      for (const item of items) {
+        const centre = item.rect.left + item.rect.width / 2;
+        expect({ width, item: item.name, offBy: Math.abs(centre - width / 2) < 2 }).toMatchObject({ offBy: true });
+      }
+    }
   });
 
   test('and never past the next size up its ramp', () => {

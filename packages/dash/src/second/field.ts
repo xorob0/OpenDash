@@ -266,6 +266,29 @@ export function fieldRow(specs: readonly FieldSpec[], x: number, bottom: number,
 }
 
 /**
+ * How a line of fields is set in the width and the height it is given.
+ *
+ * `align` is the vertical one. Fields share the baseline of the largest by default, which is what
+ * a row mixing a 116 px level with a 46 px time asks for; `top` shares the top edge instead, which
+ * is what the companion's laps and estimate are drawn on.
+ *
+ * `justify` is the horizontal one, and the default is the caller's business: a zone narrow enough
+ * for one column centres what is in it, and a wider one draws from its left edge.
+ *
+ * `columns` replaces the packed widths with that many equal cells, which is the catalogue's grid.
+ */
+export interface LineOptions {
+  gap?: number;
+  minGap?: number;
+  align?: 'baseline' | 'top';
+  justify?: 'left' | 'centre';
+  columns?: number;
+}
+
+/** The width of one cell of an equal-column grid, gaps taken out first. */
+export const cellWidth = (width: number, columns: number, gap: number): number => Math.floor((width - gap * Math.max(0, columns - 1)) / Math.max(1, columns));
+
+/**
  * A row of fields that is made to fit `width`: the gap shrinks (never below `minGap`) before
  * anything is dropped, and the row reports whether it still overflows so a module can choose a
  * shorter set of fields for a narrow zone.
@@ -276,15 +299,23 @@ export function fieldRowFitted(
   bottom: number,
   width: number,
   density: Density,
-  opts: { gap?: number; minGap?: number } = {},
+  opts: LineOptions = {},
 ): { items: Item[]; width: number; fits: boolean } {
   const d = densityOf(density);
   const preferred = opts.gap ?? d.gapX;
   const minGap = opts.minGap ?? ds.space[2];
-  const widths = specs.map((spec) => fieldWidth(spec, density));
+  const natural = specs.map((spec) => fieldWidth(spec, density));
+  const grid = opts.columns !== undefined && opts.columns > 0;
+  const cell = grid ? cellWidth(width, opts.columns ?? 1, preferred) : 0;
+  const widths = grid ? natural.map(() => cell) : natural;
   const total = widths.reduce((sum, w) => sum + w, 0);
   const gaps = Math.max(0, specs.length - 1);
-  const gap = gaps === 0 ? 0 : Math.max(minGap, Math.min(preferred, Math.floor((width - total) / gaps)));
+  const gap = grid ? preferred : gaps === 0 ? 0 : Math.max(minGap, Math.min(preferred, Math.floor((width - total) / gaps)));
+  // A top-aligned line hangs each field from the line's own top edge rather than from the baseline
+  // of the largest, so a 34 px value beside a 46 px one starts where it does rather than sitting
+  // on its line.
+  const top = bottom - rowHeight(specs, density);
+  const bottomOf = (spec: FieldSpec): number => (opts.align === 'top' ? top + fieldHeight(spec, density) : bottom);
   // Placed as a rank so that a field the sim does not publish takes its space with it rather than
   // leaving a hole in the row. `atLeast` is every field: what this row keeps was decided by the
   // page's shedding order before it got here, and the gap above is how it answers a narrow box.
@@ -293,9 +324,9 @@ export function fieldRowFitted(
       id: spec.id ?? spec.name,
       width: widths[i] ?? 0,
       present: spec.visibleBind,
-      draw: (at) => field(spec, at.x, bottom, density, widths[i] ?? 0, at.leftAt),
+      draw: (at) => field(spec, at.x, bottomOf(spec), density, widths[i] ?? 0, at.leftAt),
     })),
-    { left: x, width, gap, when: 'close', align: 'left', atLeast: specs.length },
+    { left: x, width, gap, when: 'close', align: opts.justify === 'centre' ? 'centre' : 'left', atLeast: specs.length },
   );
   const used = gaps === 0 ? total : total + gap * gaps;
   return { items, width: used, fits: used <= width };
@@ -332,6 +363,41 @@ export function wrapFields(specs: readonly FieldSpec[], width: number, density: 
   }
   if (line.length > 0) lines.push(line);
   return lines;
+}
+
+/**
+ * How a rank is broken into lines.
+ *
+ * `wrap` is the greedy break above and the default. `perLine` gives every field a line of its own,
+ * which is how a page asks for one reading under another rather than beside it. `grid` fills lines
+ * of `columns` equal cells, which is what the catalogue draws a settings page with: cells that
+ * share an x down the block rather than lines packed to their own widths.
+ */
+export type LinePlan = 'wrap' | 'perLine' | 'grid';
+
+/** Fields in lines of `columns`, the last line short. */
+const chunk = (specs: readonly FieldSpec[], columns: number): FieldSpec[][] => {
+  const lines: FieldSpec[][] = [];
+  for (let i = 0; i < specs.length; i += columns) lines.push(specs.slice(i, i + columns));
+  return lines;
+};
+
+/**
+ * The lines a rank takes, by the plan it was asked for.
+ *
+ * A grid falls back to the greedy wrap when a field would be wider than the cell the grid cuts:
+ * a module is a function of its rectangle, so a grid that does not fit is a grid that is not drawn
+ * rather than one drawn over the edge.
+ */
+export function planLines(specs: readonly FieldSpec[], width: number, density: Density, opts: { plan?: LinePlan; columns?: number; gap?: number } = {}): FieldSpec[][] {
+  const gap = opts.gap ?? densityOf(density).gapX;
+  if (opts.plan === 'perLine') return specs.map((spec) => [spec]);
+  if (opts.plan === 'grid') {
+    const columns = Math.max(1, opts.columns ?? 1);
+    const cell = cellWidth(width, columns, gap);
+    if (specs.every((spec) => fieldWidth(spec, density) <= cell)) return chunk(specs, columns);
+  }
+  return wrapFields(specs, width, density, gap);
 }
 
 /**
@@ -378,7 +444,7 @@ export function drawFieldBlock(
   bottom: number,
   width: number,
   density: Density,
-  opts: { gap?: number; lineGap?: number } = {},
+  opts: LineOptions & { lineGap?: number } = {},
 ): Item[] {
   const d = densityOf(density);
   const lineGap = opts.lineGap ?? d.gapY;
@@ -389,7 +455,7 @@ export function drawFieldBlock(
   let y = top;
   lines.forEach((line, i) => {
     const h = heights[i] ?? 0;
-    items.push(...fieldRowFitted(line, x, y + h, width, density, { gap: opts.gap }).items);
+    items.push(...fieldRowFitted(line, x, y + h, width, density, opts).items);
     y += h + lineGap;
   });
   return items;
