@@ -41,7 +41,9 @@ function chequeredRing(face: Circle, prefix: string): LayerItem {
   const rim: Circle = { ...face, r: face.r - CHEQUER_SIZE.height / 2 };
   const children: Item[] = [];
   for (let k = 0; k < CHEQUER_COUNT; k++) {
-    const angle = k * CHEQUER_STEP;
+    // Half a step in, so that twelve o'clock falls on the ground as it does at the band's left
+    // edge: the round face and the strip are then the same board rather than each other's inverse.
+    const angle = (k + 0.5) * CHEQUER_STEP;
     children.push(band(`${prefix}.chequered.c${String(k).padStart(2, '0')}`, onCircle(rim, angle, CHEQUER_SIZE), ds.purpose.flag.chequer, { rotation: angle }));
   }
   return { kind: 'layer', name: `${prefix}.chequered`, children, ...withBindings({ Visible: flagVisible('Flag_Checkered') }) };
