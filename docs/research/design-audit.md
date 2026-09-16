@@ -145,6 +145,11 @@ settle rather than an implementer's.
   iRacing variables holds no differential field, and renaming the cell to `ARB R` would contradict
   the canvas, which draws `Diff`. Either the two properties are named, or the DIFF cell is dropped,
   which the strip already knows how to do; renaming it is the one answer that is wrong.
+  The same doubt blocks the car settings page, which the canvas draws with nine cells against the
+  seven the code builds: the four that are missing, the traction slip and cut, the differential and
+  the brake migration, would each be bound to a car-specific raw name that nothing in the repository
+  records, so they are left out rather than drawn against a guess. Naming them is one session on the
+  test rig with a car that has them.
 - **The companion's flag band costs it a rank.** `ds.indicator.flagBand.heightSm` is 32 and the
   Companion 850 by 480 artboard draws that band 12 px tall. The twenty pixels come out of the module
   above it, which leaves the page 336 px of content where its fourth rank, the three sectors of the
