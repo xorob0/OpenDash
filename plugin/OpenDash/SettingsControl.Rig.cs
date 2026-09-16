@@ -65,24 +65,26 @@ namespace OpenDashPlugin
             // perfectly well -- it is a rule and a label with no indent -- but the pane already carries a
             // section of its own in the wheel buttons, and a heading that sits one level deeper than the
             // heading beneath it reads as a mistake.
+            // A pit wall brings its own two headings, "Where the zones are" over the picture and "What
+            // each zone shows" over the rows, because one wrapper here could only ever carry one of
+            // them and the canvas draws both. Every other kind takes a single heading from here.
+            var pane = BuildScreenPane(screen);
             return Ui.VStack(0,
                 Ui.Section("Your rig", rows.ToArray()),
-                Ui.Section(PaneTitle(screen), BuildScreenPane(screen)));
+                screen.IsPitWall ? pane : Ui.Section(PaneTitle(screen), pane));
         }
 
         /// <summary>
         /// The heading over the selected screen's pane, which names what the pane is a list of.
         /// </summary>
         /// <remarks>
-        /// A pit wall takes the first of the two headings the canvas gives it, because its pane opens with
-        /// the picture; the second, "What each zone shows", waits on the pane itself being split in two.
-        /// Slots is the kind the canvas never drew, and it leaves with XOR-95, so it borrows the shape of
-        /// the face's heading rather than being given a design of its own.
+        /// A pit wall is not here: it carries its own two headings, so this is never asked for one. Slots
+        /// is the kind the canvas never drew, and it leaves with XOR-95, so it borrows the shape of the
+        /// face's heading rather than being given a design of its own.
         /// </remarks>
         private static string PaneTitle(ScreenInstance screen)
         {
             if (screen.IsCompanion) return "Modules in the rotation";
-            if (screen.IsPitWall) return "Where the zones are";
             if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return "What each slot shows";
             return "What each zone shows";
         }
