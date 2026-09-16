@@ -89,12 +89,13 @@ export const SHEDDING: Record<string, Shedding> = {
   }),
   // The three sectors are the page and stay at every shape. Of the three lap times under them the
   // drawings keep two, and not the same two: your own best and the last lap in a narrow zone, the
-  // last lap and the session best in a tall one.
+  // last lap and the session best in a tall one. The session's best of each sector is the
+  // companion artboard's own last rank and stays at `wide`, the fullest form.
   sectors: fields({
-    wide: ['yourBest', 'last', 'sessionBest'],
-    grid: ['yourBest', 'last', 'sessionBest'],
-    tallNarrow: ['yourBest', 'last'],
-    tall: ['last', 'sessionBest'],
+    wide: ['s1', 's2', 's3', 'yourBest', 'last', 'sessionBest', 'bestS1', 'bestS2', 'bestS3'],
+    grid: ['s1', 's2', 's3', 'yourBest', 'last', 'sessionBest'],
+    tallNarrow: ['s1', 's2', 's3', 'yourBest', 'last'],
+    tall: ['s1', 's2', 's3', 'last', 'sessionBest'],
   }),
   // The redline is a number a driver reads once a car, so it is the first thing the speedo drops.
   speedo: fields({ wide: ['speed', 'rpm', 'redline'], grid: ['speed', 'rpm'], tallNarrow: ['speed', 'rpm'], tall: ['speed', 'rpm'] }),

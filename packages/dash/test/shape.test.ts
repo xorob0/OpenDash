@@ -151,6 +151,25 @@ describe('shedding comes before shrinking', () => {
     expect(biggest(roomy)).toBeGreaterThanOrEqual(biggest(tight));
   });
 
+  test('the sectors page labels its columns for the shape it is drawn at', () => {
+    const sectors = MODULES.find((m) => m.id === 'sectors')!;
+    const itemAt = (size: { width: number; height: number }, name: string): TextItem | undefined => {
+      const found = sectors
+        .build({ frame: rect(0, 0, size.width, size.height), density: 'zone', prefix: '' })
+        .flatMap((i) => [...walkItems([i])])
+        .find((i) => i.name === name);
+      return found && found.kind === 'text' ? found : undefined;
+    };
+    // The delta rides in the label where there is width for it, and the colour says it where there
+    // is not: the catalogue writes "S1 · −0.29" at three shapes and a bare "S1" at `tall narrow`,
+    // which is also what lets the rank keep the size the drawing gives it in a 274 px zone.
+    expect(itemAt(SHAPE_ARCHETYPES.wide, 's1.label')?.bindings?.Text?.formula).toContain('−');
+    expect(itemAt(SHAPE_ARCHETYPES.tallNarrow, 's1.label')?.bindings?.Text).toBeUndefined();
+    // And the tall drawing writes one word where the wider ones write two.
+    expect(itemAt(SHAPE_ARCHETYPES.wide, 'sessionBest.label')?.text).toBe('SESSION BEST');
+    expect(itemAt(SHAPE_ARCHETYPES.tall, 'sessionBest.label')?.text).toBe('BEST');
+  });
+
   test('and sheds what its page declares last rather than whichever row is last', () => {
     // The nano's zone body. Fuel declares level, time, to add and the average at `tall narrow`, and
     // draws a level gauge under them that the table does not name because it is not a field. The

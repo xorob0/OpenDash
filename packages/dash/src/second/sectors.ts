@@ -16,7 +16,7 @@ import { densityOf, type Density } from './density.ts';
 import { field, fieldWidth, type FieldSpec } from './field.ts';
 import { CHARS, hasTime, sectorDelta, sectorLast, sectorTime } from './values.ts';
 
-const { iff, and, lt, le, gt, eq, str, num, fmt, concat, timespanToSeconds, isnull } = ncalc;
+const { iff, and, lt, le, gt, eq, str, num, signed, concat, timespanToSeconds, isnull } = ncalc;
 
 export const SECTORS = [1, 2, 3] as const;
 
@@ -42,19 +42,29 @@ export function sectorColour(sector: number): Expr {
   );
 }
 
-/** "S1 · -0.29": the sector number and its delta, which is the field's label. */
+/** "S1 · −0.29": the sector number and its delta, which is the field's label. */
 export const sectorLabel = (sector: number): Expr =>
   iff(
     hasTime(sectorLast(sector)),
-    concat(str(`S${sector} · `), fmt(sectorDelta(sector), '0.00', true)),
+    concat(str(`S${sector} · `), signed(sectorDelta(sector), '0.00')),
     str(`S${sector}`),
   );
 
-const sectorField = (name: string, sector: number, fs: number): FieldSpec => ({
-  name: `${name}.s${sector}`,
+/**
+ * `bare` writes the label as "S1" and nothing else. A zone one column wide is what the catalogue
+ * draws that way, and the reason is width rather than taste: "S1 · +99.99" is what a bound label
+ * has to be measured by, and it is what makes the 34 px rank the drawing asks for not fit a third
+ * of a 274 px zone. The delta is on the page twice over in any case, since the colour says it.
+ */
+export interface SectorFieldOptions {
+  bare?: boolean;
+}
+
+const sectorField = (prefix: string, sector: number, fs: number, opts: SectorFieldOptions = {}): FieldSpec => ({
+  name: `${prefix}s${sector}`,
+  id: `s${sector}`,
   label: `S${sector}`,
-  labelBind: sectorLabel(sector),
-  labelWidest: `S${sector} · +99.99`,
+  ...(opts.bare ? {} : { labelBind: sectorLabel(sector), labelWidest: `S${sector} · +99.99` }),
   value: {
     sample: ['28.41', '41.07', '32.83'][sector - 1] ?? '0.00',
     bind: sectorTime(sectorLast(sector)),
@@ -65,20 +75,29 @@ const sectorField = (name: string, sector: number, fs: number): FieldSpec => ({
 });
 
 /**
+ * The three sectors as fields, for a page that lays them out itself.
+ *
+ * A rank that is a row of fields rather than a drawing is one rule 20 can size and rule 17 can
+ * shed, which is what the sectors page wants; `sectorFields` below is the absolute placement the
+ * pit wall's fixed panel still asks for.
+ */
+export const sectorSpecs = (prefix: string, fs: number, opts: SectorFieldOptions = {}): FieldSpec[] => SECTORS.map((sector) => sectorField(prefix, sector, fs, opts));
+
+/**
  * The three sector fields laid out across `frame`, bottom-aligned, evenly spaced. The size steps
  * down until a sector time fits its third of the box, so the same code works on an 802 px
  * companion page and a 432 px portrait one.
  */
-export function sectorFields(name: string, frame: Rect, density: Density, fs?: number): Item[] {
+export function sectorFields(prefix: string, frame: Rect, density: Density, fs?: number): Item[] {
   const d = densityOf(density);
   const spans = snapEdges(frame.left, frame.width, 3, d.gapX);
   const column = spans[0]?.width ?? frame.width;
   const ladder = fs === undefined ? [d.big, d.mid, d.small, d.tiny] : [fs, d.small, d.tiny];
-  const size = ladder.find((candidate) => fieldWidth(sectorField(name, 1, candidate), density) <= column) ?? ladder[ladder.length - 1] ?? d.tiny;
+  const size = ladder.find((candidate) => fieldWidth(sectorField(prefix, 1, candidate), density) <= column) ?? ladder[ladder.length - 1] ?? d.tiny;
   return SECTORS.flatMap((sector, i) => {
     const span = spans[i];
     if (!span) return [];
-    return field(sectorField(name, sector, size), span.left, frame.top + frame.height, density, span.width);
+    return field(sectorField(prefix, sector, size), span.left, frame.top + frame.height, density, span.width);
   });
 }
 

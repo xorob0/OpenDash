@@ -381,7 +381,7 @@ describe('module expressions', () => {
    * the boundary rather than the colours is what this pins.
    */
   test('a sector is dim, purple, green or red, and a new personal best is green rather than red', () => {
-    const colour = formulaOf(moduleItem('sectors', 'sector.s1.value'), 'TextColor');
+    const colour = formulaOf(moduleItem('sectors', 's1.value'), 'TextColor');
     const delta = values.sectorDelta(1);
     expect(colour).toContain(`if(!(${values.hasTime(values.sectorLast(1))}), '#33383F'`);
     expect(colour).toContain("'#B14BFF'");
