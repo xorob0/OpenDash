@@ -58,18 +58,6 @@ namespace OpenDashPlugin
 
         public const double AddressWidth = SelectWidth;
 
-        /// <summary>
-        /// The address field's own side padding.
-        /// </summary>
-        /// <remarks>
-        /// Widgets.Field carries nine and six, which is the pair the select and the drop button take, and
-        /// the canvas draws this box symmetric instead. The two readings cannot both be the sheet and the
-        /// difference is a pixel either way; the number is here so that settling it is one edit.
-        /// </remarks>
-        // TODO: read this from Theme once design/tokens.json carries a field padding at all; it carries
-        // neither this nor the kit's pair today.
-        public const double AddressPaddingX = 10;
-
         /// <summary>What an empty address box shows. A watermark and never a value: Contract.NormaliseUrl
         /// keeps only an absolute address, so a bare scheme stored in the setting is blanked on the first
         /// commit and the box would empty itself in front of the user.</summary>
