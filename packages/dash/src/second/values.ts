@@ -51,6 +51,7 @@ const {
   min,
   abs,
   ucase,
+  left,
   hms,
 } = ncalc;
 
@@ -184,6 +185,16 @@ export const carName = (idx: Expr): Expr => isnull(driver('name', idx), str(''))
  * be drawn in one -- and a hash never did.
  */
 export const carNumber = (idx: Expr): Expr => isnull(driver('carnumber', idx), str(''));
+
+/**
+ * A driver name cut to the three-letter code the narrow drawings show, upper-cased.
+ *
+ * The cut is made in NCalc rather than by the renderer, the way `chipText` cuts a class name: WPF
+ * has no ellipsis to give, it clips, so a name longer than its box has nowhere to go. Both the
+ * lists and the opponents page draw this form, the one in a narrow column and the other in the
+ * 64 px box the canvas fixes for it whatever the density.
+ */
+export const driverCode = (idx: Expr): Expr => ucase(left(isnull(carName(idx), str('')), 3));
 export const carClass = (idx: Expr): Expr => driver('carclass', idx);
 
 /** The position a table shows, overall or in class per the plugin's PositionMode. */
