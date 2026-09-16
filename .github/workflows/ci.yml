@@ -129,11 +129,14 @@ jobs:
           name: opendash-dash
           path: build/
 
+      # Both of these run the generators first, because tokens.css and content.generated.ts are
+      # generated from the repository and gitignored; a typecheck without them fails on an import of
+      # a file that has never existed.
       - name: Typecheck
         run: cd site && bun run typecheck
 
-      # Runs the generators and then next build, which is the step that catches a page referring to
-      # a token, a package or a module that no longer exists.
+      # next build is the step that catches a page referring to a token, a package or a module that
+      # no longer exists.
       - name: Build
         run: cd site && bun run build
 

@@ -82,7 +82,7 @@ WORKDIR /repo/site
 RUN bun install --frozen-lockfile
 # tokens.css from design/tokens.json, content.generated.ts from the manifest and the changelog, and
 # the woff2 faces from the vendored TTFs. All three are gitignored, so the image has to make them.
-RUN bun scripts/tokens.ts && bun scripts/content.ts && bun scripts/fonts.ts
+RUN bun run generate
 # Under node rather than bun: next build is the one step where the difference has bitten before,
 # and the runtime stage is node anyway, so building on the same engine keeps them honest.
 RUN node node_modules/.bin/next build

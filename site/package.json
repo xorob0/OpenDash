@@ -5,11 +5,11 @@
   "description": "The openDash showcase website: what the dashes look like, which screens they fit, and where to download them.",
   "license": "MIT",
   "scripts": {
-    "tokens": "bun scripts/tokens.ts",
-    "dev": "next dev",
-    "build": "bun scripts/tokens.ts && next build",
+    "generate": "bun scripts/tokens.ts && bun scripts/content.ts && bun scripts/fonts.ts",
+    "dev": "bun run generate && next dev",
+    "build": "bun run generate && next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run generate && tsc --noEmit"
   },
   "dependencies": {
     "next": "^15.5.0",

@@ -6,12 +6,13 @@ Next.js, deployed as a container.
 ```bash
 bun install
 bun run dev              # http://localhost:3000
-bun run build            # generators, then next build
+bun run build            # generate, then next build
 bun run typecheck
+bun run generate         # just the three generators
 ```
 
-`bun run dev` needs the generated files, so run `bun run build` once first, or run the three
-generators by hand.
+`dev`, `build` and `typecheck` all run `generate` first, because what it writes is gitignored and
+a fresh clone has none of it.
 
 ## Nothing here restates a fact the repository already holds
 
