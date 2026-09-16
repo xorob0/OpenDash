@@ -1,0 +1,26 @@
+{
+  "name": "@opendash/site",
+  "private": true,
+  "version": "0.0.0",
+  "description": "The openDash showcase website: what the dashes look like, which screens they fit, and where to download them.",
+  "license": "MIT",
+  "scripts": {
+    "tokens": "bun scripts/tokens.ts",
+    "dev": "next dev",
+    "build": "bun scripts/tokens.ts && next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.6.0",
+    "wawoff2": "^2.0.1"
+  }
+}

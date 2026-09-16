@@ -1,0 +1,30 @@
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  color: var(--purpose-ui-accent);
+  font-size: var(--wm);
+  line-height: 1;
+}
+
+.mark svg {
+  flex: none;
+}
+
+/* The canvas sets the wordmark at 28 / 300 + 700: one word, two weights, no space between them. */
+.word {
+  font-family: var(--font-data);
+  font-size: 1.16em;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.open {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.dash {
+  font-weight: 700;
+}
