@@ -4,8 +4,9 @@
  * window is the sample count times the refresh interval, which is why the plot's own width sets
  * the count rather than a caller asking for seconds.
  *
- * The hairlines at the quarters and the baseline are drawn behind the series, and a legend row is
- * added when there is more than one series, because unlabelled colours are a guess.
+ * The hairlines at the quarters are drawn behind the series, with a rule closing the plot for the
+ * panels the canvas draws one under, and a legend row is added when there is more than one series,
+ * because unlabelled colours are a guess.
  */
 import type { ChartItem, Hex, Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
@@ -32,6 +33,12 @@ export interface Series {
 export interface TraceOptions {
   /** Draw the quarter hairlines. */
   grid?: boolean;
+  /**
+   * Close the plot with a rule along its bottom edge. The pit wall's telemetry panels are drawn
+   * with one and the inputs page is not: a panel is a plot with a title over it and needs a floor,
+   * where the inputs page has three bars standing on the same line beside it.
+   */
+  baseline?: boolean;
   /** Draw a legend under the plot when there is more than one series. */
   legend?: boolean;
   /** Samples kept; `pointsFor` of the plot's width by default. */
@@ -117,7 +124,7 @@ export function trace(name: string, frame: Rect, series: readonly Series[], dens
     for (const [i, fraction] of [0.25, 0.5, 0.75].entries()) {
       items.push(band(`${name}.grid${i}`, rect(plot.left, Math.round(plot.top + fraction * plot.height), plot.width, 1), ds.color.surface.raised));
     }
-    items.push(band(`${name}.baseline`, rect(plot.left, plot.top + plot.height - 1, plot.width, 1), ds.color.text.dim));
+    if (opts.baseline ?? true) items.push(band(`${name}.baseline`, rect(plot.left, plot.top + plot.height - 1, plot.width, 1), ds.color.text.dim));
   }
   const points = opts.points ?? pointsFor(plot.width);
   for (const s of series) items.push(chartOf(`${name}.${s.name}`, plot, s, { ...opts, points }));

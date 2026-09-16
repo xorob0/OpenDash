@@ -509,8 +509,12 @@ describe('the inputs page', () => {
     expect(barsOf(607, 158, 'zone')).toEqual([16, 16, 16]);
     expect(barsOf(437, 510, 'zone')).toEqual([16, 16, 16]);
     // Every line has its own bar and its own number beside it in the same colour, so a legend row
-    // would repeat the labelling and cost the plot 18 px of height.
-    expect(build(802, 336, 'companion').filter((i) => /\.(legend|swatch)$/.test(i.name))).toEqual([]);
+    // would repeat the labelling and cost the plot 18 px of height. The three quarter hairlines
+    // are the whole of the grid the catalogue draws: the rule along the bottom belongs to the pit
+    // wall's telemetry panels, which are plots under a title rather than bars standing on a line.
+    const chrome = build(802, 336, 'companion').filter((i) => /\.(legend|swatch|baseline)$/.test(i.name));
+    expect(chrome).toEqual([]);
+    expect(build(802, 336, 'companion').filter((i) => /\.grid\d$/.test(i.name))).toHaveLength(3);
   });
 
   test('takes its sample count from the plot it is given rather than from the density', () => {

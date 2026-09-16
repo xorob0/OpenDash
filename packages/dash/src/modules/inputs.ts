@@ -73,7 +73,7 @@ export const inputs = defineModule('inputs', (ctx) => {
   const steerWidth = steers ? STEER.width + GROUP_GAP : 0;
   const plotWidth = Math.max(0, ctx.frame.width - barsWidth - steerWidth - GROUP_GAP);
   const series: Series[] = PEDALS.map((pedal) => ({ name: pedal.name, color: pedal.color, bind: pedal.value(), min: 0, max: 100 }));
-  const items = trace(`${ctx.prefix}trace`, rect(ctx.frame.left, ctx.frame.top, plotWidth, ctx.frame.height), series, ctx.density, { legend: false });
+  const items = trace(`${ctx.prefix}trace`, rect(ctx.frame.left, ctx.frame.top, plotWidth, ctx.frame.height), series, ctx.density, { legend: false, baseline: false });
   const barsTop = ctx.frame.top;
   const barsHeight = Math.max(0, ctx.frame.height - valueHeight);
   const barsLeft = ctx.frame.left + plotWidth + GROUP_GAP;
