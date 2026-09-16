@@ -17,7 +17,7 @@ import {
   secondScreen,
   secondScreenProperties,
 } from '../src/contract.ts';
-import { validatePackage, type Dashboard, type Item, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { validatePackage, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
@@ -476,6 +476,45 @@ describe('the track module has a titled and a titleless form', () => {
     // face zone are the two that were drawing it at the same weight.
     expect(at(566, 220)).toBe(2.5);
     expect(at(607, 158)).toBeLessThan(at(445, 516));
+  });
+});
+
+describe('the radar is cut from its box', () => {
+  const build = (w: number, h: number, density: Density = 'zone'): Item[] => MODULES.find((m) => m.id === 'radar')!.build({ frame: rect(0, 0, w, h), density, prefix: 'radar.' });
+  const radarIn = (items: Item[]): RadarItem => items.find((i): i is RadarItem => i.kind === 'radar')!;
+
+  test('the scale follows the plot rather than the density, which is what rule 18 means here', () => {
+    // The two boxes readability-pass.md §16 puts side by side: a nano zone and a tall face zone
+    // were drawing the same twenty metres of track at the same scale.
+    expect(radarIn(build(249, 158)).scale).toBeLessThan(radarIn(build(437, 510)).scale!);
+    // And the companion page keeps the 1.25 the canvas was measured at.
+    expect(radarIn(build(802, 336, 'companion')).scale!).toBeCloseTo(1.25, 1);
+  });
+
+  test('the grid the canvas draws under the cars is four rects behind the plot', () => {
+    const items = build(802, 336, 'companion');
+    const plot = radarIn(items).rect;
+    const grid = items.filter((i): i is RectangleItem => i.kind === 'rect' && /\.(grid\d|centre)$/.test(i.name));
+    expect(grid.map((i) => i.name)).toEqual(['radar.grid0', 'radar.grid1', 'radar.grid2', 'radar.centre']);
+    for (const line of grid) {
+      expect({ name: line.name, colour: line.backgroundColor }).toMatchObject({ colour: ds.color.surface.raised });
+      expect(line.rect.left).toBeGreaterThanOrEqual(plot.left);
+      expect(line.rect.left + line.rect.width).toBeLessThanOrEqual(plot.left + plot.width);
+    }
+    // Behind, not over: SimHub paints the items in order and the radar's own background is clear.
+    expect(items.findIndex((i) => i.name === 'radar.centre')).toBeLessThan(items.findIndex((i) => i.kind === 'radar'));
+  });
+
+  test('the spotter flanks are a proportion of the width and turn red on the side being called', () => {
+    const flanksOf = (w: number, h: number): RectangleItem[] => build(w, h).filter((i): i is RectangleItem => i.name === 'radar.left' || i.name === 'radar.right');
+    expect(flanksOf(802, 336).map((i) => i.rect.width)).toEqual([64, 64]);
+    expect(flanksOf(607, 158).map((i) => i.rect.width)).toEqual([51, 51]);
+    expect(flanksOf(249, 158).map((i) => i.rect.width)).toEqual([21, 21]);
+    for (const flank of flanksOf(607, 158)) {
+      const formula = flank.bindings?.BackgroundColor?.formula ?? '';
+      expect(formula).toContain(flank.name.endsWith('left') ? 'SpotterCarLeft' : 'SpotterCarRight');
+      expect(formula).toContain(ds.purpose.delta.slower);
+    }
   });
 });
 
