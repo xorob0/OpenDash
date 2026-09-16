@@ -1019,11 +1019,12 @@ namespace OpenDashPlugin
     /// </summary>
     public sealed class FacePageClash
     {
-        public FacePageClash(string pageId, string pageName, string[] zones)
+        public FacePageClash(string pageId, string pageName, string[] zones, bool glance = false)
         {
             PageId = pageId;
             PageName = pageName;
             Zones = zones;
+            Glance = glance;
         }
 
         public string PageId { get; }
@@ -1033,41 +1034,83 @@ namespace OpenDashPlugin
         /// <summary>The zone letters showing it, in letter order.</summary>
         public string[] Zones { get; }
 
-        /// <summary>"Zone B and zone C both show Relative."</summary>
-        public string Message()
+        /// <summary>Whether the quick glance shows it too, which makes it a participant like a zone.</summary>
+        public bool Glance { get; }
+
+        /// <summary>
+        /// The page as the sentence spells it: "the relative".
+        /// </summary>
+        /// <remarks>
+        /// An article and a lower-case noun, because that is how the sentence reads aloud and how the
+        /// canvas writes it. A name that lists what a page draws rather than naming one thing keeps the
+        /// spelling the panel's own drop-down uses instead: "Gear, speed, revs" does not read after an
+        /// article, and no short noun for it exists to invent.
+        /// </remarks>
+        public static string DisplayName(string name)
         {
-            var letters = Zones.Select(z => "zone " + z).ToArray();
-            var list = letters.Length == 2
-                ? letters[0] + " and " + letters[1]
-                : string.Join(", ", letters.Take(letters.Length - 1)) + " and " + letters[letters.Length - 1];
-            var verb = letters.Length == 2 ? " both show " : " all show ";
-            return char.ToUpperInvariant(list[0]) + list.Substring(1) + verb + PageName + ".";
+            if (string.IsNullOrEmpty(name)) return name;
+            if (name.IndexOf(',') >= 0) return name;
+            return "the " + char.ToLowerInvariant(name[0]) + name.Substring(1);
         }
 
+        /// <summary>"Zone B and zone C both show the relative."</summary>
+        public string Message()
+        {
+            var parts = Zones.Select(z => "zone " + z).ToList();
+            if (Glance) parts.Add("the quick glance");
+            var list = parts.Count == 2
+                ? parts[0] + " and " + parts[1]
+                : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[parts.Count - 1];
+            var verb = parts.Count == 2 ? " both show " : " all show ";
+            return char.ToUpperInvariant(list[0]) + list.Substring(1) + verb + DisplayName(PageName) + ".";
+        }
+
+        /// <summary>
+        /// Every page two or more of the five participants show: the four zones' start pages, and the
+        /// quick glance.
+        /// </summary>
+        /// <remarks>
+        /// The glance is compared by page id and against each zone's *start* page, exactly as the zones
+        /// are compared with each other. By id because the four catalogues overlap, so zone A's track
+        /// page and module 13 are one drawing under two numbers; against the start page rather than the
+        /// whole cycle because a glance set to a page a zone can cycle to is a thing somebody may well
+        /// want, and warning about it would be a false alarm on every second rig.
+        /// </remarks>
         public static IReadOnlyList<FacePageClash> Find(FaceSettings face)
         {
             var result = new List<FacePageClash>();
             if (face == null) return result;
             var order = new List<string>();
             var byPage = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-            foreach (var letter in Contract.FaceZoneLetters)
+            var names = new Dictionary<string, string>(StringComparer.Ordinal);
+            var glanced = new HashSet<string>(StringComparer.Ordinal);
+            Action<string, string, string> add = (id, name, letter) =>
             {
-                var id = FacePages.IdOf(letter, face.Start(letter));
-                if (id == null) continue;
+                if (id == null) return;
                 List<string> zones;
                 if (!byPage.TryGetValue(id, out zones))
                 {
                     zones = new List<string>();
                     byPage[id] = zones;
+                    names[id] = name;
                     order.Add(id);
                 }
-                zones.Add(letter);
-            }
+                if (letter == null) glanced.Add(id);
+                else zones.Add(letter);
+            };
+            foreach (var letter in Contract.FaceZoneLetters) add(FacePages.IdOf(letter, face.Start(letter)), FacePages.NameOf(letter, face.Start(letter)), letter);
+
+            var glance = Contract.NormaliseQuickGlance(face.QuickGlance);
+            var glanceLetter = Contract.FaceZoneLetters[Contract.QuickGlanceZone(glance)];
+            var glancePage = Contract.QuickGlancePage(glance);
+            add(FacePages.IdOf(glanceLetter, glancePage), FacePages.NameOf(glanceLetter, glancePage), null);
+
             foreach (var id in order)
             {
                 var zones = byPage[id];
-                if (zones.Count < 2) continue;
-                result.Add(new FacePageClash(id, FacePages.NameOf(zones[0], face.Start(zones[0])), zones.ToArray()));
+                var showsGlance = glanced.Contains(id);
+                if (zones.Count + (showsGlance ? 1 : 0) < 2) continue;
+                result.Add(new FacePageClash(id, names[id], zones.ToArray(), showsGlance));
             }
             return result;
         }
