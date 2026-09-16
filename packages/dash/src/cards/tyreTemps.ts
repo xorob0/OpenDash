@@ -6,18 +6,12 @@ import { ncalc } from '../generator.ts';
 import { cardFrame } from '../components/frame.ts';
 import { grid2x2, type CellSpec } from '../components/grid2x2.ts';
 import { fitLabelForm } from '../elements/label.ts';
+import { TYRE_THRESHOLDS } from '../second/wheel.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
 import { TEMP_CHARS } from './chars.ts';
 
 const { game, isnull, eq, lt, gt, num, iff, str, fmt, concat } = ncalc;
-
-/** Cold and hot thresholds, 60 and 100 C, in each unit SimHub can report. */
-export const TYRE_THRESHOLDS = {
-  Celcius: { cold: 60, hot: 100 },
-  Fahrenheit: { cold: 140, hot: 212 },
-  Kelvin: { cold: 333, hot: 373 },
-} as const;
 
 export const TYRE_CORNERS = ['FrontLeft', 'FrontRight', 'RearLeft', 'RearRight'] as const;
 

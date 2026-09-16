@@ -12,6 +12,7 @@ import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
 import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
+import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import type { TextItem } from '../src/generator.ts';
 
@@ -134,6 +135,9 @@ describe('card expressions', () => {
 
   test('tyre temps convert thresholds per unit and tyre pressures upper-case the unit', () => {
     const colour = formulaOf(textItem('tyreTemps', 'fr'), 'TextColor');
+    // The card and the wheel cell had a threshold table each, written with the same numbers and
+    // free to drift apart; there is one table now, and this is what says so.
+    expect(colour).toBe(temperatureColour('FrontRight'));
     expect(colour).toContain("('Fahrenheit'), 140");
     expect(colour).toContain("('Kelvin'), 333, 60");
     expect(colour).toContain("('Fahrenheit'), 212");
