@@ -197,11 +197,50 @@ namespace OpenDashPlugin
         /// <summary>The revs, with brake on the sides. What the hardware makers put there.</summary>
         public const string DefaultLedCentre = "rpm";
 
-        /// <summary>How the rev ladder fills the strip. It decides the look and never the when: the
-        /// thresholds are the car's own either way (ADR 0014). Mirrors LED_RPM_STYLES in contract.ts.</summary>
-        public static readonly string[] LedRpmStyles = { "leftToRight", "meetInMiddle", "f1" };
+        /// <summary>How the rev ladder fills the strip. The three openDash styles decide the look and
+        /// never the when: the thresholds are the car's own either way (ADR 0014). "car" is not one of
+        /// those -- it is the car's own bar, from the fetched table (ADR 0017). Mirrors LED_RPM_STYLES
+        /// in contract.ts.</summary>
+        public static readonly string[] LedRpmStyles = { "car", "leftToRight", "meetInMiddle", "f1" };
 
-        public const string DefaultLedRpmStyle = "leftToRight";
+        /// <summary>The car's own, because openDash's opinion is that the car is right. A car with no
+        /// table falls back to the ladder iRacing publishes without the driver choosing anything.</summary>
+        public const string DefaultLedRpmStyle = "car";
+
+        /// <summary>What the mirror does when the car's bar and the strip are not the same length.
+        /// Mirrors LED_MIRROR_FITS in contract.ts.</summary>
+        public static readonly string[] LedMirrorFits = { "stretch", "exact" };
+
+        public const string DefaultLedMirrorFit = "stretch";
+
+        /// <summary>Named, because the plugin compares against them: the mirror is on when the style is
+        /// this, and the fit is exact when the setting is that.</summary>
+        public const string LedRpmStyleCar = "car";
+
+        public const string LedMirrorFitExact = "exact";
+
+        /// <summary>Whether the plugin is publishing a mirrored bar this frame. Computed, not chosen:
+        /// it is the one gate the mirror layer of every strip profile hangs on.</summary>
+        public const string LedMirrorReady = "LedMirrorReady";
+
+        public const string LedMirrorFit = "LedMirrorFit";
+
+        /// <summary>
+        /// The run lengths a mirrored bar is published for: every centre length the generated strip
+        /// shapes use, the brows included. Mirrors MIRROR_RUN_LENGTHS in contract.ts, and the two are
+        /// checked against each other, because a length missing here is a strip shape with no mirror
+        /// and nothing that would say so.
+        /// </summary>
+        public static readonly int[] MirrorRunLengths = { 8, 9, 10, 12, 14, 15, 16, 18, 20, 25 };
+
+        /// <summary>How many characters one colour takes in a packed run: #AARRGGBB.</summary>
+        public const int MirrorColorWidth = 9;
+
+        /// <summary>"LedMirror14": a whole run of the car's own bar, as one fixed-width string.</summary>
+        public static string LedMirrorRun(int length)
+        {
+            return "LedMirror" + length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
 
 
         // --- The zone face ---------------------------------------------------------------------
@@ -707,13 +746,16 @@ namespace OpenDashPlugin
             foreach (var name in LedPropertyNames()) yield return name;
         }
 
-        /// <summary>The two a generated .ledsprofile reads, last, as ledProperties() is last in
+        /// <summary>What a generated .ledsprofile reads, last, as ledProperties() is last in
         /// contract.ts. Named apart so that the strips can be pointed at, not so that they are a
         /// category of their own.</summary>
         public static IEnumerable<string> LedPropertyNames()
         {
             yield return LedCentre;
             yield return LedRpmStyle;
+            yield return LedMirrorFit;
+            yield return LedMirrorReady;
+            foreach (var length in MirrorRunLengths) yield return LedMirrorRun(length);
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a
