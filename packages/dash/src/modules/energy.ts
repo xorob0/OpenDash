@@ -35,11 +35,8 @@ const LAPS = raw('VirtualEnergyLaps');
 
 const published = (member: Expr): Expr => not(isNull(member));
 
-/** A reading and the condition it exists under, in the one shape every field of this page takes. */
-const reading = (member: Expr, pattern: string) => ({
-  bind: iff(published(member), fmt(member, pattern), str(NO_VALUE)),
-  visibleBind: published(member),
-});
+/** A member formatted only where it is there, so the format never runs against a null. */
+const reading = (member: Expr, pattern: string): Expr => iff(published(member), fmt(member, pattern), str(NO_VALUE));
 
 /**
  * The notice, drawn only while the sim publishes nothing for this page.
@@ -53,19 +50,24 @@ const insteadOfTheReadings = (items: readonly Item[]): Item[] =>
 
 export const energy = defineModule('energy', (ctx) => {
   const d = densityOf(ctx.density);
-  const percent = { text: '%' };
   return [
     ...stack(
       ctx.frame,
       [
         fieldsRow(
           [
-            fld(ctx, 'level', 'Virtual energy', { sample: '68', ...reading(LEVEL, '0'), chars: CHARS.percent, fs: d.big, follower: percent }, { visibleBind: published(LEVEL) }),
+            fld(
+              ctx,
+              'level',
+              'Virtual energy',
+              { sample: '68', bind: reading(LEVEL, '0'), chars: CHARS.percent, fs: d.big, follower: { text: '%' } },
+              { visibleBind: published(LEVEL) },
+            ),
             fld(
               ctx,
               'refuel',
               'Refuel',
-              { sample: '31', ...reading(REFUEL, '0'), chars: CHARS.percent, fs: d.big, color: ds.color.caution.primary, follower: percent },
+              { sample: '31', bind: reading(REFUEL, '0'), chars: CHARS.percent, fs: d.big, color: ds.color.caution.primary, follower: { text: '%' } },
               { visibleBind: published(REFUEL) },
             ),
           ],
@@ -73,8 +75,14 @@ export const energy = defineModule('energy', (ctx) => {
         ),
         fieldsRow(
           [
-            fld(ctx, 'perLap', 'Avg per lap', { sample: '5.6', ...reading(PER_LAP, '0.0'), chars: CHARS.consumption, fs: d.mid, follower: percent }, { visibleBind: published(PER_LAP) }),
-            fld(ctx, 'lapsLeft', 'Est. laps', { sample: '12.1', ...reading(LAPS, '0.0'), chars: CHARS.consumption, fs: d.mid }, { visibleBind: published(LAPS) }),
+            fld(
+              ctx,
+              'perLap',
+              'Avg per lap',
+              { sample: '5.6', bind: reading(PER_LAP, '0.0'), chars: CHARS.consumption, fs: d.mid, follower: { text: '%' } },
+              { visibleBind: published(PER_LAP) },
+            ),
+            fld(ctx, 'lapsLeft', 'Est. laps', { sample: '12.1', bind: reading(LAPS, '0.0'), chars: CHARS.consumption, fs: d.mid }, { visibleBind: published(LAPS) }),
           ],
           ctx,
         ),
