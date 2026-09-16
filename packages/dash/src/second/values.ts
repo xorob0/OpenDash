@@ -9,7 +9,7 @@
  */
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import type { Chars } from '../design/metrics.ts';
+import { MINUS, type Chars } from '../design/metrics.ts';
 import { setting } from '../contract.ts';
 import { rpms } from '../shift.ts';
 import { ds as dsTokens } from '../tokens.ts';
@@ -28,6 +28,7 @@ const {
   and,
   concat,
   fmt,
+  signed,
   isnull,
   toShortTime,
   timespanToSeconds,
@@ -51,8 +52,19 @@ const {
 
 /** What a value shows when the sim has not given one. */
 export const NO_VALUE = '--';
-/** What a lap time shows when it has never been set. */
-export const NO_TIME = '--:--.---';
+
+/**
+ * What a lap time shows when it has never been set: a minus in place of every digit of a time of
+ * the same shape, so the placeholder occupies the cells the time will and the column does not move
+ * when the first lap lands. `1:42.905` is `−:−−.−−−`, and a one-decimal `1:42.3` is `−:−−.−`.
+ *
+ * One spelling, taking the decimals it stands in for. There were two, nine characters here and
+ * eight in the cards, and neither matched the other or the time it replaced.
+ */
+export const noTime = (decimals = 3): string => `${MINUS}:${MINUS}${MINUS}.${MINUS.repeat(decimals)}`;
+
+/** The three-decimal form, which is what a lap time is drawn to unless it asks for fewer. */
+export const NO_TIME = noTime();
 
 /** Character budgets of the values the second screens draw. */
 export const CHARS = {
@@ -101,8 +113,8 @@ export const CHARS = {
 /** True when a TimeSpan holds a real lap time rather than the unset `00:00:00`. */
 export const hasTime = (ts: Expr): Expr => gt(timespanToSeconds(isnull(ts, num(0))), num(0));
 
-/** A lap time as `m:ss.fff`, or `--:--.---` when it was never set. */
-export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(NO_TIME));
+/** A lap time as `m:ss.fff`, or the placeholder of the same shape when it was never set. */
+export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(noTime(decimals)));
 
 /** A sector time as `ss.fff`, or `--` when it was never set. */
 export const sectorTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, false), str(NO_VALUE));
@@ -167,9 +179,13 @@ export const carRankChange = (idx: Expr): Expr => isnull(driver('positiongain', 
 export const carRaceGap = (idx: Expr): Expr =>
   iff(eq(isnull(driver('position', idx), num(0)), num(1)), str('Lead'), isnull(driver('gaptoleadercombined', idx), str(NO_VALUE)));
 
-/** The gap to the player on track, signed, three decimals: negative ahead, positive behind. */
+/**
+ * The gap to the player on track, signed, three decimals: a car ahead reads `−5.886` and a car
+ * behind `+0.722`. The minus is the typographic one, which `signed` substitutes for the hyphen
+ * .NET's formatter writes.
+ */
 export const carRelativeGap = (idx: Expr): Expr =>
-  iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), fmt(driver('relativegaptoplayer', idx), '0.000', true));
+  iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signed(driver('relativegaptoplayer', idx), '0.000'));
 
 /**
  * The interval to the car in front: the difference of the two gaps to the leader. In class mode
@@ -179,7 +195,7 @@ export const carRelativeGap = (idx: Expr): Expr =>
 export const carInterval = (idx: Expr): Expr => {
   const ahead = driver('gaptoleader', sub(idx, num(1)));
   const here = driver('gaptoleader', idx);
-  return iff(and(gt(idx, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), fmt(sub(here, ahead), '0.0', true), str(''));
+  return iff(and(gt(idx, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
 };
 
 export const carLastLap = (idx: Expr): Expr => lapTime(driver('lastlap', idx));
