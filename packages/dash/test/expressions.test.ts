@@ -319,7 +319,8 @@ describe('module expressions', () => {
     expect(moduleItem('delta', 'scale4').text).toBe('+2.0');
   });
 
-  test('the lap times delta is signed the same way', () => {
+  test('the lap times delta names the best it is against and is signed the same way', () => {
+    expect(moduleItem('lapTimes', 'delta.label').text).toBe('DELTA TO YOUR BEST');
     const value = moduleItem('lapTimes', 'delta.value');
     expect(formulaOf(value, 'Text')).toContain("'-', '\u2212'");
     expect(value.text).toBe('\u22120.21');
