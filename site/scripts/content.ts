@@ -41,7 +41,7 @@ export interface SitePackage {
 }
 
 /**
- * The card faces are built beside the zone faces only so the two can be compared, and XOR-95
+ * The card faces are built beside the zone faces only so the two can be compared, and #146
  * deletes them. They are not a size anybody should install, so the site never lists them.
  */
 const SUPERSEDED = /^openDash slots /;

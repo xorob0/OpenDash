@@ -203,7 +203,7 @@ const pluginSource = (file: string): string => readFileSync(path.resolve(import.
 /**
  * The settings panel as one string.
  *
- * It is four tabs across six partial classes since XOR-125, so a test that named SettingsControl.cs
+ * It is four tabs across six partial classes since #176, so a test that named SettingsControl.cs
  * was reading a sixth of it and went green on the strips having moved to the Lights tab. The whole
  * panel is what these assertions mean: a setting is offered somewhere a user can reach it.
  */

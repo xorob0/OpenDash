@@ -406,7 +406,7 @@ namespace OpenDashPlugin
         /// <summary>A pit wall: three pages sharing four data zones and one wide zone.</summary>
         public const string KindPitWall = "pitwall";
 
-        /// <summary>A twelve-slot face, from the card model that the zones replaced. Leaves with XOR-95.</summary>
+        /// <summary>A twelve-slot face, from the card model that the zones replaced. Leaves with #146.</summary>
         public const string KindSlots = "slots";
 
         public static readonly string[] ScreenKinds = { KindFace, KindCompanion, KindPitWall, KindSlots };

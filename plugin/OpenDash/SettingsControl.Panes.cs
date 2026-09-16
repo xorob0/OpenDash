@@ -728,7 +728,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// On its own screen card rather than in a section of its own, which is how the card model
         /// survives the redesign without cluttering it: it is on screen only if you installed one. It
-        /// leaves with the cards in XOR-95.
+        /// leaves with the cards in #146.
         /// </remarks>
         private FrameworkElement BuildSlotsPane()
         {

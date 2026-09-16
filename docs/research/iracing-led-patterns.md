@@ -193,7 +193,7 @@ On the VM, 2026-09-16, against SimHub 9.12.6 and the emulator on the `race` scen
 
 - **A physical strip.** Everything above stops at the property and the expression; no Arduino is
   plugged into the VM, so `DynamicColor` turning `#FF00FF00` into a lit LED is still only the
-  decompiled `SetResultBase` quoted above. XOR-301 is the ticket for seeing lights without owning
+  decompiled `SetResultBase` quoted above. #301 is the ticket for seeing lights without owning
   hardware, and it is what would close this.
 - Whether a JS array from a `ScriptedContent` formula marshals to `object[]` as `ToColorArray`
   requires. Everything above about `DynamicColor` and `RPMSegments` was read from the bodies quoted;
