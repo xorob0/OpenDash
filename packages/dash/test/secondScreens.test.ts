@@ -352,6 +352,28 @@ describe('every module fits the box it is given', () => {
   }
 });
 
+describe('a bar drawn under a value', () => {
+  const gaugeOf = (density: Density) => {
+    const module = MODULES.find((m) => m.id === 'fuel')!;
+    const items = module.build({ frame: rect(0, 0, 802, 336), density, prefix: 'fuel.' });
+    const drawn = items.find((i) => i.kind === 'linearGauge');
+    if (drawn?.kind !== 'linearGauge') throw new Error('no gauge drawn');
+    return drawn;
+  };
+
+  test('is four pixels tall on the companion as in a zone, with the canvas track and fill', () => {
+    for (const density of ['companion', 'zone'] as const) {
+      const drawn = gaugeOf(density);
+      expect({ density, height: drawn.rect.height, track: drawn.backgroundColor, fill: drawn.gaugeColor }).toEqual({
+        density,
+        height: 4,
+        track: ds.color.surface.raised,
+        fill: ds.color.text.primary,
+      });
+    }
+  });
+});
+
 describe('the small text that follows a value', () => {
   const followerOf = (follower: Follower, fs: number): TextItem => {
     const spec = { name: 'f', label: 'Fuel', value: { sample: '38.4', chars: { digits: 3, specials: 1 }, fs, follower } };
