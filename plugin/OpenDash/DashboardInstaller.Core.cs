@@ -295,17 +295,13 @@ namespace OpenDashPlugin
             // Read for every package, so the panel can still say what is installable and at what
             // version; written only for the folders the rig wants.
             var wanted = Wanted;
-            var done = 0;
+            var results = new List<PackageStatus>(names.Count);
             Report(progress, 0);
-            var results = names
-                .Select(name =>
-                {
-                    var result = Process(name, force, install && Includes(wanted, FolderOf(name)), replaceEdited);
-                    done++;
-                    Report(progress, (double)done / names.Count);
-                    return result;
-                })
-                .ToList();
+            foreach (var name in names)
+            {
+                results.Add(Process(name, force, install && Includes(wanted, FolderOf(name)), replaceEdited));
+                Report(progress, (double)results.Count / names.Count);
+            }
             Packages = results;
             Status = results.Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
             LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null);
