@@ -50,13 +50,13 @@ const PORTRAIT_PAIR_GAP = 40;
 export const lapTimes = defineModule('lapTimes', (ctx) => {
   const d = densityOf(ctx.density);
   const delta = referenceDelta();
+  const shape = shapeIn(ctx);
   /**
    * The portrait companion, which is the one drawing of this page that leads with the last lap as
    * a hero, gives every time a line of its own and puts the delta below the laps rather than
    * beside them. The catalogue's `tall` zone drawing stacks the same three times at one size, so
    * the shape alone does not say which of the two is being drawn; the instrument does.
    */
-  const shape = shapeIn(ctx);
   const portrait = ctx.density === 'companion' && shape.height === 'tall';
   /**
    * The catalogue's `grid` drawing, which is the one that gives the last lap a full-width line of
@@ -115,6 +115,6 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
     // The catalogue spreads this page's ranks over the zone and centres them in a zone of one
     // column; the portrait companion centres its own column too, its artboard setting no height on
     // the group. Everywhere else the first rank sits on the top edge and the last on the bottom.
-    { gap: portrait ? PORTRAIT_GROUP_GAP : undefined, justify: portrait || shapeIn(ctx).width === 'narrow' ? 'centre' : 'spaceBetween' },
+    { gap: portrait ? PORTRAIT_GROUP_GAP : undefined, justify: portrait || shape.width === 'narrow' ? 'centre' : 'spaceBetween' },
   );
 });
