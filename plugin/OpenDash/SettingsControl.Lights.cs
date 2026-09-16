@@ -49,14 +49,26 @@ namespace OpenDashPlugin
             var panelRows = (StackPanel)panels.Child;
             foreach (var row in matrices) panelRows.Children.Add(row);
 
+            // The attribution row is not decoration. The car tables are somebody else's work under
+            // CC BY-NC-SA 4.0 (ADR 0018), openDash ships none of them, and a user is entitled to know
+            // whose numbers are lighting their wheel.
             var strips = Ui.Section("The strips",
-                Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip, then these two decide what it shows.", BodyWidth),
+                Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip, then these decide what it shows.", BodyWidth),
                 Ui.Row("Strip centre", "What the middle of the strip shows. RPM keeps the brake on the sides; RPM only leaves them dark.",
                     BuildChoice(Contract.LedCentres, new[] { "RPM", "RPM only", "Brake", "Throttle and brake", "Fuel" }, Settings.LedCentre, 220,
                         value => { Settings.LedCentre = value; Save(); })),
-                Ui.Row("Rev style", "How the ladder fills. Meet in middle works inwards from both ends; F1 is a formula wheel's colours, and flashes whole.",
-                    BuildSegmented(Contract.LedRpmStyles, new[] { "Left to right", "Meet in middle", "F1" }, Settings.LedRpmStyle,
-                        value => { Settings.LedRpmStyle = value; Save(); })));
+                // A drop-down rather than a segmented bar, now there are four: the car's own bar, and
+                // openDash's three looks.
+                Ui.Row("Rev style", "The car's own mirrors the shift lights in the car you are driving: its LEDs, its colours, its order, its flash, in the gear you are in. The other three are openDash's own looks, and are what a car we have no measurements for shows.",
+                    BuildChoice(Contract.LedRpmStyles, new[] { "The car's own", "Left to right", "Meet in middle", "F1" }, Settings.LedRpmStyle, 220,
+                        value => { Settings.LedRpmStyle = value; Save(); })),
+                Ui.Row("Car bar size", "Only for the car's own. Fill the strip spreads the car's lights over every LED; true size draws them at their own length in the middle.",
+                    BuildSegmented(Contract.LedMirrorFits, new[] { "Fill the strip", "True size" }, Settings.LedMirrorFit,
+                        value => { Settings.LedMirrorFit = value; Save(); })),
+                Ui.Caption(
+                    CarLightLibrary.Attribution + " openDash ships none of it: the tables are fetched when update checks are on, "
+                        + "and every car works offline afterwards. " + CarLightLibrary.ProjectUrl,
+                    BodyWidth));
 
             return Ui.VStack(0, box, panels, strips);
         }
