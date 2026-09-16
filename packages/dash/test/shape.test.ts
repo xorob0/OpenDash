@@ -21,7 +21,9 @@ import {
   shapeOf,
   widthBandOf,
 } from '../src/second/shape.ts';
-import { densityOf, nextOnRamp, rampOf } from '../src/second/density.ts';
+import { densityForBox, densityOf, nextOnRamp, rampOf, type Density } from '../src/second/density.ts';
+import { zoneFrame } from '../src/second/header.ts';
+import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { fieldsRow } from '../src/modules/module.ts';
 import { rule } from '../src/elements/rule.ts';
 import { fixedRow, stack, type StackRow } from '../src/second/layout.ts';
@@ -320,5 +322,60 @@ describe('a rank fills the box it is given', () => {
     const sectors = MODULES.find((m) => m.id === 'sectors')!;
     const items = valuesOf(sectors.build({ frame: rect(0, 0, 737, 270), density: 'zone', prefix: 'b.' }));
     for (const item of items) expect({ name: item.name, onRamp: rampOf('zone').includes(item.fontSize) }).toEqual({ name: item.name, onRamp: true });
+  });
+});
+
+/**
+ * Rule 18 applied to a number, which pit view is the only page on the catalogue artboard to do.
+ *
+ * The drawing gives the refuel quantity 116, 96, 64, 61 and 58 px and the pit time 81, 67, 44, 42
+ * and 40: sizes on no ramp, cut from the height of the box, every pair within a pixel of 1.45 to
+ * one. So the page takes what the options row and the progress bar leave it rather than reading
+ * `d.hero` and `d.mid`, whose 1.88 answered nothing about the box at all. readability-pass.md §6.
+ */
+describe('pit view cuts its two numbers from the box', () => {
+  /** The ratio the catalogue holds between the quantity and the time at every shape it draws. */
+  const RATIO = 1.45;
+  const pitView = MODULES.find((m) => m.id === 'pitView')!;
+  const valuesOf = (items: readonly Item[]): TextItem[] =>
+    items.flatMap((i) => [...walkItems([i])]).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'));
+  const numbersIn = (box: { width: number; height: number }, density: Density): { refuel: number; pitTime: number } => {
+    const drawn = valuesOf(pitView.build({ frame: rect(0, 0, box.width, box.height), density, prefix: 'p.' }));
+    const size = (id: string): number => drawn.find((item) => item.name === `p.${id}.value`)?.fontSize ?? 0;
+    return { refuel: size('refuel'), pitTime: size('pitTime') };
+  };
+
+  test('the catalogue drawings come out at the sizes the catalogue draws them', () => {
+    // `wide` and `tall` are the two the drawing sizes from the box alone. `grid` and `tall narrow`
+    // share their height with a car the build has no artwork for, so both reach the ramp's own top
+    // where the drawing, having spent a third of its width on the car, stops at 61 and at 58.
+    expect(numbersIn(SHAPE_ARCHETYPES.wide, 'zone')).toEqual({ refuel: 64, pitTime: 44 });
+    expect(numbersIn(SHAPE_ARCHETYPES.tall, 'zone')).toEqual({ refuel: 96, pitTime: 66 });
+  });
+
+  test('and hold the ratio at every zone body the build produces', () => {
+    for (const layout of ZONE_FACES) {
+      for (const arrangement of [layout, layoutWithoutRevBar(layout)]) {
+        for (const zone of zonesOf(arrangement)) {
+          if (zone.zone === 'A' || zone.zone === 'D') continue;
+          const density = densityForBox(zone.size);
+          const frame = rect(0, 0, zone.size.width, zone.size.height);
+          const { body } = zoneFrame('zone', { frame, title: 'Pit view', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
+          const { refuel, pitTime } = numbersIn(body, density);
+          const at = `${body.width}x${body.height}`;
+          expect({ at, drew: refuel > 0 && pitTime > 0 }).toMatchObject({ drew: true });
+          expect({ at, refuel, pitTime, held: Math.abs(refuel / pitTime - RATIO) < 0.03 }).toMatchObject({ held: true });
+        }
+      }
+    }
+  });
+
+  test('so a taller box draws them larger, where the ramp alone cannot', () => {
+    // The quantity sits at the top of its ramp, so rule 20's ceiling was exactly 1 for this page
+    // and the 1280 x 400 zone drew the same 64 px as the 1280 x 720 one in a box 296 px shorter.
+    const short = numbersIn({ width: 437, height: 214 }, 'zone');
+    const tall = numbersIn({ width: 437, height: 510 }, 'zone');
+    expect({ short: short.refuel, tall: tall.refuel, grew: tall.refuel > short.refuel }).toMatchObject({ grew: true });
+    expect(tall.refuel).toBeGreaterThan(densityOf('zone').hero);
   });
 });

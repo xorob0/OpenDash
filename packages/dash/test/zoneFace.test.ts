@@ -26,6 +26,7 @@ import { ds } from '../src/tokens.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING, boxSlack, textBox } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
+import { packImages } from '../src/build.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { MODULES } from '../src/modules/index.ts';
@@ -334,7 +335,10 @@ describe('the contract describes the shape each face really has', () => {
 describe('the face reads what it declares and nothing else', () => {
   test('every package validates with no error and no warning', () => {
     for (const { face, built } of BUILT) {
+      // Composed the way `build.ts` composes it, the image step included: a dashboard that does not
+      // declare the picture its own items draw is an `image/missing` rather than a drawing.
       const pkg = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+      packImages(pkg);
       const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
       expect({ folder: face.folder, errors: result.errors }).toMatchObject({ errors: [] });
       expect({ folder: face.folder, warnings: result.warnings }).toMatchObject({ warnings: [] });

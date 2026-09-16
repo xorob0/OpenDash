@@ -492,8 +492,9 @@ the module.
 ### The parts that are not fields
 
 A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap history
-is rows under a header, pit view's four corner toggles are what the drawing writes as the one line
-`Tyres · RIGHTS`, and tyres closes its corners with the caption saying where its pressures come
+is rows under a header, pit view's tyre service is the summary word the drawing writes as the one
+line `Tyres · RIGHTS` together with the four corner toggles that say which corner rather than which
+pair, and tyres closes its corners with the caption saying where its pressures come
 from. The catalogue draws each of these at some shapes and not at others, so they are declared the
 same way a field is, in `PARTS` beside the table above. An empty cell is a part the drawing does not
 carry at that shape.

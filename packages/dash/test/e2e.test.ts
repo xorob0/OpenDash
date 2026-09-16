@@ -244,11 +244,16 @@ describe('widget build on disk', () => {
       const bytes = readFileSync(p.zipped.path);
       expect(Buffer.compare(bytes, p.zipped.bytes)).toBe(0);
       // A card face carries cards.djson; a zone face carries one dashboard per distinct zone
-      // rectangle and catalogue, which the package itself is the list of.
+      // rectangle and catalogue, which the package itself is the list of. A dashboard that draws a
+      // picture carries its own sidecar beside the two, which the pit view's tick is the first of.
       const expected = [
         ...FONT_FILES,
         FONT_LICENCE.name,
-        ...p.pkg.dashboards.flatMap((d) => [`${d.name}.djson`, `${d.name}.djson.metadata`]),
+        ...p.pkg.dashboards.flatMap((d) => [
+          `${d.name}.djson`,
+          `${d.name}.djson.metadata`,
+          ...(d.images?.length ? [`${d.name}${RESOURCES_EXTENSION}`] : []),
+        ]),
       ]
         .sort(byCodeUnit)
         .map((f) => `${folder}/${f}`);
@@ -722,9 +727,10 @@ describe('command line', () => {
  * The picture path, end to end: an item draws an asset, the packer declares it on the dashboard it
  * landed on, and the file reaches the archive inside the `.ressources` sidecar.
  *
- * Asserted on a package composed here rather than on a shipped one, because no drawing uses an
- * asset yet: the registry, the packer and the sidecar have to be known good before a telltale or a
- * tick is drawn against them, and this is the test that keeps them so.
+ * Asserted on a card package composed here rather than on a shipped one, because the card faces
+ * draw no picture of their own: the pit view's tick is the first drawing to use an asset, and it
+ * lands on the zone faces and the second screens instead. The registry, the packer and the sidecar
+ * are therefore kept known good on a package whose contents this test controls.
  */
 describe('an image asset reaches the archive', () => {
   const tick = imageOf(WHEEL_CHANGE_TICK);

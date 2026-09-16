@@ -209,8 +209,9 @@ export const SHEDDING: Record<string, Shedding> = {
  * The second table: the parts of a page that are neither fields nor columns.
  *
  * A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap
- * history is rows under a header, pit view's corner toggles are what the drawing writes as one
- * summary, and tyres closes its four corners with a line saying where the pressures come from. The
+ * history is rows under a header, pit view's tyre service is the summary word the drawing writes as
+ * one line together with the four corner toggles beside it, and tyres closes its four corners with
+ * a line saying where the pressures come from. The
  * catalogue draws each of these at some shapes and not at others -- the `tall narrow` delta is the
  * number and its label alone, and neither the `tall narrow` nor the `tall` lap history has a header
  * over its rows -- and none of it was declared. A narrow box lost them to `rowsThatFit` instead,
@@ -229,7 +230,8 @@ export const PARTS: Record<string, Keeps> = {
   // number when the box is one column wide. The rule under the scale goes with them, being what
   // separates the scale from the three sector deltas rather than a thing of its own.
   delta: { wide: ['bar', 'scale', 'rule'], grid: ['bar', 'scale', 'rule'], tallNarrow: [], tall: ['bar', 'scale', 'rule'] },
-  // The corner toggles are the drawing's `Tyres · RIGHTS`; the fast repair and the tear-off stay.
+  // The summary word and the four corner toggles beside it are the drawing's `Tyres · RIGHTS`;
+  // the fast repair and the tear-off stay at every shape.
   pitView: { wide: ['tyres'], grid: ['tyres'], tallNarrow: [], tall: [] },
   // The caption says the pressures are the ones the car left the box with. A column that narrow
   // has no room to say it, and the catalogue closes the cell with the compound instead.
