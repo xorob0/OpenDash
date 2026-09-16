@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { measureText, type MeasuredFace } from '../src/design/advances.ts';
-import { LINE_SPACING } from '../src/design/metrics.ts';
+import { LINE_SPACING, cells, monoWidth } from '../src/design/metrics.ts';
 import {
   MODULE_CATALOGUE,
   MODULE_COUNT,
@@ -21,7 +21,7 @@ import { validatePackage, type Dashboard, type Item, type TextItem, type WidgetI
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
-import { field, type Follower } from '../src/second/field.ts';
+import { DENOMINATOR_GAP, UNIT_GAP, field, type Follower } from '../src/second/field.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
 import { rect } from '../src/design/geometry.ts';
@@ -374,6 +374,27 @@ describe('the small text that follows a value', () => {
 
   test('a unit keeps a colour it does declare', () => {
     expect(followerOf({ text: 'L', color: ds.color.text.primary }, 64).textColor).toBe(ds.color.text.primary);
+  });
+
+  test('a unit sits six pixels after the value and a denominator eight', () => {
+    const valueEnd = monoWidth(cells('SemiBold', 64), { digits: 3, specials: 1 });
+    expect(followerOf({ text: 'L' }, 64).rect.left).toBe(Math.round(valueEnd + UNIT_GAP));
+    expect(followerOf({ kind: 'denominator', text: '/ 24' }, 64).rect.left).toBe(Math.round(valueEnd + DENOMINATOR_GAP));
+  });
+
+  test('a denominator is a numeral at 0.7 of the value it follows', () => {
+    for (const [valueFs, size] of [
+      [46, 32],
+      [64, 44],
+    ] as const) {
+      const drawn = followerOf({ kind: 'denominator', text: '/ 24' }, valueFs);
+      expect({ valueFs, size: drawn.fontSize, font: drawn.font, color: drawn.textColor }).toEqual({
+        valueFs,
+        size,
+        font: ds.font.data,
+        color: ds.color.text.secondary,
+      });
+    }
   });
 });
 
