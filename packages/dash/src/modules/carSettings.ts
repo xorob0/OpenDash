@@ -42,6 +42,27 @@ const SETTING_GAP = 20;
  */
 const COLUMNS: Record<Archetype, number> = { wide: 3, grid: 3, tallNarrow: 2, tall: 2 };
 
+/**
+ * The cells the catalogue names, at `fs`, in the order it draws them.
+ *
+ * Exported because the wide car-telemetry page draws this grid beside its pedal traces, from the
+ * same definitions and without the car line or the anti-roll bars, which the drawing there does
+ * not carry. A second transcription of the same four readings would be the thing that drifts.
+ *
+ * Five of the catalogue's cells are missing and stay missing: TC slip, TC cut, Diff, Migr. and
+ * KERS. Nothing in the repository records an iRacing property for any of them, and a cell bound to
+ * a near neighbour is a reading with somebody else's number in it -- the bar's own strip binds its
+ * DIFF cell to the rear anti-roll bar, which is exactly that mistake.
+ */
+export const settingCells = (ctx: ModuleContext, fs: number): FieldSpec[] => [
+  settingField(ctx, 'tc', 'TC', tcLevel(), '0', fs, raw('dcTractionControl')),
+  settingField(ctx, 'bb', 'BB', brakeBias(), '0.0', fs, game('BrakeBias')),
+  // `Map` is what the catalogue and the bar's own strip call this cell; iRacing publishes the
+  // engine map as the mixture.
+  settingField(ctx, 'mix', 'Map', fuelMixture(), '0', fs),
+  settingField(ctx, 'abs', 'ABS', absLevel(), '0', fs, raw('dcABS')),
+];
+
 export const carSettings = defineModule('carSettings', (ctx) => {
   const d = densityOf(ctx.density);
   return stack(
@@ -67,12 +88,7 @@ export const carSettings = defineModule('carSettings', (ctx) => {
       // the drawing's and not the shedding table's, which is where importance is written.
       fieldsRow(
         [
-          settingField(ctx, 'tc', 'TC', tcLevel(), '0', d.small, raw('dcTractionControl')),
-          settingField(ctx, 'bb', 'BB', brakeBias(), '0.0', d.small, game('BrakeBias')),
-          // `Map` is what the catalogue and the bar's own strip call this cell; iRacing publishes
-          // the engine map as the mixture.
-          settingField(ctx, 'mix', 'Map', fuelMixture(), '0', d.small),
-          settingField(ctx, 'abs', 'ABS', absLevel(), '0', d.small, raw('dcABS')),
+          ...settingCells(ctx, d.small),
           settingField(ctx, 'arbRear', 'ARB R', antiRollRear(), '0', d.small),
           settingField(ctx, 'arbFront', 'ARB F', antiRollFront(), '0', d.small),
         ],
