@@ -118,6 +118,11 @@ settle rather than an implementer's.
   WPF line box, and the band is 60. Band D shrinks its value to 32 rather than clip; the settings bar
   keeps the overrun it has always had, because the box is transparent and digits have no descenders.
   The two should agree.
+- **The push to pass lamp has no lit colour.** Band D's three chips are drawn on eight catalogue
+  bands and on four face sheets, and the spotter is amber and the DRS green on every one of them.
+  The push to pass is drawn dim on all twelve, so nothing says what colour it takes when it is
+  available. The code lights it in the flag blue, while the 1280 by 720 sheet asks for green and the
+  lights review proposes blue and then green as the boost is spent. One of the three is the answer.
 - **The nano's band is two pixels short of its own drawing.** Band D now draws the artboards' block
   everywhere it fits: a 15 px label centred in a 13 px row, five pixels, and a 34 px value. Under
   WPF that block wants 62 px, since the label's box opens two and a half pixels above its row and
