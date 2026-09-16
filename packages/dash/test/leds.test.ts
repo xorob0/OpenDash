@@ -25,7 +25,7 @@ import {
   flagEffects,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
-import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { lastGear, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -483,9 +483,12 @@ describe('the per-gear shift table', () => {
     // Band 0 runs 6000 to 7000 over five rungs: rung 0 at 6000, rung 2 at 6400.
     expect(tabledStageLit(points, 0, 0, 5)).toBe(`(${rpm}) > (6000)`);
     expect(tabledStageLit(points, 0, 2, 5)).toBe(`(${rpm}) > (6400)`);
-    // The top band lights together at `last`, and the flash is at `blink`.
+    // The top band lights together at `last`, and the flash is at `blink`. The flash also carries
+    // the last-gear exception, which this used to assert the absence of: a measured gear has no
+    // more claim to flash in the gear there is nothing to shift out of than either derived ladder
+    // has, so the reversal is the point of the line rather than a loosening of it.
     expect(tabledStageLit(points, 2, 0, 5)).toBe(`(${rpm}) >= (7500)`);
-    expect(tabledOverRev(points)).toBe(`(${rpm}) >= (7800)`);
+    expect(tabledOverRev(points)).toBe(`((${rpm}) >= (7800)) and (!(${lastGear()}))`);
   });
 
   test('an entry reaches a profile as a gear-and-car override that composes over the derived ladder', () => {
