@@ -275,6 +275,37 @@ decide, grouped by where they arose. Each is a sentence the author can answer in
   it used to be, because the picture is drawn to one rule for every face. Capping it needs a height
   the canvas does not give, so it scrolls.
 
+### What the fourth round left for you
+
+- **Two requirements disagree about the Install tab's Add button**, one asking for accent text and
+  the other for an outline. The outline shipped, because a column of accent text reads as links
+  rather than as the tab's actions.
+- **The canvas names six packages and the build embeds fourteen.** The rows fall back to the folder
+  name, which is also what SimHub's own list shows. Whichever sheet gains the name table has to say
+  what the other eight read as.
+- **Retiring the rpm-only centre took away the only way to ask for dark strip sides**, and nothing
+  replaced it. A switch for the sides would be the honest replacement, the sides being a decision
+  about the sides rather than about what the middle shows.
+- **The plugin document is stale on the Lights tab**: brightness has moved into a section of its own
+  for every light, and the strips have a third row. That file is refused by the pre-commit hook, so
+  it is yours to edit.
+- **Two requirements ask for a picker where the code draws a segmented bar**, against the
+  repository's own stated rule that a three-value set is what the segmented bar was drawn for. The
+  canvas's word "picker" most likely means a choice from a fixed set rather than a control kind.
+- **The player's row on a pit wall board.** The canvas lifts the gap, the interval, both lap times
+  and the rating to the brightest ink on the player's own row; the code lifts the position, the name
+  and the gap and states that as a rule. The lift is more likely a property of the board than of the
+  column family.
+- **The driver column on the portrait board is a floor rather than a width.** The canvas fixes it at
+  190 and gives the row a gutter, but two of its columns have no source, so fixing 190 would leave
+  about 170 px of empty gutter; the remainder goes to the name instead, which is the column the
+  renderer punishes for being narrow.
+- **The telemetry trace's two colours.** The canvas draws two greys and no legend; the code draws
+  the green and red that the inputs page and the telemetry column already use for throttle and
+  brake, with a legend. Two greys tell an engineer nothing about which line is which.
+- **The race board no longer carries a stint column**, no artboard heading one, so the scope and the
+  second screens documents are now stale where they say it does.
+
 ## 4. The work, in packages
 
 The 1581 gaps group into 150 packages that can be built independently. A package owns a set of
