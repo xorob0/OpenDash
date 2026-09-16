@@ -64,11 +64,15 @@ const nothing = (why: string): Shedding => ({ kind: 'nothing', why });
  * module does not have yet, it is simply not here; the module is what this table is about.
  */
 export const SHEDDING: Record<string, Shedding> = {
-  // Six values at `wide`, four at `grid`: the laps and the estimate go, and the delta stays,
+  // Twelve values at `wide`, four at `grid`: the laps and the estimate go, and the delta stays,
   // which is the clearest proof in the catalogue that shedding is not dropping the tail. At
   // `tall narrow` only the two times a driver compares on a lap.
+  //
+  // The last six are the fullest form and belong to `wide` alone. The companion artboard draws
+  // all twelve, the catalogue's own page description names nine, and the two zone drawings that
+  // are `tall` draw six; a box that cannot hold the tail takes it off in this order anyway.
   lapTimes: fields({
-    wide: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
+    wide: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta', 'average5', 'position', 'stintLap', 's1', 's2', 's3'],
     grid: ['last', 'sessionBest', 'yourBest', 'delta'],
     tallNarrow: ['last', 'sessionBest', 'yourBest', 'delta'],
     tall: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],

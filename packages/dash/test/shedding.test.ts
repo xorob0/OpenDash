@@ -80,9 +80,13 @@ describe('a shape takes the answer of one of the four the catalogue draws', () =
 });
 
 describe('the two the ticket works through', () => {
-  test('lap times keeps six at wide and four at grid and at tall narrow', () => {
+  test('lap times keeps twelve at wide, six at tall and four at grid and at tall narrow', () => {
     const at = (shape: Archetype): readonly string[] => (sheddingFor('lapTimes') as { keeps: Record<Archetype, readonly string[]> }).keeps[shape];
-    expect(at('wide')).toHaveLength(6);
+    // Twelve is the companion artboard's drawing: the six a zone draws, then the five-lap average,
+    // the position and the stint lap, then the three sectors of the last lap. The catalogue's own
+    // zone drawings keep six, so `tall` keeps six and the extra rank lives at `wide` alone.
+    expect(at('wide')).toHaveLength(12);
+    expect(at('tall')).toEqual(['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta']);
     expect(at('grid')).toEqual(['last', 'sessionBest', 'yourBest', 'delta']);
     // The catalogue draws two here and the build takes four: a zone that stacks one column has the
     // height for them, and 234 px of the base face's zone B was empty. zones.md §10 records it.
