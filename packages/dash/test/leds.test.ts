@@ -43,6 +43,10 @@ describe('the strip shapes', () => {
   test('the named device families are the shapes people actually own', () => {
     expect(shapeById('3-9-3')?.devices).toContain('Fanatec ClubSport / Podium wheels');
     expect(shapeById('4-14-4')?.devices).toContain('SimRep Engineering MLD');
+    // The shapes no maker's name attaches to are the ones someone wires themselves.
+    for (const id of ['2-10-2', '4-9-4', '5-10-5', '0-8-0', '0-9-0', '0-10-0', '0-12-0', '0-16-0']) expect(shapeById(id)?.devices).toEqual(['generic WS2812b runs']);
+    // A row with nothing beside it is a row the panel and the guide cannot describe, so none ships unattributed.
+    for (const s of ALL_SHAPES) expect({ id: s.id, attributed: (s.devices?.length ?? 0) > 0 }).toMatchObject({ attributed: true });
     expect(shapeById('3-10-3')?.extraRuns).toEqual({ count: 2, length: 9 });
     // A brow is a strip with no sides, which is why it needs no module of its own.
     for (const b of BROW_SHAPES) expect({ id: b.id, left: b.left, right: b.right, placement: b.placement }).toMatchObject({ left: 0, right: 0, placement: 'brow' });
