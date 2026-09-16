@@ -179,7 +179,9 @@ describe('every layout', () => {
       test('the grid cards keep every value in its column: text inside the column, boxes inside the slot, no overdraw', () => {
         const origin = rect(0, 0, layout.slotSize.width, layout.slotSize.height);
         const rung = cardRung(layout);
-        const colWidth = gridColumnWidth(origin, rung);
+        // A grid whose cells carry a sub-value draws wider columns, so each card is measured
+        // against the column it is actually laid out in rather than against the plain grid's.
+        const columnWidth = (id: string): number => gridColumnWidth(origin, rung, id === 'tyreTemps' && rung.rung === 'L' ? 18 : undefined);
         /** Width of the text an item actually draws, in its own monospace cells. */
         const textWidth = (it: DrawableItem): number => {
           if (it.kind !== 'text' || !it.monospace) throw new Error(`${it.name} is not a monospaced value`);
@@ -201,6 +203,7 @@ describe('every layout', () => {
           for (const u of drawn.filter((c) => c.name.endsWith('.subunit'))) {
             expect({ card: id, unit: u.name, right: u.rect.left + u.rect.width, inside: u.rect.left + u.rect.width <= layout.slotSize.width }).toMatchObject({ inside: true });
           }
+          const colWidth = columnWidth(id);
           for (const c of [...cells, ...subs]) {
             // The glyphs fit the column; the box may take the gap and the padding, since WPF clips to it.
             expect({ card: id, cell: c.name, text: textWidth(c), colWidth, fits: textWidth(c) <= colWidth }).toMatchObject({ fits: true });
