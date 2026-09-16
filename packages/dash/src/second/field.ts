@@ -217,6 +217,9 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
       label(`${spec.name}.label`, spec.label, x, below ? bottom - d.label : valueY - d.fieldGap - d.label, width, {
         size: d.label,
         bind: spec.labelBind,
+        // `fieldWidth` already cuts the box from `labelWidest`; handing it on is what lets the fit
+        // tests measure what a bound label draws rather than the sample it happens to carry.
+        widest: spec.labelWidest,
         visibleBind: spec.visibleBind,
         leftBind: leftAt?.(),
       }),
