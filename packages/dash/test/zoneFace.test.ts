@@ -451,13 +451,18 @@ describe('what the first photograph of the face showed', () => {
 
   test('a value centred in a zone is centred in the zone, not in its own glyphs', () => {
     // `maxWidth` caps a box; it cannot widen one, so hAlign had nothing to centre within and the
-    // speed sat hard against the left edge of a 380 px column.
+    // speed sat hard against the left edge of a 380 px column. The unit now sits beside the value
+    // on its baseline rather than under it, so what the column centres is the pair: centring the
+    // value alone would put the group's own centre half a unit's width left of the column's.
     const a = rectOf(zoneFace1920x480, 'A');
     const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('zoneA', { width: a.width, height: a.height }))!;
     const page = shared.screens.find((s) => s.name === 'gearSpeedRevs')!;
-    const speed = [...walkItems(page.items)].find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('speed'))!;
-    expect(speed.hAlign).toBe('center');
-    expect(speed.rect.left + speed.rect.width / 2).toBeCloseTo(a.width / 2, 0);
+    const items = [...walkItems(page.items)];
+    const speed = items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('speed'))!;
+    const unit = items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('speed.unit'))!;
+    expect(speed.rect.left).toBeGreaterThan(0);
+    const centre = (speed.rect.left + unit.rect.left + unit.rect.width) / 2;
+    expect({ centre, column: a.width / 2, off: Math.abs(centre - a.width / 2) }).toMatchObject({ off: expect.closeTo(0, 0) });
   });
 
   test('the ghosted gears are mapped from text, because SimHub publishes the gear as a string', () => {
