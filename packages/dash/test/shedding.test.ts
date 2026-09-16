@@ -276,12 +276,6 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     // rank sheds the delta the `grid` drawing keeps. readability-pass.md §1 owns the redraw.
     '1280x400 469x258 lapTimes': ['delta'],
     '800x286 269x194 lapTimes': ['delta'],
-    // The gap column pops when the name column is squeezed under its minimum, which on a list is
-    // the column the page exists for: XOR is tracking it as the 800 x 480 list gap.
-    '800x480 249x328 leaderboard': ['gap'],
-    '800x480 249x328 relative': ['gap'],
-    '800x480 249x366 leaderboard': ['gap'],
-    '800x480 249x366 relative': ['gap'],
     // The refuel figure and the five-lap average are the last two fields of a rank the 600 x 686
     // face's 114 px zones have no room for: two ranks plus the level bar need about 124 px at the
     // compact ramp, so the two lead readings are what survive. The nano keeps its rank whole now
