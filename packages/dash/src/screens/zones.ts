@@ -28,7 +28,12 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zones$
 export function zoneScreen(page: PitWallZonePageMeta, kind: ZoneKind, size: Size): Screen {
   const pages = pagesOf(kind);
   const frame = rect(0, 0, size.width, size.height);
-  const { items: chrome, body } = zoneFrame(page.id, { frame, title: page.name, counter: { kind: 'static', page: page.number + 1, pages: pages.length } });
+  // The wide zone says so in its title, which is what the sheet draws: the same page is offered in
+  // both kinds and a pit wall carries both at once, so the title is where the two are told apart.
+  // The suffix is added here rather than in the catalogue, because the catalogue's name is also the
+  // label the plugin puts in its wide-zone dropdown, where a suffix would read as a second page.
+  const title = kind === 'wide' ? `${page.name} · Wide` : page.name;
+  const { items: chrome, body } = zoneFrame(page.id, { frame, title, counter: { kind: 'static', page: page.number + 1, pages: pages.length } });
   const density = kind === 'wide' ? 'wide' : 'zone';
   const items: Item[] = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.` })];
   return pageScreen(page.id, items);
