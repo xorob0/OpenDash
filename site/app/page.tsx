@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Anatomy } from '../components/Anatomy';
 import { Reveal } from '../components/Reveal';
+import { SectionHead } from '../components/SectionHead';
 import { Shot } from '../components/Shot';
 import { MODULES, SIMHUB_VERSION, VERSION } from '../lib/content.generated';
 import { ORDERED } from '../lib/packages';
@@ -65,15 +66,13 @@ export default function Home() {
       {/* ------------------------------------------------------------------ anatomy */}
       <section className={`section ruled ${styles.block}`}>
         <div className="page">
-          <Reveal>
-            <p className="label">The face</p>
-            <h2 className={`h1 ${styles.title}`}>Five parts, and only one of them moves slowly.</h2>
-            <p className="prose">
+          <SectionHead label="The face" title={<>Five parts, and only one of them moves slowly.</>}>
+            <p>
               A driver does not configure a dashboard. They change it mid-stint, with a thumb, and
               the layout has to survive that. So the face is a small number of named regions, each
               showing one page at a time from its own catalogue and each bound to a wheel button.
             </p>
-          </Reveal>
+          </SectionHead>
 
           <Reveal delay={80} className={styles.anatomy}>
             <Anatomy src="/shots/opendash-green.png" />
@@ -84,18 +83,17 @@ export default function Home() {
       {/* ------------------------------------------------------------------ pages */}
       <section className={`section ruled ${styles.block}`}>
         <div className="page">
-          <Reveal>
-            <p className="label">The catalogue</p>
-            <h2 className={`h1 ${styles.title}`}>
-              {MODULES.length} pages. A wheel button, not a menu.
-            </h2>
-            <p className="prose">
+          <SectionHead
+            label="The catalogue"
+            title={<>{MODULES.length} pages. A wheel button, not a menu.</>}
+          >
+            <p>
               Zones B and C each choose from the same catalogue, the band from eight that suit a
               wide, shallow strip, and zone A from four. Hold a button instead of tapping it and you
               get a glance: one page shows while you hold, and the zone returns to what it was when
               you let go.
             </p>
-          </Reveal>
+          </SectionHead>
 
           <Reveal delay={80}>
             <ul className={styles.chips}>
@@ -120,12 +118,15 @@ export default function Home() {
       {/* ------------------------------------------------------------------ three kinds */}
       <section className={`section ruled ${styles.block}`}>
         <div className="page">
-          <Reveal>
-            <p className="label">Three kinds of screen</p>
-            <h2 className={`h1 ${styles.title}`}>
-              Built from the same parts, drawn for different rooms.
-            </h2>
-          </Reveal>
+          <SectionHead
+            label="Three kinds of screen"
+            title={<>Built from the same parts, drawn for different rooms.</>}
+          >
+            <p>
+              All three are assembled from the same elements, components and pages, and each is
+              redrawn for the rectangle it is given rather than scaled into it.
+            </p>
+          </SectionHead>
 
           <div className={styles.kinds}>
             <Reveal delay={0} className={styles.kind}>
@@ -191,18 +192,15 @@ export default function Home() {
       {/* ------------------------------------------------------------------ fit */}
       <section className={`section ruled ${styles.block}`}>
         <div className="page">
-          <Reveal>
-            <p className="label">Fit</p>
-            <h2 className={`h1 ${styles.title}`}>A page is never scaled. It is redrawn.</h2>
-            <p className="prose">
+          <SectionHead label="Fit" title={<>A page is never scaled. It is redrawn.</>}>
+            <p>
               A bigger screen does not buy you the same dashboard, larger. It buys you more in each
-              zone. The relative lists seven drivers at{' '}
-              <span className="num">850 × 480</span> and eighteen at{' '}
-              <span className="num">1280 × 720</span>; a page sheds its secondary rows before it
-              shrinks its numerals, and it grows to fill a box it does not fill until it meets the
-              height, the width, or the next size up its own ramp.
+              zone. The relative lists seven drivers at <span className="num">850 × 480</span> and
+              eighteen at <span className="num">1280 × 720</span>; a page sheds its secondary rows
+              before it shrinks its numerals, and it grows to fill a box it does not fill until it
+              meets the height, the width, or the next size up its own ramp.
             </p>
-          </Reveal>
+          </SectionHead>
 
           <Reveal delay={80}>
             <ul className={styles.sizes}>
