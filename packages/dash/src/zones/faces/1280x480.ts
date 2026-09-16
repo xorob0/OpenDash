@@ -19,6 +19,7 @@ export const zoneFace1280x480: ZoneLayout = {
   background: ds.color.surface.base,
   bandCorners: true,
   barFieldsPerEnd: 2,
+  bar: { gap: 22, valueSize: 34, denominatorSize: 24, stripCell: 57 },
   zones: {
     revBarWell: rect(10, 3, 1260, 38),
     revBar: rect(16, 7, 1248, 30),

@@ -179,6 +179,51 @@ describe('the strip closes over what the game does not publish', () => {
 });
 
 /**
+ * The columns, and which of them each face has the width for.
+ *
+ * Both are read off the artboards: the column is a fixed width per face rather than a cell
+ * measured from its own reading, and what a narrow face keeps is what is left once the two ends
+ * have been laid out for the widest entry the catalogue holds. The cells a face keeps are
+ * tabulated in `docs/design/zones.md` section 3 and are what changes first when a field of an end
+ * grows, so they are pinned here rather than recomputed.
+ */
+describe('the strip is a rank of equal columns', () => {
+  const KEPT: Record<string, string[]> = {
+    openDash: ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'openDash 1280x480': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'openDash 1280x400': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'openDash 1280x720': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'openDash 850x480': ['slip', 'tc', 'bias', 'abs'],
+    'openDash 800x480': ['tc', 'bias', 'abs'],
+    'openDash 600x686': ['slip', 'tc', 'cut', 'bias', 'abs'],
+    'openDash 800x286': [],
+  };
+
+  for (const face of ZONE_FACES) {
+    const scale = face.bar;
+    test(`${face.folder} draws ${KEPT[face.folder]!.length} of the seven`, () => {
+      expect(stripValues(face.folder).map(cellIdOf)).toEqual(KEPT[face.folder]!);
+    });
+    if (!scale || stripValues(face.folder).length === 0) continue;
+
+    test(`${face.folder} draws them ${scale.stripCell} wide, centred, ${scale.gap} apart`, () => {
+      const column = 2 * Math.ceil(scale.stripCell / 2);
+      const values = stripValues(face.folder);
+      for (const value of values) {
+        // The column is a floor rather than a width: "Bias 50.5" is the one reading wider than the
+        // column it is given, and it takes the pixels it needs rather than losing its last digit.
+        expect({ cell: cellIdOf(value), width: value.rect.width, atLeast: value.rect.width >= column, centred: value.hAlign }).toMatchObject({ atLeast: true, centred: 'center' });
+      }
+      const ordered = [...values].sort((a, b) => a.rect.left - b.rect.left);
+      for (const [i, value] of ordered.slice(1).entries()) {
+        const before = ordered[i]!;
+        expect({ cell: cellIdOf(value), pitch: value.rect.left - before.rect.left }).toMatchObject({ pitch: before.rect.width + scale.gap });
+      }
+    });
+  }
+});
+
+/**
  * The strip is a row of values, drawn as the bar's end fields are.
  *
  * Both of these were silently wrong for as long as the strip measured its cells for a label-sized

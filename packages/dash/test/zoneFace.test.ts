@@ -23,8 +23,9 @@ import {
 } from '../src/contract.ts';
 import { validatePackage, type Dashboard, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
-import { LINE_SPACING } from '../src/design/metrics.ts';
+import { LINE_SPACING, boxSlack } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
+import { ds } from '../src/tokens.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { MODULES } from '../src/modules/index.ts';
@@ -422,7 +423,7 @@ describe('what the face does with a field that is not there', () => {
   };
 
   test("the bar's strip closes over a setting the car does not have", () => {
-    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480) })).filter((i) => i.name.startsWith('bar.strip.'));
+    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480), scale: zoneFace1920x480.bar! })).filter((i) => i.name.startsWith('bar.strip.'));
     expect(items.length).toBeGreaterThan(0);
     for (const item of items) {
       // Hidden when the sim has no property for it, and everything moves when one goes.
@@ -450,7 +451,7 @@ describe('what the face does with a field that is not there', () => {
     // SimHub reports TCLevel 0 for a car with no traction control at all, which is what a driver
     // who has turned it off also sees. The raw dc field is absent on the car that has none, and
     // that is the difference between a cell drawn as OFF and a cell that is not there.
-    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480) }));
+    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480), scale: zoneFace1920x480.bar! }));
     const tc = items.find((i) => i.name === 'bar.strip.tc.value')!;
     expect(bound(tc, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))');
     expect(bound(tc, 'Text')).toContain('[DataCorePlugin.GameData.TCLevel]');
@@ -523,6 +524,74 @@ describe('band D keeps its rank clear of its corners', () => {
  * every text-fits check in the suite is satisfied by three blocks drawn on top of one another. At
  * 850 by 480 they were: BIAS sat on POSITION and ABS on the slash of "3 / 24".
  */
+/**
+ * The bar has a scale of its own, read off each artboard rather than taken from the zone density
+ * ramp: a 15 px label, a value, a dimmer denominator six pixels after it, and the gap between two
+ * readouts. The numbers are the artboards' own, so they are asserted literally.
+ */
+describe('the bar is drawn at the scale its artboard draws', () => {
+  /** The side padding every artboard gives the bar. */
+  const PAD_X = 20;
+  /** The gap between a value and the dimmer denominator after it. */
+  const DENOMINATOR_GAP = 6;
+
+  test('every face that has a bar says what scale to draw it at', () => {
+    for (const face of ZONE_FACES) {
+      expect({ face: face.folder, scale: face.bar !== undefined }).toMatchObject({ scale: face.zones.bar !== undefined });
+    }
+  });
+
+  for (const { face } of BUILT) {
+    const frame = face.zones.bar;
+    const scale = face.bar;
+    if (!frame || !scale) continue;
+    const items = (): TextItem[] => faceItems(face).filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('bar.'));
+
+    test(`${face.folder} labels at ${ds.size.label} over values of ${scale.valueSize} and denominators of ${scale.denominatorSize}`, () => {
+      const expected = {
+        label: { size: ds.size.label, color: ds.color.text.label },
+        denominator: { size: scale.denominatorSize, color: ds.color.text.secondary },
+        value: { size: scale.valueSize, color: ds.color.text.primary },
+      };
+      for (const item of items()) {
+        const kind = item.name.endsWith('.label') ? 'label' : item.name.endsWith('.denominator') ? 'denominator' : 'value';
+        expect({ item: item.name, size: item.fontSize, color: item.textColor }).toMatchObject(expected[kind]);
+      }
+    });
+
+    test(`${face.folder} spaces its readouts ${scale.gap} apart and ends its right end at the padding`, () => {
+      const drawn = items();
+      const labelOf = (slot: string): TextItem => drawn.find((i) => i.name.startsWith(`bar.${slot}.`) && i.name.endsWith('.label'))!;
+      if (face.barFieldsPerEnd === 2) {
+        for (const end of ['Left', 'Right']) {
+          const first = labelOf(`${end}1`);
+          expect({ end, step: labelOf(`${end}2`).rect.left - first.rect.left }).toMatchObject({ step: first.rect.width + scale.gap });
+        }
+      }
+      // Every field of the outermost right slot ends against the padding, whatever it is made of:
+      // a value, or a value and the denominator after it.
+      const outer = `bar.Right${face.barFieldsPerEnd}.`;
+      const fields = new Set(drawn.filter((i) => i.name.startsWith(outer)).map((i) => i.name.split('.').slice(0, 3).join('.')));
+      for (const field of fields) {
+        const parts = drawn.filter((i) => i.name.startsWith(`${field}.`));
+        expect({ field, right: Math.max(...parts.map((i) => i.rect.left + i.rect.width)) }).toMatchObject({ right: frame.left + frame.width - PAD_X });
+        for (const part of parts) expect({ item: part.name, hAlign: part.hAlign }).toMatchObject({ hAlign: 'right' });
+      }
+    });
+
+    test(`${face.folder} sets a denominator ${DENOMINATOR_GAP} after the value and on its baseline`, () => {
+      const drawn = items();
+      const lap = (part: string): TextItem => drawn.find((i) => i.name === `bar.Left1.lap.${part}`)!;
+      const value = lap('value');
+      const cells = value.rect.width - boxSlack(scale.valueSize);
+      expect(lap('denominator').rect.left - (value.rect.left + cells)).toBe(DENOMINATOR_GAP);
+      // A WPF box puts its baseline one em below its top, so two runs sit on one baseline exactly
+      // when their top and their size add up to the same number.
+      expect(lap('denominator').rect.top + scale.denominatorSize).toBe(value.rect.top + scale.valueSize);
+    });
+  }
+});
+
 describe('the bar keeps its three blocks apart', () => {
   for (const { face } of BUILT) {
     const bar = face.zones.bar;

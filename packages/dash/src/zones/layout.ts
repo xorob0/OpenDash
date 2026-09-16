@@ -33,6 +33,26 @@ export interface ZoneRects {
   pitLimiter: Rect;
 }
 
+/**
+ * The bar's own scale, read off each artboard rather than taken from the zone density ramp.
+ *
+ * The artboards draw two of them: a 34 px value over a 24 px denominator in 57 px strip columns on
+ * the 56 and 54 px bars, and 28 over 20 in 54 px columns on the 50 and 46 px ones. The gap is 22 on
+ * every landscape face and 12 at 600 x 686, where one field per end and five cells share 600 pixels.
+ * Everything else about the bar -- the 13 px label row, the five pixels under it, the six before a
+ * denominator, the twenty of side padding -- is the same on every artboard and lives in `bar.ts`.
+ */
+export interface BarScale {
+  /** Between the two fields of an end, between an end and the strip, and between two strip cells. */
+  gap: number;
+  /** An end field's value, and a strip cell's. */
+  valueSize: number;
+  /** The dimmer second value after the first, as "/ 32" is drawn after a lap. */
+  denominatorSize: number;
+  /** A strip column, before the even-width rule rounds it up. */
+  stripCell: number;
+}
+
 export interface ZoneLayout {
   /** Package folder and main dashboard name, e.g. `openDash zones 1920x480`. */
   folder: string;
@@ -49,6 +69,8 @@ export interface ZoneLayout {
   bandCorners: boolean;
   /** How many fields the bar's ends carry: two each on a wide face, one each in portrait. */
   barFieldsPerEnd: 1 | 2;
+  /** The sizes the artboard draws the bar at. Absent on the nano, which has no bar. */
+  bar?: BarScale;
 }
 
 /** The rect a zone occupies. */

@@ -77,9 +77,9 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
     items.push(...revBar({ left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: ds.space[2] }, 'revBar'));
   }
 
-  if (z.bar) {
+  if (z.bar && layout.bar) {
     items.push(band('bar.ground', z.bar, ds.purpose.block.well));
-    items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd, face: sizeOf(layout) }));
+    items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd, face: sizeOf(layout), scale: layout.bar }));
   }
 
   // One pixel between the zones, because a rule is the whole boundary where a block would be too
