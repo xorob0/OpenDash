@@ -319,7 +319,7 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
    * has verified no reader for it, so the slot is declared and the cell draws nothing; `chip()`
    * takes the height and the text size the badge asks for, which is the half of it that is code.
    */
-  licence: { header: 'Licence', align: 'left', width: ({ d }) => (d.name >= 15 ? 62 : 30), cell: () => [] },
+  licence: { header: 'Licence', align: 'left', width: ({ type }) => (type.name >= 15 ? 62 : 30), cell: () => [] },
   gap: {
     header: 'Gap',
     align: 'right',
