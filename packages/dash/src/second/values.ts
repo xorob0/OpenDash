@@ -320,6 +320,17 @@ export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap(
  */
 export const tankIsLow = (): Expr => lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps());
 
+/**
+ * Whether the car is switched on. SimHub normalises it from the sim, so this is one of the few
+ * conditions that reaches a package through `GameData` rather than through iRacing's own telemetry.
+ *
+ * It is written here, with the rest of the telemetry, rather than beside the one drawing that reads
+ * it today. That drawing is the flag box, whose answer is a dim standby mark and not a dark panel
+ * so that a car switched off is not mistaken for a profile that failed to load; the reasoning is in
+ * docs/design/flag-box.md and it is about the box rather than about the property.
+ */
+export const ignitionOn = (): Expr => game('EngineIgnitionOn');
+
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));
 export const clutch = (): Expr => isnull(game('Clutch'), num(0));

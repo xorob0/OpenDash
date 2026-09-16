@@ -8,6 +8,7 @@ import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { readFileSync } from 'node:fs';
 import { flagVisible } from '../src/components/flagStrip.ts';
 import { flagBox, setting } from '../src/contract.ts';
+import { flagBoxTree } from '../src/leds/profile.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
@@ -217,6 +218,13 @@ describe('second-screen values', () => {
     // a sim that computes none leaves the warning away rather than raising it on every car.
     expect(values.fuelLapsLeft()).toContain(', 0)');
     expect(values.tankIsLow()).not.toContain(values.fuelLapsLeft());
+  });
+
+  test('the flag box reads the shared ignition expression rather than a second copy of it', () => {
+    expect(values.ignitionOn()).toBe('[DataCorePlugin.GameData.EngineIgnitionOn]');
+    const tree = JSON.stringify(flagBoxTree());
+    expect(tree).toContain(`(${values.ignitionOn()}) = (0)`);
+    expect(tree).toContain(`(${values.ignitionOn()}) = (1)`);
   });
 });
 
