@@ -16,6 +16,7 @@ import {
   type LedConditionalGroup,
   type LedContainer,
   type LedCustomStatus,
+  type LedDynamicColor,
   type LedExpression,
   type LedFrame,
   type LedGroup,
@@ -105,6 +106,11 @@ const customStatus = (c: LedCustomStatus): JsonObject => ({
 const blink = (color: string | undefined, delayMs: number | undefined): JsonObject =>
   color === undefined ? {} : { BlinkingColor: color, BlinkEnabled: true, ...(delayMs !== undefined ? { BlinkDelay: delayMs } : {}) };
 
+const dynamicColor = (c: LedDynamicColor): JsonObject => ({
+  LedCount: c.ledCount,
+  ColorFormula: buildExpressionObject(c.colorFormula),
+});
+
 const scriptedContent = (c: LedScriptedContent): JsonObject => ({
   LedCount: c.ledCount,
   ContentFormula: buildExpressionObject(c.contentFormula),
@@ -141,13 +147,15 @@ export function buildContainerObject(c: LedContainer): JsonObject {
             ? staticColor(c)
             : c.kind === 'customStatus'
               ? customStatus(c)
-              : c.kind === 'scriptedContent'
-                ? scriptedContent(c)
-                : c.kind === 'rpmSegments'
-                  ? rpmSegments(c)
-                  : c.kind === 'animation'
-                    ? animation(c)
-                    : raw(c);
+              : c.kind === 'dynamicColor'
+                ? dynamicColor(c)
+                : c.kind === 'scriptedContent'
+                  ? scriptedContent(c)
+                  : c.kind === 'rpmSegments'
+                    ? rpmSegments(c)
+                    : c.kind === 'animation'
+                      ? animation(c)
+                      : raw(c);
   return { ...base(c), ...body, ContainerType: containerTypeOf(c) };
 }
 
