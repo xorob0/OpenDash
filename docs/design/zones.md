@@ -392,6 +392,32 @@ Pages with nothing to shed, and why:
 A drawing is cut from its box rather than shed (rule 18), and a page that says it has no data is
 one line of prose with nothing in it to drop.
 
+### Where the build keeps more than the drawing
+
+The table is the catalogue read off page by page, and in five places it is deliberately not what the
+catalogue draws. Each of them is a decision rather than a drift, so each is recorded here: a reader
+holding a drawing against a zone should find the argument rather than suspect a bug.
+
+- **Lap times at `tall narrow`.** Four values where the drawing has two, which §10 argues from the
+  234 px of a real zone the drawing leaves empty. The catalogue owes the redraw.
+- **Fuel at `wide` and at `tall`.** The last lap, this lap and the five-lap average, where the zone
+  drawing carries one per-lap cell. The three come from the companion artboard, which is what the
+  `wide` row is for; the narrower shapes keep the average alone, since one number three ways is
+  still one number.
+- **Leaderboard at `wide`.** The best and the last lap, two columns the zone drawing does not carry
+  and the companion's list does. The trade runs the other way as well: the drawing gives the row a
+  rating column, and neither list declares one.
+- **Stint at `wide` and at `tall`.** The driver, where the drawing closes the page with the pit
+  window. The window is not a field the module builds, and a handover is what the recap is read for.
+- **Car settings at every shape.** The module draws the seven settings iRacing exposes and the
+  drawing draws ten, so what is kept is the proportion rather than the count: `tall narrow` drops
+  the three drawn last, which leaves four here against the drawing's seven.
+
+Everywhere else the drawing names a field the module does not build, which is the opposite case and
+is not a deviation: delta's three sector deltas, the rating on a list row, the pit window, the
+steering readout on the inputs page. They are simply not in the table, because the table is about
+the module.
+
 ### The parts that are not fields
 
 A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap history
