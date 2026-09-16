@@ -180,19 +180,29 @@ describe('the fields the catalogue draws on each page', () => {
     expect(cells.every((i) => i.rect.left >= named(items, 'temps.label').rect.left)).toBe(true);
   });
 
-  test('D7 Relative heads each gap with the position of the car it belongs to', () => {
+  test('D7 Relative sets the position of each car beside its gap, not above it', () => {
     expect(BAND_PAGES.relative!.map((f) => f.labelWidest)).toEqual(['P99', 'P99', 'P99']);
     const items = pageTexts('1920x480', 'relative');
     const drawn: Record<string, string> = { ahead: 'P3', you: 'P4', behind: 'P5' };
     for (const id of ['ahead', 'you', 'behind']) {
-      const label = named(items, `${id}.label`);
-      expect({ id, text: label.text, widest: label.widest ?? '', bound: bound(label, 'Text')?.includes("'P'") ?? false }).toEqual({
+      const position = named(items, `${id}.position`);
+      const gap = named(items, `${id}.value`);
+      expect({ id, text: position.text, widest: position.widest ?? '', bound: bound(position, 'Text')?.includes("'P'") ?? false }).toEqual({
         id,
         text: drawn[id]!,
         widest: 'P99',
         bound: true,
       });
+      // One line, the same size, the position first and the gap eight pixels after it.
+      expect({ id, top: position.rect.top, size: position.fontSize }).toEqual({ id, top: gap.rect.top, size: gap.fontSize });
+      expect(gap.rect.left - (position.rect.left + position.rect.width)).toBe(8);
     }
+    // And the page says what it is, because P3 P4 P5 name the cars rather than the page.
+    expect(named(items, 'word').text).toBe('RELATIVE');
+    expect(named(items, 'word').rect.left).toBeLessThan(named(items, 'ahead.position').rect.left);
+    // The driver's own position and gap are the primary text; the two cars beside him are not.
+    expect(named(items, 'you.position').textColor).toBe(ds.color.text.primary);
+    expect(named(items, 'ahead.position').textColor).toBe(ds.color.text.label);
   });
 
   test('a fuel time is minutes and seconds, not an hour that is nearly always zero', () => {
