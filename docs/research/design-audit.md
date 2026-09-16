@@ -306,6 +306,36 @@ decide, grouped by where they arose. Each is a sentence the author can answer in
 - **The race board no longer carries a stint column**, no artboard heading one, so the scope and the
   second screens documents are now stale where they say it does.
 
+### What the fifth round left for you
+
+- **Two settings cannot be declared before something reads them.** The contract refuses a shared
+  property no package reads, which is a guard rather than an obstacle, so the blue flag detail and
+  the companion's start and quick glance have to be declared in the same commit as their first
+  reader. Both were written and reverted rather than landing a declaration the build refuses. The
+  two packages that draw them need the contract files in their own hands.
+- **The pit wall's landscape sheet cannot be drawn as it is written.** It gives the session panel
+  five fields at 46 px, which measure 820 px across a 599 px body, and one of those values needs 70
+  px of a 59 px panel. The portrait sheet's three fields are what both pages now draw.
+- **The sheet's panel heights leave out the gap between a label and its value.** The session panel's
+  108 px is its parts added up with the five pixels dropped, and the lap data panel's 96 is the same
+  arithmetic; both panels on the artboard clip themselves by that much. The code spends its bottom
+  padding instead, so the lap data panel now ends level with its rule.
+- **The relative list's rating column.** The catalogue draws it at the widest shape only, while the
+  tower sheet draws it in a zone that is a medium box. The recommendation is the catalogue's reading,
+  with the tower's zone recorded as a row that deliberately keeps less than the sheet draws.
+- **The relative's 30 px cell is a licence badge on every drawing and the code draws a class chip.**
+  Nothing publishes a licence, so the question is whether the chip stays until one exists.
+- **The f1 ladder's bands do not split where a shift stage does.** Holding one colour across its
+  first two bands reproduces the sheet exactly on a fourteen-rung run and generalises to the shorter
+  centres; splitting at the rung the sheet implies would draw two rungs red while a green stage lit
+  them, so a style would change when a light came on.
+- **The push to pass count and the ignition are in no recorded trace**, so neither a pop-up nor an
+  ignition band can be built until the rig is recorded again. Both are telemetry rather than settings,
+  so the one precedent for adding a line by hand does not cover them.
+- **The progress bar has no flicker threshold.** Drawing it only where an update is applied, which
+  always downloads and is always slow, avoids needing one; a reinstall runs on the interface thread
+  and could not paint a bar anyway until it moves to the background.
+
 ## 4. The work, in packages
 
 The 1581 gaps group into 150 packages that can be built independently. A package owns a set of
