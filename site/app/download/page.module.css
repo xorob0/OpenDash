@@ -61,7 +61,7 @@
 
 .hint {
   font-size: var(--size-small);
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
   max-width: 46ch;
   text-wrap: pretty;
 }
@@ -115,7 +115,7 @@
 
 .fileNote {
   font-size: 0.8125rem;
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
   max-width: 58ch;
 }
 
@@ -142,7 +142,7 @@
 .absent {
   flex: none;
   font-size: var(--size-small);
-  color: var(--color-text-dim);
+  color: var(--color-text-secondary);
 }
 
 .body :global(code),

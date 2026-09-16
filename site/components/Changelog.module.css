@@ -36,7 +36,7 @@
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
 }
 
 /* Caution is already the meaning for "know this before you rely on it". */
@@ -45,7 +45,7 @@
 }
 
 .badgeWork {
-  color: var(--color-text-dim);
+  color: var(--color-text-secondary);
 }
 
 .body {
@@ -57,7 +57,7 @@
 
 .group {
   margin-top: var(--space-2);
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
 }
 
 .para,

@@ -27,11 +27,15 @@
   min-width: 0;
 }
 
-/* Rule 6: the step number carries its rank by size, and stays dim because it is an index. */
+/*
+ * Rule 6: the step number carries its rank by size, and stays quiet because it is an index. At 32px
+ * it is large text, which needs 3:1 rather than 4.5:1, so text.label clears it where text.dim does
+ * not clear either.
+ */
 .n {
   font-size: 2rem;
   line-height: 1;
-  color: var(--color-text-dim);
+  color: var(--color-text-label);
 }
 
 /* The one step people skip. Marked with a rule in caution, which is the meaning it has. */

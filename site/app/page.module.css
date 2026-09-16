@@ -73,7 +73,7 @@
   margin-top: var(--space-4);
   max-width: 68ch;
   font-size: var(--size-small);
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
   text-wrap: pretty;
 }
 
@@ -118,9 +118,15 @@
   background: var(--color-surface-zone);
 }
 
-/* A module that ships off is drawn dim rather than hidden, exactly as an unlit telltale is. */
+/*
+ * A module that ships off is drawn dimmer rather than hidden, which is what an unlit telltale does.
+ * One step dimmer, not three: the dash's text.dim is 1.7:1 and unreadable in a browser, while
+ * secondary against the primary the other chips take is still an obvious difference and both are
+ * legible. The sentence under the strip says which three and why, so the dimming is reinforcement
+ * rather than the only carrier of the fact.
+ */
 .chip[data-off] {
-  color: var(--color-text-dim);
+  color: var(--color-text-secondary);
 }
 
 .chipNote {
@@ -198,7 +204,7 @@
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
 }
 
 /* ------------------------------------------------------------------ close */

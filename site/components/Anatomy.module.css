@@ -51,12 +51,6 @@
   padding: 0;
 }
 
-.hitTag {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-}
-
 .readout {
   display: grid;
   gap: var(--space-4);
@@ -78,7 +72,7 @@
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
   border-top: 2px solid transparent;
   margin-top: -1px;
   white-space: nowrap;

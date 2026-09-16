@@ -24,7 +24,7 @@
 
 .version {
   font-size: var(--size-small);
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
 }
 
 .col {
@@ -47,7 +47,7 @@
 .fine {
   font-size: 0.8125rem;
   line-height: 1.55;
-  color: var(--color-text-label);
+  color: var(--color-text-secondary);
   max-width: 40ch;
 }
 
