@@ -118,6 +118,12 @@ settle rather than an implementer's.
   WPF line box, and the band is 60. Band D shrinks its value to 32 rather than clip; the settings bar
   keeps the overrun it has always had, because the box is transparent and digits have no descenders.
   The two should agree.
+- **The companion's flag band costs it a rank.** `ds.indicator.flagBand.heightSm` is 32 and the
+  Companion 850 by 480 artboard draws that band 12 px tall. The twenty pixels come out of the module
+  above it, which leaves the page 336 px of content where its fourth rank, the three sectors of the
+  last lap, needs 348. The lap times page therefore draws three ranks where its own artboard draws
+  four, and it is the only page that loses one to this. Either the band is 12 and the token is
+  wrong, or the band is 32 and the artboard owes the page a shorter rank.
 - **The pit wall board is drawn grouped by class and is not built that way.** Every use of the
   recessed ground `#060708` on the three pit wall sheets, and on the Panels sheet beside them, is a
   28 px row heading a group of cars with its class and the position of that class's leader, for

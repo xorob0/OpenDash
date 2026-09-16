@@ -130,6 +130,35 @@ describe('the companion', () => {
     expect(MODULES.map((m) => m.id)).toEqual(MODULE_CATALOGUE.map((m) => m.id));
   });
 
+  test('lap times draws ranks of three equal columns, spread over the body', () => {
+    // The artboard's grid: three `minmax(0, 1fr)` columns 24 px apart, which is a 275 px pitch in
+    // an 802 px body. Its point is the alignment down the page: the estimate under the session
+    // best, the position under the estimate. Content widths put each field wherever its own digits
+    // ended, and the four ranks then lined up with nothing.
+    const screen = main.screens.find((s) => s.name === 'lapTimes')!;
+    const labels = [...walkItems(screen.items)].filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.label') && !i.name.includes('.header.'));
+    const rows = [...new Set(labels.map((l) => l.rect.top))].sort((a, b) => a - b);
+    // Three ranks, where the artboard draws four: the sector rank needs 348 px of content and the
+    // page has 336, because the flag band below it is the token's 32 rather than the artboard's 12.
+    // docs/research/design-audit.md carries that disagreement; design/tokens.json is not edited
+    // from code.
+    expect(rows).toHaveLength(3);
+    const pitches = new Set<number>();
+    for (const top of rows) {
+      const lefts = labels
+        .filter((l) => l.rect.top === top)
+        .map((l) => l.rect.left)
+        .sort((a, b) => a - b);
+      expect(lefts).toHaveLength(3);
+      expect(lefts[1]! - lefts[0]!).toBe(lefts[2]! - lefts[1]!);
+      pitches.add(lefts[1]! - lefts[0]!);
+    }
+    // The same pitch in every rank, which is what makes the page a grid rather than three rows.
+    expect(pitches.size).toBe(1);
+    // Spread rather than centred: every rank opens on the body's own left edge.
+    expect(new Set(rows.map((top) => Math.min(...labels.filter((l) => l.rect.top === top).map((l) => l.rect.left)))).size).toBe(1);
+  });
+
   test('switches each screen on its own plugin setting', () => {
     main.screens.forEach((screen, i) => {
       expect(screen.enabledExpression).toBe(secondScreen.moduleEnabled(i + 1));

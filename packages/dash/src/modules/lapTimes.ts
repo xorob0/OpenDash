@@ -72,15 +72,23 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
   const laps = fld(ctx, 'laps', 'Laps', { sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.position, fs: d.mid });
   const estimated = fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid });
   const toYourBest = fld(ctx, 'delta', 'Delta to your best', { sample: '\u22120.21', bind: signed(delta, '0.00'), chars: CHARS.delta, fs: d.mid, colorBind: deltaColour(delta) });
+  /**
+   * The companion draws each rank as three equal columns rather than as three fields of their own
+   * widths. The artboard is explicit about it -- `minmax(0, 1fr)` three times, 24 px apart, which
+   * is about 251 px each in an 802 px body -- and the reason is that the four ranks then line up
+   * as a grid down the page: the estimate sits under the session best and the second sector under
+   * the position, where content widths put each of them wherever its own digits ended.
+   */
+  const columns = ctx.density === 'companion' && !portrait ? ({ lines: 'grid', columns: 3 } as const) : {};
   return stack(
     ctx.frame,
     [
       ...(grid
         ? [fieldsRow([last], ctx), fieldsRow(bests, ctx, { lines: 'grid', columns: 2 })]
-        : [fieldsRow([last, ...bests], ctx, portrait ? { lines: 'perLine', lineGap: PORTRAIT_GROUP_GAP } : {})]),
+        : [fieldsRow([last, ...bests], ctx, portrait ? { lines: 'perLine', lineGap: PORTRAIT_GROUP_GAP } : columns)]),
       ...(portrait
         ? [fieldsRow([laps, estimated], ctx, { gap: PORTRAIT_PAIR_GAP, align: 'top' }), fieldsRow([toYourBest], ctx)]
-        : [fieldsRow([laps, estimated, toYourBest], ctx)]),
+        : [fieldsRow([laps, estimated, toYourBest], ctx, columns)]),
       fieldsRow(
         [
           fld(ctx, 'average5', 'Average 5', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, fs: d.mid }),
@@ -97,6 +105,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
           fld(ctx, 'stintLap', 'Stint lap', { sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', player()), num(0)), '0'), chars: CHARS.position, fs: d.mid }),
         ],
         ctx,
+        columns,
       ),
       fieldsRow(
         SECTORS.map((sector) =>
@@ -109,6 +118,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
           }),
         ),
         ctx,
+        columns,
       ),
     ],
     ctx.density,
