@@ -23,6 +23,15 @@ namespace OpenDashPlugin
         public const string PhoneIcon = PanelIcons.Phone;
         public const string PlusIcon = PanelIcons.Plus;
 
+        // The padding inside a field, which the select, the drop button and the text box share because
+        // the canvas draws them as one shape. Both sheets write it `padding: 0 8px 0 10px`, twenty times
+        // between them, so the left is the wider of the two: the chevron on the right sits inside its own
+        // box and needs less room beside it than a value does at the other end. Widgets.cs carried 9 and
+        // 6 and said they were the canvas's, which nothing could check from there.
+
+        public const double FieldPaddingLeft = 10;
+        public const double FieldPaddingRight = 8;
+
         /// <summary>
         /// The icon a screen of each kind is drawn with, and null for a kind the canvas gives none.
         /// </summary>
