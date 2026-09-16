@@ -3,8 +3,10 @@
  *
  * The right-hand groups are laid out from the right edge in a fixed order, each measured from its
  * own text, so a longer session name or a three-digit incident count never pushes another group
- * off the screen. Track state is not drawn: SimHub has no wetness or rubber value from iRacing,
- * and a "Dry" that is always "Dry" is worse than an empty space.
+ * off the screen. Track state is the canvas's seventh group and is not drawn here: SimHub does
+ * publish `TrackGripStatus`, which band D and the track module both bind, but it is a word that
+ * changes over a session rather than over a lap, and the header is what an engineer reads on
+ * every page. The page that wants it has it.
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';

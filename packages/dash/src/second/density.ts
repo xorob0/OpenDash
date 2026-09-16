@@ -6,6 +6,10 @@
  * The numbers are the design canvas's two ramps: the companion's 116 / 64 / 46 / 34 / 24 and the
  * pit wall zone's 64 / 46 / 34 / 24 / 16, with 15 px labels on the companion and 13 px on the pit
  * wall. `wide` is a zone that spans a column: the same type, more room across.
+ *
+ * It is the zone ramp itself, and stays a density of its own because a caller says which kind of
+ * zone it is drawing rather than how wide it is. The one number it used to change, a trace's
+ * sample count, is cut from the plot's own width now.
  */
 import { ds } from '../tokens.ts';
 
@@ -50,8 +54,6 @@ export interface DensitySpec {
   /** Padding between a module's rect and its content. */
   padX: number;
   padY: number;
-  /** Samples a trace keeps, which is also its horizontal resolution. */
-  tracePoints: number;
 }
 
 const COMPANION: DensitySpec = {
@@ -74,7 +76,6 @@ const COMPANION: DensitySpec = {
   chipPadding: 6,
   padX: 24,
   padY: 16,
-  tracePoints: 300,
 };
 
 const ZONE: DensitySpec = {
@@ -97,7 +98,6 @@ const ZONE: DensitySpec = {
   chipPadding: 6,
   padX: 16,
   padY: 6,
-  tracePoints: 600,
 };
 
 /**
@@ -138,7 +138,7 @@ export const DENSITIES: Record<Density, DensitySpec> = {
   companion: COMPANION,
   zone: ZONE,
   compact: COMPACT,
-  wide: { ...ZONE, tracePoints: 900 },
+  wide: ZONE,
 };
 
 export const densityOf = (density: Density): DensitySpec => DENSITIES[density];

@@ -17,7 +17,7 @@ import {
   secondScreen,
   secondScreenProperties,
 } from '../src/contract.ts';
-import { validatePackage, type Dashboard, type Item, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { validatePackage, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
 import { MODULES } from '../src/modules/index.ts';
@@ -457,14 +457,139 @@ describe('the track module has a titled and a titleless form', () => {
 
   test('names the track above its map by default, which is what the companion and the pit wall draw', () => {
     const items = build();
-    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.map']);
+    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.state', 'track.map']);
     expect(mapIn(items).rect.top).toBeGreaterThan(frame.top);
+  });
+
+  test('puts the surface state at the right of that header, measured for its longest reading', () => {
+    const [title, state] = build() as [TextItem, TextItem];
+    expect({ hAlign: state.hAlign, widest: state.widest, text: state.text }).toEqual({ hAlign: 'right', widest: 'MODERATE', text: 'DRY' });
+    expect(state.bindings?.Text?.formula).toContain('TrackGripStatus');
+    // The name gives up the state's width rather than the two sharing the line: WPF clips, it does
+    // not reflow, so a long track name would otherwise be drawn straight through "MODERATE".
+    expect(state.rect.left + state.rect.width).toBe(frame.left + frame.width);
+    expect(title.rect.left + title.rect.width).toBeLessThanOrEqual(state.rect.left);
   });
 
   test('gives the map the whole frame when the caller asks for no title', () => {
     const items = build(false);
     expect(items.map((i) => i.name)).toEqual(['track.map']);
     expect(mapIn(items).rect).toMatchObject({ top: frame.top, height: frame.height });
+  });
+
+  test('strokes the circuit at a weight cut from the map rather than the same line in every box', () => {
+    const at = (w: number, h: number): number => mapIn(MODULES.find((m) => m.id === 'track')!.build({ frame: rect(0, 0, w, h), density: 'zone', prefix: 'track.', title: false })).trackWidth!;
+    // The catalogue's own 566 by 220 map is where the 2.5 came from; a pit wall zone and a tall
+    // face zone are the two that were drawing it at the same weight.
+    expect(at(566, 220)).toBe(2.5);
+    expect(at(607, 158)).toBeLessThan(at(445, 516));
+  });
+});
+
+describe('the inputs page', () => {
+  const build = (w: number, h: number, density: Density = 'zone'): Item[] => MODULES.find((m) => m.id === 'inputs')!.build({ frame: rect(0, 0, w, h), density, prefix: 'inputs.' });
+  const named = (items: Item[], name: string): Item => items.find((i) => i.name === name)!;
+
+  test('gives each pedal its own reading, drawn at the density small size', () => {
+    const at = (w: number, h: number, density: Density): { text: string; fontSize: number }[] =>
+      build(w, h, density)
+        .filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'))
+        .map((i) => ({ text: i.text, fontSize: i.fontSize }));
+    // Three different numbers: Dash Studio draws the samples, and three identical ones said
+    // nothing about which bar belongs to which pedal.
+    expect(at(802, 336, 'companion')).toEqual([
+      { text: '76', fontSize: 34 },
+      { text: '12', fontSize: 34 },
+      { text: '0', fontSize: 34 },
+    ]);
+    expect(at(607, 158, 'zone').map((v) => v.fontSize)).toEqual([24, 24, 24]);
+    // d.tiny is 14 at compact, which density.ts's own comment puts below the readable floor.
+    expect(at(245, 156, 'compact').map((v) => v.fontSize)).toEqual([18, 18, 18]);
+  });
+
+  test('draws the bars at the width the catalogue gives them and no legend under the plot', () => {
+    const barsOf = (w: number, h: number, density: Density): number[] => build(w, h, density).filter((i) => i.name.endsWith('.bar')).map((i) => (i as { rect: Rect }).rect.width);
+    // 20 at the fullest drawing and 16 at the other three, which follows the catalogue rather than
+    // the density: the 1920 x 480 face's wide zone is drawn at 20 and its 469 px grid zone at 16.
+    expect(barsOf(802, 336, 'companion')).toEqual([20, 20, 20]);
+    expect(barsOf(737, 270, 'zone')).toEqual([20, 20, 20]);
+    expect(barsOf(607, 158, 'zone')).toEqual([16, 16, 16]);
+    expect(barsOf(437, 510, 'zone')).toEqual([16, 16, 16]);
+    // Every line has its own bar and its own number beside it in the same colour, so a legend row
+    // would repeat the labelling and cost the plot 18 px of height. The three quarter hairlines
+    // are the whole of the grid the catalogue draws: the rule along the bottom belongs to the pit
+    // wall's telemetry panels, which are plots under a title rather than bars standing on a line.
+    const chrome = build(802, 336, 'companion').filter((i) => /\.(legend|swatch|baseline)$/.test(i.name));
+    expect(chrome).toEqual([]);
+    expect(build(802, 336, 'companion').filter((i) => /\.grid\d$/.test(i.name))).toHaveLength(3);
+  });
+
+  test('takes its sample count from the plot it is given rather than from the density', () => {
+    const pointsOf = (w: number, h: number, density: Density): number[] => build(w, h, density).filter((i) => i.kind === 'chart').map((i) => (i as { pointsCount?: number }).pointsCount!);
+    // The canvas draws 101 points across a 566 px plot, which is a sample every six pixels; the
+    // companion's plot is what the bars, the numbers and the steering leave it.
+    expect(pointsOf(802, 336, 'companion')).toEqual([85, 85, 85]);
+    // And a zone that is not wide enough to be finer keeps the floor rather than a shorter window.
+    expect(pointsOf(245, 156, 'compact')).toEqual([60, 60, 60]);
+  });
+
+  test('ends with the steering, which is a declared part the narrow shapes drop', () => {
+    const steerIn = (items: Item[]): string[] => items.filter((i) => i.name.startsWith('inputs.steer')).map((i) => i.name);
+    expect(steerIn(build(600, 280))).toEqual(['inputs.steer.track', 'inputs.steer.marker', 'inputs.steer.label']);
+    expect(steerIn(build(430, 300))).toHaveLength(3);
+    expect(steerIn(build(274, 300))).toEqual([]);
+    expect(steerIn(build(360, 470))).toEqual([]);
+  });
+
+  test('and positions its marker from the wheel angle, since SimHub binds no rotation', () => {
+    const items = build(600, 280);
+    const marker = named(items, 'inputs.steer.marker');
+    const formula = marker.bindings?.Left?.formula ?? '';
+    expect(formula).toContain('SteeringWheelAngle');
+    // Clamped to the lock the pit wall's own steering trace is drawn at, so full lock is the end
+    // of the track and not a marker somewhere off the page.
+    expect(formula).toContain('min(max(');
+    expect(formula).toContain('3.5');
+    expect((named(items, 'inputs.steer.label') as TextItem).text).toBe('STEER');
+  });
+});
+
+describe('the radar is cut from its box', () => {
+  const build = (w: number, h: number, density: Density = 'zone'): Item[] => MODULES.find((m) => m.id === 'radar')!.build({ frame: rect(0, 0, w, h), density, prefix: 'radar.' });
+  const radarIn = (items: Item[]): RadarItem => items.find((i): i is RadarItem => i.kind === 'radar')!;
+
+  test('the scale follows the plot rather than the density, which is what rule 18 means here', () => {
+    // The two boxes readability-pass.md §16 puts side by side: a nano zone and a tall face zone
+    // were drawing the same twenty metres of track at the same scale.
+    expect(radarIn(build(249, 158)).scale).toBeLessThan(radarIn(build(437, 510)).scale!);
+    // And the companion page keeps the 1.25 the canvas was measured at.
+    expect(radarIn(build(802, 336, 'companion')).scale!).toBeCloseTo(1.25, 1);
+  });
+
+  test('the grid the canvas draws under the cars is four rects behind the plot', () => {
+    const items = build(802, 336, 'companion');
+    const plot = radarIn(items).rect;
+    const grid = items.filter((i): i is RectangleItem => i.kind === 'rect' && /\.(grid\d|centre)$/.test(i.name));
+    expect(grid.map((i) => i.name)).toEqual(['radar.grid0', 'radar.grid1', 'radar.grid2', 'radar.centre']);
+    for (const line of grid) {
+      expect({ name: line.name, colour: line.backgroundColor }).toMatchObject({ colour: ds.color.surface.raised });
+      expect(line.rect.left).toBeGreaterThanOrEqual(plot.left);
+      expect(line.rect.left + line.rect.width).toBeLessThanOrEqual(plot.left + plot.width);
+    }
+    // Behind, not over: SimHub paints the items in order and the radar's own background is clear.
+    expect(items.findIndex((i) => i.name === 'radar.centre')).toBeLessThan(items.findIndex((i) => i.kind === 'radar'));
+  });
+
+  test('the spotter flanks are a proportion of the width and turn red on the side being called', () => {
+    const flanksOf = (w: number, h: number): RectangleItem[] => build(w, h).filter((i): i is RectangleItem => i.name === 'radar.left' || i.name === 'radar.right');
+    expect(flanksOf(802, 336).map((i) => i.rect.width)).toEqual([64, 64]);
+    expect(flanksOf(607, 158).map((i) => i.rect.width)).toEqual([51, 51]);
+    expect(flanksOf(249, 158).map((i) => i.rect.width)).toEqual([21, 21]);
+    for (const flank of flanksOf(607, 158)) {
+      const formula = flank.bindings?.BackgroundColor?.formula ?? '';
+      expect(formula).toContain(flank.name.endsWith('left') ? 'SpotterCarLeft' : 'SpotterCarRight');
+      expect(formula).toContain(ds.purpose.delta.slower);
+    }
   });
 });
 

@@ -42,8 +42,8 @@ const leftClusterRight = (items: Item[]): number => Math.max(...boxed(items).fil
 
 describe('the pit wall header', () => {
   test('lays the landscape readouts out in the canvas order', () => {
-    // Six, not the canvas's seven: the track state has no SimHub property to bind, which the
-    // builder's own header comment gives its reasons for.
+    // Six, not the canvas's seven: the track state is drawn by the pages that want it rather than
+    // by the strip on every page, which the builder's own header comment gives its reasons for.
     expect(readoutGroups(header(1920, false)).map((g) => g.id)).toEqual(['session', 'timeLeft', 'flag', 'incidents', 'wind', 'clocks']);
   });
 

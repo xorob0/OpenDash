@@ -220,10 +220,6 @@ export const SHEDDING: Record<string, Shedding> = {
  *
  * Apart from `SHEDDING` because it answers a different question. That table is what a rank sheds;
  * this is what furniture the page keeps around it, and a page may have an entry in both.
- *
- * The catalogue also draws a steering readout on the inputs page at `wide` and `grid`. It is not
- * here because the module does not build one: a part the page cannot draw would be a line nobody
- * will notice is dead, which is the drift this file exists to prevent.
  */
 export const PARTS: Record<string, Keeps> = {
   // The bar and its scale are two thirds of the page's height and the drawing spends them on the
@@ -236,6 +232,10 @@ export const PARTS: Record<string, Keeps> = {
   // The caption says the pressures are the ones the car left the box with. A column that narrow
   // has no room to say it, and the catalogue closes the cell with the compound instead.
   tyres: { wide: ['footer'], grid: ['footer'], tallNarrow: [], tall: ['footer'] },
+  // The steering is a fourth column beside the three pedals, and the catalogue draws it at the two
+  // shapes with the width for it. A narrow zone spends that width on the trace instead, which is
+  // where pedal application is read as a shape.
+  inputs: { wide: ['steer'], grid: ['steer'], tallNarrow: [], tall: [] },
   // A header costs one lap of the ten, which a tall box would rather spend on the lap.
   lapHistory: { wide: ['head'], grid: ['head'], tallNarrow: [], tall: [] },
 };
