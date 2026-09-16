@@ -12,7 +12,7 @@ import type { ChartItem, Hex, Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { withBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { rect, roundRect } from '../design/geometry.ts';
+import { inset as insetRect, rect, roundRect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { ds } from '../tokens.ts';
@@ -41,6 +41,13 @@ export interface TraceOptions {
   baseline?: boolean;
   /** Draw a legend under the plot when there is more than one series. */
   legend?: boolean;
+  /**
+   * Room left between the plot's edges and the polylines drawn in it, the grid keeping the whole
+   * plot. A line of thickness t at either end of its range is drawn half outside the rect and
+   * clipped, so a signal that reaches its maximum reads thinner there than it does anywhere else;
+   * the inputs page is where that shows, three pedals living at 0 and 100.
+   */
+  inset?: number;
   /** Samples kept; `pointsFor` of the plot's width by default. */
   points?: number;
   lineThickness?: number;
@@ -127,7 +134,11 @@ export function trace(name: string, frame: Rect, series: readonly Series[], dens
     if (opts.baseline ?? true) items.push(band(`${name}.baseline`, rect(plot.left, plot.top + plot.height - 1, plot.width, 1), ds.color.text.dim));
   }
   const points = opts.points ?? pointsFor(plot.width);
-  for (const s of series) items.push(chartOf(`${name}.${s.name}`, plot, s, { ...opts, points }));
+  // Never more than a quarter of the plot, so that a box too small for the margin loses the margin
+  // rather than the trace it was meant to protect.
+  const by = Math.max(0, Math.min(opts.inset ?? 0, Math.floor(Math.min(plot.width, plot.height) / 4)));
+  const field = by === 0 ? plot : insetRect(plot, by);
+  for (const s of series) items.push(chartOf(`${name}.${s.name}`, field, s, { ...opts, points }));
   if (showLegend) items.push(...legend(name, series, plot.left, frame.top + frame.height - LEGEND_HEIGHT, density, plot.width));
   return items;
 }
