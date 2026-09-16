@@ -157,6 +157,27 @@ namespace OpenDashPlugin
         /// <summary>The worst status across the packages (Failed over NotInstalled over UpdateAvailable over UpToDate).</summary>
         public InstallStatus Status { get; private set; } = InstallStatus.NotInstalled;
 
+        /// <summary>
+        /// The status the "This plugin" pill shows: the worse of what is on disk and what GitHub last answered.
+        /// </summary>
+        /// <remarks>
+        /// One pill is answerable to two different comparisons. Status is the embedded package measured against what
+        /// sits under DashTemplates, and it knows nothing of a release that exists but has never been downloaded; a
+        /// check against GitHub knows of the release and nothing of the disk. Reading the pill off the first alone
+        /// told a user whose disk matched the plugin that they were up to date, directly above a sentence saying a
+        /// newer release was waiting. The worse of the two is what the pill owes them, so an offer from either source
+        /// turns it amber.
+        ///
+        /// Every other update state leaves the package status standing, which is deliberate: Checking is a question
+        /// still open, and Idle, Disabled and Unreachable are each an answer nobody has, so none of the four is news
+        /// about the dashboards on the disk. Unreachable in particular is a state rather than a fault, since a driver
+        /// whose rig has no network can do nothing about it and does not need a pill to say so.
+        /// </remarks>
+        public static InstallStatus PillStatus(InstallStatus installed, UpdateState update)
+        {
+            return Worse(installed, update == UpdateState.UpdateAvailable ? InstallStatus.UpdateAvailable : InstallStatus.UpToDate);
+        }
+
         /// <summary>One entry per package after Refresh or EnsureInstalled, in install order; empty before and when
         /// nothing is embedded.</summary>
         public IReadOnlyList<PackageStatus> Packages { get; private set; } = NoPackages;
