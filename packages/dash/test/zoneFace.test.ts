@@ -66,6 +66,7 @@ import {
 } from '../src/zones/index.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
+import { SAMPLE_LIT, stageOf } from '../src/components/revSegments.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
@@ -449,6 +450,84 @@ describe('the parts the face draws itself', () => {
     // It carries no widget, which is what "does not cycle" means in the scene graph.
     const widgets = faceItems(zoneFace1920x480).filter((i) => i.kind === 'widget');
     expect(widgets.every((w) => !w.name.startsWith('bar'))).toBe(true);
+  });
+});
+
+/**
+ * The rev bar of each face, which is fifteen segments and one number.
+ *
+ * The spans are snapped to whole pixels from the rect and the gap, so the gap is the only figure a
+ * face states and every width follows from it. Each artboard draws the row as a flex box carrying
+ * its own `gap`, and the three figures below are read off those rows rather than off a ramp: the
+ * faces all passed 8 until they were given a gap of their own, which made the segments of every
+ * 1280 face two pixels narrow and those of the nano four.
+ */
+describe('the rev bar segments sit at the gap each artboard draws', () => {
+  /** The `gap` of the flex row holding the fifteen segments, per sheet. */
+  const GAPS: Record<string, number> = {
+    openDash: 8,
+    'openDash 1280x480': 6,
+    'openDash 1280x400': 6,
+    'openDash 1280x720': 6,
+    'openDash 850x480': 4,
+    // 800 x 480 has no sheet of its own and takes 850's here as it takes every other number.
+    'openDash 800x480': 4,
+    'openDash 800x286': 4,
+    'openDash 600x686': 4,
+  };
+
+  const segmentsOf = (layout: ZoneLayout, layer = 'revBar.shiftLights'): RectangleItem[] => {
+    const found = faceItems(layout).find((i) => i.name === layer);
+    if (found?.kind !== 'layer') throw new Error(`${layout.folder} draws no ${layer}`);
+    return found.children.filter((c): c is RectangleItem => c.kind === 'rect');
+  };
+
+  test('the table names every face once', () => {
+    expect(Object.keys(GAPS).sort()).toEqual(ZONE_FACES.map((f) => f.folder).sort());
+  });
+
+  for (const face of ZONE_FACES) {
+    const gap = GAPS[face.folder]!;
+
+    test(`${face.folder} draws fifteen segments ${gap} px apart, flush with the rev bar rect`, () => {
+      expect({ folder: face.folder, gap: face.revBarGap }).toEqual({ folder: face.folder, gap });
+      const segments = segmentsOf(face);
+      expect(segments).toHaveLength(ds.shiftLights.segments);
+
+      // Flush at both ends: the rounding is spent between the segments, never outside them, so a
+      // face whose gap changed keeps the strip the artboard drew and only redistributes its insides.
+      const r = face.zones.revBar;
+      const last = segments[segments.length - 1]!.rect;
+      expect({ folder: face.folder, first: segments[0]!.rect.left, right: last.left + last.width }).toEqual({
+        folder: face.folder,
+        first: r.left,
+        right: r.left + r.width,
+      });
+      for (const s of segments) expect([s.rect.top, s.rect.height]).toEqual([r.top, r.height]);
+      for (let k = 1; k < segments.length; k++) {
+        const before = segments[k - 1]!.rect;
+        expect({ folder: face.folder, k, gap: segments[k]!.rect.left - (before.left + before.width) }).toEqual({ folder: face.folder, k, gap });
+      }
+    });
+  }
+
+  // The artboards default `litSegments` to nine, and the static colours are what Dash Studio's
+  // editor and its Overview thumbnails show, having no telemetry to evaluate a binding against.
+  test('nine of the fifteen are coloured in at build time, as every sheet draws them', () => {
+    const stages = [ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3];
+    for (const layer of ['revBar.shiftLights', 'revBar.shiftLightsSimHub'] as const) {
+      const drawn = segmentsOf(zoneFace1920x480, layer).map((s) => s.backgroundColor);
+      expect(drawn.filter((c) => c !== ds.purpose.shift.unlit)).toHaveLength(SAMPLE_LIT);
+      expect({ layer, drawn }).toEqual({
+        layer,
+        drawn: Array.from({ length: 15 }, (_, k) => (k < SAMPLE_LIT ? stages[stageOf(k, 15)] : ds.purpose.shift.unlit)),
+      });
+    }
+    // The plain RPM bar reports revs rather than a shift point, so its nine are the one colour it
+    // ever lights.
+    const rpm = segmentsOf(zoneFace1920x480, 'revBar.rpmBar').map((s) => s.backgroundColor);
+    expect(rpm.slice(0, SAMPLE_LIT)).toEqual(Array(SAMPLE_LIT).fill(ds.color.text.secondary));
+    expect(rpm.slice(SAMPLE_LIT)).toEqual(Array(15 - SAMPLE_LIT).fill(ds.purpose.shift.unlit));
   });
 });
 
