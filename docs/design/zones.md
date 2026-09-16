@@ -174,6 +174,15 @@ about 17% on a package.
 Every zone but A carries a **22 px header line**: the zone letter in the label style, then the
 page name. Zone A has none, which is the one thing the model leaves open — see §8.
 
+The frame around it is the artboards' and not the pit wall's. A face zone is padded `6px 12px`, its
+header row is 22 px of 15 px labels in `color.text.label`, and 4 px separate that row from the page,
+which leaves a 769 × 314 zone a body of 745 × 276 and the nano's 269 × 194 one of 245 × 156. The pit
+wall's zones keep the 28 px row over 16 px of padding `PitWallZones.dc.html` draws them with, so
+`zoneFrameMetrics` takes a chrome beside its density and the two frames no longer share one table.
+
+Band D carries the letter alone, drawn by the face at the band's own side padding and centred on its
+height, since a band has no header row to put it in and counts no cycle.
+
 ### The pit limiter
 
 Drawn over zone A as a full-width white banner with dark text while the limiter is on: at 1920 it
@@ -551,7 +560,10 @@ exists. Without the plugin, the mask reads as its default and the counter says "
 
 ## 6. Band D — eight pages
 
-A band the full width of the face showing one page at a time.
+A band the full width of the face showing one page at a time, recessed into the same `block.well`
+the rev bar and the bar sit in. The well is the band's own ground rather than a rectangle behind its
+widget, because a widget paints its dashboard's background over whatever the face drew underneath;
+the face draws one there as well, so that a face whose zone D widget has not resolved is still right.
 
 | | Page | | Page |
 |---|---|---|---|

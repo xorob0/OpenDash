@@ -21,6 +21,8 @@ import { validatePackage, type Dashboard, type Item, type StaticMapItem, type Te
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
+import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
+import { densityForBox } from '../src/second/density.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type Follower } from '../src/second/field.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
@@ -310,6 +312,24 @@ export function moduleBoxes(): { name: string; frame: Rect; density: Density }[]
       boxes.push({ name: `${def.folder} ${key}`, frame: body, density: wide ? 'wide' : 'zone' });
     }
   }
+  // And one box per distinct rectangle a *face* zone is drawn at, both arrangements of all eight
+  // faces, through the face's own frame rather than the pit wall's. The modules are one catalogue
+  // and the faces are where the smallest boxes of it are: 245 by 156 on the nano and 576 by 112 in
+  // zone C of the portrait face are narrower and shorter than anything the pit wall places, so a
+  // module that overflows one of them would otherwise overflow it unmeasured.
+  for (const layout of ZONE_FACES) {
+    for (const arrangement of [layout, layoutWithoutRevBar(layout)]) {
+      for (const { zone, size } of zonesOf(arrangement)) {
+        if (zone === 'A' || zone === 'D') continue;
+        const key = `face-${size.width}x${size.height}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const density = densityForBox(size);
+        const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
+        boxes.push({ name: key, frame: body, density });
+      }
+    }
+  }
   return boxes;
 }
 
@@ -317,8 +337,11 @@ describe('every module fits the box it is given', () => {
   const BOXES = moduleBoxes();
 
   test('the boxes come from the geometry, not from a list somebody kept up to date', () => {
-    // Seven of them: two companion pages and the five distinct zone rectangles the pit walls use.
+    // Two companion pages, the distinct zone rectangles the pit walls use, and the distinct ones
+    // the eight faces draw in both of their arrangements.
     expect(BOXES.length).toBeGreaterThanOrEqual(6);
+    expect(BOXES.map((b) => b.name)).toContain('face-269x194');
+    expect(BOXES.map((b) => b.name)).toContain('face-600x150');
     for (const box of BOXES) {
       expect({ name: box.name, w: box.frame.width > 0, h: box.frame.height > 0 }).toMatchObject({ w: true, h: true });
     }

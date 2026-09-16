@@ -28,8 +28,8 @@ import { measureText } from '../design/advances.ts';
 import { rect, type Size } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { pageScreen, pagedDashboard, pagedWidget } from '../pagedDashboard.ts';
-import { zoneFrame } from '../second/header.ts';
-import { densityForBox, densityOf, type Density } from '../second/density.ts';
+import { zoneFrame, zoneFrameMetrics } from '../second/header.ts';
+import { densityForBox } from '../second/density.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 import { bandCorners, bandPageItems } from './bandPages.ts';
@@ -76,6 +76,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     // The chrome is prefixed `zone.` rather than with the page id, because a module already names
     // its own items after itself: the track page draws `track.title` and so did the header.
     const density = densityForBox(size);
+    const metrics = zoneFrameMetrics(density, 'face');
     // Neither the letter nor the counter is in the title. Zones B and C are the same rectangle on
     // most faces, so they share one dashboard file; a letter baked in here would draw B in both of
     // them, which is exactly what the first capture of the 1920 face showed, and a counter baked in
@@ -83,8 +84,9 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     // draws both, and the frame keeps the room.
     const { items: chrome, body } = zoneFrame(
       `${page.id}.zone`,
-      { frame, title: page.name, counter: { kind: 'reserved', widest: widestCounter(zone, density) }, indent: zoneLetterWidth(density) },
+      { frame, title: page.name, counter: { kind: 'reserved', widest: widestCounter(zone, metrics.size) }, indent: zoneLetterWidth(metrics.size) },
       density,
+      'face',
     );
     items = [
       ...chrome,
@@ -92,8 +94,17 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     ];
   }
 
-  return pageScreen(page.id, items);
+  return pageScreen(page.id, items, groundOf(zone));
 }
+
+/**
+ * What a zone's pages are drawn on.
+ *
+ * Band D is recessed on every artboard -- `background: #060708`, the same well the rev bar and the
+ * bar sit in -- and a widget paints its own dashboard's ground over the face, so the well has to be
+ * the band's own ground rather than a rectangle drawn behind its widget.
+ */
+const groundOf = (zone: FaceZone): `#${string}` => (zone === 'D' ? ds.purpose.block.well : ds.color.surface.base);
 
 /** A zone dashboard: every page of its catalogue, in the order the plugin lists them. */
 export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, metadata: DashboardMetadata, corners = false): Dashboard {
@@ -106,6 +117,7 @@ export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, meta
     screens: pages.map((page) => zonePageScreen(face, zones, page, size, corners)),
     metadata,
     description: `${kind === 'zoneA' ? ZONE_A_PAGES.length : kind === 'band' ? BAND_D_PAGES.length : pages.length} pages drawn for a ${size.width} x ${size.height} zone.`,
+    background: groundOf(zone),
   });
 }
 
@@ -148,10 +160,11 @@ export function zoneDashboardsFor(face: FaceSize, zones: readonly { zone: FaceZo
  *
  * Every reading is tried rather than assuming the longest is the largest number twice over: the
  * label face is proportional, so "18 / 19" is wider than "21 / 21" at some sizes, and a box cut to
- * the wrong one clips a digit in a header that is otherwise never wrong.
+ * the wrong one clips a digit in a header that is otherwise never wrong. The size is passed rather
+ * than taken from the density, because the header is measured in one place and drawn in another and
+ * the two have to be the same number.
  */
-export function widestCounter(zone: FaceZone, density: Density): string {
-  const size = densityOf(density).labelSm;
+export function widestCounter(zone: FaceZone, size: number): string {
   let widest = '';
   let width = -1;
   for (const reading of zoneCounterReadings(zone)) {
@@ -168,10 +181,7 @@ export function widestCounter(zone: FaceZone, density: Density): string {
  * The room a zone's header keeps for its letter, which the face draws.
  *
  * The widest of A to D rather than the letter's own width, so that one shared dashboard indents the
- * same whichever zone it is serving. The gap after it is the canvas's double space.
+ * same whichever zone it is serving. The gap after it is the canvas's double space, and nothing
+ * more: the artboard's header is a baseline row with `gap: 8px` between the letter and the name.
  */
-export const zoneLetterWidth = (density: Density): number =>
-  Math.max(...FACE_ZONE_LETTERS.map((l) => Math.ceil(measureText('BarlowMedium', l, densityOf(density).labelSm)))) + 2 + ds.space[2];
-
-/** The height a zone's header takes, which the body starts under. Zone A has none. */
-export const headerHeightOf = (zone: FaceZone): number => (zone === 'A' ? 0 : densityOf('zone').label + 9);
+export const zoneLetterWidth = (size: number): number => Math.max(...FACE_ZONE_LETTERS.map((l) => Math.ceil(measureText('BarlowMedium', l, size)))) + 2 + ds.space[2];

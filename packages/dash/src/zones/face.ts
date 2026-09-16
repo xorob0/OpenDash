@@ -24,8 +24,10 @@ import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
 import { layoutWithoutRevBar, rectOf, type ZoneLayout } from './layout.ts';
 import { label } from '../elements/label.ts';
-import { densityForBox, densityOf } from '../second/density.ts';
+import { measureText } from '../design/advances.ts';
+import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
+import { bandMetrics } from './bandPages.ts';
 import { widestCounter, zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
 const { not } = ncalc;
@@ -82,6 +84,13 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
     items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd, face: sizeOf(layout), scale: layout.bar }));
   }
 
+  // Band D sits in the same well as the bar: the artboards draw both recessed against the body, and
+  // the two settled strips reading as one material is what makes the changeable middle read as the
+  // changeable part. Drawn here as well as by the band's own screens, so that the face is right on
+  // its own -- a face whose zone D widget has not resolved would otherwise show base colour where
+  // the drawing has a well.
+  items.push(band('band.ground', z.band, ds.purpose.block.well));
+
   // One pixel between the zones, because a rule is the whole boundary where a block would be too
   // much. That is the reason most of the face is bare.
   for (const [name, gapLeft] of [
@@ -132,24 +141,41 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
  * is the only thing that knows which rect is which zone, so both are drawn here, over the widget,
  * in the room the zone's header keeps at each end.
  *
- * Zones A and D carry no header, so they get neither.
+ * Zone A carries no header, so it gets neither. Band D carries the letter alone: the artboards
+ * open the band with a D in the same ink as the zone letters, and its pages count nothing, being
+ * eight fields across a strip rather than a cycle a driver pages through deliberately.
  */
 function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect): Item[] {
-  if (zone === 'A' || zone === 'D') return [];
+  if (zone === 'A') return [];
+  if (zone === 'D') return [bandLetter(r)];
   const density = densityForBox({ width: r.width, height: r.height });
-  const { padX } = zoneFrameMetrics(density);
-  const size = densityOf(density).labelSm;
-  const y = zoneTitleY(r, density);
-  const counter = { kind: 'reserved', widest: widestCounter(zone, density) } as const;
+  const metrics = zoneFrameMetrics(density, 'face');
+  const size = metrics.size;
+  const y = zoneTitleY(r, metrics);
+  const counter = { kind: 'reserved', widest: widestCounter(zone, size) } as const;
   return [
-    label(`zone${zone}.letter`, zone, r.left + padX, y, zoneLetterWidth(density), { size, color: ds.color.text.secondary }),
-    label(`zone${zone}.counter`, counter.widest, zoneCounterX(r, counter, density), y, zoneCounterWidth(counter, density), {
+    label(`zone${zone}.letter`, zone, r.left + metrics.padX, y, zoneLetterWidth(size), { size }),
+    label(`zone${zone}.counter`, counter.widest, zoneCounterX(r, counter, metrics), y, zoneCounterWidth(counter, metrics), {
       size,
       hAlign: 'right',
       bind: zoneCounter(face, zone),
       widest: counter.widest,
     }),
   ];
+}
+
+/**
+ * Band D's letter, centred on the height of the band rather than on a header row it has none of.
+ *
+ * Drawn by the face for the same reason B's and C's are: the band's dashboard is one file per
+ * rectangle and knows neither which zone it is serving nor that there is a letter. `bandMetrics`
+ * is the table the band already lays itself out from, so the letter and the rank it stands before
+ * take their padding from the same row of it.
+ */
+function bandLetter(r: Rect): Item {
+  const size = ds.size.label;
+  const width = Math.ceil(measureText('BarlowMedium', 'D', size)) + 2;
+  return label('zoneD.letter', 'D', r.left + bandMetrics(r).padX, r.top + (r.height - size) / 2, width, { size });
 }
 
 export interface FaceBuildOptions {

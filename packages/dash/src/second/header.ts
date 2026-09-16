@@ -6,7 +6,7 @@
  * and lap. The dots under the module are the same information as the counter, in a form the eye
  * reads without focusing.
  */
-import type { HAlign, Item, Rect } from '../generator.ts';
+import type { HAlign, Hex, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
@@ -164,13 +164,61 @@ export function panel(name: string, spec: PanelSpec, density: Density = 'zone'):
 export const ZONE_TITLE_HEIGHT = 28;
 
 /**
- * The title line and the padding a zone frame takes, which follow the density.
+ * Whose chrome a zone frame draws.
  *
- * A 28 px title over a 16 px gutter is right on a 769 by 314 zone and is a fifth of a compact
- * one's height. The frame is chrome: it should cost the page less where the page has less.
+ * The face and the pit wall share `zoneFrame` and their artboards do not draw the same header.
+ * Every Dash sheet pads a zone `6px 12px` and opens it with a 22 px row of 15 px labels in
+ * `#5A6069`; `PitWallZones.dc.html` draws 28 px over 16. So the caller says which it is rather than
+ * the frame reading it off the density, which cannot tell a face zone from a pit wall one.
  */
-export const zoneFrameMetrics = (density: Density): { title: number; padX: number; padBottom: number } =>
-  density === 'compact' ? { title: 20, padX: 10, padBottom: 16 } : { title: ZONE_TITLE_HEIGHT, padX: 16, padBottom: 16 };
+export type ZoneChrome = 'face' | 'pitwall';
+
+export interface ZoneFrameMetrics {
+  /** The header row the title sits in. */
+  title: number;
+  /** Padding at the sides. */
+  padX: number;
+  /** Padding over the header row. */
+  padTop: number;
+  /** Between the header row and the body. */
+  gap: number;
+  /** What is left under the body. */
+  padBottom: number;
+  /** The size the zone letter, the page name and the counter are drawn at. */
+  size: number;
+  /** Their ink. */
+  color: Hex;
+}
+
+/**
+ * The face's chrome, read off the Dash artboards.
+ *
+ * The same at every density, compact included, because this is the face's chrome and not the
+ * page's ramp: the nano steps its *page* down to the compact ladder and still draws the 22 px row
+ * of 15 px labels its artboard draws.
+ */
+const FACE_CHROME: ZoneFrameMetrics = { title: 22, padX: 12, padTop: 6, gap: 4, padBottom: 6, size: ds.size.label, color: ds.color.text.label };
+
+/**
+ * The title line and the padding a zone frame takes.
+ *
+ * The pit wall's follow the density: a 28 px title over a 16 px gutter is right on a 769 by 314
+ * zone and is a fifth of a compact one's height, the frame being chrome that should cost the page
+ * less where the page has less. `padBottom` is what is left under the *body*, which is the ten
+ * pixels the pit wall has always drawn; it used to be written as sixteen and measured from the
+ * title row instead, so the number moved and the rectangle did not.
+ */
+export const zoneFrameMetrics = (density: Density, chrome: ZoneChrome = 'pitwall'): ZoneFrameMetrics =>
+  chrome === 'face'
+    ? FACE_CHROME
+    : {
+        ...(density === 'compact' ? { title: 20, padX: 10 } : { title: ZONE_TITLE_HEIGHT, padX: 16 }),
+        padTop: 0,
+        gap: 6,
+        padBottom: 10,
+        size: densityOf(density).labelSm,
+        color: ds.color.text.secondary,
+      };
 
 /**
  * The page counter in a zone's title bar.
@@ -195,38 +243,35 @@ export interface ZoneSpec {
 }
 
 /** The y a zone frame puts its title on, which the face needs to line the letter up with it. */
-export const zoneTitleY = (frame: Rect, density: Density = 'zone'): number =>
-  frame.top + (zoneFrameMetrics(density).title - densityOf(density).labelSm) / 2;
+export const zoneTitleY = (frame: Rect, metrics: ZoneFrameMetrics): number => frame.top + metrics.padTop + (metrics.title - metrics.size) / 2;
 
 /** The room a zone's title bar keeps at its right for the counter, drawn there or not. */
-export function zoneCounterWidth(counter: ZoneCounter, density: Density = 'zone'): number {
+export function zoneCounterWidth(counter: ZoneCounter, metrics: ZoneFrameMetrics): number {
   const text = counter.kind === 'static' ? `${counter.page} / ${counter.pages}` : counter.widest;
-  return Math.ceil(measureText('BarlowMedium', text, densityOf(density).labelSm)) + 2;
+  return Math.ceil(measureText('BarlowMedium', text, metrics.size)) + 2;
 }
 
 /** The x a zone's counter is drawn at, which a caller that draws its own needs. */
-export const zoneCounterX = (frame: Rect, counter: ZoneCounter, density: Density = 'zone'): number =>
-  frame.left + frame.width - zoneFrameMetrics(density).padX - zoneCounterWidth(counter, density);
+export const zoneCounterX = (frame: Rect, counter: ZoneCounter, metrics: ZoneFrameMetrics): number =>
+  frame.left + frame.width - metrics.padX - zoneCounterWidth(counter, metrics);
 
 /** A data zone: a title bar with the page name and counter, and the body rect under it. */
-export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone'): { items: Item[]; body: Rect } {
-  const d = densityOf(density);
-  const { title: titleHeight, padX, padBottom } = zoneFrameMetrics(density);
-  const titleY = zoneTitleY(spec.frame, density);
+export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone', chrome: ZoneChrome = 'pitwall'): { items: Item[]; body: Rect } {
+  const metrics = zoneFrameMetrics(density, chrome);
+  const { title: titleHeight, padX, padTop, gap, padBottom, size, color } = metrics;
+  const titleY = zoneTitleY(spec.frame, metrics);
   const indent = spec.indent ?? 0;
-  const counterWidth = zoneCounterWidth(spec.counter, density);
+  const counterWidth = zoneCounterWidth(spec.counter, metrics);
   const items: Item[] = [
-    label(`${name}.title`, spec.title, spec.frame.left + padX + indent, titleY, spec.frame.width - 2 * padX - indent - counterWidth, { size: d.labelSm, color: ds.color.text.secondary }),
+    label(`${name}.title`, spec.title, spec.frame.left + padX + indent, titleY, spec.frame.width - 2 * padX - indent - counterWidth, { size, color }),
   ];
   if (spec.counter.kind === 'static') {
-    items.push(
-      label(`${name}.counter`, `${spec.counter.page} / ${spec.counter.pages}`, zoneCounterX(spec.frame, spec.counter, density), titleY, counterWidth, { size: d.labelSm, hAlign: 'right' }),
-    );
+    items.push(label(`${name}.counter`, `${spec.counter.page} / ${spec.counter.pages}`, zoneCounterX(spec.frame, spec.counter, metrics), titleY, counterWidth, { size, hAlign: 'right' }));
   }
-  const bodyTop = spec.frame.top + titleHeight;
+  const bodyTop = spec.frame.top + padTop + titleHeight + gap;
   return {
     items,
-    body: rect(spec.frame.left + padX, bodyTop + 6, Math.max(0, spec.frame.width - 2 * padX), Math.max(0, spec.frame.height - titleHeight - padBottom)),
+    body: rect(spec.frame.left + padX, bodyTop, Math.max(0, spec.frame.width - 2 * padX), Math.max(0, spec.frame.top + spec.frame.height - padBottom - bodyTop)),
   };
 }
 
