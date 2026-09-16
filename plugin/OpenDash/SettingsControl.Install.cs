@@ -286,6 +286,8 @@ namespace OpenDashPlugin
             {
                 updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
             }
+            // The pill reads this line's answer as well as the disk's, so it is refreshed with it.
+            RefreshStatus();
         }
 
         /// <summary>
@@ -388,9 +390,14 @@ namespace OpenDashPlugin
             var version = installer.InstalledVersion ?? installer.EmbeddedVersion ?? OpenDash.Version;
             dashboardTitle.Text = DashboardInstaller.Summary(version, installer.PackageCount);
 
+            // The worse of the two questions this section answers: what is on the disk against what
+            // the build carries, and what the daily check found waiting. Reading the first alone told a
+            // driver they were up to date directly above a line saying a newer release was there.
+            var status = DashboardInstaller.PillStatus(installer.Status, updateStatus.State);
+
             string dot;
             var label = Theme.TextPrimary;
-            switch (installer.Status)
+            switch (status)
             {
                 case InstallStatus.UpToDate:
                     dot = Theme.StatusUpToDate;
@@ -406,10 +413,13 @@ namespace OpenDashPlugin
                     label = Theme.TextLabel;
                     break;
             }
-            statusHost.Child = Ui.StatusPill(dot, installer.Status.Label(), label);
-            statusHost.ToolTip = installer.HasEmbeddedPackage
+            statusHost.Child = Ui.StatusPill(dot, status.Label(), label);
+            var report = installer.HasEmbeddedPackage
                 ? (installer.Packages.Count > 0 ? installer.PackageReport() : installer.LastError)
                 : "This build of the plugin carries no dashboard package.";
+            // The release's own version belongs in the tooltip when the offer is what turned the pill:
+            // the pill says an update is available and the tooltip says which.
+            statusHost.ToolTip = updateStatus.State == UpdateState.UpdateAvailable && updateStatus.Line != null ? $"{report}\n{updateStatus.Line}" : report;
         }
     }
 }
