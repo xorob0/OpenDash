@@ -11,6 +11,13 @@ import { ds } from '../tokens.ts';
 
 export type Density = 'companion' | 'zone' | 'compact' | 'wide';
 
+/**
+ * Gap between a field's label row and its value row. The canvas draws it as `gap: 5px` on the
+ * companion artboards and on the zone pages alike; 5 is not on the `space` scale, which stops at 4
+ * and then goes to 8, so the literal stays here with the canvas as its citation.
+ */
+const FIELD_GAP = 5;
+
 export interface DensitySpec {
   /** The one big number of a module: speed, fuel, the delta. */
   hero: number;
@@ -58,7 +65,7 @@ const COMPANION: DensitySpec = {
   name: 15,
   gapX: ds.space[6],
   gapY: 20,
-  fieldGap: ds.space[1],
+  fieldGap: FIELD_GAP,
   rowHeight: 38,
   headerHeight: 24,
   cellGap: 12,
@@ -81,10 +88,10 @@ const ZONE: DensitySpec = {
   name: 13,
   gapX: ds.space[5],
   gapY: 12,
-  fieldGap: ds.space[1],
+  fieldGap: FIELD_GAP,
   rowHeight: 26,
   headerHeight: 20,
-  cellGap: 8,
+  cellGap: ds.space[3],
   bar: 4,
   chipHeight: 18,
   chipPadding: 5,
