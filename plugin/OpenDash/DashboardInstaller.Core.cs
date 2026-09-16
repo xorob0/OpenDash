@@ -254,9 +254,14 @@ namespace OpenDashPlugin
         /// Replace a folder that has changed since OpenDash wrote it. False everywhere except where a person has been
         /// shown what it means and said yes, because such a folder holds work that deleting it destroys.
         /// </param>
-        public void EnsureInstalled(bool force, bool replaceEdited = false)
+        /// <param name="progress">
+        /// Packages finished over packages to do, from 0 before the first to 1 after the last, or null for a caller
+        /// with nothing to draw. A package is the finest grain there is here, because extracting one is a single
+        /// call into PackageExtractor and reports nothing until it returns.
+        /// </param>
+        public void EnsureInstalled(bool force, bool replaceEdited = false, Action<double> progress = null)
         {
-            Run(force, install: true, replaceEdited: replaceEdited);
+            Run(force, install: true, replaceEdited: replaceEdited, progress: progress);
         }
 
         /// <summary>
@@ -276,7 +281,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public IReadOnlyCollection<string> Wanted { get; set; }
 
-        private void Run(bool force, bool install, bool replaceEdited = false)
+        private void Run(bool force, bool install, bool replaceEdited = false, Action<double> progress = null)
         {
             LastError = null;
             var names = packages.Names;
@@ -290,8 +295,16 @@ namespace OpenDashPlugin
             // Read for every package, so the panel can still say what is installable and at what
             // version; written only for the folders the rig wants.
             var wanted = Wanted;
+            var done = 0;
+            Report(progress, 0);
             var results = names
-                .Select(name => Process(name, force, install && Includes(wanted, FolderOf(name)), replaceEdited))
+                .Select(name =>
+                {
+                    var result = Process(name, force, install && Includes(wanted, FolderOf(name)), replaceEdited);
+                    done++;
+                    Report(progress, (double)done / names.Count);
+                    return result;
+                })
                 .ToList();
             Packages = results;
             Status = results.Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
@@ -437,6 +450,28 @@ namespace OpenDashPlugin
         private static InstallStatus Worse(InstallStatus a, InstallStatus b)
         {
             return Severity(a) >= Severity(b) ? a : b;
+        }
+
+        /// <summary>
+        /// A report the run cannot be derailed by.
+        /// </summary>
+        /// <remarks>
+        /// The caller draws this on the UI thread through Dispatcher.Invoke, and a settings page that has been closed
+        /// makes that throw. An exception between two packages would abandon the rest of the run and leave a rig half
+        /// written, which is exactly what this installer exists to avoid, so a bar nobody is watching is dropped and
+        /// the install carries on.
+        /// </remarks>
+        private static void Report(Action<double> progress, double fraction)
+        {
+            if (progress == null) return;
+            try
+            {
+                progress(fraction);
+            }
+            catch
+            {
+                // Deliberately silent: log is the caller's and a failed report says nothing about the install.
+            }
         }
 
         private static int Severity(InstallStatus status)

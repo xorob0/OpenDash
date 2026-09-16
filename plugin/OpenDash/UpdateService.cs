@@ -127,7 +127,12 @@ namespace OpenDashPlugin
         /// Whether to replace a dashboard somebody has edited since OpenDash wrote it. False unless a person has
         /// been shown what that means and said yes.
         /// </param>
-        public UpdateOutcome Apply(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited)
+        /// <param name="progress">
+        /// How far through the whole run this is, from 0 to 1, or null for a caller with nothing to draw. The
+        /// downloads take the first half and the install the second, so that the bar crosses the panel once rather
+        /// than reaching the end and starting again, which would say the run had finished twice.
+        /// </param>
+        public UpdateOutcome Apply(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited, Action<double> progress = null)
         {
             if (installer == null || release == null) return new UpdateOutcome { Reason = "there is nothing to apply" };
 
@@ -138,21 +143,28 @@ namespace OpenDashPlugin
             }
 
             var downloaded = new DownloadedPackageSource();
+            // Each download owns one slice of the first half, and reports inside its own slice as its bytes arrive.
+            // A package is a few megabytes over a home connection, so a bar that moved only between packages would
+            // stand still for the part of the run that actually takes the time.
+            var slice = 0.5 / plan.Items.Count;
+            var fetchedSoFar = 0;
             foreach (var item in plan.Items)
             {
-                var fetched = source.GetBytes(item.Asset.DownloadUrl);
+                var from = fetchedSoFar * slice;
+                var fetched = source.GetBytes(item.Asset.DownloadUrl, within => progress?.Invoke(from + within * slice));
                 if (!fetched.Ok) return new UpdateOutcome { Reason = item.FolderName + " could not be downloaded (" + fetched.Reason + ")" };
                 if (!Digest.Matches(fetched.Bytes, item.Asset.Digest))
                 {
                     return new UpdateOutcome { Reason = item.FolderName + " did not arrive as GitHub published it, so nothing was installed" };
                 }
                 downloaded.Add(item.Asset.Name, fetched.Bytes);
+                fetchedSoFar++;
             }
 
             // Everything is in hand before anything on disk is touched, so a download that fails half way through
             // leaves the machine as it was rather than half updated.
             var target = new DashboardInstaller(installer.SimHubRoot, log, downloaded, installer.Record);
-            target.EnsureInstalled(force: true, replaceEdited: replaceEdited);
+            target.EnsureInstalled(force: true, replaceEdited: replaceEdited, progress: within => progress?.Invoke(0.5 + within * 0.5));
 
             // A package that failed to install is a failure, whatever the others did. Reporting Ok because the run
             // finished, and putting the reason in a field the wording ignored, told a user their dashboards were
