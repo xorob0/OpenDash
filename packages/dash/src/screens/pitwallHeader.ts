@@ -23,7 +23,7 @@ import { ds } from '../tokens.ts';
 const { concat, str, fmt, iff, gt, num, isnull, isNull, not, ucase } = ncalc;
 
 /** Height of the pit wall header and the padding either side of it. */
-export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 20, groupGap: 28 } as const;
+export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
 /** The three page squares of the landscape dashboard. */
 export const PAGE_SQUARE = { size: 8, gap: 6 } as const;
 /** The flag block beside the flag's name. */
@@ -161,7 +161,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       id: 'incidents',
       parts: [
         { kind: 'label', text: 'INC' },
-        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.fuel.low },
+        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.alert.incident },
         { kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit },
       ],
     },
