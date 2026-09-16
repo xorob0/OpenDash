@@ -3,6 +3,7 @@
 // the others, the panel's summary text, and the embedded resource naming (spaces in a file name survive). Also the pure
 // InstalledVersionFrom: an absent folder is not installed, a folder without a usable sidecar is reinstalled.
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -272,6 +273,51 @@ namespace OpenDashPlugin.Tests
             Assert.All(installer.Packages, p => Assert.True(p.Extracted));
             Assert.True(File.Exists(Path.Combine(root, "DashTemplates", SmallFolder + PackageExtractor.BackupSuffix)));
             Assert.True(File.Exists(Path.Combine(root, "DashTemplates", "openDash" + PackageExtractor.BackupSuffix)));
+        }
+
+        /// <summary>
+        /// What the panel's bar is allowed to assume: a report before the first package, one after each package, and
+        /// nothing in between, so a bar drawn from this moves in whole dashboards and arrives exactly at the end.
+        /// </summary>
+        [Fact]
+        public void A_reinstall_reports_one_package_at_a_time_and_finishes_at_the_end()
+        {
+            var installer = Installer(TwoPackages());
+            var reported = new List<double>();
+
+            installer.EnsureInstalled(true, progress: reported.Add);
+
+            Assert.Equal(new[] { 0d, 0.5d, 1d }, reported);
+        }
+
+        [Fact]
+        public void A_reinstall_the_bar_is_not_watched_for_still_writes_every_dashboard()
+        {
+            // The panel marshals each report onto the UI thread, and a settings page closed mid-run makes that
+            // throw. Stopping between two packages would leave the rig half written, which is the one outcome this
+            // installer exists to prevent, so a report that throws is dropped and the run carries on.
+            var installer = Installer(TwoPackages());
+
+            installer.EnsureInstalled(true, progress: _ => throw new InvalidOperationException("the panel has gone"));
+
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+            Assert.All(installer.Packages, p => Assert.True(p.Extracted));
+            Assert.True(PackageExtractor.IsInstalled(root, "openDash"));
+            Assert.True(PackageExtractor.IsInstalled(root, SmallFolder));
+        }
+
+        /// <summary>Reading is not a run, so it says nothing to a bar that is not drawn for it.</summary>
+        [Fact]
+        public void Refresh_reports_nothing_because_it_writes_nothing()
+        {
+            var installer = Installer(TwoPackages());
+            var reported = new List<double>();
+            installer.EnsureInstalled(true, progress: reported.Add);
+            reported.Clear();
+
+            installer.Refresh();
+
+            Assert.Empty(reported);
         }
 
         [Fact]

@@ -61,12 +61,20 @@ namespace OpenDashPlugin.Tests
                 return marker < 0 ? 1 : int.Parse(url.Substring(marker + "&page=".Length));
             }
 
-            public FetchResult GetBytes(string url)
+            public FetchResult GetBytes(string url, Action<double> progress = null)
             {
                 Requested.Add(url);
-                return Assets.TryGetValue(url, out var bytes)
-                    ? new FetchResult { Ok = true, Bytes = bytes }
-                    : FetchResult.Failed("nothing at " + url);
+                if (!Assets.TryGetValue(url, out var bytes)) return FetchResult.Failed("nothing at " + url);
+                // The real client reports as the bytes arrive, once per whole percent. Three reports is enough for a
+                // test to see the shape of what the caller does with them, and a fetch that fails reports nothing.
+                // Guarded as the interface says every implementation must guard, so that a test which throws from
+                // the callback measures what the caller does rather than what this fake forgot to do.
+                foreach (var fraction in new[] { 0d, 0.5d, 1d })
+                {
+                    if (progress == null) break;
+                    try { progress(fraction); } catch { }
+                }
+                return new FetchResult { Ok = true, Bytes = bytes };
             }
         }
 
@@ -400,6 +408,61 @@ namespace OpenDashPlugin.Tests
             var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
             Assert.True(outcome.Ok);
             Assert.Contains("not in this release", outcome.Line);
+        }
+
+        // What the bar is told
+
+        /// <summary>
+        /// The four promises the panel draws a bar on: it begins at nothing, it never goes backwards, it reaches the
+        /// end exactly once, and it crosses the halfway mark when the downloading stops and the writing starts.
+        /// </summary>
+        [Fact]
+        public void Applying_reports_a_run_that_starts_at_nothing_and_ends_at_everything()
+        {
+            var record = new MemoryFolderRecord();
+            var installer = Installed("0.1.0", record, "openDash", SmallFolder);
+
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash", SmallFolder) };
+            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            fetcher.Assets["https://example.invalid/openDash.1280x480"] = SyntheticPackage.Zip(SmallFolder, "0.2.0").ToArray();
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var reported = new List<double>();
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false, progress: reported.Add);
+
+            Assert.True(outcome.Ok);
+            Assert.Equal(0, reported.First());
+            Assert.Equal(1, reported.Last());
+            Assert.Equal(reported.OrderBy(f => f), reported);
+            Assert.All(reported, f => Assert.InRange(f, 0, 1));
+
+            // Half the bar is the two downloads and half is the two installs, so the two packages are each reported
+            // as written: a run whose bar jumped from the last byte to the end would pass every assertion above.
+            Assert.Contains(0.75, reported);
+        }
+
+        [Fact]
+        public void A_run_the_bar_is_not_watched_for_is_applied_exactly_as_one_that_is()
+        {
+            var record = new MemoryFolderRecord();
+            var installer = Installed("0.1.0", record, "openDash");
+
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
+            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            // The settings page can close while the download is in flight, which makes Dispatcher.Invoke throw. The
+            // update is what the user asked for and the bar is decoration, so the one may not take the other down.
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false,
+                progress: _ => throw new InvalidOperationException("the panel has gone"));
+
+            Assert.True(outcome.Ok);
+            Assert.Equal(new[] { "openDash" }, outcome.Updated);
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
         }
 
         /// <summary>

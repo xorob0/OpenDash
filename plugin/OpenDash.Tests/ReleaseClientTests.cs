@@ -162,6 +162,31 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(answerBytes, result.Bytes);
         }
 
+        /// <summary>
+        /// The bar the panel draws while a release is downloading, and the throttle that keeps it drawable.
+        /// </summary>
+        /// <remarks>
+        /// The body is a hundred and twenty chunks, so an implementation reporting once per chunk would report a
+        /// hundred and twenty-two times. Every report crosses to the UI thread through Dispatcher.Invoke, and a
+        /// 240 px bar cannot show more than a hundred steps in any case, so one report per whole percent is the
+        /// bound and this is what holds it.
+        /// </remarks>
+        [Fact]
+        public void A_download_says_how_far_through_it_is_without_flooding_the_caller()
+        {
+            answerBytes = new byte[81920 * 120];
+            var reported = new List<double>();
+
+            var result = new ReleaseClient("0.1.0").GetBytes(prefix, reported.Add);
+
+            Assert.True(result.Ok);
+            Assert.Equal(answerBytes.Length, result.Bytes.Length);
+            Assert.Equal(0, reported.First());
+            Assert.Equal(1, reported.Last());
+            Assert.Equal(reported.OrderBy(f => f), reported);
+            Assert.InRange(reported.Count, 3, 101);
+        }
+
         [Fact]
         public void Nothing_is_fetched_from_an_empty_address()
         {

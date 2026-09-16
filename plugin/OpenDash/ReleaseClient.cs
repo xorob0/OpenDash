@@ -28,7 +28,14 @@ namespace OpenDashPlugin
     public interface IReleaseSource
     {
         FetchResult GetString(string url);
-        FetchResult GetBytes(string url);
+
+        /// <param name="progress">
+        /// How far through the body this is, from 0 to 1, or null for a caller with nothing to draw. Optional
+        /// because only the panel has a bar and every other caller would otherwise pass null by hand. An
+        /// implementation must not let this decide the fetch: the caller draws it on the UI thread and a settings
+        /// page that has closed makes that throw, which is no reason to report a download that arrived as failed.
+        /// </param>
+        FetchResult GetBytes(string url, Action<double> progress = null);
     }
 
     public sealed class ReleaseClient : IReleaseSource
@@ -63,16 +70,22 @@ namespace OpenDashPlugin
             });
         }
 
-        /// <summary>Fetches bytes, for a release asset. Follows the redirect GitHub answers with.</summary>
-        public FetchResult GetBytes(string url)
+        /// <summary>Fetches bytes, for a release asset. Follows the redirect GitHub answers with, and says how far
+        /// through it is whenever the answer declared how long it would be.</summary>
+        public FetchResult GetBytes(string url, Action<double> progress = null)
         {
             return Send(url, response =>
             {
+                // Read before the stream is, because the header is what makes a fraction possible at all: an answer
+                // sent chunked declares -1, and a download whose length nobody knows can only say it began and ended.
+                var length = response.ContentLength;
                 using (var stream = response.GetResponseStream())
                 using (var buffer = new MemoryStream())
                 {
                     var chunk = new byte[81920];
+                    var reported = -1;
                     int read;
+                    Report(progress, 0, ref reported);
                     while ((read = stream.Read(chunk, 0, chunk.Length)) > 0)
                     {
                         if (buffer.Length + read > MaxDownloadBytes)
@@ -80,10 +93,41 @@ namespace OpenDashPlugin
                             return FetchResult.Failed("the download is larger than " + MaxDownloadBytes + " bytes");
                         }
                         buffer.Write(chunk, 0, read);
+                        if (length > 0) Report(progress, (double)buffer.Length / length, ref reported);
                     }
+                    Report(progress, 1, ref reported);
                     return new FetchResult { Ok = true, Bytes = buffer.ToArray() };
                 }
             });
+        }
+
+        /// <summary>
+        /// One report per whole percent, and never a report that can decide the download.
+        /// </summary>
+        /// <remarks>
+        /// The throttle is what keeps the panel usable: a package is a few hundred chunks of 80 KB and every report
+        /// crosses to the UI thread through Dispatcher.Invoke, so a report per chunk would spend the download
+        /// redrawing a bar that had not visibly moved. A hundred steps is more than a 240 px bar can show anyway.
+        ///
+        /// The guard is the interface's promise kept: Send turns anything thrown under it into a failed fetch, so a
+        /// report that threw because the settings page had closed would be reported as a download that did not
+        /// arrive, and the update would stop for a bar nobody was watching.
+        /// </remarks>
+        private static void Report(Action<double> progress, double fraction, ref int reported)
+        {
+            if (progress == null) return;
+            var percent = (int)(fraction * 100);
+            if (percent <= reported) return;
+            reported = percent;
+            try
+            {
+                progress(fraction);
+            }
+            catch
+            {
+                // Nothing to report and nowhere to report it: this file carries no logger, and a bar nobody is
+                // watching is not a fault worth a line in SimHub's log.
+            }
         }
 
         private FetchResult Send(string url, Func<HttpWebResponse, FetchResult> read)
