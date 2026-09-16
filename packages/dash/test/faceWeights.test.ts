@@ -26,8 +26,12 @@ const textsOf = (dashboards: readonly Dashboard[]): TextItem[] =>
 /** The gear, and the two neighbours ghosted either side of it, which are the same glyph. */
 const isGear = (name: string): boolean => /(^|\.)gear$/.test(name) || /(^|\.)gear\.(above|below)$/.test(name);
 
-/** The flag band's name, which is the design's other 700 and is a label rather than a numeral. */
-const isFlagName = (name: string): boolean => name.startsWith('flag.');
+/**
+ * A flag's name, in either format, which is the design's other 700: a label on the band, and a
+ * condensed run the height of the body in the full-screen format, which the sheets set in the same
+ * weight for the same reason.
+ */
+const isFlagName = (name: string): boolean => name.startsWith('flag.') || name.startsWith('flagFull.');
 
 describe('only the gear is Bold', () => {
   for (const face of ZONE_FACES) {

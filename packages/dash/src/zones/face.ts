@@ -14,16 +14,18 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { FACE_SIZES, FACE_ZONE_LETTERS, setting, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, setting, zone as zoneSetting, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
+import { withBindings } from '../bind.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
 import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
+import { flagFull } from '../components/flagFull.ts';
 import { pitLimiter } from '../components/pitLimiter.ts';
 import { popUps } from '../components/popUp.ts';
 import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
-import { layoutWithoutRevBar, rectOf, type ZoneLayout } from './layout.ts';
+import { bodyRect, layoutWithoutRevBar, rectOf, type ZoneLayout } from './layout.ts';
 import { label } from '../elements/label.ts';
 import { measureText } from '../design/advances.ts';
 import { densityForBox } from '../second/density.ts';
@@ -123,7 +125,29 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
 
   // A flag takes the band over, because an alert outranks fuel. The same sixty pixels goes to
   // whichever has the better claim, which is why the face has no separate flag strip.
-  items.push(...flagStrip(z.band, FLAG_STRIP_STYLES.standard, 'flag'));
+  //
+  // Both formats are drawn and one is shown, the way both rev bar arrangements are: a driver flips
+  // the switch in the panel and the face in front of them changes. The format is asked once, on the
+  // group, rather than on each of the six states inside it, and a group whose Visible is false has
+  // its children's bindings left unevaluated, so the format that is not chosen costs nothing while
+  // it is not showing.
+  items.push({
+    kind: 'layer',
+    name: 'flag',
+    children: flagStrip(z.band, FLAG_STRIP_STYLES.standard, 'flag'),
+    ...withBindings({ Visible: zoneSetting.flagFormatIs(face, 'band') }),
+  });
+
+  // The other format: the flag takes zones B, A and C together, which costs the gear for as long as
+  // it is out and is the trade the setting exists to offer. The rectangle is the body of whichever
+  // face this is rather than one of eight tabulated ones, so the portrait face, the nano and the
+  // arrangement without the rev bar are all right without a second table.
+  items.push({
+    kind: 'layer',
+    name: 'flagFull',
+    children: flagFull(bodyRect(layout), 'flagFull'),
+    ...withBindings({ Visible: zoneSetting.flagFormatIs(face, 'full') }),
+  });
 
   // The limiter covers zone A rather than taking room of its own: it is true for seconds at a time
   // and it is the one thing that matters while it is. Drawn last, so it is over the zone.
