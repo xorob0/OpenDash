@@ -89,6 +89,9 @@ const SIDES: readonly Side[] = [
   { id: 'behind', offset: 1, heading: 'BEHIND', position: 5, gap: '+0.722', colour: ds.purpose.delta.slower },
 ];
 
+/** Width of one of the labels that follow the gap, with the pixel `label` leaves itself. */
+const detailWidth = (text: string, fs: number): number => Math.ceil(measureText('BarlowMedium', text, fs)) + 1;
+
 /**
  * The labels that follow the gap on its baseline, by the piece that keeps each.
  *
@@ -119,10 +122,10 @@ function details(ctx: ModuleContext, side: Side, keep: readonly string[]): { id:
 
 /** One block, at a value size and holding the pieces still kept. */
 function block(ctx: ModuleContext, side: Side, box: { left: number; width: number }, fs: number, keep: readonly string[]): StackRow | undefined {
+  if (keep.length === 0) return undefined;
   const d = densityOf(ctx.density);
   const idx = neighbour(side.offset);
   const has = (piece: string): boolean => keep.includes(piece);
-  if (keep.length === 0) return undefined;
   // The canvas draws the number at the fourth size of the companion ramp and at the last of the
   // zone one, which is not the same rung of the two ladders, so the instrument says which.
   const numberSize = ctx.density === 'companion' ? d.small : d.tiny;
@@ -185,18 +188,15 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
     return items;
   };
 
+  // No `fill`, which is rule 20 declined on purpose. The canvas names this page's gap at every
+  // shape it draws, 64 on the companion, 46 in a zone and 34 on the compact faces, and those are
+  // exactly the three densities' `big`; a stack that spent its slack on the next rung up would
+  // draw 64 where the sheet writes 46 at every one of them. So the room a tall zone has over its
+  // two blocks stays slack, and the growth chips on the face sheets are read as the size of the
+  // face against the catalogue rather than of the drawing inside it.
   return {
     height,
     draw,
-    /**
-     * No `fill`, which is rule 20 declined on purpose.
-     *
-     * The canvas names this page's gap at every shape it draws -- 64 on the companion, 46 in a
-     * zone, 34 on the compact faces -- and those are exactly the three densities' `big`. A stack
-     * that spent its slack on the next rung up would draw 64 where the sheet writes 46 at every one
-     * of them, so the room a tall zone has over its two blocks stays slack. The growth chips on the
-     * face sheets are the size of the face against the catalogue, not of the drawing inside it.
-     */
     shed: {
       ids: keep.map((piece) => `${side.id}.${piece}`),
       order: keepsAt(ctx.page, drawnAt(ctx)) ?? keep,
@@ -205,13 +205,10 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
   };
 }
 
-/** Width of one of the labels that follow the gap, with the pixel `label` leaves itself. */
-const detailWidth = (text: string, fs: number): number => Math.ceil(measureText('BarlowMedium', text, fs)) + 1;
-
 export const opponents = defineModule('opponents', (ctx) => {
   const d = densityOf(ctx.density);
   const shape = shapeIn(ctx);
-  const [ahead] = SIDES as readonly [Side, Side];
+  const ahead = SIDES[0]!;
   // Two columns when the box has room across and not down: the wide zone, which the canvas draws
   // that way, and any wide box too short to stack two blocks in.
   const columns = ctx.density === 'wide' || (shape.width === 'wide' && shape.height === 'short');
