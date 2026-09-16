@@ -18,5 +18,7 @@ export function unit(name: string, text: string, x: number, y: number, width: nu
   // object unconditionally — `{ color: follower.color }` in `second/field.ts` — passes the key with
   // the value `undefined`, the spread overwrote text.secondary with it, and `label` then fell back
   // to text.label: every unit following a value was drawn #5A6069 where the canvas draws #8A9099.
-  return label(name, text, x, y, width, { ...opts, size: opts.size ?? ds.size.labelSm, color: opts.color ?? ds.color.text.secondary });
+  // The case is the caller's in the same way: the canvas writes `s`, `L` and `km/h`, and label's
+  // upper-casing drew the stint's last stop as `24.3 S`.
+  return label(name, text, x, y, width, { ...opts, size: opts.size ?? ds.size.labelSm, color: opts.color ?? ds.color.text.secondary, case: opts.case ?? 'asIs' });
 }
