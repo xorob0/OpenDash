@@ -8,8 +8,9 @@
  * derived from `panel`'s padding and from the legend row `trace` takes off the body, and neither
  * module exports those, so a change to either has to fail here rather than by WPF clipping a row.
  *
- * The copy is pinned for the same reason. A unit in a title is the sort of thing that drifts from
- * the canvas without anybody noticing, because nothing else reads it.
+ * The copy is pinned for the same reason. A unit in a title and the three words under the axis are
+ * the sort of thing that drifts from the canvas without anybody noticing, because nothing else
+ * reads them.
  */
 import { describe, expect, test } from 'bun:test';
 import type { ChartItem, Item, Rect, TextItem } from '../src/generator.ts';
@@ -26,6 +27,8 @@ const named = (name: string): Exclude<Item, { kind: 'layer' }> => {
 };
 
 const boxOf = (name: string): Rect => named(name).rect;
+
+const textOf = (name: string): string => (named(name) as TextItem).text;
 
 const chartsOf = (id: string): ChartItem[] => PAGE.items.filter((i): i is ChartItem => i.kind === 'chart' && i.name.startsWith(`telemetry.${id}.`));
 
@@ -80,6 +83,14 @@ describe('the telemetry traces', () => {
       expect(entry.rect.top).toBeGreaterThanOrEqual(plot.top + plot.height);
       expect(entry.rect.top + entry.rect.height).toBeLessThanOrEqual(rule.top);
     }
+  });
+
+  test('names the axis honestly: it is time, not lap distance', () => {
+    // A ChartItem appends one sample per tick and draws the buffer oldest to newest, so there is no
+    // lap-distance axis to label and no window length the dashboard can promise. The canvas asks
+    // for "0 %", "Lap distance" and "100 %"; the left label in particular read "0 %" over a time
+    // axis, where a percentage of a lap means nothing.
+    expect(['telemetry.axisStart', 'telemetry.axisName', 'telemetry.axisEnd'].map(textOf)).toEqual(['EARLIER', 'TIME', 'NOW']);
   });
 
   test('leaves the foot of the column as background rather than growing the last panel', () => {
