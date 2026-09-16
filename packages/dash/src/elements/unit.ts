@@ -26,7 +26,10 @@ export function unit(name: string, text: string, x: number, y: number, width: nu
   // sheet does not have. A bound unit goes through SimHub's own `ucase`, because the sim sends the
   // spelling and the style is ours, and `widest` is upper-cased with it or the box is measured
   // from a narrower string than the one drawn and WPF clips the difference.
-  return label(name, text, x, y, width, {
+  // The sample is upper-cased here rather than left to `label`, which keeps a bound item's sample
+  // verbatim: a unit is drawn upper-cased whether it is bound or not, so a design-time `km/h` in
+  // DashStudio beside a running `KM/H` would be the editor showing something the dash never draws.
+  return label(name, text.toUpperCase(), x, y, width, {
     ...opts,
     size: opts.size ?? ds.size.labelSm,
     color: opts.color ?? ds.color.text.secondary,
