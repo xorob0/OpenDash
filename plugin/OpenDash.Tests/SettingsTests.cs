@@ -943,6 +943,21 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_settings_file_carrying_only_the_old_low_fuel_name_keeps_its_threshold()
+        {
+            // LightsLowFuelLaps supersedes FlagBoxLowFuelLaps, and the plugin publishes the one number
+            // under both names rather than renaming the field: a settings file on disk is keyed by the
+            // name that shipped, and a driver who set five laps against rc.2 keeps five.
+            var json = "{\"FlagBoxLowFuelLaps\":5}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+            Assert.Equal(5, settings.FlagBoxLowFuelLaps);
+            var declared = settings.DeclaredProperties().ToList();
+            Assert.Contains(Contract.LightsLowFuelLaps, declared);
+            Assert.Contains(Contract.FlagBoxLowFuelLaps, declared);
+        }
+
+        [Fact]
         public void A_settings_file_carrying_the_retired_strip_centre_is_migrated_into_rpm()
         {
             // rpmOnly lit the same centre as rpm and only left the sides dark, so it was retired into

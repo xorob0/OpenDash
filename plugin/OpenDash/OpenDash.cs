@@ -167,11 +167,16 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.LightsNightMode, () => Settings.LightsNightMode);
             this.AttachDelegate(Contract.FlagBoxCriticalOnly, () => Settings.FlagBoxCriticalOnly);
             this.AttachDelegate(Contract.FlagBoxGear, () => Settings.FlagBoxGear);
+            // One number under two names. LightsLowFuelLaps is what the contract reads first and
+            // FlagBoxLowFuelLaps is the name that shipped, so both carry the threshold the driver set
+            // and a profile of either vintage finds it. The field keeps the old spelling because that
+            // is what a settings file on disk is keyed by.
             this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
             // Zero means "not set": the profile then applies its own default, which is per unit, so a
             // driver in Fahrenheit who has never opened this page does not get a Celsius number.
             this.AttachDelegate(Contract.FlagBoxOilTemp, () => Settings.FlagBoxOilTemp == 0 ? (int?)null : Settings.FlagBoxOilTemp);
             this.AttachDelegate(Contract.FlagBoxWaterTemp, () => Settings.FlagBoxWaterTemp == 0 ? (int?)null : Settings.FlagBoxWaterTemp);
+            this.AttachDelegate(Contract.LightsLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 var m = matrix;

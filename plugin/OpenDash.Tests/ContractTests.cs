@@ -66,15 +66,15 @@ namespace OpenDashPlugin.Tests
             // glance), twenty-one companion modules, four pit wall zones, the wide zone, the URL,
             // and the flag box.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
-            // Eight global flag box settings and six per matrix, the way every face carries its own
-            // group, and then the two the strips read.
+            // Nine global flag box settings and six per matrix, the way every face carries its own
+            // group, and then the three the strips read.
             Assert.Equal(
-                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 8 + Contract.FlagBoxMatrices.Count * 6 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 9 + Contract.FlagBoxMatrices.Count * 6 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
             // LedRpmStyle were declared by one side only.
-            Assert.Equal(247, names.Count);
+            Assert.Equal(248, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -106,7 +106,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
             Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LightsBrightness", "LightsNightBrightness", "LightsNightMode", "FlagBoxCriticalOnly", "FlagBoxGear",
-                "FlagBoxLowFuelLaps", "FlagBoxOilTemp", "FlagBoxWaterTemp" }, names.Skip(afterFaces + 21).Take(14));
+                "FlagBoxLowFuelLaps", "FlagBoxOilTemp", "FlagBoxWaterTemp", "LightsLowFuelLaps" }, names.Skip(afterFaces + 21).Take(15));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 
@@ -355,6 +355,11 @@ namespace OpenDashPlugin.Tests
             // the dash build. The strips follow the matrices, so the flag box's last name is the last
             // before them rather than the last of all.
             Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Except(Contract.LedPropertyNames()).Last());
+            // One threshold for the strip, the rev bar and the box, under the Lights* name; the box's
+            // own name stays attached as its deprecated alias, which is what a profile of the rc.2
+            // vintage reads and what the contract's second isnull() falls back to.
+            Assert.Contains(Contract.LightsLowFuelLaps, Contract.LightsPropertyNames());
+            Assert.Contains(Contract.FlagBoxLowFuelLaps, Contract.LightsPropertyNames());
             Assert.Equal("LedFlagAnimation", Contract.PropertyNames().Last());
             Assert.True(Contract.DefaultFlagBoxGear);
             // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.

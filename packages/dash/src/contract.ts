@@ -799,6 +799,19 @@ export const LIGHTS_BRIGHTNESS_SETTING = 'LightsBrightness';
 export const LIGHTS_NIGHT_BRIGHTNESS_SETTING = 'LightsNightBrightness';
 export const LIGHTS_NIGHT_MODE_SETTING = 'LightsNightMode';
 
+/**
+ * How few laps of fuel is low, for every light openDash drives rather than for the box alone.
+ *
+ * Named `Lights*` for the reason the three above are: one threshold answers "am I low" for the
+ * strip, the rev bar and the box, and three copies of it would be three places to disagree.
+ * {@link FLAG_BOX_LOW_FUEL_LAPS_SETTING} is the name that shipped and is not retired with it:
+ * it stays attached as the deprecated alias {@link flagBox.lowFuelLaps} falls back through, so
+ * that a rig set up against rc.2 keeps the number its driver chose. ADR 0003 makes a published
+ * property name a public interface, and XOR-119 is the rule that one does not vanish without a
+ * release of warning.
+ */
+export const LIGHTS_LOW_FUEL_LAPS_SETTING = 'LightsLowFuelLaps';
+
 /** Flag-box-specific, because they are about this box rather than about lights in general. */
 export const FLAG_BOX_CRITICAL_ONLY_SETTING = 'FlagBoxCriticalOnly';
 export const FLAG_BOX_GEAR_SETTING = 'FlagBoxGear';
@@ -860,8 +873,17 @@ export const flagBox = {
   criticalOnly: (): Expr => isnull(prop(propertyName(FLAG_BOX_CRITICAL_ONLY_SETTING)), String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
   /** `isnull([OpenDash.FlagBoxGear], true)`: the gear as the resting state. */
   gear: (): Expr => isnull(prop(propertyName(FLAG_BOX_GEAR_SETTING)), String(DEFAULT_FLAG_BOX_GEAR)),
-  /** `isnull([OpenDash.FlagBoxLowFuelLaps], 2)`. */
-  lowFuelLaps: (): Expr => isnull(prop(propertyName(FLAG_BOX_LOW_FUEL_LAPS_SETTING)), num(DEFAULT_FLAG_BOX_LOW_FUEL_LAPS)),
+  /**
+   * `isnull([OpenDash.LightsLowFuelLaps], isnull([OpenDash.FlagBoxLowFuelLaps], 2))`: how few laps
+   * of fuel is low, for every light rather than for the box alone.
+   *
+   * Two fallbacks deep, exactly as {@link setting.revBar} is and for the same reason. The inner one
+   * is the deprecated alias, so that a profile installed beside an rc.2 plugin -- which attaches
+   * `FlagBoxLowFuelLaps` and not `LightsLowFuelLaps` -- still reads the number that user set; the
+   * innermost is the default a profile without any plugin shows.
+   */
+  lowFuelLaps: (): Expr =>
+    isnull(prop(propertyName(LIGHTS_LOW_FUEL_LAPS_SETTING)), isnull(prop(propertyName(FLAG_BOX_LOW_FUEL_LAPS_SETTING)), num(DEFAULT_FLAG_BOX_LOW_FUEL_LAPS))),
   /**
    * The oil threshold, defaulted **per unit**: the default is looked up from SimHub's own
    * `TemperatureUnit` inside the expression, so a driver in Fahrenheit gets 248 rather than 120.
@@ -890,6 +912,10 @@ export function flagBoxProperties(): string[] {
     FLAG_BOX_LOW_FUEL_LAPS_SETTING,
     FLAG_BOX_OIL_TEMP_SETTING,
     FLAG_BOX_WATER_TEMP_SETTING,
+    // Appended rather than placed beside the other Lights* names: this list is pinned in order by
+    // packages/dash/test/declared-properties.txt, and both halves of the contract assert its head
+    // by index, so a new name joins the end of the group and is never inserted into it.
+    LIGHTS_LOW_FUEL_LAPS_SETTING,
   ];
   const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
   return [...global, ...perMatrix].map(propertyName);

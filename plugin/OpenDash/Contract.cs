@@ -31,6 +31,13 @@ namespace OpenDashPlugin
         public const string LightsNightBrightness = "LightsNightBrightness";
         public const string LightsNightMode = "LightsNightMode";
 
+        /// <summary>How few laps of fuel is low, for every light openDash drives rather than for the box
+        /// alone: one threshold answers "am I low" for the strip, the rev bar and the box, and three
+        /// copies of it would be three places to disagree. FlagBoxLowFuelLaps is its deprecated alias
+        /// and stays attached, because a published property name is a public interface (ADR 0003) and
+        /// an rc.2 user's settings do not vanish without a release of warning (XOR-119).</summary>
+        public const string LightsLowFuelLaps = "LightsLowFuelLaps";
+
         /// <summary>Quiet until something matters: the box shows only the flags that mean slow down or
         /// are addressed to this car. Flag-box-specific, because it is about flags rather than lights.</summary>
         public const string FlagBoxCriticalOnly = "FlagBoxCriticalOnly";
@@ -39,7 +46,8 @@ namespace OpenDashPlugin
         /// something else.</summary>
         public const string FlagBoxGear = "FlagBoxGear";
 
-        /// <summary>Laps, not litres: a litre threshold means nothing without knowing the car.</summary>
+        /// <summary>Laps, not litres: a litre threshold means nothing without knowing the car. The name
+        /// that shipped, now the deprecated alias of LightsLowFuelLaps and attached beside it.</summary>
         public const string FlagBoxLowFuelLaps = "FlagBoxLowFuelLaps";
 
         /// <summary>Degrees in SimHub's own unit. A driver in Fahrenheit who sets 120 and gets a Celsius
@@ -947,6 +955,10 @@ namespace OpenDashPlugin
             yield return FlagBoxLowFuelLaps;
             yield return FlagBoxOilTemp;
             yield return FlagBoxWaterTemp;
+            // Appended rather than placed beside the other Lights* names: this list is pinned in order
+            // and both halves of the contract assert its head by index, so a new name joins the end of
+            // the group and is never inserted into it.
+            yield return LightsLowFuelLaps;
             foreach (var matrix in FlagBoxMatrices)
             {
                 foreach (var name in FlagBoxMatrixProperties(matrix)) yield return name;
