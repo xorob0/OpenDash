@@ -106,6 +106,13 @@ export type RevLayer = keyof RevSegmentOptions;
 export const stageOf = (k: number, count: number): number => Math.min(2, Math.floor((k * 3) / count));
 
 /**
+ * The colour a lit segment takes in a layer: its band's on either shift ladder, and text.secondary
+ * on the plain RPM bar, which reports revs rather than a shift point and so belongs to no band.
+ */
+const litColourOf = (layer: RevLayer, k: number, count: number): Hex =>
+  layer === 'rpm' ? ds.color.text.secondary : (STAGE_COLORS[stageOf(k, count)] ?? ds.purpose.shift.stage3);
+
+/**
  * Bindings of segment k of `count`, in each of the three layers. Both shift ladders light the
  * same segment in the same colour and differ only in what decides it; the plain RPM bar lights a
  * segment when the displayed RPM percentage passes `k * 100 / count`.
@@ -116,7 +123,7 @@ export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
   const stageStart = indexes.findIndex((i) => stageOf(i, count) === stage);
   const stageCount = indexes.filter((i) => stageOf(i, count) === stage).length;
   const local = k - stageStart;
-  const color = STAGE_COLORS[stage] ?? ds.purpose.shift.stage3;
+  const color = litColourOf('shift', k, count);
 
   const flash = (on: Expr): Pick<SegmentOptions, 'blinkBind' | 'blinkDelayMs'> | Record<string, never> =>
     stage === 2 ? { blinkBind: on, blinkDelayMs: REDLINE_BLINK_MS } : {};
@@ -127,9 +134,20 @@ export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
   return {
     shift: { colorBind: litColor(mirrorStageLit(stage, local, stageCount), color), ...flash(mirrorOverRev()) },
     simhub: { colorBind: litColor(simhubStageLit(stage, local, stageCount), color), ...flash(simhubRedline()) },
-    rpm: { colorBind: litColor(rpmLit, ds.color.text.secondary) },
+    rpm: { colorBind: litColor(rpmLit, litColourOf('rpm', k, count)) },
   };
 }
+
+/**
+ * How many segments the build colours in, which is what the sheets draw and what Dash Studio shows.
+ *
+ * A dashboard carries a static colour per item as well as its binding, and the editor, the Overview
+ * panel's thumbnails and any render made before a game is running show the static one. Leaving all
+ * fifteen at `unlit` made the component the artboards lead with the component that previews as an
+ * empty trough. Every rev-bar artboard defaults `litSegments` to nine, so nine is what is drawn; the
+ * bindings replace it on the first frame, so the running dash is unaffected.
+ */
+export const SAMPLE_LIT = 9;
 
 /**
  * The three layers. `<prefix>.shiftLights` is the car's own ladder, `<prefix>.shiftLightsSimHub`
@@ -139,7 +157,12 @@ export function revSegmentOptions(k: number, count: number): RevSegmentOptions {
 export function revLayers(prefix: string, placements: readonly RevSegmentPlacement[]): [LayerItem, LayerItem, LayerItem] {
   const count = placements.length;
   const build = (layer: RevLayer): LayerItem['children'] =>
-    placements.map((p, k) => segment(`${prefix}.${layer}.${pad2(k)}`, p.rect, ds.purpose.shift.unlit, { ...revSegmentOptions(k, count)[layer], rotation: p.rotation }));
+    placements.map((p, k) =>
+      segment(`${prefix}.${layer}.${pad2(k)}`, p.rect, k < SAMPLE_LIT ? litColourOf(layer, k, count) : ds.purpose.shift.unlit, {
+        ...revSegmentOptions(k, count)[layer],
+        rotation: p.rotation,
+      }),
+    );
 
   const on = setting.revBarIs('shift');
   const layer = (name: string, which: RevLayer, visible: Expr): LayerItem => ({
