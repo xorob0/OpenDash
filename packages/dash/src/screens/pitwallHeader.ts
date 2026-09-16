@@ -267,22 +267,25 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   let x = frame.left + PIT_WALL_HEADER.padX + mark.width + PIT_WALL_HEADER.gap;
   const squares = spec.pages > 1 ? spec.pages * PAGE_SQUARE.size + (spec.pages - 1) * PAGE_SQUARE.gap : 0;
   const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName.toUpperCase(), d.labelSm)) + 2;
-  // What the readouts left, the squares included: they say which page this is, which the name only
-  // repeats. A name that does not fit is dropped whole rather than cut to the room, since WPF would
-  // clip it mid-word and the strip would read "PIT WALL · PORTR".
-  const room = right + PIT_WALL_HEADER.groupGap - PIT_WALL_HEADER.gap - x;
+  // The loop leaves `right` a group gap clear of everything it drew, which is the room the cluster
+  // has. The squares are counted first because they say which page this is and the name only
+  // repeats it, and a name that does not fit goes whole rather than cut to the room: WPF clips
+  // mid-word and the strip would read "PIT WALL · PORTR".
+  const room = right - x;
   if (pageWidth + (squares > 0 ? PIT_WALL_HEADER.gap + squares : 0) <= room) {
     items.push(label(`${name}.page`, spec.pageName, x, labelY, pageWidth, { size: d.labelSm, color: ds.color.text.secondary }));
     x += pageWidth + PIT_WALL_HEADER.gap;
   }
-  for (let i = 0; i < (squares > 0 ? spec.pages : 0); i++) {
-    items.push(
-      band(
-        `${name}.square${i + 1}`,
-        rect(x + i * (PAGE_SQUARE.size + PAGE_SQUARE.gap), Math.round(top + (fs - PAGE_SQUARE.size) / 2), PAGE_SQUARE.size, PAGE_SQUARE.size),
-        i + 1 === spec.page ? ds.color.text.primary : ds.color.text.dim,
-      ),
-    );
+  if (squares > 0) {
+    for (let i = 0; i < spec.pages; i++) {
+      items.push(
+        band(
+          `${name}.square${i + 1}`,
+          rect(x + i * (PAGE_SQUARE.size + PAGE_SQUARE.gap), Math.round(top + (fs - PAGE_SQUARE.size) / 2), PAGE_SQUARE.size, PAGE_SQUARE.size),
+          i + 1 === spec.page ? ds.color.text.primary : ds.color.text.dim,
+        ),
+      );
+    }
   }
 
   items.push(...readouts);
