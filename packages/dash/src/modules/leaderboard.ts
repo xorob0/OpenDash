@@ -11,9 +11,7 @@
  * then the chip and the number. The gap outlives both, because a leaderboard without a gap is a
  * list of names.
  */
-import { measureText } from '../design/advances.ts';
-import { densityOf } from '../second/density.ts';
-import { columnWidths, table, type ColumnId } from '../second/table.ts';
+import { columnWidths, table, tableRowHeight, type ColumnId } from '../second/table.ts';
 import { defineModule, pageColumns } from './module.ts';
 import type { Density } from '../second/density.ts';
 
@@ -21,41 +19,55 @@ import type { Density } from '../second/density.ts';
 export const LEADERBOARD_COLUMNS: readonly ColumnId[] = ['pos', 'num', 'name', 'class', 'gap', 'best', 'last'];
 
 /**
- * The name a driver column is measured for: a full first and last name at the density's own size.
+ * Whether a table draws its header row.
  *
- * This used to be four characters' worth, which is a column that fits "Toma". WPF clips in silence,
- * so what that produced was not a narrow column but a cut name: at 800 x 480 zone C drew "Tomasz
- * Kowalcz" with the class chip hard against it. A column that cannot hold a name should cost the
- * row its next column instead, which is what this measurement makes it do.
- *
- * It is a bound and not a guarantee. A name of unusually wide letters is half again as wide as this
- * one at the same length, and nothing here truncates; XOR-121 owns what a name does when it is
- * longer than any column will ever be.
+ * The companion shows one page at a time with room for a legend; a zone of a face has a title
+ * already, and every list on the catalogue and the face artboards is drawn without a header. It is
+ * the density that says which of the two a module is on.
  */
-const NAME_TO_FIT = 'Tomasz Kowalczyk';
+export const drawsHeader = (density: Density): boolean => density === 'companion';
 
-/** The columns that fit `width`: drops from the end until the row is no wider than its box. */
-export function fittingColumns(columns: readonly ColumnId[], width: number, density: Density): ColumnId[] {
+/**
+ * The name column is the one that flexes, and the gap column is the one the page exists for.
+ *
+ * `fittingColumns` used to pop from the end until a full name fitted, and with the gap drawn last
+ * that is the column that paid: at 229 x 292 the leaderboard lost the gap and became a list of
+ * names, which is readability-pass.md §11. A page keeps its position and its gap whatever else it
+ * has to give up; the name that no longer fits becomes the three-letter code `table.ts` draws when
+ * its column is too narrow for a name, which costs a column nothing.
+ */
+const NEVER_DROPPED: readonly ColumnId[] = ['pos', 'gap'];
+
+/** The columns that fit `width`: drops the last droppable one until the row is no wider than its box. */
+export function fittingColumns(columns: readonly ColumnId[], width: number, density: Density, rowHeight?: number): ColumnId[] {
   const kept = [...columns];
-  // The name column flexes, so a row fits when every fixed column plus a readable name fits.
-  const minimumName = Math.ceil(measureText('BarlowMedium', NAME_TO_FIT, densityOf(density).name));
-  while (kept.length > 2) {
-    const widths = columnWidths(kept, width, density);
+  const h = rowHeight ?? tableRowHeight(density);
+  // A row fits when every fixed column plus a column wide enough for a driver code fits.
+  const minimumName = 60;
+  for (;;) {
+    const widths = columnWidths(kept, width, density, h);
     const nameIndex = kept.indexOf('name');
     const name = nameIndex < 0 ? minimumName : (widths[nameIndex] ?? 0);
     if (name >= minimumName) break;
-    kept.pop();
+    const droppable = kept.map((id, i) => ({ id, i })).filter(({ id }) => !NEVER_DROPPED.includes(id));
+    const last = droppable[droppable.length - 1];
+    if (!last) break;
+    kept.splice(last.i, 1);
   }
   return kept;
 }
 
-export const leaderboard = defineModule('leaderboard', (ctx) =>
-  table({
+export const leaderboard = defineModule('leaderboard', (ctx) => {
+  const header = drawsHeader(ctx.density);
+  const rowHeight = tableRowHeight(ctx.density);
+  return table({
     name: `${ctx.prefix}table`,
     frame: ctx.frame,
-    columns: fittingColumns(pageColumns(LEADERBOARD_COLUMNS, ctx), ctx.frame.width, ctx.density),
+    columns: fittingColumns(pageColumns(LEADERBOARD_COLUMNS, ctx), ctx.frame.width, ctx.density, rowHeight),
     mode: 'full',
     density: ctx.density,
+    rowHeight,
+    header,
     classOnly: ctx.classOnly,
-  }),
-);
+  });
+});

@@ -40,6 +40,15 @@ export interface ChipOptions {
   visibleBind?: Expr;
   /** Override the measured width, e.g. to line a chip up with a table column. */
   width?: number;
+  /**
+   * Override the block's height and the text's size, for a caller whose chip is not the density's.
+   *
+   * The canvas draws the licence badge on a table row 18 px tall with 12 px letters whatever the
+   * row it sits in, because it is a badge and not a label: it does not follow the type ramp the way
+   * the values beside it do.
+   */
+  height?: number;
+  size?: number;
 }
 
 /** Width a chip takes at a density: padding, four characters, padding. */
@@ -57,11 +66,13 @@ export const chipText = (expr: Expr): Expr => ucase(left(isnull(expr, str('')), 
  */
 export function chip(name: string, text: string, x: number, top: number, density: Density, opts: ChipOptions = {}): Item[] {
   const d = densityOf(density);
+  const height = opts.height ?? d.chipHeight;
+  const size = opts.size ?? d.labelSm;
   const width = opts.width ?? chipWidth(density);
-  const box = rect(x, top, width, d.chipHeight);
+  const box = rect(x, top, width, height);
   const fill: Hex = opts.inverted ? ds.color.text.primary : ds.color.surface.raised;
   const ink: Hex = opts.inverted ? ds.color.surface.base : ds.color.text.secondary;
-  const textY = top + (d.chipHeight - d.labelSm) / 2;
+  const textY = top + (height - size) / 2;
   const fillBind = opts.invertedBind ? iff(opts.invertedBind, str(ds.color.text.primary), str(ds.color.surface.raised)) : undefined;
   const inkBind = opts.invertedBind ? iff(opts.invertedBind, str(ds.color.surface.base), str(ds.color.text.secondary)) : undefined;
   const block = band(`${name}.block`, box, fill, { visibleBind: opts.visibleBind });
@@ -69,7 +80,7 @@ export function chip(name: string, text: string, x: number, top: number, density
     { ...block, ...withBindings({ Visible: opts.visibleBind, BackgroundColor: fillBind }) },
     {
       ...label(`${name}.text`, text, x + d.chipPadding, textY, width - 2 * d.chipPadding, {
-        size: d.labelSm,
+        size,
         color: ink,
         hAlign: 'center',
         bind: opts.bind,
