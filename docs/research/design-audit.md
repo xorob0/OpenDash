@@ -118,6 +118,11 @@ settle rather than an implementer's.
   WPF line box, and the band is 60. Band D shrinks its value to 32 rather than clip; the settings bar
   keeps the overrun it has always had, because the box is transparent and digits have no descenders.
   The two should agree.
+- **The spacing legend says the grid's row gap is 8 and every drawing of it is 4.** The Main sheet
+  annotates `space.2` as "segment gap at 1920, grid row gap", while the twenty-three card grids
+  drawn across the canvas all set `gap: 4px 16px`, which is `space.1` over `space.4` and is what the
+  code draws. The audit read the legend and filed the code as wrong. Twenty-three drawings against
+  one annotation suggests the annotation is what needs correcting, so nothing was changed.
 - **The car settings page is drawn at two sizes and at one.** Five artboards set the car and the
   cells at the same size, while the 1280 by 400 and the 800 by 480 sheets set the car one step above
   them. The code draws the second reading. Which is it, since it is the page's whole hierarchy?
