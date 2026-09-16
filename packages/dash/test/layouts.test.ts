@@ -189,9 +189,19 @@ describe('every layout', () => {
         for (const id of ['tyreTemps', 'tyrePressures']) {
           const screen = cards.screens.find((s) => s.name === id);
           if (!screen) throw new Error(`${id} has no screen`);
-          const cells = screen.items.filter((i): i is DrawableItem => hasRect(i) && i.kind === 'text' && !i.name.endsWith('.label'));
-          expect(cells.map((c) => c.name)).toEqual(['fl', 'fr', 'rl', 'rr'].map((corner) => `${id}.${corner}`));
-          for (const c of cells) {
+          const corners = ['fl', 'fr', 'rl', 'rr'];
+          const drawn = screen.items.filter((i): i is DrawableItem => hasRect(i) && i.kind === 'text' && !i.name.endsWith('.label'));
+          const cells = drawn.filter((c) => !c.name.includes('.sub'));
+          expect(cells.map((c) => c.name)).toEqual(corners.map((corner) => `${id}.${corner}`));
+          // The tread left under a tyre temperature is a value in the same column and is measured
+          // with the rest; the canvas draws it at rung L only. Its per-cent sign is a label rather
+          // than a cell, so that one is checked by its box.
+          const subs = drawn.filter((c) => c.name.endsWith('.sub'));
+          expect(subs.map((c) => c.name)).toEqual(id === 'tyreTemps' && rung.rung === 'L' ? corners.map((corner) => `${id}.${corner}.sub`) : []);
+          for (const u of drawn.filter((c) => c.name.endsWith('.subunit'))) {
+            expect({ card: id, unit: u.name, right: u.rect.left + u.rect.width, inside: u.rect.left + u.rect.width <= layout.slotSize.width }).toMatchObject({ inside: true });
+          }
+          for (const c of [...cells, ...subs]) {
             // The glyphs fit the column; the box may take the gap and the padding, since WPF clips to it.
             expect({ card: id, cell: c.name, text: textWidth(c), colWidth, fits: textWidth(c) <= colWidth }).toMatchObject({ fits: true });
             expect({ card: id, cell: c.name, right: c.rect.left + c.rect.width, inside: c.rect.left + c.rect.width <= layout.slotSize.width }).toMatchObject({ inside: true });

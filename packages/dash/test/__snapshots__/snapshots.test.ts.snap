@@ -841,7 +841,7 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     "VerticalAlignment": 0,
     "TextWrapping": "NoWrap",
     "Left": 16,
-    "Top": 35,
+    "Top": 32,
     "Width": 223,
     "Height": 19,
     "Visible": true,
@@ -866,20 +866,20 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     "Font": "openDash Display",
     "FontWeight": "SemiBold",
     "FontStyle": "Normal",
-    "FontSize": 46,
+    "FontSize": 34,
     "Text": "84",
     "TextColor": "#FFF5F7FA",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
     "UseMonospacedText": true,
-    "CharWidth": 22,
-    "SpecialCharsWidth": 12,
+    "CharWidth": 16,
+    "SpecialCharsWidth": 9,
     "SpecialChars": ".,:",
     "TextWrapping": "NoWrap",
     "Left": 16,
-    "Top": 50,
-    "Width": 69,
-    "Height": 57,
+    "Top": 49,
+    "Width": 50,
+    "Height": 42,
     "Visible": true,
     "BackgroundColor": "#00FFFFFF",
     "BorderStyle": {},
@@ -908,20 +908,94 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     "Font": "openDash Display",
     "FontWeight": "SemiBold",
     "FontStyle": "Normal",
-    "FontSize": 46,
+    "FontSize": 13,
+    "Text": "79",
+    "TextColor": "#FF8A9099",
+    "HorizontalAlignment": 0,
+    "VerticalAlignment": 0,
+    "UseMonospacedText": true,
+    "CharWidth": 7,
+    "SpecialCharsWidth": 4,
+    "SpecialChars": ".,:",
+    "TextWrapping": "NoWrap",
+    "Left": 16,
+    "Top": 87,
+    "Width": 23,
+    "Height": 17,
+    "Visible": true,
+    "BackgroundColor": "#00FFFFFF",
+    "BorderStyle": {},
+    "Bindings": {
+      "Text": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) = (0), '--', format(isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0), '0'))"
+        },
+        "Mode": 2
+      },
+      "TextColor": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) < (65), '#FFB300', '#8A9099'))"
+        },
+        "Mode": 2
+      }
+    },
+    "Id": "b8500e0e-53e2-5c53-99ef-0a370ce36ea9",
+    "Name": "tyreTemps.fl.sub",
+    "RenderingSkip": 0,
+    "MinimumRefreshIntervalMS": 0
+  },
+  {
+    "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+    "IsTextItem": true,
+    "Font": "Barlow",
+    "FontWeight": "Medium",
+    "FontStyle": "Normal",
+    "FontSize": 13,
+    "Text": "%",
+    "TextColor": "#FF8A9099",
+    "HorizontalAlignment": 0,
+    "VerticalAlignment": 0,
+    "TextWrapping": "NoWrap",
+    "Left": 37,
+    "Top": 87,
+    "Width": 99,
+    "Height": 17,
+    "Visible": true,
+    "BackgroundColor": "#00FFFFFF",
+    "BorderStyle": {},
+    "Bindings": {
+      "TextColor": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) < (65), '#FFB300', '#8A9099'))"
+        },
+        "Mode": 2
+      }
+    },
+    "Id": "5a6320e3-6c8d-54dc-8c19-906fb6e8f471",
+    "Name": "tyreTemps.fl.subunit",
+    "RenderingSkip": 0,
+    "MinimumRefreshIntervalMS": 0
+  },
+  {
+    "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+    "IsTextItem": true,
+    "Font": "openDash Display",
+    "FontWeight": "SemiBold",
+    "FontStyle": "Normal",
+    "FontSize": 34,
     "Text": "104",
     "TextColor": "#FFF5F7FA",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
     "UseMonospacedText": true,
-    "CharWidth": 22,
-    "SpecialCharsWidth": 12,
+    "CharWidth": 16,
+    "SpecialCharsWidth": 9,
     "SpecialChars": ".,:",
     "TextWrapping": "NoWrap",
     "Left": 136,
-    "Top": 50,
-    "Width": 69,
-    "Height": 57,
+    "Top": 49,
+    "Width": 50,
+    "Height": 42,
     "Visible": true,
     "BackgroundColor": "#00FFFFFF",
     "BorderStyle": {},
@@ -950,20 +1024,94 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     "Font": "openDash Display",
     "FontWeight": "SemiBold",
     "FontStyle": "Normal",
-    "FontSize": 46,
+    "FontSize": 13,
+    "Text": "61",
+    "TextColor": "#FF8A9099",
+    "HorizontalAlignment": 0,
+    "VerticalAlignment": 0,
+    "UseMonospacedText": true,
+    "CharWidth": 7,
+    "SpecialCharsWidth": 4,
+    "SpecialChars": ".,:",
+    "TextWrapping": "NoWrap",
+    "Left": 136,
+    "Top": 87,
+    "Width": 23,
+    "Height": 17,
+    "Visible": true,
+    "BackgroundColor": "#00FFFFFF",
+    "BorderStyle": {},
+    "Bindings": {
+      "Text": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) = (0), '--', format(isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0), '0'))"
+        },
+        "Mode": 2
+      },
+      "TextColor": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) < (65), '#FFB300', '#8A9099'))"
+        },
+        "Mode": 2
+      }
+    },
+    "Id": "7d85927a-7bbe-5e8c-bf63-8623f48c0ccf",
+    "Name": "tyreTemps.fr.sub",
+    "RenderingSkip": 0,
+    "MinimumRefreshIntervalMS": 0
+  },
+  {
+    "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+    "IsTextItem": true,
+    "Font": "Barlow",
+    "FontWeight": "Medium",
+    "FontStyle": "Normal",
+    "FontSize": 13,
+    "Text": "%",
+    "TextColor": "#FF8A9099",
+    "HorizontalAlignment": 0,
+    "VerticalAlignment": 0,
+    "TextWrapping": "NoWrap",
+    "Left": 157,
+    "Top": 87,
+    "Width": 83,
+    "Height": 17,
+    "Visible": true,
+    "BackgroundColor": "#00FFFFFF",
+    "BorderStyle": {},
+    "Bindings": {
+      "TextColor": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) < (65), '#FFB300', '#8A9099'))"
+        },
+        "Mode": 2
+      }
+    },
+    "Id": "418fa3c8-b34c-5347-9146-b6c6a40339fe",
+    "Name": "tyreTemps.fr.subunit",
+    "RenderingSkip": 0,
+    "MinimumRefreshIntervalMS": 0
+  },
+  {
+    "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+    "IsTextItem": true,
+    "Font": "openDash Display",
+    "FontWeight": "SemiBold",
+    "FontStyle": "Normal",
+    "FontSize": 34,
     "Text": "62",
     "TextColor": "#FFF5F7FA",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
     "UseMonospacedText": true,
-    "CharWidth": 22,
-    "SpecialCharsWidth": 12,
+    "CharWidth": 16,
+    "SpecialCharsWidth": 9,
     "SpecialChars": ".,:",
     "TextWrapping": "NoWrap",
     "Left": 16,
-    "Top": 100,
-    "Width": 69,
-    "Height": 57,
+    "Top": 102,
+    "Width": 50,
+    "Height": 42,
     "Visible": true,
     "BackgroundColor": "#00FFFFFF",
     "BorderStyle": {},
@@ -992,20 +1140,94 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     "Font": "openDash Display",
     "FontWeight": "SemiBold",
     "FontStyle": "Normal",
-    "FontSize": 46,
+    "FontSize": 13,
+    "Text": "86",
+    "TextColor": "#FF8A9099",
+    "HorizontalAlignment": 0,
+    "VerticalAlignment": 0,
+    "UseMonospacedText": true,
+    "CharWidth": 7,
+    "SpecialCharsWidth": 4,
+    "SpecialChars": ".,:",
+    "TextWrapping": "NoWrap",
+    "Left": 16,
+    "Top": 140,
+    "Width": 23,
+    "Height": 17,
+    "Visible": true,
+    "BackgroundColor": "#00FFFFFF",
+    "BorderStyle": {},
+    "Bindings": {
+      "Text": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) = (0), '--', format(isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0), '0'))"
+        },
+        "Mode": 2
+      },
+      "TextColor": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) < (65), '#FFB300', '#8A9099'))"
+        },
+        "Mode": 2
+      }
+    },
+    "Id": "330bbd34-0760-5401-8704-8c0fc66a05d8",
+    "Name": "tyreTemps.rl.sub",
+    "RenderingSkip": 0,
+    "MinimumRefreshIntervalMS": 0
+  },
+  {
+    "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+    "IsTextItem": true,
+    "Font": "Barlow",
+    "FontWeight": "Medium",
+    "FontStyle": "Normal",
+    "FontSize": 13,
+    "Text": "%",
+    "TextColor": "#FF8A9099",
+    "HorizontalAlignment": 0,
+    "VerticalAlignment": 0,
+    "TextWrapping": "NoWrap",
+    "Left": 37,
+    "Top": 140,
+    "Width": 99,
+    "Height": 17,
+    "Visible": true,
+    "BackgroundColor": "#00FFFFFF",
+    "BorderStyle": {},
+    "Bindings": {
+      "TextColor": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) < (65), '#FFB300', '#8A9099'))"
+        },
+        "Mode": 2
+      }
+    },
+    "Id": "1fb1ae1b-636d-56a8-9261-22f900caa127",
+    "Name": "tyreTemps.rl.subunit",
+    "RenderingSkip": 0,
+    "MinimumRefreshIntervalMS": 0
+  },
+  {
+    "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+    "IsTextItem": true,
+    "Font": "openDash Display",
+    "FontWeight": "SemiBold",
+    "FontStyle": "Normal",
+    "FontSize": 34,
     "Text": "88",
     "TextColor": "#FFF5F7FA",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
     "UseMonospacedText": true,
-    "CharWidth": 22,
-    "SpecialCharsWidth": 12,
+    "CharWidth": 16,
+    "SpecialCharsWidth": 9,
     "SpecialChars": ".,:",
     "TextWrapping": "NoWrap",
     "Left": 136,
-    "Top": 100,
-    "Width": 69,
-    "Height": 57,
+    "Top": 102,
+    "Width": 50,
+    "Height": 42,
     "Visible": true,
     "BackgroundColor": "#00FFFFFF",
     "BorderStyle": {},
@@ -1025,6 +1247,80 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     },
     "Id": "a5df3cf3-0443-5a06-8d0f-d189298dee00",
     "Name": "tyreTemps.rr",
+    "RenderingSkip": 0,
+    "MinimumRefreshIntervalMS": 0
+  },
+  {
+    "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+    "IsTextItem": true,
+    "Font": "openDash Display",
+    "FontWeight": "SemiBold",
+    "FontStyle": "Normal",
+    "FontSize": 13,
+    "Text": "58",
+    "TextColor": "#FF8A9099",
+    "HorizontalAlignment": 0,
+    "VerticalAlignment": 0,
+    "UseMonospacedText": true,
+    "CharWidth": 7,
+    "SpecialCharsWidth": 4,
+    "SpecialChars": ".,:",
+    "TextWrapping": "NoWrap",
+    "Left": 136,
+    "Top": 140,
+    "Width": 23,
+    "Height": 17,
+    "Visible": true,
+    "BackgroundColor": "#00FFFFFF",
+    "BorderStyle": {},
+    "Bindings": {
+      "Text": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) = (0), '--', format(isnull([DataCorePlugin.GameData.TyreWearRearRight], 0), '0'))"
+        },
+        "Mode": 2
+      },
+      "TextColor": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) < (65), '#FFB300', '#8A9099'))"
+        },
+        "Mode": 2
+      }
+    },
+    "Id": "41d507c8-037a-530d-8927-ee172ae1c964",
+    "Name": "tyreTemps.rr.sub",
+    "RenderingSkip": 0,
+    "MinimumRefreshIntervalMS": 0
+  },
+  {
+    "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+    "IsTextItem": true,
+    "Font": "Barlow",
+    "FontWeight": "Medium",
+    "FontStyle": "Normal",
+    "FontSize": 13,
+    "Text": "%",
+    "TextColor": "#FF8A9099",
+    "HorizontalAlignment": 0,
+    "VerticalAlignment": 0,
+    "TextWrapping": "NoWrap",
+    "Left": 157,
+    "Top": 140,
+    "Width": 83,
+    "Height": 17,
+    "Visible": true,
+    "BackgroundColor": "#00FFFFFF",
+    "BorderStyle": {},
+    "Bindings": {
+      "TextColor": {
+        "Formula": {
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) < (65), '#FFB300', '#8A9099'))"
+        },
+        "Mode": 2
+      }
+    },
+    "Id": "2479c903-9882-5db7-9336-4598e23be361",
+    "Name": "tyreTemps.rr.subunit",
     "RenderingSkip": 0,
     "MinimumRefreshIntervalMS": 0
   }
@@ -9588,7 +9884,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "VerticalAlignment": 0,
           "TextWrapping": "NoWrap",
           "Left": 16,
-          "Top": 35,
+          "Top": 32,
           "Width": 223,
           "Height": 19,
           "Visible": true,
@@ -9613,20 +9909,20 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Font": "openDash Display",
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
-          "FontSize": 46,
+          "FontSize": 34,
           "Text": "84",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "UseMonospacedText": true,
-          "CharWidth": 22,
-          "SpecialCharsWidth": 12,
+          "CharWidth": 16,
+          "SpecialCharsWidth": 9,
           "SpecialChars": ".,:",
           "TextWrapping": "NoWrap",
           "Left": 16,
-          "Top": 50,
-          "Width": 69,
-          "Height": 57,
+          "Top": 49,
+          "Width": 50,
+          "Height": 42,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
           "BorderStyle": {},
@@ -9655,20 +9951,94 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Font": "openDash Display",
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
-          "FontSize": 46,
+          "FontSize": 13,
+          "Text": "79",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 7,
+          "SpecialCharsWidth": 4,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 16,
+          "Top": 87,
+          "Width": 23,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) = (0), '--', format(isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0), '0'))"
+              },
+              "Mode": 2
+            },
+            "TextColor": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) < (65), '#FFB300', '#8A9099'))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "b8500e0e-53e2-5c53-99ef-0a370ce36ea9",
+          "Name": "tyreTemps.fl.sub",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "%",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 37,
+          "Top": 87,
+          "Width": 99,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "TextColor": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearFrontLeft], 0)) < (65), '#FFB300', '#8A9099'))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "5a6320e3-6c8d-54dc-8c19-906fb6e8f471",
+          "Name": "tyreTemps.fl.subunit",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 34,
           "Text": "104",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "UseMonospacedText": true,
-          "CharWidth": 22,
-          "SpecialCharsWidth": 12,
+          "CharWidth": 16,
+          "SpecialCharsWidth": 9,
           "SpecialChars": ".,:",
           "TextWrapping": "NoWrap",
           "Left": 136,
-          "Top": 50,
-          "Width": 69,
-          "Height": 57,
+          "Top": 49,
+          "Width": 50,
+          "Height": 42,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
           "BorderStyle": {},
@@ -9697,20 +10067,94 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Font": "openDash Display",
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
-          "FontSize": 46,
+          "FontSize": 13,
+          "Text": "61",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 7,
+          "SpecialCharsWidth": 4,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 136,
+          "Top": 87,
+          "Width": 23,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) = (0), '--', format(isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0), '0'))"
+              },
+              "Mode": 2
+            },
+            "TextColor": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) < (65), '#FFB300', '#8A9099'))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "7d85927a-7bbe-5e8c-bf63-8623f48c0ccf",
+          "Name": "tyreTemps.fr.sub",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "%",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 157,
+          "Top": 87,
+          "Width": 83,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "TextColor": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearFrontRight], 0)) < (65), '#FFB300', '#8A9099'))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "418fa3c8-b34c-5347-9146-b6c6a40339fe",
+          "Name": "tyreTemps.fr.subunit",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 34,
           "Text": "62",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "UseMonospacedText": true,
-          "CharWidth": 22,
-          "SpecialCharsWidth": 12,
+          "CharWidth": 16,
+          "SpecialCharsWidth": 9,
           "SpecialChars": ".,:",
           "TextWrapping": "NoWrap",
           "Left": 16,
-          "Top": 100,
-          "Width": 69,
-          "Height": 57,
+          "Top": 102,
+          "Width": 50,
+          "Height": 42,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
           "BorderStyle": {},
@@ -9739,20 +10183,94 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Font": "openDash Display",
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
-          "FontSize": 46,
+          "FontSize": 13,
+          "Text": "86",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 7,
+          "SpecialCharsWidth": 4,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 16,
+          "Top": 140,
+          "Width": 23,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) = (0), '--', format(isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0), '0'))"
+              },
+              "Mode": 2
+            },
+            "TextColor": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) < (65), '#FFB300', '#8A9099'))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "330bbd34-0760-5401-8704-8c0fc66a05d8",
+          "Name": "tyreTemps.rl.sub",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "%",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 37,
+          "Top": 140,
+          "Width": 99,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "TextColor": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearRearLeft], 0)) < (65), '#FFB300', '#8A9099'))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "1fb1ae1b-636d-56a8-9261-22f900caa127",
+          "Name": "tyreTemps.rl.subunit",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 34,
           "Text": "88",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
           "UseMonospacedText": true,
-          "CharWidth": 22,
-          "SpecialCharsWidth": 12,
+          "CharWidth": 16,
+          "SpecialCharsWidth": 9,
           "SpecialChars": ".,:",
           "TextWrapping": "NoWrap",
           "Left": 136,
-          "Top": 100,
-          "Width": 69,
-          "Height": 57,
+          "Top": 102,
+          "Width": 50,
+          "Height": 42,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",
           "BorderStyle": {},
@@ -9772,6 +10290,80 @@ exports[`dashboard snapshots cards.djson 1`] = `
           },
           "Id": "a5df3cf3-0443-5a06-8d0f-d189298dee00",
           "Name": "tyreTemps.rr",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "58",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 7,
+          "SpecialCharsWidth": 4,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 136,
+          "Top": 140,
+          "Width": 23,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) = (0), '--', format(isnull([DataCorePlugin.GameData.TyreWearRearRight], 0), '0'))"
+              },
+              "Mode": 2
+            },
+            "TextColor": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) < (65), '#FFB300', '#8A9099'))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "41d507c8-037a-530d-8927-ee172ae1c964",
+          "Name": "tyreTemps.rr.sub",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "Barlow",
+          "FontWeight": "Medium",
+          "FontStyle": "Normal",
+          "FontSize": 13,
+          "Text": "%",
+          "TextColor": "#FF8A9099",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "TextWrapping": "NoWrap",
+          "Left": 157,
+          "Top": 140,
+          "Width": 83,
+          "Height": 17,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "TextColor": {
+              "Formula": {
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreWearRearRight], 0)) < (65), '#FFB300', '#8A9099'))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "2479c903-9882-5db7-9336-4598e23be361",
+          "Name": "tyreTemps.rr.subunit",
           "RenderingSkip": 0,
           "MinimumRefreshIntervalMS": 0
         }
