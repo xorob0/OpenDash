@@ -246,7 +246,7 @@ exports[`card snapshots card 3 delta 1`] = `
     "FontWeight": "SemiBold",
     "FontStyle": "Normal",
     "FontSize": 64,
-    "Text": "-0.21",
+    "Text": "−0.21",
     "TextColor": "#FFF5F7FA",
     "HorizontalAlignment": 0,
     "VerticalAlignment": 0,
@@ -265,13 +265,13 @@ exports[`card snapshots card 3 delta 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+          "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
         },
         "Mode": 2
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+          "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
         },
         "Mode": 2
       }
@@ -8853,7 +8853,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 64,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -8872,13 +8872,13 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -13862,7 +13862,7 @@ exports[`package snapshots openDash slots 1280x480/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 46,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -13881,13 +13881,13 @@ exports[`package snapshots openDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -19111,7 +19111,7 @@ exports[`package snapshots openDash slots 1280x400/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 46,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -19130,13 +19130,13 @@ exports[`package snapshots openDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -23747,7 +23747,7 @@ exports[`package snapshots openDash slots 850x480/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 46,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -23766,13 +23766,13 @@ exports[`package snapshots openDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -28338,7 +28338,7 @@ exports[`package snapshots openDash slots 800x480/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 46,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -28357,13 +28357,13 @@ exports[`package snapshots openDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -33493,7 +33493,7 @@ exports[`package snapshots openDash slots 1280x720/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 46,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -33512,13 +33512,13 @@ exports[`package snapshots openDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -39286,7 +39286,7 @@ exports[`package snapshots openDash slots 800x286/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 46,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -39305,13 +39305,13 @@ exports[`package snapshots openDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -43697,7 +43697,7 @@ exports[`package snapshots openDash slots 600x686/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 46,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -43716,13 +43716,13 @@ exports[`package snapshots openDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -47723,7 +47723,7 @@ exports[`package snapshots openDash 480 round/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 34,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -47742,13 +47742,13 @@ exports[`package snapshots openDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }
@@ -51865,7 +51865,7 @@ exports[`package snapshots openDash 800 round/cards.djson 1`] = `
           "FontWeight": "SemiBold",
           "FontStyle": "Normal",
           "FontSize": 46,
-          "Text": "-0.21",
+          "Text": "−0.21",
           "TextColor": "#FFF5F7FA",
           "HorizontalAlignment": 0,
           "VerticalAlignment": 0,
@@ -51884,13 +51884,13 @@ exports[`package snapshots openDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds])), '+0.00', format(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), '0.00', true))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '0.00', replace(format(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0), '0.00', true), '-', '−'))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (-0.005), '#00D96A', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) > (0.005), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if((abs(isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0))) <= (0.005), '#F5F7FA', if((isnull(if((isnull([OpenDash.DeltaReference], 'session')) = ('alltime'), [PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds], [PersistantTrackerPlugin.SessionBestLiveDeltaSeconds]), 0)) < (0), '#00D96A', '#FF2D46'))"
               },
               "Mode": 2
             }

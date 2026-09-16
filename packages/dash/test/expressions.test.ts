@@ -103,11 +103,18 @@ describe('card expressions', () => {
     const text = formulaOf(textItem('delta', 'value'), 'Text');
     expect(text).toContain("isnull([OpenDash.DeltaReference], 'session')");
     expect(text).toContain('[PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds]');
-    expect(text).toContain("format(if(");
     expect(text).toContain("'0.00', true)");
+    expect(text).toContain("'-', '−'");
     const colour = formulaOf(textItem('delta', 'value'), 'TextColor');
-    expect(colour).toContain("< (-0.005), '#00D96A'");
-    expect(colour).toContain("> (0.005), '#FF2D46'");
+    expect(colour).toContain("< (0), '#00D96A'");
+    expect(colour).toContain("'#FF2D46'");
+    // The deadband decides the text and the colour together, so a level delta cannot be drawn as
+    // "+0.00" in the resting white: it is the bare "0.00" the canvas draws.
+    const deadband = 'if((abs(isnull(';
+    expect(text.startsWith(deadband)).toBe(true);
+    expect(colour.startsWith(deadband)).toBe(true);
+    expect(text).toContain("<= (0.005), '0.00'");
+    expect(colour).toContain("<= (0.005), '#F5F7FA'");
   });
 
   test('assists show -- without the raw field, OFF at zero', () => {
