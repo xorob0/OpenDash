@@ -141,6 +141,9 @@ export const buildBorderObject = (border: Border | undefined): JsonObject => {
     put('RadiusBottomLeft', r.bottomLeft);
     put('RadiusBottomRight', r.bottomRight);
   }
+  // Inside `BorderStyle` and not on the item: SimHub recurses into the bindable sub-objects of an
+  // item, and the same formula written at item level resolves to no property at all.
+  if (border.colorBinding) o.Bindings = { BorderColor: buildBindingObject(border.colorBinding) };
   return o;
 };
 

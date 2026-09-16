@@ -262,6 +262,26 @@ describe('the corner blocks at the ends of the band', () => {
     }
   });
 
+  test('a lamp is a 20 px chip outlined in the colour its word is written in', () => {
+    // The outline and the ink carry one colour between them, and both are bound: a chip whose
+    // border stayed bright around a dim word would read as a lamp half on. The border's colour is
+    // written inside BorderStyle, which is the only place SimHub reads one.
+    const items = bandCorners(BANDS['1920x480'], 'corner.');
+    const lit: Record<string, string> = { drs: ds.purpose.flag.green, p2p: ds.purpose.flag.blue, spt: ds.color.caution.primary };
+    for (const id of ['drs', 'p2p', 'spt']) {
+      const chip = items.find((i) => i.name === `corner.${id}.chip`);
+      if (chip?.kind !== 'rect') throw new Error(`no chip under the ${id} lamp`);
+      const word = named(textsIn(items), `corner.${id}`);
+      expect({ id, height: chip.rect.height, width: chip.rect.width }).toEqual({ id, height: 20, width: word.rect.width });
+      expect(chip.border).toMatchObject({ top: 1, bottom: 1, left: 1, right: 1, color: ds.color.text.dim });
+      expect(chip.border?.colorBinding?.formula).toBe(bound(word, 'TextColor'));
+      expect(String(chip.border?.colorBinding?.formula)).toContain(lit[id]!);
+      // The word sits inside the chip rather than beside it.
+      expect(word.rect.top).toBeGreaterThanOrEqual(chip.rect.top);
+      expect(word.rect.top + word.rect.height).toBeLessThanOrEqual(chip.rect.top + chip.rect.height + 1);
+    }
+  });
+
   test('the page rank keeps the band’s 22 px between itself and each corner', () => {
     for (const [face, band] of Object.entries(BANDS)) {
       if (!band.corners) continue;
