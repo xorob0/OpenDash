@@ -24,6 +24,7 @@ import type { HAlign, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
+import { assetBox, imageOf, RANK_DOWN, RANK_UP } from '../design/assets.ts';
 import { rect } from '../design/geometry.ts';
 import { cells, monoWidth, MINUS, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
@@ -35,7 +36,7 @@ import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex } from './values.ts';
 
-const { iff, str, fmt, eq, ne, num, and, not, gt, abs, concat, left, ucase, isnull } = ncalc;
+const { iff, str, fmt, eq, ne, num, and, not, gt, lt, abs, concat, left, ucase, isnull } = ncalc;
 
 /** How a table picks the car on each row. */
 export type TableMode = 'full' | 'class' | 'relative';
@@ -284,27 +285,40 @@ function cellName(ctx: CellContext): Item[] {
   ];
 }
 
+/** The rank triangle's side. Ten on every artboard that heads the column, whatever its row height. */
+const RANK_MARK = 10;
+
 /**
- * The rank column. SimHub cannot draw a triangle, so a gain is a 6 px square in the gain's colour
- * with the count beside it, and an unchanged position is a short dash.
+ * The rank column: the places a car has gained or lost, as the canvas's 10 px triangle with the
+ * count beside it, and a short dash where the position has not moved.
+ *
+ * The triangle is a picture because SimHub draws rectangles, ellipses and text and a triangle is
+ * none of the three; it is two pictures rather than one because an `ImageItem` has nothing that
+ * tints what it draws, so up and down are two files shown by complementary tests. That is the one
+ * mark on a row whose colour is not read from `design/tokens.json` at build time, which
+ * `design/assets.ts` records against each file. The count and the dash are text and a rect, so
+ * both keep their tokens.
  */
 function cellRank(ctx: CellContext): Item[] {
   const change = carRankChange(ctx.idx);
   const gained = gt(change, num(0));
+  const lost = lt(change, num(0));
   const moved = ne(change, num(0));
   const fs = ctx.type.minor;
   const mono = cells('SemiBold', fs);
   const countWidth = monoWidth(mono, { digits: 2, specials: 0 });
-  const marker = 6;
   const gap = 3;
   const right = ctx.x + ctx.width;
-  const markerX = right - countWidth - gap - marker;
+  const markerBox = rect(right - countWidth - gap - RANK_MARK, ctx.top + (ctx.height - RANK_MARK) / 2, RANK_MARK, RANK_MARK);
   const colour = iff(gained, str(ds.purpose.delta.faster), str(ds.purpose.delta.slower));
   return [
-    {
-      ...band(`${ctx.name}.rank.marker`, rect(markerX, ctx.top + (ctx.height - marker) / 2, marker, marker), ds.purpose.delta.faster),
-      ...withBindings({ Visible: moved, BackgroundColor: colour }),
-    },
+    ...([[RANK_UP, gained, 'up'], [RANK_DOWN, lost, 'down']] as const).map(([asset, visible, id]) => ({
+      kind: 'image' as const,
+      name: `${ctx.name}.rank.${id}`,
+      image: asset.name,
+      rect: assetBox(markerBox, imageOf(asset)),
+      ...withBindings({ Visible: visible }),
+    })),
     {
       ...band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim),
       ...withBindings({ Visible: not(moved) }),

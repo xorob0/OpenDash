@@ -119,6 +119,45 @@ describe('the row the canvas draws', () => {
   });
 });
 
+/**
+ * The padding is only there if every cell honours it.
+ *
+ * `table` insets the row by six and lays its columns out from that edge, which says nothing about
+ * what the cells then draw: a box is given a width and WPF clips whatever overruns it, so a cell
+ * that sizes itself -- the chips, and a numeral whose box is its own glyphs plus slack -- can end
+ * outside the row it belongs to without any of the counts or the widths changing. The background
+ * and the rule are the two items that do span the frame, being the row's furniture rather than
+ * cells of it.
+ *
+ * The vertical slack is the fit walk's: a WPF line box is taller than its ink at both ends and
+ * both tails are transparent.
+ */
+describe('a row draws its cells inside the padding', () => {
+  const PAD_X = 6;
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      for (const id of ['relative', 'leaderboard']) {
+        const items = MODULES.find((m) => m.id === id)!.build({ frame: box.frame, density: box.density, prefix: '' });
+        const band = rowBand(items);
+        for (const item of flat(items)) {
+          if (item.kind === 'layer' || !item.name.includes('.row.')) continue;
+          if (item.name.endsWith('.row.background') || item.name.endsWith('.row.rule')) continue;
+          const above = item.kind === 'text' ? Math.ceil(0.1 * item.fontSize) + 2 : 1;
+          const below = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 1;
+          const r = item.rect;
+          const inside =
+            r.left >= band.left + PAD_X &&
+            r.left + r.width <= band.left + band.width - PAD_X + 1 &&
+            r.top >= band.top - above &&
+            r.top + r.height <= band.top + band.height + below;
+          expect({ id, box: box.name, item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+        }
+      }
+    });
+  }
+});
+
 describe('a zone draws no header and the companion draws one', () => {
   test('no drawing on the catalogue or on a face artboard has a header row', () => {
     for (const density of ['zone', 'wide', 'compact'] as const) {

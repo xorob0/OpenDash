@@ -17,7 +17,7 @@ import { describe, expect, test } from 'bun:test';
 import { PORTRAIT_COLUMNS, RACE_COLUMNS, TOWER_COLUMNS, portraitPage, racePage, towerPage } from '../src/screens/pitwall.ts';
 import { columnWidths, type ColumnId } from '../src/second/table.ts';
 import { walkItems } from '../src/walk.ts';
-import type { Item, RectangleItem, TextItem } from '../src/generator.ts';
+import type { ImageItem, Item, RectangleItem, TextItem } from '../src/generator.ts';
 
 /** A column of a board's header row: its id here, and the width and alignment its artboard states. */
 interface Column {
@@ -187,6 +187,53 @@ describe('the iRating column', () => {
   test('and the tower, whose artboard does not head one, draws none', () => {
     expect(TOWER_COLUMNS.includes('rating')).toBe(false);
   });
+});
+
+/**
+ * The rank cell, which is the one cell of a board drawn as a picture.
+ *
+ * SimHub draws rectangles, ellipses and text, so the canvas's 10 px triangle is an image, and an
+ * image carries no colour to bind: up and down are two files at one box, each shown by its own
+ * half of the test. Both halves are checked here rather than one, because a pair whose tests
+ * overlapped would draw the green triangle over the red one and a pair whose tests left a hole
+ * would drop the mark on the rows it is for.
+ */
+describe('the rank cell marks the direction with a triangle', () => {
+  const marksOf = (b: Board): ImageItem[] => b.items.filter((i): i is ImageItem => i.kind === 'image' && i.name.includes('.row.rank.'));
+  const countOf = (b: Board): TextItem => b.items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.rank.count'))!;
+  const visible = (item: Item): string => String(item.bindings?.Visible?.formula ?? '');
+
+  for (const b of BOARDS) {
+    test(`${b.page}: one 10 px picture per direction, both at the same box`, () => {
+      const marks = marksOf(b);
+      expect({ page: b.page, images: marks.map((m) => m.image) }).toEqual({ page: b.page, images: ['rank-up', 'rank-down'] });
+      expect({ page: b.page, boxes: marks.map((m) => [m.rect.width, m.rect.height]) }).toEqual({ page: b.page, boxes: [[10, 10], [10, 10]] });
+      expect({ page: b.page, box: marks[0]!.rect }).toEqual({ page: b.page, box: marks[1]!.rect });
+    });
+
+    test(`${b.page}: shown by complementary tests of the one value, with the dash for neither`, () => {
+      const [up, down] = marksOf(b);
+      const gained = visible(up!);
+      const change = gained.slice(0, gained.lastIndexOf('>'));
+      expect({ page: b.page, gained: gained.endsWith('> (0)'), change: change.length > 0 }).toEqual({ page: b.page, gained: true, change: true });
+      expect({ page: b.page, lost: visible(down!) }).toEqual({ page: b.page, lost: `${change}< (0)` });
+      const dash = b.items.find((i) => i.name.endsWith('.row.rank.flat'))!;
+      expect({ page: b.page, unchanged: visible(dash) }).toEqual({ page: b.page, unchanged: `!(${change}!= (0))` });
+    });
+
+    test(`${b.page}: with the count three pixels after it, and both inside the 36 px column`, () => {
+      const [up] = marksOf(b);
+      const count = countOf(b);
+      expect({ page: b.page, gap: count.rect.left - (up!.rect.left + up!.rect.width) }).toEqual({ page: b.page, gap: 3 });
+      const widths = widthsOf(b);
+      const left = frameOf(b).left + 16 + (widths[0] ?? 0);
+      const right = left + (widths[b.columns.indexOf('rank')] ?? 0);
+      // The count's box carries a pixel of slack past the two digits it is cut for; what has to be
+      // in the column is the mark and the digits.
+      const digits = 2 * (count.monospace?.charWidth ?? 0);
+      expect({ page: b.page, from: up!.rect.left >= left, to: count.rect.left + digits <= right }).toEqual({ page: b.page, from: true, to: true });
+    });
+  }
 });
 
 describe('the columns no artboard heads are gone from the boards that drew them', () => {
