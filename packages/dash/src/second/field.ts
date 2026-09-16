@@ -69,9 +69,22 @@ export interface FieldSpec {
   labelBind?: Expr;
   /** The longest label the binding can produce; what the field is measured by. Defaults to `label`. */
   labelWidest?: string;
+  /**
+   * Draws the label under the value rather than above it, which is how the catalogue captions a
+   * delta in a narrow zone: the number, then two pixels, then "vs session best". The field is still
+   * placed by its bottom edge, and with the label below that edge is the label's.
+   */
+  labelBelow?: boolean;
   value: FieldValue;
   visibleBind?: Expr;
 }
+
+/**
+ * Gap between a value and a label drawn under it. Two pixels on the catalogue, which is off the
+ * `space` scale, so the literal stays here with the canvas as its citation. A caption under a
+ * number is not the label above the next one: the pair reads as one thing and is set tight.
+ */
+export const LABEL_BELOW_GAP = 2;
 
 /**
  * Gap between a value and the unit after it. Six pixels on the canvas, which is off the `space`
@@ -148,27 +161,32 @@ export function fieldWidth(spec: FieldSpec, density: Density): number {
  */
 export function fieldHeight(spec: FieldSpec, density: Density): number {
   const d = densityOf(density);
-  const labelPart = spec.label === '' && spec.labelBind === undefined ? 0 : d.label + d.fieldGap;
-  const box = textBox(0, spec.value.fs);
-  const belowTheLine = Math.max(0, box.top + box.height - spec.value.fs);
-  return labelPart + spec.value.fs + belowTheLine;
+  const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
+  const labelPart = hasLabel ? d.label + (spec.labelBelow ? LABEL_BELOW_GAP : d.fieldGap) : 0;
+  return labelPart + spec.value.fs + fieldTail(spec, density);
 }
 
 /**
- * How far a field's value hangs below the bottom edge it is placed on.
+ * How far a field's last line hangs below the bottom edge it is placed on.
  *
  * The same tail `fieldHeight` counts, named on its own because a stack has to reserve it twice
  * over: a block is centred, so the room it may take is its box less this at each end. Two pixels
  * covered it while every value was a ramp size in a box with slack; a value that has grown into its
  * box is exactly where a constant stops covering it.
+ *
+ * The last line is the label where the label is below, so a caption's small tail is what is
+ * reserved rather than the tail of the number above it.
  */
-export function fieldTail(spec: FieldSpec): number {
-  const box = textBox(0, spec.value.fs);
-  return Math.max(0, box.top + box.height - spec.value.fs);
+export function fieldTail(spec: FieldSpec, density: Density): number {
+  const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
+  const fs = spec.labelBelow && hasLabel ? densityOf(density).label : spec.value.fs;
+  const box = textBox(0, fs);
+  return Math.max(0, box.top + box.height - fs);
 }
 
 /** The deepest tail of a set of fields. */
-export const fieldsTail = (specs: readonly FieldSpec[]): number => specs.reduce((tail, spec) => Math.max(tail, fieldTail(spec)), 0);
+export const fieldsTail = (specs: readonly FieldSpec[], density: Density): number =>
+  specs.reduce((tail, spec) => Math.max(tail, fieldTail(spec, density)), 0);
 
 /** Tallest of a set of fields, which is the height of the row they sit in. */
 export const rowHeight = (specs: readonly FieldSpec[], density: Density): number =>
@@ -184,12 +202,13 @@ export const rowHeight = (specs: readonly FieldSpec[], density: Density): number
 export function field(spec: FieldSpec, x: number, bottom: number, density: Density, maxWidth?: number, leftAt?: (dx?: number) => Expr | undefined): Item[] {
   const d = densityOf(density);
   const items: Item[] = [];
-  const valueY = bottom - spec.value.fs;
   const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
+  const below = hasLabel && spec.labelBelow === true;
+  const valueY = bottom - spec.value.fs - (below ? d.label + LABEL_BELOW_GAP : 0);
   const width = maxWidth ?? fieldWidth(spec, density);
   if (hasLabel) {
     items.push(
-      label(`${spec.name}.label`, spec.label, x, valueY - d.fieldGap - d.label, width, {
+      label(`${spec.name}.label`, spec.label, x, below ? bottom - d.label : valueY - d.fieldGap - d.label, width, {
         size: d.label,
         bind: spec.labelBind,
         visibleBind: spec.visibleBind,
