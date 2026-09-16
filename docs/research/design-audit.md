@@ -168,6 +168,15 @@ settle rather than an implementer's.
   appears nowhere in either pit wall package. The audit filed this as a fill to be corrected, which
   it is not: grouping a board by class is a feature of the table, and it should be built once, in
   the table, rather than painted here. Until it is, a multi-class board reads as one race.
+  Two things block it, both now recorded in the table itself. SimHub names the classes in a session
+  and counts them, but publishes exactly one per-class ordering, the player's own, so there is no
+  expression for the n-th car of an arbitrary class and therefore none for a heading's leader.
+  Besides that, a repeated layer stamps every row at one constant pitch, so an inserted heading has
+  no row of its own and cannot push the rows below it down. Closing this needs a property from the
+  plugin giving a per-class leaderboard index, and a row model whose pitch may vary.
+- **Two requirements name the wrong grey.** They ask for `text.dim` for a colour the sheets draw as
+  `#5A6069`, which is `text.label`; `text.dim` is `#33383F`. The code draws the sheet's colour, so
+  it is the requirement's token name that wants correcting.
 - **The push to pass lamp has no lit colour.** Band D's three chips are drawn on eight catalogue
   bands and on four face sheets, and the spotter is amber and the DRS green on every one of them.
   The push to pass is drawn dim on all twelve, so nothing says what colour it takes when it is
