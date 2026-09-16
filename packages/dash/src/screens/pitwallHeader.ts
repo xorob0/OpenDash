@@ -8,9 +8,10 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
+import { withBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { rect } from '../design/geometry.ts';
-import { canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
+import { rect, roundRect } from '../design/geometry.ts';
+import { canvasBaseline, canvasYForBaseline, textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
@@ -18,7 +19,7 @@ import { FLAG_PRIORITY, flagVisible } from '../components/flagStrip.ts';
 import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
 import { CHARS, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionTimeLeft, sessionType, simClock, totalLaps, windKmh } from '../second/values.ts';
-import { ds } from '../tokens.ts';
+import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { concat, str, fmt, iff, gt, num, isnull, isNull, not, ucase } = ncalc;
 
@@ -61,6 +62,12 @@ const WIDEST_INCIDENT_LIMIT = '/ unlimited';
 /** A lap total wider than three digits is not a race anyone drives. */
 const WIDEST_LAP_TOTAL = 'OF 999';
 
+/**
+ * The strongest wind the readout has room for, unit included. iRacing's weather generator stays
+ * far below it, but the box is measured before the binding exists and WPF clips what does not fit.
+ */
+const WIDEST_WIND = '188 km/h';
+
 /** The flag colour and name as one expression each, in priority order, defaulting to no flag. */
 const flagColour = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => iff(flagVisible(flag), str(FLAG_LOOK[flag]?.color ?? ds.color.text.dim), fallback), str(ds.color.text.dim));
 const flagName = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => iff(flagVisible(flag), str((FLAG_LOOK[flag]?.name ?? '').toUpperCase()), fallback), str('NO FLAG'));
@@ -88,6 +95,43 @@ export function wordmark(name: string, x: number, top: number, fs: number): { it
     ],
   };
 }
+
+/**
+ * One run of the data face, measured from its own widest string rather than from monospace cells.
+ *
+ * The wind reads "12 km/h", and a value that carries its unit cannot be monospaced: the "m" is one
+ * of the characters `font.cell.excluded` names as overrunning the digit cell, so the run is drawn
+ * proportionally and the group measures it with the advances.
+ */
+function dataRun(name: string, sample: string, widest: string, bind: Expr, fs: number): { width: number; draw(x: number, top: number): Item[] } {
+  const width = Math.ceil(measureText('BarlowCondensedSemiBold', widest, fs)) + 2;
+  return {
+    width,
+    draw(x: number, top: number): Item[] {
+      const box = textBox(top, fs);
+      return [
+        {
+          kind: 'text',
+          name: `${name}.0`,
+          rect: roundRect({ left: x, top: box.top, width, height: box.height }),
+          text: sample,
+          widest,
+          font: ds.font.data,
+          fontWeight: 'SemiBold',
+          fontSize: fs,
+          textColor: ds.color.text.primary,
+          hAlign: 'left',
+          vAlign: 'top',
+          backgroundColor: TRANSPARENT,
+          ...withBindings({ Text: bind }),
+        },
+      ];
+    },
+  };
+}
+
+/** A right-hand group: a run of inline parts, or one proportional run of the data face. */
+type HeaderGroup = { id: string; parts: InlinePart[]; run?: undefined } | { id: string; parts?: undefined; run: { sample: string; widest: string; bind: Expr } };
 
 export interface PitWallHeaderSpec {
   frame: Rect;
@@ -131,7 +175,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   }
 
   const hasLimit = not(isNull(incidentLimit()));
-  const groups: { id: string; parts: InlinePart[] }[] = [
+  const groups: HeaderGroup[] = [
     {
       id: 'session',
       parts: [
@@ -167,11 +211,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     },
     {
       id: 'wind',
-      parts: [
-        { kind: 'label', text: 'WIND' },
-        { kind: 'value', sample: '12', bind: fmt(windKmh(), '0'), chars: { digits: 3, specials: 0 } },
-        { kind: 'label', text: 'KM/H' },
-      ],
+      run: { sample: '12 km/h', widest: WIDEST_WIND, bind: concat(fmt(windKmh(), '0'), str(' km/h')) },
     },
     {
       id: 'clocks',
@@ -187,7 +227,9 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   const shown = spec.compact ? groups.filter((g) => g.id !== 'wind' && g.id !== 'clocks').concat([{ id: 'clock', parts: [{ kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } }, { kind: 'label', text: 'LOCAL' }] }]) : groups;
   let right = frame.left + frame.width - PIT_WALL_HEADER.padX;
   for (const group of [...shown].reverse()) {
-    const g = inlineGroup(`${name}.${group.id}`, group.parts, fs, density);
+    const g = group.run
+      ? dataRun(`${name}.${group.id}`, group.run.sample, group.run.widest, group.run.bind, fs)
+      : inlineGroup(`${name}.${group.id}`, group.parts, fs, density);
     right -= g.width;
     items.push(...g.draw(right, top));
     right -= PIT_WALL_HEADER.groupGap;
