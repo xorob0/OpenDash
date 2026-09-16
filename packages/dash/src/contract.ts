@@ -731,7 +731,9 @@ export const PIT_WALL_WIDE_ZONE_PAGES: readonly PitWallZonePageMeta[] = [
   { number: 0, id: 'inputs', name: 'Inputs' },
   { number: 1, id: 'web', name: 'Web view' },
   { number: 2, id: 'lapHistory', name: 'Lap history' },
-  { number: 3, id: 'opponents', name: 'Opponents' },
+  // The wide page is the module with the best lap beside the last, which is what the sheet names
+  // it; the standard zone stays "Opponents" and draws the last lap alone.
+  { number: 3, id: 'opponents', name: 'Opponents · best and last' },
   { number: 4, id: 'tyres', name: 'Tyres' },
   { number: 5, id: 'carTelemetry', name: 'Car telemetry' },
 ];
