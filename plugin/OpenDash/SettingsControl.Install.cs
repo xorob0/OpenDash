@@ -435,7 +435,7 @@ namespace OpenDashPlugin
                     label = Theme.TextLabel;
                     break;
             }
-            statusHost.Child = Ui.HStack(8, Ui.Dot(dot), Ui.Label(installer.Status.Label(), label));
+            statusHost.Child = Ui.StatusPill(dot, installer.Status.Label(), label);
             statusHost.ToolTip = installer.HasEmbeddedPackage
                 ? (installer.Packages.Count > 0 ? installer.PackageReport() : installer.LastError)
                 : "This build of the plugin carries no dashboard package.";
