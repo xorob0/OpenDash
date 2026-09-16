@@ -23,6 +23,7 @@ import { track } from '../modules/track.ts';
 import { fld, type ModuleContext } from '../modules/module.ts';
 import {
   CHARS,
+  STEERING_RANGE,
   airTemperature,
   bestLap,
   brake,
@@ -176,7 +177,7 @@ export const TELEMETRY_TRACES: { id: string; title: string; series: () => Series
       { name: 'Clutch', color: ds.color.text.secondary, bind: clutch(), min: 0, max: 100 },
     ],
   },
-  { id: 'steering', title: 'Steering', weight: 1, series: () => [{ name: 'Steering', color: ds.color.text.primary, bind: steering(), min: -3.5, max: 3.5 }] },
+  { id: 'steering', title: 'Steering', weight: 1, series: () => [{ name: 'Steering', color: ds.color.text.primary, bind: steering(), min: -STEERING_RANGE, max: STEERING_RANGE }] },
 ];
 
 /** A trace panel: its title and legend, then the plot. */
