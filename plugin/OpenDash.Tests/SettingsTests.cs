@@ -972,6 +972,7 @@ namespace OpenDashPlugin.Tests
                 FlagBoxWaterTemp = 115,
                 LedCentre = "fuel",
                 LedRpmStyle = "f1",
+                LedFlagAnimation = false,
             };
             source.Normalise();
             source.FlagBoxRest[1] = "gear";
@@ -993,6 +994,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(copy.MatrixFlags(4));
             Assert.Equal("fuel", copy.LedCentre);
             Assert.Equal("f1", copy.LedRpmStyle);
+            Assert.False(copy.LedFlagAnimation);
 
             // A clone, not the same array: editing one settings object must not edit the other.
             copy.FlagBoxRest[1] = "dark";
@@ -1010,6 +1012,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(80, settings.LightsBrightness);
             Assert.Equal(Contract.DefaultLedCentre, settings.LedCentre);
             Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedRpmStyle);
+            Assert.True(settings.LedFlagAnimation);
         }
 
         [Fact]

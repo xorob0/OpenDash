@@ -59,6 +59,11 @@ namespace OpenDashPlugin
         public const string LedCentre = "LedCentre";
         public const string LedRpmStyle = "LedRpmStyle";
 
+        /// <summary>Whether a flag on a strip moves at all. Off holds every flag from the frame it would
+        /// have settled on and never turns one off, which is what a driver who finds a blinking rim
+        /// distracting is asking for. Appended after the other two, which are pinned in order.</summary>
+        public const string LedFlagAnimation = "LedFlagAnimation";
+
         public const bool DefaultShiftLights = true;
 
         /// <summary>
@@ -206,6 +211,9 @@ namespace OpenDashPlugin
         public static readonly string[] LedRpmStyles = { "leftToRight", "meetInMiddle", "f1" };
 
         public const string DefaultLedRpmStyle = "leftToRight";
+
+        /// <summary>On: movement is what a flag is read by at the edge of vision.</summary>
+        public const bool DefaultLedFlagAnimation = true;
 
 
         // --- The zone face ---------------------------------------------------------------------
@@ -946,13 +954,14 @@ namespace OpenDashPlugin
             foreach (var name in LedPropertyNames()) yield return name;
         }
 
-        /// <summary>The two a generated .ledsprofile reads, last, as ledProperties() is last in
+        /// <summary>The three a generated .ledsprofile reads, last, as ledProperties() is last in
         /// contract.ts. Named apart so that the strips can be pointed at, not so that they are a
         /// category of their own.</summary>
         public static IEnumerable<string> LedPropertyNames()
         {
             yield return LedCentre;
             yield return LedRpmStyle;
+            yield return LedFlagAnimation;
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a

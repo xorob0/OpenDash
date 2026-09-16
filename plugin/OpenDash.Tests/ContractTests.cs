@@ -74,7 +74,7 @@ namespace OpenDashPlugin.Tests
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
             // LedRpmStyle were declared by one side only.
-            Assert.Equal(246, names.Count);
+            Assert.Equal(247, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -355,7 +355,7 @@ namespace OpenDashPlugin.Tests
             // the dash build. The strips follow the matrices, so the flag box's last name is the last
             // before them rather than the last of all.
             Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Except(Contract.LedPropertyNames()).Last());
-            Assert.Equal("LedRpmStyle", Contract.PropertyNames().Last());
+            Assert.Equal("LedFlagAnimation", Contract.PropertyNames().Last());
             Assert.True(Contract.DefaultFlagBoxGear);
             // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
             Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
@@ -397,9 +397,13 @@ namespace OpenDashPlugin.Tests
             // read them through isnull(), and the plugin had neither constant, delegate nor control, so
             // every strip could only ever draw its defaults. Both suites were green throughout, which
             // is why The_two_sides_declare_the_same_properties() exists below.
-            Assert.Equal(new[] { "LedCentre", "LedRpmStyle" }, Contract.LedPropertyNames());
+            Assert.Equal(new[] { "LedCentre", "LedRpmStyle", "LedFlagAnimation" }, Contract.LedPropertyNames());
             Assert.Contains(Contract.LedCentre, Contract.LightsPropertyNames());
             Assert.Contains(Contract.LedRpmStyle, Contract.LightsPropertyNames());
+            Assert.Contains(Contract.LedFlagAnimation, Contract.LightsPropertyNames());
+            // On: movement is what a flag is read by at the edge of vision, and off is the driver
+            // asking for a rim that holds rather than blinks.
+            Assert.True(Contract.DefaultLedFlagAnimation);
             // A rig setting rather than a per-device group, unlike a matrix: openDash generates one
             // profile per strip shape, and every shape reads the same two names.
             Assert.DoesNotContain(Contract.LedPropertyNames(), n => n.Contains("1") || n.Contains("2"));

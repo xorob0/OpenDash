@@ -257,3 +257,4 @@ OpenDash.FlagBoxMatrix4Warnings
 OpenDash.FlagBoxMatrix4Side
 OpenDash.LedCentre
 OpenDash.LedRpmStyle
+OpenDash.LedFlagAnimation

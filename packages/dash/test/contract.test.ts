@@ -15,6 +15,7 @@ import {
   ledProperties,
   LED_CENTRES,
   LED_CENTRE_SETTING,
+  LED_FLAG_ANIMATION_SETTING,
   RETIRED_LED_CENTRE,
   LED_RPM_STYLES,
   LED_RPM_STYLE_SETTING,
@@ -81,14 +82,14 @@ describe('settings', () => {
     // global and six per matrix, the way every face carries its own group; the strips are the two
     // that decide what a strip shows.
     expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 6);
-    expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle']);
+    expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle', 'OpenDash.LedFlagAnimation']);
     // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
       4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length + ledProperties().length,
     );
     // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
     // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
-    expect(props).toHaveLength(246);
+    expect(props).toHaveLength(247);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -188,6 +189,9 @@ describe('settings', () => {
     expect(setting.sessionProgress()).toBe("isnull([OpenDash.SessionProgress], 'auto')");
     expect(setting.slot(1)).toBe('isnull([OpenDash.Slot01], 12)');
     expect(setting.slot(7)).toBe('isnull([OpenDash.Slot07], 5)');
+    // On, because movement is what a flag is read by at the edge of vision; a profile installed
+    // beside no plugin at all therefore still moves.
+    expect(setting.ledFlagAnimation()).toBe('isnull([OpenDash.LedFlagAnimation], true)');
   });
 });
 
@@ -237,7 +241,8 @@ describe('plugin mirror', () => {
     // The C# list itself is checked against the pin by ContractTests.cs, which can enumerate it; what
     // is checked here is the half a regex can see, the same way the modes above are.
     const source = pluginSource('Contract.cs');
-    for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING]) expect(source).toContain(`public const string ${name} = "${name}";`);
+    for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING]) expect(source).toContain(`public const string ${name} = "${name}";`);
+    expect(source).toContain(`public const bool DefaultLedFlagAnimation = ${String(DEFAULTS.LedFlagAnimation)};`);
     expect(source).toContain(`LedCentres = ${csArray(LED_CENTRES)};`);
     expect(source).toContain(`LedRpmStyles = ${csArray(LED_RPM_STYLES)};`);
     expect(source).toContain(`public const string DefaultLedCentre = "${DEFAULTS.LedCentre}";`);
@@ -250,7 +255,7 @@ describe('plugin mirror', () => {
     // Attached, and offered on the panel. A property the plugin declares and never attaches is a
     // profile stuck on its isnull() default, which is exactly how these two shipped.
     const attach = pluginSource('OpenDash.cs');
-    for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
+    for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
     const panel = panelSource();
     expect(panel).toContain('Contract.LedCentres');
     expect(panel).toContain('Contract.LedRpmStyles');
