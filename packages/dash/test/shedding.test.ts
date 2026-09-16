@@ -315,6 +315,13 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     '600x686 600x150 sectors': ['yourBest', 'last', 'sessionBest'],
     '600x686 600x150 session': ['lap', 'timeLeft'],
     '600x686 600x150 stint': ['stops', 'lastStop'],
+    // The compound chip is centred over the tyre grid, which is the axle line between the two rows
+    // of the car. These two zones are wide and short, so the page takes its four corners as one row
+    // of four -- two rows of cells in 112 px leaves a corner one reading -- and a single row has no
+    // axle line to put a chip on. The page names its compound at every other zone the build gives
+    // it; readability-pass.md §15 owns the redraw of the narrow tyre page.
+    '600x686 600x160 tyres': ['compound'],
+    '600x686 600x150 tyres': ['compound'],
     // The nano's 194 px zone keeps the three sectors at the size the drawing gives them and loses
     // the two lap times under them, which is rule 17 taking the recap rather than shrinking the
     // reading the page exists for. The 800 x 480 face's 292 px zone keeps both.
