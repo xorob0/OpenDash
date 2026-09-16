@@ -16,8 +16,9 @@ export const speed = defineCard('speed', (slot, rung, prefix, meta) => {
     { sample: '187', bind: fmt(s, '0'), chars: SPEED_CHARS },
     {
       kind: 'unit',
-      sample: 'KM/H',
-      bind: iff(eq(game('SpeedLocalUnit'), str('MPH')), str('MPH'), str('KM/H')),
+      // Lower case, as the canvas and the speedo module both draw it: a unit is not a field label.
+      sample: 'km/h',
+      bind: iff(eq(game('SpeedLocalUnit'), str('MPH')), str('mph'), str('km/h')),
       after: SPEED_CHARS,
       // x + digits * digit cell + gap
       leftBind: ({ x, mono, gap }) => add(num(x), mul(digitCount(s, SPEED_DIGITS), num(mono.charWidth)), num(gap)),

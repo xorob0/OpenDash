@@ -12,6 +12,7 @@ import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
 import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
+import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import type { TextItem } from '../src/generator.ts';
 
@@ -95,8 +96,13 @@ describe('card expressions', () => {
 
   test('lap times use toshorttime with forced minutes and dim no-data glyphs', () => {
     expect(formulaOf(textItem('currentLap', 'value'), 'Text')).toBe(
-      "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '-:--.-', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))",
+      "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))",
     );
+    // One spelling of the placeholder, shared with the module pages, and a true minus in every
+    // cell: the cards wrote theirs with hyphens and one glyph fewer than the time it stands in for.
+    expect(values.NO_TIME).toBe('−:−−.−−−');
+    expect(formulaOf(textItem('lastLap', 'value'), 'Text')).toContain(`'${values.NO_TIME}'`);
+    expect(formulaOf(textItem('bestLap', 'value'), 'Text')).toContain(`'${values.NO_TIME}'`);
     expect(formulaOf(textItem('lastLap', 'value'), 'Text')).toContain('toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true)');
     expect(formulaOf(textItem('lastLap', 'value'), 'TextColor')).toContain("< (0.0005), '#B14BFF'");
     expect(formulaOf(textItem('bestLap', 'value'), 'TextColor')).not.toContain('#B14BFF');
@@ -106,11 +112,18 @@ describe('card expressions', () => {
     const text = formulaOf(textItem('delta', 'value'), 'Text');
     expect(text).toContain("isnull([OpenDash.DeltaReference], 'session')");
     expect(text).toContain('[PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds]');
-    expect(text).toContain("format(if(");
     expect(text).toContain("'0.00', true)");
+    expect(text).toContain("'-', '−'");
     const colour = formulaOf(textItem('delta', 'value'), 'TextColor');
-    expect(colour).toContain("< (-0.005), '#00D96A'");
-    expect(colour).toContain("> (0.005), '#FF2D46'");
+    expect(colour).toContain("< (0), '#00D96A'");
+    expect(colour).toContain("'#FF2D46'");
+    // The deadband decides the text and the colour together, so a level delta cannot be drawn as
+    // "+0.00" in the resting white: it is the bare "0.00" the canvas draws.
+    const deadband = 'if((abs(isnull(';
+    expect(text.startsWith(deadband)).toBe(true);
+    expect(colour.startsWith(deadband)).toBe(true);
+    expect(text).toContain("<= (0.005), '0.00'");
+    expect(colour).toContain("<= (0.005), '#F5F7FA'");
   });
 
   test('assists show -- without the raw field, OFF at zero', () => {
@@ -125,6 +138,9 @@ describe('card expressions', () => {
 
   test('tyre temps convert thresholds per unit and tyre pressures upper-case the unit', () => {
     const colour = formulaOf(textItem('tyreTemps', 'fr'), 'TextColor');
+    // The card and the wheel cell had a threshold table each, written with the same numbers and
+    // free to drift apart; there is one table now, and this is what says so.
+    expect(colour).toBe(temperatureColour('FrontRight'));
     expect(colour).toContain("('Fahrenheit'), 140");
     expect(colour).toContain("('Kelvin'), 333, 60");
     expect(colour).toContain("('Fahrenheit'), 212");

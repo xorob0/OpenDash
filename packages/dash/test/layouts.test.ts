@@ -179,7 +179,9 @@ describe('every layout', () => {
       test('the grid cards keep every value in its column: text inside the column, boxes inside the slot, no overdraw', () => {
         const origin = rect(0, 0, layout.slotSize.width, layout.slotSize.height);
         const rung = cardRung(layout);
-        const colWidth = gridColumnWidth(origin, rung);
+        // A grid whose cells carry a sub-value draws wider columns, so each card is measured
+        // against the column it is actually laid out in rather than against the plain grid's.
+        const columnWidth = (id: string): number => gridColumnWidth(origin, rung, id === 'tyreTemps' && rung.rung === 'L' ? 18 : undefined);
         /** Width of the text an item actually draws, in its own monospace cells. */
         const textWidth = (it: DrawableItem): number => {
           if (it.kind !== 'text' || !it.monospace) throw new Error(`${it.name} is not a monospaced value`);
@@ -189,9 +191,20 @@ describe('every layout', () => {
         for (const id of ['tyreTemps', 'tyrePressures']) {
           const screen = cards.screens.find((s) => s.name === id);
           if (!screen) throw new Error(`${id} has no screen`);
-          const cells = screen.items.filter((i): i is DrawableItem => hasRect(i) && i.kind === 'text' && !i.name.endsWith('.label'));
-          expect(cells.map((c) => c.name)).toEqual(['fl', 'fr', 'rl', 'rr'].map((corner) => `${id}.${corner}`));
-          for (const c of cells) {
+          const corners = ['fl', 'fr', 'rl', 'rr'];
+          const drawn = screen.items.filter((i): i is DrawableItem => hasRect(i) && i.kind === 'text' && !i.name.endsWith('.label'));
+          const cells = drawn.filter((c) => !c.name.includes('.sub'));
+          expect(cells.map((c) => c.name)).toEqual(corners.map((corner) => `${id}.${corner}`));
+          // The tread left under a tyre temperature is a value in the same column and is measured
+          // with the rest; the canvas draws it at rung L only. Its per-cent sign is a label rather
+          // than a cell, so that one is checked by its box.
+          const subs = drawn.filter((c) => c.name.endsWith('.sub'));
+          expect(subs.map((c) => c.name)).toEqual(id === 'tyreTemps' && rung.rung === 'L' ? corners.map((corner) => `${id}.${corner}.sub`) : []);
+          for (const u of drawn.filter((c) => c.name.endsWith('.subunit'))) {
+            expect({ card: id, unit: u.name, right: u.rect.left + u.rect.width, inside: u.rect.left + u.rect.width <= layout.slotSize.width }).toMatchObject({ inside: true });
+          }
+          const colWidth = columnWidth(id);
+          for (const c of [...cells, ...subs]) {
             // The glyphs fit the column; the box may take the gap and the padding, since WPF clips to it.
             expect({ card: id, cell: c.name, text: textWidth(c), colWidth, fits: textWidth(c) <= colWidth }).toMatchObject({ fits: true });
             expect({ card: id, cell: c.name, right: c.rect.left + c.rect.width, inside: c.rect.left + c.rect.width <= layout.slotSize.width }).toMatchObject({ inside: true });
