@@ -995,12 +995,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The RGB strips: the two settings every generated .ledsprofile reads.
+        /// The RGB strips: the settings every generated .ledsprofile reads.
         ///
         /// No group per device, unlike the matrices. openDash builds one profile per strip shape rather
-        /// than per box, so the thing a driver picks is the profile; these two then say what whichever
+        /// than per box, so the thing a driver picks is the profile; these then say what whichever
         /// profile they picked shows. Without them the strips are stuck on their defaults, because a
         /// profile reads them through isnull() and nothing else writes them.
+        ///
+        /// The attribution at the bottom is not decoration. The car tables are somebody else's work
+        /// under CC BY-NC-SA 4.0 (ADR 0017), and a user is entitled to know whose numbers are lighting
+        /// their wheel.
         /// </summary>
         private IEnumerable<UIElement> BuildStripRows()
         {
@@ -1012,14 +1016,23 @@ namespace OpenDashPlugin
                 Settings.LedCentre,
                 220,
                 value => { Settings.LedCentre = value; plugin.SaveSettings(); });
-            var style = BuildSegmented(Contract.LedRpmStyles, new[] { "Left to right", "Meet in middle", "F1" }, Settings.LedRpmStyle, value =>
+            // A drop-down here too, now there are four: the car's own bar, and openDash's three looks.
+            var style = BuildChoice(
+                Contract.LedRpmStyles,
+                new[] { "The car's own", "Left to right", "Meet in middle", "F1" },
+                Settings.LedRpmStyle,
+                220,
+                value => { Settings.LedRpmStyle = value; plugin.SaveSettings(); });
+            var fit = BuildSegmented(Contract.LedMirrorFits, new[] { "Fill the strip", "True size" }, Settings.LedMirrorFit, value =>
             {
-                Settings.LedRpmStyle = value;
+                Settings.LedMirrorFit = value;
                 plugin.SaveSettings();
             });
-            yield return Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip, then these two decide what it shows.", 846);
+            yield return Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip, then these decide what it shows.", 846);
             yield return Ui.Row("Strip centre", "What the middle of the strip shows. RPM keeps the brake on the sides; RPM only leaves them dark.", centre);
-            yield return Ui.Row("Rev style", "How the ladder fills. Meet in middle works inwards from both ends; F1 is a formula wheel's colours, and flashes whole.", style);
+            yield return Ui.Row("Rev style", "The car's own mirrors the shift lights in the car you are driving: its LEDs, its colours, its order, its flash, in the gear you are in. The other three are openDash's own looks, and are what a car we have no measurements for shows.", style);
+            yield return Ui.Row("Car bar size", "Only for the car's own. Fill the strip spreads the car's lights over every LED; true size draws them at their own length in the middle.", fit);
+            yield return Ui.Caption(CarLightLibrary.Attribution + " openDash ships none of it: the tables are fetched when update checks are on, and every car works offline afterwards. " + CarLightLibrary.ProjectUrl, 846);
         }
 
         /// <summary>One value of a value set, as a drop-down: the control for a list longer than the two

@@ -242,6 +242,10 @@ describe('plugin mirror', () => {
     const panel = pluginSource('SettingsControl.cs');
     expect(panel).toContain('Contract.LedCentres');
     expect(panel).toContain('Contract.LedRpmStyles');
+    expect(panel).toContain('Contract.LedMirrorFits');
+    // Whose measurements they are, on the page that uses them: CC BY-NC-SA asks for attribution and
+    // a user is entitled to know whose numbers light their wheel (ADR 0017).
+    expect(panel).toContain('CarLightLibrary.Attribution');
   });
 
   test('Cards.cs lists the catalogue: number, id, label and display name, in order', () => {
