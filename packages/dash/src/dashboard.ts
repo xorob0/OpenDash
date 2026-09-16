@@ -74,7 +74,7 @@ export function buildLayout(layout: Layout, opts: BuildOptions): BuiltLayout {
 }
 
 /** The TTFs the face uses; the others in fonts/ stay for the plugin and future surfaces. */
-export const FACE_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'Barlow-Medium.ttf'] as const;
+export const FACE_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'Barlow-Medium.ttf', 'Barlow-Bold.ttf'] as const;
 
 /**
  * Absolute paths of the fonts to copy into `_SHFonts/`, renamed on the way so that SimHub resolves
