@@ -45,6 +45,7 @@ import {
   roadTemperature,
   simClock,
   windKmh,
+  NO_TIME,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
@@ -92,7 +93,7 @@ export interface BandField {
   widest?: string;
 }
 
-const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str('--:--.---'), toShortTime(expr, 3));
+const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), toShortTime(expr, 3));
 
 /** D1 Fuel: what a driver checks on a straight, which is why it is the default. */
 const fuel: readonly BandField[] = [
@@ -178,7 +179,7 @@ const relative: readonly BandField[] = [
     labelBind: relativePosition(aheadBehind(num(-1))),
     labelWidest: 'P99',
     sample: '-1.342',
-    bind: fmt(carRelativeGap(aheadBehind(num(-1))), '0.000'),
+    bind: carRelativeGap(aheadBehind(num(-1))),
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -189,7 +190,7 @@ const relative: readonly BandField[] = [
     labelBind: relativePosition(aheadBehind(num(1))),
     labelWidest: 'P99',
     sample: '+0.722',
-    bind: fmt(carRelativeGap(aheadBehind(num(1))), '+0.000;-0.000;0.000'),
+    bind: carRelativeGap(aheadBehind(num(1))),
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
