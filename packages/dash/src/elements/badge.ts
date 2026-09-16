@@ -19,10 +19,11 @@
  *
  * Two things a caller should know before wiring one. `FontWeight` is not among the properties
  * SimHub will bind, so a badge whose class arrives at runtime cannot change weight with it: it is
- * six badges, one per class, each with its own `Visible`. And the packages ship Barlow at Medium
- * and Bold only (`FACE_FONT_FILES`, `SCREEN_FONT_FILES`), so the SemiBold the ramp asks for at B
- * and A has to be shipped and measured into `design/advances.ts` before `validateOrThrow` will let
- * either of them onto a face.
+ * six badges, one per class, each with its own `Visible`. And a package ships the faces it draws
+ * in, which for Barlow is Medium and Bold on a dash face and Medium alone on a second screen, so
+ * B and A, which the ramp draws in SemiBold, and Pro, which it draws in Bold, need their file
+ * added to `FACE_FONT_FILES` or `SCREEN_FONT_FILES` and measured into `design/advances.ts` before
+ * `validateOrThrow` will let them onto anything.
  */
 import type { FontWeight, Hex, Item } from '../generator.ts';
 import type { Expr } from '../bind.ts';
@@ -66,8 +67,8 @@ const faceWeight = (weight: number): FontWeight => (weight >= 700 ? 'Bold' : wei
  *
  * The ramp draws the same letter at three weights and only Medium and Bold are measured, so a
  * badge measured in one face and drawn in another is short of its glyph by the difference. Taking
- * the wider of the pair that brackets the ramp costs a fraction of a pixel and cannot clip, and it
- * keeps every badge of a class the same box, which is how the canvas sets a row of driver marks.
+ * the wider of the pair that brackets the ramp costs a fraction of a pixel and cannot clip, and a
+ * class's box then stops depending on which rung of the ramp its weight sits on.
  */
 const letterWidth = (text: string, size: number): number => Math.max(measureText('BarlowMedium', text, size), measureText('BarlowBold', text, size));
 
