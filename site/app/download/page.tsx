@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { Changelog } from '../../components/Changelog';
 import { Reveal } from '../../components/Reveal';
 import { SectionHead } from '../../components/SectionHead';
-import { DOWNLOADS, PACKAGES, RELEASES, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
-import { NOTES, sizeLabel } from '../../lib/packages';
+import { DOWNLOADS, RELEASES, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
+import { NOTES, ORDERED, sizeLabel } from '../../lib/packages';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -63,7 +63,7 @@ export default function Download() {
               <p className="label">Recommended</p>
               <h2 className="h2">The plugin</h2>
               <p className="prose">
-                One file. It carries all {PACKAGES.length} dashboards inside it, extracts them into
+                One file. It carries all {ORDERED.length} dashboards inside it, extracts them into
                 SimHub, and adds an openDash page to the left menu where every setting lives — which
                 zone shows what, the rev bar, the flag box, the LED profiles.
               </p>
@@ -122,7 +122,7 @@ export default function Download() {
 
           <Reveal>
             <ul className={styles.files}>
-              {PACKAGES.map((p) => {
+              {ORDERED.map((p) => {
                 const file = byFile.get(`${p.folder}.simhubdash`);
                 return (
                   <li key={p.folder} className={styles.file}>
