@@ -244,6 +244,9 @@ namespace OpenDashPlugin
                 toggle = new ToggleButton();
             }
             toggle.IsChecked = isOn;
+            // SimHub's switch brings no ring of its own, and a row reached by the keyboard has to say where
+            // it is; the kit's ring is an adorner, so it costs the row no height.
+            toggle.FocusVisualStyle = Ui.FocusRing();
             toggle.Checked += (sender, args) => changed(true);
             toggle.Unchecked += (sender, args) => changed(false);
             return toggle;
@@ -257,19 +260,19 @@ namespace OpenDashPlugin
             return control;
         }
 
-        /// <summary>One value of a value set, as a drop-down: the control for a list longer than the two
-        /// or three options Segmented.cs is drawn for. The labels are positional, so values[i] is what
-        /// labels[i] names.</summary>
+        /// <summary>
+        /// One value of a value set, as a drop-down: the control for a list longer than the two or three
+        /// options Segmented.cs is drawn for. The labels are positional, so values[i] is what labels[i] names.
+        /// </summary>
+        /// <remarks>
+        /// Ui.Field is the chrome, so the box carries the same ground, outline and ring as the drop button
+        /// and the text field beside it. Its corner stays SimHub's: a ComboBox has no CornerRadius, and the
+        /// template that would give it one supplies the list under it as well, which Widgets.Field records.
+        /// </remarks>
         private static ComboBox BuildChoice(string[] values, string[] labels, string selected, double width, Action<string> changed)
         {
-            var box = new ComboBox
-            {
-                Width = width,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Right,
-            };
+            var box = new ComboBox { Width = width, HorizontalAlignment = HorizontalAlignment.Right };
+            Ui.Field(box, Theme.ControlHeightSm);
             foreach (var label in labels) box.Items.Add(label);
             var index = Array.IndexOf(values, selected);
             box.SelectedIndex = index >= 0 ? index : 0;
@@ -284,14 +287,8 @@ namespace OpenDashPlugin
         /// <summary>A page picker in page-number order, so that SelectedIndex is the page number.</summary>
         private static ComboBox BuildPageSelect(System.Collections.Generic.IReadOnlyList<ZonePage> pages, int selected, double width, Action<int> changed)
         {
-            var box = new ComboBox
-            {
-                Width = width,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-            };
+            var box = new ComboBox { Width = width, HorizontalAlignment = HorizontalAlignment.Left };
+            Ui.Field(box, Theme.ControlHeightSm);
             foreach (var page in pages) box.Items.Add(page.Name);
             box.SelectedIndex = selected >= 0 && selected < pages.Count ? selected : 0;
             box.SelectionChanged += (sender, args) =>
@@ -310,13 +307,11 @@ namespace OpenDashPlugin
             var box = new TextBox
             {
                 Width = 80,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
                 HorizontalContentAlignment = HorizontalAlignment.Right,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Text = value.ToString(System.Globalization.CultureInfo.InvariantCulture),
             };
+            Ui.Field(box, Theme.ControlHeightSm);
             Action commit = () =>
             {
                 int parsed;
@@ -415,7 +410,9 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Warn("ControlsEditor is unavailable; naming the action instead: " + ex.Message);
-                var text = Ui.Text(friendlyName + " — bind " + Contract.FullActionName(action) + " in Controls and events", Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
+                // The sheet's value on a binding row, which is the one string openDash sets on such a row
+                // at all: the editor beside it is SimHub's and draws its own.
+                var text = Ui.Text(friendlyName + " — bind " + Contract.FullActionName(action) + " in Controls and events", Theme.SizeLabel, FontWeights.Normal, Theme.TextPrimary);
                 text.HorizontalAlignment = HorizontalAlignment.Right;
                 return text;
             }
@@ -464,7 +461,16 @@ namespace OpenDashPlugin
             };
         }
 
-        /// <summary>SimHub's link button (SHLinkButton) carrying the canvas's accent text and external-link icon.</summary>
+        /// <summary>
+        /// SimHub's link button (SHLinkButton) carrying the canvas's accent text and external-link icon.
+        /// </summary>
+        /// <remarks>
+        /// The icon leads the label, as it does on a button that carries one, and at the same 8 px.
+        ///
+        /// The hover is drawn here because neither half of the link can inherit it: the ink is set on the
+        /// TextBlock and on the Path rather than left to the button, so SHLinkButton's own template has
+        /// nothing to reach. The two change together, or a hovered link is a lit word beside a dim glyph.
+        /// </remarks>
         private static Button BuildLink(string text, string url)
         {
             Button button;
@@ -477,12 +483,20 @@ namespace OpenDashPlugin
                 Log.Warn("SHLinkButton is unavailable; using a plain button: " + ex.Message);
                 button = new Button();
             }
-            button.Content = Ui.HStack(6,
-                Ui.Text(text, Theme.SizeBody, FontWeights.Medium, Theme.Accent),
-                Ui.Icon(Ui.ExternalLinkIcon, Theme.Accent));
+            var icon = Ui.Icon(Ui.ExternalLinkIcon, Theme.Accent);
+            var label = Ui.Text(text, Theme.SizeBody, FontWeights.Medium, Theme.Accent);
+            button.Content = Ui.HStack(PanelMetrics.ButtonIconGap, icon, label);
+            button.Height = Theme.ControlHeight;
             button.Padding = new Thickness(0);
             button.Cursor = Cursors.Hand;
             button.ToolTip = url;
+            Action<string> ink = hex =>
+            {
+                icon.Stroke = Ui.Brush(hex);
+                label.Foreground = Ui.Brush(hex);
+            };
+            button.MouseEnter += (sender, args) => ink(Theme.AccentHover);
+            button.MouseLeave += (sender, args) => ink(Theme.Accent);
             button.Click += (sender, args) => Ui.OpenUrl(url);
             return button;
         }
