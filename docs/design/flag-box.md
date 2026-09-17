@@ -25,27 +25,71 @@ disqualification are invisible through them.
 Highest priority first. One picture at a time: a condition shows only when nothing above it is
 raised.
 
-| | Condition | iRacing bits | Critical | The picture |
-|---|---|---|---|---|
-| 1 | Red | `red` | yes | The whole box red. The only condition that takes it in one colour. |
-| 2 | Disqualified | `disqualify` | yes | A cross, blinking. The one flag that ends the race whether the driver reacts or not. |
-| 3 | Black | `black` | yes | An outline. |
-| 4 | Black furled | `furled` | yes | The same flag rolled up: a bar rather than a field. |
-| 5 | Meatball | `repair` | yes | An orange disc. Round, so it is not read as a flag of another colour. |
-| 6 | Chequered | `checkered` | no | A checkerboard of two-pixel squares. |
-| 7 | Full-course caution | `caution`, `cautionWaving` | yes | Yellow in bands. |
-| 8 | Waved yellow | `yellowWaving` | yes | The yellow flag, blinking. |
-| 9 | Yellow | `yellow` | yes | Solid yellow, steady. |
-| 10 | Debris | `debris` | yes | Yellow with danger stripes. |
-| 11 | Blue | `blue` | yes | Blue with an arrow that moves: two frames. |
-| 12 | White | `white` | no | Solid white. In iRacing this is the last lap. |
-| 13 | Green | `green` | no | Solid green. |
-| 14 | Set | `startSet` | no | Two bars of the start gantry. |
-| 15 | Ready | `startReady` | no | One bar of the start gantry. |
+The table carries the canvas's own alert number beside each rank, and the band the face draws in
+band D, so that the two surfaces can be read against one another on one page. Band D draws all
+fifteen; `docs/design/zones.md` describes the band itself.
+
+| | Condition | iRacing bits | Critical | Canvas | The picture | The band |
+|---|---|---|---|---|---|---|
+| 1 | Red | `red` | yes | 3 | The whole box red. The only condition that takes it in one colour. | Filled `purpose.flag.red`, "RED FLAG". |
+| 2 | Disqualified | `disqualify` | yes | 4 | A cross, blinking. The one flag that ends the race whether the driver reacts or not. | Outlined `purpose.flag.black`, "DISQUALIFIED". |
+| 3 | Black furled | `furled` | yes | 5 | The same flag rolled up: a bar rather than a field. | Outlined, "BLACK FLAG · FURLED". |
+| 4 | Black | `black` | yes | 6 | An outline. | Outlined, "BLACK FLAG". |
+| 5 | Meatball | `repair` | yes | 18 | An orange disc. Round, so it is not read as a flag of another colour. | Filled `purpose.flag.orange`, "MEATBALL". |
+| 6 | Full-course caution | `caution`, `cautionWaving` | yes | 7 | Yellow in bands. | Filled `purpose.alert.safetyCar`, "SAFETY CAR". |
+| 7 | Waved yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "WAVED YELLOW", flashing. |
+| 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW FLAG", steady. |
+| 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Filled `purpose.flag.debris`, "DEBRIS". |
+| 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE FLAG". |
+| 11 | White | `white` | no | 16 | Solid white. In iRacing this is the last lap. | Filled white, "WHITE · LAST LAP". |
+| 12 | Green | `green` | no | 21 | Solid green. | Filled green, "GREEN FLAG", on `Flag_Green` rather than on the bit. |
+| 13 | Set | `startSet` | no | 22 | Two bars of the start gantry. | Outlined green, "GREEN · SET". |
+| 14 | Ready | `startReady` | no | 22 | One bar of the start gantry. | Outlined green, "GREEN · READY". |
+| 15 | Chequered | `checkered` | no | 23 | A checkerboard of two-pixel squares. | The same board, half the band high, with no name. |
 
 Colour is `purpose.flag.*` from `design/tokens.json`, resolved to a literal at build time. The
 blink rate is `indicator.flagBand.flashHz`, so the box pulses at the same rate as the band on the
 face.
+
+### Where the rank departs from the canvas's numbering
+
+One rule governs it: **no condition the critical-flags switch can silence outranks one it cannot.**
+The switch guards the non-critical half of the list, so a non-critical condition ranked above a
+critical one would mean that turning the switch *off* hid a flag, which is the opposite of what the
+switch says. Two entries move for that rule and one for a second reason.
+
+**The chequer, numbered 23, was second of the list.** It hid a yellow thrown at a race finishing
+under one, and it hid the blue flag of a car being lapped on the last lap. It is last now, which is
+both the canvas's own rank and what the rule asks for.
+
+**The white, numbered 16, sits below the blue at 20** and below the meatball, rather than above
+them: the white is news and those two are addressed to this car.
+
+**The meatball, numbered 18, keeps the fifth rank.** That one is not the rule but the same reading
+as the list's shape: a flag calling this car in outranks a condition of the track. Besides, the LED
+strip draws it on the black family's lamp, its orange aliasing the caution amber, so it could not be
+ranked between the two yellows without a second lamp to put it on. It is the one rank the canvas
+and the code disagree about, and it wants the author's arbitration.
+
+### What the band does that the box does not, and the reverse
+
+**The band has no duration.** The canvas asks for a configurable three seconds per alert and
+`design/tokens.json` states it as `indicator.alert.durationMs`, and neither is read: a duration
+needs a clock, and neither NCalc nor the plugin has one under
+[ADR 0009](decisions/0009-does-the-plugin-compute.md). Every condition shows for exactly as long as
+its bits are set. The green flag is the one place that hurt, because iRacing holds `green` for the
+whole green-flag stint and band D would have been a solid green bar over the fuel page for an entire
+race; SimHub passes `Flag_Green` through a `GreenLimiter` and reports it only shortly after the flag
+is raised, which is the only clock there is, so the band reads that property where it reads bits
+everywhere else. The box keeps the bit, a lit green lamp costing nothing.
+
+**The debris flag's danger stripes are not drawn on the band.** The canvas gives the alert
+catalogue two patterns, the chequer and the stripes, and the band draws the first. A debris flag is
+a yellow band named "DEBRIS", which says it on every face that writes a name and reads as a plain
+yellow on the nano, which writes none. The second pattern is a piece of work of its own.
+
+**The band has no critical-flags switch.** Sixty-four pixels are the only thing a driver with a box
+has, which is what the switch is for; a driver who wants band D quieter turns the flag format off.
 
 ### The four decisions sixty-four pixels forced
 
@@ -229,11 +273,15 @@ SimHub without a rebuild.
 
 ## What is not drawn, and why
 
-Everything a comparable flag box draws that openDash does not. Each line is a thing somebody will
-ask for; the answer is that iRacing does not publish it, not that it was forgotten.
+Everything a comparable flag box draws that openDash does not, and, since band D reads this same
+list, everything the canvas's alert catalogue numbers that no surface raises. Each line is a thing
+somebody will ask for; the answer is that iRacing does not publish it, not that it was forgotten.
 
 | Wanted | Why not |
 |---|---|
+| **Engine off, ignition off** (canvas 1 and 2) | They are not `SessionFlags` bits and they are not flags. `EngineWarnings` and the ignition state are published and belong to the telltales and to the pit alerts, where the canvas also puts them; drawing them in the flag rank would put a car state above a red flag. |
+| **Double yellow** (canvas 9) | iRacing publishes one yellow and one waved yellow. There is no double yellow in the bitfield, and the canvas's own drawing of it is two stacked bands, which band D has no room for. |
+| **Push to pass, headlight flash** (canvas 24 and 25) | `PushToPass` is published and is a car state rather than a flag; the headlight flash is not published at all. Both rank below every flag in the canvas, so neither would ever reach a band that draws fifteen above it. |
 | **Yellow per sector** | iRacing's `SessionFlags` has no per-sector yellow. Even if it did, eight pixels across cannot say *which* sector without inventing a legend the driver has not been taught. |
 | **Virtual safety car** | iRacing has no VSC. `caution` is a full-course caution with the pace car deployed, which is drawn, and is not the same thing. |
 | **Safety car, as its own picture** | The closest honest reading of `caution`/`cautionWaving` *is* the pace car being deployed, and it is drawn as the full-course caution. A second glyph would be the same condition twice. |
