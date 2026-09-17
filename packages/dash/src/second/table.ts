@@ -34,7 +34,7 @@ import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex } from './values.ts';
+import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, splitHiddenCars } from './values.ts';
 
 const { iff, str, fmt, eq, ne, num, and, not, gt, lt, abs, concat, left, ucase, isnull } = ncalc;
 
@@ -99,6 +99,28 @@ const BOARD_HEADER_HEIGHT = 32;
  * is another 204, so the canvas's own column set only fits a board at this gap.
  */
 const BOARD_CELL_GAP = 0;
+
+/**
+ * The limit line: what a split list draws where it cuts the field.
+ *
+ * `Panels.dc.html` draws a 20 px band padded like a row it stands between, a 13 px uppercase label
+ * centred in it and a 1 px line in `text.primary` running from either side of the label out to the
+ * row's own inset, twelve pixels clear of the text. The lines flank the label rather than close the
+ * band above and below: two full-width lines are what a board already draws under every row, and
+ * the reader would count them as rules rather than read them as a cut.
+ */
+const SPLIT_HEIGHT = 20;
+const SPLIT_CLEARANCE = 12;
+
+/**
+ * The copy the canvas writes on the limit line, and the widest count that can precede it.
+ *
+ * The count is bound, so it is the `widest` that is measured and not the sample: two digits, since
+ * no grid a sim publishes reaches a hundred cars, and the four because it is the widest digit
+ * Barlow Medium draws. A `widest` left undeclared is what once turned "NO FLAG" into "NO FLA".
+ */
+const SPLIT_COPY = 'CARS NOT SHOWN';
+const SPLIT_WIDEST = `44 ${SPLIT_COPY}`;
 
 /** Side padding of a row: the board's 16, or the catalogue's 6. */
 const padXOf = (board: boolean): number => (board ? BOARD_PAD_X : ROW_PAD_X);
@@ -447,9 +469,14 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
         colorBind: iff(carIsSessionBest(ctx.idx), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },
+  // The three samples are one lap's sectors and they add up to the `last` sample beside them, the
+  // way every triple the canvas draws adds up to the time on its own row: 28.412, 41.071 and 33.422
+  // are 1:42.905, each rounded to the two decimals a sector is drawn to. A row whose sectors and
+  // whose lap time disagree is read at design time as a bug in the bindings, which is a morning
+  // spent on a number nothing computes.
   s1: { header: 'S1', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's1', '28.41', carSector(ctx.idx, 1), CHARS.sector, { fs: ctx.type.minor }) },
   s2: { header: 'S2', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's2', '41.07', carSector(ctx.idx, 2), CHARS.sector, { fs: ctx.type.minor }) },
-  s3: { header: 'S3', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's3', '32.83', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.type.minor }) },
+  s3: { header: 'S3', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's3', '33.42', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.type.minor }) },
   /** No board draws it: the canvas's three pages spend the room on Nat, Licence and iRating instead. */
   stint: { header: 'Stint', align: 'right', width: ({ type }) => cellColumn(52, type.minor, { digits: 2, specials: 0 }), cell: (ctx) => cellValue(ctx, 'stint', '12', carStintLaps(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor }) },
   pit: { header: 'Pit', align: 'right', width: (row) => drawnWidth(row, Math.ceil(2 * row.d.chipPadding + 26), 44), cell: cellPit },
@@ -500,6 +527,12 @@ export interface TableSpec {
   board?: boolean;
   /** Row height; {@link tableRowHeight} by default. */
   rowHeight?: number;
+  /**
+   * How many rows at the top of the field a split list keeps, the rest of them following the player
+   * across a limit line. Absent, which is the default, the table is the one contiguous list it has
+   * always been, so the face zones and the companion are untouched.
+   */
+  split?: number;
   /**
    * When true, the table lists the player's own class rather than the whole field.
    *
@@ -589,11 +622,97 @@ function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { h
 }
 
 /**
- * The table. The row template is stamped `rows` times by the repeated layer; the inner row layer
- * carries the "this car exists" test so that empty rows draw nothing at all.
+ * One block of rows: the row template, and the repeated layer that stamps it `rows` times. The
+ * inner row layer carries the "this car exists" test so that empty rows draw nothing at all.
+ *
+ * A split list draws two blocks rather than one row index clever enough to be both. The index of
+ * every cell of every row is that expression, so a conditional in it is a conditional SimHub
+ * evaluates a few hundred times a tick, and the two halves of a split list differ in one thing
+ * only: where they start counting.
+ */
+function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: { name: string; top: number; rows: number; idx: Expr }): LayerItem {
+  const d = densityOf(spec.density);
+  const board = spec.board ?? false;
+  const { name, top, rows, idx } = block;
+  const isPlayer = carIsPlayer(idx);
+  const inPit = carInPit(idx);
+  const children: Item[] = [
+    { ...band(`${spec.name}.${name}.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), ...withBindings({ Visible: isPlayer }) },
+    // The board's rows are flush and each is closed by a rule; a list's are two apart and closed by
+    // the gap. Both run the frame's full width, under the padding the cells are inset by.
+    ...(board ? [rule(`${spec.name}.${name}.rule`, spec.frame.left, top + rowHeight - 1, spec.frame.width, 1)] : []),
+  ];
+  let x = spec.frame.left + padXOf(board);
+  spec.columns.forEach((id, i) => {
+    const width = widths[i] ?? 0;
+    children.push(
+      ...COLUMNS[id].cell({
+        name: `${spec.name}.${name}`,
+        idx,
+        x,
+        width,
+        top,
+        height: rowHeight,
+        d,
+        density: spec.density,
+        type: rowTypeOf(rowHeight, board),
+        isPlayer,
+        inPit,
+        mode: spec.mode,
+        align: COLUMNS[id].align,
+      }),
+    );
+    x += width + cellGapOf(board);
+  });
+  const row: LayerItem = { kind: 'layer', name: `${spec.name}.${name}`, children, ...withBindings({ Visible: carAvailable(idx) }) };
+  return { kind: 'layer', name: `${spec.name}.${name}s`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + rowGapOf(board), repeatLeftOffset: 0 };
+}
+
+/**
+ * The limit line, and why it is not a row.
+ *
+ * SimHub evaluates a repeated layer's own Visible once, for row one, which is what the head of this
+ * file records; a band living inside the repeat would therefore show on every row or on none. It is
+ * a fixed item between the two blocks instead, and what it says is bound: the count depends on
+ * where the player is, and a label whose text moves is measured by its `widest` rather than by the
+ * sample Dash Studio shows.
+ *
+ * The lines either side are drawn from the label outwards, so a band too narrow to hold both the
+ * label and its clearance draws the label alone rather than a line through the text.
+ */
+function limitLine(spec: TableSpec, top: number, hidden: Expr): Item[] {
+  const d = densityOf(spec.density);
+  const padX = padXOf(spec.board ?? false);
+  const fs = d.labelSm;
+  // A pixel over what the widest count draws: WPF clips at the box's edge, and a box cut to the
+  // exact advance loses the last glyph's final column.
+  const width = Math.ceil(measureText('BarlowMedium', SPLIT_WIDEST, fs)) + 1;
+  const left = spec.frame.left + Math.round((spec.frame.width - width) / 2);
+  const right = left + width;
+  const shown = gt(hidden, num(0));
+  const lines: [string, number, number][] = [
+    ['before', spec.frame.left + padX, left - SPLIT_CLEARANCE],
+    ['after', right + SPLIT_CLEARANCE, spec.frame.left + spec.frame.width - padX],
+  ];
+  return [
+    ...lines
+      .filter(([, from, to]) => to > from)
+      .map(([id, from, to]) => band(`${spec.name}.limit.${id}`, rect(from, top + (SPLIT_HEIGHT - 1) / 2, to - from, 1), ds.color.text.primary, { visibleBind: shown })),
+    label(`${spec.name}.limit.count`, `7 ${SPLIT_COPY}`, left, top + (SPLIT_HEIGHT - fs) / 2, width, {
+      size: fs,
+      hAlign: 'center',
+      bind: concat(fmt(hidden, '0'), str(` ${SPLIT_COPY}`)),
+      widest: SPLIT_WIDEST,
+      visibleBind: shown,
+    }),
+  ];
+}
+
+/**
+ * The table: the header, then the rows the frame holds, in one block or in the two a split list
+ * draws with its limit line between them.
  */
 export function table(spec: TableSpec): Item[] {
-  const d = densityOf(spec.density);
   const header = spec.header ?? true;
   const rowHeight = spec.rowHeight ?? tableRowHeight(spec.density);
   const board = spec.board ?? false;
@@ -601,9 +720,21 @@ export function table(spec: TableSpec): Item[] {
   const cellGap = cellGapOf(board);
   const rowGap = rowGapOf(board);
   const headerHeight = headerHeightOf(board, rowHeight);
-  const type = rowTypeOf(rowHeight, board);
-  const capacity = rowsThatFit(spec.frame, { density: spec.density, header, rowHeight, board });
+  const fit = { density: spec.density, header, rowHeight, board };
+  if (spec.split !== undefined && (spec.mode !== 'full' || spec.classOnly)) {
+    // The kept rows are the head of the overall leaderboard and the window below counts in the same
+    // numbers; a class filter would restart both at one and the limit line would count a field the
+    // rows above it are not drawn from.
+    throw new Error(`table ${spec.name}: a split list is the overall leaderboard, so it takes neither a class mode nor classOnly`);
+  }
+  // The limit line costs a row's worth of the body and is laid out whether or not the field is long
+  // enough to hide anything behind it, since nothing about a stamped layout moves at runtime. A box
+  // too short to hold a block either side of it draws the plain list instead.
+  const short = rect(spec.frame.left, spec.frame.top, spec.frame.width, spec.frame.height - SPLIT_HEIGHT - rowGap);
+  const splits = (spec.split ?? 0) > 0 && rowsThatFit(short, fit) >= 2;
+  const capacity = rowsThatFit(splits ? short : spec.frame, fit);
   const rows = Math.max(1, Math.min(spec.rows ?? capacity, capacity));
+  const topRows = splits ? Math.min(spec.split ?? 0, rows - 1) : 0;
   const widths = columnWidths(spec.columns, spec.frame.width, spec.density, rowHeight, board);
   const headTop = spec.frame.top + (header ? headerHeight : 0);
   // The canvas gives every list body `justify-content: center`, so what a declared row count leaves
@@ -615,46 +746,25 @@ export function table(spec: TableSpec): Item[] {
   // short of falls at the foot. Centring them is what put 84 px of margin over P1 on the race page
   // and 158 on the tower, which is a board that has lost the edge a reader reads positions down.
   const body = spec.frame.height - (header ? headerHeight : 0);
-  const slack = board ? 0 : Math.max(0, Math.round((body - (rows * rowHeight + (rows - 1) * rowGap)) / 2));
+  const stack = rows * rowHeight + (rows - 1) * rowGap + (splits ? SPLIT_HEIGHT + rowGap : 0);
+  const slack = board ? 0 : Math.max(0, Math.round((body - stack) / 2));
   const top = headTop + slack;
-  // The player sits in the middle of a relative table, so the row index counts from that row.
-  const centre = Math.ceil(rows / 2);
-  const idx = rowIndexFor(spec, centre);
-  const isPlayer = carIsPlayer(idx);
-  const inPit = carInPit(idx);
-
-  const children: Item[] = [
-    { ...band(`${spec.name}.row.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), ...withBindings({ Visible: isPlayer }) },
-    // The board's rows are flush and each is closed by a rule; a list's are two apart and closed by
-    // the gap. Both run the frame's full width, under the padding the cells are inset by.
-    ...(board ? [rule(`${spec.name}.row.rule`, spec.frame.left, top + rowHeight - 1, spec.frame.width, 1)] : []),
+  const head = header ? headerRow(spec, widths, spec.frame.top, { height: headerHeight, padX, cellGap, board }) : [];
+  if (!splits) {
+    // The player sits in the middle of a relative table, so the row index counts from that row.
+    const idx = rowIndexFor(spec, Math.ceil(rows / 2));
+    return [...head, rowBlock(spec, widths, rowHeight, { name: 'row', top, rows, idx })];
+  }
+  // The player sits in the middle of the window, as in a relative table, so a driver reads as many
+  // cars ahead as behind whatever the field does around them.
+  const windowRows = rows - topRows;
+  const bandTop = top + topRows * (rowHeight + rowGap);
+  return [
+    ...head,
+    rowBlock(spec, widths, rowHeight, { name: 'row', top, rows: topRows, idx: rowIndex.full() }),
+    ...limitLine(spec, bandTop, splitHiddenCars(topRows, windowRows)),
+    rowBlock(spec, widths, rowHeight, { name: 'splitRow', top: bandTop + SPLIT_HEIGHT + rowGap, rows: windowRows, idx: rowIndex.split(topRows, windowRows) }),
   ];
-  let x = spec.frame.left + padX;
-  spec.columns.forEach((id, i) => {
-    const width = widths[i] ?? 0;
-    children.push(
-      ...COLUMNS[id].cell({
-        name: `${spec.name}.row`,
-        idx,
-        x,
-        width,
-        top,
-        height: rowHeight,
-        d,
-        density: spec.density,
-        type,
-        isPlayer,
-        inPit,
-        mode: spec.mode,
-        align: COLUMNS[id].align,
-      }),
-    );
-    x += width + cellGap;
-  });
-
-  const row: LayerItem = { kind: 'layer', name: `${spec.name}.row`, children, ...withBindings({ Visible: carAvailable(idx) }) };
-  const stamped: LayerItem = { kind: 'layer', name: `${spec.name}.rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + rowGap, repeatLeftOffset: 0 };
-  return [...(header ? headerRow(spec, widths, spec.frame.top, { height: headerHeight, padX, cellGap, board }) : []), stamped];
 }
 
 /** Every column the tables can show, for the docs and for a test that keeps them in step. */
