@@ -11,7 +11,7 @@ import { rect } from '../src/design/geometry.ts';
 import { panel, PANEL_TITLE_HEIGHT } from '../src/second/header.ts';
 import { LEGEND_HEIGHT, SWATCH, legend, legendWidth, trace, type Series } from '../src/second/trace.ts';
 import { ds } from '../src/tokens.ts';
-import type { ChartItem, TextItem } from '../src/generator.ts';
+import type { ChartItem, RectangleItem, TextItem } from '../src/generator.ts';
 
 const FRAME = rect(0, 0, 800, 240);
 
@@ -46,7 +46,7 @@ describe('a pit wall panel', () => {
 describe('a trace´s legend', () => {
   test('sets its swatch eight from its name, which is what every sheet draws', () => {
     const items = legend('l', SERIES, 0, 0, 'zone');
-    const swatch = items.find((i) => i.name === 'l.Throttle.swatch');
+    const swatch = items.find((i): i is RectangleItem => i.kind === 'rect' && i.name === 'l.Throttle.swatch');
     const text = items.find((i): i is TextItem => i.kind === 'text' && i.name === 'l.Throttle.legend');
     expect(swatch?.rect.width).toBe(SWATCH.width);
     expect((text?.rect.left ?? 0) - SWATCH.width).toBe(ds.space[2]);
