@@ -56,6 +56,16 @@ const DATA_FACE: Record<DataWeight, MeasuredFace> = { SemiBold: 'BarlowCondensed
 export function numeral(name: string, sample: string, x: number, y: number, fs: number, chars: Chars, opts: NumeralOptions = {}): TextItem {
   const weight = opts.weight ?? 'SemiBold';
   const mono = opts.proportional ? undefined : (opts.mono ?? cells(weight, fs));
+  // The cell is cut for digits and `font.cell.excluded` is the set whose ink overruns it in every
+  // condensed face, at any size, so no cell a value is drawn in can hold one. WPF says nothing when
+  // it clips, and a clipped `#` reads as the wrong font rather than as too wide a glyph, which is
+  // how thirty-one of them shipped; failing the build is the only place it can be noticed.
+  if (mono) {
+    const banned = [...sample, ...(opts.widest ?? '')].find((ch) => ds.font.cell.excluded.has(ch));
+    if (banned !== undefined) {
+      throw new Error(`numeral ${name}: ${JSON.stringify(banned)} cannot be drawn in a monospace cell (font.cell.excluded); split it into a proportional label beside the value`);
+    }
+  }
   const box = textBox(y, fs);
   const budget = mono === undefined ? Math.ceil(measureText(DATA_FACE[weight], opts.widest ?? sample, fs)) : monoWidth(mono, chars);
   const wanted = budget + boxSlack(fs);

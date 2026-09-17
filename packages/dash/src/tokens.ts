@@ -225,6 +225,16 @@ export const ds = {
       gear: num('font.cell.gear'),
       /** Characters that get the narrow cell. */
       specialChars: text('font.cell.specialChars'),
+      /**
+       * Characters a monospaced value may not contain. Read rather than restated: the ban is what
+       * keeps the cell cut for digits, so the set the design writes and the set `numeral` refuses
+       * have to be one set. It was a token nobody read until `numeral` enforced it.
+       *
+       * A set rather than the string `specialChars` is, because the two are asked different
+       * questions: `specialChars` is serialised into the item and reaches SimHub as written, while
+       * this one is never emitted and is only ever asked whether it holds a character.
+       */
+      excluded: new Set(text('font.cell.excluded')) as ReadonlySet<string>,
     },
   },
   size: {
