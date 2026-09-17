@@ -755,16 +755,15 @@ export function table(spec: TableSpec): Item[] {
     const idx = rowIndexFor(spec, Math.ceil(rows / 2));
     return [...head, rowBlock(spec, widths, rowHeight, { name: 'row', top, rows, idx })];
   }
-  const windowRows = rows - topRows;
   // The player sits in the middle of the window, as in a relative table, so a driver reads as many
   // cars ahead as behind whatever the field does around them.
-  const centre = Math.ceil(windowRows / 2);
+  const windowRows = rows - topRows;
   const bandTop = top + topRows * (rowHeight + rowGap);
   return [
     ...head,
     rowBlock(spec, widths, rowHeight, { name: 'row', top, rows: topRows, idx: rowIndex.full() }),
-    ...limitLine(spec, bandTop, splitHiddenCars(topRows, centre)),
-    rowBlock(spec, widths, rowHeight, { name: 'splitRow', top: bandTop + SPLIT_HEIGHT + rowGap, rows: windowRows, idx: rowIndex.split(topRows, centre) }),
+    ...limitLine(spec, bandTop, splitHiddenCars(topRows, windowRows)),
+    rowBlock(spec, widths, rowHeight, { name: 'splitRow', top: bandTop + SPLIT_HEIGHT + rowGap, rows: windowRows, idx: rowIndex.split(topRows, windowRows) }),
   ];
 }
 

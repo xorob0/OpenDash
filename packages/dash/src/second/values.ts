@@ -172,12 +172,18 @@ export const neighbour = (offset: number): Expr => aheadBehind(num(offset));
  *
  * The `topRows` at the head of the field are kept whatever the player does, so the window opens
  * directly under them for as long as the player is still inside it, and follows the player down
- * once the player is past it, the player sitting on row `centre` of the window as in a relative
+ * once the player is past it, the player sitting in the middle of its `rows` as in a relative
  * table. The max is also the guard: `getplayerleaderboardposition()` answers -1 before the sim has
- * placed the player, and a window pinned to the kept rows is the unsplit list the table draws
- * anyway.
+ * placed the player, and a window pinned against the kept rows is the plain list the table drew
+ * before there was a split.
+ *
+ * The min is the other half of the sentence the canvas writes, "when the player sits below the row
+ * budget": a field the rows can all hold is not cut at all, and the last car of a longer one is the
+ * last row rather than the window running off the end into blank rows with cars hidden behind the
+ * line.
  */
-const splitWindowTop = (topRows: number, centre: number): Expr => max(num(topRows + 1), sub(playerPosition(), num(centre - 1)));
+const splitWindowTop = (topRows: number, rows: number): Expr =>
+  max(num(topRows + 1), min(sub(playerPosition(), num(Math.ceil(rows / 2) - 1)), sub(opponentCount(), num(rows - 1))));
 
 /** The row a table's Nth line shows, given its mode. */
 export const rowIndex = {
@@ -196,11 +202,11 @@ export const rowIndex = {
    * player's own class while the rows above the limit line draw overall positions, so the two
    * blocks of one list would be counting different fields.
    */
-  split: (topRows: number, centre: number): Expr => sub(add(splitWindowTop(topRows, centre), repeatIndex()), num(1)),
+  split: (topRows: number, rows: number): Expr => sub(add(splitWindowTop(topRows, rows), repeatIndex()), num(1)),
 };
 
 /** How many cars a split list leaves out: the run between the rows it keeps and the window. */
-export const splitHiddenCars = (topRows: number, centre: number): Expr => sub(splitWindowTop(topRows, centre), num(topRows + 1));
+export const splitHiddenCars = (topRows: number, rows: number): Expr => sub(splitWindowTop(topRows, rows), num(topRows + 1));
 
 /** The leaderboard index of the car holding the session's best lap. */
 export const sessionBestRow = (): Expr => bestLapPosition();

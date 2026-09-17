@@ -13,6 +13,7 @@ import { describe, expect, test } from 'bun:test';
 import { measureText } from '../src/design/advances.ts';
 import { rect } from '../src/design/geometry.ts';
 import { table, type ColumnId, type TableSpec } from '../src/second/table.ts';
+import { opponentCount } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
@@ -49,16 +50,24 @@ const items = (split?: number): Item[] => [...walkItems(table(board(split)))];
 const named = (list: Item[], suffix: string): Item | undefined => list.find((i) => i.name.endsWith(suffix));
 const layer = (list: Item[], name: string): LayerItem => list.find((i): i is LayerItem => i.kind === 'layer' && i.name === name)!;
 
+/** A field of twenty-four cars, which is the grid the canvas draws its own example against. */
+const FIELD = 24;
+
 /**
- * An NCalc expression of the split, evaluated for a player at `position` on row `k` of a repeated
- * layer. Nothing in the repository evaluates a binding, so what is evaluated here is only what the
- * split emits: a max of two sums.
+ * An NCalc expression of the split, evaluated for a player at `position` in a field of `field` cars,
+ * on row `k` of a repeated layer. Nothing in the repository evaluates a binding, so what is
+ * evaluated here is only what the split emits: two functions over three readings.
  */
-const evaluate = (expression: string, position: number, k = 1): number => {
-  const js = expression.replaceAll('getplayerleaderboardposition()', String(position)).replaceAll('repeatindex()', String(k)).replaceAll('max(', 'Math.max(');
-  // Whatever is left once the one function call is taken out has to be arithmetic, or the split is
-  // emitting something this is quietly reading as a number.
-  if (!/^[\d\s().,+\-*/]+$/.test(js.replaceAll('Math.max', ''))) throw new Error(`the expression holds something this cannot evaluate: ${js}`);
+const evaluate = (expression: string, position: number, { k = 1, field = FIELD }: { k?: number; field?: number } = {}): number => {
+  const js = expression
+    .replaceAll(opponentCount(), String(field))
+    .replaceAll('getplayerleaderboardposition()', String(position))
+    .replaceAll('repeatindex()', String(k))
+    .replaceAll('max(', 'Math.max(')
+    .replaceAll('min(', 'Math.min(');
+  // Whatever is left once the two calls are taken out has to be arithmetic, or the split is emitting
+  // something this is quietly reading as a number.
+  if (!/^[\d\s().,+\-*/]+$/.test(js.replaceAll('Math.max', '').replaceAll('Math.min', ''))) throw new Error(`the expression holds something this cannot evaluate: ${js}`);
   return Number(new Function(`return ${js};`)());
 };
 
@@ -82,7 +91,8 @@ const rowIndexOf = (list: Item[], block: string): string => {
  * Read off the Visible test rather than off the label's Text, which is the same count with the copy
  * concatenated onto it: what shows the line and what it says are one expression or the line lies.
  */
-const hiddenCount = (list: Item[], position: number): number => evaluate(formula(named(list, '.limit.count')!, 'Visible').replace(/ > \(0\)$/, ''), position);
+const hiddenCount = (list: Item[], position: number, field = FIELD): number =>
+  evaluate(formula(named(list, '.limit.count')!, 'Visible').replace(/ > \(0\)$/, ''), position, { field });
 
 describe('a table splits only when it is asked to', () => {
   test('no split: one repeated layer and no limit line, which is every list the packages draw', () => {
@@ -117,7 +127,7 @@ describe('the split keeps the top of the field and follows the player', () => {
     // The last position that is still inside the budget: the window has opened under the kept rows
     // and the player has reached its centre row without pushing it down.
     for (const position of [-1, 1, 5, KEPT + CENTRE - 1]) {
-      expect({ position, first: evaluate(idx, position, 1) }).toEqual({ position, first: KEPT + 1 });
+      expect({ position, first: evaluate(idx, position) }).toEqual({ position, first: KEPT + 1 });
       expect({ position, hidden: hiddenCount(list, position) }).toEqual({ position, hidden: 0 });
     }
   });
@@ -126,18 +136,31 @@ describe('the split keeps the top of the field and follows the player', () => {
     const idx = rowIndexOf(list, 'splitRow');
     // The canvas's own example: P1 to P6 above the line, P7 to P13 behind it, the window opening at
     // P14 with the player third in it.
-    expect(evaluate(idx, 16, 1)).toBe(14);
-    expect(evaluate(idx, 16, CENTRE)).toBe(16);
-    expect(evaluate(idx, 16, WINDOW)).toBe(18);
+    expect(evaluate(idx, 16)).toBe(14);
+    expect(evaluate(idx, 16, { k: CENTRE })).toBe(16);
+    expect(evaluate(idx, 16, { k: WINDOW })).toBe(18);
     expect(hiddenCount(list, 16)).toBe(7);
     expect(formula(named(list, '.limit.count')!, 'Text')).toContain("' CARS NOT SHOWN'");
   });
 
-  test('a field shorter than the rows it is given draws neither block past its last car', () => {
-    // Which is also what a field shorter than the split does: the rows above the line run out, the
-    // count is nought and the line stays dark, and the window addresses rows no car answers for.
+  test('a field the rows can all hold is never cut, wherever the player is in it', () => {
+    const idx = rowIndexOf(list, 'splitRow');
+    // Eleven rows hold eleven cars, so the player can be last of them and the list stays whole. A
+    // field shorter than the six kept rows is the same answer twice over: nothing is hidden, and
+    // both blocks draw only the rows a car answers for.
+    for (const field of [4, ROWS]) {
+      expect({ field, hidden: hiddenCount(list, field, field) }).toEqual({ field, hidden: 0 });
+      expect({ field, first: evaluate(idx, field, { field }) }).toEqual({ field, first: KEPT + 1 });
+    }
     for (const block of ['row', 'splitRow']) expect(formula(layer(list, `test.board.${block}`), 'Visible')).toContain('driveravailable');
-    expect(hiddenCount(list, 3)).toBe(0);
+  });
+
+  test('the window stops at the last car rather than running off the end of the field', () => {
+    const idx = rowIndexOf(list, 'splitRow');
+    // A player last of twenty-four: the window ends on P24 and what it could not reach is behind the
+    // line, rather than five rows of nothing under a count that is short of the truth.
+    expect(evaluate(idx, FIELD, { k: WINDOW })).toBe(FIELD);
+    expect(hiddenCount(list, FIELD)).toBe(FIELD - WINDOW - KEPT);
   });
 
   test('the line and its count come and go together', () => {
