@@ -26,6 +26,9 @@ import {
   flagEffects,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
+// The flag box's own states, so that "the strip and the box compare the same thing" is asserted
+// against the box rather than against a copy of what the box is believed to say.
+import { warningStates } from '../src/leds/states.ts';
 import { lastGear, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
@@ -246,6 +249,22 @@ describe('the effect catalogue', () => {
     // ...and the race lamp carries flags and nothing else ever, which is the other half of it: a
     // lamp that is the flags on one shape and something else on another is the wrong light.
     expect(ALL_EFFECTS().filter((e) => e.role === 'race').map((e) => e.id)).toEqual(flagEffects().map((e) => e.id));
+  });
+
+  test('the strip and the box read one low-fuel threshold, so a rig has one answer to "am I low"', () => {
+    const strip = ALL_EFFECTS().find((e) => e.id === 'lowFuel')!;
+    const box = warningStates().find((s) => s.id === 'lowFuel')!;
+    expect(strip.when).toBe(box.raised);
+    expect(strip.when).toContain('[OpenDash.LightsLowFuelLaps]');
+    // It read CarSettings_FuelAlertActive, which is SimHub's own alert and what the native container
+    // reads. That is a different question from the one the box asks, so the number in the panel moved
+    // the box and left the strip where SimHub had put it.
+    expect(strip.when).not.toContain('CarSettings_FuelAlertActive');
+    expect(strip.source).toContain('Fuel_RemainingLaps');
+    for (const shape of ALL_SHAPES) {
+      const text = leds.serializeProfile(rpmStripProfile(shape, stableGuid(`t/fuel/${shape.id}`)));
+      expect({ shape: shape.id, native: text.includes('CarSettings_FuelAlertActive') }).toMatchObject({ native: false });
+    }
   });
 
   test('the spotters light the side the car is actually on, steadily', () => {

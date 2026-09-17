@@ -33,7 +33,9 @@
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { FLAG_BLINK_MS } from '../components/flagStrip.ts';
+import { setting } from '../contract.ts';
 import { conditionRaised, flagCondition, safeBitSet, type FlagCondition } from '../flags.ts';
+import { tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { type EffectRole, type Lamp } from './lamps.ts';
 
@@ -127,8 +129,16 @@ const pitLimit = (): Expr => isnull(game('PitLimiterSpeed'), num(0));
 export const PIT_SPEEDING_MARGIN = 1;
 const pitSpeeding = (): Expr => and(on('IsInPitLane'), gt(pitLimit(), num(0)), gt(speedLocal(), add(pitLimit(), num(PIT_SPEEDING_MARGIN))));
 
-/** The low-fuel alert SimHub itself computes, which is what the native LED container reads. */
-const lowFuel = (): Expr => gt(g('CarSettings_FuelAlertActive'), num(0));
+/**
+ * Low fuel, as {@link tankIsLow}: the laps remaining against the one threshold in laps the driver
+ * set, which is `LightsLowFuelLaps` with the box's deprecated name behind it.
+ *
+ * It read `CarSettings_FuelAlertActive` before, which is SimHub's own alert and is what the native
+ * LED container reads. That is a different question from the one the flag box asks, so a strip and
+ * a box on the same rig could come on at different moments and a driver would have two answers to
+ * "am I low" with one number in the panel that moved only one of them.
+ */
+const lowFuel = (): Expr => tankIsLow();
 
 /**
  * The engine turning, which is what an engine warning has to be read against. `EngineWarnings` sets
@@ -332,7 +342,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     color: ds.purpose.fuel.low,
     blinkWhen: lowFuel(),
     blinkDelayMs: SLOW_BLINK_MS,
-    source: 'DataCorePlugin.GameData.CarSettings_FuelAlertActive',
+    source: 'DataCorePlugin.Computed.Fuel_RemainingLaps against OpenDash.LightsLowFuelLaps',
   },
   {
     id: 'temperature',
