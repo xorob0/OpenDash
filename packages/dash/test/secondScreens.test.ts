@@ -31,7 +31,7 @@ import { contains, rect } from '../src/design/geometry.ts';
 import type { Density } from '../src/second/density.ts';
 import type { Rect } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
-import { cellOverruns } from './monoGlyphs.ts';
+import { cellOverruns, drawableGlyphs } from './monoGlyphs.ts';
 import { ds } from '../src/tokens.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -346,11 +346,35 @@ describe('a monospaced value only draws glyphs that fit its cell', () => {
           if (!item.monospace) continue;
           monospaced += 1;
           expect({ item: item.name, overruns: cellOverruns(item) }).toMatchObject({ overruns: [] });
+          // The same rule said in the design's own words rather than in advances. `numeral` refuses
+          // the set at the point a value is built, which covers everything drawn through it; this
+          // covers what these packages actually emit, a monospaced item assembled some other way
+          // included, and it names the token so a failure reads as the ban it is.
+          const banned = [...drawableGlyphs(item)].filter((glyph) => ds.font.cell.excluded.has(glyph)).sort();
+          expect({ item: item.name, banned }).toMatchObject({ banned: [] });
         }
       }
       expect(monospaced).toBeGreaterThan(0);
     });
   }
+
+  test('the banned set is banned because it does not fit, not because somebody typed it', () => {
+    // Without this the token and the guards above are two opinions that happen to agree:
+    // `cellOverruns` measures and `font.cell.excluded` declares, and a character only one of them
+    // rejects is a place where the design and the code have quietly parted. Measured at 1000 px so
+    // the comparison is the em fraction the token is written in, free of any rounding a size adds.
+    const faces = [
+      ['BarlowCondensedSemiBold', ds.font.cell.semiBold.digit],
+      ['BarlowCondensedBold', ds.font.cell.bold.digit],
+    ] as const;
+    expect(ds.font.cell.excluded.size).toBeGreaterThan(0);
+    for (const [face, cell] of faces) {
+      for (const glyph of ds.font.cell.excluded) {
+        const em = measureText(face, glyph, 1000) / 1000;
+        expect({ face, glyph, em, cell, overruns: em > cell }).toMatchObject({ overruns: true });
+      }
+    }
+  });
 });
 
 /**
