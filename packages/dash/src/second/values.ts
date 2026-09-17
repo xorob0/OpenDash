@@ -219,9 +219,34 @@ export const carPosition = (idx: Expr): Expr =>
 /** Places gained since the start, signed; 0 when the sim does not track it. */
 export const carRankChange = (idx: Expr): Expr => isnull(driver('positiongain', idx), num(0));
 
-/** The race gap, which SimHub already formats as "+1L" when a car is lapped; "Lead" for the leader. */
-export const carRaceGap = (idx: Expr): Expr =>
-  iff(eq(isnull(driver('position', idx), num(0)), num(1)), str('Lead'), isnull(driver('gaptoleadercombined', idx), str(NO_VALUE)));
+/**
+ * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and
+ * SimHub's own `+1L` once a car is a lap or more down.
+ *
+ * The seconds are formatted here rather than taken from `gaptoleadercombined`, which is one string
+ * for both cases and whose sign and decimals the dash has no say in: the column is drawn beside
+ * the interval, which is `signed(..., '0.0')`, and two neighbouring columns of the same quantity
+ * reading to different precisions is what the sheet is measured against. `signed` writes the
+ * typographic minus, so the value is not formatted again on top of it.
+ *
+ * Lapped is asked of the laps rather than inferred from the string, since the string is the answer
+ * and not the question. The leader is leaderboard row 1, the board being sorted by live position;
+ * where either lap is missing the difference is null, the test is false, and the row falls back to
+ * seconds, which is the reading that is always true.
+ */
+export const carRaceGap = (idx: Expr): Expr => {
+  const gap = driver('gaptoleader', idx);
+  const lapsDown = sub(driver('currentlap', num(1)), driver('currentlap', idx));
+  return iff(
+    eq(isnull(driver('position', idx), num(0)), num(1)),
+    str('Lead'),
+    iff(
+      ncalc.isNull(gap),
+      str(NO_VALUE),
+      iff(gt(lapsDown, num(0)), isnull(driver('gaptoleadercombined', idx), str(NO_VALUE)), signed(gap, '0.0')),
+    ),
+  );
+};
 
 /**
  * The gap to the player on track, signed, three decimals: a car ahead reads `−5.886` and a car
