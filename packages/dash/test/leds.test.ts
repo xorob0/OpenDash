@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
-import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE } from '../src/contract.ts';
+import { PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE } from '../src/contract.ts';
 import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
@@ -480,6 +480,28 @@ describe('every generated profile', () => {
       const p = rpmStripProfile(shape, stableGuid(`t/${shape.id}`));
       const outer = shape.reversed ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
       expect({ shape: shape.id, type: leds.containerTypeOf(outer) }).toMatchObject({ type: 'Groups.GameRunningGroup' });
+    }
+  });
+
+  test('obeys the rig brightness, which the flag box had to itself until now', () => {
+    // LightsBrightness, LightsNightBrightness and LightsNightMode are captioned "for every light
+    // openDash drives", and a wheel strip and a brow read none of the three: the composed expression
+    // had one reader, the matrix. The assertion is against contract.ts rather than against a copy of
+    // what it is believed to emit, so the strip and the box cannot come to hold two brightnesses.
+    for (const shape of ALL_SHAPES) {
+      const p = rpmStripProfile(shape, stableGuid(`t/bright/${shape.id}`));
+      const bright = walk(p.containers).filter((c) => leds.containerTypeOf(c) === 'Groups.BrightnessFormulaGroup');
+      expect({ shape: shape.id, groups: bright.length }).toMatchObject({ groups: 1 });
+      // One group over the whole tree: the run under it is everything the profile draws.
+      const outer = shape.reversed ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
+      expect({ shape: shape.id, under: leds.childrenOf(outer).map((c) => leds.containerTypeOf(c)) }).toMatchObject({ under: ['Groups.BrightnessFormulaGroup'] });
+      const fields = (bright[0] as Extract<leds.LedContainer, { kind: 'raw' }>).fields ?? {};
+      expect({ shape: shape.id, formula: fields.BrightnessFormula }).toMatchObject({ formula: { Expression: flagBox.brightness() } });
+      // ...and it reaches the file, with each read defaulted so a strip works with no plugin at all.
+      const text = leds.serializeProfile(p);
+      for (const read of ['isnull([OpenDash.LightsNightMode], false)', 'isnull([OpenDash.LightsNightBrightness], 25)', 'isnull([OpenDash.LightsBrightness], 100)']) {
+        expect({ shape: shape.id, read, present: text.includes(read) }).toMatchObject({ present: true });
+      }
     }
   });
 
