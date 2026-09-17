@@ -636,12 +636,40 @@ outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so 
 pixels goes to whichever has the better claim. The band draws as a filled bar with a 3 px border
 in the flag's colour and the flag's name in dark text.
 
-The black flag is the one exception, and it is drawn light on dark rather than dark on light. Its
-token, `purpose.flag.black`, is `#F5F7FA`, which is the ink and not the ground: a band filled with
-it would be indistinguishable from the white flag at `#FFFFFF`. So the black flag fills with
-`surface.base`, keeps the border, and writes its name in `purpose.flag.black`. The canvas captions
-it "outlined", which it no longer is, because a transparent flag left the page underneath fully
-readable and a flag takes the band over.
+**It draws the whole flag catalogue, which is fifteen conditions and not six.** The band used to
+read the six `Flag_*` properties SimHub normalises, and those are a lossy summary of what iRacing
+publishes: `Flag_Yellow` folds the standing yellow, the waved yellow and both cautions into one
+band, and `Flag_Black` is only the `black` bit. A red flag, a disqualification, a furled black, a
+meatball, a full-course caution, a waved yellow, the debris flag and the start gantry were therefore
+drawn by the 8x8 box and invisible on the dash, and the face's own ranking disagreed with the box's
+about which of two live flags won. The band reads `FLAG_CATALOGUE` in
+`packages/dash/src/flags.ts` now, through the same `conditionVisible` the box ranks with, so the
+three surfaces that draw flags cannot disagree. Which condition takes which shape, and which rank,
+is tabulated in [flag-box.md](flag-box.md), which remains the single place a condition is refused
+with its reason.
+
+Three consequences are worth stating. The band is iRacing's, as the box already was, since
+`SessionFlagsDetails` is a raw iRacing field: on another sim it stays dark rather than drawing an
+approximation of a flag nobody published. The flash belongs to the waved yellow and no longer to the
+standing one, the folded property having strobed both. And the green flag alone reads a normalised
+property, `Flag_Green`, because iRacing holds the `green` bit for a whole green-flag stint and
+SimHub's own limiter on that property is the only clock there is; without it band D would be a solid
+green bar over the fuel page for an entire race.
+
+**Three shapes and no fourth**, which is the canvas's rule for the alert catalogue and is
+`packages/dash/src/components/alertBand.ts`: a filled bar, a bar outlined in the alert's colour over
+an opaque ground, and the chequer. The black family and the start gantry take the outlined form, and
+the black flag is the reason it exists. Its token, `purpose.flag.black`, is `#F5F7FA`, which is the
+ink and not the ground: a band filled with it would be indistinguishable from the white flag at
+`#FFFFFF`. So the black flag fills with `surface.base`, keeps the border, and writes its name in
+`purpose.flag.black`. The canvas captions it "outlined", which it now is again in the sense the
+canvas means, an edge and a name in the alert's colour, though never with a transparent ground: a
+transparent flag left the page underneath fully readable and a flag takes the band over.
+
+**The nano writes no name.** Its twelve pixels are colour alone, so the conditions that share a
+colour share a band there: a debris flag reads as a yellow, and the three members of the black
+family as one outline. That is the price of the strip's height rather than a decision of the
+catalogue's, and it is why the names exist on every other face.
 
 ---
 
@@ -792,7 +820,7 @@ lists the same things.
 | Zone A's four pages, A1 to A4 | **Built**, as `zoneface-zoneA-340x320` and again at 340 × 361 for the second arrangement. Three of the four carry a `proposed` chip on the sheet and are built regardless, the fourth being the catalogue's own track page. |
 | Twenty-one pages for zone B and twenty-one for zone C | **Built**, as the one `zoneface-module-469x320` both zones point at, and again at 469 × 361. |
 | Band D's eight pages, D1 to D8 | **Built**, as `zoneface-band-1280x60`. What D8 is still short of is in the table above. |
-| The flag over the band, in six colours | **Built**: `flagStrip` draws black, chequered, yellow, blue, white and green over band D's rectangle, and the black flag fills with `surface.base` rather than with its own token. |
+| The flag over the band, in six colours | **Built, and wider than the sheet asks**: `flagStrip` draws all fifteen conditions of `FLAG_CATALOGUE` over band D's rectangle, in the three shapes of the alert catalogue, where the sheet draws the six SimHub normalises. The black family keeps a `surface.base` ground rather than its own token, which is the ink. |
 | A full-screen flag over zones B, A and C, with `OpenDash.FlagFormat` set to band or full | **Deferred.** It is chipped proposed, and it is a further pair of arrangements rather than an option on the two that exist: a screen cannot resize its neighbours at run time, so the format would be built the way the rev bar is, as more screens with complementary expressions, and the property would carry a face's prefix like the zone settings. The contract declares no such property today. |
 | The chips "bar: 2 fields per end" and "band corners: yes" | **Built**: `barFieldsPerEnd` is 2 and `bandCorners` is true at this size. |
 | The chips "A grid", "B grid", "C grid" and "D grid" | Three of the four are what `shapeOf` returns for those rectangles. The fourth is the disagreement recorded above. |
