@@ -17,6 +17,19 @@ import { ds } from '../src/tokens.ts';
 
 const profileFor = (shape: StripShape): leds.LedProfile => rpmStripProfile(shape, stableGuid(`test/lamps/${shape.id}`));
 
+/**
+ * The wrappers a strip profile puts over its tree, none of which decides where anything lands: the
+ * remap on a strip wired from the far end, the gate on the sim running, and the rig brightness.
+ */
+const WRAPPERS: ReadonlySet<string> = new Set(['Groups.RemapGroup', 'Groups.GameRunningGroup', 'Groups.BrightnessFormulaGroup']);
+
+/** The containers that actually paint: what is under those wrappers, whichever of them a shape has. */
+const drawnTreeOf = (profile: leds.LedProfile): readonly leds.LedContainer[] => {
+  let level: readonly leds.LedContainer[] = profile.containers;
+  while (level.length === 1 && WRAPPERS.has(leds.containerTypeOf(level[0]!))) level = leds.childrenOf(level[0]!);
+  return level;
+};
+
 /** Every container of a profile with the absolute run it paints, which is what a fit rule reads. */
 interface Placed {
   container: leds.LedContainer;
@@ -220,7 +233,7 @@ describe('what a lamp is never yielded to', () => {
 
   test('the pit family is last on every shape, and is the only thing that takes the whole run', () => {
     for (const shape of ALL_SHAPES) {
-      const tree = leds.childrenOf(shape.reversed ? leds.childrenOf(profileFor(shape).containers[0]!)[0]! : profileFor(shape).containers[0]!);
+      const tree = drawnTreeOf(profileFor(shape));
       // The 3/10/3's two further runs of nine are a different strip on the same device, so they sit
       // outside the main run and outside this ranking.
       const main = tree.filter((c) => (c.startPosition ?? 1) <= stripLength(shape));
