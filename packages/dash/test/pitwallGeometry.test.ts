@@ -129,13 +129,11 @@ describe('the zone rectangles', () => {
       { name: 'portrait.zoneC', rect: rect(0, 1448, 539, 471), file: 'zones-539x471.djson' },
       { name: 'portrait.zoneD', rect: rect(540, 1448, 540, 471), file: 'zones-540x471.djson' },
     ]);
-    // The sheet's own 539 and 540. Two halves of an odd width leave the page's last pixel column
-    // unpainted, which is where a reader sees a page cut short.
-    for (const zone of zones) expect({ zone: zone.name, right: right(zone.rect) }).toMatchObject({ right: expect.any(Number) });
+    // The sheet's own 539 and 540: two halves of an odd width stop a pixel short of the page.
     expect([...new Set(zones.map((z) => right(z.rect)))]).toEqual([539, PORTRAIT_SIZE.width]);
   });
 
-  test('every rule between two zones is 1 px of surface.raised', () => {
+  test('every rule the four pages draw is 1 px of surface.raised', () => {
     const rules = [RACE, TOWER, TELEMETRY, PORTRAIT].flatMap((screen) => placed(screen).filter((i) => i.name.toLowerCase().includes('rule')));
     expect(rules.length).toBeGreaterThan(0);
     for (const item of rules) {
@@ -174,7 +172,7 @@ describe('what a board stamps into the band it is given', () => {
 });
 
 /**
- * The regions a page cuts itself into, as the page cuts them, and every item inside one of them.
+ * The regions a page cuts itself into, written out, and every item of the page inside one of them.
  *
  * They are coarse on purpose. The four fixed panels are measured one by one in
  * `pitwallPanels.test.ts` and the five plots in `telemetryTraces.test.ts`; what is missing, and
