@@ -8,7 +8,8 @@
  * possible at all.
  */
 import { describe, expect, test } from 'bun:test';
-import { FLAG_PRIORITY } from '../src/components/flagStrip.ts';
+import { flagStrip, FLAG_PRIORITY } from '../src/components/flagStrip.ts';
+import { rect } from '../src/design/geometry.ts';
 import {
   declaredProperties,
   DEFAULT_OIL_TEMP,
@@ -19,14 +20,14 @@ import {
   FLAG_BOX_MATRIX_DEFAULTS,
   PROPERTY_PREFIX,
 } from '../src/contract.ts';
-import { FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, type SessionFlagBit } from '../src/flags.ts';
+import { conditionRaised, conditionShown, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, flagCondition, type SessionFlagBit } from '../src/flags.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type Hex, type MatrixContainer, type MatrixFrame } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
 import { eitherLadder, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { overRev as overRevStrip } from '../src/leds/ladder.ts';
 import { flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
-import { buildFlagBoxProfile, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
+import { buildFlagBoxProfile, criticalOnly, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
 import { CAR_BOTH, CAR_LEFT, CAR_RIGHT, pitStates, spotterStates, warningStates } from '../src/leds/states.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -166,17 +167,55 @@ describe('the rules it inherits from the packages', () => {
 });
 
 describe('one ordered list, shared with the face', () => {
+  test('the catalogue is ranked in the canvas alert catalogue’s own numbering', () => {
+    // The order, and the canvas number each entry carries in PagesAndAlerts. It is asserted as the
+    // list rather than refreshed from the code, because this is the ranking three surfaces read and
+    // a change to it is a change to what a driver is told first.
+    expect(FLAG_CATALOGUE.map((c) => c.id)).toEqual([
+      'red', // 3
+      'disqualify', // 4
+      'furled', // 5
+      'black', // 6
+      'meatball', // 18 in the canvas, kept here: a flag calling this car in
+      'caution', // 7 SafetyCar
+      'yellowWaving', // where 9 DoubleYellow and 10 YellowSector would be
+      'yellow', // 11
+      'debris', // 19
+      'blue', // 20
+      'white', // 16 in the canvas, kept below the blue: see the rule
+      'green', // 21
+      'startSet', // 22
+      'startReady', // 22
+      'chequered', // 23
+    ]);
+    // The rule the two departures answer to: no condition the critical-flags switch can silence
+    // outranks one it cannot, or turning the switch off would hide a flag. Every critical condition
+    // therefore comes first, which is also what moved the chequer off the second rank.
+    const firstNews = FLAG_CATALOGUE.findIndex((c) => !c.critical);
+    expect(FLAG_CATALOGUE.slice(firstNews).filter((c) => c.critical)).toEqual([]);
+  });
+
   test('the face ranks from the catalogue rather than its own copy', () => {
     expect(FLAG_PRIORITY).toEqual(FACE_FLAG_PRIORITY);
-    expect(FACE_FLAG_PRIORITY).toEqual(['Flag_Black', 'Flag_Checkered', 'Flag_Yellow', 'Flag_Blue', 'Flag_White', 'Flag_Green']);
+    // The six SimHub normalises, in the catalogue's order: the chequer is last of them, where it
+    // used to be second and hid a yellow thrown at a race finishing under one.
+    expect(FACE_FLAG_PRIORITY).toEqual(['Flag_Black', 'Flag_Yellow', 'Flag_Blue', 'Flag_White', 'Flag_Green', 'Flag_Checkered']);
   });
 
   test('the box draws the catalogue in that same order', () => {
     const drawn = flagContainers().map((c) => c.description);
     expect(drawn).toEqual(drawnFlags(false).map((c) => c.id));
     // The face's six keep their relative rank inside the longer list, or the two would disagree.
-    const faceIds = ['black', 'chequered', 'yellow', 'blue', 'white', 'green'];
+    const faceIds = ['black', 'yellow', 'blue', 'white', 'green', 'chequered'];
     expect(drawn.filter((d) => faceIds.includes(d ?? ''))).toEqual(faceIds);
+  });
+
+  test('band D draws every one of them, so no condition is the box’s alone', () => {
+    // The face used to draw the six SimHub normalises and the box all fifteen, so a red flag, a
+    // disqualification, a furled black, a meatball, a full-course caution, a waved yellow, the
+    // debris flag and the start gantry were invisible on a dash with no box beside it.
+    const band = flagStrip(rect(0, 0, 1920, 60));
+    expect(band.map((i) => i.name)).toEqual(FLAG_CATALOGUE.map((c) => `flag.${c.id}`));
   });
 
   test('every condition in the catalogue is either drawn or absent on purpose', () => {
@@ -203,7 +242,11 @@ describe('several conditions true at once', () => {
     { name: 'disqualified outranks the black flag it comes with', bits: ['black', 'disqualify'], expect: 'disqualify' },
     { name: 'a furled black is not a black', bits: ['furled'], expect: 'furled' },
     { name: 'a meatball while being lapped', bits: ['repair', 'blue'], expect: 'meatball' },
-    { name: 'the chequer while being lapped', bits: ['checkered', 'blue'], expect: 'chequered' },
+    // The chequer is last of the fifteen, where the canvas numbers it 23 of 25: a blue flag while
+    // the chequer is out is still an instruction to this car, and the chequer is news.
+    { name: 'the chequer while being lapped', bits: ['checkered', 'blue'], expect: 'blue' },
+    { name: 'the chequer alone', bits: ['checkered'], expect: 'chequered' },
+    { name: 'a yellow thrown at a chequered finish', bits: ['checkered', 'yellow'], expect: 'yellow' },
     { name: 'the start gantry', bits: ['startReady'], expect: 'startReady' },
     { name: 'set outranks ready, because it is later', bits: ['startReady', 'startSet'], expect: 'startSet' },
   ];
@@ -243,10 +286,17 @@ describe('critical flags only', () => {
   });
 
   test('a suppressed flag stops outranking the ones below it, rather than blanking the box', () => {
-    // The chequer is not critical. With the switch on and the chequer out over a blue flag, the
-    // box shows blue; a naive implementation shows nothing, because the chequer still wins and
-    // then draws nothing.
-    expect(shown(['checkered', 'blue'], false)).toBe('chequered');
+    // The switch guards each condition rather than excluding it from the ranking, so a suppressed
+    // flag never wins and then draws nothing. It is now unobservable in this catalogue, because no
+    // condition the switch can silence outranks one it cannot, and that ordering is asserted with
+    // the catalogue above; what is asserted here is the mechanism, which survives a reordering.
+    const white = flagCondition('white');
+    const green = flagCondition('green');
+    expect(conditionVisible(green, criticalOnly())).toInclude(`!(${conditionShown(white, criticalOnly())})`);
+    expect(conditionVisible(green, criticalOnly())).not.toInclude(`!(${conditionRaised(white)})`);
+    // And the switch still takes the news away rather than moving it.
+    expect(shown(['checkered', 'blue'], false)).toBe('blue');
+    expect(shown(['checkered'], true)).toBeUndefined();
     expect(shown(['checkered', 'blue'], true)).toBe('blue');
   });
 

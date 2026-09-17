@@ -221,13 +221,15 @@ describe('the effect catalogue', () => {
     // ranking a lossy copy of the list the box ranks -- which is how the two could disagree about
     // which flag was out. flagEffects composes highest priority last, which on a strip wins a tie.
     expect(flagEffects().map((e) => e.id)).toEqual([
+      // The chequer composes first because it ranks last: the catalogue puts it below every
+      // instruction, so a yellow thrown at a race finishing under one is what the lamp shows.
+      'flag.chequered',
       'flag.green',
       'flag.white',
       'flag.blue',
       'flag.debris',
       'flag.yellow',
       'flag.caution',
-      'flag.chequered',
       'flag.black',
     ]);
     const yellow = flagEffects().find((e) => e.id === 'flag.yellow')!;

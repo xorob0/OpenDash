@@ -16,6 +16,7 @@
 import { describe, expect, test } from 'bun:test';
 import { BLACK_FLAG_BORDER, FLAG_BLINK_MS, FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
 import { CHEQUER_COUNT, CHEQUER_STEP } from '../src/components/flagRing.ts';
+import { FLAG_CATALOGUE } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { hero } from '../src/hero/hero.ts';
@@ -191,17 +192,22 @@ describe('the coloured bands', () => {
   }
 });
 
-describe('the yellow flash', () => {
+describe('the waved yellow flash', () => {
   for (const face of ZONE_FACES) {
     test(`${face.folder} is opaque in both phases, the page never showing through`, () => {
       // The flash was BlinkEnabled on the whole layer, so half of every cycle drew no band at all
       // and band D's page read through the flag that had taken it over. What blinks is one opaque
       // band over another, at the rate design/tokens.json states.
-      const layer = layerOf(face, 'yellow');
+      //
+      // It is the waved yellow that flashes and not the standing one, which is the rule the box
+      // keeps under "waving is blinking". The band used to flash on SimHub's `Flag_Yellow`, which
+      // folds `yellow`, `yellowWaving`, `caution` and `cautionWaving` into one, so a standing yellow
+      // strobed for as long as it was out; band D reads the bits now and can tell them apart.
+      const layer = layerOf(face, 'yellowWaving');
       expect(layer.blink).toBeUndefined();
 
       const blinking = layer.children.filter((c) => c.blink?.enabled);
-      expect(blinking.map((c) => c.name)).toEqual(['flag.yellow.flash']);
+      expect(blinking.map((c) => c.name)).toEqual(['flag.yellowWaving.flash']);
 
       const flash = blinking[0]!;
       if (flash.kind !== 'rect') throw new Error('the flash is a band');
@@ -212,7 +218,7 @@ describe('the yellow flash', () => {
       expect(layer.children[layer.children.length - 1]?.name).toBe(flash.name);
 
       // The ground under it holds the whole band whichever phase the flash is in.
-      const ground = bandOf(face, 'yellow');
+      const ground = bandOf(face, 'yellowWaving');
       expect(ground.blink).toBeUndefined();
       expect({ rect: ground.rect, colour: ground.backgroundColor }).toEqual({ rect: face.zones.band, colour: ds.purpose.flag.yellow });
     });
@@ -220,7 +226,7 @@ describe('the yellow flash', () => {
 
   test('and no other state flashes at all', () => {
     for (const face of ZONE_FACES) {
-      for (const id of ['blue', 'white', 'green', 'black', 'chequered']) {
+      for (const id of FLAG_CATALOGUE.map((c) => c.id).filter((id) => id !== 'yellowWaving')) {
         const layer = layerOf(face, id);
         expect({ face: face.folder, id, blinking: [...walkItems([layer])].filter((i) => i.blink?.enabled).map((i) => i.name) }).toEqual({
           face: face.folder,
