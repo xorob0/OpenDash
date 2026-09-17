@@ -88,14 +88,23 @@ describe('no panel draws past its own frame', () => {
     cases.push({ page: 'race', items: itemsOf(racePage(1920, 1080)), panels });
   }
   cases.push({ page: 'tower', items: itemsOf(towerPage(1920, 1080)), panels: [{ id: 'tower.track', top: BODY_TOP, height: 400 }] });
-  cases.push({
-    page: 'portrait',
-    items: itemsOf(portraitPage(1080, 1920)),
-    panels: [
-      { id: 'portrait.session', top: 921, height: 110 },
-      { id: 'portrait.lapData', top: 921, height: 110 },
-    ],
-  });
+  {
+    // The portrait panel row opens under the board, and the board is as tall as its own header and
+    // rows come to rather than a number off the sheet, so the row's top is read off the rule that
+    // closes the board instead of being written down beside it.
+    const items = itemsOf(portraitPage(1080, 1920));
+    const boardRule = items.find((i) => i.name === 'portrait.boardRule');
+    if (!boardRule) throw new Error('no portrait.boardRule');
+    const top = boardRule.rect.top + 1;
+    cases.push({
+      page: 'portrait',
+      items,
+      panels: [
+        { id: 'portrait.session', top, height: 110 },
+        { id: 'portrait.lapData', top, height: 110 },
+      ],
+    });
+  }
 
   for (const c of cases) {
     for (const p of c.panels) {
