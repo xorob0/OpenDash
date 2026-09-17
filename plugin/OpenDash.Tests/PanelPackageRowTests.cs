@@ -27,12 +27,17 @@ namespace OpenDashPlugin.Tests
             return new ScreenInstance { Kind = kind, Width = width, Height = height, Package = package };
         }
 
+        /// <summary>A package the design names reads by that name; one it does not keeps its folder.</summary>
         [Fact]
-        public void The_row_names_the_folder_and_captions_it_with_the_size()
+        public void The_row_names_the_package_and_captions_it_with_the_size()
         {
-            var entry = Package("openDash 850x480", Contract.KindFace, 850, 480);
-            Assert.Equal("openDash 850x480", PanelPackageRow.Name(entry));
-            Assert.Equal("850 × 480", PanelPackageRow.Caption(entry));
+            var named = Package("openDash 850x480", Contract.KindFace, 850, 480);
+            Assert.Equal("Rim", PanelPackageRow.Name(named));
+            Assert.Equal("850 × 480", PanelPackageRow.Caption(named));
+
+            var unnamed = Package("openDash 1280x720", Contract.KindFace, 1280, 720);
+            Assert.Equal("openDash 1280x720", PanelPackageRow.Name(unnamed));
+            Assert.Equal("1280 × 720", PanelPackageRow.Caption(unnamed));
         }
 
         /// <summary>The same rule the screen card follows: a kind the canvas draws no icon for is written
@@ -40,7 +45,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_kind_without_an_icon_is_written_on_the_caption()
         {
-            Assert.Equal("slots · 480 × 480", PanelPackageRow.Caption(Package("openDash 480 round", Contract.KindSlots, 480, 480)));
+            // The round face is the one package whose caption the design writes itself, so it reads
+            // "480 round" rather than its kind and its pixels; the kind is carried by that word.
+            Assert.Equal("480 round", PanelPackageRow.Caption(Package("openDash 480 round", Contract.KindSlots, 480, 480)));
+            Assert.Equal("slots · 800 × 800", PanelPackageRow.Caption(Package("openDash 800 round", Contract.KindSlots, 800, 800)));
             Assert.Equal("1920 × 1080", PanelPackageRow.Caption(Package("openDash Pit wall", Contract.KindPitWall, 1920, 1080)));
         }
 
