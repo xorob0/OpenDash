@@ -37,12 +37,14 @@ namespace OpenDashPlugin
                 Save();
             });
 
-            return Ui.VStack(0, Ui.Section("These apply to every screen",
-                Ui.Caption("A lap time means the same thing on the rim as it does on the pit wall, so these are not per screen.", BodyWidth),
-                Ui.Row("The rev bar", "Shift lights, a plain RPM bar, or off entirely if your DDU has LEDs of its own. Off gives its room back to the zones.", revBar),
-                Ui.Row("Position", "Overall, or within your class. A zone can still be set to list your own class on its own.", position),
-                Ui.Row("Delta reference", "Which lap the delta compares against.", delta),
-                Ui.Row("Session progress", "Auto shows laps when the session declares a lap count, time otherwise.", session)));
+            // A gap of this tab's own rather than the section default: PanelDataTab.RowGap says why, and
+            // passing it here is what keeps Install and Lights on the twenty they are drawn at.
+            return Ui.VStack(0, Ui.Section(PanelDataTab.SectionTitle, PanelDataTab.RowGap,
+                Ui.Caption(PanelDataTab.SectionCaption, BodyWidth),
+                Ui.Row(PanelDataTab.RevBarTitle, PanelDataTab.RevBarCaption, revBar),
+                Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position),
+                Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta),
+                Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)));
         }
     }
 }
