@@ -15,8 +15,9 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { portraitPage, racePage, towerPage } from '../src/screens/pitwall.ts';
+import { TRACK_ASPECT } from '../src/modules/track.ts';
 import { walkItems } from '../src/walk.ts';
-import type { Item, Rect, TextItem } from '../src/generator.ts';
+import type { Item, Rect, StaticMapItem, TextItem } from '../src/generator.ts';
 
 /** An item with a box, which is everything a panel draws: a layer carries none and is not one. */
 type Placed = Extract<Item, { rect: Rect }>;
@@ -176,6 +177,34 @@ describe('the Lap data panel draws the three lap times of the sheet', () => {
   }
 });
 
+describe('the Lap delta panel draws the sheet its scale rather than the panel its width', () => {
+  const items = itemsOf(racePage(1920, 1080));
+
+  test('sets the delta at the 46 px the sheet declares', () => {
+    // The box the sheet leaves this field is a label, a gap and a numeral, with nothing for the
+    // tail the numeral hangs below them, so a fitter measuring that tail used to answer by
+    // shrinking the one number the panel exists to show. 39 px is what that produced.
+    expect(value(items, 'race.lapDelta.delta').fontSize).toBe(46);
+  });
+
+  test('draws the bar at the 330 px of the sheet however wide the panel is', () => {
+    const track = named(items, 'race.lapDelta.bar.track')[0]!;
+    expect({ width: track.rect.width, height: track.rect.height }).toEqual({ width: 330, height: 12 });
+    // A scale whose graduations move with the panel is a scale nobody can learn: the quarters mark
+    // a second either side of zero, and they have to sit that far apart on every page that draws
+    // one. The room past the bar stays background, so it still ends inside the panel body.
+    const body = texts(items, 'race.lapDelta.delta.label')[0]!.rect.left;
+    expect(track.rect.left + track.rect.width).toBeLessThanOrEqual(body + COLUMN_WIDTH - 40);
+  });
+
+  test('keeps the ticks and the centre marker on that track', () => {
+    const ticks = named(items, 'race.lapDelta.bar.tick').map((i) => i.rect.left);
+    const track = named(items, 'race.lapDelta.bar.track')[0]!;
+    expect(ticks).toEqual([0, 0.25, 0.75, 1].map((f) => Math.round(track.rect.left + f * (track.rect.width - 1))));
+    expect(named(items, 'race.lapDelta.bar.centre')[0]!.rect.width).toBe(2);
+  });
+});
+
 describe('the Track panel carries the session best', () => {
   for (const [page, screen] of [
     ['race.track', racePage(1920, 1080)],
@@ -202,5 +231,38 @@ describe('the Track panel carries the session best', () => {
       expect(texts(items, `${page}.map.title`)).toHaveLength(1);
       expect(texts(items, `${page}.map.state`)[0]!.widest).toBe('MODERATE');
     });
+
+    test(`${page} orders the conditions as both sheets do, road before air`, () => {
+      const at = (id: string): number => value(items, `${page}.${id}`).rect.left;
+      expect(at('road')).toBeLessThan(at('air'));
+    });
+
+    test(`${page} sets the readings of a line 20 apart, which is the gap the sheet gives them`, () => {
+      const label = (id: string): TextItem => texts(items, `${page}.${id}.label`)[0]!;
+      const gap = (a: string, b: string): number => label(b).rect.left - (label(a).rect.left + label(a).rect.width);
+      expect([gap('sessionBest', 'road'), gap('road', 'air')]).toEqual([20, 20]);
+    });
   }
+
+  /**
+   * The map is cut from its box at the catalogue's ratio (**rule 18**), not placed in it at a size
+   * and not stretched to whatever share of the panel is going.
+   *
+   * Both sheets give it about half the panel, and at the height the panel leaves under the map's
+   * own header row the ratio is the narrower of the two on the race page. A box wider than that
+   * buys no ink, so the field column beside it keeps the difference.
+   */
+  test('cuts the map to the drawing at both pit wall sizes', () => {
+    const mapOf = (page: string, screen: { items: Item[] }): { width: number; height: number } => {
+      const map = itemsOf(screen).find((i): i is StaticMapItem => i.kind === 'staticMap' && i.name === `${page}.map.map`);
+      if (!map) throw new Error(`no map on ${page}`);
+      return { width: map.rect.width, height: map.rect.height };
+    };
+    const race = mapOf('race.track', racePage(1920, 1080));
+    const tower = mapOf('tower.track', towerPage(1920, 1080));
+    expect({ race, tower }).toEqual({ race: { width: 253, height: 164 }, tower: { width: 499, height: 328 } });
+    for (const [page, box] of [['race', race], ['tower', tower]] as const) {
+      expect({ page, wider: box.width > Math.round(TRACK_ASPECT * box.height) }).toMatchObject({ wider: false });
+    }
+  });
 });

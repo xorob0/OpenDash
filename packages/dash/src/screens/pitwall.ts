@@ -20,7 +20,7 @@ import { centreZeroGauge } from '../second/gauge.ts';
 import { sectorFields } from '../second/sectors.ts';
 import { table, type ColumnId } from '../second/table.ts';
 import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
-import { track } from '../modules/track.ts';
+import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, type ModuleContext } from '../modules/module.ts';
 import {
   CHARS,
@@ -62,11 +62,6 @@ const DENSITY = 'zone' as const;
 
 /** A context for a module drawn inside a pit wall panel. */
 const ctxOf = (frame: Rect, prefix: string): ModuleContext => ({ frame, density: DENSITY, prefix });
-
-/** A block of fields filling a panel body: it wraps when the panel is narrow and shrinks when it is short. */
-function fieldsIn(prefix: string, body: Rect, specs: readonly FieldSpec[]): Item[] {
-  return fitFields(specs, body, DENSITY);
-}
 
 /**
  * One row of fields across a panel body, drawn from its top edge.
@@ -141,6 +136,16 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
   ];
 }
 
+/**
+ * The delta bar's width, which is the sheet's and not the panel's.
+ *
+ * A bar stretched to whatever the body has left is a scale whose graduations move: the quarters
+ * mark a second either side of zero, and a reader who has learnt where half a second sits on this
+ * bar should find it there on every page that draws one. So the bar is a fixed width and the room
+ * beyond it stays background, which is what the artboard does with its own 77 spare pixels.
+ */
+const DELTA_BAR_WIDTH = 330;
+
 /** The lap delta panel: the live delta, its bar, and the three sectors of the last lap. */
 export function lapDeltaPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
@@ -151,22 +156,36 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
     labelWidest: 'VS ALL-TIME BEST',
   });
   const deltaWidth = 160;
-  // The canvas's track, which the gauge's own overhangs then turn into 20 px graduations and a
-  // 24 px centre marker; a 10 px track drew both two pixels short of the sheet.
+  // `Panels.dc.html`'s track, which the gauge's own overhangs then turn into 20 px graduations and
+  // a 24 px centre marker. The two sheets disagree about this one number and are left disagreeing:
+  // the component sheet draws the bar 320 by 12 with 20 px graduations where `PitWall1920x1080`
+  // draws it 330 by 10 with 18, and the component sheet is the one that defines the part.
   const barHeight = 12;
   const topHeight = d.label + d.fieldGap + d.big;
-  const barWidth = Math.max(0, body.width - deltaWidth - d.gapX);
   const sectorTop = body.top + topHeight + Math.round(d.gapY / 2);
   const sectorHeight = Math.max(0, body.top + body.height - sectorTop);
   return [
     ...items,
-    ...fitFields([deltaField], rect(body.left, body.top, deltaWidth, topHeight), DENSITY),
-    ...centreZeroGauge(`${name}.bar`, rect(body.left + deltaWidth + d.gapX, body.top + topHeight - barHeight - 6, barWidth, barHeight), value, { range: 2 }),
+    // Drawn as a row rather than fitted: the box the sheet leaves this field is its label, its gap
+    // and its numeral and nothing for the tail the numeral's line box hangs below that, so a fitter
+    // measuring the tail found the box short and answered by shrinking the one number the panel
+    // exists to show. The tail spends the gap over the sectors instead, as it does on every other
+    // panel of the column.
+    ...fieldRowFitted([deltaField], body.left, body.top + topHeight, deltaWidth, DENSITY).items,
+    // The sheet sets this row wider than a row of fields, at 32 rather than 24: the bar is a second
+    // reading of the number beside it and not the next field along.
+    ...centreZeroGauge(`${name}.bar`, rect(body.left + deltaWidth + ds.space[6], body.top + topHeight - barHeight - 6, DELTA_BAR_WIDTH, barHeight), value, { range: 2 }),
     ...sectorFields(`${name}.sector.`, rect(body.left, sectorTop, body.width, sectorHeight), DENSITY, d.small),
   ];
 }
 
-/** The canvas sets the lap times of the Lap data panel closer than a row of fields, at 20 px. */
+/**
+ * What the lap times of the Lap data panel are set at, which is closer than a row of fields.
+ *
+ * The portrait sheet's 20 rather than the landscape sheet's 28. The landscape row is four times
+ * wide and this panel draws the portrait set of three, so it is drawn at the gap that set is drawn
+ * at rather than at one borrowed from a row it is not.
+ */
 const LAP_DATA_GAP = 20;
 
 /**
@@ -194,31 +213,48 @@ export function lapDataPanel(name: string, frame: Rect): Item[] {
 }
 
 /**
+ * What the Track panel's field column is set at, both off the sheet: 20 between the readings of a
+ * row, where the rest of a panel gives 24, and 10 between its rows, where `fitFields` would
+ * otherwise derive half the density's 12.
+ */
+const TRACK_FIELD_GAP = 20;
+const TRACK_LINE_GAP = 10;
+
+/**
  * The track panel: the map, with the session best, the conditions and the car's assists beside it.
  *
  * Both landscape sheets draw the session best in this panel and draw it larger than the conditions,
  * so it leads the column rather than closing it: a greedy wrap that lists it last puts it on the
  * second line beside the brake bias, which buries the one lap the whole board is read against. The
  * track's name and its surface state are the map's own header row, where `track.ts` already draws
- * them, and are not repeated here.
+ * them, and are not repeated here. Road comes before Air, as both sheets order them.
  */
 export function trackPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Track' });
-  const mapWidth = Math.round(body.width * 0.48);
+  // Cut rather than shared out. Both sheets give the map about half the panel -- 300 of 599 on the
+  // race page, 520 of 999 on the tower -- and the ratio is what the circuit can actually spend of
+  // that half at the height the panel leaves it, so the box is whichever of the two is smaller and
+  // the field column keeps the rest. A box wider than the ratio asks for buys no ink.
+  const mapWidth = trackFrameWidth(body.height, DENSITY, Math.floor(body.width / 2));
   const right = rect(body.left + mapWidth + d.gapX, body.top, Math.max(0, body.width - mapWidth - d.gapX), body.height);
   const ctx = ctxOf(right, `${name}.`);
   return [
     ...items,
     ...track.build({ frame: rect(body.left, body.top, mapWidth, body.height), density: DENSITY, prefix: `${name}.map.` }),
-    ...fieldsIn(name, right, [
-      fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
-      fld(ctx, 'air', 'Air', { sample: '24', bind: fmt(airTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
-      fld(ctx, 'road', 'Road', { sample: '31', bind: fmt(roadTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
-      fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }),
-      fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }),
-      fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(isnull(game('BrakeBias'), num(0)), '0.0'), chars: CHARS.setting, fs: d.small }),
-    ]),
+    ...fitFields(
+      [
+        fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
+        fld(ctx, 'road', 'Road', { sample: '31', bind: fmt(roadTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
+        fld(ctx, 'air', 'Air', { sample: '24', bind: fmt(airTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
+        fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }),
+        fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }),
+        fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(isnull(game('BrakeBias'), num(0)), '0.0'), chars: CHARS.setting, fs: d.small }),
+      ],
+      right,
+      DENSITY,
+      { gap: TRACK_FIELD_GAP, lineGap: TRACK_LINE_GAP },
+    ),
   ];
 }
 
