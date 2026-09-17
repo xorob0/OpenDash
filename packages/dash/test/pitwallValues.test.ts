@@ -10,9 +10,9 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc } from '../src/generator.ts';
-import { cells, monoWidth, type Chars } from '../src/design/metrics.ts';
+import { cells, monoWidth, MINUS, type Chars } from '../src/design/metrics.ts';
 import { DENSITIES, densityOf, type Density } from '../src/second/density.ts';
-import { CHARS, carSector, sectorTime } from '../src/second/values.ts';
+import { CHARS, carRaceGap, carSector, sectorTime } from '../src/second/values.ts';
 
 const { num, repeatIndex } = ncalc;
 
@@ -73,6 +73,48 @@ function fits(text: string, chars: Chars): boolean {
   const specials = [...text].filter((c) => '.,:'.includes(c)).length;
   return text.length - specials <= chars.digits && specials <= chars.specials;
 }
+
+describe('the Gap column', () => {
+  const BOARD: readonly Car[] = [
+    car({ position: 1, gaptoleader: 0, currentlap: 24, gaptoleadercombined: '' }),
+    car({ position: 2, gaptoleader: 2.64, currentlap: 24, gaptoleadercombined: '+2.6' }),
+    car({ position: 3, gaptoleader: 142.35, currentlap: 23, gaptoleadercombined: '+1L' }),
+    car({ position: 4, gaptoleader: null, currentlap: 23, gaptoleadercombined: null }),
+  ];
+  const gapOf = (row: number): unknown => evaluate(carRaceGap(repeatIndex()), BOARD, row);
+
+  test('the leader reads Lead', () => {
+    expect(gapOf(1)).toBe('Lead');
+  });
+
+  test('a car on the lead lap reads seconds, signed, to one decimal', () => {
+    expect(gapOf(2)).toBe('+2.6');
+  });
+
+  test('a lapped car keeps the lap count, which seconds cannot say', () => {
+    expect(gapOf(3)).toBe('+1L');
+  });
+
+  test('a row the sim gives no gap for reads the no-value placeholder', () => {
+    expect(gapOf(4)).toBe('--');
+  });
+
+  test('the combined string is reached only once the lapped test has said so', () => {
+    // It is one string for both cases and the dash has no say in its sign or its decimals, so a
+    // row that is not lapped must never fall through to it.
+    const formula = carRaceGap(repeatIndex());
+    const lapped = formula.indexOf('drivercurrentlap');
+    expect(lapped).toBeGreaterThan(-1);
+    expect(formula.indexOf('drivergaptoleadercombined')).toBeGreaterThan(lapped);
+  });
+
+  test('the widest gap a lead-lap car can show fits the budget it is drawn in', () => {
+    // A car not yet lapped is less than one lap behind, and no lap of any track the sims model
+    // runs to a thousand seconds, so three digits of seconds is the ceiling.
+    expect(fits('+999.9', CHARS.gap)).toBe(true);
+    expect(fits(`${MINUS}999.9`, CHARS.gap)).toBe(true);
+  });
+});
 
 describe('the sector cells', () => {
   const sectorOf = (seconds: number): unknown => evaluate(carSector(repeatIndex(), 1), [car({ sectors: [seconds, 0, 0] })], 1);
