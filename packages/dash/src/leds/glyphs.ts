@@ -60,7 +60,10 @@ export const DARK: Grid = solid('.');
 const framesOf = (steps: readonly (readonly [Grid, number])[], name: string): MatrixFrame[] =>
   steps.map(([grid, durationMs]) => ({ durationMs, pixels: pixelsOf(grid, FLAG_PALETTE, name) }));
 
-/** Grows in three steps and then stays: the red flag and the meatball, which both mean "it is over". */
+/**
+ * Grows in three steps and then stays. The growth is what catches an eye that was not on the box;
+ * the last frame is the one that still has to be right twenty seconds later.
+ */
 const growThenHold = (steps: readonly [Grid, Grid, Grid, Grid], name: string): MatrixFrame[] =>
   framesOf([[steps[0], GROW_MS], [steps[1], GROW_MS], [steps[2], GROW_MS], [steps[3], HOLD_MS]], name);
 
