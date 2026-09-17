@@ -11,6 +11,10 @@
  * and what `docs/design/readability-pass.md` §15 asks for; the drawing beside them is cut from
  * whatever is left, which is rule 18. Nothing here is ever scaled down.
  *
+ * At `wide` the pressure is drawn twice, in the sim's unit and in the other one, which is what the
+ * fifth wide zone page is named for. It is the only reading that takes a second line-mate, and the
+ * cell drops that second reading before it drops the row it sits on.
+ *
  * iRacing reports the pressure the car left the pit box with, not a live one; the temperature and
  * the tread are live.
  */
@@ -27,7 +31,7 @@ import { tyreGlyph, tyreGlyphSize } from './tyreGlyph.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, pressureUnit, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
 
-const { iff, eq, lt, gt, str, num, fmt, concat, game } = ncalc;
+const { iff, eq, lt, gt, str, num, fmt, mul, concat, game } = ncalc;
 
 /** Tread left below this percentage is drawn in caution. */
 export const WEAR_CAUTION = 65;
@@ -53,6 +57,16 @@ export const UNIT_CELL = 22;
 
 /** Gap between the numbers and the drawing: ten pixels in the grid, seven in the four-column row. */
 export const CORNER_GAP = 10;
+
+/**
+ * Between the two pressures of the wide page.
+ *
+ * The canvas draws no pair of readings on one line, so there is no measurement of its own to cite.
+ * The cell's gap to its drawing stands in rather than a new number being invented: it is the one
+ * distance inside a corner wide enough that the figures either side of it read as two readings and
+ * not as one long value, five being what a value already leaves its own unit.
+ */
+export const READING_GAP = CORNER_GAP;
 
 /**
  * The temperature's colour: blue when cold, red when hot, `nominal` in between, dim with no
@@ -96,7 +110,15 @@ interface Quantity {
   color?: Hex;
   colorBind?: Expr;
   unit?: { text: string; widest?: string; bind?: Expr };
+  /**
+   * The same value read a second way, drawn after the first on the line they share. Only the wide
+   * page carries one, and only its pressure: see {@link otherPressure}.
+   */
+  also?: Quantity;
 }
+
+/** A row's readings, left to right: the quantity itself, and the second reading where it has one. */
+const readings = (q: Quantity): Quantity[] => (q.also ? [q, q.also] : [q]);
 
 /**
  * The unit's box: the canvas's 22 px, or what the widest unit the binding can produce really needs.
@@ -109,9 +131,63 @@ const unitBox = (q: Quantity, d: DensitySpec): number =>
 
 const valueWidth = (q: Quantity): number => monoWidth(cells('SemiBold', q.fs), q.chars);
 
-const rowWidth = (q: Quantity, d: DensitySpec): number => valueWidth(q) + (q.unit === undefined ? 0 : UNIT_GAP + unitBox(q, d));
+/** One reading: its cells, and the unit that follows it where it has one. */
+const readingWidth = (q: Quantity, d: DensitySpec): number => valueWidth(q) + (q.unit === undefined ? 0 : UNIT_GAP + unitBox(q, d));
+
+const rowWidth = (q: Quantity, d: DensitySpec): number => {
+  const row = readings(q);
+  return row.reduce((w, r) => w + readingWidth(r, d), 0) + READING_GAP * (row.length - 1);
+};
 
 const blockHeight = (qs: readonly Quantity[]): number => qs.reduce((h, q) => h + q.fs, 0) + ROW_GAP * Math.max(0, qs.length - 1);
+
+/**
+ * What a pressure reported in one unit is worth in the other. Physical constants, so they are
+ * numbers here rather than tokens: `tokens.json` holds what the design decides, not what a psi is.
+ */
+const KPA_PER_PSI = 6.894757;
+const PSI_PER_KPA = 0.1450377;
+const PSI_PER_BAR = 14.503774;
+
+/**
+ * The pressure read a second way, which is what makes the wide page "tyres with both units": the
+ * board is called in one unit and the setup screen is dialled in the other, and a driver on the pit
+ * wall should not have to do the sum.
+ *
+ * SimHub reports one of Psi, Kpa and Bar, and the pair worth drawing is psi and kPa, so a psi car
+ * is given kPa and both metric cars are given psi. Bar is kPa divided by a hundred, and printing
+ * the same figure twice with the point moved would be width spent on nothing.
+ *
+ * The unit branched on is `pressureUnit`'s own spelling rather than SimHub's, so that the two
+ * readings can never disagree about which unit the first of them is in.
+ */
+function otherPressure(pressure: Expr): { value: Expr; unit: Expr } {
+  const shown = pressureUnit();
+  const isPsi = eq(shown, str('psi'));
+  return {
+    // kPa is drawn whole and psi keeps its decimal, which is how each is read on a setup screen.
+    value: iff(isPsi, fmt(mul(pressure, num(KPA_PER_PSI)), '0'), fmt(mul(pressure, iff(eq(shown, str('bar')), num(PSI_PER_BAR), num(PSI_PER_KPA))), '0.0')),
+    unit: iff(isPsi, str('kPa'), str('psi')),
+  };
+}
+
+/** The converted pressure as a reading of its own, drawn after the sim's on the same line. */
+function otherReading(corner: Corner, d: DensitySpec): Quantity {
+  const pressure = tyrePressure(corner);
+  const other = otherPressure(pressure);
+  return {
+    id: 'pressure.alt',
+    fs: d.small,
+    // The same budget as the first reading, which is wider than either spelling of the second: a
+    // kPa is three whole digits and a psi is `dd.d`, and `28.6` holds both.
+    chars: CHARS.pressure,
+    // The samples are the psi a stint starts on, so the second reading of one of them is kPa.
+    sample: String(Math.round(Number(CORNER_SAMPLES[corner].pressure) * KPA_PER_PSI)),
+    bind: iff(eq(pressure, num(0)), str('--'), other.value),
+    color: ds.purpose.tyre.pressure,
+    unit: { text: 'kPa', widest: 'kPa', bind: other.unit },
+  };
+}
 
 /** The three readings in the order the drawing stacks them, which is also the order a cell sheds them. */
 function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[] {
@@ -137,6 +213,9 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
       bind: iff(eq(pressure, num(0)), str('--'), fmt(pressure, '0.0')),
       color: ds.purpose.tyre.pressure,
       unit: { text: 'psi', widest: 'kPa', bind: pressureUnit() },
+      // Wide zone page 5 is "Tyres with both pressure units", and it is the only box the catalogue
+      // gives a corner enough width for a second reading; every other density draws the sim's own.
+      ...(density === 'wide' ? { also: otherReading(corner, d) } : {}),
     },
     {
       // The corner's own figure rather than `tyreWearMin`'s worst section, for the reason the
@@ -154,9 +233,16 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
   ];
 }
 
-/** The readings this cell keeps: the longest run of them that fits, most important first. */
+/**
+ * The readings this cell keeps: the longest run of them that fits, most important first.
+ *
+ * A second reading goes before the reading that carries it, which is rule 17 applied inside a row
+ * rather than down a column: a pressure the cell can draw once and not twice is still a pressure,
+ * and shedding the whole row to keep the conversion beside it would cost the driver the figure in
+ * order to keep the gloss on it. Only width is at stake, both readings sharing one line.
+ */
 function keptQuantities(all: readonly Quantity[], frame: Rect, d: DensitySpec): Quantity[] {
-  const kept = [...all];
+  const kept = all.map((q) => (q.also && rowWidth(q, d) > frame.width ? { ...q, also: undefined } : q));
   while (kept.length > 1 && (blockHeight(kept) > frame.height || Math.max(...kept.map((q) => rowWidth(q, d))) > frame.width)) kept.pop();
   return kept;
 }
@@ -205,24 +291,29 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
   let top = frame.top + (frame.height - blockHeight(kept)) / 2;
   for (const q of kept) {
     const width = rowWidth(q, d);
-    const x = opts.numbers === 'left' ? columnLeft + numbers - width : columnLeft;
-    items.push(
-      numeral(`${name}.${q.id}`, q.sample, x, top, q.fs, q.chars, {
-        bind: q.bind,
-        color: q.color,
-        colorBind: q.colorBind,
-        maxWidth: Math.max(0, columnEnd - x),
-      }),
-    );
-    if (q.unit) {
-      const box = unitBox(q, d);
+    // The row is set as one piece, so a second reading extends it inwards from the outer edge and
+    // the reading nearest the drawing is the last one written rather than the first.
+    let x = opts.numbers === 'left' ? columnLeft + numbers - width : columnLeft;
+    for (const r of readings(q)) {
       items.push(
-        unit(`${name}.${q.id}.unit`, q.unit.text, x + valueWidth(q) + UNIT_GAP, canvasYForBaseline(canvasBaseline(top, q.fs), d.labelSm), box, {
-          size: d.labelSm,
-          bind: q.unit.bind,
-          widest: q.unit.widest,
+        numeral(`${name}.${r.id}`, r.sample, x, top, r.fs, r.chars, {
+          bind: r.bind,
+          color: r.color,
+          colorBind: r.colorBind,
+          maxWidth: Math.max(0, columnEnd - x),
         }),
       );
+      if (r.unit) {
+        const box = unitBox(r, d);
+        items.push(
+          unit(`${name}.${r.id}.unit`, r.unit.text, x + valueWidth(r) + UNIT_GAP, canvasYForBaseline(canvasBaseline(top, r.fs), d.labelSm), box, {
+            size: d.labelSm,
+            bind: r.unit.bind,
+            widest: r.unit.widest,
+          }),
+        );
+      }
+      x += readingWidth(r, d) + READING_GAP;
     }
     top += q.fs + ROW_GAP;
   }
