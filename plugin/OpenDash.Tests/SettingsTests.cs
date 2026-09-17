@@ -1225,6 +1225,41 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Face1280x480CycleZoneB", main.ActionNames());
         }
 
+        /// <summary>
+        /// The Install tab's rows and the rig are one list, and ADR 0017 is what could set them at odds.
+        /// </summary>
+        /// <remarks>
+        /// A second screen made from a package takes a folder of its own, so a row keyed on the folder
+        /// would lose it; the rim face and the companion are both 850 × 480, so a row keyed on the size
+        /// would hand one of them the other's screens. The package a screen was made from survives both.
+        /// A screen from a settings file written before that was recorded is the case the fallback to the
+        /// kind and the size exists for, and without it such a screen would stop counting anywhere.
+        /// </remarks>
+        [Fact]
+        public void A_second_screen_at_one_size_counts_against_its_own_package()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Normalise();
+            var rim = new PackageEntry { Package = "rim", Folder = "openDash 850x480", Kind = Contract.KindFace, Width = 850, Height = 480 };
+            var phone = new PackageEntry { Package = "companion", Folder = "openDash Companion", Kind = Contract.KindCompanion, Width = 850, Height = 480 };
+            Assert.Equal("Rim", rim.DisplayName);
+            Assert.Equal("Phone", phone.DisplayName);
+
+            var first = settings.AddScreen(rim, "Main dash");
+            var second = settings.AddScreen(rim, "Spare");
+            settings.AddScreen(phone, "Phone");
+            settings.Normalise();
+
+            Assert.NotEqual(first.Folder, second.Folder);
+            Assert.Equal(2, PanelPackageRow.Uses(rim, settings.RigScreens()));
+            Assert.Equal(1, PanelPackageRow.Uses(phone, settings.RigScreens()));
+
+            settings.Rig.Add(new ScreenInstance { Namespace = "Legacy", Name = "Legacy", Kind = Contract.KindFace, Width = 850, Height = 480 });
+            settings.Normalise();
+            Assert.Equal(3, PanelPackageRow.Uses(rim, settings.RigScreens()));
+            Assert.Equal(1, PanelPackageRow.Uses(phone, settings.RigScreens()));
+        }
+
         [Fact]
         public void A_namespace_is_frozen_at_creation_and_a_rename_is_a_label()
         {
