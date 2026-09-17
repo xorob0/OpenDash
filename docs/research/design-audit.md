@@ -336,6 +336,47 @@ decide, grouped by where they arose. Each is a sentence the author can answer in
   always downloads and is always slow, avoids needing one; a reinstall runs on the interface thread
   and could not paint a bar anyway until it moves to the background.
 
+### What the sixth round left for you
+
+- **A red flag cannot be drawn on a strip while low fuel is the same red.** `purpose.fuel.low`
+  resolves to the danger red, which is also the red flag's, and both blink at the same rate on the
+  same shared lamp of a two-lamp side, so one light would carry two meanings. The red flag and the
+  start gantry are therefore undrawn and pinned as undrawn, to be added the day that token moves to
+  the amber the canvas asks for. The meatball is folded into the black family for the same reason:
+  `purpose.flag.orange` aliases the caution amber, which is already the temperature warning.
+- **The black flag and the chequered flag are no longer one light.** Black is white over the ground
+  at four times a second and the chequer is the same pair exchanged at two, so the exception that
+  was named in the distinctness test has fallen away on its own.
+- **The race lamp costs twenty-two per cent of the profile.** Ranking twelve conditions in the
+  catalogue's own order takes the serialised profiles from 3116 to 3801 kilobytes, and the formula
+  on the fourteen-lamp shape from 41 to 101 thousand characters. It has not been measured on the rig
+  under load.
+- **The pop-ups draw over the full-screen flag.** The face's own rule is that a flag outranks a
+  pop-up, which is why a pop-up already leaves band D alone. Gating the three pop-ups while a flag is
+  out would follow that rule; the limiter is a car state rather than a notification and belongs on
+  top either way.
+- **The full-screen yellow blanks the whole body for half of every cycle.** That is the band's own
+  behaviour at forty times the area, and it is worth looking at on the rig before release.
+- **A strip profile carries no version, so it can never read as out of date.** Nineteen of the twenty
+  profiles compare null with null and answer up to date forever, so a driver who updates openDash is
+  offered a reinstall and never an update. Stamping the same marker the flag box carries is three
+  lines across the profile model, its serialiser and the strip.
+- **The plugin's resources document states something false.** It says a light profile is embedded but
+  not installed, which stopped being true this round, and the decision record beside it reads the
+  same way.
+- **A drawing's own corners are a third use of radius.** The design says radius is none on a face and
+  the segment's value on a segment, and nowhere else, while the tyre and the car seen from above both
+  carry corners cut from their own boxes. The guard now names them as exceptions with their reasons.
+
+### Two packages left half done
+
+Their agents stopped mid-file after committing a green half, so both halves below are on the branch
+and the rest is not. The rank mark on a list row is drawn, as one picture per direction, and the
+relative's sample carries its minus, while the cell that ranks a row is not finished. The tyre
+drawing is measured against the canvas at every shape, and what remains is the padding: the
+catalogue's twelve and fourteen cost two faces their drawing altogether, and the intended answer was
+to let a tight box take that padding back before it gives up the tyre.
+
 ## 4. The work, in packages
 
 The 1581 gaps group into 150 packages that can be built independently. A package owns a set of
