@@ -243,6 +243,9 @@ describe('the effect catalogue', () => {
     // A flag lives on the race lamp and on nothing else, so none of them takes the strip any more:
     // that is what stopped a blue flag held for a minute from taking the rev ladder with it.
     for (const e of flagEffects()) expect({ id: e.id, role: e.role }).toMatchObject({ role: 'race' });
+    // ...and the race lamp carries flags and nothing else ever, which is the other half of it: a
+    // lamp that is the flags on one shape and something else on another is the wrong light.
+    expect(ALL_EFFECTS().filter((e) => e.role === 'race').map((e) => e.id)).toEqual(flagEffects().map((e) => e.id));
   });
 
   test('the spotters light the side the car is actually on, steadily', () => {
