@@ -32,7 +32,8 @@
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { FLAG_BLINK_MS, FLAG_PRIORITY, flagVisible, type FlagProperty } from '../components/flagStrip.ts';
+import { FLAG_BLINK_MS } from '../components/flagStrip.ts';
+import { conditionRaised, flagCondition, safeBitSet, type FlagCondition } from '../flags.ts';
 import { ds } from '../tokens.ts';
 import { type EffectRole, type Lamp } from './lamps.ts';
 
@@ -138,21 +139,101 @@ const lowFuel = (): Expr => gt(g('CarSettings_FuelAlertActive'), num(0));
 const engineRunning = (): Expr => gt(g('Rpms'), num(0));
 
 /**
- * The flags, in the order the face ranks them, read through the face's own `flagVisible` so that
- * the box and the screen cannot disagree about which of two live flags wins — the thing XOR-225
- * names as the reason the alert catalogue matters here.
+ * What a race lamp can draw, highest rank first: one row per appearance, each taking the catalogue
+ * conditions a lamp cannot tell apart.
+ *
+ * The strip used to rank the six normalised `Flag_*` summaries, which fold four iRacing bits into
+ * `Flag_Yellow` and hide a furled black and a disqualification behind `Flag_Black` entirely, so the
+ * box and the strip could disagree about which flag was out. These rows rank `FLAG_CATALOGUE`
+ * through `SessionFlagsDetails` the way `profile.ts` ranks it for the matrix, so nine conditions
+ * that could not reach a strip at all now do.
+ *
+ * **A row is an appearance, not a condition.** One LED has a hue and a rhythm and nothing else, so
+ * fifteen conditions cannot each be drawn differently; the canvas's own answer is that the ones a
+ * lamp cannot tell apart map onto the ones it can. A row therefore carries every condition that
+ * draws the same way, and because the rows keep the catalogue's order and take contiguous runs of
+ * it, ranking the rows *is* ranking the catalogue: the strip and the box cannot pick different
+ * flags. A condition with no row is skipped rather than allowed to hold the lamp dark, which is the
+ * same rule `drawnFlags()` applies to a condition with no glyph.
+ *
+ * On the rates: the black family is the fast tier because it is addressed to this car, and
+ * everything else is the flag band's own 2 Hz, so a yellow on the face and a yellow on the strip
+ * flash together. On the colours: where a row names a second lit colour it is because the second
+ * colour is itself the fact, and where it does not, the off phase is {@link BLINK_OFF}.
+ *
+ * Two rows the canvas draws are missing, and both are blocked on a token rather than on this file:
+ *
+ *  - **Red, and the start gantry that draws in red held.** `purpose.fuel.low` resolves to
+ *    `color.danger.primary`, the same `#FF2D46` as `purpose.flag.red`, and the low-fuel lamp blinks
+ *    at the same 2 Hz a red flag would. On a two-LED side the flags share their lamp with the car
+ *    warnings, so the two would be one light with two meanings. The canvas asks for amber on low
+ *    fuel; until that token moves, a red flag is no more visible on a strip than it was before.
+ *  - **The meatball in `purpose.flag.orange`.** That token resolves to `color.caution.primary`,
+ *    which is the temperature warning's amber at the same fast rate and on the same shared lamp.
+ *    The meatball is therefore folded into the black row, which is the family it belongs to and is
+ *    at least the right instruction, rather than drawn as a light the driver already knows as a
+ *    temperature warning.
  */
-const FLAG_COLORS: Record<FlagProperty, string> = {
-  Flag_Black: ds.purpose.flag.black,
-  Flag_Checkered: ds.purpose.flag.chequer,
-  Flag_Yellow: ds.purpose.flag.yellow,
-  Flag_Blue: ds.purpose.flag.blue,
-  Flag_White: ds.purpose.flag.white,
-  Flag_Green: ds.purpose.flag.green,
-};
+interface FlagRow {
+  /** Stable id, suffixed onto `flag.`; the catalogue id of the condition the row is named for. */
+  id: string;
+  /** The container description in the profile, and what the panel calls it. */
+  label: string;
+  /** The catalogue ids this row draws, in the catalogue's own order. */
+  conditions: readonly string[];
+  color: string;
+  /** The other half of the alternation, where the second colour is itself a fact. */
+  blinkColor?: string;
+  blinkDelayMs: number;
+}
+
+export const FLAG_ROWS: readonly FlagRow[] = [
+  // The disqualification and the furled black are the black flag's own family and draw as it does;
+  // the meatball is here for the reason the header gives rather than because it draws the same way.
+  {
+    id: 'black',
+    label: 'Black flag',
+    conditions: ['disqualify', 'black', 'furled', 'meatball'],
+    color: ds.purpose.flag.black,
+    blinkDelayMs: FAST_BLINK_MS,
+  },
+  // The reverse assignment of the black: ground steady, white on the blink. SimHub fills the run
+  // with BlinkingColor while blinking and with Color otherwise, so exchanging the two fields is
+  // exactly what antiphase means in this format and needs no phase control. It is also what stops
+  // the two whites being one light, since both resolve to #F5F7FA.
+  {
+    id: 'chequered',
+    label: 'Chequered flag',
+    conditions: ['chequered'],
+    color: BLINK_OFF,
+    blinkColor: ds.purpose.flag.chequer,
+    blinkDelayMs: SLOW_BLINK_MS,
+  },
+  // The whole track rather than this corner, said by alternating the flag yellow with the caution
+  // amber. The amber is the steady half on purpose: the caution and the plain yellow are on one
+  // lamp at the same 2 Hz, so the colour they are read by at the instant of a glance has to differ.
+  {
+    id: 'caution',
+    label: 'Full-course caution',
+    conditions: ['caution'],
+    color: ds.color.caution.primary,
+    blinkColor: ds.purpose.flag.yellow,
+    blinkDelayMs: SLOW_BLINK_MS,
+  },
+  { id: 'yellow', label: 'Yellow flag', conditions: ['yellowWaving', 'yellow'], color: ds.purpose.flag.yellow, blinkDelayMs: SLOW_BLINK_MS },
+  // The yellow hue at the fast rate, which is the one thing a lamp has left to say "and there is
+  // something on the road" with.
+  { id: 'debris', label: 'Debris flag', conditions: ['debris'], color: ds.purpose.flag.debris, blinkDelayMs: FAST_BLINK_MS },
+  { id: 'blue', label: 'Blue flag', conditions: ['blue'], color: ds.purpose.flag.blue, blinkDelayMs: SLOW_BLINK_MS },
+  { id: 'white', label: 'White flag', conditions: ['white'], color: ds.purpose.flag.white, blinkDelayMs: SLOW_BLINK_MS },
+  { id: 'green', label: 'Green flag', conditions: ['green'], color: ds.purpose.flag.green, blinkDelayMs: SLOW_BLINK_MS },
+];
+
+/** The catalogue conditions of one row, resolved once. */
+const rowConditions = (row: FlagRow): FlagCondition[] => row.conditions.map(flagCondition);
 
 /**
- * One effect per flag, highest priority last so that it composes on top.
+ * One effect per row, highest priority last so that it composes on top.
  *
  * A flag lives on the race lamp and on nothing else. It used to take the whole strip and blank it,
  * which is how a blue flag held for a minute took the rev ladder with it — the note the whole
@@ -161,17 +242,25 @@ const FLAG_COLORS: Record<FlagProperty, string> = {
  * brow has today and is not this change's to settle.
  */
 export const flagEffects = (): LedEffect[] =>
-  [...FLAG_PRIORITY]
-    .reverse()
-    .map((flag) => ({
-      id: `flag.${flag.replace('Flag_', '').toLowerCase()}`,
-      label: `${flag.replace('Flag_', '')} flag`,
+  FLAG_ROWS.map((row, index) => {
+    const mine = rowConditions(row);
+    const above = FLAG_ROWS.slice(0, index).flatMap(rowConditions);
+    // Null-safe, because a CustomStatus answers a throwing formula with on: a car that publishes no
+    // SessionFlagsDetails would otherwise show every flag at once rather than none.
+    const raised = (c: FlagCondition): Expr => conditionRaised(c, safeBitSet);
+    const when = and(...above.map((c) => not(raised(c))), or(...mine.map(raised)));
+    return {
+      id: `flag.${row.id}`,
+      label: row.label,
       role: 'race' as const,
-      when: flagVisible(flag),
-      color: FLAG_COLORS[flag] ?? ds.purpose.flag.white,
-      source: `DataCorePlugin.GameData.${flag}`,
-      ...(flag === 'Flag_Yellow' ? { blinkWhen: flagVisible(flag), blinkDelayMs: SLOW_BLINK_MS } : {}),
-    }));
+      when,
+      color: row.color,
+      blinkWhen: when,
+      ...(row.blinkColor ? { blinkColor: row.blinkColor } : {}),
+      blinkDelayMs: row.blinkDelayMs,
+      source: mine.flatMap((c) => c.bits).map((bit) => `DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Is${bit}`).join(', '),
+    };
+  }).reverse();
 
 /**
  * The catalogue, lowest rank first within each role, which is also composition order: what is later

@@ -20,7 +20,7 @@
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 
-const { and, eq, not, num, or, prop } = ncalc;
+const { and, eq, isnull, not, num, or, prop } = ncalc;
 
 /** A member of `iRacingSDK.SessionFlags`, as SimHub spells it. Camel case: the enum's own. */
 export type SessionFlagBit =
@@ -57,8 +57,22 @@ export type SessionFlagBit =
  */
 export const flagBit = (bit: SessionFlagBit): Expr => prop(`DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Is${bit}`);
 
+/** How a surface reads one bit. The two are {@link bitSet} and {@link safeBitSet}. */
+export type BitTest = (bit: SessionFlagBit) => Expr;
+
 /** True when the bit is set. SimHub hands a boolean through as 1 or 0. */
-export const bitSet = (bit: SessionFlagBit): Expr => eq(flagBit(bit), num(1));
+export const bitSet: BitTest = (bit) => eq(flagBit(bit), num(1));
+
+/**
+ * The same read, null-safe, which is what a strip needs and a matrix does not.
+ *
+ * `CustomStatusContainer.IsActiveBase` catches a throwing expression and returns its default of
+ * 1.0, so on a car or a sim that publishes no `SessionFlagsDetails` a bare read does not leave the
+ * lamp dark: it leaves every flag *on*, and the highest-ranked one wins. The box's `when` group
+ * tolerates the same throw and shows nothing, which is why one catalogue can be read two ways and
+ * why the difference is a parameter here rather than a second copy of the ranking.
+ */
+export const safeBitSet: BitTest = (bit) => eq(isnull(flagBit(bit), num(0)), num(1));
 
 /** The SimHub flag properties the face's band and ring draw. */
 export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_Blue' | 'Flag_White' | 'Flag_Green';
@@ -117,7 +131,7 @@ export const flagCondition = (id: string): FlagCondition => {
 };
 
 /** Any of the condition's bits is set. */
-export const conditionRaised = (condition: FlagCondition): Expr => or(...condition.bits.map(bitSet));
+export const conditionRaised = (condition: FlagCondition, test: BitTest = bitSet): Expr => or(...condition.bits.map(test));
 
 /**
  * The condition is raised *and the driver has asked to see it*.
