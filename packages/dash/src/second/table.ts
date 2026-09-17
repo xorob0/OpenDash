@@ -447,9 +447,14 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
         colorBind: iff(carIsSessionBest(ctx.idx), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },
+  // The three samples are one lap's sectors and they add up to the `last` sample beside them, the
+  // way every triple the canvas draws adds up to the time on its own row: 28.412, 41.071 and 33.422
+  // are 1:42.905, each rounded to the two decimals a sector is drawn to. A row whose sectors and
+  // whose lap time disagree is read at design time as a bug in the bindings, which is a morning
+  // spent on a number nothing computes.
   s1: { header: 'S1', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's1', '28.41', carSector(ctx.idx, 1), CHARS.sector, { fs: ctx.type.minor }) },
   s2: { header: 'S2', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's2', '41.07', carSector(ctx.idx, 2), CHARS.sector, { fs: ctx.type.minor }) },
-  s3: { header: 'S3', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's3', '32.83', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.type.minor }) },
+  s3: { header: 'S3', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's3', '33.42', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.type.minor }) },
   /** No board draws it: the canvas's three pages spend the room on Nat, Licence and iRating instead. */
   stint: { header: 'Stint', align: 'right', width: ({ type }) => cellColumn(52, type.minor, { digits: 2, specials: 0 }), cell: (ctx) => cellValue(ctx, 'stint', '12', carStintLaps(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor }) },
   pit: { header: 'Pit', align: 'right', width: (row) => drawnWidth(row, Math.ceil(2 * row.d.chipPadding + 26), 44), cell: cellPit },
