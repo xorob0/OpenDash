@@ -18,7 +18,7 @@ import { fieldRowFitted, fitFields, rowHeight, type FieldSpec } from '../second/
 import { panel, PANEL_TITLE_HEIGHT } from '../second/header.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
 import { sectorFields } from '../second/sectors.ts';
-import { table, type ColumnId } from '../second/table.ts';
+import { rowsThatFit as boardRowsThatFit, table, type ColumnId } from '../second/table.ts';
 import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, type ModuleContext } from '../modules/module.ts';
@@ -352,8 +352,29 @@ export const RACE_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 
 export const TOWER_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 'class', 'gap', 'last', 'best', 'pit'];
 export const PORTRAIT_COLUMNS: readonly ColumnId[] = ['pos', 'rank', 'num', 'name', 'class', 'rating', 'gap', 'int', 'last', 'best', 'pit', 'tyre'];
 
-/** Rows the pit wall tables stamp: a full grid of cars. */
+/** Rows the race and portrait boards stamp: a full grid of cars. */
 export const PIT_WALL_ROWS = 24;
+
+/**
+ * Rows the tower board stamps, which is the one page that exists to hold the whole field.
+ *
+ * `Panels.dc.html` reads "33 rows fit the tower page", and at the 28 px row the tower draws they
+ * do: thirty-three of them under a 28 px header is 952 of the 1016 px body. A row with no car
+ * behind it hides itself, so a grid of twenty-four draws exactly what the other two pages draw and
+ * a fuller field is no longer cut at the grid.
+ */
+export const TOWER_ROWS = 33;
+
+/**
+ * The zone column of a landscape page, which both artboards set at 639 px.
+ *
+ * The board beside it takes what is left rather than the other way about: the zone rectangle is
+ * what names a zone dashboard and what every page of the catalogue is then cut for, so it is the
+ * fixed half of the split and the board absorbs the odd pixel. `PitWallTelemetry1920x1080` writes
+ * the two out as 1279 and 639, which come to 1919 of the 1920 it declares, and giving that pixel
+ * to the plot is what leaves the two landscape pages on one split.
+ */
+const ZONE_COLUMN_WIDTH = 639;
 
 const vRule = (name: string, x: number, top: number, height: number): Item => rule(name, x, top, 1, height);
 
@@ -362,12 +383,17 @@ export function racePage(width: number, height: number): Screen {
   const header = rect(0, 0, width, PIT_WALL_HEADER.height);
   const bodyTop = PIT_WALL_HEADER.height;
   const bodyHeight = height - bodyTop;
-  const boardWidth = 1280;
-  const columnLeft = boardWidth + 1;
-  const columnWidth = width - columnLeft;
+  const columnWidth = ZONE_COLUMN_WIDTH;
+  const columnLeft = width - columnWidth;
+  const boardWidth = columnLeft - 1;
   // The artboard's own four heights. They come to 602 with their rules, which leaves 414 of the
-  // 1016 px body for the two zones and the rule between them; the sheet spends 403 there and leaves
-  // the last eleven pixels unaccounted, so the zones are a few pixels taller here than drawn.
+  // 1016 px body for the two zones and the rule between them; the sheet spends 403 there, on zones
+  // of 195 and 207, and leaves the last eleven pixels unaccounted.
+  //
+  // So the two are one rectangle here, a few pixels taller than either. A zone rectangle names the
+  // zone dashboard the package carries, and two zones of one column that differ by twelve pixels
+  // are a second copy of all twenty-one pages, shedding their rows at different heights for a
+  // difference a reader of the column cannot see.
   const panels = [
     { id: 'session', height: 108, draw: sessionPanel },
     { id: 'lapDelta', height: 158, draw: lapDeltaPanel },
@@ -407,7 +433,7 @@ export function towerPage(width: number, height: number): Screen {
   const zoneWidth = Math.floor((columnWidth - 1) / 2);
   const items: Item[] = [
     ...pitWallHeader('tower.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · tower', page: 2, pages: 3 }),
-    ...table({ name: 'tower.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: TOWER_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 28, board: true }),
+    ...table({ name: 'tower.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: TOWER_COLUMNS, mode: 'full', density: DENSITY, rows: TOWER_ROWS, rowHeight: 28, board: true }),
     vRule('tower.columnRule', boardWidth, bodyTop, bodyHeight),
     ...trackPanel('tower.track', rect(columnLeft, bodyTop, columnWidth, trackHeight)),
     rule('tower.trackRule', columnLeft, bodyTop + trackHeight, columnWidth, 1),
@@ -425,9 +451,9 @@ export function telemetryPage(width: number, height: number): Screen {
   const d = densityOf(DENSITY);
   const bodyTop = PIT_WALL_HEADER.height;
   const bodyHeight = height - bodyTop;
-  const plotWidth = 1279;
-  const zoneLeft = plotWidth + 1;
-  const zoneWidth = width - zoneLeft;
+  const zoneWidth = ZONE_COLUMN_WIDTH;
+  const zoneLeft = width - zoneWidth;
+  const plotWidth = zoneLeft - 1;
   const footerHeight = 25;
   const items: Item[] = [...pitWallHeader('telemetry.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · telemetry', page: 3, pages: 3 })];
   // The five panels, their rules and the footer come to less than the column, and what is left over
@@ -463,30 +489,58 @@ export function telemetryPage(width: number, height: number): Screen {
   return { name: 'telemetry', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
 }
 
+/**
+ * The height a board of `rows` rows occupies: the header row over them, and the rows.
+ *
+ * Asked of `table.ts` rather than restated here, because a board's header follows its own row
+ * height and only that module knows by how much. The smallest frame that still holds `rows` is
+ * that sum exactly: a board stacks its rows flush and opens them against the header rule, so
+ * nothing else is spent.
+ */
+function boardHeightOf(spec: { rows: number; rowHeight: number }): number {
+  let height = spec.rows * spec.rowHeight;
+  while (boardRowsThatFit(rect(0, 0, 0, height), { ...spec, density: DENSITY, header: true, board: true }) < spec.rows) height += 1;
+  return height;
+}
+
+/** What the portrait board's rows are set at, off its artboard's own `.trow`. */
+const PORTRAIT_ROW_HEIGHT = 32;
+
 /** The portrait page: the field above, the driver's numbers in the middle, four zones below. */
 export function portraitPage(width: number, height: number): Screen {
   const bodyTop = PIT_WALL_HEADER.height;
-  const boardHeight = 856;
+  // `PitWall1080x1920` draws this band 856 px tall, which is 32 + 2 x 28 + 24 x 32: a header, two
+  // class bands and the field. The bands are a picture of data SimHub does not publish, as the head
+  // of this file says, so the board is composed from the parts it does draw instead of keeping a
+  // total that only matches the sheet by accident. The 56 px the bands would have taken go to what
+  // follows the board rather than to an empty strip under the last car, which is what the sheet's
+  // own column does with them: every band under the board is laid out after it, not against it.
+  const boardHeight = boardHeightOf({ rows: PIT_WALL_ROWS, rowHeight: PORTRAIT_ROW_HEIGHT });
   const panelTop = bodyTop + boardHeight + 1;
   const panelHeight = 110;
   const zonesTop = panelTop + panelHeight + 1;
   const zoneHeight = Math.floor((height - zonesTop - 1) / 2);
   const half = Math.floor((width - 1) / 2);
+  // The sheet's own two columns, 539 and 540 either side of the rule. An odd width divides into a
+  // narrow column and a wide one, and the wide one is the remainder rather than a second `half`:
+  // two halves leave the last pixel column of the page unpainted, which is the one place the eye
+  // reads a page as cut short. The panel row above draws itself the same way.
+  const rightWidth = width - half - 1;
   const items: Item[] = [
     ...pitWallHeader('portrait.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · portrait', page: 1, pages: 1, compact: true }),
-    ...table({ name: 'portrait.board', frame: rect(0, bodyTop, width, boardHeight), columns: PORTRAIT_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 32, board: true }),
+    ...table({ name: 'portrait.board', frame: rect(0, bodyTop, width, boardHeight), columns: PORTRAIT_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: PORTRAIT_ROW_HEIGHT, board: true }),
     rule('portrait.boardRule', 0, bodyTop + boardHeight, width, 1),
     ...sessionPanel('portrait.session', rect(0, panelTop, half, panelHeight)),
     vRule('portrait.panelRule', half, panelTop, panelHeight),
-    ...lapDataPanel('portrait.lapData', rect(half + 1, panelTop, width - half - 1, panelHeight)),
+    ...lapDataPanel('portrait.lapData', rect(half + 1, panelTop, rightWidth, panelHeight)),
     rule('portrait.panelBottomRule', 0, panelTop + panelHeight, width, 1),
     zoneWidget('portrait.zoneA', rect(0, zonesTop, half, zoneHeight), 'standard', 'A'),
     vRule('portrait.zoneRuleTop', half, zonesTop, zoneHeight),
-    zoneWidget('portrait.zoneB', rect(half + 1, zonesTop, half, zoneHeight), 'standard', 'B'),
+    zoneWidget('portrait.zoneB', rect(half + 1, zonesTop, rightWidth, zoneHeight), 'standard', 'B'),
     rule('portrait.zoneRuleMiddle', 0, zonesTop + zoneHeight, width, 1),
     zoneWidget('portrait.zoneC', rect(0, zonesTop + zoneHeight + 1, half, zoneHeight), 'standard', 'C'),
     vRule('portrait.zoneRuleBottom', half, zonesTop + zoneHeight + 1, zoneHeight),
-    zoneWidget('portrait.zoneD', rect(half + 1, zonesTop + zoneHeight + 1, half, zoneHeight), 'standard', 'D'),
+    zoneWidget('portrait.zoneD', rect(half + 1, zonesTop + zoneHeight + 1, rightWidth, zoneHeight), 'standard', 'D'),
   ];
   return { name: 'portrait', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
 }
