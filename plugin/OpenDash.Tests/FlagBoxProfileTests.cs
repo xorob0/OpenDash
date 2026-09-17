@@ -76,20 +76,89 @@ namespace OpenDashPlugin.Tests
                 prefix + "openDash Flag box.ledsprofile",
                 prefix + "openDash brow-25.ledsprofile",
             };
-            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(release));
-            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(Enumerable.Reverse(release)));
+            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(release, FlagBoxProfile.FileName));
+            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(Enumerable.Reverse(release), FlagBoxProfile.FileName));
 
             // Strips only: no flag box, rather than the nearest thing to one.
-            Assert.Null(FlagBoxProfile.SelectResource(new[] { prefix + "openDash 0-10-0.ledsprofile", prefix + "openDash brow-9.ledsprofile" }));
-            Assert.Null(FlagBoxProfile.SelectResource(new string[0]));
+            Assert.Null(FlagBoxProfile.SelectResource(new[] { prefix + "openDash 0-10-0.ledsprofile", prefix + "openDash brow-9.ledsprofile" }, FlagBoxProfile.FileName));
+            Assert.Null(FlagBoxProfile.SelectResource(new string[0], FlagBoxProfile.FileName));
 
             // A case-only variant is taken when it is all there is, because copying the built file
             // over an older "openDash flag box.ledsprofile" on Windows replaces the bytes and keeps
             // the old casing; it loses to the exact spelling whenever both are present, whichever
             // way round the list holds them.
             var lower = prefix + "openDash flag box.ledsprofile";
-            Assert.Equal(lower, FlagBoxProfile.SelectResource(new[] { lower }));
-            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(new[] { lower, prefix + "openDash Flag box.ledsprofile" }));
+            Assert.Equal(lower, FlagBoxProfile.SelectResource(new[] { lower }, FlagBoxProfile.FileName));
+            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(new[] { lower, prefix + "openDash Flag box.ledsprofile" }, FlagBoxProfile.FileName));
+        }
+
+        [Fact]
+        public void AShapeSelectsItsOwnResourceAndNeverTheMatrixOne()
+        {
+            // The inverse of the pin above, and the half that was missing while only the flag box was
+            // ever installed. Now that a strip is handed to SimHub's LED driver the hazard runs both
+            // ways: a shape must never collect the 8x8 matrix profile, which would paint sixty-four
+            // pixels onto a ten-LED strip, and it must never collect a neighbouring shape's either.
+            const string prefix = "OpenDashPlugin.Resources.";
+            var release = new[]
+            {
+                prefix + "openDash 0-10-0.ledsprofile",
+                prefix + "openDash 4-14-4-reversed.ledsprofile",
+                prefix + "openDash 4-14-4.ledsprofile",
+                prefix + "openDash Flag box.ledsprofile",
+                prefix + "openDash brow-25.ledsprofile",
+            };
+
+            foreach (var id in new[] { "0-10-0", "4-14-4", "4-14-4-reversed", "brow-25" })
+            {
+                var chosen = FlagBoxProfile.SelectResource(release, FlagBoxProfile.StripFileName(id));
+                Assert.Equal(prefix + "openDash " + id + FlagBoxProfile.ProfileExtension, chosen);
+                Assert.NotEqual(prefix + FlagBoxProfile.FileName, chosen);
+            }
+
+            // "4-14-4" is a prefix of "4-14-4-reversed": a match that was not the whole file name would
+            // hand the reversed wiring to a strip wired the usual way, which lights the wrong end.
+            Assert.Equal(
+                prefix + "openDash 4-14-4.ledsprofile",
+                FlagBoxProfile.SelectResource(new[] { prefix + "openDash 4-14-4-reversed.ledsprofile", prefix + "openDash 4-14-4.ledsprofile" }, FlagBoxProfile.StripFileName("4-14-4")));
+
+            // A shape this build did not emit is absent, not the nearest thing to it.
+            Assert.Null(FlagBoxProfile.SelectResource(release, FlagBoxProfile.StripFileName("7-7-7")));
+            Assert.Null(FlagBoxProfile.StripFileName(null));
+        }
+
+        [Fact]
+        public void TheStripsAreEveryEmbeddedProfileExceptTheFlagBox()
+        {
+            // How the panel knows which shapes this build carries: the embedded files themselves, not a
+            // copy of STRIP_SHAPES and BROW_SHAPES transcribed into C#. A shape added in
+            // packages/dash/src/leds/strip.ts therefore arrives with its row and no edit here.
+            var strips = FlagBoxProfile.StripResourceNames(Self);
+            Assert.Equal(new[] { "0-10-0" }, strips.Select(FlagBoxProfile.ShapeIdOf).ToArray());
+            Assert.DoesNotContain(FlagBoxProfile.ResourceName(Self), strips);
+
+            // The flag box is not a shape, and neither is a file that is not ours at all.
+            Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources." + FlagBoxProfile.FileName));
+            Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.openDash flag box.ledsprofile"));
+            Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.somebody else.ledsprofile"));
+            Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.openDash .ledsprofile"));
+            Assert.Null(FlagBoxProfile.ShapeIdOf(null));
+            Assert.Equal("brow-9", FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.openDash brow-9.ledsprofile"));
+
+            // And the round trip, which is the contract with rpmStripFileName() on the dash side.
+            Assert.Equal("4-14-4", FlagBoxProfile.ShapeIdOf("x.Resources." + FlagBoxProfile.StripFileName("4-14-4")));
+        }
+
+        [Fact]
+        public void AShapesProfileIsReadWithoutBeingWrittenToDisk()
+        {
+            // Installing hands SimHub the embedded text directly; only the flag box is also left on
+            // disk, because only it has a by-hand import path to fall back to.
+            var strip = FlagBoxProfile.StripResourceNames(Self).Single();
+            var json = FlagBoxProfile.ResourceText(Self, strip);
+            Assert.Equal("openDash 0/10/0", FlagBoxProfile.ProfileNameOf(json));
+            Assert.Null(FlagBoxProfile.ResourceText(Self, "OpenDashPlugin.Resources.not embedded.ledsprofile"));
+            Assert.Null(FlagBoxProfile.ResourceText(Self, null));
         }
 
         [Fact]
