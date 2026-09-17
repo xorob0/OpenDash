@@ -246,7 +246,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("openDash", installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
             Assert.Equal("0.2.0", installer.EmbeddedVersion);
-            Assert.Equal("openDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
+            Assert.Equal("openDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion));
 
             // Both packages carry the same fonts; the second install finds them in DashFonts already.
             Assert.Equal(2, Directory.GetFiles(Path.Combine(root, "DashFonts"), "*.ttf").Length);
@@ -425,7 +425,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(SmallFolder, installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
-            Assert.Equal("openDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion, installer.PackageCount));
+            Assert.Equal("openDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion));
         }
 
         [Fact]
@@ -452,15 +452,13 @@ namespace OpenDashPlugin.Tests
         // The panel's texts
 
         [Theory]
-        [InlineData("0.1.0", 10, "openDash 0.1.0")]
-        [InlineData("0.1.0", 1, "openDash 0.1.0")]
-        [InlineData("0.1.0", 0, "openDash 0.1.0")]
-        [InlineData("(unknown version)", 2, "openDash (unknown version)")]
-        public void Summary_is_the_wordmark_and_the_version_and_counts_nothing(string version, int count, string expected)
+        [InlineData("0.1.0", "openDash 0.1.0")]
+        [InlineData("(unknown version)", "openDash (unknown version)")]
+        public void Summary_is_the_wordmark_and_the_version(string version, string expected)
         {
             // The lowercase d is how the product spells itself, and the count of dashboards belongs to the
-            // tooltip rather than to the title, so the same string comes back whatever the count is.
-            Assert.Equal(expected, DashboardInstaller.Summary(version, count));
+            // pill's tooltip rather than to the title, which is why the summary no longer takes one.
+            Assert.Equal(expected, DashboardInstaller.Summary(version));
         }
 
         [Theory]

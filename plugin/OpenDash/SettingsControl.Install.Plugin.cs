@@ -398,7 +398,7 @@ namespace OpenDashPlugin
             if (dashboardTitle == null || statusHost == null) return;
             var installer = plugin.Installer;
             var version = installer.InstalledVersion ?? installer.EmbeddedVersion ?? OpenDash.Version;
-            dashboardTitle.Text = DashboardInstaller.Summary(version, installer.PackageCount);
+            dashboardTitle.Text = DashboardInstaller.Summary(version);
 
             // The worse of the two questions this section answers: what is on the disk against what
             // the build carries, and what the daily check found waiting. Reading the first alone told a
