@@ -426,8 +426,12 @@ describe('the parts the face draws itself', () => {
 
   test('the flag takes band D rather than having a strip of its own', () => {
     const band = zoneFace1920x480.zones.band;
-    const flag = all.filter((i) => i.name.startsWith('flag'));
+    // The band format, which is the one this is about. The face draws a second, full-screen format
+    // beside it under `flagFull.`, deliberately over zones B, A and C; `flagFormat.test.ts` holds
+    // that one, including that the two cannot draw at once.
+    const flag = all.filter((i) => i.name.startsWith('flag.'));
     expect(flag.length).toBeGreaterThan(0);
+    expect(all.some((i) => i.name.startsWith('flagFull.'))).toBe(true);
     // Every part of it is inside band D. The slot model drew a strip along the bottom edge and the
     // band is where that sixty pixels went, so a flag that fell outside the band would mean the
     // face had grown a second one.

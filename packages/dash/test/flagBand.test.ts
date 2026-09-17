@@ -40,8 +40,17 @@ const TILE: Record<string, number> = {
   'openDash 600x686': 56,
 };
 
+/**
+ * The band format's states, which the face now draws inside a group of their own: the two formats
+ * `OpenDash.<Face>FlagFormat` chooses between are both built and one is shown, so the six states are
+ * one level further down than they were. Everything this file asserts is about the band format and
+ * is found by its `flag.` prefix; the full-screen block is `flagFull.` and is held in
+ * `flagFormat.test.ts`.
+ */
+const bandFormatItems = (items: readonly Item[]): Item[] => [...walkItems(items)];
+
 const chequerChildren = (items: readonly Item[]): RectangleItem[] => {
-  const layer = items.find((i): i is LayerItem => i.kind === 'layer' && i.name === 'flag.chequered');
+  const layer = bandFormatItems(items).find((i): i is LayerItem => i.kind === 'layer' && i.name === 'flag.chequered');
   if (!layer) throw new Error('no chequered flag');
   return layer.children.map((c) => {
     if (c.kind !== 'rect') throw new Error(`${c.name} is not a rect`);
@@ -107,7 +116,11 @@ describe('the chequered band', () => {
 const COLOURED = ['yellow', 'blue', 'white', 'green'] as const;
 
 const flagLayers = (face: ZoneLayout): Map<string, LayerItem> =>
-  new Map(faceItems(face).filter((i): i is LayerItem => i.kind === 'layer' && i.name.startsWith('flag.')).map((l) => [l.name.slice('flag.'.length), l]));
+  new Map(
+    bandFormatItems(faceItems(face))
+      .filter((i): i is LayerItem => i.kind === 'layer' && i.name.startsWith('flag.') && i.name.split('.').length === 2)
+      .map((l) => [l.name.slice('flag.'.length), l]),
+  );
 
 const layerOf = (face: ZoneLayout, id: string): LayerItem => {
   const layer = flagLayers(face).get(id);
