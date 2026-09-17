@@ -377,6 +377,45 @@ drawing is measured against the canvas at every shape, and what remains is the p
 catalogue's twelve and fourteen cost two faces their drawing altogether, and the intended answer was
 to let a tight box take that padding back before it gives up the tyre.
 
+### What the seventh round left for you
+
+- **The face draws a page counter that no artboard draws.** Every zone header carries "20 / 20" at
+  its right, and the zones document describes the header as the letter and the page name. The
+  recommendation is to keep it and have the canvas gain it, since the length of a cycle is decided by
+  a zone's mask and a driver has no other way of knowing where in it they are.
+- **Three sheets say a zone centres its rows and the layout spreads them.** Rule 20 grows a rank into
+  the body it is given, which is a spread by construction, so centring would make that growth
+  invisible. One of the two statements has to go.
+- **The nano's band draws 32 where its sheet says 34**, for the two pixels recorded earlier. The row
+  height the artboard states is met exactly; only the glyph differs.
+- **The round faces ghost the gear at 0.4 and the zone sheets at 0.42.** Each was followed where it
+  is drawn rather than unified. If one number is wanted, the round requirement's pinned 104 px
+  reopens with it.
+- **The smaller round face cannot take the gear cluster.** Its sheet lays the three gears across the
+  whole disc while the layout gives the gear the 160 px between two slots, and the row needs 286.
+  Either the slots move, the gear shrinks, or that face keeps the gear alone.
+- **The disqualification flag no longer blinks on the box**, because the canvas draws its three
+  frames with no dark one. The cross closing outwards reads as movement without a panel that goes
+  dark under the one flag that ends a race.
+- **The flag box document is stale in nine rows and two paragraphs.** It describes the superseded
+  stills, and two of its stated decisions are now reversed: a full-course caution is banded, and blue
+  moves. A stale rationale is worse than none.
+- **The delta bar is 12 px on the component sheet and 10 on the page.** The component sheet is where
+  a part is defined, so the page is the more likely one to correct.
+- **The pit wall map is 23 px shorter than its sheet draws**, because the circuit's name moved into
+  the map's own header row when it could not be measured beside it. On the race page those 23 px of
+  height cost 35 px of width, since the map is cut at the catalogue's ratio.
+- **The sector samples on a board do not sum to the lap time beside them.** The canvas's own triple
+  does, exactly, and swapping the four numbers moves no box.
+- **A sector over a minute reads 142.35 rather than 1:42.35.** Widening the budget for the colon
+  moves 498 box coordinates and costs the band its Best field on two faces.
+- **The Round package has neither an icon nor a kind word.** Keeping it on the card model, which its
+  installed property names require, means the kind table gives it no icon, while its caption now
+  reads "480 round" rather than naming the kind. Keying the icon on the folder for the two round
+  packages would settle it.
+- **Six packages are named and eight keep their folder.** A list that names most of its members
+  invites the reader to think the rest are second class.
+
 ## 4. The work, in packages
 
 The 1581 gaps group into 150 packages that can be built independently. A package owns a set of
