@@ -214,18 +214,38 @@ describe('the effect catalogue', () => {
     }
   });
 
-  test('the flags are ranked exactly as the face ranks them, so the two cannot disagree', () => {
-    // flagEffects composes highest priority last, which on a strip is what wins a tie.
-    expect(flagEffects().map((e) => e.id)).toEqual(['flag.green', 'flag.white', 'flag.blue', 'flag.yellow', 'flag.checkered', 'flag.black']);
-    // ...and each carries the face's own flagVisible, which is what makes "the same ranking" true
-    // rather than merely intended: black beating yellow is one expression shared by both.
+  test('the flags are ranked by the catalogue the box ranks, so the two cannot disagree', () => {
+    // This asserted the six normalised Flag_* summaries in the face's order, and it is replaced
+    // rather than extended: the strip no longer reads them at all. Flag_Yellow folds four iRacing
+    // bits together and Flag_Black hides a furled black and a disqualification, so ranking them was
+    // ranking a lossy copy of the list the box ranks -- which is how the two could disagree about
+    // which flag was out. flagEffects composes highest priority last, which on a strip wins a tie.
+    expect(flagEffects().map((e) => e.id)).toEqual([
+      'flag.green',
+      'flag.white',
+      'flag.blue',
+      'flag.debris',
+      'flag.yellow',
+      'flag.caution',
+      'flag.chequered',
+      'flag.black',
+    ]);
     const yellow = flagEffects().find((e) => e.id === 'flag.yellow')!;
-    expect(yellow.when).toContain('[DataCorePlugin.GameData.Flag_Black]) = (0)');
-    expect(yellow.when).toContain('[DataCorePlugin.GameData.Flag_Yellow]) = (1)');
+    expect(yellow.when).toContain('SessionFlagsDetails.Isyellow');
+    // ...and it is the catalogue's own ranking, so a black flag still beats a yellow.
+    expect(yellow.when).toContain('SessionFlagsDetails.Isblack');
     expect(yellow.blinkWhen).toBeTruthy();
+    // Nothing anywhere in a profile reads a Flag_* summary any more.
+    for (const shape of ALL_SHAPES) {
+      const text = leds.serializeProfile(rpmStripProfile(shape, stableGuid(`t/flags/${shape.id}`)));
+      expect({ shape: shape.id, summaries: text.includes('DataCorePlugin.GameData.Flag_') }).toMatchObject({ summaries: false });
+    }
     // A flag lives on the race lamp and on nothing else, so none of them takes the strip any more:
     // that is what stopped a blue flag held for a minute from taking the rev ladder with it.
     for (const e of flagEffects()) expect({ id: e.id, role: e.role }).toMatchObject({ role: 'race' });
+    // ...and the race lamp carries flags and nothing else ever, which is the other half of it: a
+    // lamp that is the flags on one shape and something else on another is the wrong light.
+    expect(ALL_EFFECTS().filter((e) => e.role === 'race').map((e) => e.id)).toEqual(flagEffects().map((e) => e.id));
   });
 
   test('the spotters light the side the car is actually on, steadily', () => {
