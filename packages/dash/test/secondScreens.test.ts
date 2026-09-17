@@ -565,6 +565,34 @@ describe('the track module has a titled and a titleless form', () => {
     expect(mapIn(items).rect).toMatchObject({ top: frame.top, height: frame.height });
   });
 
+  /**
+   * The style the canvas draws the cars and the circuit in, asserted because nothing else would
+   * catch it going back.
+   *
+   * SimHub's defaults are a 12 px dot per car and a bordered track, which is the map the design
+   * spent a package replacing: 4 px for the player against 3 for everyone else, one border on the
+   * player alone so that a car in traffic is still findable, and a single dim stroke with no
+   * border under it. Class colours stay off, as `track.ts` explains.
+   */
+  test('draws the cars and the outline in the style the canvas asks for', () => {
+    const map = mapIn(build(false));
+    expect({
+      player: { radius: map.playerStyle?.dotRadius, border: map.playerStyle?.dotBorderThickness },
+      opponent: { radius: map.opponentStyle?.dotRadius, border: map.opponentStyle?.dotBorderThickness },
+      trackColor: map.trackColor,
+      trackBorderWidth: map.trackBorderWidth,
+      classColors: map.overrideColorsWithCarClassColors,
+      startLine: map.startLine?.enabled,
+    }).toEqual({
+      player: { radius: 4, border: 1 },
+      opponent: { radius: 3, border: 0 },
+      trackColor: ds.color.text.dim,
+      trackBorderWidth: 0,
+      classColors: false,
+      startLine: true,
+    });
+  });
+
   test('strokes the circuit at a weight cut from the map rather than the same line in every box', () => {
     const at = (w: number, h: number): number => mapIn(MODULES.find((m) => m.id === 'track')!.build({ frame: rect(0, 0, w, h), density: 'zone', prefix: 'track.', title: false })).trackWidth!;
     // The catalogue's own 566 by 220 map is where the 2.5 came from; a pit wall zone and a tall
