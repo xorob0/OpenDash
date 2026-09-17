@@ -3,8 +3,9 @@
  * what the design canvas draws with `justify-content: center`, and a row is placed by its bottom
  * edge because the fields in it are bottom-aligned.
  *
- * A row that does not fit is not drawn: zones come in six heights (195 to 356 px) and a module
- * drops its last row rather than letting SimHub clip it.
+ * A row that does not fit is not drawn: a zone is whatever rectangle the page embedding it has
+ * left over, the faces and the four pit wall pages cut a different one each, and a module drops
+ * its last row rather than letting SimHub clip it.
  */
 import type { Item, Rect } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
