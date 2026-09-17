@@ -88,6 +88,14 @@ export interface FlagCondition {
    * gantry are news rather than instructions, so they are not critical.
    */
   critical: boolean;
+  /**
+   * Whether the picture moves or stays still. Movement means act: a flag that ends or interrupts
+   * the race moves, a flag that informs is held, and that one rule is what lets the box be learned
+   * away from the car. It lives with the condition rather than with the drawing because it is a
+   * fact about the flag; `flagBox.test.ts` holds the drawings to it, so a picture cannot quietly
+   * gain or lose the frames that carry its meaning.
+   */
+  motion: 'moves' | 'held';
   /** The iRacing bits that raise it. Any one of them is enough. */
   bits: readonly SessionFlagBit[];
   /** The face's own property for this condition, when the face draws it. */
@@ -102,23 +110,23 @@ export interface FlagCondition {
  * is over, then slow down, then yield, then the lap, then the start gantry.
  */
 export const FLAG_CATALOGUE: readonly FlagCondition[] = [
-  { id: 'red', name: 'Red', critical: true, bits: ['red'] },
-  { id: 'disqualify', name: 'Disqualified', critical: true, bits: ['disqualify'] },
-  { id: 'black', name: 'Black', critical: true, bits: ['black'], faceFlag: 'Flag_Black' },
-  { id: 'furled', name: 'Black furled', critical: true, bits: ['furled'] },
-  { id: 'meatball', name: 'Meatball', critical: true, bits: ['repair'] },
-  { id: 'chequered', name: 'Chequered', critical: false, bits: ['checkered'], faceFlag: 'Flag_Checkered' },
+  { id: 'red', name: 'Red', critical: true, motion: 'moves', bits: ['red'] },
+  { id: 'disqualify', name: 'Disqualified', critical: true, motion: 'moves', bits: ['disqualify'] },
+  { id: 'black', name: 'Black', critical: true, motion: 'moves', bits: ['black'], faceFlag: 'Flag_Black' },
+  { id: 'furled', name: 'Black furled', critical: true, motion: 'moves', bits: ['furled'] },
+  { id: 'meatball', name: 'Meatball', critical: true, motion: 'moves', bits: ['repair'] },
+  { id: 'chequered', name: 'Chequered', critical: false, motion: 'moves', bits: ['checkered'], faceFlag: 'Flag_Checkered' },
   // Full-course caution: in iRacing this is the pace car being deployed, which is the closest
   // honest reading of a safety car. It outranks a local yellow because it is the whole track.
-  { id: 'caution', name: 'Full-course caution', critical: true, bits: ['caution', 'cautionWaving'] },
-  { id: 'yellowWaving', name: 'Waved yellow', critical: true, bits: ['yellowWaving'] },
-  { id: 'yellow', name: 'Yellow', critical: true, bits: ['yellow'], faceFlag: 'Flag_Yellow' },
-  { id: 'debris', name: 'Debris', critical: true, bits: ['debris'] },
-  { id: 'blue', name: 'Blue', critical: true, bits: ['blue'], faceFlag: 'Flag_Blue' },
-  { id: 'white', name: 'White', critical: false, bits: ['white'], faceFlag: 'Flag_White' },
-  { id: 'green', name: 'Green', critical: false, bits: ['green'], faceFlag: 'Flag_Green' },
-  { id: 'startSet', name: 'Set', critical: false, bits: ['startSet'] },
-  { id: 'startReady', name: 'Ready', critical: false, bits: ['startReady'] },
+  { id: 'caution', name: 'Full-course caution', critical: true, motion: 'moves', bits: ['caution', 'cautionWaving'] },
+  { id: 'yellowWaving', name: 'Waved yellow', critical: true, motion: 'moves', bits: ['yellowWaving'] },
+  { id: 'yellow', name: 'Yellow', critical: true, motion: 'held', bits: ['yellow'], faceFlag: 'Flag_Yellow' },
+  { id: 'debris', name: 'Debris', critical: true, motion: 'moves', bits: ['debris'] },
+  { id: 'blue', name: 'Blue', critical: true, motion: 'held', bits: ['blue'], faceFlag: 'Flag_Blue' },
+  { id: 'white', name: 'White', critical: false, motion: 'held', bits: ['white'], faceFlag: 'Flag_White' },
+  { id: 'green', name: 'Green', critical: false, motion: 'held', bits: ['green'], faceFlag: 'Flag_Green' },
+  { id: 'startSet', name: 'Set', critical: false, motion: 'held', bits: ['startSet'] },
+  { id: 'startReady', name: 'Ready', critical: false, motion: 'held', bits: ['startReady'] },
 ];
 
 /** The face's flag properties, in this catalogue's order. */
