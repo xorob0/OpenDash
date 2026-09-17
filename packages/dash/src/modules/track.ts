@@ -13,7 +13,7 @@
 import { ncalc } from '../generator.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, type Rect } from '../design/geometry.ts';
-import { densityOf } from '../second/density.ts';
+import { densityOf, type Density } from '../second/density.ts';
 import { label } from '../elements/label.ts';
 import type { StaticMapItem } from '../generator.ts';
 import { ds } from '../tokens.ts';
@@ -31,10 +31,35 @@ const { concat, fmt, str, ucase } = ncalc;
  */
 const trackWidthFor = (map: Rect): number => Math.round(10 * Math.max(1.5, Math.min(6, Math.min(map.width, map.height) / 88))) / 10;
 
+/** The catalogue's own viewBox: every map on every artboard is this box scaled into its slot. */
+const VIEW = { width: 231, height: 150 } as const;
+
+/** The drawing's ratio, which the box cut for it keeps. */
+export const TRACK_ASPECT = VIEW.width / VIEW.height;
+
+/** What a titled frame spends above its map: the header row and the gap under it. */
+export const trackHeaderHeight = (density: Density): number => {
+  const d = densityOf(density);
+  return d.labelSm + d.fieldGap * 2;
+};
+
+/**
+ * The width a titled track frame takes at `height` so that the map under its header is the
+ * catalogue's own ratio, capped by the room `within` leaves. **Rule 18**: the map is cut from its
+ * box rather than placed in it at a size.
+ *
+ * The circuit is drawn into its rectangle at its recorded proportions, so a box wider than the
+ * ratio asks for buys no ink: it either letterboxes the drawing or stretches it, and neither is
+ * what a panel meant to spend the width on. Cutting the box to the ratio is therefore the widest
+ * the drawing can be read at that height, and the field column beside it keeps the rest.
+ */
+export const trackFrameWidth = (height: number, density: Density, within: number): number =>
+  Math.max(0, Math.min(Math.round(TRACK_ASPECT * Math.max(0, height - trackHeaderHeight(density))), within));
+
 export const track = defineModule('track', (ctx) => {
   const d = densityOf(ctx.density);
   const titled = ctx.title !== false;
-  const mapTop = titled ? ctx.frame.top + d.labelSm + d.fieldGap * 2 : ctx.frame.top;
+  const mapTop = titled ? ctx.frame.top + trackHeaderHeight(ctx.density) : ctx.frame.top;
   const mapRect = rect(ctx.frame.left, mapTop, ctx.frame.width, Math.max(0, ctx.frame.top + ctx.frame.height - mapTop));
   const map: StaticMapItem = {
     kind: 'staticMap',
