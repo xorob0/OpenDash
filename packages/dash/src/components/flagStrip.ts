@@ -1,59 +1,41 @@
 /**
- * flagStrip: one Layer per flag, sharing the band anatomy and differing in colour, label and
- * behaviour. One shows at a time in priority order black, chequered, yellow, blue, white, green;
- * nothing is drawn when no flag is out. Black is outlined, since a black band on this face is
- * invisible; chequered is a hard-edged check pattern (half the band high) with no label; yellow
- * flashes at 2 Hz between its own fill and the face's ground, never between its fill and the page
- * it covers. The nano's 12 px strip is too thin for a label, so its style drops the labels and
- * thins the black outline to 2 px.
+ * flagStrip: band D's flag, one Layer per condition of `FLAG_CATALOGUE`, sharing the band anatomy
+ * and differing in shape, colour, name and behaviour. One shows at a time and nothing is drawn when
+ * nothing is raised.
+ *
+ * It reads the catalogue's bits through `conditionVisible` rather than SimHub's six normalised
+ * `Flag_*` properties, which is the whole of what this file is for. Those six are a lossy summary:
+ * `Flag_Yellow` folds the standing yellow, the waved yellow and both cautions into one band, and
+ * `Flag_Black` is only the `black` bit, so a red flag, a disqualification, a furled black, a
+ * meatball, a full-course caution, the debris flag and the start gantry were invisible on the face
+ * and visible on the 8x8 box. The face, the box and the pit wall header now rank one list, so the
+ * three cannot disagree about which of two live conditions wins.
+ *
+ * The price is that band D is iRacing's, as the box already was: `SessionFlagsDetails` is a raw
+ * iRacing field, so in another sim the band stays dark rather than drawing an approximation of a
+ * flag nobody published. `safeBitSet` is what keeps it dark, since a bare read of an absent
+ * property is not a boolean.
+ *
+ * The nano's 12 px strip is too thin for a name, so its style drops the names and thins the
+ * outline to 2 px; at that size a debris flag and a yellow are one band, which flags.ts records.
  */
-import type { FontWeight, Hex, Item, LayerItem, Rect, RectangleItem } from '../generator.ts';
-import { ncalc } from '../generator.ts';
+import type { Item, LayerItem, Rect } from '../generator.ts';
 import { withBindings, type Expr } from '../bind.ts';
-import { rect } from '../design/geometry.ts';
-import { band } from '../elements/band.ts';
-import { label } from '../elements/label.ts';
-import { FACE_FLAG_PRIORITY, type FaceFlag } from '../flags.ts';
-import { ds, TRANSPARENT } from '../tokens.ts';
+import { ncalc } from '../generator.ts';
+import { ALERT_BAND_STYLES, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
+import { bandRaised, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, type AlertBandSpec, type FaceFlag, type FlagCondition } from '../flags.ts';
+
+export { ALERT_BAND_BORDER as BLACK_FLAG_BORDER, ALERT_FLASH_MS as FLAG_BLINK_MS, ALERT_NAME_WEIGHT as FLAG_NAME_WEIGHT, ALERT_BAND_STYLES as FLAG_STRIP_STYLES } from './alertBand.ts';
+export type { AlertBandStyle as FlagStripStyle } from './alertBand.ts';
 
 const { game, eq, and, num } = ncalc;
 
 /**
- * The band's border, which every artboard draws on every state as `border: 3px solid`, counted
- * inside the box. The black flag draws it in the flag colour, because a dark band on a dark dash
- * needs an edge to read as a band; a coloured state draws it in its own fill, where the artboards
- * leave it transparent over the same fill, which is the same three pixels of that colour.
- */
-export const BLACK_FLAG_BORDER = 3;
-
-/** The weight the artboards set the flag name in, against the 500 of every other label. */
-export const FLAG_NAME_WEIGHT: FontWeight = 'Bold';
-
-/** How a strip is dressed: whether the flag name is drawn on it, and how thick the black outline is. */
-export interface FlagStripStyle {
-  /** Draw "YELLOW FLAG" and the like centred on the band. */
-  labels: boolean;
-  /** Border of the black flag's outline. */
-  blackBorder: number;
-}
-
-export const FLAG_STRIP_STYLES = {
-  standard: { labels: true, blackBorder: BLACK_FLAG_BORDER },
-  /** The nano's 12 px strip: colour only, 2 px outline (from the canvas). */
-  nano: { labels: false, blackBorder: 2 },
-} as const satisfies Record<string, FlagStripStyle>;
-
-/** Half period of the yellow flag's flash in ms (250 at 2 Hz). */
-export const FLAG_BLINK_MS = Math.round(1000 / ds.indicator.flagBand.flashHz / 2);
-
-/**
- * SimHub flag properties in priority order, taken from `FLAG_CATALOGUE` rather than restated: the
- * face and the flag box rank the same conditions, and two lists would eventually disagree about
- * which of two live flags wins.
+ * SimHub flag properties in priority order, taken from `FLAG_CATALOGUE` rather than restated.
  *
- * The face draws the six SimHub normalises. The box draws the whole catalogue, because
- * `Flag_Yellow` folds four iRacing bits together and `Flag_Black` hides a furled black; see
- * flags.ts.
+ * Band D no longer reads them. What is left on them is the round face's ring, which has one colour
+ * and no room for a name, and the pit wall header, which writes the flag's name beside the session:
+ * both draw the six SimHub normalises and both rank them in the catalogue's order through this.
  */
 export const FLAG_PRIORITY: readonly FaceFlag[] = FACE_FLAG_PRIORITY;
 export type FlagProperty = FaceFlag;
@@ -65,103 +47,34 @@ export function flagVisible(flag: FlagProperty): Expr {
   return and(...higher, eq(game(flag), num(1)));
 }
 
-const labelY = (frame: Rect): number => frame.top + (frame.height - ds.size.label) / 2;
-
-/**
- * The centred flag name, when the style draws one. It is the one label on a face drawn in Bold
- * rather than Medium, which is what every FaceVariants sheet sets it in: the band is read at a
- * glance and from further away than a field label is.
- */
-const flagLabel = (frame: Rect, style: FlagStripStyle, name: string, text: string, color: Hex): Item[] =>
-  style.labels ? [label(name, text, frame.left, labelY(frame), frame.width, { color, hAlign: 'center', weight: FLAG_NAME_WEIGHT })] : [];
-
-/**
- * The off phase of a flashing band: the face's own ground, opaque, laid inside the border so that
- * the band keeps its edge through the phase it is dark in.
- */
-const flashBand = (name: string, frame: Rect): RectangleItem => {
-  const inset = BLACK_FLAG_BORDER;
-  return {
-    ...band(name, rect(frame.left + inset, frame.top + inset, frame.width - 2 * inset, frame.height - 2 * inset), ds.color.surface.base),
-    blink: { enabled: true, delayMs: FLAG_BLINK_MS },
-  };
+/** The shape the condition asks for, drawn over `frame`. */
+const bandParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
+  switch (spec.shape) {
+    case 'filled':
+      return filledBand(name, frame, style, spec.colour, spec.label, spec.flash ?? false);
+    case 'outlined':
+      return outlinedBand(name, frame, style, spec.colour, spec.label);
+    case 'chequer':
+      return chequerBand(name, frame);
+  }
 };
 
 /**
- * A band filled with the flag's colour, named, and flashing where the flag flashes.
+ * One condition's layer, ranked by `bandRaised` rather than by the box's own reading: null-safe, so
+ * that a sim publishing no `SessionFlagsDetails` leaves the band dark rather than lighting it, and
+ * limited where a bit is held longer than the flag it announces.
  *
- * The flash was `blink` on the layer, which serialises as `BlinkEnabled` on the group, so for half
- * of every cycle nothing of the band was drawn and band D's fuel page read through a yellow flag.
- * A flag takes the band over precisely so that the page underneath cannot be read, which is what
- * the black flag was filled to obtain. So the ground and the name stay put and an opaque band
- * flashes over them at the same 2 Hz: the state alternates between two things rather than between
- * a thing and the page.
+ * The band passes `false` for the critical-flags switch and so draws the whole list. That switch is
+ * the box's, where sixty-four pixels are the only thing a driver has; a driver who wants band D
+ * quieter turns the flag format off instead.
  */
-function solidFlag(frame: Rect, style: FlagStripStyle, prefix: string, id: string, flag: FlagProperty, color: Hex, text: string, flash: boolean): LayerItem {
-  return {
-    kind: 'layer',
-    name: `${prefix}.${id}`,
-    children: [
-      band(`${prefix}.${id}.band`, frame, color, { border: { color, width: BLACK_FLAG_BORDER } }),
-      ...flagLabel(frame, style, `${prefix}.${id}.label`, text, ds.purpose.flag.onFlag),
-      ...(flash ? [flashBand(`${prefix}.${id}.flash`, frame)] : []),
-    ],
-    ...withBindings({ Visible: flagVisible(flag) }),
-  };
-}
+const conditionLayer = (frame: Rect, style: AlertBandStyle, prefix: string, condition: FlagCondition): LayerItem => ({
+  kind: 'layer',
+  name: `${prefix}.${condition.id}`,
+  children: bandParts(`${prefix}.${condition.id}`, frame, style, condition.band),
+  ...withBindings({ Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) }),
+});
 
-/**
- * The black flag, filled like the other five.
- *
- * It was transparent with only a border, which left band D's page fully readable underneath the
- * most serious thing the band can say. A flag takes the band over, so it has to leave nothing of
- * the page showing.
- *
- * The ground is `surface.base` and not `purpose.flag.black`, which is `#F5F7FA` and is the ink
- * rather than the ground: a band filled with it would be indistinguishable from the white flag at
- * `#FFFFFF`, and two states a driver cannot tell apart is a bug whoever chose the colours. So this
- * flag is light on dark where the others are dark on light, which is also what a black flag looks
- * like. The border stays, because a dark band on a dark dash needs an edge to read as a band.
- */
-function blackFlag(frame: Rect, style: FlagStripStyle, prefix: string): LayerItem {
-  return {
-    kind: 'layer',
-    name: `${prefix}.black`,
-    children: [
-      band(`${prefix}.black.band`, frame, ds.color.surface.base, { border: { color: ds.purpose.flag.black, width: style.blackBorder } }),
-      ...flagLabel(frame, style, `${prefix}.black.label`, 'BLACK FLAG', ds.purpose.flag.black),
-    ],
-    ...withBindings({ Visible: flagVisible('Flag_Black') }),
-  };
-}
-
-/**
- * The chequer, in the phase the canvas draws. `repeating-conic-gradient(#F5F7FA 0 25%, #0A0B0D 0
- * 50%)` sweeps clockwise from twelve o'clock, so the light quadrant of every tile is its top right
- * and the band opens on the ground: row 0 starts one square in, not at the band's left edge.
- */
-function chequeredFlag(frame: Rect, prefix: string): LayerItem {
-  const check = frame.height / 2;
-  const columns = Math.ceil(frame.width / check);
-  const children: Item[] = [band(`${prefix}.chequered.band`, frame, ds.color.surface.base)];
-  for (let row = 0; row < 2; row++) {
-    for (let col = (row + 1) % 2; col < columns; col += 2) {
-      const width = Math.min(check, frame.left + frame.width - (frame.left + col * check));
-      children.push(
-        band(`${prefix}.chequered.r${row}c${String(col).padStart(2, '0')}`, rect(frame.left + col * check, frame.top + row * check, width, check), ds.purpose.flag.chequer),
-      );
-    }
-  }
-  return { kind: 'layer', name: `${prefix}.chequered`, children, ...withBindings({ Visible: flagVisible('Flag_Checkered') }) };
-}
-
-export function flagStrip(frame: Rect, style: FlagStripStyle = FLAG_STRIP_STYLES.standard, prefix = 'flag'): Item[] {
-  return [
-    blackFlag(frame, style, prefix),
-    chequeredFlag(frame, prefix),
-    solidFlag(frame, style, prefix, 'yellow', 'Flag_Yellow', ds.purpose.flag.yellow, 'YELLOW FLAG', true),
-    solidFlag(frame, style, prefix, 'blue', 'Flag_Blue', ds.purpose.flag.blue, 'BLUE FLAG', false),
-    solidFlag(frame, style, prefix, 'white', 'Flag_White', ds.purpose.flag.white, 'WHITE FLAG', false),
-    solidFlag(frame, style, prefix, 'green', 'Flag_Green', ds.purpose.flag.green, 'GREEN FLAG', false),
-  ];
+export function flagStrip(frame: Rect, style: AlertBandStyle = ALERT_BAND_STYLES.standard, prefix = 'flag'): Item[] {
+  return FLAG_CATALOGUE.map((condition) => conditionLayer(frame, style, prefix, condition));
 }
