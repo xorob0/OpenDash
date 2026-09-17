@@ -208,10 +208,9 @@ namespace OpenDashPlugin
         /// "OpenDash" spells the name two ways on one page and the canvas spells it one way. The count of
         /// dashboards used to follow the version and does not any more: the section is about the plugin rather
         /// than about its packages, and the pill beside this line carries a tooltip naming every package and the
-        /// state each one is in, which says the same thing and says it usefully. `packageCount` is therefore not
-        /// read; it stays in the signature only while the panel still passes it.
+        /// state each one is in, which says the same thing and says it usefully.
         /// </remarks>
-        public static string Summary(string version, int packageCount)
+        public static string Summary(string version)
         {
             return "openDash " + version;
         }
