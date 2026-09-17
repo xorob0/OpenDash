@@ -137,9 +137,26 @@ namespace OpenDashPlugin
         /// <summary>One shape's row: the embedded profile compared with what SimHub holds.</summary>
         public static FlagBoxPlan Plan(string embeddedJson)
         {
-            var embedded = Parse(embeddedJson);
-            if (embedded == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
-            return FlagBoxInstallPlan.Decide(embedded.ProfileId, embedded.Description, Installed());
+            return Plan(new[] { embeddedJson })[0];
+        }
+
+        /// <summary>
+        /// A plan per member, in the order given, off ONE read of SimHub's profile list.
+        ///
+        /// The panel redraws its rows whenever the tab is opened, and there are nineteen of them, so
+        /// asking the driver once and deciding nineteen times is the difference between one traversal
+        /// of the user's profiles and nineteen. <see cref="FlagBoxInstallPlan.Combine"/> turns these
+        /// into the grouped row's own state.
+        /// </summary>
+        public static IList<FlagBoxPlan> Plan(IEnumerable<string> embeddedJsons)
+        {
+            var parsed = (embeddedJsons ?? Enumerable.Empty<string>()).Select(Parse).ToList();
+            var installed = Installed();
+            return parsed
+                .Select(p => p == null
+                    ? new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }
+                    : FlagBoxInstallPlan.Decide(p.ProfileId, p.Description, installed))
+                .ToList();
         }
 
         /// <summary>One shape, installed. The list form with a single member.</summary>
@@ -329,8 +346,10 @@ namespace OpenDashPlugin
                 {
                     added++;
                 }
-                else
+                else if (installed != null)
                 {
+                    // Only when the list could be read at all. A list that could not be read says
+                    // nothing about whether the profile is in it, and Census has already logged why.
                     Log.Warn("The " + Name(profile) + " profile was added but cannot be found again by its id;"
                         + " SimHub may have renumbered it because a copy was already present. Check SimHub's "
                         + what + " profile list.");
