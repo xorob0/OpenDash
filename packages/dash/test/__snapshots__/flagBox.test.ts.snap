@@ -13,14 +13,12 @@ exports[`the emitted file the tree 1`] = `
               animation red glyph
             when disqualify
               animation disqualify glyph
-            when black
-              animation black glyph
             when furled
               animation furled glyph
+            when black
+              animation black glyph
             when meatball
               animation meatball glyph
-            when chequered
-              animation chequered glyph
             when caution
               animation caution glyph
             when yellowWaving
@@ -39,6 +37,8 @@ exports[`the emitted file the tree 1`] = `
               animation startSet glyph
             when startReady
               animation startReady glyph
+            when chequered
+              animation chequered glyph
         when Below the flags
           when Pit
             when Pit speeding
@@ -186,14 +186,12 @@ exports[`the emitted file the tree 1`] = `
               animation red glyph
             when disqualify
               animation disqualify glyph
-            when black
-              animation black glyph
             when furled
               animation furled glyph
+            when black
+              animation black glyph
             when meatball
               animation meatball glyph
-            when chequered
-              animation chequered glyph
             when caution
               animation caution glyph
             when yellowWaving
@@ -212,6 +210,8 @@ exports[`the emitted file the tree 1`] = `
               animation startSet glyph
             when startReady
               animation startReady glyph
+            when chequered
+              animation chequered glyph
         when Below the flags
           when Pit
             when Pit speeding
@@ -359,14 +359,12 @@ exports[`the emitted file the tree 1`] = `
               animation red glyph
             when disqualify
               animation disqualify glyph
-            when black
-              animation black glyph
             when furled
               animation furled glyph
+            when black
+              animation black glyph
             when meatball
               animation meatball glyph
-            when chequered
-              animation chequered glyph
             when caution
               animation caution glyph
             when yellowWaving
@@ -385,6 +383,8 @@ exports[`the emitted file the tree 1`] = `
               animation startSet glyph
             when startReady
               animation startReady glyph
+            when chequered
+              animation chequered glyph
         when Below the flags
           when Pit
             when Pit speeding
@@ -532,14 +532,12 @@ exports[`the emitted file the tree 1`] = `
               animation red glyph
             when disqualify
               animation disqualify glyph
-            when black
-              animation black glyph
             when furled
               animation furled glyph
+            when black
+              animation black glyph
             when meatball
               animation meatball glyph
-            when chequered
-              animation chequered glyph
             when caution
               animation caution glyph
             when yellowWaving
@@ -558,6 +556,8 @@ exports[`the emitted file the tree 1`] = `
               animation startSet glyph
             when startReady
               animation startReady glyph
+            when chequered
+              animation chequered glyph
         when Below the flags
           when Pit
             when Pit speeding
@@ -776,25 +776,6 @@ C......C
 .C....C.
 C......C
 
-black
-CCCCCCCC
-C......C
-C......C
-C......C
-C......C
-C......C
-C......C
-CCCCCCCC
-  --
-........
-.CCCCCC.
-.C....C.
-.C....C.
-.C....C.
-.C....C.
-.CCCCCC.
-........
-
 furled
 ........
 ........
@@ -821,6 +802,25 @@ CCCCCCCC
 CCCCCCCC
 CCCCCCCC
 ........
+........
+
+black
+CCCCCCCC
+C......C
+C......C
+C......C
+C......C
+C......C
+C......C
+CCCCCCCC
+  --
+........
+.CCCCCC.
+.C....C.
+.C....C.
+.C....C.
+.C....C.
+.CCCCCC.
 ........
 
 meatball
@@ -859,25 +859,6 @@ DDDDDDDD
 DDDDDDDD
 .DDDDDD.
 ...DD...
-
-chequered
-CC..CC..
-CC..CC..
-..CC..CC
-..CC..CC
-CC..CC..
-CC..CC..
-..CC..CC
-..CC..CC
-  --
-..CC..CC
-..CC..CC
-CC..CC..
-CC..CC..
-..CC..CC
-..CC..CC
-CC..CC..
-CC..CC..
 
 caution
 EEEE....
@@ -1004,6 +985,25 @@ startReady
 BBBBBBBB
 BBBBBBBB
 ........
+
+chequered
+CC..CC..
+CC..CC..
+..CC..CC
+..CC..CC
+CC..CC..
+CC..CC..
+..CC..CC
+..CC..CC
+  --
+..CC..CC
+..CC..CC
+CC..CC..
+CC..CC..
+..CC..CC
+..CC..CC
+CC..CC..
+CC..CC..
 
 Pit speeding
 BB....BB

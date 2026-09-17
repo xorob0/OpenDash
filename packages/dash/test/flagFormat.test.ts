@@ -16,6 +16,8 @@
 import { describe, expect, test } from 'bun:test';
 import { zone as zoneSetting } from '../src/contract.ts';
 import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, flagFullNameSize } from '../src/components/flagFull.ts';
+import { flagVisible } from '../src/components/flagStrip.ts';
+import { bandRaised, conditionVisible, FLAG_CATALOGUE } from '../src/flags.ts';
 import { measureText } from '../src/design/advances.ts';
 import { bottom, contains, overlaps, rect, right } from '../src/design/geometry.ts';
 import type { Item, LayerItem, Rect, TextItem } from '../src/generator.ts';
@@ -24,7 +26,7 @@ import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, type ZoneLayout } from '../src/zones/index.ts';
 import { bodyRect } from '../src/zones/layout.ts';
 
-/** The six states, in the priority both formats rank them in. */
+/** The six states the block draws, in the order the component lists them. */
 const STATES = ['black', 'chequered', 'yellow', 'blue', 'white', 'green'] as const;
 
 /** Every arrangement of every face: the one the sheets draw, and the one with the rev bar's room given back. */
@@ -149,11 +151,28 @@ describe('the two formats cannot both draw', () => {
       expect(visibleOf(fullGroup)).toBe(zoneSetting.flagFormatIs(size, 'full'));
       expect(visibleOf(bandGroup)).not.toBe(visibleOf(fullGroup));
 
-      // And inside them the same six states, each gated on the same condition in both formats: one
-      // ranking of the flags, not two that could disagree about which of two live flags wins.
+      // And inside them the same conditions, ranked from the one catalogue rather than from two
+      // lists that could disagree about which of two live flags wins.
+      //
+      // The two no longer rank them by the same expression. The band draws all fifteen conditions
+      // of FLAG_CATALOGUE off the `SessionFlagsDetails` bits, while the block still draws the six
+      // SimHub normalises, off the `Flag_*` properties; both take their order from that catalogue,
+      // through FACE_FLAG_PRIORITY, so within the six they cannot disagree. What the block cannot
+      // say it does not say: under a red flag or a full-course caution the band names it and the
+      // block draws nothing. Moving the block onto the catalogue as well is the author's, since it
+      // would measure every name in the block down to fit "DISQUALIFIED".
+      const bandStates = bandGroup.children.filter((c): c is LayerItem => c.kind === 'layer').map((c) => c.name.slice('flag.'.length));
+      const fullStates = fullGroup.children.filter((c): c is LayerItem => c.kind === 'layer').map((c) => c.name.slice('flagFull.'.length));
+      expect(fullStates).toEqual([...STATES]);
+      expect(bandStates).toEqual(FLAG_CATALOGUE.map((c) => c.id));
+      // Every state of the block is a condition of the catalogue, ranked among the band's in the
+      // same relative order.
+      expect(bandStates.filter((id) => fullStates.includes(id))).toEqual(FLAG_CATALOGUE.filter((c) => c.faceFlag !== undefined).map((c) => c.id));
       for (const id of STATES) {
         expect({ id, band: stateOf(bandGroup, id).name, full: stateOf(fullGroup, id).name }).toMatchObject({ id, band: `flag.${id}`, full: `flagFull.${id}` });
-        expect({ id, same: visibleOf(stateOf(bandGroup, id)) === visibleOf(stateOf(fullGroup, id)) }).toMatchObject({ id, same: true });
+        const condition = FLAG_CATALOGUE.find((c) => c.id === id);
+        expect({ id, full: visibleOf(stateOf(fullGroup, id)) }).toEqual({ id, full: flagVisible(condition!.faceFlag!) });
+        expect({ id, band: visibleOf(stateOf(bandGroup, id)) }).toEqual({ id, band: conditionVisible(condition!, false, FLAG_CATALOGUE, bandRaised) });
       }
     });
   }

@@ -128,9 +128,10 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
   //
   // Both formats are drawn and one is shown, the way both rev bar arrangements are: a driver flips
   // the switch in the panel and the face in front of them changes. The format is asked once, on the
-  // group, rather than on each of the six states inside it, and a group whose Visible is false has
-  // its children's bindings left unevaluated, so the format that is not chosen costs nothing while
-  // it is not showing.
+  // group, rather than on each of the catalogue's fifteen conditions inside it, and a group whose
+  // Visible is false has its children's bindings left unevaluated, so the format that is not chosen
+  // costs nothing while it is not showing. That matters more than it did: the band draws all
+  // fifteen now, where it drew the six properties SimHub normalises.
   items.push({
     kind: 'layer',
     name: 'flag',
