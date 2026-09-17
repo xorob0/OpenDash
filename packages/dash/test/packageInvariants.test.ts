@@ -63,6 +63,10 @@ const COLOUR_EXCEPTIONS: readonly { value: string; why: string }[] = [
 const RADIUS_EXCEPTIONS: readonly { match: RegExp; radius?: number; why: string }[] = [
   { match: /(?:^|\.)(?:shift|rpm|simhub)\.\d+$/, radius: ds.radius.seg, why: 'radius.seg on a shift-light or rev-bar segment: the one rounded thing on the face' },
   { match: /(?:^|\.)tyres\.(?:Front|Rear)(?:Left|Right)\.(?:body|change)$/, why: "the tyre drawing's body and its change badge, cut from their box: packages/dash/src/second/wheel.ts" },
+  // The three tread columns of the same drawing. The outer two are the tyre's shoulders, which are
+  // round where the crown between them is not, so the radius is what makes the drawing read as a
+  // tyre seen end-on rather than as three bars; it is cut from the box like every other part of it.
+  { match: /(?:^|\.)tyres\.(?:Front|Rear)(?:Left|Right)\.track[123]$/, why: "the tyre's tread columns, whose shoulders are round: packages/dash/src/second/tyreGlyph.ts" },
   { match: /(?:^|\.)pitView\.car\.(?:body|nose|tail|(?:Front|Rear)(?:Left|Right))$/, why: 'the car seen from above, whose tapers are rectangles because the format has no path item: packages/dash/src/second/carTopView.ts' },
 ];
 
