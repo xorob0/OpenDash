@@ -68,7 +68,7 @@ export function gear(frame: Rect, size: number = GEAR_SIZES.standard, prefix = '
 }
 
 /** The share of the gear a ghosted neighbour is drawn at, where a face draws no other. */
-export const GHOST_RATIO = 0.42;
+const GHOST_RATIO = 0.42;
 
 /** How a face draws the gear's two ghosted neighbours: how far off its cell, and how large. */
 export interface GearGhosts {
