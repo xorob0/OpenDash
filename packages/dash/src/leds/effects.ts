@@ -606,3 +606,38 @@ export const effectContainer = (effect: LedEffect, startPosition: number, ledCou
   enabledFormula: { expression: above.length === 0 ? effect.when : and(effect.when, ...above.map(not)) },
   ...(effect.blinkWhen ? { blinkFormula: { expression: effect.blinkWhen }, blinkColor: effect.blinkColor ?? BLINK_OFF, blinkDelayMs: effect.blinkDelayMs } : {}),
 });
+
+/** `isnull([OpenDash.LedFlagAnimation], true) = true`: whether a flag on a strip moves at all. */
+const flagsMove = (): Expr => eq(setting.ledFlagAnimation(), 'true');
+
+/**
+ * The colour a flag settles on once it stops moving.
+ *
+ * `StaticColorContainerBase` alternates `Color` with `BlinkingColor`, and on most rows `Color` is the
+ * lit half and {@link BLINK_OFF} the dark one, so holding a row means holding its `Color`. The
+ * chequered row is written the other way round deliberately — a dark ground blinking white, which is
+ * what stops it being the white flag with a blink — so reading its `Color` would hold a chequered
+ * flag dark, and going dark is the one thing this switch promises never to do.
+ */
+const heldColor = (effect: LedEffect): string => (effect.color === BLINK_OFF ? (effect.blinkColor ?? effect.color) : effect.color);
+
+/**
+ * One effect as the containers it needs: one of them, or for a flag the moving one and the held one.
+ *
+ * `LedFlagAnimation` is a switch on the movement rather than on the flags, which is the whole of the
+ * promise: off does not turn a flag off, it holds the flag from the moment it is out on the colour
+ * the moving one would have settled on. A driver who finds a blinking rim distracting asks for a rim
+ * that stops moving, and they are still owed the flag.
+ *
+ * Two mutually exclusive containers rather than one whose blink is gated, because a held chequered
+ * flag is not the colour a moving one shows steadily; see {@link heldColor}. Both carry the same
+ * rank, so what outranks a moving flag outranks a held one.
+ */
+export const effectContainers = (effect: LedEffect, startPosition: number, ledCount: number, above: readonly Expr[] = []): leds.LedContainer[] => {
+  // Flags and nothing else. The race lamp carries the catalogue and carries nothing besides, and the
+  // switch is named for a flag; a limiter that stopped blinking would be a state, not a flag held.
+  if (effect.role !== 'race' || effect.blinkWhen === undefined) return [effectContainer(effect, startPosition, ledCount, above)];
+  const moving: LedEffect = { ...effect, when: and(effect.when, flagsMove()), blinkWhen: and(effect.blinkWhen, flagsMove()) };
+  const held: LedEffect = { ...effect, label: `${effect.label}, held`, when: and(effect.when, not(flagsMove())), color: heldColor(effect), blinkWhen: undefined };
+  return [effectContainer(moving, startPosition, ledCount, above), effectContainer(held, startPosition, ledCount, above)];
+};

@@ -33,7 +33,7 @@ import { mirrorAvailable } from '../shift.ts';
 import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainer, lampConditions, type LedEffect } from './effects.ts';
+import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
@@ -324,7 +324,12 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
         kind: 'group',
         description: `${side} ${lamp.label} lamp`,
         startPosition: position,
-        children: ranked.map((effect, i) => effectContainer(effect, 1, 1, ranked.slice(0, i).map((higher) => higher.when))).reverse(),
+        // Reversed by rank and then flattened, so that a flag's moving and held containers stay
+        // beside each other in the file rather than at opposite ends of the lamp.
+        children: ranked
+          .map((effect, i) => effectContainers(effect, 1, 1, ranked.slice(0, i).map((higher) => higher.when)))
+          .reverse()
+          .flat(),
       },
     ];
   };
@@ -335,7 +340,7 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
     description: effect.label,
     trigger: { expression: effect.when },
     clearBackgroundWhenActive: true,
-    children: [effectContainer(effect, 1, stripLength(shape))],
+    children: effectContainers(effect, 1, stripLength(shape)),
   });
   const lamps = [...placed].sort((a, b) => b.index - a.index).flatMap(lampGroup);
   const whole = ALL_EFFECTS().filter((e) => e.role === 'strip' || (placed.length === 0 && e.role === 'race'));
