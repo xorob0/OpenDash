@@ -78,7 +78,11 @@ export const radar = defineModule('radar', (ctx) => {
     rect: plot,
     scale: radarScaleFor(plot),
     useSmoothedPlayerAngle: true,
-    playerStyle: { dotColor: ds.color.text.primary, dotRadius: 0, labelFontSize: 1, labelColor: ds.color.surface.base },
+    // Every colour of both styles is named even where nothing is drawn in it: a key left unset is
+    // filled by the serialiser from SimHub's own initialisers, and those are literals that never
+    // passed through design/tokens.json. The player's dot has radius 0, so this border is the
+    // ground colour of a mark that is never drawn.
+    playerStyle: { dotColor: ds.color.text.primary, dotRadius: 0, dotBorderColor: ds.color.surface.base, labelFontSize: 1, labelColor: ds.color.surface.base },
     opponentStyle: {
       dotColor: ds.color.surface.raised,
       dotRadius: CAR.width / 2,
