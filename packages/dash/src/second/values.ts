@@ -167,6 +167,18 @@ export const player = (): Expr => playerPosition();
 /** The car ahead on track (-1) or behind (1). */
 export const neighbour = (offset: number): Expr => aheadBehind(num(offset));
 
+/**
+ * Where a split list's window opens: the first leaderboard row drawn under the limit line.
+ *
+ * The `topRows` at the head of the field are kept whatever the player does, so the window opens
+ * directly under them for as long as the player is still inside it, and follows the player down
+ * once the player is past it, the player sitting on row `centre` of the window as in a relative
+ * table. The max is also the guard: `getplayerleaderboardposition()` answers -1 before the sim has
+ * placed the player, and a window pinned to the kept rows is the unsplit list the table draws
+ * anyway.
+ */
+const splitWindowTop = (topRows: number, centre: number): Expr => max(num(topRows + 1), sub(playerPosition(), num(centre - 1)));
+
 /** The row a table's Nth line shows, given its mode. */
 export const rowIndex = {
   /** The leaderboard in order. */
@@ -177,7 +189,18 @@ export const rowIndex = {
   relative: (centre: number): Expr => aheadBehind(sub(repeatIndex(), num(centre))),
   /** The same, counting only the player's own class. */
   relativeInClass: (centre: number): Expr => aheadBehindInClass(sub(repeatIndex(), num(centre))),
+  /**
+   * A split list's second block: the leaderboard again, counting from where the window opens.
+   *
+   * Still the overall leaderboard, and deliberately: `inClass` would restart the numbering at the
+   * player's own class while the rows above the limit line draw overall positions, so the two
+   * blocks of one list would be counting different fields.
+   */
+  split: (topRows: number, centre: number): Expr => sub(add(splitWindowTop(topRows, centre), repeatIndex()), num(1)),
 };
+
+/** How many cars a split list leaves out: the run between the rows it keeps and the window. */
+export const splitHiddenCars = (topRows: number, centre: number): Expr => sub(splitWindowTop(topRows, centre), num(topRows + 1));
 
 /** The leaderboard index of the car holding the session's best lap. */
 export const sessionBestRow = (): Expr => bestLapPosition();
