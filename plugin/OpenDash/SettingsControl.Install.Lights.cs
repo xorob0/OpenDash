@@ -38,7 +38,8 @@ namespace OpenDashPlugin
             var rows = new List<UIElement>();
             var flagBox = BuildFlagBoxRow(flagBoxPlan);
             if (flagBox != null) rows.Add(flagBox);
-            rows.AddRange(BuildStripRows(typeof(OpenDash).Assembly));
+            bool stripsUnavailable;
+            rows.AddRange(BuildStripRows(typeof(OpenDash).Assembly, out stripsUnavailable));
 
             var children = new List<UIElement> { Ui.Caption(PanelLightRows.SectionCaption, BodyWidth) };
             if (rows.Count == 0)
@@ -50,6 +51,11 @@ namespace OpenDashPlugin
             // The rows go in as one child rather than as a child each: a section holds what it is given
             // twenty apart, and an install row is separated by its own rule and by nothing else.
             children.Add(Ui.VStack(0, rows.ToArray()));
+            // A row whose driver cannot be reached reads "Not installed", because that is the only pill
+            // PanelCopy has for a state nothing is known about. The sentence under the rows is what stops
+            // that pill being read as a fact: it says the settings could not be asked, which is what the
+            // press would run into.
+            if (stripsUnavailable) children.Add(Ui.Caption(PanelLightRows.Unavailable, BodyWidth));
             if (flagBox != null && flagBoxPlan.State == FlagBoxInstallState.Unavailable)
             {
                 children.Add(BuildFlagBoxFallback(flagBoxPlan));
@@ -95,7 +101,7 @@ namespace OpenDashPlugin
         /// A shape this build did not embed has no row at all, which is the honest answer: a row for a
         /// profile that is not there could only offer a press that does nothing.
         /// </remarks>
-        private IList<UIElement> BuildStripRows(Assembly assembly)
+        private IList<UIElement> BuildStripRows(Assembly assembly, out bool unavailable)
         {
             var log = new SimHubInstallLog();
             var json = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -112,6 +118,7 @@ namespace OpenDashPlugin
             var rows = PanelLightRows.Rows(profiles);
             var order = rows.SelectMany(row => row.ShapeIds).ToList();
             var plans = Plan(order.Select(id => json[id]).ToList());
+            unavailable = plans.Any(p => p.State == FlagBoxInstallState.Unavailable);
             var byId = new Dictionary<string, FlagBoxPlan>(StringComparer.Ordinal);
             for (var i = 0; i < order.Count && i < plans.Count; i++) byId[order[i]] = plans[i];
 
