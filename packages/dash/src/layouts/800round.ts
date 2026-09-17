@@ -1,12 +1,12 @@
 /**
  * 800 round, the 5 inch round DDU: the face is the display, so the outer 12 px are the flag
  * ring and everything else sits in the 776 px inner disc. The rev arc runs over the top at
- * radius 352, the gear stands beside the speed in the middle (the standard 260 / 116 row in a
- * 320 x 280 column), the pit limiter sits above them, and six 180 x 110 slots sit two per side
- * and two below: left column, right column, then the bottom row. The slots are rung M by width
- * but only 110 high, so the cards take the S padding, as the canvas draws them (8 / 12).
- * Geometry from design/canvas/DashRound800.dc.html, whose positions are relative to the inner
- * disc.
+ * radius 352, the gear stands in the middle of a 320 x 280 column with the gear below and the
+ * gear above ghosted either side of it, the pit limiter sits above them, and six 180 x 110 slots
+ * sit two per side and two below: left column, right column, then the bottom row. The slots are
+ * rung M by width but only 110 high, so the cards take the S padding, as the canvas draws them
+ * (8 / 12). Geometry from design/canvas/DashRound800.dc.html, whose positions are relative to
+ * the inner disc.
  */
 import { rect } from '../design/geometry.ts';
 import { rungSpec } from '../design/rung.ts';
@@ -20,7 +20,9 @@ export const layout800round: Layout = roundLayout({
   folder: 'openDash 800 round',
   size: SIZE,
   revArc: { r: 352, segment: { width: 30, height: 18 } },
-  gear: { rect: rect(228, 248, 320, 280) },
+  // Two fifths of the gear, not the 0.42 the three zone sheets draw: this artboard sets 104 px
+  // either side of a 260 px gear, and 16 px of air between each ghost and the gear's cell.
+  gear: { rect: rect(228, 248, 320, 280), neighbours: { gap: ds.space[4], ratio: 0.4 } },
   pitLimiter: rect(288, 164, 200, ds.indicator.pitLimiter.height),
   slotSize: { width: 180, height: 110 },
   slotOrigins: [

@@ -8,7 +8,7 @@ import type { Item, Rect } from '../generator.ts';
 import { band } from '../elements/band.ts';
 import { flagRing } from '../components/flagRing.ts';
 import { flagStrip, type FlagStripStyle } from '../components/flagStrip.ts';
-import { gear } from '../components/gear.ts';
+import { gear, gearCluster, type GearGhosts } from '../components/gear.ts';
 import { pitLimiter } from '../components/pitLimiter.ts';
 import { revArc, type RevArcFrame } from '../components/revArc.ts';
 import { REV_WELL_PAD_X, REV_WELL_PAD_Y, revBar, type RevBarFrame } from '../components/revBar.ts';
@@ -23,6 +23,8 @@ export interface GearVariant {
   rect: Rect;
   /** Font size when not the standard 260 (the nano's 180). */
   size?: number;
+  /** The two ghosted neighbours, on the faces whose artboard draws them beside the gear. */
+  neighbours?: GearGhosts;
 }
 
 export type FlagVariant = { kind: 'flagStrip'; rect: Rect; style?: FlagStripStyle } | { kind: 'flagRing'; face: Circle };
@@ -58,7 +60,7 @@ export function revItems(rev: RevVariant): Item[] {
 }
 
 export function gearItems(variant: GearVariant): Item[] {
-  return gear(variant.rect, variant.size);
+  return variant.neighbours ? gearCluster(variant.rect, variant.neighbours, variant.size) : gear(variant.rect, variant.size);
 }
 
 export function flagItems(flags: FlagVariant): Item[] {

@@ -51332,6 +51332,84 @@ exports[`package snapshots openDash 800 round/openDash 800 round.djson 1`] = `
           "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
           "IsTextItem": true,
           "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 104,
+          "Text": "3",
+          "TextColor": "#FF33383F",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 55,
+          "SpecialCharsWidth": 30,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 261,
+          "Top": 338,
+          "Width": 59,
+          "Height": 126,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(([DataCorePlugin.GameData.Gear]) = ('8'), '7', if(([DataCorePlugin.GameData.Gear]) = ('7'), '6', if(([DataCorePlugin.GameData.Gear]) = ('6'), '5', if(([DataCorePlugin.GameData.Gear]) = ('5'), '4', if(([DataCorePlugin.GameData.Gear]) = ('4'), '3', if(([DataCorePlugin.GameData.Gear]) = ('3'), '2', if(([DataCorePlugin.GameData.Gear]) = ('2'), '1', '')))))))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "de4e19a0-dde7-5844-819d-58bba81df95d",
+          "Name": "hero.gear.below",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
+          "FontWeight": "SemiBold",
+          "FontStyle": "Normal",
+          "FontSize": 104,
+          "Text": "5",
+          "TextColor": "#FF33383F",
+          "HorizontalAlignment": 0,
+          "VerticalAlignment": 0,
+          "UseMonospacedText": true,
+          "CharWidth": 55,
+          "SpecialCharsWidth": 30,
+          "SpecialChars": ".,:",
+          "TextWrapping": "NoWrap",
+          "Left": 484,
+          "Top": 338,
+          "Width": 59,
+          "Height": 126,
+          "Visible": true,
+          "BackgroundColor": "#00FFFFFF",
+          "BorderStyle": {},
+          "Bindings": {
+            "Text": {
+              "Formula": {
+                "Expression": "if(([DataCorePlugin.GameData.Gear]) = ('7'), '8', if(([DataCorePlugin.GameData.Gear]) = ('6'), '7', if(([DataCorePlugin.GameData.Gear]) = ('5'), '6', if(([DataCorePlugin.GameData.Gear]) = ('4'), '5', if(([DataCorePlugin.GameData.Gear]) = ('3'), '4', if(([DataCorePlugin.GameData.Gear]) = ('2'), '3', if(([DataCorePlugin.GameData.Gear]) = ('1'), '2', '')))))))"
+              },
+              "Mode": 2
+            },
+            "Visible": {
+              "Formula": {
+                "Expression": "!(((isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0))))"
+              },
+              "Mode": 2
+            }
+          },
+          "Id": "56105c35-a357-542f-bf84-1792f204630a",
+          "Name": "hero.gear.above",
+          "RenderingSkip": 0,
+          "MinimumRefreshIntervalMS": 0
+        },
+        {
+          "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+          "IsTextItem": true,
+          "Font": "openDash Display",
           "FontWeight": "Bold",
           "FontStyle": "Normal",
           "FontSize": 260,
