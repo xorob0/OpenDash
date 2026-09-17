@@ -14,15 +14,14 @@ namespace OpenDashPlugin
         /// The row's first line.
         /// </summary>
         /// <remarks>
-        /// The folder, which is the name SimHub's own dashboard list shows, so somebody looking for the
-        /// thing they installed finds the same word in both places. The canvas names six of the packages
-        /// -- "Main DDU", "Rim", "Pit wall" and the rest -- and that table belongs to PackageEntry rather
-        /// than here, because it is a fact about a package and not about a row; XOR's plugin-61 is where
-        /// it lands, and this is the one expression that changes when it does.
+        /// The canvas names six of the packages, "Main DDU", "Rim", "Pit wall" and the rest, and that
+        /// table is a fact about a package rather than about a row, so it lives on the entry. The other
+        /// eight keep the folder, which is the name SimHub's own dashboard list shows, so somebody
+        /// looking for the thing they installed finds the same word in both places.
         /// </remarks>
         public static string Name(PackageEntry entry)
         {
-            return entry == null ? string.Empty : entry.Folder ?? string.Empty;
+            return entry == null ? string.Empty : entry.DisplayName ?? entry.Folder ?? string.Empty;
         }
 
         /// <summary>
@@ -36,8 +35,12 @@ namespace OpenDashPlugin
         public static string Caption(PackageEntry entry)
         {
             if (entry == null) return string.Empty;
+            // The unreadable size is answered first, because the design's caption is a fixed string per
+            // package and would otherwise state a size for a package that has none to state.
             if (entry.Width <= 0 || entry.Height <= 0) return PanelCopy.KindWord(entry.Kind) ?? string.Empty;
-            return PanelCopy.SizeLine(entry.Kind, entry.SizeLabel);
+            // Then the design's own caption where it gives one, so that the round face reads
+            // "480 round" as the product writes it rather than as its kind and its pixels.
+            return entry.SizeCaption ?? PanelCopy.SizeLine(entry.Kind, entry.SizeLabel);
         }
 
         /// <summary>
