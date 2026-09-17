@@ -7,6 +7,7 @@ import { MODULES } from '../src/modules/index.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { readFileSync } from 'node:fs';
 import { flagVisible } from '../src/components/flagStrip.ts';
+import { bandRaised, conditionVisible, flagCondition, FLAG_CATALOGUE } from '../src/flags.ts';
 import { flagBox, setting } from '../src/contract.ts';
 import { flagBoxTree } from '../src/leds/profile.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
@@ -394,11 +395,28 @@ describe('hero expressions', () => {
   });
 
   test('flags are visible by priority', () => {
+    // The ring and the pit wall header still read the six SimHub normalises, ranked in the
+    // catalogue's order: the chequer is last of them now, where it used to be second.
     expect(flagVisible('Flag_Black')).toBe('(([DataCorePlugin.GameData.Flag_Black]) = (1))');
-    expect(flagVisible('Flag_Yellow')).toBe(
-      '(([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Checkered]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (1))',
-    );
-    expect(flagVisible('Flag_Green').split(' and ')).toHaveLength(6);
+    expect(flagVisible('Flag_Yellow')).toBe('(([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (1))');
+    expect(flagVisible('Flag_Checkered').split(' and ')).toHaveLength(6);
+    expect(flagVisible('Flag_Green').split(' and ')).toHaveLength(5);
+  });
+
+  test('band D ranks the whole catalogue off the bits, not the six summaries', () => {
+    // One layer per condition, each gated on its own bits and on every higher condition being
+    // absent, read null-safely so that a sim publishing no SessionFlagsDetails leaves the band dark.
+    const red = conditionVisible(flagCondition('red'), false, FLAG_CATALOGUE, bandRaised);
+    expect(red).toBe('(((isnull([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isred], 0)) = (1)))');
+    const yellow = conditionVisible(flagCondition('yellow'), false, FLAG_CATALOGUE, bandRaised);
+    expect(yellow).toContain('SessionFlagsDetails.IsyellowWaving');
+    expect(yellow).toContain('SessionFlagsDetails.Isred');
+    expect(yellow).not.toContain('GameData.Flag_');
+    // The green is the exception, and the only one: SimHub limits Flag_Green where the bit is held
+    // all race, so the band reads the limited property and a green flag is an event again.
+    const green = conditionVisible(flagCondition('green'), false, FLAG_CATALOGUE, bandRaised);
+    expect(green).toInclude('(isnull([DataCorePlugin.GameData.Flag_Green], 0)) = (1)');
+    expect(green).not.toContain('SessionFlagsDetails.Isgreen');
   });
 });
 

@@ -14,6 +14,7 @@ import { CARDS } from '../src/cards/index.ts';
 import { PRESSURE_TIERS, pressureTier, pressureTierFor } from '../src/cards/tyrePressures.ts';
 import { CHEQUER_COUNT, CHEQUER_SIZE, CHEQUER_STEP } from '../src/components/flagRing.ts';
 import { FLAG_STRIP_STYLES } from '../src/components/flagStrip.ts';
+import { FLAG_CATALOGUE } from '../src/flags.ts';
 import { GEAR_SIZES, gear, ghostedGearWidth } from '../src/components/gear.ts';
 import { gridColumnWidth } from '../src/components/grid2x2.ts';
 import { revArcAngle } from '../src/components/revArc.ts';
@@ -578,9 +579,12 @@ describe('800 x 286 nano', () => {
     expect(items.map((i) => i.name).filter((n) => n.startsWith('hero.'))).toEqual(['hero.gear']);
   });
 
-  test('the 12 px flag strip has no labels, a 2 px black outline and 6 px checks', () => {
+  test('the 12 px flag strip has no labels, a 2 px outline and 6 px checks', () => {
+    // The strip draws the whole catalogue, one layer per condition, rather than the six properties
+    // SimHub normalises: a red flag, a disqualification, a furled black, a meatball, a full-course
+    // caution, a waved yellow, the debris flag and the start gantry are on the nano too now.
     const flags = items.filter((i): i is LayerItem => i.kind === 'layer' && i.name.startsWith('flag.'));
-    expect(flags.map((f) => f.name)).toEqual(['flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']);
+    expect(flags.map((f) => f.name)).toEqual(FLAG_CATALOGUE.map((c) => `flag.${c.id}`));
     for (const f of flags) {
       for (const child of walkItems(f.children)) {
         expect(child.kind).toBe('rect');
@@ -588,14 +592,23 @@ describe('800 x 286 nano', () => {
         if (hasRect(child)) expect(contains(rect(0, 274, 800, 12), child.rect)).toBe(true);
       }
     }
-    for (const id of ['blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
-    expect(layerNamed(items, 'flag.yellow').children.map((c) => c.name)).toEqual(['flag.yellow.band', 'flag.yellow.flash']);
-    const black = layerNamed(items, 'flag.black').children[0];
-    if (black?.kind !== 'rect') throw new Error('black band');
-    expect(black.border).toEqual({ color: '#F5F7FA', top: 2, bottom: 2, left: 2, right: 2 });
-    // Opaque, and the darkest ground there is: a flag takes the strip over, and the black flag was
-    // the one that did not, leaving whatever it covered readable underneath it.
-    expect(black.backgroundColor).toBe('#0A0B0D');
+    // A filled band with nothing to say at this size is one rectangle; a flashing one is two.
+    for (const id of ['red', 'meatball', 'blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
+    expect(layerNamed(items, 'flag.yellowWaving').children.map((c) => c.name)).toEqual(['flag.yellowWaving.band', 'flag.yellowWaving.flash']);
+    // The outlined form, which the black family and the start gantry share.
+    for (const id of ['black', 'disqualify', 'furled']) {
+      const outlined = layerNamed(items, `flag.${id}`).children[0];
+      if (outlined?.kind !== 'rect') throw new Error(`${id} band`);
+      expect({ id, border: outlined.border }).toEqual({ id, border: { color: '#F5F7FA', top: 2, bottom: 2, left: 2, right: 2 } });
+      // Opaque, and the darkest ground there is: a flag takes the strip over, and the black flag was
+      // the one that did not, leaving whatever it covered readable underneath it.
+      expect({ id, ground: outlined.backgroundColor }).toEqual({ id, ground: '#0A0B0D' });
+    }
+    for (const id of ['startSet', 'startReady']) {
+      const outlined = layerNamed(items, `flag.${id}`).children[0];
+      if (outlined?.kind !== 'rect') throw new Error(`${id} band`);
+      expect({ id, colour: outlined.border?.color, ground: outlined.backgroundColor }).toEqual({ id, colour: '#00D96A', ground: '#0A0B0D' });
+    }
     // 800 / 6 = 133.3 columns, so the last check (column 133, row 1) is clipped to 2 px.
     const checks = layerNamed(items, 'flag.chequered').children.slice(1).filter(hasRect);
     expect(checks).toHaveLength(2 * Math.ceil(800 / 6 / 2));
@@ -603,17 +616,24 @@ describe('800 x 286 nano', () => {
     expect(checks.map((c) => c.rect.width).filter((w) => w !== 6)).toEqual([2]);
     // The flash is a band over the fill and not the layer: a blinking layer draws nothing for half
     // of every cycle, and what a flag covers has to stay covered.
-    expect(layerNamed(items, 'flag.yellow').blink).toBeUndefined();
-    expect(layerNamed(items, 'flag.yellow').children[1]?.blink).toEqual({ enabled: true, delayMs: 250 });
+    expect(layerNamed(items, 'flag.yellowWaving').blink).toBeUndefined();
+    expect(layerNamed(items, 'flag.yellowWaving').children[1]?.blink).toEqual({ enabled: true, delayMs: 250 });
   });
 
   test('the standard strip of the other faces keeps its labels and 3 px outline', () => {
     const standard = buildLayout(layout1280x480, opts).main.screens[0]!.items;
-    const yellow = layerNamed(standard, 'flag.yellow');
-    expect(yellow.children.map((c) => c.name)).toEqual(['flag.yellow.band', 'flag.yellow.label', 'flag.yellow.flash']);
+    const waved = layerNamed(standard, 'flag.yellowWaving');
+    expect(waved.children.map((c) => c.name)).toEqual(['flag.yellowWaving.band', 'flag.yellowWaving.label', 'flag.yellowWaving.flash']);
     const black = layerNamed(standard, 'flag.black').children[0];
     if (black?.kind !== 'rect') throw new Error('black band');
     expect(black.border?.top).toBe(3);
+    // Every name the catalogue gives, drawn once and only at the standard size.
+    const named = FLAG_CATALOGUE.filter((c) => c.band.shape !== 'chequer');
+    for (const condition of named) {
+      const label = layerNamed(standard, `flag.${condition.id}`).children.find((c) => c.name.endsWith('.label'));
+      if (label?.kind !== 'text') throw new Error(`${condition.id} label`);
+      expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: condition.band.shape === 'chequer' ? '' : condition.band.label });
+    }
   });
 });
 

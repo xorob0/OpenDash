@@ -207,18 +207,6 @@ export const FLAG_ROWS: readonly FlagRow[] = [
     color: ds.purpose.flag.black,
     blinkDelayMs: FAST_BLINK_MS,
   },
-  // The reverse assignment of the black: ground steady, white on the blink. SimHub fills the run
-  // with BlinkingColor while blinking and with Color otherwise, so exchanging the two fields is
-  // exactly what antiphase means in this format and needs no phase control. It is also what stops
-  // the two whites being one light, since both resolve to #F5F7FA.
-  {
-    id: 'chequered',
-    label: 'Chequered flag',
-    conditions: ['chequered'],
-    color: BLINK_OFF,
-    blinkColor: ds.purpose.flag.chequer,
-    blinkDelayMs: SLOW_BLINK_MS,
-  },
   // The whole track rather than this corner, said by alternating the flag yellow with the caution
   // amber. The amber is the steady half on purpose: the caution and the plain yellow are on one
   // lamp at the same 2 Hz, so the colour they are read by at the instant of a glance has to differ.
@@ -237,6 +225,20 @@ export const FLAG_ROWS: readonly FlagRow[] = [
   { id: 'blue', label: 'Blue flag', conditions: ['blue'], color: ds.purpose.flag.blue, blinkDelayMs: SLOW_BLINK_MS },
   { id: 'white', label: 'White flag', conditions: ['white'], color: ds.purpose.flag.white, blinkDelayMs: SLOW_BLINK_MS },
   { id: 'green', label: 'Green flag', conditions: ['green'], color: ds.purpose.flag.green, blinkDelayMs: SLOW_BLINK_MS },
+  // Last, because the catalogue ranks the chequer last: it is news where everything above it is an
+  // instruction, and a chequer that outranked them hid a yellow thrown at a race finishing under
+  // one. The drawing is the reverse assignment of the black: ground steady, white on the blink.
+  // SimHub fills the run with BlinkingColor while blinking and with Color otherwise, so exchanging
+  // the two fields is exactly what antiphase means in this format and needs no phase control. It is
+  // also what stops the two whites being one light, since both resolve to #F5F7FA.
+  {
+    id: 'chequered',
+    label: 'Chequered flag',
+    conditions: ['chequered'],
+    color: BLINK_OFF,
+    blinkColor: ds.purpose.flag.chequer,
+    blinkDelayMs: SLOW_BLINK_MS,
+  },
 ];
 
 /** The catalogue conditions of one row, resolved once. */
