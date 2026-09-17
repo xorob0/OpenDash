@@ -111,8 +111,8 @@ interface Quantity {
   colorBind?: Expr;
   unit?: { text: string; widest?: string; bind?: Expr };
   /**
-   * The same value read a second way, drawn after the first on its own line. Only the wide page
-   * carries one, and only its pressure: see {@link otherPressure}.
+   * The same value read a second way, drawn after the first on the line they share. Only the wide
+   * page carries one, and only its pressure: see {@link otherPressure}.
    */
   also?: Quantity;
 }
