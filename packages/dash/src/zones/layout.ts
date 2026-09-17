@@ -131,7 +131,25 @@ export const zoneLayoutDescription = (width: number, height: number): string => 
 export const revBarReclaim = (zones: ZoneRects): number => (zones.bar?.top ?? bodyTop(zones)) - zones.revBarWell.top;
 
 /** The top of the body: the highest of the three zones, which is all three of them in landscape. */
-const bodyTop = (zones: ZoneRects): number => Math.min(zones.zoneA.top, zones.zoneB.top, zones.zoneC.top);
+export const bodyTop = (zones: ZoneRects): number => Math.min(zones.zoneA.top, zones.zoneB.top, zones.zoneC.top);
+
+/**
+ * The body as one rectangle: zones B, A and C together, the seams between them included, full width.
+ *
+ * Derived rather than tabulated, which is what makes the full-screen flag one component instead of
+ * eight tables. It reproduces every rectangle the FaceVariants sheets quote -- 1280 x 320 at y 99,
+ * 1280 x 258 at 87, 1280 x 554 at 105, 1920 x 314 at 105, 800 x 328 at 91, 850 x 328 at 91,
+ * 800 x 194 at 33 and 600 x 546 at 83 -- and gives the two arrangements and the faces the sheets do
+ * not draw for nothing. Both edges are taken from all three zones rather than from zone B's top and
+ * zone C's bottom, because the portrait face stacks A over B over C and neither is the body's edge
+ * there.
+ */
+export function bodyRect(layout: ZoneLayout): Rect {
+  const z = layout.zones;
+  const top = bodyTop(z);
+  const bottom = Math.max(z.zoneA.top + z.zoneA.height, z.zoneB.top + z.zoneB.height, z.zoneC.top + z.zoneC.height);
+  return { left: 0, top, width: layout.width, height: bottom - top };
+}
 
 /** `rect` moved up by `by`, keeping its size. */
 const liftedBy = (r: Rect, by: number): Rect => ({ ...r, top: r.top - by });
