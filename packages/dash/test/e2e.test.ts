@@ -315,8 +315,27 @@ describe('widget build on disk', () => {
 });
 
 describe('the emitted JSON', () => {
-  const documents = (): { file: string; doc: JsonItem; text: string }[] =>
-    [widget, inline].flatMap((r) => FOLDERS.flatMap((folder) => djsonFiles(join(r.out, folder)).map((file) => ({ file, doc: readJson(file), text: readFileSync(file, 'utf8') }))));
+  /**
+   * Every dashboard the build writes, not only the card faces.
+   *
+   * It used to fold the two card builds over `FOLDERS` alone, which left the zone faces and both
+   * second screens outside every rule below it. Since the zone face became the dash face that is
+   * the surface the rules are most about, and the brand-colour guard in particular was watching the
+   * one part of the build it was not written for.
+   */
+  const documents = (): { file: string; doc: JsonItem; text: string }[] => {
+    const read = (file: string): { file: string; doc: JsonItem; text: string } => ({ file, doc: readJson(file), text: readFileSync(file, 'utf8') });
+    // The zone faces are a widget build only, since a zone is a widget: the inline build writes the
+    // card folders and nothing else, which is why the folders are read per build rather than in one
+    // list. The second screens are their own build and name their folders themselves.
+    const folders = (r: typeof widget): string[] => (r === widget ? [...FOLDERS, ...ZONE_FOLDERS] : FOLDERS);
+    return [
+      ...[widget, inline].flatMap((r) => folders(r).flatMap((folder) => djsonFiles(join(r.out, folder)).map(read))),
+      ...readdirSync(second.out, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .flatMap((e) => djsonFiles(join(second.out, e.name)).map(read)),
+    ];
+  };
 
   test('has $type as the first key of every item, one of the five kinds, with unique GUID ids', () => {
     for (const { file, doc } of documents()) {
@@ -365,10 +384,15 @@ describe('the emitted JSON', () => {
 
   test('writes every colour as #AARRGGBB', () => {
     for (const { file, doc, text } of documents()) {
-      const colours = stringsOf(doc).filter((s) => s.value.startsWith('#'));
+      // Not every string opening with a hash is a colour: the board's number column is headed with
+      // a bare "#", and a drawn character is a `Text` rather than a colour key. The rest of the
+      // rule stands, so a malformed colour under any other key still fails here.
+      const colours = stringsOf(doc).filter((s) => s.value.startsWith('#') && s.key !== 'Text');
       expect(colours.length).toBeGreaterThan(0);
       for (const c of colours) expect({ file, ...c, ok: isNormalisedHex(c.value) }).toEqual({ file, ...c, ok: true });
-      for (const m of text.matchAll(/"(#[0-9A-Za-z]*)"/g)) expect(m[1]).toMatch(/^#[0-9A-F]{8}$/);
+      // One or more characters after the hash, for the same reason: the bare "#" the board heads its
+      // number column with is a glyph. Anything longer is claiming to be a colour and must be one.
+      for (const m of text.matchAll(/"(#[0-9A-Za-z]+)"/g)) expect(m[1]).toMatch(/^#[0-9A-F]{8}$/);
       for (const key of ['BackgroundColor', 'TextColor', 'BorderColor', 'StartColor', 'EndColor', 'MiddleColor', 'FillColor', 'EllipseColor']) {
         for (const c of colours.filter((s) => s.key === key)) expect(c.value).toMatch(/^#[0-9A-F]{8}$/);
       }
