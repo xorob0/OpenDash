@@ -81,7 +81,7 @@ export const CHARS = {
   relativeGap: { digits: 6, specials: 1 } as Chars,
   /** `+1L` or `+12.6` */
   gap: { digits: 6, specials: 1 } as Chars,
-  /** `28.41` */
+  /** `28.41`, and `142.35` on a track whose sectors run over a minute. */
   sector: { digits: 5, specials: 1 } as Chars,
   /** `24` */
   position: { digits: 2, specials: 0 } as Chars,
@@ -123,8 +123,23 @@ export const hasTime = (ts: Expr): Expr => gt(timespanToSeconds(isnull(ts, num(0
 /** A lap time as `m:ss.fff`, or the placeholder of the same shape when it was never set. */
 export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(noTime(decimals)));
 
-/** A sector time as `ss.fff`, or `--` when it was never set. */
-export const sectorTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, false), str(NO_VALUE));
+/**
+ * A sector time as seconds to two decimals, `28.41`, or `--` when it was never set.
+ *
+ * Two decimals rather than three, because every sample drawn beside one of these -- the table's
+ * `28.41`, the sectors module's, the zone Sectors page's -- writes two, and the third decimal was
+ * the one digit by which the bound text disagreed with the sheet it was measured from.
+ *
+ * Seconds rather than `toShortTime`, which is the same change made to the same end. `toShortTime`
+ * turns a sector of a minute or more into `m:ss.ff`, which wants a second special cell, and
+ * {@link CHARS.sector} is the width of every box a sector is drawn in: budgeting for that form
+ * widens the three sector fields far enough that the 1280 x 60 sectors band sheds its Best field,
+ * which is a real column lost on every lap of every track to buy the Nordschleife a colon. So the
+ * form that fits the budget is the one that is drawn, and it is the form `zones/bandPages.ts`
+ * already writes its sectors in. Five digits hold up to `999.99`, which no sector of a lap reaches.
+ */
+export const sectorTime = (ts: Expr, decimals = 2): Expr =>
+  iff(hasTime(ts), fmt(timespanToSeconds(ts), `0.${'0'.repeat(decimals)}`), str(NO_VALUE));
 
 /** Seconds as `h:mm:ss`, or `-:--:--` when there is nothing to count. */
 export const clock = (seconds: Expr): Expr => iff(gt(seconds, num(0)), hms(seconds), str('-:--:--'));
@@ -204,9 +219,34 @@ export const carPosition = (idx: Expr): Expr =>
 /** Places gained since the start, signed; 0 when the sim does not track it. */
 export const carRankChange = (idx: Expr): Expr => isnull(driver('positiongain', idx), num(0));
 
-/** The race gap, which SimHub already formats as "+1L" when a car is lapped; "Lead" for the leader. */
-export const carRaceGap = (idx: Expr): Expr =>
-  iff(eq(isnull(driver('position', idx), num(0)), num(1)), str('Lead'), isnull(driver('gaptoleadercombined', idx), str(NO_VALUE)));
+/**
+ * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and
+ * SimHub's own `+1L` once a car is a lap or more down.
+ *
+ * The seconds are formatted here rather than taken from `gaptoleadercombined`, which is one string
+ * for both cases and whose sign and decimals the dash has no say in: the column is drawn beside
+ * the interval, which is `signed(..., '0.0')`, and two neighbouring columns of the same quantity
+ * reading to different precisions is what the sheet is measured against. `signed` writes the
+ * typographic minus, so the value is not formatted again on top of it.
+ *
+ * Lapped is asked of the laps rather than inferred from the string, since the string is the answer
+ * and not the question. The leader is leaderboard row 1, the board being sorted by live position;
+ * where either lap is missing the difference is null, the test is false, and the row falls back to
+ * seconds, which is the reading that is always true.
+ */
+export const carRaceGap = (idx: Expr): Expr => {
+  const gap = driver('gaptoleader', idx);
+  const lapsDown = sub(driver('currentlap', num(1)), driver('currentlap', idx));
+  return iff(
+    eq(isnull(driver('position', idx), num(0)), num(1)),
+    str('Lead'),
+    iff(
+      ncalc.isNull(gap),
+      str(NO_VALUE),
+      iff(gt(lapsDown, num(0)), isnull(driver('gaptoleadercombined', idx), str(NO_VALUE)), signed(gap, '0.0')),
+    ),
+  );
+};
 
 /**
  * The gap to the player on track, signed, three decimals: a car ahead reads `−5.886` and a car
