@@ -139,6 +139,12 @@ export interface PanelSpec {
   /** Padding inside the panel. */
   padX?: number;
   padY?: number;
+  /**
+   * Gap between the title's row and the body under it. Eight by default, which is what the panel
+   * sheets draw; a trace panel asks for six, because its title row also carries the legend and the
+   * two pixels are the difference between the plot the artboard draws and one two pixels shorter.
+   */
+  titleGap?: number;
 }
 
 /** Height a panel's title row takes, gap included. */
@@ -157,7 +163,7 @@ export function panel(name: string, spec: PanelSpec, density: Density = 'zone'):
     // difference between the two chromes.
     label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX, { size: d.labelSm, color: ds.color.text.label }),
   ];
-  const bodyTop = titleY + d.labelSm + ds.space[2];
+  const bodyTop = titleY + d.labelSm + (spec.titleGap ?? ds.space[2]);
   return {
     items,
     body: rect(spec.frame.left + padX, bodyTop, Math.max(0, spec.frame.width - 2 * padX), Math.max(0, spec.frame.top + spec.frame.height - padY - bodyTop)),

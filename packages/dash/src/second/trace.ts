@@ -53,8 +53,18 @@ export interface TraceOptions {
    * where the inputs page has three bars standing on the same line beside it.
    */
   baseline?: boolean;
-  /** Draw a legend under the plot when there is more than one series. */
+  /** Draw a legend when there is more than one series. */
   legend?: boolean;
+  /**
+   * Where the legend goes. Under the plot by default, which costs it a row; `title` returns the
+   * entries laid from the plot's left edge on the title's own line, for a caller that has a title
+   * row to put them in and would rather spend none of the plot on chrome.
+   *
+   * The caller places them, because only it knows where its title row is: `legendWidth` measures
+   * the set so it can be right-aligned there. What this option changes here is that the plot keeps
+   * the whole frame.
+   */
+  legendAt?: 'below' | 'title';
   /**
    * Room left between the plot's edges and the polylines drawn in it, the grid keeping the whole
    * plot. A line of thickness t at either end of its range is drawn half outside the rect and
@@ -90,7 +100,7 @@ export const LEGEND_HEIGHT = 14;
 /** Width and height of a legend swatch. */
 export const SWATCH = { width: 16, height: 2 } as const;
 /** Gap between a swatch and its text, and between legend entries. */
-const SWATCH_GAP = 6;
+const SWATCH_GAP = ds.space[2];
 const LEGEND_GAP = 20;
 
 const chartOf = (name: string, frame: Rect, series: Series, opts: TraceOptions & { points: number }): ChartItem => ({
@@ -137,12 +147,16 @@ export const legendWidth = (series: readonly Series[], density: Density): number
 };
 
 /**
- * The traces of `series` filling `frame`, with the grid behind them. The legend, when asked for,
- * is drawn under the plot and takes LEGEND_HEIGHT off the bottom.
+ * The traces of `series` filling `frame`, with the grid behind them.
+ *
+ * A legend asked for is drawn under the plot and takes LEGEND_HEIGHT off the bottom, unless the
+ * caller says `legendAt: 'title'`, in which case the plot keeps the whole frame and the caller
+ * draws the entries itself through `legend` and `legendWidth`.
  */
 export function trace(name: string, frame: Rect, series: readonly Series[], density: Density, opts: TraceOptions = {}): Item[] {
   const showLegend = (opts.legend ?? series.length > 1) && series.length > 0;
-  const plot = showLegend ? rect(frame.left, frame.top, frame.width, Math.max(0, frame.height - LEGEND_HEIGHT - 4)) : frame;
+  const below = showLegend && (opts.legendAt ?? 'below') === 'below';
+  const plot = below ? rect(frame.left, frame.top, frame.width, Math.max(0, frame.height - LEGEND_HEIGHT - 4)) : frame;
   const items: Item[] = [];
   const lines = GRID_LINES[opts.grid ?? 'quarters'];
   if (lines.length > 0) {
@@ -157,6 +171,6 @@ export function trace(name: string, frame: Rect, series: readonly Series[], dens
   const by = Math.max(0, Math.min(opts.inset ?? 0, Math.floor(Math.min(plot.width, plot.height) / 4)));
   const field = by === 0 ? plot : insetRect(plot, by);
   for (const s of series) items.push(chartOf(`${name}.${s.name}`, field, s, { ...opts, points }));
-  if (showLegend) items.push(...legend(name, series, plot.left, frame.top + frame.height - LEGEND_HEIGHT, density, plot.width));
+  if (below) items.push(...legend(name, series, plot.left, frame.top + frame.height - LEGEND_HEIGHT, density, plot.width));
   return items;
 }
