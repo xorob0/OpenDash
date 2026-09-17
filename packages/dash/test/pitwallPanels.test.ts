@@ -245,6 +245,31 @@ describe('the Track panel carries the session best', () => {
   }
 
   /**
+   * How the column breaks at each size, which is a consequence of how wide the map is left.
+   *
+   * The tower holds its six readings on one line with a pixel to spare, so a map widened by even a
+   * little would drop the brake bias onto a second line on its own. That is a wrap nobody would
+   * see in a diff, which is why it is asserted here rather than left to be noticed on the VM.
+   */
+  test('breaks the column evenly at each size', () => {
+    // Fields on one line share a baseline rather than a top edge, so a 34 px reading opens its
+    // label ten pixels above a 24 px one beside it. A line is therefore a cluster, not a value.
+    const linesOf = (page: string, screen: { items: Item[] }): number[] => {
+      const items = itemsOf(screen);
+      const tops = ['sessionBest', 'road', 'air', 'tc', 'abs', 'bb'].map((id) => texts(items, `${page}.${id}.label`)[0]!.rect.top).sort((a, b) => a - b);
+      return tops.reduce<number[]>((lines, top, i) => {
+        if (i > 0 && top - tops[i - 1]! <= 20) lines[lines.length - 1]! += 1;
+        else lines.push(1);
+        return lines;
+      }, []);
+    };
+    expect({
+      race: linesOf('race.track', racePage(1920, 1080)),
+      tower: linesOf('tower.track', towerPage(1920, 1080)),
+    }).toEqual({ race: [3, 3], tower: [6] });
+  });
+
+  /**
    * The map is cut from its box at the catalogue's ratio (**rule 18**), not placed in it at a size
    * and not stretched to whatever share of the panel is going.
    *
