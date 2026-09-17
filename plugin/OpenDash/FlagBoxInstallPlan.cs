@@ -5,6 +5,7 @@
 // SimHub's own object model and cannot run off Windows. No SimHub or WPF types in this file.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenDashPlugin
 {
@@ -60,6 +61,12 @@ namespace OpenDashPlugin
     {
         /// <summary>Stamped into the profile's Author by the build; how we tell ours from the user's.</summary>
         public const string Author = "openDash";
+
+        /// <summary>The warning both presses owe the user. Update and Reinstall cost the same thing --
+        /// the copy in SimHub goes, and whatever the user changed in it goes with it -- so the sentence
+        /// names the press rather than either verb and both branches carry it.</summary>
+        public const string Replaces =
+            "Pressing the button replaces the copy in SimHub, including any changes you made to it there.";
 
         /// <summary>
         /// The version the build stamped into a profile description, or null.
@@ -118,6 +125,68 @@ namespace OpenDashPlugin
             return plan;
         }
 
+        /// <summary>
+        /// One row's plan over several profiles, for a group the panel draws as a single line.
+        ///
+        /// The worst member decides, in the order below, so a row can never read better than the profile
+        /// it is worst about: a group of nineteen strips where one is missing says "Not installed", and a
+        /// press then installs every member. The versions survive only when the members agree, because a
+        /// pill that says "Installed (0.4.0)" over a group holding two different versions is a lie the
+        /// user cannot see through.
+        ///
+        /// <see cref="FlagBoxPlan.Existing"/> is left null: a group is several profiles and there is no
+        /// single one for it to name. Nothing reads it for a row; the per-member plans still carry theirs.
+        /// </summary>
+        public static FlagBoxPlan Combine(IEnumerable<FlagBoxPlan> plans)
+        {
+            FlagBoxPlan worst = null;
+            var count = 0;
+            string embedded = null;
+            string installed = null;
+            var embeddedAgree = true;
+            var installedAgree = true;
+            foreach (var plan in plans ?? Enumerable.Empty<FlagBoxPlan>())
+            {
+                if (plan == null) continue;
+                if (count == 0)
+                {
+                    embedded = plan.EmbeddedVersion;
+                    installed = plan.InstalledVersion;
+                }
+                else
+                {
+                    if (!string.Equals(embedded, plan.EmbeddedVersion, StringComparison.Ordinal)) embeddedAgree = false;
+                    if (!string.Equals(installed, plan.InstalledVersion, StringComparison.Ordinal)) installedAgree = false;
+                }
+                count++;
+                if (worst == null || Severity(plan.State) < Severity(worst.State)) worst = plan;
+            }
+            // An empty group is a build that embedded none of these profiles, which is the same answer
+            // the single case gives and the same one the panel already knows how to draw.
+            if (worst == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
+            return new FlagBoxPlan
+            {
+                State = worst.State,
+                EmbeddedVersion = embeddedAgree ? embedded : null,
+                InstalledVersion = installedAgree ? installed : null,
+            };
+        }
+
+        /// <summary>How loudly a state has to be reported, lowest first. A failure the user can act on
+        /// beats a state they cannot, and "one of these is missing" beats "the rest are current".</summary>
+        private static int Severity(FlagBoxInstallState state)
+        {
+            switch (state)
+            {
+                case FlagBoxInstallState.Failed: return 0;
+                case FlagBoxInstallState.NotEmbedded: return 1;
+                case FlagBoxInstallState.Unavailable: return 2;
+                case FlagBoxInstallState.NotInstalled: return 3;
+                case FlagBoxInstallState.Outdated: return 4;
+                default: return 5;
+            }
+        }
+
         /// <summary>The label on the button, which has to say what pressing it does.</summary>
         public static string ButtonLabel(FlagBoxPlan plan)
         {
@@ -148,13 +217,19 @@ namespace OpenDashPlugin
                     // Installing adds a profile; it does not switch to one. SimHub picks the current
                     // profile from its own persisted activeProfileId, so a user who presses the button
                     // and then sees nothing on the box has not been told the rest of the job.
+                    //
+                    // The button here says Reinstall, which costs the user exactly what Update costs
+                    // them: the copy in SimHub is replaced by id, their edits to it with it. Saying so
+                    // only in the Outdated branch left the one press that is never necessary as the one
+                    // press that was never warned about.
                     return "Installed and up to date"
                         + (plan.InstalledVersion == null ? ". " : " (" + plan.InstalledVersion + "). ")
-                        + "Select it on your matrix device to use it.";
+                        + "Select it on your matrix device to use it. "
+                        + Replaces;
                 case FlagBoxInstallState.Outdated:
                     return "A newer profile is available ("
                         + (plan.InstalledVersion ?? "unknown") + " to " + (plan.EmbeddedVersion ?? "unknown")
-                        + "). Updating replaces the copy in SimHub, including any changes you made to it there.";
+                        + "). " + Replaces;
                 default:
                     return "Installing the flag box profile failed.";
             }
