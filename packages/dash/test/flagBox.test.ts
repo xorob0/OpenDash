@@ -20,12 +20,12 @@ import {
   PROPERTY_PREFIX,
 } from '../src/contract.ts';
 import { FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, type SessionFlagBit } from '../src/flags.ts';
-import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type MatrixContainer } from '../src/generator.ts';
+import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type Hex, type MatrixContainer, type MatrixFrame } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
 import { eitherLadder, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { overRev as overRevStrip } from '../src/leds/ladder.ts';
-import { flagFrames, FLAG_PALETTE, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
+import { flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
 import { buildFlagBoxProfile, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
 import { CAR_BOTH, CAR_LEFT, CAR_RIGHT, pitStates, spotterStates, warningStates } from '../src/leds/states.ts';
 import { ds } from '../src/tokens.ts';
@@ -276,12 +276,23 @@ describe('sixty-four pixels', () => {
   });
 
   test('black is an outline and a disqualification is a cross, because black is unlit', () => {
-    const black = flagFrames('black')?.[0]?.pixels ?? [];
-    expect(black[0]?.every((p) => p !== null)).toBe(true);
-    expect(black[3]?.slice(1, 7).every((p) => p === null)).toBe(true);
-    const dq = flagFrames('disqualify')?.[0]?.pixels ?? [];
-    expect(dq[0]?.[0]).toBe(ds.purpose.flag.black);
-    expect(dq[0]?.[3]).toBeNull();
+    const black = flagFrames('black') ?? [];
+    for (const frame of black) {
+      // Both halves of the wave are outlines: a filled panel would be a flag of another colour.
+      expect(frame.pixels.flat().filter((p) => p !== null).length).toBeLessThan(64);
+    }
+    expect(black[0]?.pixels[0]?.every((p) => p !== null)).toBe(true);
+    expect(black[0]?.pixels[3]?.slice(1, 7).every((p) => p === null)).toBe(true);
+    // The smaller flag of the wave is the same outline inset by one, so the panel's edge goes dark.
+    expect(black[1]?.pixels[0]?.every((p) => p === null)).toBe(true);
+    expect(black[1]?.pixels[1]?.slice(1, 7).every((p) => p === ds.purpose.flag.black)).toBe(true);
+
+    // The cross closes from the middle outwards, so the corners are the last pixels to arrive.
+    const dq = flagFrames('disqualify') ?? [];
+    expect(dq[0]?.pixels[0]?.every((p) => p === null)).toBe(true);
+    const closed = dq[dq.length - 1]?.pixels ?? [];
+    expect(closed[0]?.[0]).toBe(ds.purpose.flag.black);
+    expect(closed[0]?.[3]).toBeNull();
   });
 
   test('a waved yellow is the yellow flag blinking, which is what tells them apart', () => {
@@ -298,17 +309,51 @@ describe('sixty-four pixels', () => {
     for (const frame of flagFrames('yellowWaving') ?? []) expect(frame.durationMs).toBe(half);
   });
 
-  test('a full-course caution is banded, so it never looks like a local yellow', () => {
-    const caution = flagFrames('caution')?.[0]?.pixels ?? [];
+  test('a full-course caution is two flags waved in turn, so it never looks like a local yellow', () => {
+    // The whole-track condition and the local one are both the yellow flag, so the only thing that
+    // can separate them is the pattern: two half panels alternating against one solid panel.
+    const caution = flagFrames('caution') ?? [];
     const yellow = flagFrames('yellow')?.[0]?.pixels ?? [];
-    expect(caution).not.toEqual(yellow);
-    expect(caution[2]?.every((p) => p === null)).toBe(true);
+    expect(caution).toHaveLength(2);
+    const picture = (frame: MatrixFrame | undefined): string[] => (frame?.pixels ?? []).map((row) => row.map((p) => (p === null ? '.' : 'Y')).join(''));
+    expect(picture(caution[0])).toEqual(Array.from({ length: 8 }, () => 'YYYY....'));
+    expect(picture(caution[1])).toEqual(Array.from({ length: 8 }, () => '....YYYY'));
+    for (const frame of caution) {
+      expect(frame.pixels).not.toEqual(yellow);
+      expect(new Set(frame.pixels.flat().filter((p) => p !== null))).toEqual(new Set([ds.purpose.flag.yellow]));
+    }
   });
 
-  test('blue moves: two frames whose arrows are in different places', () => {
+  test('blue is held: one full panel with nothing cut out of it', () => {
+    // Movement means act, and a blue flag informs. It is the flag a driver sees most often, so a
+    // moving one would teach them that movement is ordinary, which is the whole rule undone.
     const blue = flagFrames('blue') ?? [];
-    expect(blue).toHaveLength(2);
-    expect(blue[0]?.pixels).not.toEqual(blue[1]?.pixels);
+    expect(blue).toHaveLength(1);
+    expect(blue[0]?.pixels.flat().every((p) => p === ds.purpose.flag.blue)).toBe(true);
+  });
+
+  test('a flag that moves has more than one frame and a flag that is held has exactly one', () => {
+    // The rule the canvas states, turned into something a later edit cannot quietly break: the
+    // catalogue says which flags move and the drawings have to agree with it, in both directions.
+    for (const condition of FLAG_CATALOGUE) {
+      const count = (flagFrames(condition.id) ?? []).length;
+      expect({ id: condition.id, moves: count > 1 }).toEqual({ id: condition.id, moves: condition.motion === 'moves' });
+    }
+  });
+
+  test('red and the meatball grow in 100 ms steps and then stay', () => {
+    // SimHub has no play-once: the sequence loops, so "plays once, then holds" is a last frame that
+    // outlasts the other three by two hundred times.
+    for (const id of ['red', 'meatball']) {
+      expect({ id, durations: (flagFrames(id) ?? []).map((f) => f.durationMs) }).toEqual({ id, durations: [100, 100, 100, HOLD_MS] });
+    }
+  });
+
+  test('a flag that walks steps at the band rate, so the whole box keeps one pulse', () => {
+    const half = Math.round(1000 / ds.indicator.flagBand.flashHz / 2);
+    for (const id of ['disqualify', 'furled', 'debris', 'black', 'chequered', 'caution']) {
+      for (const frame of flagFrames(id) ?? []) expect({ id, ms: frame.durationMs }).toEqual({ id, ms: half });
+    }
   });
 
   test('no two conditions draw the same picture', () => {
@@ -775,12 +820,16 @@ describe('the pit family, the spotter and the warnings', () => {
   });
 
   test('a solid flag is told apart by colour, which is what a flag is', () => {
-    // The counterpart of the test above: red, yellow, white and green are the same shape on
-    // purpose. A racing flag *is* a colour, and inventing a pattern for each would be worse.
-    const solids = ['red', 'yellow', 'white', 'green'].map((id) => flagFrames(id)?.[0]?.pixels.map((r) => r.map((c) => (c === null ? '.' : '#')).join('')).join('|'));
-    expect(new Set(solids).size).toBe(1);
-    const colours = ['red', 'yellow', 'white', 'green'].map((id) => flagFrames(id)?.[0]?.pixels[0]?.[0]);
-    expect(new Set(colours).size).toBe(4);
+    // The counterpart of the test above: yellow, blue, white and green are the same shape on
+    // purpose, and red is that shape again once it has finished growing. A racing flag *is* a
+    // colour, and inventing a pattern for each would be worse. Five now rather than four, because
+    // blue lost its arrow and red gained the three frames it grows through.
+    const shapeOf = (pixels: readonly (readonly (Hex | null)[])[] = []): string => pixels.map((r) => r.map((c) => (c === null ? '.' : '#')).join('')).join('|');
+    const held = ['yellow', 'blue', 'white', 'green'];
+    const panels = [...held.map((id) => flagFrames(id)?.[0]?.pixels), flagFrames('red')?.at(-1)?.pixels];
+    expect(panels).toHaveLength(5);
+    expect(new Set(panels.map((p) => shapeOf(p))).size).toBe(1);
+    expect(new Set(panels.map((p) => p?.[0]?.[0])).size).toBe(5);
   });
 
   test('the same glyph on matrix 2 differs only in StartPositionMatrix', () => {
