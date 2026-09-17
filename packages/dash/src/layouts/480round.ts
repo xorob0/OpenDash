@@ -1,9 +1,14 @@
 /**
  * 480 round, the round and square 480 x 480 DDUs: the face is the display, so the outer 12 px
  * are the flag ring and everything else sits in the 456 px inner disc. The rev arc runs over the
- * top at radius 206, the gear stands over a row of speed and unit in the middle, the pit
- * limiter sits above the gear, and two 140 x 108 slots (rung S) flank the gear. Geometry from
- * design/canvas/DashRound480.dc.html, whose positions are relative to the inner disc.
+ * top at radius 206, the gear stands alone in the middle, the pit limiter sits above it, and two
+ * 140 x 108 slots (rung S) flank it. Geometry from design/canvas/DashRound480.dc.html, whose
+ * positions are relative to the inner disc.
+ *
+ * Alone, where the 800 draws the gear with its two neighbours ghosted: the artboard lays that
+ * cluster across the whole 456 px disc, and the gear's rect here is the 160 px between the two
+ * slots, which a 286 px cluster would have to overhang. Which of the two gives way is the
+ * author's, and until it is settled this face draws the gear the canvas's own size.
  */
 import { rect } from '../design/geometry.ts';
 import { ds } from '../tokens.ts';
