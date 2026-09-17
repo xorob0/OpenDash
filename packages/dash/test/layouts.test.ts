@@ -14,7 +14,7 @@ import { CARDS } from '../src/cards/index.ts';
 import { PRESSURE_TIERS, pressureTier, pressureTierFor } from '../src/cards/tyrePressures.ts';
 import { CHEQUER_COUNT, CHEQUER_SIZE, CHEQUER_STEP } from '../src/components/flagRing.ts';
 import { FLAG_STRIP_STYLES } from '../src/components/flagStrip.ts';
-import { GEAR_SIZES, gear } from '../src/components/gear.ts';
+import { GEAR_SIZES, gear, ghostedGearWidth } from '../src/components/gear.ts';
 import { gridColumnWidth } from '../src/components/grid2x2.ts';
 import { revArcAngle } from '../src/components/revArc.ts';
 import { declaredProperties, defaultCardForSlot, slotSettingName } from '../src/contract.ts';
@@ -22,8 +22,8 @@ import { buildLayout, buildPackage } from '../src/dashboard.ts';
 import { centre, contains, distance, overlaps, rect, type Rect } from '../src/design/geometry.ts';
 import { FONT_METRICS, WPF_BASELINE } from '../src/design/metrics.ts';
 import { rungForSlot, rungSpec, type Rung } from '../src/design/rung.ts';
-import { itemBounds, type Dashboard, type DrawableItem, type EllipseItem, type Item, type LayerItem } from '../src/generator.ts';
-import { hero, type HeroGeometry } from '../src/hero/hero.ts';
+import { itemBounds, type Dashboard, type DrawableItem, type EllipseItem, type Item, type LayerItem, type TextItem } from '../src/generator.ts';
+import { gearItems, hero, type HeroGeometry } from '../src/hero/hero.ts';
 import {
   cardRung,
   LAYOUTS,
@@ -694,7 +694,8 @@ const ROUND_ROWS: RoundRow[] = [
     face: FACE_800,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 400, cy: 400, r: 352 }, segment: { width: 30, height: 18 } },
-      gear: { rect: rect(240, 260, 320, 280) },
+      // The gear with its two neighbours ghosted, at the 0.4 of it this artboard draws.
+      gear: { rect: rect(240, 260, 320, 280), neighbours: { gap: 16, ratio: 0.4 } },
       pitLimiter: rect(300, 176, 200, 36),
       flags: { kind: 'flagRing', face: FACE_800 },
     },
@@ -702,8 +703,23 @@ const ROUND_ROWS: RoundRow[] = [
   },
 ];
 
+/** The gear's own items: its two ghosted neighbours first, on the face whose hero asks for them. */
+const gearNames = (row: RoundRow): string[] => (row.hero.gear.neighbours ? ['hero.gear.below', 'hero.gear.above', 'hero.gear'] : ['hero.gear']);
+
 /** The items of a round face's hero, in the order the main screen draws them (the ring last, so it is the outermost element). */
-const ROUND_HERO_NAMES = ['revArc.shiftLights', 'revArc.shiftLightsSimHub', 'revArc.rpmBar', 'hero.gear', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green'];
+const roundHeroNames = (row: RoundRow): string[] => [
+  'revArc.shiftLights',
+  'revArc.shiftLightsSimHub',
+  'revArc.rpmBar',
+  ...gearNames(row),
+  'pitLimiter',
+  'flag.black',
+  'flag.chequered',
+  'flag.yellow',
+  'flag.blue',
+  'flag.white',
+  'flag.green',
+];
 
 describe('the round faces, row by row of the spec table', () => {
   test('the table covers every round layout, each once', () => {
@@ -735,8 +751,8 @@ describe('the round faces, row by row of the spec table', () => {
       });
 
       test('carries the round hero: rev arc layers, the gear, the pit limiter and six flag rings, then the slots', () => {
-        expect(items.map((i) => i.name)).toEqual([...ROUND_HERO_NAMES, ...layout.slots.map((_, i) => slotSettingName(i + 1))]);
-        expect(hero(layout.hero).map((i) => i.name)).toEqual(ROUND_HERO_NAMES);
+        expect(items.map((i) => i.name)).toEqual([...roundHeroNames(row), ...layout.slots.map((_, i) => slotSettingName(i + 1))]);
+        expect(hero(layout.hero).map((i) => i.name)).toEqual(roundHeroNames(row));
       });
 
       test('every rev arc segment centre lies on its circle within 1 px and is rotated by its angle', () => {
@@ -819,7 +835,10 @@ describe('the round faces, row by row of the spec table', () => {
           const halfDiagonal = Math.hypot(s.rect.width, s.rect.height) / 2;
           expect(distance(centre(s.rect), centrePoint) + halfDiagonal).toBeLessThanOrEqual(inner);
         }
-        for (const name of ['hero.gear', 'pitLimiter.band']) {
+        // Every box of the gear cluster, not only the gear's: on the 800 the ghosts are what reach
+        // nearest the slots, and an assertion that covers the centre numeral alone covers the one
+        // box that was never in doubt.
+        for (const name of [...gearNames(row), 'pitLimiter.band']) {
           const item = [...walkItems(items)].find((i) => i.name === name);
           if (!item || !hasRect(item)) throw new Error(`${name} has no rect`);
           for (const c of corners(item.rect)) expect({ name, corner: c, inside: distance(c, centrePoint) <= inner }).toMatchObject({ inside: true });
@@ -834,7 +853,7 @@ describe('the round faces, row by row of the spec table', () => {
         const checks = layerNamed(items, 'flag.chequered').children.filter(hasRect);
         expect(segments).toHaveLength(45);
         expect(checks).toHaveLength(CHEQUER_COUNT);
-        const heroBoxes = ['hero.gear', 'pitLimiter.band'].map((name) => {
+        const heroBoxes = [...gearNames(row), 'pitLimiter.band'].map((name) => {
           const item = [...walkItems(items)].find((i) => i.name === name);
           if (!item || !hasRect(item)) throw new Error(`${name} has no rect`);
           return { name, rect: item.rect };
@@ -889,16 +908,70 @@ describe('480 round', () => {
 
 describe('800 round', () => {
   const layout = layout800round;
+  const cluster = gearItems(layout.hero.gear).filter((i): i is TextItem => i.kind === 'text');
+  const clusterItem = (name: string): TextItem => {
+    const item = cluster.find((i) => i.name === name);
+    if (!item) throw new Error(`the cluster draws no ${name}`);
+    return item;
+  };
 
-  test('the hero is the gear alone, centred in the 320 x 280 column, its glyphs inside the column', () => {
-    expect(layout.hero.gear).toEqual({ rect: rect(240, 260, 320, 280) });
-    const [gearItem] = gear(rect(240, 260, 320, 280));
-    if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
+  test('the hero is the gear with its neighbours: the previous, the current and the next gear in one row', () => {
+    expect(layout.hero.gear).toEqual({ rect: rect(240, 260, 320, 280), neighbours: { gap: 16, ratio: 0.4 } });
+    // The ghosts are drawn first and read left to right, so the row is 3 4 5 across the column.
+    expect(cluster.map((i) => i.name)).toEqual(['hero.gear.below', 'hero.gear.above', 'hero.gear']);
+    expect([...cluster].sort((a, b) => a.rect.left - b.rect.left).map((i) => i.text)).toEqual(['3', '4', '5']);
+  });
+
+  test('the gear is 260 Bold, its cell centred in the 320 x 280 column and its box five pixels above the bottom slots', () => {
+    const gearItem = clusterItem('hero.gear');
     expect([gearItem.fontSize, gearItem.fontWeight]).toEqual([260, 'Bold']);
     expect(gearItem.rect).toEqual({ left: 332, top: 244, width: 140, height: 313 });
     // The cell, not the box, is centred: 136 in 320 leaves 92 either side.
     const cell = gearItem.monospace?.charWidth ?? 0;
     expect(Math.abs(gearItem.rect.left - 240 - (560 - (gearItem.rect.left + cell)))).toBeLessThanOrEqual(1);
+    expect(gearItem.rect.top + gearItem.rect.height).toBe(Math.max(...layout.slots.map((s) => s.top)) - 5);
+    // The cluster adds no box the plain gear would not have drawn, so the neighbours cost nothing down.
+    expect(gear(layout.hero.gear.rect)[0]).toEqual(gearItem);
+  });
+
+  test('the neighbours are 104 px SemiBold in the dim ink, 16 px off the gear cell either side, the row centred on the face', () => {
+    const below = clusterItem('hero.gear.below');
+    const above = clusterItem('hero.gear.above');
+    for (const ghost of [below, above]) {
+      expect([ghost.fontSize, ghost.fontWeight, ghost.textColor]).toEqual([104, 'SemiBold', '#33383F']);
+      // 0.4 of the gear, in the gear's own letter-wide cell: ceil(0.52 x 104) = 55, and 4 px of slack.
+      expect(ghost.monospace?.charWidth).toBe(55);
+      expect(ghost.rect.width).toBe(55 + 4);
+    }
+    expect(below.rect).toEqual({ left: 261, top: 338, width: 59, height: 126 });
+    expect(above.rect).toEqual({ left: 484, top: 338, width: 59, height: 126 });
+    const gearItem = clusterItem('hero.gear');
+    const cell = gearItem.monospace!.charWidth;
+    expect(gearItem.rect.left - (below.rect.left + below.monospace!.charWidth)).toBe(16);
+    expect(above.rect.left - (gearItem.rect.left + cell)).toBe(16);
+    // The cells are symmetric about the gear's, so what the row draws is centred on the face even
+    // though the boxes are not: each one takes its slack to the right.
+    expect((below.rect.left + above.rect.left + above.monospace!.charWidth) / 2).toBe(400);
+  });
+
+  test('the neighbour reads the gear as text, and the one above is hidden in the car top gear', () => {
+    const below = clusterItem('hero.gear.below');
+    const above = clusterItem('hero.gear.above');
+    // Mapped rather than added: SimHub publishes the gear as a string, so [Gear] + 1 is "31" in third.
+    expect(below.bindings?.Text?.formula).toContain("if(([DataCorePlugin.GameData.Gear]) = ('3'), '2'");
+    expect(above.bindings?.Text?.formula).toContain("if(([DataCorePlugin.GameData.Gear]) = ('3'), '4'");
+    for (const ghost of [below, above]) expect(ghost.bindings?.Text?.formula).not.toContain('+');
+    expect(below.bindings?.Visible).toBeUndefined();
+    expect(above.bindings?.Visible?.formula).toBeDefined();
+  });
+
+  test('a column too narrow for the row drops the neighbours rather than drawing them over a slot', () => {
+    // What the 480 round would do if it were given the cluster: its gear sits in the 160 px between
+    // two slots and the row needs 286, so the ghosts go and the gear keeps its size.
+    const narrow = { ...layout480round.hero.gear, neighbours: { gap: 16, ratio: 0.4 } };
+    expect(gearItems(narrow).map((i) => i.name)).toEqual(['hero.gear']);
+    expect(ghostedGearWidth(GEAR_SIZES.standard, { gap: 16, ratio: 0.4 })).toBe(286);
+    expect(narrow.rect.width).toBeLessThan(286);
   });
 
   test('the pit limiter is the standard 36 px block, 200 wide, centred over the gear and 48 px above the column', () => {
