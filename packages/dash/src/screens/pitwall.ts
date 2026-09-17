@@ -387,8 +387,13 @@ export function racePage(width: number, height: number): Screen {
   const columnLeft = width - columnWidth;
   const boardWidth = columnLeft - 1;
   // The artboard's own four heights. They come to 602 with their rules, which leaves 414 of the
-  // 1016 px body for the two zones and the rule between them; the sheet spends 403 there and leaves
-  // the last eleven pixels unaccounted, so the zones are a few pixels taller here than drawn.
+  // 1016 px body for the two zones and the rule between them; the sheet spends 403 there, on zones
+  // of 195 and 207, and leaves the last eleven pixels unaccounted.
+  //
+  // So the two are one rectangle here, a few pixels taller than either. A zone rectangle names the
+  // zone dashboard the package carries, and two zones of one column that differ by twelve pixels
+  // are a second copy of all twenty-one pages, shedding their rows at different heights for a
+  // difference a reader of the column cannot see.
   const panels = [
     { id: 'session', height: 108, draw: sessionPanel },
     { id: 'lapDelta', height: 158, draw: lapDeltaPanel },
@@ -492,9 +497,9 @@ export function telemetryPage(width: number, height: number): Screen {
  * that sum exactly: a board stacks its rows flush and opens them against the header rule, so
  * nothing else is spent.
  */
-function boardHeightOf(rows: number, row: number): number {
-  let height = rows * row;
-  while (boardRowsThatFit(rect(0, 0, 0, height), { density: DENSITY, header: true, rowHeight: row, board: true }) < rows) height += 1;
+function boardHeightOf(spec: { rows: number; rowHeight: number }): number {
+  let height = spec.rows * spec.rowHeight;
+  while (boardRowsThatFit(rect(0, 0, 0, height), { ...spec, density: DENSITY, header: true, board: true }) < spec.rows) height += 1;
   return height;
 }
 
@@ -510,7 +515,7 @@ export function portraitPage(width: number, height: number): Screen {
   // total that only matches the sheet by accident. The 56 px the bands would have taken go to what
   // follows the board rather than to an empty strip under the last car, which is what the sheet's
   // own column does with them: every band under the board is laid out after it, not against it.
-  const boardHeight = boardHeightOf(PIT_WALL_ROWS, PORTRAIT_ROW_HEIGHT);
+  const boardHeight = boardHeightOf({ rows: PIT_WALL_ROWS, rowHeight: PORTRAIT_ROW_HEIGHT });
   const panelTop = bodyTop + boardHeight + 1;
   const panelHeight = 110;
   const zonesTop = panelTop + panelHeight + 1;
