@@ -5,8 +5,8 @@
  * these tests exist to prove openDash refuses to draw something rather than to prove it draws it.
  */
 import { describe, expect, test } from 'bun:test';
-import { stableGuid, leds } from '../src/generator.ts';
-import { PROPERTY_PREFIX, declaredProperties, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE } from '../src/contract.ts';
+import { ncalc, stableGuid, leds } from '../src/generator.ts';
+import { PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE, setting } from '../src/contract.ts';
 import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
@@ -23,9 +23,13 @@ import {
   SPOTTER_EFFECTS,
   TURN_EFFECTS,
   effectContainer,
+  effectContainers,
   flagEffects,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
+// The flag box's own states, so that "the strip and the box compare the same thing" is asserted
+// against the box rather than against a copy of what the box is believed to say.
+import { warningStates } from '../src/leds/states.ts';
 import { lastGear, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
@@ -248,6 +252,57 @@ describe('the effect catalogue', () => {
     expect(ALL_EFFECTS().filter((e) => e.role === 'race').map((e) => e.id)).toEqual(flagEffects().map((e) => e.id));
   });
 
+  test('with the flag animation switched off a flag is held, and never held dark', () => {
+    // The switch is on the movement rather than on the flags. A driver who finds a blinking rim
+    // distracting is asking for a rim that stops moving, and is still owed the flag: it was declared,
+    // attached and drawn in the panel with nothing reading it, which is a switch that changes nothing.
+    const moves = ncalc.eq(setting.ledFlagAnimation(), 'true');
+    for (const flag of flagEffects()) {
+      const pair = effectContainers(flag, 1, 1) as Extract<leds.LedContainer, { kind: 'customStatus' }>[];
+      expect({ id: flag.id, containers: pair.length }).toMatchObject({ containers: 2 });
+      const [moving, held] = pair;
+      expect({ id: flag.id, on: moving!.enabledFormula.expression.includes(moves) }).toMatchObject({ on: true });
+      expect({ id: flag.id, blink: moving!.blinkFormula?.expression.includes(moves) }).toMatchObject({ blink: true });
+      // Held: lit while the switch is off, steady, and on a colour that is actually lit. The
+      // chequered row's own Color is the off phase — it is written as a dark ground blinking white so
+      // as not to be the white flag — so holding that field would turn the one flag off.
+      expect({ id: flag.id, off: held!.enabledFormula.expression.includes(ncalc.not(moves)) }).toMatchObject({ off: true });
+      expect({ id: flag.id, blink: held!.blinkFormula }).toMatchObject({ blink: undefined });
+      expect({ id: flag.id, dark: held!.color === BLINK_OFF }).toMatchObject({ dark: false });
+      expect({ id: flag.id, lit: held!.color === flag.color || held!.color === flag.blinkColor }).toMatchObject({ lit: true });
+    }
+    // ...and on every shape, so there is no device that draws a flag it cannot hold.
+    const labels = new Set(flagEffects().map((e) => e.label));
+    for (const shape of ALL_SHAPES) {
+      const profile = rpmStripProfile(shape, stableGuid(`t/held/${shape.id}`));
+      // The lit containers alone: on a shape with no lamps a flag is also the name of the group that
+      // blanks the run for it, and that group is not a second drawing of the flag.
+      const drawn = walk(profile.containers)
+        .filter((c) => c.kind === 'customStatus')
+        .map((c) => c.description ?? '');
+      const moving = drawn.filter((d) => labels.has(d)).length;
+      expect({ shape: shape.id, moving: moving > 0 }).toMatchObject({ moving: true });
+      expect({ shape: shape.id, held: drawn.filter((d) => d.endsWith(', held')).length }).toMatchObject({ held: moving });
+      expect({ shape: shape.id, reads: leds.serializeProfile(profile).includes('[OpenDash.LedFlagAnimation]') }).toMatchObject({ reads: true });
+    }
+  });
+
+  test('the strip and the box read one low-fuel threshold, so a rig has one answer to "am I low"', () => {
+    const strip = ALL_EFFECTS().find((e) => e.id === 'lowFuel')!;
+    const box = warningStates().find((s) => s.id === 'lowFuel')!;
+    expect(strip.when).toBe(box.raised);
+    expect(strip.when).toContain('[OpenDash.LightsLowFuelLaps]');
+    // It read CarSettings_FuelAlertActive, which is SimHub's own alert and what the native container
+    // reads. That is a different question from the one the box asks, so the number in the panel moved
+    // the box and left the strip where SimHub had put it.
+    expect(strip.when).not.toContain('CarSettings_FuelAlertActive');
+    expect(strip.source).toContain('Fuel_RemainingLaps');
+    for (const shape of ALL_SHAPES) {
+      const text = leds.serializeProfile(rpmStripProfile(shape, stableGuid(`t/fuel/${shape.id}`)));
+      expect({ shape: shape.id, native: text.includes('CarSettings_FuelAlertActive') }).toMatchObject({ native: false });
+    }
+  });
+
   test('the spotters light the side the car is actually on, steadily', () => {
     const [left, right] = SPOTTER_EFFECTS;
     expect({ role: left!.role, side: left!.side }).toEqual({ role: 'side', side: 'left' });
@@ -461,6 +516,28 @@ describe('every generated profile', () => {
       const p = rpmStripProfile(shape, stableGuid(`t/${shape.id}`));
       const outer = shape.reversed ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
       expect({ shape: shape.id, type: leds.containerTypeOf(outer) }).toMatchObject({ type: 'Groups.GameRunningGroup' });
+    }
+  });
+
+  test('obeys the rig brightness, which the flag box had to itself until now', () => {
+    // LightsBrightness, LightsNightBrightness and LightsNightMode are captioned "for every light
+    // openDash drives", and a wheel strip and a brow read none of the three: the composed expression
+    // had one reader, the matrix. The assertion is against contract.ts rather than against a copy of
+    // what it is believed to emit, so the strip and the box cannot come to hold two brightnesses.
+    for (const shape of ALL_SHAPES) {
+      const p = rpmStripProfile(shape, stableGuid(`t/bright/${shape.id}`));
+      const bright = walk(p.containers).filter((c) => leds.containerTypeOf(c) === 'Groups.BrightnessFormulaGroup');
+      expect({ shape: shape.id, groups: bright.length }).toMatchObject({ groups: 1 });
+      // One group over the whole tree: the run under it is everything the profile draws.
+      const outer = shape.reversed ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
+      expect({ shape: shape.id, under: leds.childrenOf(outer).map((c) => leds.containerTypeOf(c)) }).toMatchObject({ under: ['Groups.BrightnessFormulaGroup'] });
+      const fields = (bright[0] as Extract<leds.LedContainer, { kind: 'raw' }>).fields ?? {};
+      expect({ shape: shape.id, formula: fields.BrightnessFormula }).toMatchObject({ formula: { Expression: flagBox.brightness() } });
+      // ...and it reaches the file, with each read defaulted so a strip works with no plugin at all.
+      const text = leds.serializeProfile(p);
+      for (const read of ['isnull([OpenDash.LightsNightMode], false)', 'isnull([OpenDash.LightsNightBrightness], 25)', 'isnull([OpenDash.LightsBrightness], 100)']) {
+        expect({ shape: shape.id, read, present: text.includes(read) }).toMatchObject({ present: true });
+      }
     }
   });
 

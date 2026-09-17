@@ -27,13 +27,13 @@
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { DEFAULTS, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
+import { DEFAULTS, flagBox, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
 import type { LedCentre, LedRpmStyle } from '../contract.ts';
 import { mirrorAvailable } from '../shift.ts';
 import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainer, lampConditions, type LedEffect } from './effects.ts';
+import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
@@ -324,7 +324,12 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
         kind: 'group',
         description: `${side} ${lamp.label} lamp`,
         startPosition: position,
-        children: ranked.map((effect, i) => effectContainer(effect, 1, 1, ranked.slice(0, i).map((higher) => higher.when))).reverse(),
+        // Reversed by rank and then flattened, so that a flag's moving and held containers stay
+        // beside each other in the file rather than at opposite ends of the lamp.
+        children: ranked
+          .map((effect, i) => effectContainers(effect, 1, 1, ranked.slice(0, i).map((higher) => higher.when)))
+          .reverse()
+          .flat(),
       },
     ];
   };
@@ -335,7 +340,7 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
     description: effect.label,
     trigger: { expression: effect.when },
     clearBackgroundWhenActive: true,
-    children: [effectContainer(effect, 1, stripLength(shape))],
+    children: effectContainers(effect, 1, stripLength(shape)),
   });
   const lamps = [...placed].sort((a, b) => b.index - a.index).flatMap(lampGroup);
   const whole = ALL_EFFECTS().filter((e) => e.role === 'strip' || (placed.length === 0 && e.role === 'race'));
@@ -370,6 +375,31 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
 ];
 
 /**
+ * The rig's brightness, over everything a strip draws.
+ *
+ * `LightsBrightness`, `LightsNightBrightness` and `LightsNightMode` are named for the rig rather
+ * than for one device, and the panel captions them "for every light openDash drives"; until this
+ * container existed that sentence was untrue, because the only reader of the composed expression
+ * was the flag box (`leds/profile.ts`), so a wheel strip and a brow ignored all three. Both
+ * artefacts now read the one `flagBox.brightness()`, so day, night and the switch resolve in a
+ * single place and the two cannot drift apart.
+ *
+ * `Groups.BrightnessFormulaGroup` is the strip's container of that kind and is one of the fifty-six
+ * SimHub 9.12.6 resolves. It goes through `raw` because the generator models only the containers a
+ * profile has needed so far, and `BrightnessFormula` is the field name its matrix sibling carries,
+ * which was read off a real file; the strip spelling is the same by SimHub's own convention but has
+ * not been seen on a strip, so it is the thing to look at first if a profile loads and ignores the
+ * setting.
+ */
+const brightnessGroup = (children: readonly leds.LedContainer[]): leds.LedContainer => ({
+  kind: 'raw',
+  containerType: 'Groups.BrightnessFormulaGroup',
+  description: 'the rig brightness, day or night',
+  fields: { BrightnessFormula: leds.buildExpressionObject({ expression: flagBox.brightness() }) },
+  children,
+});
+
+/**
  * The profile for one strip shape. A reversed strip is the same tree inside a `Groups.RemapGroup`
  * that turns logical positions into physical ones, which is the whole reason a new device is a row
  * of numbers rather than a second profile.
@@ -381,11 +411,14 @@ export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedP
   // its IsActiveBase catches a throwing expression and returns its default of 1.0 — so with the sim
   // closed, where the properties are null, a bare CustomStatus lights up. One native group gates
   // the lot. What the strip does when the game is NOT running is XOR-249.
+  // Brightness sits under the running gate rather than over it: nothing outside that gate paints,
+  // so a brightness group above it would scale nothing and would only cost an evaluation with the
+  // sim closed.
   const running: leds.LedContainer = {
     kind: 'raw',
     containerType: 'Groups.GameRunningGroup',
     description: 'only while the sim is running',
-    children: treeFor(shape),
+    children: [brightnessGroup(treeFor(shape))],
   };
   const tree = [running];
   return {
