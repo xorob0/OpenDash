@@ -19,7 +19,7 @@
 import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { gear as gearComponent, gearCell, GEAR_BOX_SLACK, GEAR_CHARS } from '../components/gear.ts';
+import { gear as gearComponent, gearGhosts, ghostedGearWidth, GEAR_BOX_SLACK, GEAR_CHARS, type GearGhosts } from '../components/gear.ts';
 import { measureText } from '../design/advances.ts';
 import { boxSlack, canvasBaseline, canvasYForBaseline, cells, gearCells, monoWidth, type Chars, type DataWeight } from '../design/metrics.ts';
 import { GEAR_CELL, LINE_SPACING } from '../design/metrics.ts';
@@ -29,12 +29,11 @@ import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
 import { UNIT_GAP } from '../second/field.ts';
 import { CHARS, speedUnit } from '../second/values.ts';
-import { lastGear } from '../shift.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 
-const { game, fmt, isnull, num, str, iff, eq, not } = ncalc;
+const { game, fmt, isnull, num } = ncalc;
 
 /**
  * The weight the speed page draws its one big value in, and the weight it is measured in.
@@ -84,9 +83,8 @@ const rowLineBox = (top: number, fs: number): number => top + (rowHeight(fs) - f
 /** The gap between a stack's rows, never less than two pixels however short the column. */
 const rowGap = (height: number, share: number): number => Math.max(2, Math.round(height * share));
 
-/** The share of the gear a ghosted neighbour is drawn at, and the gap off the gear's cell edge. */
-const GHOST_SHARE = 0.42;
-const GHOST_GAP = ds.space[3];
+/** How zone A draws the ghosted neighbours: the sheets' share of the gear, off its cell edge. */
+const GHOSTS: GearGhosts = { gap: ds.space[3] };
 
 /**
  * Gap between the speed and the rpm value beside it on A3. Ten pixels on the catalogue, which is
@@ -208,13 +206,6 @@ function fitWidth(wanted: number, width: number, extent: (fs: number) => number)
 /** A run's share of the column, rounded rather than floored: the canvas draws 107 in 194, not 106. */
 const shareOf = (height: number, share: number): number => Math.round(height * share);
 
-/** The size a ghosted neighbour is drawn at beside a gear of `fs`. */
-const ghostSize = (fs: number): number => Math.round(fs * GHOST_SHARE);
-
-/** What the gear and its two ghosts take across, which is what the gear row is fitted by. */
-const ghostedGearWidth = (fs: number): number =>
-  monoWidth(gearCells(fs), GEAR_CHARS) + 2 * (GHOST_GAP + monoWidth(gearCells(ghostSize(fs)), GEAR_CHARS) + GEAR_BOX_SLACK);
-
 /** The speed and its unit, as A1 and A3 both draw them. */
 const speedRuns = (prefix: string, fs: number, unitFs: number): Run[] => [
   {
@@ -250,7 +241,7 @@ const revsRuns = (prefix: string, fs: number, unitFs: number, gap?: number): Run
 function gearSpeedRevs(frame: Rect, prefix: string): Item[] {
   const d = densityOf('zone');
   const share = SHARE.a1;
-  const gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, ghostedGearWidth);
+  const gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, (fs) => ghostedGearWidth(fs, GHOSTS));
   const speedSize = fitWidth(shareOf(frame.height, share.speed), frame.width, (fs) => rowExtent(speedRuns(prefix, fs, d.labelSm)));
   const revsSize = fitWidth(shareOf(frame.height, share.revs), frame.width, (fs) => rowExtent(revsRuns(prefix, fs, d.labelSm)));
   return stack(frame, rowGap(frame.height, share.gap), [
@@ -263,68 +254,7 @@ function gearSpeedRevs(frame: Rect, prefix: string): Item[] {
 /** The gear and its ghosts, in a box exactly the gear's own canvas line box. */
 function gearRow(frame: Rect, top: number, size: number, prefix: string): Item[] {
   const box = rect(frame.left, rowLineBox(top, size), frame.width, size);
-  return [...neighbours(box, size, prefix), ...gearComponent(box, size, `${prefix}main`)];
-}
-
-/**
- * The gear below and above, ghosted either side of the one a driver is in.
- *
- * Drawn rather than described: it is what tells a driver at a glance which way the box is going,
- * and it costs two text items. SimHub reports the gear as a number, so the neighbours are that
- * number plus and minus one; at the ends of the box they show nothing rather than 0 or 7.
- *
- * Placed off the gear's own cell rather than off the column's edges. The gear is centred and the
- * ghosts follow it, so the three read as one cluster whatever the column is: spacing them from the
- * edges put half a column between the ghost and the gear on the 600 px DisplayDash band.
- */
-function neighbours(frame: Rect, size: number, prefix: string): Item[] {
-  const small = ghostSize(size);
-  const mono = gearCells(small);
-  const width = monoWidth(mono, GEAR_CHARS);
-  const cell = gearCell(frame, size);
-  const gear = game('Gear');
-  const top = frame.top + (frame.height - small) / 2;
-  const sides = [
-    { id: 'below', x: cell.left - GHOST_GAP - width, step: -1 as const, visibleBind: undefined },
-    // The gear above is nothing to show in the car's top gear, which the ladder cannot know: the
-    // mapping stops at the eight gears SimHub reports, and this stops at the count the car declares.
-    { id: 'above', x: cell.left + cell.width + GHOST_GAP, step: 1 as const, visibleBind: not(lastGear()) },
-  ];
-  return sides.map((side) =>
-    numeral(`${prefix}gear.${side.id}`, side.id === 'below' ? '3' : '5', side.x, top, small, GEAR_CHARS, {
-      mono,
-      // Ghosted with the dim ink rather than with opacity: SimHub's opacity is an item property
-      // and the dim colour is the token for exactly this -- something present but not being read.
-      color: ds.color.text.dim,
-      maxWidth: width + GEAR_BOX_SLACK,
-      bind: gearNeighbour(gear, side.step),
-      visibleBind: side.visibleBind,
-    }),
-  );
-}
-
-/** The forward gears SimHub can report, as the strings it reports them in. */
-const FORWARD_GEARS = ['1', '2', '3', '4', '5', '6', '7', '8'] as const;
-
-/**
- * The gear one above or one below, as text mapped from text.
- *
- * **SimHub publishes the gear as a string** -- "N", "R", "1" -- so it cannot be added to. NCalc's
- * `+` has a string overload, so `[Gear] + 1` in third gear evaluates to "31", and a cell one
- * character wide draws the 3: the right-hand ghost showed the gear the car was already in, which
- * is what the first capture of the 1920 face caught. `-` has no string overload and coerced, which
- * is why only one side of the pair was wrong.
- *
- * Mapping text to text keeps arithmetic out of it entirely. Neutral and reverse match nothing and
- * draw nothing, and so does the gear below first, and the gear above the last one SimHub names --
- * which is the behaviour the ends of the box wanted anyway.
- */
-function gearNeighbour(gear: Expr, step: 1 | -1): Expr {
-  return FORWARD_GEARS.reduce<Expr>((fallback, g) => {
-    const neighbour = Number(g) + step;
-    if (neighbour < 1 || neighbour > FORWARD_GEARS.length) return fallback;
-    return iff(eq(gear, str(g)), str(String(neighbour)), fallback);
-  }, str(''));
+  return [...gearGhosts(box, size, GHOSTS, `${prefix}gear`), ...gearComponent(box, size, `${prefix}main`)];
 }
 
 /** A2: the gear alone, as large as the column allows. */
