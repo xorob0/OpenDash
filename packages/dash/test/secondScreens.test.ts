@@ -659,6 +659,52 @@ describe('the opponents block keeps the gaps the canvas draws it with', () => {
   }
 });
 
+/**
+ * The identity row across, which is the one line of this page that no fit check can speak for.
+ *
+ * The three cells are placed by arithmetic rather than by a rank, so two of them can sit on top of
+ * each other while every item stays inside the frame and inside its own box: the drawing is wrong
+ * and every check is green. It happened. The name's box and the number's cell were taken from the
+ * canvas as two fixed numbers, 64 and 44, and the canvas cuts them on a sheet whose values are
+ * 16 px; the companion draws its number at 34, where four digits take sixty-four cells of their
+ * own, so the class chip began twelve pixels inside the number's box and a four-digit car number
+ * was drawn underneath it. The row also clamped the chip to the right edge instead of shedding it,
+ * which is the same overlap waiting for a box narrow enough to reach it.
+ *
+ * What is asserted is only that the cells do not overlap, not the gap between them: a cell is the
+ * canvas's column or the content, whichever is wider, so a number drawn in a 44 px cell that needs
+ * 35 leaves nine pixels of the column after it and that is the column doing its job.
+ */
+describe('the opponents identity row sets its cells side by side', () => {
+  const opponents = MODULES.find((m) => m.id === 'opponents')!;
+  /** In the order the row sets them, which is also the order they are shed in. */
+  const CELLS = ['name', 'num.value', 'class.block'];
+  const cellsOf = (items: readonly Item[], side: string): Exclude<Item, { kind: 'layer' }>[] =>
+    CELLS.map((id) => items.find((i) => i.name === `${side}.${id}`)).filter((i): i is Exclude<Item, { kind: 'layer' }> => i !== undefined && i.kind !== 'layer');
+
+  // A narrow zone sheds the row down to nothing, and a row of nothing overlaps nothing, so this is
+  // what keeps the check from passing because it found no cells anywhere.
+  test('the companion page draws all three of them', () => {
+    const page = moduleBoxes().find((b) => b.name === 'openDash Companion page')!;
+    const items = opponents.build({ frame: page.frame, density: page.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+    expect(cellsOf(items, 'ahead').map((i) => i.name)).toEqual(['ahead.name', 'ahead.num.value', 'ahead.class.block']);
+  });
+
+  for (const box of moduleBoxes()) {
+    for (const side of ['ahead', 'behind']) {
+      test(`${side} on a ${box.name}`, () => {
+        const items = opponents.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+        const drawn = cellsOf(items, side);
+        for (const [i, cell] of drawn.slice(1).entries()) {
+          const previous = drawn[i]!;
+          const gap = cell.rect.left - (previous.rect.left + previous.rect.width);
+          expect({ box: box.name, side, after: previous.name, cell: cell.name, gap, overlaps: gap < 0 }).toMatchObject({ overlaps: false });
+        }
+      });
+    }
+  }
+});
+
 describe('a bar drawn under a value', () => {
   const gaugeOf = (density: Density) => {
     const module = MODULES.find((m) => m.id === 'fuel')!;
