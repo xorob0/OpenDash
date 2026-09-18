@@ -234,6 +234,7 @@ OpenDash.CompanionModule18
 OpenDash.CompanionModule19
 OpenDash.CompanionModule20
 OpenDash.CompanionModule21
+OpenDash.CompanionPage
 OpenDash.PitWallZoneA
 OpenDash.PitWallZoneB
 OpenDash.PitWallZoneC

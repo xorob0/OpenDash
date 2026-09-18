@@ -72,16 +72,16 @@ namespace OpenDashPlugin.Tests
             // only, the gear and the two temperature thresholds moved under the matrix that owns them,
             // and the switch on the spotter bar's movement joined the rig's own names.
             Assert.Equal(
-                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 4 + 3 + 6 + Contract.FlagBoxMatrices.Count * 10 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 1 + 4 + 3 + 6 + Contract.FlagBoxMatrices.Count * 10 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
             // LedRpmStyle were declared by one side only. 256 before the four settings a box owns
             // became four per matrix, which is twelve names more, 269 before the pit wall gained the
             // class filter its board and its list zones read, 270 before band D was allowed to name the
-            // car a blue flag is being waved for, and 271 before each face was given its own answer to
-            // when the lap review is shown.
-            Assert.Equal(279, names.Count);
+            // car a blue flag is being waved for, 271 before each face was given its own answer to when
+            // the lap review is shown, and 279 before the companion's page became the plugin's.
+            Assert.Equal(280, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -119,8 +119,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
+            // The page after the switches: live state the screens' enabled expressions follow, and the
+            // one companion name that is not a switch. The start and the glance are not properties.
+            Assert.Equal("CompanionPage", names[afterFaces + 21]);
             Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "PitWallClassOnly", "LightsBrightness", "LightsNightBrightness",
-                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 21).Take(13));
+                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 22).Take(13));
             // One filter for the screen, not one per zone: a pit wall zone is a widget pointed at one
             // dashboard file per rectangle, so zones A and B of the race page are the same file.
             Assert.False(Contract.DefaultPitWallClassOnly);
@@ -153,7 +156,10 @@ namespace OpenDashPlugin.Tests
             // The web view address is the pit wall's although its name carries no prefix: it was named
             // before the idiom, and no other screen has a browser page to point anywhere.
             Assert.Contains(Contract.WebViewUrl, Contract.ScreenPropertyNames(Contract.PitWallPrefix));
-            Assert.Equal(Modules.Count, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
+            // The twenty-one switches and the page. The start module and the glance module are the
+            // plugin's own state and not properties, because nothing on the screen reads either of them.
+            Assert.Equal(Modules.Count + 1, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
+            Assert.Equal("CompanionPage", Contract.ScreenPropertyNames(Contract.CompanionPrefix).Last());
             Assert.Equal(Contract.FacePropertyNames(Contract.ReferenceFace), Contract.ScreenPropertyNames(Contract.FacePrefix(Contract.ReferenceFace)));
 
             Assert.True(Contract.IsKnownScreen(Contract.FacePrefix(Contract.ReferenceFace)));

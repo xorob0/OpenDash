@@ -1207,7 +1207,8 @@ namespace OpenDashPlugin.Tests
             settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
             settings.Normalise();
             var names = settings.DeclaredProperties().ToList();
-            Assert.Equal(shared + 2 * perFace + Modules.Count + 7 + lights, names.Count);
+            // Plus one for the companion's page, which is the one name it owns that is not a switch.
+            Assert.Equal(shared + 2 * perFace + Modules.Count + 1 + 7 + lights, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Contains("Face1920x480ZoneA", names);
             Assert.Contains("Face850x480ZoneA", names);
@@ -1219,7 +1220,7 @@ namespace OpenDashPlugin.Tests
 
             settings.RemoveScreen("Face850x480");
             settings.Normalise();
-            Assert.Equal(shared + perFace + Modules.Count + 7 + lights, settings.DeclaredProperties().Count());
+            Assert.Equal(shared + perFace + Modules.Count + 1 + 7 + lights, settings.DeclaredProperties().Count());
         }
 
         /// <summary>A screen on the stock namespace for its kind and size, as the first one at a size is.</summary>
@@ -1563,10 +1564,19 @@ namespace OpenDashPlugin.Tests
             settings.OpenOnStartPages();
             Assert.Equal(7, companion.CompanionPage);
 
+            // The page is the one of the three that is a property, because it is the one the screens'
+            // enabled expressions read; the start and the glance reach the screen only by being copied
+            // into it.
+            Assert.Equal("CompanionPage", Contract.CompanionPageProperty(Contract.CompanionPrefix));
+            Assert.Equal("GaragePage", Contract.CompanionPageProperty("Garage"));
+            companion.CompanionPage = 4;
+            Assert.Equal(4, settings.ScreenCompanionPage("Companion"));
+
             // A screen the rig no longer holds reads its defaults rather than throwing on SimHub's
             // own thread, the way every other per-screen read does.
             Assert.Equal(Contract.DefaultCompanionStart, settings.ScreenCompanionStart("Gone"));
             Assert.Equal(Contract.DefaultCompanionQuickGlance, settings.ScreenCompanionQuickGlance("Gone"));
+            Assert.Equal(Contract.DefaultCompanionPage, settings.ScreenCompanionPage("Gone"));
             Assert.Equal(Contract.DefaultCompanionStart, settings.CycleScreenModule("Gone"));
         }
 

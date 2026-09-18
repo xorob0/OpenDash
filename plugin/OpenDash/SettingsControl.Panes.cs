@@ -837,7 +837,60 @@ namespace OpenDashPlugin
                     + "none of their data; switch them on for a sim that does.",
                     BodyWidth),
                 grid,
+                BuildCompanionPages(screen),
                 BuildCompanionWheelButtons(screen));
+        }
+
+        /// <summary>
+        /// The module a companion opens on, and the one a held button shows.
+        /// </summary>
+        /// <remarks>
+        /// Two selects over the same catalogue, laid out the way a face's glance row is: a label and a
+        /// caption on the left, the select on the right, and the glance's binder beside its own select
+        /// because the gesture and the page it shows are one decision.
+        ///
+        /// The glance may name a module the grid above has turned off, and that is deliberate and is the
+        /// same rule a face's glance page keeps: a glance is a thing the driver asked for by holding a
+        /// button, and the rotation is about what the button steps through.
+        /// </remarks>
+        private ComboBox BuildModuleSelect(int selected, string tooltip, Action<int> chosen)
+        {
+            var select = new ComboBox
+            {
+                Width = PanelPitWallPlan.SelectWidth,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                ToolTip = tooltip,
+            };
+            Ui.Field(select, Theme.ControlHeightSm);
+            foreach (var module in Modules.All) select.Items.Add(module.Number.ToString("00") + " · " + module.Name);
+            select.SelectedIndex = selected >= 0 && selected < Modules.Count ? selected : 0;
+            select.SelectionChanged += (sender, args) =>
+            {
+                if (select.SelectedIndex < 0 || select.SelectedIndex >= Modules.Count) return;
+                chosen(select.SelectedIndex);
+                Save();
+            };
+            return select;
+        }
+
+        private FrameworkElement BuildCompanionPages(ScreenInstance screen)
+        {
+            var startText = Ui.VStack(4, Ui.Body("Opens on"),
+                Ui.Caption("Where a session starts, whatever the button was left on last time."));
+            startText.MaxWidth = 420;
+            var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
+                Ui.Caption("Hold to show one module, release to return. Usually the relative or the track."));
+            glanceText.MaxWidth = 420;
+
+            return Ui.Section("Which module is up",
+                Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session opens on", value =>
+                {
+                    screen.CompanionStart = value;
+                    screen.OpenOnStartModule();
+                })),
+                Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
+                    BuildModuleSelect(Settings.ScreenCompanionQuickGlance(screen.Namespace), "The module a held button shows", value => screen.CompanionQuickGlance = value),
+                    BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true))));
         }
 
         /// <summary>
@@ -852,6 +905,10 @@ namespace OpenDashPlugin
         private FrameworkElement BuildCompanionWheelButtons(ScreenInstance screen)
         {
             return Ui.Section("Wheel buttons on this screen",
+                Ui.Caption(
+                    "openDash pages this screen itself, so bind this button: SimHub's own Next and Previous cannot reach a "
+                    + "companion whose page the plugin decides.",
+                    BodyWidth),
                 Ui.Row(
                     Ui.Label("Next module"),
                     BuildBinder(Contract.NextModuleActionFor(screen.Namespace), screen.Name + " · next module")));
