@@ -9,7 +9,6 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import type { Expr } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { rule } from '../elements/rule.ts';
 import { label } from '../elements/label.ts';
@@ -22,38 +21,11 @@ import { rowsThatFit as boardRowsThatFit, table, type ColumnId } from '../second
 import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, type ModuleContext } from '../modules/module.ts';
-import {
-  CHARS,
-  STEERING_RANGE,
-  airTemperature,
-  bestLap,
-  brake,
-  carPosition,
-  classOpponentCount,
-  clock,
-  clutch,
-  deltaColour,
-  estimatedLap,
-  fieldSize,
-  isTimedSession,
-  lapTime,
-  lastLap,
-  player,
-  playerClass,
-  referenceDelta,
-  referenceLabel,
-  roadTemperature,
-  rpm,
-  sessionBestLap,
-  sessionTimeLeft,
-  sessionType,
-  speed,
-  steering,
-  throttle,
-} from '../second/values.ts';
+import { airTemperature, bestLap, brake, carPosition, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
+import type { Expr } from '../bind.ts';
 
 const { fmt, concat, str, iff, eq, gt, num, isnull, ucase, driver, game } = ncalc;
 
@@ -289,11 +261,18 @@ const gearNumber = (): Expr =>
  * gives the speed and pedal plots twice the gear plot and a column divided by weight gave every
  * panel whatever was left over.
  */
-export const TELEMETRY_TRACES: { id: string; title: string; series: () => Series[]; plot: number }[] = [
-  // The speed trace carries its unit in the title, which is where the sheet puts it. It is written
-  // rather than bound, because a panel title is a literal and the sim's own unit setting is not
-  // read here; a rig set to miles is the one case this is wrong for.
-  { id: 'speed', title: 'Speed · km/h', plot: 180, series: () => [{ name: 'Speed', color: ds.color.text.primary, bind: speed(), min: 0, max: 300 }] },
+export const TELEMETRY_TRACES: { id: string; title: string; titleBind?: Expr; titleWidest?: string; series: () => Series[]; plot: number }[] = [
+  // The speed trace carries its unit in the title, which is where the sheet puts it, and the unit
+  // is the driver's own rather than a fixed word: the value under it is `SpeedLocal`, so a title
+  // reading kilometres over a miles rig would be an engineer reading the wrong number off a graph.
+  {
+    id: 'speed',
+    title: 'Speed · km/h',
+    titleBind: concat(str('SPEED · '), ucase(speedUnit())),
+    titleWidest: 'SPEED · KM/H',
+    plot: 180,
+    series: () => [{ name: 'Speed', color: ds.color.text.primary, bind: speed(), min: 0, max: 300 }],
+  },
   { id: 'rpm', title: 'RPM', plot: 130, series: () => [{ name: 'RPM', color: ds.color.text.primary, bind: rpm(), min: 0, useMaximum: false }] },
   // The canvas draws the gear as flat runs with a vertical step between them. A ChartItem is a ring
   // buffer drawn oldest to newest with a straight line between consecutive samples, and it has no
@@ -333,7 +312,11 @@ export const tracePanelHeight = (spec: (typeof TELEMETRY_TRACES)[number]): numbe
 
 /** A trace panel: its title and legend, then the plot. */
 export function tracePanel(name: string, frame: Rect, spec: (typeof TELEMETRY_TRACES)[number]): Item[] {
-  const { items, body } = panel(name, { frame, title: spec.title });
+  const { items, body } = panel(name, {
+    frame,
+    title: spec.title,
+    ...(spec.titleBind ? { titleBind: spec.titleBind, titleWidest: spec.titleWidest ?? spec.title.toUpperCase() } : {}),
+  });
   return [...items, ...trace(`${name}.trace`, body, spec.series(), DENSITY, { legend: spec.series().length > 1 })];
 }
 

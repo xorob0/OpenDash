@@ -28,7 +28,7 @@ import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
 import { UNIT_GAP } from '../second/field.ts';
-import { CHARS, speedUnit } from '../second/values.ts';
+import { CHARS, speed, speedUnit } from '../second/values.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
@@ -215,7 +215,10 @@ const speedRuns = (prefix: string, fs: number, unitFs: number): Run[] => [
     fs,
     chars: CHARS.speed,
     weight: SPEED_WEIGHT,
-    bind: fmt(isnull(game('SpeedKmh'), num(0)), '0'),
+    // `SpeedLocal` and not `SpeedKmh`: the label under this number follows the driver's own unit,
+    // so a value that is always kilometres per hour would read 180 under the word "mph" on an
+    // imperial rig, where the companion's speedo and the pit wall's trace both showed 112.
+    bind: fmt(speed(), '0'),
   },
   // The written unit rather than the enum. `SpeedLocalUnit` reads `KMH` or `MPH`, so binding it
   // raw drew `KMH` where every sheet writes `KM/H`; `speedUnit` is the one place that mapping lives.
