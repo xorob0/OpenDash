@@ -728,8 +728,11 @@ describe('what the first photograph of the face showed', () => {
   test('band D sits in the well the artboards recess it into, and the face draws it there too', () => {
     for (const { face, built } of BUILT) {
       const band = face.zones.band;
-      const ground = faceItems(face).find((i): i is RectangleItem => i.kind === 'rect' && i.name === 'band.ground')!;
+      const items = faceItems(face);
+      const ground = items.find((i): i is RectangleItem => i.kind === 'rect' && i.name === 'band.ground')!;
       expect({ face: face.folder, rect: ground.rect, colour: ground.backgroundColor }).toEqual({ face: face.folder, rect: band, colour: ds.purpose.block.well });
+      // Before the widget, so the band's pages draw over the well rather than under it.
+      expect({ face: face.folder, ground: items.indexOf(ground) < items.findIndex((i) => i.name === 'zoneD') }).toMatchObject({ ground: true });
       // The widget paints its own dashboard's ground over the face, so the band's pages have to be
       // drawn in the well rather than have one painted behind them.
       const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
