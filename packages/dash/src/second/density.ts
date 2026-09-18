@@ -19,7 +19,7 @@
  */
 import { ds } from '../tokens.ts';
 
-export type Density = 'companion' | 'zone' | 'compact' | 'wide';
+export type Density = 'companion' | 'zone' | 'compact' | 'wide' | 'panel';
 
 /**
  * Gap between a field's label row and its value row. The canvas draws it as `gap: 5px` on the
@@ -156,11 +156,24 @@ const COMPACT: DensitySpec = {
   padY: 4,
 };
 
+/**
+ * The zone ramp on the pit wall, which labels a step lower than the same ramp on a face.
+ *
+ * The six pit wall sheets and `Panels.dc.html` write every field label as `.lblt`, 13 px, and not
+ * one of them uses the `.lbl` at 15 that `ZoneCatalogue.dc.html` draws five hundred times. That is
+ * a distance rule rather than an inconsistency: a face is read at arm's length over a wheel and a
+ * pit wall across a garage, where the row a reader scans is the value and the label beside it is
+ * there to be found once. Only the label moves; the row it sits in does not, so no panel whose
+ * height the sheets fix to the pixel changes and nothing is shed for it.
+ */
+const PANEL: DensitySpec = { ...ZONE, label: ds.size.labelSm };
+
 export const DENSITIES: Record<Density, DensitySpec> = {
   companion: COMPANION,
   zone: ZONE,
   compact: COMPACT,
   wide: ZONE,
+  panel: PANEL,
 };
 
 export const densityOf = (density: Density): DensitySpec => DENSITIES[density];

@@ -143,7 +143,7 @@ const headerHeightOf = (board: boolean, rowHeight: number): number => (board ? M
  * here instead, and it is a ceiling rather than a ramp: a table types up to this and no further,
  * and buys rows with whatever height is left.
  */
-const ROW_HEIGHT: Record<Density, number> = { companion: 38, zone: 34, wide: 34, compact: 28 };
+const ROW_HEIGHT: Record<Density, number> = { companion: 38, zone: 34, wide: 34, compact: 28, panel: 34 };
 
 /** The row height a table takes at a density unless its caller declares one. */
 export const tableRowHeight = (density: Density): number => ROW_HEIGHT[density];
