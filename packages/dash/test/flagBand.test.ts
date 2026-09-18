@@ -15,7 +15,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { BLACK_FLAG_BORDER, FLAG_BLINK_MS, FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
-import { CHEQUER_COUNT, CHEQUER_STEP } from '../src/components/flagRing.ts';
+import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
 import { FLAG_CATALOGUE } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
@@ -66,8 +66,15 @@ const bandPhase = (face: ZoneLayout): number => {
   return (Math.min(...top.map((c) => c.rect.left)) - band.left) / band.height;
 };
 
+/** The face a round layout hangs its ring on, which is what the count and the step are read from. */
+const ringFace = (layout: Layout) => {
+  const { flags } = layout.hero;
+  if (flags.kind !== 'flagRing') throw new Error(`${layout.folder} draws no flag ring`);
+  return flags.face;
+};
+
 /** The same fraction on a rim, where a tile is one check and the gap after it. */
-const ringPhase = (layout: Layout): number => (chequerChildren(hero(layout.hero))[0]!.rotation ?? 0) / CHEQUER_STEP;
+const ringPhase = (layout: Layout): number => (chequerChildren(hero(layout.hero))[0]!.rotation ?? 0) / chequerStep(ringFace(layout));
 
 describe('the chequered band', () => {
   for (const face of ZONE_FACES) {
@@ -156,12 +163,13 @@ describe('the flag name', () => {
 
 describe('the chequered ring', () => {
   for (const layout of [layout480round, layout800round]) {
-    test(`${layout.folder} draws ${CHEQUER_COUNT} checks in the band's phase, none of them at twelve o'clock`, () => {
+    test(`${layout.folder} draws ${chequerCount(ringFace(layout))} checks in the band's phase, none of them at twelve o'clock`, () => {
       const checks = chequerChildren(hero(layout.hero));
-      expect(checks).toHaveLength(CHEQUER_COUNT);
+      const step = chequerStep(ringFace(layout));
+      expect(checks).toHaveLength(chequerCount(ringFace(layout)));
       checks.forEach((check, k) => {
         expect({ name: check.name, color: check.backgroundColor }).toEqual({ name: check.name, color: CHEQUER });
-        expect(check.rotation).toBe((k + 0.5) * CHEQUER_STEP);
+        expect(check.rotation).toBe((k + 0.5) * step);
       });
       expect(checks.map((c) => (c.rotation ?? 0) % 360)).not.toContain(0);
     });
