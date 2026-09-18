@@ -28,6 +28,29 @@ describe('the gaps the canvas draws', () => {
   });
 });
 
+describe('the label ramp', () => {
+  test('a label is a step above its small label at every density, never level with it', () => {
+    // The distinction the sheets draw and the one a page cannot lose: `.lbl` over `.lbl-sm`. The
+    // zone ramp used to set both from `labelSm`, so a label and the unit after it read as one run.
+    for (const density of ['companion', 'zone', 'wide'] as const) {
+      const d = densityOf(density);
+      expect({ density, label: d.label, labelSm: d.labelSm }).toEqual({ density, label: 15, labelSm: 13 });
+    }
+    const compact = densityOf('compact');
+    expect({ label: compact.label, labelSm: compact.labelSm }).toEqual({ label: 13, labelSm: 12 });
+  });
+
+  test('and sits in the sheets’ own row, which the ramp does not move', () => {
+    // Every artboard centres its label in a `height: 13px` row, so the step from 13 to 15 is bought
+    // in width alone. A row that grew with the type would push the pit wall panels, whose heights
+    // the sheets fix to the pixel, past their own frames.
+    for (const density of ['companion', 'zone', 'wide'] as const) {
+      expect({ density, labelRow: densityOf(density).labelRow }).toEqual({ density, labelRow: 13 });
+    }
+    expect(densityOf('compact').labelRow).toBe(12);
+  });
+});
+
 describe('the companion ramp', () => {
   test('fields are 24 apart across and rows 16 apart down', () => {
     const d = densityOf('companion');
