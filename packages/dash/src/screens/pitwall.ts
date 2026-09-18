@@ -555,15 +555,16 @@ export const PIT_WALL_SIZES: readonly PitWallSize[] = [
 /**
  * The pit wall dashboard: three landscape pages, or the one portrait page.
  *
- * **Only one landscape page is live at a time**, chosen by `PitWallPage`, which the plugin sets from
- * `PitWallStartPage` when SimHub starts and a bindable action moves. That is what makes "which type I
- * want as default" answerable at all: a dashboard opens on the first screen whose expression is true,
- * and nothing else about a screen can be made to depend on a setting.
+ * **One landscape page is up, and it is the one the plugin was told to show.** All three are built
+ * and `PitWallPage` chooses between them, which is configuration rather than a control: a pit wall is
+ * set up once and then left, so the page it shows belongs with the rig's arrangement and not with
+ * anything a spotter reaches for mid-session. There is therefore no binding, no action and no live
+ * copy of the setting.
  *
- * The cost is that SimHub's own next-screen navigation no longer walks the three, because it skips a
- * screen whose expression is false; the openDash action replaces it and can be bound to a key as well
- * as to a wheel button. It is the same mechanism the companion has used since it shipped, for the same
- * reason, and `secondScreen.moduleShown` is where that is written down.
+ * The gate is what makes the choice possible at all -- a dashboard opens on the first screen whose
+ * expression is true, and nothing else about a screen can be made to follow a setting -- and it is
+ * also what stops SimHub's own next-screen navigation walking the other two, which is the point
+ * rather than the price.
  */
 export function pitWallDashboard(size: PitWallSize, metadata: DashboardMetadata): Dashboard {
   const screens = size.portrait ? [portraitPage(size.width, size.height)] : [racePage(size.width, size.height), towerPage(size.width, size.height), telemetryPage(size.width, size.height)];

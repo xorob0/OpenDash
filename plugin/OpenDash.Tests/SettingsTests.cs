@@ -241,7 +241,7 @@ namespace OpenDashPlugin.Tests
             var wall = Screen(Contract.KindPitWall, 1920, 1080);
             // Every zone of every page, each on the page its own slot names.
             foreach (var slot in Contract.PitWallZoneSlots) Assert.Equal(slot.Fallback, wall.ZonePage(slot.Key));
-            Assert.Equal(Contract.DefaultPitWallStartPage, wall.PitWallStartPage);
+            Assert.Equal(Contract.DefaultPitWallPage, wall.PitWallPage);
             Assert.Equal("", wall.WebViewUrl);
         }
 
@@ -1262,9 +1262,9 @@ namespace OpenDashPlugin.Tests
             settings.Normalise();
             var names = settings.DeclaredProperties().ToList();
             // Plus two for the companion's page and its flag format, which are the names it owns that
-            // are not switches, and the pit wall's own: a zone per page, the page it opens on, the page
-            // it is showing, the URL and the class filter.
-            var perPitWall = Contract.PitWallZoneSlots.Count + 4;
+            // are not switches, and the pit wall's own: a zone per page, the page it shows,
+            // the URL and the class filter.
+            var perPitWall = Contract.PitWallZoneSlots.Count + 3;
             Assert.Equal(shared + 2 * perFace + Modules.Count + 2 + perPitWall + lights, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Contains("Face1920x480ZoneA", names);
@@ -1465,13 +1465,13 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("WebViewUrl", stock);
             Assert.Contains("PitWallTowerWide", stock);
             Assert.Contains("PitWallRaceA", stock);
-            Assert.Contains("PitWallStartPage", stock);
+            Assert.Contains("PitWallPage", stock);
 
             var second = Contract.ScreenPropertyNames(Contract.KindPitWall, "Garage").ToList();
             Assert.Contains("GarageWebViewUrl", second);
             Assert.Contains("GarageTowerWide", second);
             Assert.Contains("GarageRaceA", second);
-            Assert.Contains("GarageStartPage", second);
+            Assert.Contains("GaragePage", second);
             Assert.DoesNotContain("WebViewUrl", second);
             Assert.Empty(stock.Intersect(second));
         }
