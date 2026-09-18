@@ -5,6 +5,15 @@
  * Everything here reads a property SimHub already publishes. Nothing is computed between frames,
  * which is the line scope.md draws and ADR 0009 owns; where that meant a feature could not be
  * built, it is written down in docs/design/flag-box.md rather than approximated.
+ *
+ * Nothing below the flags moves. The box's one rule is that movement means act: a flag that ends
+ * or interrupts the race moves, and everything that merely informs is held. A limiter left on and
+ * an oil temperature climbing are both conditions the driver lives with for minutes at a time, so
+ * a picture that strobed for those minutes would spend the box's only attention signal on the
+ * states least able to give it back. The shape carries the urgency instead.
+ *
+ * "Held briefly so it cannot strobe" on the face sheet is read here as a plain still frame. A
+ * minimum on-time is memory between frames, which ADR 0009 does not admit, so it is not built.
  */
 import { flagBox, flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type MatrixContainer, type MatrixFrame } from '../generator.ts';
@@ -50,8 +59,7 @@ export const LIMITER_IN_LANE: Grid = [
 ];
 
 /**
- * Limiter still on out of the lane: a mistake costing a second a corner, so it shouts. An
- * exclamation mark, blinking.
+ * Limiter still on out of the lane: a mistake costing a second a corner. An exclamation mark, held.
  *
  * It is deliberately not a filled panel. `purpose.pitLimiter` is pure white, the same value as
  * `purpose.flag.white`, so a filled panel here would be the white flag with a blink — and telling
@@ -91,31 +99,50 @@ export const CAR_BOTH: Grid = Array.from({ length: 8 }, () => 'WW....WW');
 
 // --- The warnings ----------------------------------------------------------------------------
 
-/** Low fuel: a tank emptying — a bar across the bottom two rows only. */
+/**
+ * Low fuel: the pump, body and hose, as the face sheet draws it.
+ *
+ * It was a tank outline, which is a rectangle with a rectangle inside it — the limiter frame's
+ * vocabulary, and nothing a driver has seen anywhere else. ISO 2575 registers the pump for the
+ * fuel level telltale, so it is the one picture in this family the driver already knows from the
+ * road car, and knowing it is worth more than a shape that fits the grid more comfortably.
+ */
 export const LOW_FUEL: Grid = [
-  '.YYYYYY.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.YYYYYY.',
-  '.YYYYYY.',
+  '.YYYYY..',
+  '.Y...Y.Y',
+  '.YYYYY.Y',
+  '.Y...Y.Y',
+  '.Y...YYY',
+  '.Y...Y..',
+  '.Y...Y..',
+  'YYYYYYY.',
 ];
 
-/** Oil too hot: the meatball's cousin, a disc with a drip, in orange. */
+/**
+ * Oil too hot: the can, spout up and a drop falling from it, as the face sheet draws it.
+ *
+ * It was a disc, which is the meatball's own shape in a second orange — the one thing the
+ * uniqueness rule in glyphFit.test.ts exists to refuse, and the confusion that costs most, since
+ * the meatball is an instruction to come in and the oil lamp is not. ISO 2575 registers the can
+ * for the oil telltale.
+ */
 export const OIL_HOT: Grid = [
-  '...OO...',
-  '..OOOO..',
-  '.OOOOOO.',
-  'OOOOOOOO',
-  'OOOOOOOO',
-  '.OOOOOO.',
-  '..OOOO..',
-  '...OO...',
+  '.......O',
+  '......O.',
+  '.....O..',
+  '.OOOOO..',
+  'OOOOOOO.',
+  'OOOOOOO.',
+  '.OOOOO..',
+  '...O....',
 ];
 
-/** Water too hot: waves, in orange, so the two temperatures are told apart by shape. */
+/**
+ * Water too hot: waves, in orange, so the two temperatures are told apart by shape.
+ *
+ * Two bands of three rows and a blank, not two single rows. The face sheet's prose says "two rows
+ * of waves" and its own artboard draws these eight, and the artboard is the drawing, so it wins.
+ */
 export const WATER_HOT: Grid = [
   '..OO..OO',
   '.O..OO..',
@@ -167,8 +194,8 @@ export interface BoxState {
  * is costing a penalty right now.
  */
 export const pitStates = (): BoxState[] => [
-  { id: 'speeding', raised: speeding(), grid: SPEEDING, blink: true },
-  { id: 'limiterOutOfLane', raised: and(limiterOn(), not(inLane())), grid: LIMITER_OUT_OF_LANE, blink: true },
+  { id: 'speeding', raised: speeding(), grid: SPEEDING, blink: false },
+  { id: 'limiterOutOfLane', raised: and(limiterOn(), not(inLane())), grid: LIMITER_OUT_OF_LANE, blink: false },
   { id: 'limiterInLane', raised: and(limiterOn(), inLane()), grid: LIMITER_IN_LANE, blink: false },
 ];
 
@@ -201,9 +228,9 @@ export function spotterStates(matrix: FlagBoxMatrix): BoxState[] {
  * Fahrenheit number and gets a Fahrenheit comparison.
  */
 export const warningStates = (): BoxState[] => [
-  { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBox.oilTemp()), grid: OIL_HOT, blink: true },
-  { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBox.waterTemp()), grid: WATER_HOT, blink: true },
-  { id: 'lowFuel', raised: tankIsLow(), grid: LOW_FUEL, blink: true },
+  { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBox.oilTemp()), grid: OIL_HOT, blink: false },
+  { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBox.waterTemp()), grid: WATER_HOT, blink: false },
+  { id: 'lowFuel', raised: tankIsLow(), grid: LOW_FUEL, blink: false },
 ];
 
 /** A temperature, defaulted so that a car which does not report one never trips a warning. */
@@ -219,6 +246,11 @@ export function stateContainers(list: readonly BoxState[], kind: string): Matrix
   }));
 }
 
+/**
+ * No state below the flags sets `blink`, so the first branch is unreachable today. It is kept
+ * rather than deleted because `blink` is what the rule is written in: flagBox.test.ts asserts that
+ * every state here is held, and an invariant with no field to name cannot be tested.
+ */
 const framesOf = (state: BoxState): MatrixFrame[] =>
   state.blink ? blinkFrames(state.grid, DARK, STATE_PALETTE, STATE_BLINK_HZ, state.id) : still(state.grid, STATE_PALETTE, state.id);
 
