@@ -19,6 +19,11 @@
 // profile's name, its file stem and this constant, and FlagBoxProfileTests embeds a decoy that sorts
 // ahead of it so that going back to sort order fails rather than shipping.
 //
+// The strips are now installed too, so the guarantee runs both ways and the selection is shared:
+// `SelectResource` takes the file name it is looking for, a shape asks for `StripFileName(id)` and the
+// flag box asks for `FileName`. Only an exact spelling wins, and the two spellings cannot collide, so
+// neither driver can be handed the other's profile.
+//
 // No SimHub or WPF types here, so this compiles into the tests.
 using System;
 using System.Collections.Generic;
@@ -76,6 +81,18 @@ namespace OpenDashPlugin
         /// profiles that is the flag box.</summary>
         public const string FileName = ProfileName + ProfileExtension;
 
+        /// <summary>The prefix every profile file name carries, the flag box's and every strip's alike.
+        /// It is what makes "openDash 4-14-4" a shape id of ours rather than a file somebody dropped in.</summary>
+        public const string FilePrefix = "openDash ";
+
+        /// <summary>The file a strip or brow shape is written under. The other half of rpmStripFileName()
+        /// in packages/dash/src/leds/rpmStrip.ts, which spells it `openDash ${shape.id}`; the shape ids
+        /// themselves stay in STRIP_SHAPES and BROW_SHAPES and are never copied here.</summary>
+        public static string StripFileName(string shapeId)
+        {
+            return string.IsNullOrEmpty(shapeId) ? null : FilePrefix + shapeId + ProfileExtension;
+        }
+
         /// <summary>Where the profile is left: SimHub/OpenDash/. Its own folder rather than PluginsData,
         /// because PluginsData is where SimHub keeps files it owns and this one is for the user to pick up.</summary>
         public const string FolderName = "OpenDash";
@@ -109,22 +126,76 @@ namespace OpenDashPlugin
         /// </summary>
         public static string ResourceName(Assembly assembly)
         {
-            return SelectResource(ResourceNames(assembly));
+            return SelectResource(ResourceNames(assembly), FileName);
+        }
+
+        /// <summary>One embedded profile by its file name, or null when this build embeds no such file.
+        /// The same selection the flag box uses, so a shape asking for its own file can never be handed
+        /// the matrix profile and the matrix can never be handed a strip: the two names differ, and only
+        /// an exact name wins.</summary>
+        public static string ResourceName(Assembly assembly, string fileName)
+        {
+            return SelectResource(ResourceNames(assembly), fileName);
         }
 
         /// <summary>The selection itself, over the names alone, so that it can be shown to do the right
         /// thing on lists no build of ours would produce.</summary>
-        internal static string SelectResource(IEnumerable<string> names)
+        internal static string SelectResource(IEnumerable<string> names, string fileName)
         {
-            if (names == null) return null;
+            if (names == null || string.IsNullOrEmpty(fileName)) return null;
             string variant = null;
             foreach (var name in names)
             {
                 var file = FileNameOf(name);
-                if (string.Equals(file, FileName, StringComparison.Ordinal)) return name;
-                if (variant == null && string.Equals(file, FileName, StringComparison.OrdinalIgnoreCase)) variant = name;
+                if (string.Equals(file, fileName, StringComparison.Ordinal)) return name;
+                if (variant == null && string.Equals(file, fileName, StringComparison.OrdinalIgnoreCase)) variant = name;
             }
             return variant;
+        }
+
+        /// <summary>Every embedded profile that is not the flag box, in name order: one per strip or brow
+        /// shape the build emitted. Derived from what is embedded rather than from a table copied out of
+        /// packages/dash/src/leds/strip.ts, so the plugin offers exactly the shapes its own build carries
+        /// and a shape added there needs no second edit here.</summary>
+        public static IReadOnlyList<string> StripResourceNames(Assembly assembly)
+        {
+            return ResourceNames(assembly).Where(n => ShapeIdOf(n) != null).ToList();
+        }
+
+        /// <summary>The shape id a profile resource is for -- "4-14-4", "brow-9" -- or null when the
+        /// resource is the flag box or is not one of ours at all.</summary>
+        public static string ShapeIdOf(string resourceName)
+        {
+            var file = FileNameOf(resourceName);
+            if (file == null) return null;
+            if (string.Equals(file, FileName, StringComparison.OrdinalIgnoreCase)) return null;
+            if (!file.StartsWith(FilePrefix, StringComparison.Ordinal)) return null;
+            if (!file.EndsWith(ProfileExtension, StringComparison.OrdinalIgnoreCase)) return null;
+            var id = file.Substring(FilePrefix.Length, file.Length - FilePrefix.Length - ProfileExtension.Length);
+            return id.Length == 0 ? null : id;
+        }
+
+        /// <summary>One embedded profile's JSON, or null when it cannot be read. The installer hands this
+        /// straight to SimHub, so a profile is offered without ever having been written to disk.</summary>
+        public static string ResourceText(Assembly assembly, string resourceName, IInstallLog log = null)
+        {
+            if (assembly == null || string.IsNullOrEmpty(resourceName)) return null;
+            try
+            {
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                {
+                    if (stream == null) return null;
+                    using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
+                    {
+                        return reader.ReadToEnd();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                (log ?? NullInstallLog.Instance).Error("The embedded profile " + resourceName + " could not be read: " + e.Message);
+                return null;
+            }
         }
 
         /// <summary>The file name a resource is written under: everything after the last ".Resources."
@@ -267,15 +338,8 @@ namespace OpenDashPlugin
             string path = Path.Combine(folder, fileName);
             try
             {
-                string embedded;
-                using (var stream = assembly.GetManifestResourceStream(resource))
-                {
-                    if (stream == null) throw new InvalidOperationException("resource " + resource + " could not be opened");
-                    using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
-                    {
-                        embedded = reader.ReadToEnd();
-                    }
-                }
+                string embedded = ResourceText(assembly, resource, log);
+                if (embedded == null) throw new InvalidOperationException("resource " + resource + " could not be opened");
 
                 string profileName = ProfileNameOf(embedded);
                 if (File.Exists(path) && string.Equals(File.ReadAllText(path), embedded, StringComparison.Ordinal))

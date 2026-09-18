@@ -114,6 +114,17 @@ export const lastGear = (): Expr => {
 export const mirrorOverRev = (): Expr => and(ge(rpms(), blinkRpm()), not(lastGear()));
 
 /**
+ * The same flash under SimHub's bands: ADR 0004's redline flag, with the same exception on it.
+ *
+ * The exception belongs to the flash rather than to either ladder: a gear there is nothing to shift
+ * out of is a fact about the car, and where the thresholds were read from has no bearing on it. A
+ * car that publishes zeros for the four RPMs falls here (see `mirrorAvailable`), and before this
+ * it flashed for ever in the last gear, on the digit, the bar and the strip alike. `simhubStageLit`
+ * reads `simhubRedline` directly and is left alone, so the top band still lights.
+ */
+export const simhubOverRev = (): Expr => and(simhubRedline(), not(lastGear()));
+
+/**
  * Segment `local` of `count` in one of SimHub's two bands: the band's progress times its segment
  * count passed the segment's index, and reduced to the entry test for the first segment, where the
  * comparison is against zero. The same reduction `bandLit` makes, for the same reason — the entry
@@ -168,7 +179,7 @@ export const stageEntered = (stage: number): Expr => eitherLadder(mirrorStageEnt
  * the bar deliberately does not. That divergence is what #284's review found on the flag box,
  * and it is why the flash is a definition here rather than a boolean each surface interprets.
  */
-export const overRevEither = (): Expr => eitherLadder(mirrorOverRev(), simhubRedline());
+export const overRevEither = (): Expr => eitherLadder(mirrorOverRev(), simhubOverRev());
 
 /**
  * SimHub's own redline RPM, and the only place `CarSettings_CurrentGearRedLineRPM` is spelled.

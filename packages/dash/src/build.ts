@@ -15,8 +15,10 @@ import { COMPANION_PREFIX, declaredProperties, facePrefix, foreignProperties, PI
 import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
 import { buildZoneFace, sizeOf, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
 import { fontsForPackage } from './dashboard.ts';
+import { assetNamed, imageOf } from './design/assets.ts';
 import { fontsForPanel } from './design/fontFiles.ts';
 import { noticesForPackage, PANEL_NOTICES } from './design/notices.ts';
+import { itemsOf } from './walk.ts';
 import type { Rung } from './design/rung.ts';
 import {
   formatIssues,
@@ -158,6 +160,16 @@ export function readVersion(file: string = VERSION_FILE): string {
 }
 
 /**
+ * The two font warnings this build refuses to print and carry on from. A run drawn in a family or
+ * a weight the package does not bundle is resolved by WPF to whatever it can find, so the advances
+ * in design/advances.ts, and the fit textFit.test.ts proved with them, describe a face that never
+ * shipped; that is the failure the family renaming in design/fontFiles.ts was introduced to end.
+ * The generator can only warn, because a package it validates need not carry its own fonts at all,
+ * and one built here always does.
+ */
+const FONT_ERROR_CODES: readonly string[] = ['font/missing', 'font/weight-missing'];
+
+/**
  * Validates against the contract's declared properties; throws a BuildError on errors, returns the
  * warnings.
  *
@@ -166,6 +178,11 @@ export function readVersion(file: string = VERSION_FILE): string {
  * so being declared proves nothing here; without this rule a package could read the screen beside
  * it and only a rig with two screens would ever show it. A card face passes nothing, because it
  * owns no group and reads the modes and the slots alone.
+ *
+ * {@link FONT_ERROR_CODES} is why a package that draws a weight it does not ship fails here rather
+ * than logging a warning: what a package ships is the set of faces it draws in, and a weight added
+ * to an item has to be added to FACE_FONT_FILES or SCREEN_FONT_FILES, and measured into
+ * design/advances.ts, before anything can be drawn in it.
  */
 export function validateOrThrow(pkg: DashPackage, screen?: string): ValidationIssue[] {
   const result = validatePackage(pkg, {
@@ -177,7 +194,38 @@ export function validateOrThrow(pkg: DashPackage, screen?: string): ValidationIs
     const n = result.errors.length;
     throw new BuildError(`package ${pkg.folderName} has ${n} validation error${n === 1 ? '' : 's'}:\n${formatIssues(result.errors)}`, result.errors);
   }
+  const faces = result.warnings.filter((w) => FONT_ERROR_CODES.includes(w.code));
+  if (faces.length > 0) {
+    const n = faces.length;
+    throw new BuildError(`package ${pkg.folderName} draws in ${n} face${n === 1 ? '' : 's'} it does not ship:\n${formatIssues(faces)}`, faces);
+  }
   return result.warnings;
+}
+
+/**
+ * Declares on each dashboard the images its own items draw, which is what puts the files into the
+ * `.ressources` sidecar of the `.simhubdash` beside `_SHFonts/`.
+ *
+ * A module returns items and never sees the dashboard it lands on, so no drawing can declare its
+ * own artwork; the declaration is derived here instead, from what is actually drawn. A package
+ * therefore carries the assets it uses and no others, which is what keeps a package a package
+ * SimHub can read at startup rather than a folder of every picture openDash owns.
+ *
+ * Run before validation, so that an item whose image nothing declares is the validator's
+ * `image/missing` rather than a dashboard that loads and draws a hole.
+ */
+export function packImages(pkg: DashPackage): void {
+  for (const dashboard of pkg.dashboards) {
+    const drawn = [...new Set(itemsOf(dashboard).flatMap((item) => (item.kind === 'image' ? [item.image] : [])))].sort();
+    if (drawn.length === 0) continue;
+    dashboard.images = drawn.map((name) => {
+      const asset = assetNamed(name);
+      if (asset === undefined) {
+        throw new BuildError(`${pkg.folderName}/${dashboard.name} draws the image ${JSON.stringify(name)}, which is not an asset of packages/dash/src/design/assets.ts`);
+      }
+      return imageOf(asset);
+    });
+  }
 }
 
 /**
@@ -338,6 +386,7 @@ export function composePackages(opts: BuildOptions = {}, allowEmpty = false): Co
   for (const layout of layouts) {
     claim(layout.folder);
     const pkg = buildPackage(layout, { version, simHubVersion, strategy });
+    packImages(pkg);
     const warnings = validateOrThrow(pkg);
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ layout, kind: 'dash', pkg, warnings });
@@ -346,6 +395,7 @@ export function composePackages(opts: BuildOptions = {}, allowEmpty = false): Co
     claim(face.folder);
     const built = buildZoneFace(face, { version, simHubVersion, author: DEFAULT_AUTHOR });
     const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+    packImages(pkg);
     const warnings = validateOrThrow(pkg, facePrefix(sizeOf(face)));
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ zoneFace: face, kind: 'dash', pkg, warnings });
@@ -353,6 +403,7 @@ export function composePackages(opts: BuildOptions = {}, allowEmpty = false): Co
   for (const screen of screens) {
     claim(screen.folder);
     const pkg = buildScreenPackage(screen, { version, simHubVersion });
+    packImages(pkg);
     const warnings = validateOrThrow(pkg, screen.kind === 'pitwall' ? PIT_WALL_PREFIX : COMPANION_PREFIX);
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ screen, kind: screen.kind, pkg, warnings });

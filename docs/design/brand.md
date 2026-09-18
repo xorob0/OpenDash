@@ -67,7 +67,9 @@ be distinctive would cost drivers real recognition time.
 |---|---|---|
 | OpenDash cyan | `color.brand.primary` | `#33D9F2` |
 
-Logo, plugin panel, documentation, website. Never on the dash face.
+Logo, plugin panel, documentation, website. Never on the dash face. Which surfaces of the panel
+may carry it is enumerated in [plugin.md](plugin.md), where the enumeration on the canvas and the
+one the panel draws are recorded as disagreeing.
 
 ## Typography
 
@@ -101,6 +103,15 @@ name `openDash Display`. WPF reads the width word out of a family name and files
 Condensed" as a *stretch* of Barlow, which a `.djson` has no way to ask back, so every numeral
 came out about a fifth too wide. Same outlines, renamed on the way into a package; the vendored
 files are untouched.
+
+A package carries the faces it is drawn in rather than every weight the two families offer, which
+means Barlow Medium for labels and the display family at SemiBold and Bold for numerals, to which
+the second screens add Light for the pit wall wordmark. The restriction follows from correctness
+rather than from package size, since a weight drawn without its file is resolved by WPF to whatever
+it can find, and every advance in `packages/dash/src/design/advances.ts` then measures a face that
+never shipped. The build therefore refuses a package that draws a weight it does not carry, so that
+a further weight has to be added to `FACE_FONT_FILES` or `SCREEN_FONT_FILES`, and measured, prior
+to being drawn.
 
 ## Form
 

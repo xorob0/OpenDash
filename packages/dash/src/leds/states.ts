@@ -5,12 +5,22 @@
  * Everything here reads a property SimHub already publishes. Nothing is computed between frames,
  * which is the line scope.md draws and ADR 0009 owns; where that meant a feature could not be
  * built, it is written down in docs/design/flag-box.md rather than approximated.
+ *
+ * Nothing below the flags moves. The box's one rule is that movement means act: a flag that ends
+ * or interrupts the race moves, and everything that merely informs is held. A limiter left on and
+ * an oil temperature climbing are both conditions the driver lives with for minutes at a time, so
+ * a picture that strobed for those minutes would spend the box's only attention signal on the
+ * states least able to give it back. The shape carries the urgency instead.
+ *
+ * "Held briefly so it cannot strobe" on the face sheet is read here as a plain still frame. A
+ * minimum on-time is memory between frames, which ADR 0009 does not admit, so it is not built.
  */
-import { flagBox, flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
+import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type MatrixContainer, type MatrixFrame } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
-import { blinkFrames, still, type Grid, type Palette } from './glyph.ts';
+import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
+import { tankIsLow } from '../second/values.ts';
 
 const { and, eq, game, gt, lt, computed, not, num, str } = ncalc;
 
@@ -49,8 +59,7 @@ export const LIMITER_IN_LANE: Grid = [
 ];
 
 /**
- * Limiter still on out of the lane: a mistake costing a second a corner, so it shouts. An
- * exclamation mark, blinking.
+ * Limiter still on out of the lane: a mistake costing a second a corner. An exclamation mark, held.
  *
  * It is deliberately not a filled panel. `purpose.pitLimiter` is pure white, the same value as
  * `purpose.flag.white`, so a filled panel here would be the white flag with a blink — and telling
@@ -82,39 +91,81 @@ export const SPEEDING: Grid = [
 ];
 
 // --- The spotter -----------------------------------------------------------------------------
+//
+// The bar is an overlay rather than a rank: it lights the edge columns and leaves the rest of the
+// panel absent, and SimHub's own merge drops an absent pixel rather than clearing what is beneath
+// it (docs/research/simhub-leds-format.md). Painted after the flags, it therefore shows a car
+// alongside *over* a standing yellow instead of instead of it, which is the whole point: the flag
+// stays readable and the bar says which side.
+//
+// Two columns rather than one, so it is not mistaken for a stuck LED. White rather than the purple
+// the canvas draws: design/tokens.json holds no such value and a colour is decided there.
 
-/** A car on the left: a bar down the left edge. Two columns, so it is not mistaken for an artefact. */
-export const CAR_LEFT: Grid = Array.from({ length: 8 }, () => 'WW......');
-export const CAR_RIGHT: Grid = Array.from({ length: 8 }, () => '......WW');
-export const CAR_BOTH: Grid = Array.from({ length: 8 }, () => 'WW....WW');
+const bar = (columns: readonly number[]): Grid => Array.from({ length: 8 }, () => Array.from({ length: 8 }, (_, c) => (columns.includes(c) ? 'W' : '.')).join(''));
+
+/** A car on the left: a bar down the left edge, held. */
+export const CAR_LEFT: Grid = bar([0, 1]);
+export const CAR_RIGHT: Grid = bar([6, 7]);
+export const CAR_BOTH: Grid = bar([0, 1, 6, 7]);
+
+/**
+ * The same bars growing inwards, one column then two then three.
+ *
+ * The middle step is the held picture, so the growing variant is the held one with a step either
+ * side of it rather than a second drawing. The sequence loops, which is what an `AnimationContainer`
+ * does with any frame list; there is no play-once, and a bar that grew and then stopped would be
+ * indistinguishable from the held one after the first second anyway.
+ */
+export const CAR_LEFT_GROWING: readonly Grid[] = [bar([0]), CAR_LEFT, bar([0, 1, 2])];
+export const CAR_RIGHT_GROWING: readonly Grid[] = [bar([7]), CAR_RIGHT, bar([5, 6, 7])];
+export const CAR_BOTH_GROWING: readonly Grid[] = [bar([0, 7]), CAR_BOTH, bar([0, 1, 2, 5, 6, 7])];
 
 // --- The warnings ----------------------------------------------------------------------------
 
-/** Low fuel: a tank emptying — a bar across the bottom two rows only. */
+/**
+ * Low fuel: the pump, body and hose, as the face sheet draws it.
+ *
+ * It was a tank outline, which is a rectangle with a rectangle inside it — the limiter frame's
+ * vocabulary, and nothing a driver has seen anywhere else. ISO 2575 registers the pump for the
+ * fuel level telltale, so it is the one picture in this family the driver already knows from the
+ * road car, and knowing it is worth more than a shape that fits the grid more comfortably.
+ */
 export const LOW_FUEL: Grid = [
-  '.YYYYYY.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.YYYYYY.',
-  '.YYYYYY.',
+  '.YYYYY..',
+  '.Y...Y.Y',
+  '.YYYYY.Y',
+  '.Y...Y.Y',
+  '.Y...YYY',
+  '.Y...Y..',
+  '.Y...Y..',
+  'YYYYYYY.',
 ];
 
-/** Oil too hot: the meatball's cousin, a disc with a drip, in orange. */
+/**
+ * Oil too hot: the can, spout up and a drop falling from it, as the face sheet draws it.
+ *
+ * It was a disc, which is the meatball's own shape in a second orange — the one thing the
+ * uniqueness rule in glyphFit.test.ts exists to refuse, and the confusion that costs most, since
+ * the meatball is an instruction to come in and the oil lamp is not. ISO 2575 registers the can
+ * for the oil telltale.
+ */
 export const OIL_HOT: Grid = [
-  '...OO...',
-  '..OOOO..',
-  '.OOOOOO.',
-  'OOOOOOOO',
-  'OOOOOOOO',
-  '.OOOOOO.',
-  '..OOOO..',
-  '...OO...',
+  '.......O',
+  '......O.',
+  '.....O..',
+  '.OOOOO..',
+  'OOOOOOO.',
+  'OOOOOOO.',
+  '.OOOOO..',
+  '...O....',
 ];
 
-/** Water too hot: waves, in orange, so the two temperatures are told apart by shape. */
+/**
+ * Water too hot: waves, in orange, so the two temperatures are told apart by shape.
+ *
+ * Two bands of three rows and a blank, not two single rows. The face sheet's prose says "two rows
+ * of waves" and its own artboard draws these eight, and the artboard is the drawing, so it wins.
+ */
 export const WATER_HOT: Grid = [
   '..OO..OO',
   '.O..OO..',
@@ -157,8 +208,15 @@ const speeding = (): Expr => and(inLane(), gt(speedMs(), ncalc.add(pitLimitMs(),
 export interface BoxState {
   id: string;
   raised: Expr;
+  /** The settled picture: what the state shows once it is no longer moving. */
   grid: Grid;
   blink: boolean;
+  /**
+   * The frames it cycles instead, for the one state that may move. `grid` is still the settled
+   * picture and is what the state shows with movement switched off, so a variant is never a second
+   * drawing of the same fact.
+   */
+  steps?: readonly Grid[];
 }
 
 /**
@@ -166,8 +224,8 @@ export interface BoxState {
  * is costing a penalty right now.
  */
 export const pitStates = (): BoxState[] => [
-  { id: 'speeding', raised: speeding(), grid: SPEEDING, blink: true },
-  { id: 'limiterOutOfLane', raised: and(limiterOn(), not(inLane())), grid: LIMITER_OUT_OF_LANE, blink: true },
+  { id: 'speeding', raised: speeding(), grid: SPEEDING, blink: false },
+  { id: 'limiterOutOfLane', raised: and(limiterOn(), not(inLane())), grid: LIMITER_OUT_OF_LANE, blink: false },
   { id: 'limiterInLane', raised: and(limiterOn(), inLane()), grid: LIMITER_IN_LANE, blink: false },
 ];
 
@@ -181,16 +239,20 @@ export const pitStates = (): BoxState[] => [
  * all become `SpotterCarLeft`), so the two-car state does not survive. Three states are shipped
  * rather than a fourth faked; see docs/design/flag-box.md.
  */
-export function spotterStates(matrix: FlagBoxMatrix): BoxState[] {
+export function spotterStates(matrix: FlagBoxMatrix, growing = false): BoxState[] {
   const side = flagBoxMatrix(matrix).side();
   const left = eq(game('SpotterCarLeft'), num(1));
   const right = eq(game('SpotterCarRight'), num(1));
   const isSide = (name: string): Expr => eq(side, str(name));
   const shows = (name: string): Expr => ncalc.or(isSide('both'), isSide(name));
+  // The two variants are named apart rather than sharing one name, because they are two pictures
+  // and the contact sheet addresses a picture by the name the profile draws it under.
+  const id = (name: string): string => (growing ? `${name}Growing` : name);
+  const steps = (grids: readonly Grid[]): { steps?: readonly Grid[] } => (growing ? { steps: grids } : {});
   return [
-    { id: 'carBoth', raised: and(isSide('both'), left, right), grid: CAR_BOTH, blink: false },
-    { id: 'carLeft', raised: and(shows('left'), left), grid: CAR_LEFT, blink: false },
-    { id: 'carRight', raised: and(shows('right'), right), grid: CAR_RIGHT, blink: false },
+    { id: id('carBoth'), raised: and(isSide('both'), left, right), grid: CAR_BOTH, blink: false, ...steps(CAR_BOTH_GROWING) },
+    { id: id('carLeft'), raised: and(shows('left'), left), grid: CAR_LEFT, blink: false, ...steps(CAR_LEFT_GROWING) },
+    { id: id('carRight'), raised: and(shows('right'), right), grid: CAR_RIGHT, blink: false, ...steps(CAR_RIGHT_GROWING) },
   ];
 }
 
@@ -198,11 +260,15 @@ export function spotterStates(matrix: FlagBoxMatrix): BoxState[] {
  * The three warnings, highest first. Each threshold is a contract property; the temperatures are
  * compared in whatever unit SimHub is already reporting them in, so a driver in Fahrenheit sets a
  * Fahrenheit number and gets a Fahrenheit comparison.
+ *
+ * The two temperatures belong to the panel and the fuel threshold does not: how hot is too hot is a
+ * judgement a driver may want said on one box and not on another, whereas "am I low on fuel" is one
+ * answer the whole rig shares with the strip and the faces.
  */
-export const warningStates = (): BoxState[] => [
-  { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBox.oilTemp()), grid: OIL_HOT, blink: true },
-  { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBox.waterTemp()), grid: WATER_HOT, blink: true },
-  { id: 'lowFuel', raised: lt(ncalc.isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps()), grid: LOW_FUEL, blink: true },
+export const warningStates = (matrix: FlagBoxMatrix): BoxState[] => [
+  { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBoxMatrix(matrix).oilTemp()), grid: OIL_HOT, blink: false },
+  { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBoxMatrix(matrix).waterTemp()), grid: WATER_HOT, blink: false },
+  { id: 'lowFuel', raised: tankIsLow(), grid: LOW_FUEL, blink: false },
 ];
 
 /** A temperature, defaulted so that a car which does not report one never trips a warning. */
@@ -218,8 +284,26 @@ export function stateContainers(list: readonly BoxState[], kind: string): Matrix
   }));
 }
 
-const framesOf = (state: BoxState): MatrixFrame[] =>
-  state.blink ? blinkFrames(state.grid, DARK, STATE_PALETTE, STATE_BLINK_HZ, state.id) : still(state.grid, STATE_PALETTE, state.id);
+/**
+ * No state below the flags sets `blink`, so that branch is unreachable today. It is kept rather
+ * than deleted because `blink` is what the rule is written in: flagBox.test.ts asserts that every
+ * state here is held, and an invariant with no field to name cannot be tested.
+ *
+ * `steps` is the one exception to "nothing below the flags moves", and it is a switch the driver
+ * turns on rather than a rate: growing is not blinking, since no frame of it is dark and the bar is
+ * on the whole time. A state that is neither blinking nor growing is one still frame.
+ */
+const framesOf = (state: BoxState): MatrixFrame[] => {
+  if (state.steps) return sequence(state.steps, state.id);
+  return state.blink ? blinkFrames(state.grid, DARK, STATE_PALETTE, STATE_BLINK_HZ, state.id) : still(state.grid, STATE_PALETTE, state.id);
+};
+
+/** Half a blink each, so a bar that grows keeps the rate everything else on this box moves at. */
+export const STATE_STEP_MS = Math.round(1000 / STATE_BLINK_HZ / 2);
+
+/** One picture per step, every step the same length; the container loops it. */
+const sequence = (grids: readonly Grid[], name: string): MatrixFrame[] =>
+  grids.map((grid) => ({ durationMs: STATE_STEP_MS, pixels: pixelsOf(grid, STATE_PALETTE, name) }));
 
 /** Nothing in the list is raised: what the next thing down needs to be true. */
 export const noneRaised = (list: readonly BoxState[]): Expr => and(...list.map((s) => not(s.raised)));

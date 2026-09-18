@@ -18,8 +18,10 @@ namespace OpenDashPlugin
         public const string PositionMode = "PositionMode";
         public const string DeltaReference = "DeltaReference";
         public const string SessionProgress = "SessionProgress";
+        public const string BlueFlagDetail = "BlueFlagDetail";
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
+        public const string PitWallClassOnly = "PitWallClassOnly";
 
         /// <summary>The lights. Not a screen, but their settings are properties for the same reason the
         /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.
@@ -31,21 +33,32 @@ namespace OpenDashPlugin
         public const string LightsNightBrightness = "LightsNightBrightness";
         public const string LightsNightMode = "LightsNightMode";
 
-        /// <summary>Quiet until something matters: the box shows only the flags that mean slow down or
-        /// are addressed to this car. Flag-box-specific, because it is about flags rather than lights.</summary>
-        public const string FlagBoxCriticalOnly = "FlagBoxCriticalOnly";
+        /// <summary>How few laps of fuel is low, for every light openDash drives rather than for the box
+        /// alone: one threshold answers "am I low" for the strip, the rev bar and the box, and three
+        /// copies of it would be three places to disagree. FlagBoxLowFuelLaps is its deprecated alias
+        /// and stays attached, because a published property name is a public interface (ADR 0003) and
+        /// an rc.2 user's settings do not vanish without a release of warning (#170).</summary>
+        public const string LightsLowFuelLaps = "LightsLowFuelLaps";
 
-        /// <summary>The gear as the box's resting state. Off leaves the panel dark rather than showing
-        /// something else.</summary>
-        public const string FlagBoxGear = "FlagBoxGear";
-
-        /// <summary>Laps, not litres: a litre threshold means nothing without knowing the car.</summary>
+        /// <summary>Laps, not litres: a litre threshold means nothing without knowing the car. The name
+        /// that shipped, now the deprecated alias of LightsLowFuelLaps and attached beside it.</summary>
         public const string FlagBoxLowFuelLaps = "FlagBoxLowFuelLaps";
 
-        /// <summary>Degrees in SimHub's own unit. A driver in Fahrenheit who sets 120 and gets a Celsius
-        /// threshold has been given a broken feature.</summary>
-        public const string FlagBoxOilTemp = "FlagBoxOilTemp";
-        public const string FlagBoxWaterTemp = "FlagBoxWaterTemp";
+        /// <summary>Whether the spotter bar grows inwards or is simply there. The rig's rather than a
+        /// box's, for the reason the brightness trio is: a driver who finds a moving bar distracting
+        /// finds it distracting on every panel. Off by default, unlike the flags' own switch, because
+        /// movement on this box means act and a car alongside informs.</summary>
+        public const string FlagBoxSpotterAnimation = "FlagBoxSpotterAnimation";
+
+        /// <summary>The four names a box used to share with every other box: quiet until something
+        /// matters, the gear at rest, and the two temperature thresholds. They are now
+        /// FlagBoxMatrix&lt;N&gt;CriticalOnly and its siblings, since a rig with a box in each corner
+        /// could otherwise not show the whole catalogue on one and the gear alone on the other. These
+        /// constants remain only so the migration in OpenDashSettings can name what it is reading.</summary>
+        public const string LegacyFlagBoxCriticalOnly = "FlagBoxCriticalOnly";
+        public const string LegacyFlagBoxGear = "FlagBoxGear";
+        public const string LegacyFlagBoxOilTemp = "FlagBoxOilTemp";
+        public const string LegacyFlagBoxWaterTemp = "FlagBoxWaterTemp";
 
         /// <summary>The RGB strips. Every generated .ledsprofile reads these two and nothing else of its
         /// own, so they are the whole of what a driver can say about a strip: what its middle shows, and
@@ -58,6 +71,11 @@ namespace OpenDashPlugin
         /// a number rather than a thing somebody owns.</summary>
         public const string LedCentre = "LedCentre";
         public const string LedRpmStyle = "LedRpmStyle";
+
+        /// <summary>Whether a flag on a strip moves at all. Off holds every flag from the frame it would
+        /// have settled on and never turns one off, which is what a driver who finds a blinking rim
+        /// distracting is asking for. Appended after the other two, which are pinned in order.</summary>
+        public const string LedFlagAnimation = "LedFlagAnimation";
 
         public const bool DefaultShiftLights = true;
 
@@ -88,6 +106,23 @@ namespace OpenDashPlugin
         public static readonly string[] SessionProgressModes = { "auto", "laps", "time" };
         public const string DefaultSessionProgress = "auto";
 
+        /// <summary>
+        /// What a blue flag band says beyond its colour: nothing, the class of the car behind, or
+        /// that car's position and class. Mirrors BLUE_FLAG_DETAILS in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Shared and not a face's, which is the difference from the flag format beside it. The
+        /// format decides how much of one screen a flag takes and so differs between a rim read at
+        /// arm's length and a display in the corner of the eye; this decides what a band is allowed
+        /// to say, which is the same answer wherever it is written. Appended to the shared group
+        /// after the rev bar, since both halves of the contract assert that group by index.
+        /// </remarks>
+        public static readonly string[] BlueFlagDetails = { "none", "class", "positionClass" };
+
+        /// <summary>Nothing extra: a blue flag is read by its colour, and the class of the car
+        /// behind is a thing to ask for rather than a thing to be given while lifting.</summary>
+        public const string DefaultBlueFlagDetail = "none";
+
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
         public static readonly string[] PitWallZoneLetters = { "A", "B", "C", "D" };
@@ -100,6 +135,13 @@ namespace OpenDashPlugin
 
         /// <summary>The web view page shows nothing until the user sets an address.</summary>
         public const string DefaultWebViewUrl = "";
+
+        /// <summary>The zone and page a held button shows on a pit wall: zone D, the leaderboard.
+        ///
+        /// Zone D because it is the one a glance can borrow without hiding what the glance is for: A
+        /// and B carry the fuel and the tyres a stop is planned on, C the relative a spotter calls
+        /// from, and D the two cars either side, which the leaderboard says more about anyway.</summary>
+        public const int DefaultPitWallQuickGlance = 3 * 100 + 5;
 
         /// <summary>Percent. SimHub's own global brightness for the device applies on top of this.</summary>
         public const int DefaultLightsBrightness = 100;
@@ -146,7 +188,9 @@ namespace OpenDashPlugin
             return "FlagBoxMatrix" + matrix + name;
         }
 
-        /// <summary>The five names of one matrix, in attachment order.</summary>
+        /// <summary>The ten names of one matrix, in attachment order. The last four moved here from the
+        /// tab, and are appended rather than interleaved because both halves of the contract pin this
+        /// list in order.</summary>
         public static IEnumerable<string> FlagBoxMatrixProperties(int matrix)
         {
             yield return FlagBoxMatrixProperty(matrix, "Rest");
@@ -155,6 +199,33 @@ namespace OpenDashPlugin
             yield return FlagBoxMatrixProperty(matrix, "Spotter");
             yield return FlagBoxMatrixProperty(matrix, "Warnings");
             yield return FlagBoxMatrixProperty(matrix, "Side");
+            yield return FlagBoxMatrixProperty(matrix, "CriticalOnly");
+            yield return FlagBoxMatrixProperty(matrix, "Gear");
+            yield return FlagBoxMatrixProperty(matrix, "OilTemp");
+            yield return FlagBoxMatrixProperty(matrix, "WaterTemp");
+        }
+
+        /// <summary>Critical-flags-only off on every panel, and the gear on on every panel: the defaults
+        /// do not move with the names.</summary>
+        public static bool[] DefaultFlagBoxCriticalOnlys()
+        {
+            var values = new bool[FlagBoxMatrices.Count];
+            for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxCriticalOnly;
+            return values;
+        }
+
+        public static bool[] DefaultFlagBoxGears()
+        {
+            var values = new bool[FlagBoxMatrices.Count];
+            for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxGear;
+            return values;
+        }
+
+        /// <summary>Zero, which the attach turns into null so the profile falls back to the default for
+        /// the driver's own temperature unit rather than to a Celsius number in Fahrenheit.</summary>
+        public static int[] DefaultFlagBoxTemps()
+        {
+            return new int[FlagBoxMatrices.Count];
         }
 
         /// <summary>Matrix 1 does everything, 2 to 4 are off: one box works out of the box.</summary>
@@ -189,10 +260,17 @@ namespace OpenDashPlugin
         /// a worse default than a busy one.</summary>
         public const bool DefaultFlagBoxCriticalOnly = false;
 
-        /// <summary>What the middle of a strip shows: the revs, the revs with the sides left dark, the
-        /// brake, throttle and brake from the middle outwards, or the fuel. Mirrors LED_CENTRES in
-        /// contract.ts.</summary>
-        public static readonly string[] LedCentres = { "rpm", "rpmOnly", "brake", "throttleBrake", "fuel" };
+        /// <summary>Off: the bar is there rather than growing. Movement on this box means act.</summary>
+        public const bool DefaultFlagBoxSpotterAnimation = false;
+
+        /// <summary>What the middle of a strip shows: the revs, the brake, throttle and brake from the
+        /// middle outwards, or the fuel. Mirrors LED_CENTRES in contract.ts.</summary>
+        public static readonly string[] LedCentres = { "rpm", "brake", "throttleBrake", "fuel" };
+
+        /// <summary>The fifth centre, retired into "rpm". It lit the same centre and differed only in
+        /// leaving the sides dark, which is a decision about the sides rather than about the centre.
+        /// Kept as a name so that NormaliseLedCentre can migrate a settings file that carries it.</summary>
+        public const string RetiredLedCentre = "rpmOnly";
 
         /// <summary>The revs, with brake on the sides. What the hardware makers put there.</summary>
         public const string DefaultLedCentre = "rpm";
@@ -242,6 +320,9 @@ namespace OpenDashPlugin
             return "LedMirror" + length.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
+        /// <summary>On: movement is what a flag is read by at the edge of vision.</summary>
+        public const bool DefaultLedFlagAnimation = true;
+
 
         // --- The zone face ---------------------------------------------------------------------
         //
@@ -269,7 +350,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public struct FaceSize
         {
-            public FaceSize(int width, int height, FaceBody body, int[] parts, bool hasBar, int barFieldsPerEnd)
+            public FaceSize(int width, int height, FaceBody body, int[] parts, bool hasBar, int barFieldsPerEnd, int revBarHeight, int barHeight, int bodyHeight, int bandHeight)
             {
                 Width = width;
                 Height = height;
@@ -277,6 +358,10 @@ namespace OpenDashPlugin
                 Parts = parts;
                 HasBar = hasBar;
                 BarFieldsPerEnd = barFieldsPerEnd;
+                RevBarHeight = revBarHeight;
+                BarHeight = barHeight;
+                BodyHeight = bodyHeight;
+                BandHeight = bandHeight;
             }
 
             public int Width { get; }
@@ -291,6 +376,27 @@ namespace OpenDashPlugin
 
             /// <summary>Two per end on a wide face, one in portrait.</summary>
             public int BarFieldsPerEnd { get; }
+
+            /// <summary>
+            /// The heights of the four rows the face stacks, from the top: the strip the rev bar sits
+            /// in, the bar, the body the three zones share, and band D. Mirrors `rows` in FACE_SIZES.
+            /// </summary>
+            /// <remarks>
+            /// Carried for the same reason Parts is: the panel draws a plan of the face and cannot read
+            /// a layout file, and a plan whose rows are four constants drew a 1920 x 480 face's 48, 56,
+            /// 314 and 60 as 19, 24, 150 and 26. A plan scales these by its own width over Width.
+            ///
+            /// BarHeight is zero on the nano, which has no bar. BodyHeight counts the whole region the
+            /// three zones occupy, the one-pixel seams between them included, so that a portrait face
+            /// whose zones are stacked measures the same way as a wide one whose zones are side by side.
+            /// </remarks>
+            public int RevBarHeight { get; }
+
+            public int BarHeight { get; }
+
+            public int BodyHeight { get; }
+
+            public int BandHeight { get; }
 
             /// <summary>The zone letters of the body, in the order it draws them.</summary>
             public string[] BodyOrder
@@ -307,14 +413,14 @@ namespace OpenDashPlugin
         /// </summary>
         public static readonly IReadOnlyList<FaceSize> FaceSizes = new[]
         {
-            new FaceSize(1920, 480, FaceBody.Row, new[] { 769, 380, 769 }, true, 2),
-            new FaceSize(1280, 480, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
-            new FaceSize(1280, 400, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
-            new FaceSize(850, 480, FaceBody.Row, new[] { 274, 300, 274 }, true, 2),
-            new FaceSize(800, 480, FaceBody.Row, new[] { 249, 300, 249 }, true, 2),
-            new FaceSize(1280, 720, FaceBody.Row, new[] { 469, 340, 469 }, true, 2),
-            new FaceSize(800, 286, FaceBody.Row, new[] { 269, 260, 269 }, false, 2),
-            new FaceSize(600, 686, FaceBody.Column, new[] { 234, 160, 150 }, true, 1),
+            new FaceSize(1920, 480, FaceBody.Row, new[] { 769, 380, 769 }, true, 2, 48, 56, 314, 60),
+            new FaceSize(1280, 480, FaceBody.Row, new[] { 469, 340, 469 }, true, 2, 44, 54, 320, 60),
+            new FaceSize(1280, 400, FaceBody.Row, new[] { 469, 340, 469 }, true, 2, 36, 50, 258, 54),
+            new FaceSize(850, 480, FaceBody.Row, new[] { 274, 300, 274 }, true, 2, 40, 50, 328, 60),
+            new FaceSize(800, 480, FaceBody.Row, new[] { 249, 300, 249 }, true, 2, 40, 50, 328, 60),
+            new FaceSize(1280, 720, FaceBody.Row, new[] { 469, 340, 469 }, true, 2, 48, 56, 554, 60),
+            new FaceSize(800, 286, FaceBody.Row, new[] { 269, 260, 269 }, false, 2, 33, 0, 194, 58),
+            new FaceSize(600, 686, FaceBody.Column, new[] { 234, 160, 150 }, true, 1, 36, 46, 546, 56),
         };
 
         /// <summary>The face a rig is most likely to have, and where a pre-face setting is migrated to.</summary>
@@ -438,7 +544,7 @@ namespace OpenDashPlugin
             }
             if (string.Equals(kind, KindCompanion, StringComparison.Ordinal))
             {
-                for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
+                foreach (var name in CompanionPropertyNames(ns)) yield return name;
                 yield break;
             }
             if (string.Equals(kind, KindPitWall, StringComparison.Ordinal))
@@ -446,6 +552,9 @@ namespace OpenDashPlugin
                 foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(ns, letter);
                 yield return PitWallWideProperty(ns);
                 yield return WebViewUrlProperty(ns);
+                // Last, after the web view: the six before it have shipped and both halves of the
+                // contract assert the group by index, so a new one joins the end of it.
+                yield return PitWallClassOnlyProperty(ns);
                 yield break;
             }
             // A slots face reads the twelve shared slot properties and nothing of its own, which is why
@@ -459,9 +568,10 @@ namespace OpenDashPlugin
         public static IEnumerable<string> ScreenActionNames(string kind, string ns)
         {
             if (string.Equals(kind, KindFace, StringComparison.Ordinal)) return FaceActionNames(ns);
-            // Only a face has a button today. The canvas draws "Next module" on the companion pane and
-            // no such action is registered, so the panel says it is not bound rather than offering a
-            // binder for a name SimHub would never call.
+            if (string.Equals(kind, KindCompanion, StringComparison.Ordinal)) return CompanionActionNames(ns);
+            if (string.Equals(kind, KindPitWall, StringComparison.Ordinal)) return PitWallActionNames(ns);
+            // A slots face has none: it cycles nothing, its twelve cards being arranged once with a
+            // mouse and then left alone.
             return new string[0];
         }
 
@@ -474,7 +584,7 @@ namespace OpenDashPlugin
             }
             if (string.Equals(prefix, CompanionPrefix, StringComparison.Ordinal))
             {
-                for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(module);
+                foreach (var name in CompanionPropertyNames(CompanionPrefix)) yield return name;
                 yield break;
             }
             if (string.Equals(prefix, PitWallPrefix, StringComparison.Ordinal))
@@ -482,6 +592,7 @@ namespace OpenDashPlugin
                 foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
                 yield return PitWallWide;
                 yield return WebViewUrl;
+                yield return PitWallClassOnly;
                 yield break;
             }
             throw new ArgumentOutOfRangeException("prefix", prefix, "no screen carries that prefix");
@@ -511,6 +622,7 @@ namespace OpenDashPlugin
             yield return SessionProgress;
             for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
             yield return RevBar;
+            yield return BlueFlagDetail;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
@@ -537,6 +649,32 @@ namespace OpenDashPlugin
         /// <summary>Zone C on the track page, which is what a glance is usually for. Encoded as
         /// zoneIndex * 100 + page, so a glance is one property rather than a pair per zone.</summary>
         public const int DefaultQuickGlance = 2 * 100 + 12;
+
+        /// <summary>How a face draws a flag: over the band it shares with whatever else has a claim on
+        /// those sixty pixels, or over the whole face. Mirrors FLAG_FORMATS in contract.ts.</summary>
+        public static readonly string[] FlagFormats = { "band", "full" };
+
+        /// <summary>The band, which is what the face has always drawn: a flag over the whole face takes
+        /// the gear with it, and that is a choice rather than a default.</summary>
+        public const string DefaultFlagFormat = "band";
+
+        /// <summary>
+        /// When a face shows the lap review: never, in a race, or in every session. Mirrors
+        /// LAP_REVIEW_MODES in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Three values and not the canvas's four. "Race" is the one session name openDash can match
+        /// with certainty; a "practice" value would have to match a set of spellings -- lone, open,
+        /// offline testing, warmup -- that no committed trace carries, and a value that silently
+        /// never matches is worse than one that is not offered.
+        /// </remarks>
+        public static readonly string[] LapReviewModes = { "off", "race", "all" };
+
+        /// <summary>Off: the panel covers the gear for four seconds of every lap, and the lap-time
+        /// pop-up already gives a driver the two figures they wait for at the line in a third of the
+        /// room. What takes the face is asked for, which is why the flag format defaults to the band
+        /// as well.</summary>
+        public const string DefaultLapReview = "off";
 
         /// <summary>
         /// The characters a namespace may be spelled with, and the rule that produces one from a name.
@@ -603,12 +741,39 @@ namespace OpenDashPlugin
             return QuickGlanceProperty(FacePrefix(face));
         }
 
+        /// <summary>Property name of a face's flag format: Face1920x480FlagFormat. Per screen and not per
+        /// rig, so that the face in the driver's peripheral vision can take a flag over the whole screen
+        /// while the one they read directly keeps its band.</summary>
+        public static string FlagFormatProperty(string ns)
+        {
+            return ns + "FlagFormat";
+        }
+
+        public static string FlagFormatProperty(FaceSize face)
+        {
+            return FlagFormatProperty(FacePrefix(face));
+        }
+
+        /// <summary>Property name of a face's lap review: Face1920x480LapReview.</summary>
+        public static string LapReviewProperty(string ns)
+        {
+            return ns + "LapReview";
+        }
+
+        public static string LapReviewProperty(FaceSize face)
+        {
+            return LapReviewProperty(FacePrefix(face));
+        }
+
         /// <summary>
         /// The actions a driver binds to a wheel button. Named as verbs, because a property is a noun:
         /// `OpenDash.QuickGlance` is what the glance is set to and `OpenDash.HoldQuickGlance` is the
         /// button that shows it, and a log naming one should not read like the other.
         /// </summary>
         public const string HoldQuickGlanceAction = "HoldQuickGlance";
+
+        /// <summary>The companion's own button: advance to the next module the rotation leaves on.</summary>
+        public const string NextModuleAction = "NextModule";
 
         /// <summary>Action that advances one zone of one face: Face1920x480CycleZoneA.</summary>
         public static string CycleZoneAction(string ns, string letter)
@@ -631,6 +796,12 @@ namespace OpenDashPlugin
         public static string HoldQuickGlanceActionFor(FaceSize face)
         {
             return HoldQuickGlanceActionFor(FacePrefix(face));
+        }
+
+        /// <summary>Action that advances one companion: CompanionNextModule.</summary>
+        public static string NextModuleActionFor(string ns)
+        {
+            return ns + NextModuleAction;
         }
 
         /// <summary>
@@ -734,6 +905,10 @@ namespace OpenDashPlugin
             foreach (var letter in FaceZoneLetters) yield return ZoneClassOnlyProperty(ns, letter);
             foreach (var slot in BarSlots) yield return BarFieldProperty(ns, slot);
             yield return QuickGlanceProperty(ns);
+            // Last, after the glance: the names before it have shipped and both halves of the contract
+            // assert the group by index, so a new one joins the end of it.
+            yield return FlagFormatProperty(ns);
+            yield return LapReviewProperty(ns);
         }
 
         public static IEnumerable<string> FacePropertyNames(FaceSize face)
@@ -773,6 +948,13 @@ namespace OpenDashPlugin
         /// Off: most racing is single-class, and a driver in one would not thank us for a leaderboard
         /// that hides nobody but says it does.</summary>
         public const bool DefaultZoneClassOnly = false;
+
+        /// <summary>Whether a pit wall's board and its zone lists show the player's own class. One
+        /// answer for the screen and not one per zone, as a face has: a pit wall's zones are widgets
+        /// pointed at one dashboard file per rectangle, so two zones of one column are the same file
+        /// and could not be told apart. Off, for the reason a face's is off. Mirrors
+        /// DEFAULT_PIT_WALL_CLASS_ONLY in contract.ts.</summary>
+        public const bool DefaultPitWallClassOnly = false;
 
         /// <summary>The class filter of every face zone, in letter order.</summary>
         public static bool[] DefaultFaceZoneClassOnly()
@@ -840,6 +1022,65 @@ namespace OpenDashPlugin
             return ModuleProperty(CompanionPrefix, module);
         }
 
+        /// <summary>Property name of a companion's live page: CompanionPage.</summary>
+        public static string CompanionPageProperty(string ns)
+        {
+            return ns + "Page";
+        }
+
+        /// <summary>The module a companion opens on, and the one a held button shows: lap times, which
+        /// is the first in page order, and the track map, which is what a glance is usually for. Both
+        /// count from zero, so the track map is module 13 at page 12.</summary>
+        public const int DefaultCompanionStart = 0;
+
+        public const int DefaultCompanionQuickGlance = 12;
+
+        /// <summary>The page a companion reads before anything has set one, which is the first module.
+        /// Mirrors DEFAULT_COMPANION_PAGE in contract.ts: a package installed without the plugin opens
+        /// on lap times and, having nothing to move it, stays there.</summary>
+        public const int DefaultCompanionPage = 0;
+
+        /// <summary>
+        /// Every property one companion owns, in attachment order: the module switches, then the page.
+        /// </summary>
+        /// <remarks>
+        /// The start module and the glance module are not among them, and that is the idiom rather than
+        /// an omission: a second-screen property has to be read by a package, which
+        /// packages/dash/test/secondScreens.test.ts enforces, and nothing on the screen reads either of
+        /// them. The start is applied once by Init and the glance is a value the hold copies into the
+        /// page and copies back on release, which is exactly how a pit wall's own glance works.
+        ///
+        /// The page is appended after the twenty-one rather than put in front of them, because both
+        /// halves of the contract assert this group by index.
+        /// </remarks>
+        public static IEnumerable<string> CompanionPropertyNames(string ns)
+        {
+            for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
+            yield return CompanionPageProperty(ns);
+        }
+
+        /// <summary>Every action one companion registers, in registration order.</summary>
+        public static IEnumerable<string> CompanionActionNames(string ns)
+        {
+            yield return NextModuleActionFor(ns);
+            yield return HoldQuickGlanceActionFor(ns);
+        }
+
+        /// <summary>
+        /// Every action one pit wall registers, in registration order: the glance and nothing else.
+        /// </summary>
+        /// <remarks>
+        /// A pit wall cycles no zone, because nobody sitting in front of a 1920 by 1080 needs to page
+        /// a panel that is already on screen beside five others. The glance is the one exception: the
+        /// canvas asks for a page called up on demand over a zone's assigned one, and "on demand" on
+        /// a screen nobody is driving is whatever SimHub will bind, a keyboard key as readily as a
+        /// wheel button. Held and not toggled, so that a hand leaving the key puts the zone back.
+        /// </remarks>
+        public static IEnumerable<string> PitWallActionNames(string ns)
+        {
+            yield return HoldQuickGlanceActionFor(ns);
+        }
+
         /// <summary>Property name of a pit wall zone: PitWallZoneA .. PitWallZoneD.</summary>
         public static string ZoneProperty(string ns, string letter)
         {
@@ -871,6 +1112,14 @@ namespace OpenDashPlugin
         public static string WebViewUrlProperty(string ns)
         {
             return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? WebViewUrl : ns + "WebViewUrl";
+        }
+
+        /// <summary>Property name of a pit wall's class filter: PitWallClassOnly, or GarageClassOnly
+        /// on a second one. No special case for the stock prefix, unlike the web view address: this
+        /// name was coined with the idiom, so the stock spelling is what the idiom already produces.</summary>
+        public static string PitWallClassOnlyProperty(string ns)
+        {
+            return ns + "ClassOnly";
         }
 
         /// <summary>Default page of a zone, by its letter.</summary>
@@ -961,19 +1210,21 @@ namespace OpenDashPlugin
         ///
         /// A rig with no matrix and no strip still declares all of them, unlike a screen it does not
         /// have: openDash installs neither profile by itself (ADR 0013), so there is nothing to detect,
-        /// and thirty-four names is not the hundred and thirty-six that made the screens worth
-        /// narrowing. (Thirteen, this said before the matrices had a group each; it is counted here
-        /// rather than guessed at.)</summary>
+        /// and sixty-one names is not the hundred and thirty-six that made the screens worth
+        /// narrowing. (Thirteen, this said before the matrices had a group each, thirty-four before
+        /// the four settings a box owns moved under it, and forty-nine before the mirror brought its
+        /// fit, its gate and a run per length; it is counted here rather than guessed at.)</summary>
         public static IEnumerable<string> LightsPropertyNames()
         {
             yield return LightsBrightness;
             yield return LightsNightBrightness;
             yield return LightsNightMode;
-            yield return FlagBoxCriticalOnly;
-            yield return FlagBoxGear;
             yield return FlagBoxLowFuelLaps;
-            yield return FlagBoxOilTemp;
-            yield return FlagBoxWaterTemp;
+            // Appended rather than placed beside the other Lights* names: this list is pinned in order
+            // and both halves of the contract assert its head by index, so a new name joins the end of
+            // the group and is never inserted into it.
+            yield return LightsLowFuelLaps;
+            yield return FlagBoxSpotterAnimation;
             foreach (var matrix in FlagBoxMatrices)
             {
                 foreach (var name in FlagBoxMatrixProperties(matrix)) yield return name;
@@ -988,6 +1239,7 @@ namespace OpenDashPlugin
         {
             yield return LedCentre;
             yield return LedRpmStyle;
+            yield return LedFlagAnimation;
             yield return LedMirrorFit;
             yield return LedMirrorReady;
             foreach (var length in MirrorRunLengths) yield return LedMirrorRun(length);
@@ -1013,6 +1265,21 @@ namespace OpenDashPlugin
         {
             var alias = shiftLights ? RevBarShift : RevBarRpm;
             return string.IsNullOrWhiteSpace(value) ? alias : NormaliseChoice(value, RevBarModes, alias);
+        }
+
+        /// <summary>
+        /// The strip centre a settings file means.
+        /// </summary>
+        /// <remarks>
+        /// A stored "rpmOnly" becomes "rpm", which is where the value was retired. Migrated by name
+        /// rather than left to the fallback: the fallback lands on "rpm" only for as long as "rpm" is
+        /// the default, and a value no conditional group in the profile matches is a strip whose centre
+        /// goes dark. #170 is the rule that an rc.2 user's settings survive the release.
+        /// </remarks>
+        public static string NormaliseLedCentre(string value)
+        {
+            if (value != null && string.Equals(value.Trim(), RetiredLedCentre, StringComparison.OrdinalIgnoreCase)) return DefaultLedCentre;
+            return NormaliseChoice(value, LedCentres, DefaultLedCentre);
         }
 
         /// <summary>Returns value when it is one of allowed (ordinal, case-insensitive, canonical casing), else fallback.</summary>
@@ -1073,6 +1340,24 @@ namespace OpenDashPlugin
             if (zoneIndex >= FaceZoneLetters.Length) return DefaultQuickGlance;
             var page = QuickGlancePage(value);
             return page < FaceZonePageCounts[zoneIndex] ? value : DefaultQuickGlance;
+        }
+
+        /// <summary>A pit wall zone and a standard page packed the way a face's glance is packed.</summary>
+        public static int PitWallQuickGlanceValue(int zoneIndex, int page)
+        {
+            if (zoneIndex < 0 || zoneIndex >= PitWallZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
+            return zoneIndex * 100 + page;
+        }
+
+        /// <summary>Returns the pit wall glance when both halves are in range, else the default. The
+        /// page is a standard one because the four data zones are standard; the wide zone spans a
+        /// column of the tower page and is not among them.</summary>
+        public static int NormalisePitWallQuickGlance(int value)
+        {
+            if (value < 0) return DefaultPitWallQuickGlance;
+            var zoneIndex = QuickGlanceZone(value);
+            if (zoneIndex >= PitWallZoneLetters.Length) return DefaultPitWallQuickGlance;
+            return ZonePages.IsValidStandard(QuickGlancePage(value)) ? value : DefaultPitWallQuickGlance;
         }
 
         /// <summary>Clamps a card number into the catalogue, or returns fallback when it is outside.</summary>

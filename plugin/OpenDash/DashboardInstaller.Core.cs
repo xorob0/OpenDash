@@ -157,6 +157,27 @@ namespace OpenDashPlugin
         /// <summary>The worst status across the packages (Failed over NotInstalled over UpdateAvailable over UpToDate).</summary>
         public InstallStatus Status { get; private set; } = InstallStatus.NotInstalled;
 
+        /// <summary>
+        /// The status the "This plugin" pill shows: the worse of what is on disk and what GitHub last answered.
+        /// </summary>
+        /// <remarks>
+        /// One pill is answerable to two different comparisons. Status is the embedded package measured against what
+        /// sits under DashTemplates, and it knows nothing of a release that exists but has never been downloaded; a
+        /// check against GitHub knows of the release and nothing of the disk. Reading the pill off the first alone
+        /// told a user whose disk matched the plugin that they were up to date, directly above a sentence saying a
+        /// newer release was waiting. The worse of the two is what the pill owes them, so an offer from either source
+        /// turns it amber.
+        ///
+        /// Every other update state leaves the package status standing, which is deliberate: Checking is a question
+        /// still open, and Idle, Disabled and Unreachable are each an answer nobody has, so none of the four is news
+        /// about the dashboards on the disk. Unreachable in particular is a state rather than a fault, since a driver
+        /// whose rig has no network can do nothing about it and does not need a pill to say so.
+        /// </remarks>
+        public static InstallStatus PillStatus(InstallStatus installed, UpdateState update)
+        {
+            return Worse(installed, update == UpdateState.UpdateAvailable ? InstallStatus.UpdateAvailable : InstallStatus.UpToDate);
+        }
+
         /// <summary>One entry per package after Refresh or EnsureInstalled, in install order; empty before and when
         /// nothing is embedded.</summary>
         public IReadOnlyList<PackageStatus> Packages { get; private set; } = NoPackages;
@@ -179,13 +200,19 @@ namespace OpenDashPlugin
         /// <summary>The first failure of the last run; null when every package went through.</summary>
         public string LastError { get; private set; }
 
-        /// <summary>The Dashboard section's title: "OpenDash 0.1.0 · 10 dashboards". Just "OpenDash 0.1.0" when nothing
-        /// is embedded, so that a build without packages does not announce zero dashboards.</summary>
-        public static string Summary(string version, int packageCount)
+        /// <summary>
+        /// The "This plugin" section's title: "openDash 0.1.0".
+        /// </summary>
+        /// <remarks>
+        /// The wordmark is written as the product writes it, with the lowercase d, because a section headed
+        /// "OpenDash" spells the name two ways on one page and the canvas spells it one way. The count of
+        /// dashboards used to follow the version and does not any more: the section is about the plugin rather
+        /// than about its packages, and the pill beside this line carries a tooltip naming every package and the
+        /// state each one is in, which says the same thing and says it usefully.
+        /// </remarks>
+        public static string Summary(string version)
         {
-            var title = "OpenDash " + version;
-            if (packageCount <= 0) return title;
-            return title + " · " + packageCount + (packageCount == 1 ? " dashboard" : " dashboards");
+            return "openDash " + version;
         }
 
         /// <summary>One line per package, for the status tooltip: which dashboard is in which state, and why it failed.</summary>
@@ -226,9 +253,14 @@ namespace OpenDashPlugin
         /// Replace a folder that has changed since OpenDash wrote it. False everywhere except where a person has been
         /// shown what it means and said yes, because such a folder holds work that deleting it destroys.
         /// </param>
-        public void EnsureInstalled(bool force, bool replaceEdited = false)
+        /// <param name="progress">
+        /// Packages finished over packages to do, from 0 before the first to 1 after the last, or null for a caller
+        /// with nothing to draw. A package is the finest grain there is here, because extracting one is a single
+        /// call into PackageExtractor and reports nothing until it returns.
+        /// </param>
+        public void EnsureInstalled(bool force, bool replaceEdited = false, Action<double> progress = null)
         {
-            Run(force, install: true, replaceEdited: replaceEdited);
+            Run(force, install: true, replaceEdited: replaceEdited, progress: progress);
         }
 
         /// <summary>
@@ -248,7 +280,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public IReadOnlyCollection<string> Wanted { get; set; }
 
-        private void Run(bool force, bool install, bool replaceEdited = false)
+        private void Run(bool force, bool install, bool replaceEdited = false, Action<double> progress = null)
         {
             LastError = null;
             var names = packages.Names;
@@ -262,9 +294,13 @@ namespace OpenDashPlugin
             // Read for every package, so the panel can still say what is installable and at what
             // version; written only for the folders the rig wants.
             var wanted = Wanted;
-            var results = names
-                .Select(name => Process(name, force, install && Includes(wanted, FolderOf(name)), replaceEdited))
-                .ToList();
+            var results = new List<PackageStatus>(names.Count);
+            Report(progress, 0);
+            foreach (var name in names)
+            {
+                results.Add(Process(name, force, install && Includes(wanted, FolderOf(name)), replaceEdited));
+                Report(progress, (double)results.Count / names.Count);
+            }
             Packages = results;
             Status = results.Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
             LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null);
@@ -409,6 +445,28 @@ namespace OpenDashPlugin
         private static InstallStatus Worse(InstallStatus a, InstallStatus b)
         {
             return Severity(a) >= Severity(b) ? a : b;
+        }
+
+        /// <summary>
+        /// A report the run cannot be derailed by.
+        /// </summary>
+        /// <remarks>
+        /// The caller draws this on the UI thread through Dispatcher.Invoke, and a settings page that has been closed
+        /// makes that throw. An exception between two packages would abandon the rest of the run and leave a rig half
+        /// written, which is exactly what this installer exists to avoid, so a bar nobody is watching is dropped and
+        /// the install carries on.
+        /// </remarks>
+        private static void Report(Action<double> progress, double fraction)
+        {
+            if (progress == null) return;
+            try
+            {
+                progress(fraction);
+            }
+            catch
+            {
+                // Deliberately silent: log is the caller's and a failed report says nothing about the install.
+            }
         }
 
         private static int Severity(InstallStatus status)

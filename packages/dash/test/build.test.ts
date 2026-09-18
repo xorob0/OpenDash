@@ -122,11 +122,11 @@ describe('inline strategy', () => {
 });
 
 describe('package', () => {
-  test('bundles only the three face fonts, all present on disk', () => {
-    // Two of the three are the vendored condensed files renamed: the family a .djson asks for is
+  test('bundles only the face fonts, all present on disk', () => {
+    // Two of them are the vendored condensed files renamed: the family a .djson asks for is
     // openDash Display, and a file called BarlowCondensed-Bold.ttf no longer carries that name.
     const fonts = fontsForPackage();
-    expect(fonts.map((f) => f.split('/').pop())).toEqual(['openDashDisplay-SemiBold.ttf', 'openDashDisplay-Bold.ttf', 'Barlow-Medium.ttf']);
+    expect(fonts.map((f) => f.split('/').pop())).toEqual(['openDashDisplay-SemiBold.ttf', 'openDashDisplay-Bold.ttf', 'Barlow-Medium.ttf', 'Barlow-Bold.ttf']);
     for (const f of fonts) expect({ f, exists: existsSync(f) }).toEqual({ f, exists: true });
     const pkg = buildPackage(layout1920x480, opts);
     expect(pkg.folderName).toBe('openDash slots 1920x480');

@@ -1,0 +1,372 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`what each face draws, per zone rectangle the shape of every zone body, and what each page keeps in it 1`] = `
+"1920x480  zone 769x314  body 745x276  zone
+  lapTimes       wide       keeps last sessionBest yourBest laps estimated delta average5 position stintLap s1 s2 s3
+  delta          wide       keeps delta s1 s2 s3  parts bar scale rule
+  sectors        wide       keeps s1 s2 s3 yourBest last sessionBest bestS1 bestS2 bestS3
+  speedo         wide       keeps speed rpm redline
+  fuel           wide       keeps level time toAdd lastLap thisLap average lapsLeft
+  energy         wide       one drawing, nothing to shed
+  tyres          wide       one drawing, nothing to shed  parts footer compound
+  pitView        wide       keeps refuel pitTime  parts tyres
+  carSettings    wide       keeps car tc abs bb mix arbFront arbRear
+  inputs         wide       one drawing, nothing to shed  parts steer
+  session        wide       keeps type position class lap timeLeft lapsLeft incidents cars
+  radar          wide       one drawing, nothing to shed
+  track          wide       one drawing, nothing to shed
+  leaderboard    wide       keeps pos num name class gap best last
+  relative       wide       keeps pos num name class gap
+  opponents      wide       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
+  gear           wide       one drawing, nothing to shed
+  stint          wide       keeps stintLaps stintTime completed stops lastStop avgLap driver
+  lapHistory     wide       one drawing, nothing to shed  parts head
+  damage         wide       one drawing, nothing to shed
+  trackRivals    wide       one drawing, nothing to shed
+
+1920x480  zone 769x358  body 745x320  zone
+  lapTimes       wide       keeps last sessionBest yourBest laps estimated delta average5 position stintLap s1 s2 s3
+  delta          wide       keeps delta s1 s2 s3  parts bar scale rule
+  sectors        wide       keeps s1 s2 s3 yourBest last sessionBest bestS1 bestS2 bestS3
+  speedo         wide       keeps speed rpm redline
+  fuel           wide       keeps level time toAdd lastLap thisLap average lapsLeft
+  energy         wide       one drawing, nothing to shed
+  tyres          wide       one drawing, nothing to shed  parts footer compound
+  pitView        wide       keeps refuel pitTime  parts tyres
+  carSettings    wide       keeps car tc abs bb mix arbFront arbRear
+  inputs         wide       one drawing, nothing to shed  parts steer
+  session        wide       keeps type position class lap timeLeft lapsLeft incidents cars
+  radar          wide       one drawing, nothing to shed
+  track          wide       one drawing, nothing to shed
+  leaderboard    wide       keeps pos num name class gap best last
+  relative       wide       keeps pos num name class gap
+  opponents      wide       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
+  gear           wide       one drawing, nothing to shed
+  stint          wide       keeps stintLaps stintTime completed stops lastStop avgLap driver
+  lapHistory     wide       one drawing, nothing to shed  parts head
+  damage         wide       one drawing, nothing to shed
+  trackRivals    wide       one drawing, nothing to shed
+
+1280x480  zone 469x320  body 445x282  zone
+  lapTimes       grid       keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          grid       keeps delta s1 s2 s3  parts bar scale rule
+  sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
+  speedo         grid       keeps speed rpm  sheds redline
+  fuel           grid       keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         grid       one drawing, nothing to shed
+  tyres          grid       one drawing, nothing to shed  parts footer compound
+  pitView        grid       keeps refuel pitTime  parts tyres
+  carSettings    grid       keeps car tc abs bb mix arbFront arbRear
+  inputs         grid       one drawing, nothing to shed  parts steer
+  session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          grid       one drawing, nothing to shed
+  track          grid       one drawing, nothing to shed
+  leaderboard    grid       keeps pos num name class gap  sheds best last
+  relative       grid       keeps pos num name class gap
+  opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
+  gear           grid       one drawing, nothing to shed
+  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     grid       one drawing, nothing to shed  parts head
+  damage         grid       one drawing, nothing to shed
+  trackRivals    grid       one drawing, nothing to shed
+
+1280x480  zone 469x361  body 445x323  zone
+  lapTimes       grid       keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          grid       keeps delta s1 s2 s3  parts bar scale rule
+  sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
+  speedo         grid       keeps speed rpm  sheds redline
+  fuel           grid       keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         grid       one drawing, nothing to shed
+  tyres          grid       one drawing, nothing to shed  parts footer compound
+  pitView        grid       keeps refuel pitTime  parts tyres
+  carSettings    grid       keeps car tc abs bb mix arbFront arbRear
+  inputs         grid       one drawing, nothing to shed  parts steer
+  session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          grid       one drawing, nothing to shed
+  track          grid       one drawing, nothing to shed
+  leaderboard    grid       keeps pos num name class gap  sheds best last
+  relative       grid       keeps pos num name class gap
+  opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
+  gear           grid       one drawing, nothing to shed
+  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     grid       one drawing, nothing to shed  parts head
+  damage         grid       one drawing, nothing to shed
+  trackRivals    grid       one drawing, nothing to shed
+
+1280x400  zone 469x258  body 445x220  zone
+  lapTimes       grid       keeps last sessionBest yourBest  sheds laps estimated delta average5 position stintLap s1 s2 s3  declared last sessionBest yourBest delta
+  delta          grid       keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
+  sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
+  speedo         grid       keeps speed rpm  sheds redline
+  fuel           grid       keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         grid       one drawing, nothing to shed
+  tyres          grid       one drawing, nothing to shed  parts footer compound
+  pitView        grid       keeps refuel pitTime  parts tyres
+  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  inputs         grid       one drawing, nothing to shed  parts steer
+  session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          grid       one drawing, nothing to shed
+  track          grid       one drawing, nothing to shed
+  leaderboard    grid       keeps pos num name class gap  sheds best last
+  relative       grid       keeps pos num name class gap
+  opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num  sheds ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating  declared ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap
+  gear           grid       one drawing, nothing to shed
+  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     tallNarrow one drawing, nothing to shed
+  damage         grid       one drawing, nothing to shed
+  trackRivals    grid       one drawing, nothing to shed
+
+1280x400  zone 469x292  body 445x254  zone
+  lapTimes       grid       keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          grid       keeps delta s1 s2 s3  parts bar scale rule
+  sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
+  speedo         grid       keeps speed rpm  sheds redline
+  fuel           grid       keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         grid       one drawing, nothing to shed
+  tyres          grid       one drawing, nothing to shed  parts footer compound
+  pitView        grid       keeps refuel pitTime  parts tyres
+  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  inputs         grid       one drawing, nothing to shed  parts steer
+  session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          grid       one drawing, nothing to shed
+  track          grid       one drawing, nothing to shed
+  leaderboard    grid       keeps pos num name class gap  sheds best last
+  relative       grid       keeps pos num name class gap
+  opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
+  gear           grid       one drawing, nothing to shed
+  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     tallNarrow one drawing, nothing to shed
+  damage         grid       one drawing, nothing to shed
+  trackRivals    grid       one drawing, nothing to shed
+
+850x480  zone 274x328  body 250x290  compact
+  lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
+  sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
+  speedo         tallNarrow keeps speed rpm  sheds redline
+  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         tallNarrow one drawing, nothing to shed
+  tyres          tallNarrow one drawing, nothing to shed
+  pitView        tallNarrow keeps refuel pitTime
+  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  inputs         tallNarrow one drawing, nothing to shed
+  session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          tallNarrow one drawing, nothing to shed
+  track          tallNarrow one drawing, nothing to shed
+  leaderboard    tallNarrow keeps pos name gap  sheds num class best last
+  relative       tallNarrow keeps pos name gap  sheds num class
+  opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
+  gear           tallNarrow one drawing, nothing to shed
+  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     tallNarrow one drawing, nothing to shed
+  damage         tallNarrow one drawing, nothing to shed
+  trackRivals    tallNarrow one drawing, nothing to shed
+
+850x480  zone 274x366  body 250x328  compact
+  lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
+  sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
+  speedo         tallNarrow keeps speed rpm  sheds redline
+  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         tallNarrow one drawing, nothing to shed
+  tyres          tallNarrow one drawing, nothing to shed
+  pitView        tallNarrow keeps refuel pitTime
+  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  inputs         tallNarrow one drawing, nothing to shed
+  session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          tallNarrow one drawing, nothing to shed
+  track          tallNarrow one drawing, nothing to shed
+  leaderboard    tallNarrow keeps pos name gap  sheds num class best last
+  relative       tallNarrow keeps pos name gap  sheds num class
+  opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
+  gear           tallNarrow one drawing, nothing to shed
+  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     tallNarrow one drawing, nothing to shed
+  damage         tallNarrow one drawing, nothing to shed
+  trackRivals    tallNarrow one drawing, nothing to shed
+
+800x480  zone 249x328  body 225x290  compact
+  lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
+  sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
+  speedo         tallNarrow keeps speed rpm  sheds redline
+  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         tallNarrow one drawing, nothing to shed
+  tyres          tallNarrow one drawing, nothing to shed
+  pitView        tallNarrow keeps refuel pitTime
+  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  inputs         tallNarrow one drawing, nothing to shed
+  session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          tallNarrow one drawing, nothing to shed
+  track          tallNarrow one drawing, nothing to shed
+  leaderboard    tallNarrow keeps pos name gap  sheds num class best last
+  relative       tallNarrow keeps pos name gap  sheds num class
+  opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
+  gear           tallNarrow one drawing, nothing to shed
+  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     tallNarrow one drawing, nothing to shed
+  damage         tallNarrow one drawing, nothing to shed
+  trackRivals    tallNarrow one drawing, nothing to shed
+
+800x480  zone 249x366  body 225x328  compact
+  lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
+  sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
+  speedo         tallNarrow keeps speed rpm  sheds redline
+  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         tallNarrow one drawing, nothing to shed
+  tyres          tallNarrow one drawing, nothing to shed
+  pitView        tallNarrow keeps refuel pitTime
+  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  inputs         tallNarrow one drawing, nothing to shed
+  session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          tallNarrow one drawing, nothing to shed
+  track          tallNarrow one drawing, nothing to shed
+  leaderboard    tallNarrow keeps pos name gap  sheds num class best last
+  relative       tallNarrow keeps pos name gap  sheds num class
+  opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
+  gear           tallNarrow one drawing, nothing to shed
+  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     tallNarrow one drawing, nothing to shed
+  damage         tallNarrow one drawing, nothing to shed
+  trackRivals    tallNarrow one drawing, nothing to shed
+
+1280x720  zone 469x554  body 445x516  zone
+  lapTimes       tall       keeps last sessionBest yourBest laps estimated delta  sheds average5 position stintLap s1 s2 s3
+  delta          tall       keeps delta s1 s2 s3  parts bar scale rule
+  sectors        tall       keeps s1 s2 s3 last sessionBest  sheds yourBest bestS1 bestS2 bestS3
+  speedo         tall       keeps speed rpm  sheds redline
+  fuel           tall       keeps level time toAdd lastLap thisLap average lapsLeft
+  energy         tall       one drawing, nothing to shed
+  tyres          tall       one drawing, nothing to shed  parts footer compound
+  pitView        tall       keeps refuel pitTime
+  carSettings    tall       keeps car tc abs bb mix arbFront arbRear
+  inputs         tall       one drawing, nothing to shed
+  session        tall       keeps type position class lap timeLeft lapsLeft incidents cars
+  radar          tall       one drawing, nothing to shed
+  track          tall       one drawing, nothing to shed
+  leaderboard    tall       keeps pos num name class gap  sheds best last
+  relative       tall       keeps pos num name class gap
+  opponents      tall       keeps ahead.gap behind.gap ahead.name behind.name ahead.lastLap behind.lastLap  sheds ahead.num behind.num ahead.class behind.class ahead.rating behind.rating
+  gear           tall       one drawing, nothing to shed
+  stint          tall       keeps stintLaps stintTime completed stops lastStop avgLap driver
+  lapHistory     tall       one drawing, nothing to shed
+  damage         tall       one drawing, nothing to shed
+  trackRivals    tall       one drawing, nothing to shed
+
+1280x720  zone 469x598  body 445x560  zone
+  lapTimes       tall       keeps last sessionBest yourBest laps estimated delta  sheds average5 position stintLap s1 s2 s3
+  delta          tall       keeps delta s1 s2 s3  parts bar scale rule
+  sectors        tall       keeps s1 s2 s3 last sessionBest  sheds yourBest bestS1 bestS2 bestS3
+  speedo         tall       keeps speed rpm  sheds redline
+  fuel           tall       keeps level time toAdd lastLap thisLap average lapsLeft
+  energy         tall       one drawing, nothing to shed
+  tyres          tall       one drawing, nothing to shed  parts footer compound
+  pitView        tall       keeps refuel pitTime
+  carSettings    tall       keeps car tc abs bb mix arbFront arbRear
+  inputs         tall       one drawing, nothing to shed
+  session        tall       keeps type position class lap timeLeft lapsLeft incidents cars
+  radar          tall       one drawing, nothing to shed
+  track          tall       one drawing, nothing to shed
+  leaderboard    tall       keeps pos num name class gap  sheds best last
+  relative       tall       keeps pos num name class gap
+  opponents      tall       keeps ahead.gap behind.gap ahead.name behind.name ahead.lastLap behind.lastLap  sheds ahead.num behind.num ahead.class behind.class ahead.rating behind.rating
+  gear           tall       one drawing, nothing to shed
+  stint          tall       keeps stintLaps stintTime completed stops lastStop avgLap driver
+  lapHistory     tall       one drawing, nothing to shed
+  damage         tall       one drawing, nothing to shed
+  trackRivals    tall       one drawing, nothing to shed
+
+800x286  zone 269x194  body 245x156  compact
+  lapTimes       tallNarrow keeps last sessionBest yourBest  sheds laps estimated delta average5 position stintLap s1 s2 s3  declared last sessionBest yourBest delta
+  delta          tallNarrow keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
+  sectors        tallNarrow keeps s1 s2 s3  sheds yourBest last sessionBest bestS1 bestS2 bestS3  declared s1 s2 s3 yourBest last
+  speedo         tallNarrow keeps speed rpm  sheds redline
+  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         tallNarrow one drawing, nothing to shed
+  tyres          tallNarrow one drawing, nothing to shed
+  pitView        tallNarrow keeps refuel pitTime
+  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  inputs         tallNarrow one drawing, nothing to shed
+  session        tallNarrow keeps position class  sheds type lap timeLeft lapsLeft incidents cars  declared position class lap timeLeft
+  radar          tallNarrow one drawing, nothing to shed
+  track          tallNarrow one drawing, nothing to shed
+  leaderboard    tallNarrow keeps pos name gap  sheds num class best last
+  relative       tallNarrow keeps pos name gap  sheds num class
+  opponents      tallNarrow keeps ahead.gap behind.gap  sheds ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating  declared ahead.gap behind.gap ahead.name behind.name
+  gear           tallNarrow one drawing, nothing to shed
+  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     tallNarrow one drawing, nothing to shed
+  damage         tallNarrow one drawing, nothing to shed
+  trackRivals    tallNarrow one drawing, nothing to shed
+
+800x286  zone 269x226  body 245x188  compact
+  lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          tallNarrow keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
+  sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
+  speedo         tallNarrow keeps speed rpm  sheds redline
+  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  energy         tallNarrow one drawing, nothing to shed
+  tyres          tallNarrow one drawing, nothing to shed
+  pitView        tallNarrow keeps refuel pitTime
+  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  inputs         tallNarrow one drawing, nothing to shed
+  session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          tallNarrow one drawing, nothing to shed
+  track          tallNarrow one drawing, nothing to shed
+  leaderboard    tallNarrow keeps pos name gap  sheds num class best last
+  relative       tallNarrow keeps pos name gap  sheds num class
+  opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
+  gear           tallNarrow one drawing, nothing to shed
+  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     tallNarrow one drawing, nothing to shed
+  damage         tallNarrow one drawing, nothing to shed
+  trackRivals    tallNarrow one drawing, nothing to shed
+
+600x686  zone 600x160  body 576x122  compact
+  lapTimes       grid       keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
+  delta          grid       keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
+  sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
+  speedo         grid       keeps speed rpm  sheds redline
+  fuel           grid       keeps level time  sheds toAdd lastLap thisLap average lapsLeft  declared level time toAdd average
+  energy         grid       one drawing, nothing to shed
+  tyres          grid       one drawing, nothing to shed  parts footer compound
+  pitView        grid       keeps refuel pitTime  parts tyres
+  carSettings    grid       keeps car tc abs bb  sheds mix arbFront arbRear  declared car tc abs bb mix arbFront arbRear
+  inputs         grid       one drawing, nothing to shed  parts steer
+  session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
+  radar          grid       one drawing, nothing to shed
+  track          grid       one drawing, nothing to shed
+  leaderboard    grid       keeps pos num name class gap  sheds best last
+  relative       grid       keeps pos num name class gap
+  opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
+  gear           grid       one drawing, nothing to shed
+  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  lapHistory     grid       one drawing, nothing to shed  parts head
+  damage         grid       one drawing, nothing to shed
+  trackRivals    grid       one drawing, nothing to shed
+
+600x686  zone 600x150  body 576x112  compact
+  lapTimes       grid       keeps last sessionBest yourBest  sheds laps estimated delta average5 position stintLap s1 s2 s3  declared last sessionBest yourBest delta
+  delta          grid       keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
+  sectors        grid       keeps s1 s2 s3  sheds yourBest last sessionBest bestS1 bestS2 bestS3  declared s1 s2 s3 yourBest last sessionBest
+  speedo         grid       keeps speed rpm  sheds redline
+  fuel           grid       keeps level time  sheds toAdd lastLap thisLap average lapsLeft  declared level time toAdd average
+  energy         grid       one drawing, nothing to shed
+  tyres          grid       one drawing, nothing to shed  parts footer compound
+  pitView        grid       keeps refuel pitTime  parts tyres
+  carSettings    grid       keeps car tc abs bb  sheds mix arbFront arbRear  declared car tc abs bb mix arbFront arbRear
+  inputs         grid       one drawing, nothing to shed  parts steer
+  session        grid       keeps position class  sheds type lap timeLeft lapsLeft incidents cars  declared position class lap timeLeft
+  radar          grid       one drawing, nothing to shed
+  track          grid       one drawing, nothing to shed
+  leaderboard    grid       keeps pos num name class gap  sheds best last
+  relative       grid       keeps pos num name class gap
+  opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
+  gear           grid       one drawing, nothing to shed
+  stint          grid       keeps stintLaps  sheds stintTime completed stops lastStop avgLap driver  declared stintLaps stops lastStop
+  lapHistory     grid       one drawing, nothing to shed  parts head
+  damage         grid       one drawing, nothing to shed
+  trackRivals    grid       one drawing, nothing to shed
+"
+`;

@@ -59,7 +59,10 @@ namespace OpenDashPlugin.Tests
 
             public FetchResult GetString(string url) { throw new NotSupportedException("the tables are fetched as bytes"); }
 
-            public FetchResult GetBytes(string url)
+            // The progress callback is accepted and dropped: CarLightLibrary fetches the archive without
+            // one, because the tables arrive on a background update rather than behind a bar somebody
+            // is watching.
+            public FetchResult GetBytes(string url, Action<double> progress = null)
             {
                 Requested.Add(url);
                 if (Failure != null) return FetchResult.Failed(Failure);

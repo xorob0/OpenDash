@@ -14,18 +14,25 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { FACE_SIZES, FACE_ZONE_LETTERS, setting, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, setting, zone as zoneSetting, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
+import { withBindings } from '../bind.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
 import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
-import { pitLimiter } from '../components/pitLimiter.ts';
+import { flagFull } from '../components/flagFull.ts';
+import { pitAlerts } from '../components/pitAlerts.ts';
+import { popUps } from '../components/popUp.ts';
+import { changeNotifications } from '../components/changeNotification.ts';
+import { lapReview, lapReviewFrame, lapReviewOut } from '../components/lapReview.ts';
 import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
-import { layoutWithoutRevBar, rectOf, type ZoneLayout } from './layout.ts';
+import { bodyRect, layoutWithoutRevBar, rectOf, type ZoneLayout } from './layout.ts';
 import { label } from '../elements/label.ts';
-import { densityForBox, densityOf } from '../second/density.ts';
+import { measureText } from '../design/advances.ts';
+import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
+import { bandMetrics } from './bandPages.ts';
 import { widestCounter, zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
 const { not } = ncalc;
@@ -74,13 +81,20 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
   if (withRevBar) {
     // The well the rev bar has sat in since the first token file named it, and which was never drawn.
     items.push(band('well', z.revBarWell, ds.purpose.block.well));
-    items.push(...revBar({ left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: ds.space[2] }, 'revBar'));
+    items.push(...revBar({ left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: layout.revBarGap }, 'revBar'));
   }
 
-  if (z.bar) {
+  if (z.bar && layout.bar) {
     items.push(band('bar.ground', z.bar, ds.purpose.block.well));
-    items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd, face: sizeOf(layout) }));
+    items.push(...bar(z.bar, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd, face: sizeOf(layout), scale: layout.bar }));
   }
+
+  // Band D sits in the same well as the bar: the artboards draw both recessed against the body, and
+  // the two settled strips reading as one material is what makes the changeable middle read as the
+  // changeable part. Drawn here as well as by the band's own screens, so that the face is right on
+  // its own -- a face whose zone D widget has not resolved would otherwise show base colour where
+  // the drawing has a well.
+  items.push(band('band.ground', z.band, ds.purpose.block.well));
 
   // One pixel between the zones, because a rule is the whole boundary where a block would be too
   // much. That is the reason most of the face is bare.
@@ -91,6 +105,20 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
     if (gapLeft > z.zoneB.left) items.push(rule(name, gapLeft, z.zoneB.top, 1, z.zoneB.height));
   }
 
+  // The same pixel across the face: the artboards leave an empty row above every row of the body
+  // and above band D, and draw the rule in it. Read off the rects rather than tabulated per face,
+  // so that the portrait face, which stacks its zones into four rows, and the arrangement that
+  // gives the rev bar's room back are both right without a second table.
+  const rowTops = [...new Set([z.zoneA.top, z.zoneB.top, z.zoneC.top])].sort((a, b) => a - b);
+  const startingAt = (top: number): string => (['A', 'B', 'C'] as const).filter((zone) => rectOf(layout, zone).top === top).join('');
+  const across: [string, number][] = rowTops.map((top, i) => [i === 0 ? 'rule.body' : `rule.zone${startingAt(top)}`, top]);
+  across.push(['rule.band', z.band.top]);
+  for (const [name, top] of across) {
+    // A rule is a boundary between two parts, and the top edge of the face is not one: the nano
+    // with its rev bar off starts its body on row 1, with only the face's margin above it.
+    if (top > 1) items.push(rule(name, 0, top - 1, layout.width, 1));
+  }
+
   const face = sizeOf(layout);
   for (const zone of FACE_ZONE_LETTERS) {
     items.push(zoneWidget(`zone${zone}`, face, zone, rectOf(layout, zone)));
@@ -99,11 +127,63 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
 
   // A flag takes the band over, because an alert outranks fuel. The same sixty pixels goes to
   // whichever has the better claim, which is why the face has no separate flag strip.
-  items.push(...flagStrip(z.band, FLAG_STRIP_STYLES.standard, 'flag'));
+  //
+  // Both formats are drawn and one is shown, the way both rev bar arrangements are: a driver flips
+  // the switch in the panel and the face in front of them changes. The format is asked once, on the
+  // group, rather than on each of the catalogue's fifteen conditions inside it, and a group whose
+  // Visible is false has its children's bindings left unevaluated, so the format that is not chosen
+  // costs nothing while it is not showing. That matters more than it did: the band draws all
+  // fifteen now, where it drew the six properties SimHub normalises.
+  items.push({
+    kind: 'layer',
+    name: 'flag',
+    children: flagStrip(z.band, FLAG_STRIP_STYLES.standard, 'flag'),
+    ...withBindings({ Visible: zoneSetting.flagFormatIs(face, 'band') }),
+  });
 
-  // The limiter covers zone A rather than taking room of its own: it is true for seconds at a time
-  // and it is the one thing that matters while it is. Drawn last, so it is over the zone.
-  items.push(...pitLimiter(z.pitLimiter, 'pitLimiter'));
+  // The other format: the flag takes zones B, A and C together, which costs the gear for as long as
+  // it is out and is the trade the setting exists to offer. The rectangle is the body of whichever
+  // face this is rather than one of eight tabulated ones, so the portrait face, the nano and the
+  // arrangement without the rev bar are all right without a second table.
+  items.push({
+    kind: 'layer',
+    name: 'flagFull',
+    children: flagFull(bodyRect(layout), 'flagFull'),
+    ...withBindings({ Visible: zoneSetting.flagFormatIs(face, 'full') }),
+  });
+
+  // The pit family covers zone A rather than taking room of its own: one of them is true for
+  // seconds at a time and it is the one thing that matters while it is. Drawn last, so it is over
+  // the zone -- and over the full-screen flag, which covers this rectangle too: a driver serving a
+  // stop under a red flag still has to know whether the limiter is on.
+  items.push(...pitAlerts(z.pitLimiter, 'pitAlert'));
+
+  // A pop-up covers the hero, which on this face is zone A: the gear and the speed are what a
+  // driver can give up for the three seconds a lap time is worth more than either. The box is
+  // centred on that rectangle rather than placed, so it clears the limiter banner at the top of the
+  // column, the bar of settled values above it and band D below, where a flag has the better claim
+  // on the same sixty pixels. Drawn after the limiter, which is the only other thing over a zone.
+  items.push(...popUps(z.zoneA, 'popUp'));
+
+  // And the smaller box of the same family, on the same rectangle: a car setting that has just
+  // moved, for the three seconds SimHub's own window holds it. Ranked under the lap-time pop-up
+  // inside the component, so a lap time at the line is never covered by a click of traction control.
+  items.push(...changeNotifications(z.zoneA, 'notice'));
+
+  // The largest of the family, last, and on the same rectangle again: the debrief of the lap just
+  // finished, for the four seconds after the line.
+  //
+  // It is ranked by geometry rather than by an exclusion chain, which is the one place this face
+  // does that and is worth saying why. The pop-up and the notification are 560 by 120 and 400 by 96
+  // centred on this same zone, and the review is larger than both in both directions and is drawn
+  // over them, so the two conditions that are true at the same moment -- a lap time at the line and
+  // a review of that lap -- cannot both be read. A chain would have to reach into `popUp.ts`, whose
+  // three conditions know nothing of a face and so could not ask which face's setting is on.
+  //
+  // The limiter banner is above the review rather than under it on every face but the nano, where
+  // the body is 194 px and a 160 px panel leaves it seventeen either side. That is the same trade
+  // the pop-ups already make on that face and is why the pit alerts are pushed before this.
+  items.push(lapReview(lapReviewFrame(z.zoneA, layout.width), lapReviewOut(face), 'lapReview'));
 
   return items;
 }
@@ -118,24 +198,41 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
  * is the only thing that knows which rect is which zone, so both are drawn here, over the widget,
  * in the room the zone's header keeps at each end.
  *
- * Zones A and D carry no header, so they get neither.
+ * Zone A carries no header, so it gets neither. Band D carries the letter alone: the artboards
+ * open the band with a D in the same ink as the zone letters, and its pages count nothing, being
+ * eight fields across a strip rather than a cycle a driver pages through deliberately.
  */
 function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect): Item[] {
-  if (zone === 'A' || zone === 'D') return [];
+  if (zone === 'A') return [];
+  if (zone === 'D') return [bandLetter(r)];
   const density = densityForBox({ width: r.width, height: r.height });
-  const { padX } = zoneFrameMetrics(density);
-  const size = densityOf(density).labelSm;
-  const y = zoneTitleY(r, density);
-  const counter = { kind: 'reserved', widest: widestCounter(zone, density) } as const;
+  const metrics = zoneFrameMetrics(density, 'face');
+  const size = metrics.size;
+  const y = zoneTitleY(r, metrics);
+  const counter = { kind: 'reserved', widest: widestCounter(zone, size) } as const;
   return [
-    label(`zone${zone}.letter`, zone, r.left + padX, y, zoneLetterWidth(density), { size, color: ds.color.text.secondary }),
-    label(`zone${zone}.counter`, counter.widest, zoneCounterX(r, counter, density), y, zoneCounterWidth(counter, density), {
+    label(`zone${zone}.letter`, zone, r.left + metrics.padX, y, zoneLetterWidth(size), { size }),
+    label(`zone${zone}.counter`, counter.widest, zoneCounterX(r, counter, metrics), y, zoneCounterWidth(counter, metrics), {
       size,
       hAlign: 'right',
       bind: zoneCounter(face, zone),
       widest: counter.widest,
     }),
   ];
+}
+
+/**
+ * Band D's letter, centred on the height of the band rather than on a header row it has none of.
+ *
+ * Drawn by the face for the same reason B's and C's are: the band's dashboard is one file per
+ * rectangle and knows neither which zone it is serving nor that there is a letter. `bandMetrics`
+ * is the table the band already lays itself out from, so the letter and the rank it stands before
+ * take their padding from the same row of it.
+ */
+function bandLetter(r: Rect): Item {
+  const size = ds.size.label;
+  const width = Math.ceil(measureText('BarlowMedium', 'D', size)) + 2;
+  return label('zoneD.letter', 'D', r.left + bandMetrics(r).padX, r.top + (r.height - size) / 2, width, { size });
 }
 
 export interface FaceBuildOptions {

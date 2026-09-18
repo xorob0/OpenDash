@@ -21,23 +21,29 @@ import {
   zoneCounterReadings,
   zoneProperties,
 } from '../src/contract.ts';
-import { validatePackage, type Dashboard, type TextItem, type WidgetItem } from '../src/generator.ts';
-import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
-import { LINE_SPACING } from '../src/design/metrics.ts';
+import { validatePackage, type Dashboard, type RectangleItem, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { ds } from '../src/tokens.ts';
+import { PIT_WALL_CLASS_ONLY_SETTING, PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
+import { LINE_SPACING, boxSlack, textBox } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
+import { packImages } from '../src/build.ts';
 import { fontsForPackage } from '../src/dashboard.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { MODULES } from '../src/modules/index.ts';
-import { rect } from '../src/design/geometry.ts';
+import { rect, type Rect } from '../src/design/geometry.ts';
+import { densityForBox } from '../src/second/density.ts';
 import { shapeOf } from '../src/second/shape.ts';
-import { zoneFrame } from '../src/second/header.ts';
+import { archetypeOf, type Archetype } from '../src/modules/shedding.ts';
+import { zoneFrame, zoneFrameMetrics } from '../src/second/header.ts';
 import {
+  BAR_FIELD_SPECS,
   BASE_FACE,
   FACE_SCREEN_NAME,
   FACE_SCREEN_NAME_NO_REV_BAR,
   LARGE_FACE,
   ZONE_FACES,
   bandCorners,
+  bandMetrics,
   bandPageItems,
   bar,
   buildZoneFace,
@@ -51,14 +57,20 @@ import {
   zoneFace1920x480,
   zoneFace600x686,
   zoneFace800x286,
+  zoneFace800x480,
+  zoneFace1280x400,
+  zoneFace1280x480,
+  zoneFace1280x720,
+  zoneFace850x480,
+  type ZoneLayout,
 } from '../src/zones/index.ts';
+import { TELLTALES } from '../src/zones/telltales.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 import { SCREEN_PACKAGES, buildScreenPackage } from '../src/screens/index.ts';
+import { SAMPLE_LIT, stageOf } from '../src/components/revSegments.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
-/** The companion and the pit walls, to check the face's new options stay off their screens. */
-const SECOND_SCREENS = SCREEN_PACKAGES.map((def) => buildScreenPackage(def, OPTS));
 // Looked up by identity rather than by folder name, which moved to plain "openDash" in #169.
 const reference = BUILT.find((b) => b.face === zoneFace1920x480)!;
 /** Every zone property carries its face's prefix, so a test that names one has to say whose. */
@@ -132,6 +144,94 @@ describe('the reference face is the artboard', () => {
     expect(z.revBar.top).toBeGreaterThanOrEqual(z.revBarWell.top);
     expect(z.revBar.left + z.revBar.width).toBeLessThanOrEqual(z.revBarWell.left + z.revBarWell.width);
   });
+});
+
+/**
+ * The two faces whose rectangles the sheets fix and nothing held.
+ *
+ * 1280 x 720 is drawn like any other face and only its three widths were ever compared to anything,
+ * against the contract, which is a second copy of the same three numbers. 800 x 480 has no artboard
+ * at all and computes its six rects from 850 x 480, so an edit to the 850 sheet carried into
+ * `faces/850x480.ts` would move the 800 face and nothing would fail. The FaceVariants sheets now
+ * write both down, so they are written down here.
+ */
+describe('the two faces the sheets fix and no test held', () => {
+  test('1280 x 720 is 1240 x 32 of rev bar over a 1280 x 56 bar', () => {
+    const z = zoneFace1280x720.zones;
+    expect(z.revBarWell).toEqual({ left: 14, top: 4, width: 1252, height: 40 });
+    expect(z.revBar).toEqual({ left: 20, top: 8, width: 1240, height: 32 });
+    expect(z.bar).toEqual({ left: 0, top: 48, width: 1280, height: 56 });
+  });
+
+  test('and its three zones sit at y 105, 554 tall, a pixel apart', () => {
+    const z = zoneFace1280x720.zones;
+    expect(z.zoneB).toEqual({ left: 0, top: 105, width: 469, height: 554 });
+    expect(z.zoneA).toEqual({ left: 470, top: 105, width: 340, height: 554 });
+    expect(z.zoneC).toEqual({ left: 811, top: 105, width: 469, height: 554 });
+    expect(z.band).toEqual({ left: 0, top: 660, width: 1280, height: 60 });
+  });
+
+  test('800 x 480 comes out as the sheet draws it, although it is derived from 850', () => {
+    const z = zoneFace800x480.zones;
+    expect(z.revBar).toEqual({ left: 14, top: 6, width: 772, height: 28 });
+    expect(z.bar).toEqual({ left: 0, top: 40, width: 800, height: 50 });
+    expect(z.zoneB).toEqual({ left: 0, top: 91, width: 249, height: 328 });
+    expect(z.zoneA).toEqual({ left: 250, top: 91, width: 300, height: 328 });
+    expect(z.zoneC).toEqual({ left: 551, top: 91, width: 249, height: 328 });
+    expect(z.band).toEqual({ left: 0, top: 420, width: 800, height: 60 });
+  });
+
+  test('and every landscape face leaves the same pixel between its parts', () => {
+    // Generalised from the reference face, which is the only one that had it: the gutter the rules
+    // are drawn in is a fact about all six of them.
+    for (const face of ZONE_FACES) {
+      const z = face.zones;
+      if (z.zoneA.left === z.zoneB.left) continue;
+      expect({ face: face.folder, ba: z.zoneB.left + z.zoneB.width }).toEqual({ face: face.folder, ba: z.zoneA.left - 1 });
+      expect({ face: face.folder, ac: z.zoneA.left + z.zoneA.width }).toEqual({ face: face.folder, ac: z.zoneC.left - 1 });
+      expect({ face: face.folder, right: z.zoneC.left + z.zoneC.width }).toEqual({ face: face.folder, right: face.width });
+      expect({ face: face.folder, underBar: z.zoneB.top - 1 }).toEqual({ face: face.folder, underBar: z.bar ? z.bar.top + z.bar.height : z.zoneB.top - 1 });
+      expect({ face: face.folder, overBand: z.zoneB.top + z.zoneB.height }).toEqual({ face: face.folder, overBand: z.band.top - 1 });
+    }
+  });
+});
+
+/**
+ * The shape chips each FaceVariants sheet carries in its header row.
+ *
+ * They are **box-shape labels**, and they say nothing about how a zone sheds: only zones B and C
+ * consult the archetype, zone A only on its map page, and band D never, being one rank across a
+ * wide short box whatever the model would call it. §10 of `docs/design/zones.md` records that for
+ * the "D grid" chip. What the chips do fix is the arithmetic of `shapeOf` and `archetypeOf` against
+ * the rectangles the faces draw, which is what this table holds.
+ */
+describe('every zone is the shape its face sheet chips it', () => {
+  const CHIPS: Record<string, readonly [Archetype, Archetype, Archetype, Archetype]> = {
+    openDash: ['grid', 'wide', 'wide', 'grid'],
+    'openDash 1280x480': ['grid', 'grid', 'grid', 'grid'],
+    'openDash 1280x400': ['grid', 'grid', 'grid', 'grid'],
+    'openDash 1280x720': ['tall', 'tall', 'tall', 'grid'],
+    'openDash 850x480': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'openDash 800x480': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'openDash 800x286': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'openDash 600x686': ['wide', 'grid', 'grid', 'grid'],
+  };
+
+  test('every face is chipped, and chipped once', () => {
+    expect(Object.keys(CHIPS).sort()).toEqual(ZONE_FACES.map((f) => f.folder).sort());
+  });
+
+  for (const face of ZONE_FACES) {
+    test(`${face.folder} draws the four shapes its sheet writes, with the rev bar on and off`, () => {
+      // Both arrangements, because the rev bar's room goes to the zones that start the body and a
+      // chip that held only for one of them would be half a label. It happens that no zone changes
+      // shape when it grows, which is worth knowing rather than assuming.
+      for (const layout of [face, layoutWithoutRevBar(face)]) {
+        const drawn = FACE_ZONE_LETTERS.map((zone) => archetypeOf(shapeOf(rectOf(layout, zone))));
+        expect({ face: face.folder, drawn }).toEqual({ face: face.folder, drawn: [...CHIPS[face.folder]!] });
+      }
+    });
+  }
 });
 
 describe('every zone cycles its own catalogue', () => {
@@ -212,6 +312,14 @@ describe('the contract describes the shape each face really has', () => {
       const order = bodyOrder(face).map((letter) => (letter === 'A' ? z.zoneA : letter === 'B' ? z.zoneB : z.zoneC));
       const drawn = order.map((r) => (stacked ? r.height : r.width));
       expect({ folder: layout.folder, parts: [...face.parts] }).toMatchObject({ parts: drawn });
+
+      // And the four rows the panel's plan scales from, which are the face's own and not constants.
+      // The body is the whole region the three zones occupy, the one-pixel seams included, so that a
+      // stacked body measures the same way as a body laid side by side.
+      const rows = { revBar: z.bar ? z.bar.top : order[0]!.top, bar: z.bar ? z.bar.height : 0, body: z.band.top - order[0]!.top - 1, band: z.band.height };
+      expect({ folder: layout.folder, rows: { ...face.rows } }).toMatchObject({ rows });
+      // And they add up to the face, seam by seam, which is what makes them a plan rather than a list.
+      expect({ folder: layout.folder, sum: rows.revBar + rows.bar + rows.body + rows.band }).toMatchObject({ sum: layout.height - (z.bar ? 2 : 1) });
     });
   }
 
@@ -227,7 +335,12 @@ describe('the contract describes the shape each face really has', () => {
 describe('the face reads what it declares and nothing else', () => {
   test('every package validates with no error and no warning', () => {
     for (const { face, built } of BUILT) {
+      // Composed the way `build.ts` composes it, the image step included: a dashboard that does not
+      // declare the picture its own items draw is an `image/missing` rather than a drawing.
       const pkg = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+      // As the build validates one: `packImages` first, which declares on each dashboard the
+      // artwork its own items draw, since no builder sees the dashboard its items land on.
+      packImages(pkg);
       const result = validatePackage(pkg, { declaredProperties: declaredProperties(), propertyPrefix: PROPERTY_PREFIX });
       expect({ folder: face.folder, errors: result.errors }).toMatchObject({ errors: [] });
       expect({ folder: face.folder, warnings: result.warnings }).toMatchObject({ warnings: [] });
@@ -311,8 +424,12 @@ describe('the parts the face draws itself', () => {
 
   test('the flag takes band D rather than having a strip of its own', () => {
     const band = zoneFace1920x480.zones.band;
-    const flag = all.filter((i) => i.name.startsWith('flag'));
+    // The band format, which is the one this is about. The face draws a second, full-screen format
+    // beside it under `flagFull.`, deliberately over zones B, A and C; `flagFormat.test.ts` holds
+    // that one, including that the two cannot draw at once.
+    const flag = all.filter((i) => i.name.startsWith('flag.'));
     expect(flag.length).toBeGreaterThan(0);
+    expect(all.some((i) => i.name.startsWith('flagFull.'))).toBe(true);
     // Every part of it is inside band D. The slot model drew a strip along the bottom edge and the
     // band is where that sixty pixels went, so a flag that fell outside the band would mean the
     // face had grown a second one.
@@ -324,11 +441,22 @@ describe('the parts the face draws itself', () => {
     }
   });
 
-  test('the pit limiter covers zone A rather than taking room of its own', () => {
+  test('the pit alerts cover zone A rather than taking room of its own', () => {
     const z = zoneFace1920x480.zones;
     expect(z.pitLimiter.left).toBeGreaterThanOrEqual(z.zoneA.left);
     expect(z.pitLimiter.left + z.pitLimiter.width).toBeLessThanOrEqual(z.zoneA.left + z.zoneA.width);
-    expect(names).toContain('pitLimiter');
+    // Five states over the one rectangle, so the family costs the face no room the limiter did not
+    // already take and only the winning one is ever drawn.
+    const drawn = all.filter((i) => i.name.startsWith('pitAlert.'));
+    expect(drawn.length).toBeGreaterThan(0);
+    const banner = z.pitLimiter;
+    for (const item of drawn) {
+      if (item.kind === 'layer') continue;
+      const r = item.rect;
+      const inside =
+        r.left >= banner.left && r.left + r.width <= banner.left + banner.width && r.top >= banner.top && r.top + r.height <= banner.top + banner.height;
+      expect({ item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+    }
   });
 
   test('the bar is drawn and is not a zone', () => {
@@ -336,6 +464,199 @@ describe('the parts the face draws itself', () => {
     // It carries no widget, which is what "does not cycle" means in the scene graph.
     const widgets = faceItems(zoneFace1920x480).filter((i) => i.kind === 'widget');
     expect(widgets.every((w) => !w.name.startsWith('bar'))).toBe(true);
+  });
+});
+
+/**
+ * The rev bar of each face, which is fifteen segments and one number.
+ *
+ * The spans are snapped to whole pixels from the rect and the gap, so the gap is the only figure a
+ * face states and every width follows from it. Each artboard draws the row as a flex box carrying
+ * its own `gap`, and the three figures below are read off those rows rather than off a ramp: the
+ * faces all passed 8 until they were given a gap of their own, which made the segments of every
+ * 1280 face two pixels narrow and those of the nano four.
+ */
+describe('the rev bar segments sit at the gap each artboard draws', () => {
+  /** The `gap` of the flex row holding the fifteen segments, per sheet. */
+  const GAPS: Record<string, number> = {
+    openDash: 8,
+    'openDash 1280x480': 6,
+    'openDash 1280x400': 6,
+    'openDash 1280x720': 6,
+    'openDash 850x480': 4,
+    // 800 x 480 has no sheet of its own and takes 850's here as it takes every other number.
+    'openDash 800x480': 4,
+    'openDash 800x286': 4,
+    'openDash 600x686': 4,
+  };
+
+  const segmentsOf = (layout: ZoneLayout, layer = 'revBar.shiftLights'): RectangleItem[] => {
+    const found = faceItems(layout).find((i) => i.name === layer);
+    if (found?.kind !== 'layer') throw new Error(`${layout.folder} draws no ${layer}`);
+    return found.children.filter((c): c is RectangleItem => c.kind === 'rect');
+  };
+
+  test('the table names every face once', () => {
+    expect(Object.keys(GAPS).sort()).toEqual(ZONE_FACES.map((f) => f.folder).sort());
+  });
+
+  for (const face of ZONE_FACES) {
+    const gap = GAPS[face.folder]!;
+
+    test(`${face.folder} draws fifteen segments ${gap} px apart, flush with the rev bar rect`, () => {
+      expect({ folder: face.folder, gap: face.revBarGap }).toEqual({ folder: face.folder, gap });
+      const segments = segmentsOf(face);
+      expect(segments).toHaveLength(ds.shiftLights.segments);
+
+      // Flush at both ends: the rounding is spent between the segments, never outside them, so a
+      // face whose gap changed keeps the strip the artboard drew and only redistributes its insides.
+      const r = face.zones.revBar;
+      const last = segments[segments.length - 1]!.rect;
+      expect({ folder: face.folder, first: segments[0]!.rect.left, right: last.left + last.width }).toEqual({
+        folder: face.folder,
+        first: r.left,
+        right: r.left + r.width,
+      });
+      for (const s of segments) expect([s.rect.top, s.rect.height]).toEqual([r.top, r.height]);
+      for (let k = 1; k < segments.length; k++) {
+        const before = segments[k - 1]!.rect;
+        expect({ folder: face.folder, k, gap: segments[k]!.rect.left - (before.left + before.width) }).toEqual({ folder: face.folder, k, gap });
+      }
+    });
+  }
+
+  // The artboards default `litSegments` to nine, and the static colours are what Dash Studio's
+  // editor and its Overview thumbnails show, having no telemetry to evaluate a binding against.
+  test('nine of the fifteen are coloured in at build time, as every sheet draws them', () => {
+    const stages = [ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3];
+    for (const layer of ['revBar.shiftLights', 'revBar.shiftLightsSimHub'] as const) {
+      const drawn = segmentsOf(zoneFace1920x480, layer).map((s) => s.backgroundColor);
+      expect(drawn.filter((c) => c !== ds.purpose.shift.unlit)).toHaveLength(SAMPLE_LIT);
+      expect({ layer, drawn }).toEqual({
+        layer,
+        drawn: Array.from({ length: 15 }, (_, k) => (k < SAMPLE_LIT ? stages[stageOf(k, 15)] : ds.purpose.shift.unlit)),
+      });
+    }
+    // The plain RPM bar reports revs rather than a shift point, so its nine are the one colour it
+    // ever lights.
+    const rpm = segmentsOf(zoneFace1920x480, 'revBar.rpmBar').map((s) => s.backgroundColor);
+    expect(rpm.slice(0, SAMPLE_LIT)).toEqual(Array(SAMPLE_LIT).fill(ds.color.text.secondary));
+    expect(rpm.slice(SAMPLE_LIT)).toEqual(Array(15 - SAMPLE_LIT).fill(ds.purpose.shift.unlit));
+  });
+});
+
+/**
+ * The face is ruled across as well as down. The build drew the two vertical rules between the zones
+ * from the first zone face and neither of the horizontal ones, although every rectangular artboard
+ * separates the bar from the body and the body from band D with the same pixel.
+ */
+describe('the hairlines across the face', () => {
+  const hairlines = (layout: ZoneLayout, revBar: boolean): RectangleItem[] =>
+    faceItems(layout, { revBar }).filter((i): i is RectangleItem => i.kind === 'rect' && i.name.startsWith('rule.') && i.rect.height === 1);
+
+  test('every face rules the row above each zone row and above band D, in surface.raised', () => {
+    for (const face of ZONE_FACES) {
+      for (const [layout, on] of [
+        [face, true],
+        [layoutWithoutRevBar(face), false],
+      ] as const) {
+        const z = layout.zones;
+        // One row per distinct zone top -- one on a face whose body is a row, three on the portrait
+        // face that stacks its zones -- and one for the band. The nano with its rev bar off starts
+        // its body on row 1, where a rule would be the face's top edge rather than a boundary.
+        const wanted = [...new Set([z.zoneA.top, z.zoneB.top, z.zoneC.top, z.band.top])].sort((a, b) => a - b).filter((top) => top > 1);
+        const drawn = hairlines(layout, on);
+        expect({ face: face.folder, revBar: on, tops: drawn.map((r) => r.rect.top) }).toMatchObject({ tops: wanted.map((top) => top - 1) });
+        for (const r of drawn) {
+          expect({ face: face.folder, rule: r.name, rect: r.rect, colour: r.backgroundColor }).toMatchObject({
+            rect: { left: 0, width: layout.width, height: 1 },
+            colour: ds.color.surface.raised,
+          });
+        }
+      }
+    }
+  });
+
+  test('and they land where the artboards draw them', () => {
+    // Read off the artboards, which place each as `left: 0; width: <face>; height: 1px;
+    // background: #1C1F24`. Literal here for the same reason every other rect in this file is.
+    const drawn = (layout: ZoneLayout): number[] => hairlines(layout, true).map((r) => r.rect.top);
+    expect(drawn(zoneFace1920x480)).toEqual([104, 419]);
+    expect(drawn(zoneFace1280x480)).toEqual([98, 419]);
+    expect(drawn(zoneFace1280x400)).toEqual([86, 345]);
+    expect(drawn(zoneFace1280x720)).toEqual([104, 659]);
+    expect(drawn(zoneFace850x480)).toEqual([90, 419]);
+    expect(drawn(zoneFace800x286)).toEqual([32, 227]);
+    expect(drawn(zoneFace600x686)).toEqual([82, 317, 478, 629]);
+  });
+
+  test('each sits in an empty row, over nothing and under nothing', () => {
+    for (const face of ZONE_FACES) {
+      const z = face.zones;
+      const parts = [z.revBarWell, ...(z.bar ? [z.bar] : []), z.zoneA, z.zoneB, z.zoneC, z.band];
+      for (const r of hairlines(face, true)) {
+        const clash = parts.filter((p) => r.rect.top >= p.top && r.rect.top < p.top + p.height);
+        expect({ face: face.folder, rule: r.name, row: r.rect.top, clash }).toMatchObject({ clash: [] });
+      }
+    }
+  });
+});
+
+/**
+ * The chrome a face zone draws, which is the artboards' and not the pit wall's.
+ *
+ * Every Dash sheet pads a zone `6px 12px` and opens it with a 22 px baseline row: the zone letter,
+ * 8 px, the page name, both in the 15 px label style in `#5A6069`. `PitWallZones.dc.html` draws a
+ * 28 px row over 16 px of padding, and the two shared one table until the audit read them apart.
+ */
+describe('a face zone is framed the way the artboards frame it', () => {
+  test('22 px of header inside 6px 12px of padding, in the 15 px label style', () => {
+    for (const density of ['zone', 'compact'] as const) {
+      // The same at every density, compact included: the *page* steps down to the compact ladder on
+      // a 269 by 194 zone, the chrome around it does not.
+      expect({ density, metrics: zoneFrameMetrics(density, 'face') }).toEqual({
+        density,
+        metrics: { title: 22, padX: 12, padTop: 6, gap: 4, padBottom: 6, size: ds.size.label, color: ds.color.text.label },
+      });
+    }
+  });
+
+  test('and the pit wall keeps the 28 px frame its own artboard draws', () => {
+    expect(zoneFrameMetrics('zone')).toMatchObject({ title: 28, padX: 16, size: ds.size.labelSm, color: ds.color.text.secondary });
+    expect(zoneFrameMetrics('compact')).toMatchObject({ title: 20, padX: 10 });
+    // The rectangle it has always cut, which the padding being written from the body rather than
+    // from the title row must not have moved: 28 + 6 down, 16 in, 10 left under it.
+    const { body } = zoneFrame('probe', { frame: rect(0, 0, 607, 328), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
+    expect(body).toEqual({ left: 16, top: 34, width: 575, height: 284 });
+  });
+
+  test('which leaves each face the body its artboard leaves', () => {
+    // 769 - 24 wide and 314 - 38 tall, and so on down the eight faces: the page gets the rectangle
+    // the drawing gives it rather than one the frame decided.
+    const bodyOf = (width: number, height: number): Rect =>
+      zoneFrame('probe', { frame: rect(0, 0, width, height), title: 'PROBE', counter: { kind: 'reserved', widest: '21 / 21' } }, densityForBox({ width, height }), 'face').body;
+    expect(bodyOf(769, 314)).toEqual({ left: 12, top: 32, width: 745, height: 276 });
+    expect(bodyOf(469, 320)).toEqual({ left: 12, top: 32, width: 445, height: 282 });
+    expect(bodyOf(469, 258)).toEqual({ left: 12, top: 32, width: 445, height: 220 });
+    expect(bodyOf(469, 554)).toEqual({ left: 12, top: 32, width: 445, height: 516 });
+    expect(bodyOf(274, 328)).toEqual({ left: 12, top: 32, width: 250, height: 290 });
+    expect(bodyOf(249, 328)).toEqual({ left: 12, top: 32, width: 225, height: 290 });
+    expect(bodyOf(269, 194)).toEqual({ left: 12, top: 32, width: 245, height: 156 });
+    expect(bodyOf(600, 160)).toEqual({ left: 12, top: 32, width: 576, height: 122 });
+    expect(bodyOf(600, 150)).toEqual({ left: 12, top: 32, width: 576, height: 112 });
+  });
+
+  test('the page name follows the letter by the canvas eight pixels', () => {
+    const letter = faceItems(zoneFace1920x480).find((i): i is TextItem => i.kind === 'text' && i.name === 'zoneB.letter')!;
+    const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    const title = [...walkItems(shared.screens[0]!.items)].find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.zone.title'))!;
+    const { padX, size } = zoneFrameMetrics('zone', 'face');
+    // The letter's box, the gap, the name. Measured from the zone's own left edge, since the title
+    // is drawn inside the zone's dashboard and the letter over it by the face.
+    const letterBox = Math.ceil(measureText('BarlowMedium', 'D', size)) + 2;
+    expect({ left: title.rect.left }).toEqual({ left: padX + letterBox + ds.space[2] });
+    expect({ size: title.fontSize, ink: title.textColor }).toEqual({ size: ds.size.label, ink: ds.color.text.label });
+    expect(letter.fontSize).toBe(title.fontSize);
   });
 });
 
@@ -353,8 +674,11 @@ describe('what the first photograph of the face showed', () => {
     const c = texts.find((t) => t.name === 'zoneC.letter')!;
     expect(b.text).toBe('B');
     expect(c.text).toBe('C');
-    // Zone A and band D carry no header, so they get no letter.
-    expect(texts.some((t) => t.name === 'zoneA.letter' || t.name === 'zoneD.letter')).toBe(false);
+    // Band D opens with a letter of its own, drawn by the face for the same reason: a band
+    // dashboard is one file per rectangle and knows nothing of the zone it is serving.
+    expect(texts.find((t) => t.name === 'zoneD.letter')!.text).toBe('D');
+    // Zone A carries no header, so it gets no letter.
+    expect(texts.some((t) => t.name === 'zoneA.letter')).toBe(false);
 
     // And no page of the shared dashboard carries a letter of its own: one file cannot say both.
     const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
@@ -366,26 +690,92 @@ describe('what the first photograph of the face showed', () => {
   });
 
   test('each letter sits where its zone will draw its title, not over the page name', () => {
+    // The artboard's header: `padding: 6px 12px` and a 22 px baseline row, so the letter starts 12
+    // px in and its line box opens 6 px down. Literal rather than bounded, because a letter that
+    // has drifted two pixels off the title it is meant to sit beside is exactly what the first
+    // capture showed and a bound would not have caught.
+    const { padX, padTop, title, size } = zoneFrameMetrics('zone', 'face');
     for (const zone of ['B', 'C'] as const) {
       const letter = texts.find((t) => t.name === `zone${zone}.letter`)!;
       const r = rectOf(zoneFace1920x480, zone);
-      expect(letter.rect.left).toBeGreaterThanOrEqual(r.left);
-      // Inside the zone's own padding, and clear of the page name that follows it.
-      expect(letter.rect.left - r.left).toBeLessThan(24);
-      expect(letter.rect.top).toBeGreaterThanOrEqual(r.top);
-      expect(letter.rect.top).toBeLessThan(r.top + 28);
+      const line = r.top + padTop + (title - size) / 2;
+      expect({ zone, left: letter.rect.left, top: letter.rect.top }).toEqual({ zone, left: r.left + padX, top: textBox(line, size).top });
+      // And it is drawn in the ink and at the size the page name beside it is.
+      expect({ zone, size: letter.fontSize, ink: letter.textColor }).toEqual({ zone, size: ds.size.label, ink: ds.color.text.label });
+    }
+  });
+
+  test('band D opens with its letter, centred on the band and clear of the rank', () => {
+    for (const { face, built } of BUILT) {
+      const band = face.zones.band;
+      const letter = faceItems(face)
+        .filter((i): i is TextItem => i.kind === 'text')
+        .find((t) => t.name === 'zoneD.letter')!;
+      expect({ face: face.folder, text: letter.text, size: letter.fontSize, ink: letter.textColor }).toEqual({
+        face: face.folder,
+        text: 'D',
+        size: ds.size.label,
+        ink: ds.color.text.label,
+      });
+      // The band's own padding, from the table the band lays its rank out from, and the middle of
+      // the strip rather than a header row the band does not have.
+      expect({ face: face.folder, left: letter.rect.left }).toEqual({ face: face.folder, left: band.left + bandMetrics(band).padX });
+      expect({ face: face.folder, top: letter.rect.top }).toEqual({ face: face.folder, top: textBox(band.top + (band.height - ds.size.label) / 2, ds.size.label).top });
+
+      // And nothing the band draws reaches back into the letter's room.
+      const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
+      const clear = bandMetrics(band).padX + letter.rect.width;
+      for (const screen of dashboard.screens) {
+        for (const item of [...walkItems(screen.items)]) {
+          if (item.kind === 'layer') continue;
+          expect({ face: face.folder, screen: screen.name, item: item.name, left: item.rect.left, clear: item.rect.left >= clear }).toMatchObject({ clear: true });
+        }
+      }
+    }
+  });
+
+  test('band D sits in the well the artboards recess it into, and the face draws it there too', () => {
+    for (const { face, built } of BUILT) {
+      const band = face.zones.band;
+      const items = faceItems(face);
+      const ground = items.find((i): i is RectangleItem => i.kind === 'rect' && i.name === 'band.ground')!;
+      expect({ face: face.folder, rect: ground.rect, colour: ground.backgroundColor }).toEqual({ face: face.folder, rect: band, colour: ds.purpose.block.well });
+      // Before the widget, so the band's pages draw over the well rather than under it.
+      expect({ face: face.folder, ground: items.indexOf(ground) < items.findIndex((i) => i.name === 'zoneD') }).toMatchObject({ ground: true });
+      // The widget paints its own dashboard's ground over the face, so the band's pages have to be
+      // drawn in the well rather than have one painted behind them.
+      const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
+      expect({ face: face.folder, ground: dashboard.backgroundColor }).toEqual({ face: face.folder, ground: ds.purpose.block.well });
+      for (const screen of dashboard.screens) {
+        expect({ face: face.folder, screen: screen.name, ground: screen.backgroundColor }).toEqual({ face: face.folder, screen: screen.name, ground: ds.purpose.block.well });
+      }
+    }
+  });
+
+  test('and every other zone is drawn on the base surface, which is not a well', () => {
+    const zoneA = rectOf(zoneFace1920x480, 'A');
+    const modules = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
+    const gear = reference.built.zones.find((d) => d.name === zoneDashboardName('zoneA', { width: zoneA.width, height: zoneA.height }))!;
+    for (const dashboard of [modules, gear]) {
+      expect({ name: dashboard.name, ground: dashboard.backgroundColor }).toEqual({ name: dashboard.name, ground: ds.color.surface.base });
     }
   });
 
   test('a value centred in a zone is centred in the zone, not in its own glyphs', () => {
     // `maxWidth` caps a box; it cannot widen one, so hAlign had nothing to centre within and the
-    // speed sat hard against the left edge of a 380 px column.
+    // speed sat hard against the left edge of a 380 px column. The unit now sits beside the value
+    // on its baseline rather than under it, so what the column centres is the pair: centring the
+    // value alone would put the group's own centre half a unit's width left of the column's.
     const a = rectOf(zoneFace1920x480, 'A');
     const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('zoneA', { width: a.width, height: a.height }))!;
     const page = shared.screens.find((s) => s.name === 'gearSpeedRevs')!;
-    const speed = [...walkItems(page.items)].find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('speed'))!;
-    expect(speed.hAlign).toBe('center');
-    expect(speed.rect.left + speed.rect.width / 2).toBeCloseTo(a.width / 2, 0);
+    const items = [...walkItems(page.items)];
+    const speed = items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('speed'))!;
+    const unit = items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('speed.unit'))!;
+    expect(speed.rect.left).toBeGreaterThan(0);
+    const centre = (speed.rect.left + unit.rect.left + unit.rect.width) / 2;
+    // Within a pixel: the boxes are integer-snapped and the unit's takes a pixel past its advances.
+    expect({ centre, column: a.width / 2, centred: Math.abs(centre - a.width / 2) <= 1 }).toMatchObject({ centred: true });
   });
 
   test('the ghosted gears are mapped from text, because SimHub publishes the gear as a string', () => {
@@ -411,7 +801,8 @@ describe('what the first photograph of the face showed', () => {
 /**
  * A field the game does not publish is removed and the rank closes over the hole; a telltale that
  * is unlit keeps its place and goes dim. Both rules live in `second/rank.ts`, and these are the
- * three places on the face that ask for one of them.
+ * places on the face that ask for one of them: the bar's strip and band D's corner lamps for the
+ * one, band D's telltale rank for the other.
  */
 describe('what the face does with a field that is not there', () => {
   const band = { left: 0, top: 420, width: 1920, height: 60 };
@@ -422,7 +813,7 @@ describe('what the face does with a field that is not there', () => {
   };
 
   test("the bar's strip closes over a setting the car does not have", () => {
-    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480) })).filter((i) => i.name.startsWith('bar.strip.'));
+    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480), scale: zoneFace1920x480.bar! })).filter((i) => i.name.startsWith('bar.strip.'));
     expect(items.length).toBeGreaterThan(0);
     for (const item of items) {
       // Hidden when the sim has no property for it, and everything moves when one goes.
@@ -436,21 +827,26 @@ describe('what the face does with a field that is not there', () => {
     expect(bound(items.find((i) => i.name === 'bar.strip.diff.value')!, 'Left')).toContain('dcTractionControl2');
   });
 
-  test("band D's car page removes a gauge the sim does not wire, and keeps the temperatures", () => {
-    const items = textsIn(bandPageItems('car', band, 'car.'));
-    const water = items.find((i) => i.name === 'car.water.value')!;
-    const voltage = items.find((i) => i.name === 'car.voltage.value')!;
-    expect(bound(voltage, 'Visible')).toContain('Voltage');
-    expect(bound(water, 'Visible')).toBeUndefined();
-    // The temperature does not vanish, but it does move: the rank recentres on what is left.
-    expect(bound(water, 'Left')).toContain('Voltage');
+  test("band D's telltale rank dims a lamp in place rather than closing over it", () => {
+    const chips = bandPageItems('car', band, 'car.').filter((i): i is RectangleItem => i.kind === 'rect' && i.name.endsWith('.chip'));
+    expect(chips).toHaveLength(TELLTALES.length);
+    // The lamp the pit limiter lights changes the colour of its edge and nothing else.
+    const limiter = chips.find((i) => i.name === 'car.limiter.chip')!;
+    expect(String(limiter.border?.colorBinding?.formula)).toContain('PitLimiterOn');
+    for (const chip of chips) {
+      expect({ name: chip.name, hides: chip.bindings?.Visible !== undefined, moves: chip.bindings?.Left !== undefined }).toEqual({
+        name: chip.name,
+        hides: false,
+        moves: false,
+      });
+    }
   });
 
   test("the strip asks the property that says the car has the setting, not the one it reads", () => {
     // SimHub reports TCLevel 0 for a car with no traction control at all, which is what a driver
     // who has turned it off also sees. The raw dc field is absent on the car that has none, and
     // that is the difference between a cell drawn as OFF and a cell that is not there.
-    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480) }));
+    const items = textsIn(bar({ left: 0, top: 48, width: 1920, height: 56 }, 'bar.', { fieldsPerEnd: 2, face: sizeOf(zoneFace1920x480), scale: zoneFace1920x480.bar! }));
     const tc = items.find((i) => i.name === 'bar.strip.tc.value')!;
     expect(bound(tc, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))');
     expect(bound(tc, 'Text')).toContain('[DataCorePlugin.GameData.TCLevel]');
@@ -463,7 +859,10 @@ describe('what the face does with a field that is not there', () => {
     const items = textsIn(settings.build({ frame: rect(0, 0, 600, 280), density: 'zone', prefix: '' }));
     const abs = items.find((i) => i.name === 'abs.value')!;
     expect(bound(abs, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))');
-    expect(bound(abs, 'Left')).toContain('dcTractionControl');
+    // `abs` opens the second line of the three-column grid, so the cell that has to move when the
+    // car has no ABS is the one drawn after it rather than `abs` itself.
+    const arbRear = items.find((i) => i.name === 'arbRear.value')!;
+    expect(bound(arbRear, 'Left')).toContain('dcABS');
   });
 
   test('the corner lamps dim in place rather than vanishing', () => {
@@ -523,6 +922,103 @@ describe('band D keeps its rank clear of its corners', () => {
  * every text-fits check in the suite is satisfied by three blocks drawn on top of one another. At
  * 850 by 480 they were: BIAS sat on POSITION and ABS on the slash of "3 / 24".
  */
+/**
+ * The bar has a scale of its own, read off each artboard rather than taken from the zone density
+ * ramp: a 15 px label, a value, a dimmer denominator six pixels after it, and the gap between two
+ * readouts. The numbers are the artboards' own, so they are asserted literally.
+ */
+describe('the bar is drawn at the scale its artboard draws', () => {
+  /** The side padding every artboard gives the bar. */
+  const PAD_X = 20;
+  /** The gap between a value and the dimmer denominator after it. */
+  const DENOMINATOR_GAP = 6;
+
+  test('every face that has a bar says what scale to draw it at', () => {
+    for (const face of ZONE_FACES) {
+      expect({ face: face.folder, scale: face.bar !== undefined }).toMatchObject({ scale: face.zones.bar !== undefined });
+    }
+  });
+
+  for (const { face } of BUILT) {
+    const frame = face.zones.bar;
+    const scale = face.bar;
+    if (!frame || !scale) continue;
+    const items = (): TextItem[] => faceItems(face).filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('bar.'));
+
+    test(`${face.folder} labels at ${ds.size.label} over values of ${scale.valueSize} and denominators of ${scale.denominatorSize}`, () => {
+      const expected = {
+        label: { size: ds.size.label, color: ds.color.text.label },
+        denominator: { size: scale.denominatorSize, color: ds.color.text.secondary },
+        value: { size: scale.valueSize, color: ds.color.text.primary },
+      };
+      for (const item of items()) {
+        const kind = item.name.endsWith('.label') ? 'label' : item.name.endsWith('.denominator') ? 'denominator' : 'value';
+        expect({ item: item.name, size: item.fontSize, color: item.textColor }).toMatchObject(expected[kind]);
+      }
+    });
+
+    test(`${face.folder} spaces its readouts ${scale.gap} apart and ends its right end at the padding`, () => {
+      const drawn = items();
+      const labelOf = (slot: string): TextItem => drawn.find((i) => i.name.startsWith(`bar.${slot}.`) && i.name.endsWith('.label'))!;
+      if (face.barFieldsPerEnd === 2) {
+        for (const end of ['Left', 'Right']) {
+          const first = labelOf(`${end}1`);
+          expect({ end, step: labelOf(`${end}2`).rect.left - first.rect.left }).toMatchObject({ step: first.rect.width + scale.gap });
+        }
+      }
+      // Every field of the outermost right slot ends against the padding, whatever it is made of:
+      // a value, or a value and the denominator after it.
+      const outer = `bar.Right${face.barFieldsPerEnd}.`;
+      const fields = new Set(drawn.filter((i) => i.name.startsWith(outer)).map((i) => i.name.split('.').slice(0, 3).join('.')));
+      for (const field of fields) {
+        const parts = drawn.filter((i) => i.name.startsWith(`${field}.`));
+        expect({ field, right: Math.max(...parts.map((i) => i.rect.left + i.rect.width)) }).toMatchObject({ right: frame.left + frame.width - PAD_X });
+        for (const part of parts) expect({ item: part.name, hAlign: part.hAlign }).toMatchObject({ hAlign: 'right' });
+      }
+    });
+
+    test(`${face.folder} sets a denominator ${DENOMINATOR_GAP} after the value and on its baseline`, () => {
+      const drawn = items();
+      const lap = (part: string): TextItem => drawn.find((i) => i.name === `bar.Left1.lap.${part}`)!;
+      const value = lap('value');
+      const cells = value.rect.width - boxSlack(scale.valueSize);
+      expect(lap('denominator').rect.left - (value.rect.left + cells)).toBe(DENOMINATOR_GAP);
+      // A WPF box puts its baseline one em below its top, so two runs sit on one baseline exactly
+      // when their top and their size add up to the same number.
+      expect(lap('denominator').rect.top + scale.denominatorSize).toBe(value.rect.top + scale.valueSize);
+    });
+  }
+});
+
+/**
+ * The catalogue an end draws from, written as the zone catalogue artboard writes it. Ten fields
+ * rather than the artboard's eleven: strength of field is published by SimHub in no form at all
+ * and ADR 0009 settled that a field which can never have a value is not offered.
+ */
+describe('the bar draws the catalogue the artboard writes', () => {
+  test('ten fields, each with the label and the reading the artboard gives it', () => {
+    expect(BAR_FIELD_SPECS.map((spec) => [spec.label, spec.sample, spec.denominator?.sample ?? ''])).toEqual([
+      ['Race', '0:28:14', ''],
+      ['Lap', '4', '/ 32'],
+      ['Time left', '0:42:15', ''],
+      ['Clock', '14:32', ''],
+      ['Real time', '19:26', ''],
+      ['Position', '3', '/ 22'],
+      ['Class', 'GT3 · P4', ''],
+      ['Incidents', '3x', ''],
+      ['Air', '21.5', '°'],
+      ['Track', '27.6', '°'],
+    ]);
+  });
+
+  test('and shortens the one label the portrait artboard shortens', () => {
+    const labelOn = (face: typeof zoneFace600x686, slot: string): string =>
+      faceItems(face).find((i): i is TextItem => i.kind === 'text' && i.name === `bar.${slot}.position.label`)!.text;
+    expect(labelOn(zoneFace600x686, 'Right1')).toBe('POS');
+    expect(labelOn(zoneFace1920x480, 'Right1')).toBe('POSITION');
+  });
+});
+
 describe('the bar keeps its three blocks apart', () => {
   for (const { face } of BUILT) {
     const bar = face.zones.bar;
@@ -573,7 +1069,7 @@ describe('the twenty-one pages reach the face', () => {
   test('every page of the catalogue draws, and draws inside a 769 by 314 zone at shape wide', () => {
     // The ticket's own measure. The zone is 769 by 314; what a page is handed is the body under the
     // header, and the shape model is asked what that body is before anything is drawn into it.
-    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: MODULE_COUNT } });
+    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: MODULE_COUNT } }, 'zone', 'face');
     expect(shapeOf(body).width).toBe('wide');
 
     for (const screen of shared.screens) {
@@ -738,13 +1234,25 @@ describe('a zone may list the class a driver is racing in', () => {
     }
   });
 
-  test('the companion and the pit wall list everybody, as they always have', () => {
-    for (const pkg of SECOND_SCREENS) {
+  test('the companion lists everybody, and a pit wall lists by its own screen setting', () => {
+    // A face's filter is a zone's, because a face's zones are four rectangles of one dashboard and
+    // each can be told apart. A pit wall's are widgets pointed at one file per rectangle, so zones A
+    // and B of the race page are the same file: the filter it answers is the screen's, and no face's
+    // ever reaches either second screen.
+    let read = 0;
+    for (const def of SCREEN_PACKAGES) {
+      const pkg = buildScreenPackage(def, OPTS);
+      const allowed = def.kind === 'pitwall' ? [`OpenDash.${PIT_WALL_CLASS_ONLY_SETTING}`] : [];
       for (const dashboard of pkg.dashboards) {
-        const used = propertiesIn(dashboard).filter((p) => p.endsWith('ClassOnly'));
-        expect({ dashboard: dashboard.name, used }).toMatchObject({ used: [] });
+        for (const p of new Set(propertiesIn(dashboard).filter((n) => n.endsWith('ClassOnly')))) {
+          expect({ dashboard: dashboard.name, p, allowed: allowed.includes(p) }).toMatchObject({ allowed: true });
+          read += 1;
+        }
       }
     }
+    // And it is read, rather than declared and drawn by nothing: the three boards and the two list
+    // pages of every zone dashboard ask it.
+    expect(read).toBeGreaterThan(0);
   });
 });
 

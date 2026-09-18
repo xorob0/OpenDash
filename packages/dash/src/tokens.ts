@@ -68,6 +68,13 @@ function num(path: string): number {
   return v;
 }
 
+function bool(path: string): boolean {
+  used.push(path);
+  const v = resolveToken(path);
+  if (typeof v !== 'boolean') throw new Error(`tokens: ${path} is not a boolean (${String(v)})`);
+  return v;
+}
+
 function text(path: string): string {
   used.push(path);
   const v = resolveToken(path);
@@ -154,6 +161,17 @@ export const ds = {
       debrisStripe: hex('purpose.flag.debris.stripe'),
     },
     pitLimiter: hex('purpose.pitLimiter'),
+    /**
+     * A pop-up owns two colours of its own rather than borrowing `surface.zone` and `text.primary`
+     * directly: the box is a thing that appears over the hero, and naming its fill and its rule
+     * here is what lets the artboard move either one without moving every zone on the face.
+     */
+    popUp: { surface: hex('purpose.popUp.surface'), rule: hex('purpose.popUp.rule') },
+    /**
+     * Up and down are the same grey on purpose. A change of setting is information about what the
+     * driver just did, not a state of the car, so neither direction takes a state colour.
+     */
+    trend: { up: hex('purpose.trend.up'), down: hex('purpose.trend.down') },
     // The alert colours the face already uses, reached directly by the LED profiles for the same
     // reason the semantic scale is: a strip has no readouts to name a colour after.
     alert: {
@@ -225,6 +243,16 @@ export const ds = {
       gear: num('font.cell.gear'),
       /** Characters that get the narrow cell. */
       specialChars: text('font.cell.specialChars'),
+      /**
+       * Characters a monospaced value may not contain. Read rather than restated: the ban is what
+       * keeps the cell cut for digits, so the set the design writes and the set `numeral` refuses
+       * have to be one set. It was a token nobody read until `numeral` enforced it.
+       *
+       * A set rather than the string `specialChars` is, because the two are asked different
+       * questions: `specialChars` is serialised into the item and reaches SimHub as written, while
+       * this one is never emitted and is only ever asked whether it holds a character.
+       */
+      excluded: new Set(text('font.cell.excluded')) as ReadonlySet<string>,
     },
   },
   size: {
@@ -236,6 +264,16 @@ export const ds = {
     valueSm: num('font.size.valueSm'),
     label: num('font.size.label'),
     labelSm: num('font.size.labelSm'),
+  },
+  /**
+   * The other numeral scale, whose scope line in the token file reads "Plugin panel, and the pit
+   * wall tables, at 96 dpi logical pixels". It is a sibling of `size` rather than a branch of it
+   * because it is measured for a monitor at desk distance and not for a DDU at arm's length: the
+   * two ramps meet only where the second screens' lower steps land on it.
+   */
+  ui: {
+    numeral: num('font.size.ui.numeral'),
+    numeralLg: num('font.size.ui.numeralLg'),
   },
   space: {
     1: num('space.1'),
@@ -258,6 +296,25 @@ export const ds = {
     /** The flag ring on round faces takes the band's place; its width is the ring's stroke. */
     flagRing: { width: num('indicator.flagRing.width') },
     pitLimiter: { height: num('indicator.pitLimiter.height'), heightSm: num('indicator.pitLimiter.heightSm') },
+    /**
+     * The four transient boxes. Their durations are how long the design says each one is worth
+     * looking at, not a timer a dashboard can run: nothing in a scene graph counts milliseconds, so
+     * a caller compares one of these against a published value that is already a clock. They are
+     * exposed all the same, because the number a condition is written against has to come from the
+     * token file rather than from a literal beside the condition.
+     */
+    alert: { durationMs: num('indicator.alert.durationMs') },
+    popUp: { height: num('indicator.popUp.height'), durationMs: num('indicator.popUp.durationMs') },
+    changeNotification: {
+      height: num('indicator.changeNotification.height'),
+      durationMs: num('indicator.changeNotification.durationMs'),
+      settleFrames: num('indicator.changeNotification.settleFrames'),
+    },
+    lapReview: {
+      height: num('indicator.lapReview.height'),
+      durationMs: num('indicator.lapReview.durationMs'),
+      perSessionType: bool('indicator.lapReview.perSessionType'),
+    },
   },
   card: {
     rung: { L: rung('L'), M: rung('M'), S: rung('S') },

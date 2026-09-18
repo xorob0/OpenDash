@@ -143,6 +143,90 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void The_summary_warns_before_a_reinstall_overwrites_edits_too()
+        {
+            // pluginlights-58's second half. Reinstall costs the user exactly what Update costs them --
+            // the copy in SimHub goes and their edits to it go with it -- and it is the press that is
+            // never necessary, so it is the one that most needs saying before it is pressed.
+            var upToDate = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
+            Assert.Equal("Reinstall in SimHub", FlagBoxInstallPlan.ButtonLabel(upToDate));
+            var text = FlagBoxInstallPlan.Summary(upToDate, null);
+            Assert.Contains("replaces", text, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("changes you made", text, StringComparison.OrdinalIgnoreCase);
+
+            // One sentence for both presses, so the two branches cannot drift apart again.
+            Assert.Contains(FlagBoxInstallPlan.Replaces, text, StringComparison.Ordinal);
+            Assert.Contains(FlagBoxInstallPlan.Replaces, FlagBoxInstallPlan.Summary(FlagBoxInstallPlan.Decide(Ours, V2, new[] { Profile(Ours, V1) }), null), StringComparison.Ordinal);
+
+            // A press that adds rather than replaces is not warned about, because it costs nothing.
+            Assert.DoesNotContain(FlagBoxInstallPlan.Replaces, FlagBoxInstallPlan.Summary(FlagBoxInstallPlan.Decide(Ours, V1, new List<InstalledProfile>()), null), StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void A_group_reads_as_its_worst_member()
+        {
+            // The grouped row: nineteen strips behind one line. It may never read better than the
+            // profile it is worst about, or the press that follows it does more than the row said.
+            var here = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
+            var missing = FlagBoxInstallPlan.Decide(Theirs, V1, new List<InstalledProfile>());
+            var old = FlagBoxInstallPlan.Decide(Ours, V2, new[] { Profile(Ours, V1) });
+
+            Assert.Equal(FlagBoxInstallState.UpToDate, FlagBoxInstallPlan.Combine(new[] { here, here }).State);
+            Assert.Equal(FlagBoxInstallState.NotInstalled, FlagBoxInstallPlan.Combine(new[] { here, missing }).State);
+            Assert.Equal(FlagBoxInstallState.Outdated, FlagBoxInstallPlan.Combine(new[] { here, old }).State);
+            // Missing beats merely old: the press has to add one, not only update the other.
+            Assert.Equal(FlagBoxInstallState.NotInstalled, FlagBoxInstallPlan.Combine(new[] { old, missing }).State);
+            // And a failure beats everything, because it is the one thing the user can act on.
+            var failed = new FlagBoxPlan { State = FlagBoxInstallState.Failed };
+            Assert.Equal(FlagBoxInstallState.Failed, FlagBoxInstallPlan.Combine(new[] { here, missing, failed }).State);
+
+            // Unreachable is a state, not an error, and it outranks both "missing" and "old": nothing
+            // about the group can be known while SimHub's settings cannot be read at all.
+            var unreachable = FlagBoxInstallPlan.Decide(Ours, V1, null);
+            Assert.Equal(FlagBoxInstallState.Unavailable, FlagBoxInstallPlan.Combine(new[] { here, missing, unreachable }).State);
+        }
+
+        [Fact]
+        public void A_group_shows_a_version_only_when_its_members_agree_on_one()
+        {
+            var a = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
+            var b = FlagBoxInstallPlan.Decide(Theirs, V1, new[] { Profile(Theirs, V1) });
+            var both = FlagBoxInstallPlan.Combine(new[] { a, b });
+            Assert.Equal("0.2.0-rc.1", both.InstalledVersion);
+            Assert.Equal("0.2.0-rc.1", both.EmbeddedVersion);
+
+            // Two versions behind one pill would read as one, and the user cannot see through it.
+            var mixed = FlagBoxInstallPlan.Combine(new[] { a, FlagBoxInstallPlan.Decide(Theirs, V1, new[] { Profile(Theirs, V2) }) });
+            Assert.Null(mixed.InstalledVersion);
+            Assert.Equal("0.2.0-rc.1", mixed.EmbeddedVersion);
+        }
+
+        [Fact]
+        public void A_group_of_nothing_is_a_build_that_embedded_nothing()
+        {
+            // Not "installed", which is what an all-clear over an empty list would say.
+            Assert.Equal(FlagBoxInstallState.NotEmbedded, FlagBoxInstallPlan.Combine(new FlagBoxPlan[0]).State);
+            Assert.Equal(FlagBoxInstallState.NotEmbedded, FlagBoxInstallPlan.Combine(null).State);
+            Assert.Equal(FlagBoxInstallState.NotEmbedded, FlagBoxInstallPlan.Combine(new FlagBoxPlan[] { null, null }).State);
+            Assert.False(FlagBoxInstallPlan.Combine(new FlagBoxPlan[0]).WouldChange);
+
+            // A null member among real ones is skipped rather than counted as a state of its own.
+            var here = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
+            Assert.Equal(FlagBoxInstallState.UpToDate, FlagBoxInstallPlan.Combine(new[] { null, here }).State);
+        }
+
+        [Fact]
+        public void A_group_that_would_change_says_so()
+        {
+            // The button is enabled off WouldChange, so the combined plan has to answer it the way the
+            // members would: a group holding one missing profile is a group with work to do.
+            var here = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
+            var missing = FlagBoxInstallPlan.Decide(Theirs, V1, new List<InstalledProfile>());
+            Assert.True(FlagBoxInstallPlan.Combine(new[] { here, missing }).WouldChange);
+            Assert.False(FlagBoxInstallPlan.Combine(new[] { here, here }).WouldChange);
+        }
+
+        [Fact]
         public void The_summary_says_that_installing_is_not_selecting()
         {
             // AddProfile appends to the list; SimHub picks the current profile from its own persisted

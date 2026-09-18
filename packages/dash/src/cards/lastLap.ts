@@ -2,6 +2,7 @@
 import { ncalc } from '../generator.ts';
 import { readout } from '../components/readout.ts';
 import { ds } from '../tokens.ts';
+import { NO_TIME } from '../second/values.ts';
 import { defineCard } from './card.ts';
 import { LAP_TIME_CHARS } from './chars.ts';
 
@@ -22,7 +23,7 @@ export const lastLap = defineCard('lastLap', (slot, rung, prefix, meta) => {
     { text: meta.label },
     {
       sample: '1:42.905',
-      bind: iff(noData, str('-:--.---'), toShortTime(last, 3, false, true)),
+      bind: iff(noData, str(NO_TIME), toShortTime(last, 3, false, true)),
       chars: LAP_TIME_CHARS,
       color: ds.purpose.lap.nominal,
       colorBind: iff(noData, str(ds.purpose.lap.noData), iff(isSessionBest, str(ds.purpose.lap.sessionBest), str(ds.purpose.lap.nominal))),

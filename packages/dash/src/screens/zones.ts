@@ -18,6 +18,20 @@ import type { Size } from '../design/geometry.ts';
 
 export type ZoneKind = 'standard' | 'wide';
 
+/**
+ * The rectangle the canvas designs a zone of each kind on, which no page places.
+ *
+ * A zone is a widget, so the boxes a page is ever proved against are the ones the pit wall pages
+ * happen to have room for, and 240 is not among them: a wide page that only works at the 255 px
+ * the tower gives it would pass quietly. The fit suite builds every module into these as well as
+ * into the placed rectangles, so the frame a page was drawn on is one a test can fail on, and a
+ * kind added here is covered the day it is added rather than the day somebody lists it.
+ */
+export const ZONE_REFERENCE: Record<ZoneKind, Size> = {
+  standard: { width: 639, height: 240 },
+  wide: { width: 1279, height: 240 },
+};
+
 /** The pages a zone of this kind can show. */
 export const pagesOf = (kind: ZoneKind): readonly PitWallZonePageMeta[] => (kind === 'wide' ? PIT_WALL_WIDE_ZONE_PAGES : PIT_WALL_ZONE_PAGES);
 
@@ -28,9 +42,19 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zones$
 export function zoneScreen(page: PitWallZonePageMeta, kind: ZoneKind, size: Size): Screen {
   const pages = pagesOf(kind);
   const frame = rect(0, 0, size.width, size.height);
-  const { items: chrome, body } = zoneFrame(page.id, { frame, title: page.name, counter: { kind: 'static', page: page.number + 1, pages: pages.length } });
-  const density = kind === 'wide' ? 'wide' : 'zone';
-  const items: Item[] = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.` })];
+  // The wide zone says so in its title, which is what the sheet draws: the same page is offered in
+  // both kinds and a pit wall carries both at once, so the title is where the two are told apart.
+  // The suffix is added here rather than in the catalogue, because the catalogue's name is also the
+  // label the plugin puts in its wide-zone dropdown, where a suffix would read as a second page.
+  const title = kind === 'wide' ? `${page.name} · Wide` : page.name;
+  const { items: chrome, body } = zoneFrame(page.id, { frame, title, counter: { kind: 'static', page: page.number + 1, pages: pages.length } });
+  // A zone dashboard is a pit wall screen, so both kinds label at the pit wall's 13 rather than the
+  // face's 15: `PitWallZones.dc.html` writes eighty `.lblt` and not one `.lbl`.
+  const density = kind === 'wide' ? 'wide' : 'panel';
+  // The class filter is the screen's, so every zone of a pit wall answers it the same way: four
+  // widgets share one zone dashboard per rectangle, and a filter told apart per zone could not
+  // reach one of two zones drawn from the same file.
+  const items: Item[] = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, classOnly: secondScreen.classOnly() })];
   return pageScreen(page.id, items);
 }
 

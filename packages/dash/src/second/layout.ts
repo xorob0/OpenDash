@@ -3,8 +3,9 @@
  * what the design canvas draws with `justify-content: center`, and a row is placed by its bottom
  * edge because the fields in it are bottom-aligned.
  *
- * A row that does not fit is not drawn: zones come in six heights (195 to 356 px) and a module
- * drops its last row rather than letting SimHub clip it.
+ * A row that does not fit is not drawn: a zone is whatever rectangle the page embedding it has
+ * left over, the faces and the four pit wall pages cut a different one each, and a module drops
+ * its last row rather than letting SimHub clip it.
  */
 import type { Item, Rect } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
@@ -28,6 +29,19 @@ export interface StackRow {
     lead: number;
     tail: number;
     at(factor: number): StackRow | undefined;
+  };
+  /**
+   * What the row declares, for a box too short to hold the stack: the ids it draws, the page's own
+   * order to shed them in (most important first), and the row again without one of them.
+   *
+   * Without it a stack too tall loses whole trailing rows, and the page's declaration is overruled
+   * by the geometry: a 249 x 158 zone took fuel's level gauge off with the average it was under,
+   * although the table keeps the average and the drawing has a gauge at every shape.
+   */
+  shed?: {
+    ids: readonly string[];
+    order: readonly string[];
+    without(ids: readonly string[]): StackRow | undefined;
   };
 }
 
@@ -56,12 +70,44 @@ export const stackHeight = (rows: readonly StackRow[], gap: number): number =>
 export const ROW_TAIL = 2;
 
 /**
- * The rows that fit `height`, longest prefix first. Modules list their rows in importance order,
- * so a short zone keeps the reading that matters and drops the recap under it.
+ * Where a stack sheds first: the least important id any of its rows declares.
+ *
+ * Least important is the page's own order, most important first, and an id the order does not name
+ * is less important than every id it does -- the same reading `rank.ts` gives a `shedOrder`. The
+ * last id of the last row that has one is never returned: a page that draws nothing is worse than a
+ * page drawing one thing.
  */
-export function rowsThatFit(rows: readonly StackRow[], height: number, gap: number): StackRow[] {
-  const kept = [...rows];
+function leastImportant(rows: readonly StackRow[], order: readonly string[]): { row: number; id: string } | undefined {
+  const declared = rows.flatMap((row, i) => (row.shed?.ids ?? []).map((id) => ({ row: i, id })));
+  if (declared.length <= 1) return undefined;
+  const rank = (id: string): number => {
+    const i = order.indexOf(id);
+    return i === -1 ? order.length : i;
+  };
+  return declared.reduce((worst, next) => (rank(next.id) >= rank(worst.id) ? next : worst));
+}
+
+/**
+ * The rows that fit `height`. Modules list their rows in importance order, so a short zone keeps
+ * the reading that matters and drops the recap under it.
+ *
+ * A row that declares what it draws is shed one id at a time, in the page's own order, before any
+ * row is taken off whole: that is rule 17 read the way the shedding table writes it, rather than
+ * the height of a box deciding which of a page's declared fields survive. Only once nothing
+ * declared can go does the stack fall back to dropping its trailing row, which is what a gauge, a
+ * strip or a table -- none of which declares an id -- is dropped by.
+ */
+export function rowsThatFit(rows: readonly StackRow[], height: number, gap: number, shedOrder?: readonly string[]): StackRow[] {
+  let kept = [...rows];
   const room = height - 2 * ROW_TAIL;
+  const order = shedOrder ?? kept.find((row) => row.shed)?.shed?.order ?? kept.flatMap((row) => row.shed?.ids ?? []);
+  while (stackHeight(kept, gap) > room) {
+    const worst = leastImportant(kept, order);
+    if (!worst) break;
+    const row = kept[worst.row];
+    const rebuilt = row?.shed?.without([worst.id]);
+    kept = rebuilt === undefined || rebuilt.height <= 0 ? kept.filter((_, i) => i !== worst.row) : kept.map((r, i) => (i === worst.row ? rebuilt : r));
+  }
   while (kept.length > 1 && stackHeight(kept, gap) > room) kept.pop();
   return kept;
 }
@@ -113,21 +159,48 @@ function filled(rows: readonly StackRow[], height: number, step: number): readon
 }
 
 /**
- * Draws rows as a column centred in `frame`, dropping trailing rows that do not fit. The gap
- * defaults to the density's row gap.
+ * How a stack spends the height its rows do not use.
+ *
+ * `centre` is one tight block in the middle of the frame. `spaceBetween` is the catalogue's other
+ * answer: the wrapper takes `height: 100%` and the rows are pushed apart, the declared gap becoming
+ * a minimum rather than the distance. Which of the two a page takes is a decision the catalogue
+ * makes page by page and not by shape -- sectors, fuel, session, stint, speedo and car settings
+ * spread at every shape they are drawn at, and the delta, the lists and the drawings centre -- so
+ * the page says, and centring stays the default.
  */
-export function stack(frame: Rect, rows: readonly StackRow[], density: Density, gap?: number): Item[] {
+export type StackJustify = 'centre' | 'spaceBetween';
+
+export interface StackOptions {
+  /** Gap between the rows, which a spread stack reads as a minimum. Defaults to the density's. */
+  gap?: number;
+  justify?: StackJustify;
+  /** The page's declared keeps, most important first; the rows' own declaration by default. */
+  shedOrder?: readonly string[];
+}
+
+/**
+ * Draws rows as a column in `frame`, centred or spread, dropping what does not fit. The gap
+ * defaults to the density's row gap, and a bare number is that gap.
+ */
+export function stack(frame: Rect, rows: readonly StackRow[], density: Density, opts: number | StackOptions = {}): Item[] {
+  const { gap, justify = 'centre', shedOrder } = typeof opts === 'number' ? { gap: opts } : opts;
   const step = gap ?? densityOf(density).gapY;
   // A row of no height is a rank the page shed entirely. It is dropped rather than drawn, so the
   // rows under it move up instead of sitting below a gap with nothing above it.
   const live = rows.filter((row) => row.height > 0);
-  const kept = rowsThatFit(filled(live, frame.height, step), frame.height, step);
+  const kept = rowsThatFit(filled(live, frame.height, step), frame.height, step, shedOrder);
   const total = stackHeight(kept, step);
-  let y = Math.round(frame.top + (frame.height - total) / 2);
+  // The room a spread stack has is its box less its own tail at each end, the same reservation
+  // growing makes: pushed to the bottom edge, the last row's line box would hang past it.
+  const tail = Math.ceil(Math.max(ROW_TAIL, ...kept.map((row) => row.fill?.tail ?? ROW_TAIL)));
+  const room = frame.height - 2 * tail;
+  const spread = justify === 'spaceBetween' && kept.length > 1 && total <= room;
+  const stretch = spread ? (room - total) / (kept.length - 1) : 0;
+  let y = spread ? frame.top + tail : Math.round(frame.top + (frame.height - total) / 2);
   const items: Item[] = [];
   for (const row of kept) {
-    items.push(...row.draw(y + row.height));
-    y += row.height + step;
+    items.push(...row.draw(Math.round(y) + row.height));
+    y += row.height + step + stretch;
   }
   return items;
 }

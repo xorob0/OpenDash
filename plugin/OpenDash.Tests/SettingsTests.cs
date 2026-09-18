@@ -391,7 +391,8 @@ namespace OpenDashPlugin.Tests
             Assert.Single(clashes);
             Assert.Equal("relative", clashes[0].PageId);
             Assert.Equal(new[] { "B", "C" }, clashes[0].Zones);
-            Assert.Equal("Zone B and zone C both show Relative.", clashes[0].Message());
+            // An article and a lower-case noun, as the canvas writes it, rather than the catalogue name.
+            Assert.Equal("Zone B and zone C both show the relative.", clashes[0].Message());
             // Reported, not prevented: both zones keep the page.
             Assert.Equal(14, settings.FaceZoneStart(Face, "B"));
             Assert.Equal(14, settings.FaceZoneStart(Face, "C"));
@@ -404,7 +405,25 @@ namespace OpenDashPlugin.Tests
             var settings = new OpenDashSettings();
             settings.SetFaceZoneStart(Face, "A", 3);
             settings.SetFaceZoneStart(Face, "B", 12);
-            Assert.Equal("Zone A and zone B both show Track.", FacePageClash.Warning(settings.Face(Face)));
+            // The glance is moved off the track so that this reads about the two catalogues alone; that
+            // it defaults to the track and would join in is the next test's business.
+            settings.SetQuickGlance(Face, Contract.QuickGlanceValue(0, 2));
+            Assert.Equal("Zone A and zone B both show the track.", FacePageClash.Warning(settings.Face(Face)));
+        }
+
+        [Fact]
+        public void A_page_that_does_not_read_after_an_article_keeps_its_catalogue_name()
+        {
+            // "the gear, speed, revs" is not a sentence, and no short noun for that page exists to
+            // invent, so it is spelled the way the panel's own drop-down spells it.
+            Assert.Equal("Gear, speed, revs", FacePageClash.DisplayName("Gear, speed, revs"));
+            Assert.Equal("the relative", FacePageClash.DisplayName("Relative"));
+            Assert.Equal("the lap times", FacePageClash.DisplayName("Lap times"));
+            // No two zones can land on that page today -- only zone A's catalogue holds it -- so the
+            // sentence is pinned on the clash itself rather than on a face that cannot be arranged.
+            Assert.Equal(
+                "Zone A and zone B both show Gear, speed, revs.",
+                new FacePageClash("gearSpeedRevs", "Gear, speed, revs", new[] { "A", "B" }).Message());
         }
 
         [Fact]
@@ -418,13 +437,48 @@ namespace OpenDashPlugin.Tests
             var clashes = settings.FaceClashes(Face);
             Assert.Single(clashes);
             Assert.Equal(new[] { "B", "C", "D" }, clashes[0].Zones);
-            Assert.Equal("Zone B, zone C and zone D all show Fuel.", clashes[0].Message());
+            Assert.Equal("Zone B, zone C and zone D all show the fuel.", clashes[0].Message());
         }
 
         [Fact]
         public void A_face_with_nothing_in_common_warns_about_nothing()
         {
+            // The defaults included: zone C opens on the relative and the glance is set to the track,
+            // so the fifth participant agrees with nobody.
             Assert.Equal(string.Empty, FacePageClash.Warning(new OpenDashSettings().Face(Face)));
+        }
+
+        [Fact]
+        public void The_quick_glance_is_the_fifth_participant_and_is_said_by_name()
+        {
+            // The glance is compared against each zone's start page by page id, as the zones are
+            // compared with each other, and the line is shown rather than blocking the setting.
+            var settings = new OpenDashSettings();
+            settings.SetQuickGlance(Face, Contract.QuickGlanceValue(2, 12));
+            settings.SetFaceZoneStart(Face, "C", 12);
+            var clashes = settings.FaceClashes(Face);
+            Assert.Single(clashes);
+            Assert.Equal("track", clashes[0].PageId);
+            Assert.Equal(new[] { "C" }, clashes[0].Zones);
+            Assert.True(clashes[0].Glance);
+            Assert.Equal("Zone C and the quick glance both show the track.", clashes[0].Message());
+            // Said, not prevented: the zone keeps the page and so does the glance.
+            Assert.Equal(12, settings.FaceZoneStart(Face, "C"));
+            Assert.Equal(Contract.QuickGlanceValue(2, 12), settings.QuickGlanceOf(Face));
+
+            // By id and not by number: zone A's page 3 and module 13 are one drawing, so a glance held
+            // on zone A's track page clashes with a zone B showing module 13.
+            var across = new OpenDashSettings();
+            across.SetQuickGlance(Face, Contract.QuickGlanceValue(0, 3));
+            across.SetFaceZoneStart(Face, "B", 12);
+            Assert.Equal("Zone B and the quick glance both show the track.", FacePageClash.Warning(across.Face(Face)));
+
+            // And three participants read as a list, the glance last.
+            var three = new OpenDashSettings();
+            three.SetQuickGlance(Face, Contract.QuickGlanceValue(2, 12));
+            three.SetFaceZoneStart(Face, "B", 12);
+            three.SetFaceZoneStart(Face, "C", 12);
+            Assert.Equal("Zone B, zone C and the quick glance all show the track.", FacePageClash.Warning(three.Face(Face)));
         }
 
         [Fact]
@@ -913,7 +967,7 @@ namespace OpenDashPlugin.Tests
                 LightsBrightness = 250,
                 LightsNightBrightness = -4,
                 FlagBoxLowFuelLaps = -1,
-                FlagBoxOilTemp = -20,
+                FlagBoxMatrixOilTemp = new[] { -20, 0, 0, 0 },
             };
             settings.Normalise();
 
@@ -922,7 +976,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultFlagBoxLowFuelLaps, settings.FlagBoxLowFuelLaps);
             // Zero, not a Celsius number: zero means "not set" and lets the profile pick the default
             // for whichever unit SimHub is in.
-            Assert.Equal(0, settings.FlagBoxOilTemp);
+            Assert.Equal(0, settings.MatrixOilTemp(1));
         }
 
         [Fact]
@@ -943,6 +997,34 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_settings_file_carrying_only_the_old_low_fuel_name_keeps_its_threshold()
+        {
+            // LightsLowFuelLaps supersedes FlagBoxLowFuelLaps, and the plugin publishes the one number
+            // under both names rather than renaming the field: a settings file on disk is keyed by the
+            // name that shipped, and a driver who set five laps against rc.2 keeps five.
+            var json = "{\"FlagBoxLowFuelLaps\":5}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+            Assert.Equal(5, settings.FlagBoxLowFuelLaps);
+            var declared = settings.DeclaredProperties().ToList();
+            Assert.Contains(Contract.LightsLowFuelLaps, declared);
+            Assert.Contains(Contract.FlagBoxLowFuelLaps, declared);
+        }
+
+        [Fact]
+        public void A_settings_file_carrying_the_retired_strip_centre_is_migrated_into_rpm()
+        {
+            // rpmOnly lit the same centre as rpm and only left the sides dark, so it was retired into
+            // rpm. A rig upgraded with it still stored would otherwise match no conditional group in
+            // the profile, and its strip centre would go dark.
+            var json = "{\"LedCentre\":\"rpmOnly\"}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+            Assert.Equal("rpm", settings.LedCentre);
+            Assert.Contains(settings.LedCentre, Contract.LedCentres);
+        }
+
+        [Fact]
         public void CopyFrom_carries_the_lights()
         {
             // It carried none of them before the strips were added: the panel's copy handed back a rig
@@ -952,38 +1034,44 @@ namespace OpenDashPlugin.Tests
                 LightsBrightness = 60,
                 LightsNightBrightness = 10,
                 LightsNightMode = true,
-                FlagBoxCriticalOnly = true,
-                FlagBoxGear = false,
                 FlagBoxLowFuelLaps = 5,
-                FlagBoxOilTemp = 130,
-                FlagBoxWaterTemp = 115,
                 LedCentre = "fuel",
                 LedRpmStyle = "f1",
+                LedFlagAnimation = false,
             };
             source.Normalise();
             source.FlagBoxRest[1] = "gear";
             source.FlagBoxSide[0] = "left";
             source.FlagBoxFlags[3] = true;
+            // The four that moved under the matrix are set per panel, so the copy has to carry the
+            // arrays rather than four scalars.
+            source.FlagBoxMatrixCriticalOnly[0] = true;
+            source.FlagBoxMatrixGear[1] = false;
+            source.FlagBoxMatrixOilTemp[0] = 130;
+            source.FlagBoxMatrixWaterTemp[0] = 115;
 
             var copy = new OpenDashSettings();
             copy.CopyFrom(source);
             Assert.Equal(60, copy.LightsBrightness);
             Assert.Equal(10, copy.LightsNightBrightness);
             Assert.True(copy.LightsNightMode);
-            Assert.True(copy.FlagBoxCriticalOnly);
-            Assert.False(copy.FlagBoxGear);
             Assert.Equal(5, copy.FlagBoxLowFuelLaps);
-            Assert.Equal(130, copy.FlagBoxOilTemp);
-            Assert.Equal(115, copy.FlagBoxWaterTemp);
+            Assert.True(copy.MatrixCriticalOnly(1));
+            Assert.False(copy.MatrixGear(2));
+            Assert.Equal(130, copy.MatrixOilTemp(1));
+            Assert.Equal(115, copy.MatrixWaterTemp(1));
             Assert.Equal("gear", copy.MatrixRest(2));
             Assert.Equal("left", copy.MatrixSide(1));
             Assert.True(copy.MatrixFlags(4));
             Assert.Equal("fuel", copy.LedCentre);
             Assert.Equal("f1", copy.LedRpmStyle);
+            Assert.False(copy.LedFlagAnimation);
 
             // A clone, not the same array: editing one settings object must not edit the other.
             copy.FlagBoxRest[1] = "dark";
             Assert.Equal("gear", source.MatrixRest(2));
+            copy.FlagBoxMatrixOilTemp[0] = 90;
+            Assert.Equal(130, source.MatrixOilTemp(1));
         }
 
         [Fact]
@@ -997,6 +1085,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(80, settings.LightsBrightness);
             Assert.Equal(Contract.DefaultLedCentre, settings.LedCentre);
             Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedRpmStyle);
+            Assert.True(settings.LedFlagAnimation);
         }
 
         [Fact]
@@ -1021,8 +1110,51 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(100, settings.LightsBrightness);
             Assert.True(settings.LightsNightBrightness < settings.LightsBrightness);
             Assert.False(settings.LightsNightMode);
-            Assert.False(settings.FlagBoxCriticalOnly);
-            Assert.True(settings.FlagBoxGear);
+            // Per panel since the settings a box owns moved under it, and the defaults did not move
+            // with the names: quiet off and the gear on, on every panel.
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.False(settings.MatrixCriticalOnly(matrix));
+                Assert.True(settings.MatrixGear(matrix));
+                Assert.Equal(0, settings.MatrixOilTemp(matrix));
+                Assert.Equal(0, settings.MatrixWaterTemp(matrix));
+            }
+        }
+
+        [Fact]
+        public void A_flag_box_setting_written_before_it_belonged_to_a_box_reaches_all_four_panels()
+        {
+            // The migration ADR 0003 owes: a driver who had turned the gear off, or set a Fahrenheit
+            // oil threshold, keeps it on every box they own rather than being silently reset.
+            var json = "{\"FlagBoxCriticalOnly\":true,\"FlagBoxGear\":false,\"FlagBoxOilTemp\":250,\"FlagBoxWaterTemp\":235}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.True(settings.MatrixCriticalOnly(matrix));
+                Assert.False(settings.MatrixGear(matrix));
+                Assert.Equal(250, settings.MatrixOilTemp(matrix));
+                Assert.Equal(235, settings.MatrixWaterTemp(matrix));
+            }
+
+            // Cleared, so it happens once: a value the driver sets on one panel afterwards is not
+            // overwritten by the legacy scalar on the next load.
+            Assert.Null(settings.FlagBoxCriticalOnly);
+            Assert.Null(settings.FlagBoxGear);
+            Assert.Null(settings.FlagBoxOilTemp);
+            Assert.Null(settings.FlagBoxWaterTemp);
+        }
+
+        [Fact]
+        public void A_panel_set_since_the_move_is_not_overwritten_by_the_migration()
+        {
+            var json = "{\"FlagBoxMatrixGear\":[false,true,true,true]}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            Assert.False(settings.MatrixGear(1));
+            Assert.True(settings.MatrixGear(2));
         }
 
         [Fact]
@@ -1053,12 +1185,12 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_declared_properties_grow_and_shrink_with_the_rig()
         {
-            // Eight face sizes times twenty-one properties is what the plugin used to attach whatever
-            // the rig was. What it attaches now is the four modes, the twelve slots and the rev bar,
-            // which every screen shares, and one group per screen the rig holds.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1;
+            // Eight face sizes times twenty-two properties is what the plugin used to attach whatever
+            // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar and
+            // the blue flag detail, which every screen shares, and one group per screen the rig holds.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(17, shared);
+            Assert.Equal(18, shared);
             // The lights are declared whatever the rig is: openDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
             // rather than the hundred and thirty-six that made the screens worth narrowing.
@@ -1075,18 +1207,20 @@ namespace OpenDashPlugin.Tests
             settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
             settings.Normalise();
             var names = settings.DeclaredProperties().ToList();
-            Assert.Equal(shared + 2 * perFace + Modules.Count + 6 + lights, names.Count);
+            // Plus one for the companion's page, which is the one name it owns that is not a switch.
+            Assert.Equal(shared + 2 * perFace + Modules.Count + 1 + 7 + lights, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Contains("Face1920x480ZoneA", names);
             Assert.Contains("Face850x480ZoneA", names);
             Assert.Contains("CompanionModule21", names);
             Assert.Contains("WebViewUrl", names);
+            Assert.Contains("PitWallClassOnly", names);
             // And the six faces the rig has not got are not declared at all.
             Assert.DoesNotContain("Face1280x480ZoneA", names);
 
             settings.RemoveScreen("Face850x480");
             settings.Normalise();
-            Assert.Equal(shared + perFace + Modules.Count + 6 + lights, settings.DeclaredProperties().Count());
+            Assert.Equal(shared + perFace + Modules.Count + 1 + 7 + lights, settings.DeclaredProperties().Count());
         }
 
         /// <summary>A screen on the stock namespace for its kind and size, as the first one at a size is.</summary>
@@ -1138,6 +1272,41 @@ namespace OpenDashPlugin.Tests
             // one in front of the driver cycles.
             Assert.Contains("RimCycleZoneB", rim.ActionNames());
             Assert.Contains("Face1280x480CycleZoneB", main.ActionNames());
+        }
+
+        /// <summary>
+        /// The Install tab's rows and the rig are one list, and ADR 0017 is what could set them at odds.
+        /// </summary>
+        /// <remarks>
+        /// A second screen made from a package takes a folder of its own, so a row keyed on the folder
+        /// would lose it; the rim face and the companion are both 850 × 480, so a row keyed on the size
+        /// would hand one of them the other's screens. The package a screen was made from survives both.
+        /// A screen from a settings file written before that was recorded is the case the fallback to the
+        /// kind and the size exists for, and without it such a screen would stop counting anywhere.
+        /// </remarks>
+        [Fact]
+        public void A_second_screen_at_one_size_counts_against_its_own_package()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Normalise();
+            var rim = new PackageEntry { Package = "rim", Folder = "openDash 850x480", Kind = Contract.KindFace, Width = 850, Height = 480 };
+            var phone = new PackageEntry { Package = "companion", Folder = "openDash Companion", Kind = Contract.KindCompanion, Width = 850, Height = 480 };
+            Assert.Equal("Rim", rim.DisplayName);
+            Assert.Equal("Phone", phone.DisplayName);
+
+            var first = settings.AddScreen(rim, "Main dash");
+            var second = settings.AddScreen(rim, "Spare");
+            settings.AddScreen(phone, "Phone");
+            settings.Normalise();
+
+            Assert.NotEqual(first.Folder, second.Folder);
+            Assert.Equal(2, PanelPackageRow.Uses(rim, settings.RigScreens()));
+            Assert.Equal(1, PanelPackageRow.Uses(phone, settings.RigScreens()));
+
+            settings.Rig.Add(new ScreenInstance { Namespace = "Legacy", Name = "Legacy", Kind = Contract.KindFace, Width = 850, Height = 480 });
+            settings.Normalise();
+            Assert.Equal(3, PanelPackageRow.Uses(rim, settings.RigScreens()));
+            Assert.Equal(1, PanelPackageRow.Uses(phone, settings.RigScreens()));
         }
 
         [Fact]
@@ -1276,7 +1445,169 @@ namespace OpenDashPlugin.Tests
             confused.Normalise();
             Assert.Null(confused.Face);
             Assert.Null(confused.Modules);
+            Assert.Null(confused.FlagFormat);
+            Assert.Null(confused.LapReview);
             Assert.NotNull(confused.Zones);
+        }
+
+        [Fact]
+        public void The_lap_review_is_off_by_default_and_is_set_per_screen()
+        {
+            // Per screen for a stronger version of the flag format's reason: the panel takes the hero
+            // for four seconds at every crossing, so a display on the desk and a rim in the driver's
+            // hands do not want the same answer. Off on both until somebody asks.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Rig.Add(Screen(Contract.KindFace, Contract.FaceSizes[3].Width, Contract.FaceSizes[3].Height));
+            settings.Normalise();
+            Assert.Equal("off", settings.ScreenLapReview("Face1920x480"));
+            Assert.Equal("off", settings.ScreenLapReview("Face850x480"));
+
+            settings.ScreenOf("Face1920x480").LapReview = "race";
+            settings.Normalise();
+            Assert.Equal("race", settings.ScreenLapReview("Face1920x480"));
+            Assert.Equal("off", settings.ScreenLapReview("Face850x480"));
+
+            // A spelling the panel never wrote falls back, and a screen the rig no longer holds reads
+            // the default rather than throwing on SimHub's data thread.
+            settings.ScreenOf("Face1920x480").LapReview = "sometimes";
+            settings.Normalise();
+            Assert.Equal("off", settings.ScreenLapReview("Face1920x480"));
+            Assert.Equal("off", settings.ScreenLapReview("Face1280x720"));
+
+            settings.ScreenOf("Face1920x480").LapReview = "all";
+            settings.Normalise();
+            var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
+            read.Normalise();
+            Assert.Equal("all", read.ScreenLapReview("Face1920x480"));
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.Equal("all", copy.ScreenLapReview("Face1920x480"));
+        }
+
+        [Fact]
+        public void The_flag_format_is_the_band_by_default_and_is_set_per_screen()
+        {
+            // Per screen like the zones: the face in the driver's peripheral vision is the one a
+            // full-face flag is for, and the one they read directly should keep its band.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Rig.Add(Screen(Contract.KindFace, Contract.FaceSizes[3].Width, Contract.FaceSizes[3].Height));
+            settings.Normalise();
+            Assert.Equal("band", settings.ScreenFlagFormat("Face1920x480"));
+            Assert.Equal("band", settings.ScreenFlagFormat("Face850x480"));
+
+            settings.ScreenOf("Face850x480").FlagFormat = "full";
+            settings.Normalise();
+            Assert.Equal("band", settings.ScreenFlagFormat("Face1920x480"));
+            Assert.Equal("full", settings.ScreenFlagFormat("Face850x480"));
+
+            // A spelling the panel never wrote falls back rather than reaching the face as itself, and
+            // a screen the rig no longer holds reads the default rather than throwing on SimHub's
+            // data thread, the way every other per-screen read does.
+            settings.ScreenOf("Face850x480").FlagFormat = "enormous";
+            settings.Normalise();
+            Assert.Equal("band", settings.ScreenFlagFormat("Face850x480"));
+            Assert.Equal("band", settings.ScreenFlagFormat("Face1280x720"));
+        }
+
+        [Fact]
+        public void The_flag_format_survives_a_save()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.ScreenOf("Face1920x480").FlagFormat = "full";
+            settings.Normalise();
+
+            var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
+            read.Normalise();
+            Assert.Equal("full", read.ScreenFlagFormat("Face1920x480"));
+
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.Equal("full", copy.ScreenFlagFormat("Face1920x480"));
+        }
+
+        [Fact]
+        public void A_companion_opens_on_its_start_module_and_its_button_skips_what_is_off()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
+            settings.Normalise();
+            var companion = settings.ScreenOf("Companion");
+            Assert.Equal(Contract.DefaultCompanionStart, companion.CompanionStart);
+            Assert.Equal(Contract.DefaultCompanionQuickGlance, companion.CompanionQuickGlance);
+
+            // Modules 6, 20 and 21 are off by default -- iRacing carries none of their data -- so the
+            // button steps 4, then 6 to the next one that is on, which is 7.
+            companion.CompanionPage = 3;
+            Assert.Equal(4, settings.CycleScreenModule("Companion"));
+            companion.CompanionPage = 4;
+            Assert.Equal(6, settings.CycleScreenModule("Companion"));
+            // And it wraps over the two that are off at the end of the catalogue.
+            companion.CompanionPage = 18;
+            Assert.Equal(0, settings.CycleScreenModule("Companion"));
+
+            // A glance shows a module the rotation has turned off, because a glance is a thing the
+            // driver asked for by holding a button, and releasing puts the page back.
+            companion.CompanionPage = 2;
+            companion.CompanionQuickGlance = 5;
+            settings.BeginScreenGlance("Companion");
+            Assert.Equal(5, companion.CompanionPage);
+            settings.BeginScreenGlance("Companion");
+            settings.EndScreenGlance("Companion");
+            Assert.Equal(2, companion.CompanionPage);
+
+            // Init puts it back on the module it opens on, which is what that setting means.
+            companion.CompanionStart = 7;
+            companion.CompanionPage = 15;
+            settings.OpenOnStartPages();
+            Assert.Equal(7, companion.CompanionPage);
+
+            // The page is the one of the three that is a property, because it is the one the screens'
+            // enabled expressions read; the start and the glance reach the screen only by being copied
+            // into it.
+            Assert.Equal("CompanionPage", Contract.CompanionPageProperty(Contract.CompanionPrefix));
+            Assert.Equal("GaragePage", Contract.CompanionPageProperty("Garage"));
+            companion.CompanionPage = 4;
+            Assert.Equal(4, settings.ScreenCompanionPage("Companion"));
+
+            // A screen the rig no longer holds reads its defaults rather than throwing on SimHub's
+            // own thread, the way every other per-screen read does.
+            Assert.Equal(Contract.DefaultCompanionStart, settings.ScreenCompanionStart("Gone"));
+            Assert.Equal(Contract.DefaultCompanionQuickGlance, settings.ScreenCompanionQuickGlance("Gone"));
+            Assert.Equal(Contract.DefaultCompanionPage, settings.ScreenCompanionPage("Gone"));
+            Assert.Equal(Contract.DefaultCompanionStart, settings.CycleScreenModule("Gone"));
+        }
+
+        [Fact]
+        public void A_pit_wall_glance_borrows_one_zone_and_gives_it_back()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
+            settings.Normalise();
+            var wall = settings.ScreenOf("PitWall");
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, wall.PitWallQuickGlance);
+
+            // Zone C, the relative by default, lent to the radar and handed back on release.
+            wall.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(2, 9);
+            settings.BeginScreenGlance("PitWall");
+            Assert.Equal(9, settings.ScreenZone("PitWall", "C"));
+            // The other zones stay where they are, and a second press while one is held does nothing.
+            Assert.Equal(Contract.PitWallDefaultZonePages[1], settings.ScreenZone("PitWall", "B"));
+            settings.BeginScreenGlance("PitWall");
+            settings.EndScreenGlance("PitWall");
+            Assert.Equal(Contract.PitWallDefaultZonePages[2], settings.ScreenZone("PitWall", "C"));
+            // A release with no press does nothing rather than restoring a page nobody took.
+            wall.Zones[2] = 6;
+            settings.EndScreenGlance("PitWall");
+            Assert.Equal(6, settings.ScreenZone("PitWall", "C"));
+
+            // A stored glance outside the catalogue reads as the default, and a screen the rig no
+            // longer holds reads the default too rather than throwing on SimHub's own thread.
+            wall.PitWallQuickGlance = 411;
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, settings.ScreenPitWallQuickGlance("PitWall"));
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, settings.ScreenPitWallQuickGlance("Gone"));
         }
 
         [Fact]

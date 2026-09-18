@@ -3,27 +3,33 @@
  *
  * The right-hand groups are laid out from the right edge in a fixed order, each measured from its
  * own text, so a longer session name or a three-digit incident count never pushes another group
- * off the screen. Track state is not drawn: SimHub has no wetness or rubber value from iRacing,
- * and a "Dry" that is always "Dry" is worse than an empty space.
+ * off the screen. They are laid out before the left-hand cluster, because the page name is the one
+ * text on the strip whose width is known at build time and is therefore what gives way when the
+ * two sides meet: the portrait header once drew "OFFLINE TESTING" over "PIT WALL · PORTRAIT".
+ *
+ * The seventh group is the track state, which SimHub publishes as `TrackGripStatus` and which band
+ * D and the track module bind as well. The compact portrait header drops it along with the wind and
+ * the sim clock, which is room the 1080 px strip does not have.
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
+import { withBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { rect } from '../design/geometry.ts';
-import { canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
+import { rect, roundRect } from '../design/geometry.ts';
+import { canvasBaseline, canvasYForBaseline, textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
 import { FLAG_PRIORITY, flagVisible } from '../components/flagStrip.ts';
 import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
-import { CHARS, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionTimeLeft, sessionType, simClock, totalLaps, windKmh } from '../second/values.ts';
-import { ds } from '../tokens.ts';
+import { CHARS, GRIP_WIDEST, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionTimeLeft, sessionType, simClock, totalLaps, trackGrip, windKmh } from '../second/values.ts';
+import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { concat, str, fmt, iff, gt, num, isnull, isNull, not, ucase } = ncalc;
 
 /** Height of the pit wall header and the padding either side of it. */
-export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 20, groupGap: 28 } as const;
+export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
 /** The three page squares of the landscape dashboard. */
 export const PAGE_SQUARE = { size: 8, gap: 6 } as const;
 /** The flag block beside the flag's name. */
@@ -61,6 +67,15 @@ const WIDEST_INCIDENT_LIMIT = '/ unlimited';
 /** A lap total wider than three digits is not a race anyone drives. */
 const WIDEST_LAP_TOTAL = 'OF 999';
 
+/** The same total after the portrait's "Lap 12 / 30", which writes it as a denominator. */
+const WIDEST_LAP_DENOMINATOR = '/ 999';
+
+/**
+ * The strongest wind the readout has room for, unit included. iRacing's weather generator stays
+ * far below it, but the box is measured before the binding exists and WPF clips what does not fit.
+ */
+const WIDEST_WIND = '188 km/h';
+
 /** The flag colour and name as one expression each, in priority order, defaulting to no flag. */
 const flagColour = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => iff(flagVisible(flag), str(FLAG_LOOK[flag]?.color ?? ds.color.text.dim), fallback), str(ds.color.text.dim));
 const flagName = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => iff(flagVisible(flag), str((FLAG_LOOK[flag]?.name ?? '').toUpperCase()), fallback), str('NO FLAG'));
@@ -89,6 +104,57 @@ export function wordmark(name: string, x: number, top: number, fs: number): { it
   };
 }
 
+/** A word of the data face, under the small label the group is read by. */
+interface RunSpec {
+  label?: string;
+  sample: string;
+  widest: string;
+  bind: Expr;
+}
+
+/**
+ * One run of the data face, measured from its own widest string rather than from monospace cells.
+ *
+ * The wind reads "12 km/h" and the track state reads "MODERATE", and neither can be monospaced: the
+ * "m" both carry is one of the characters `font.cell.excluded` names as overrunning the digit cell,
+ * so the run is drawn proportionally and the group measures it with the advances.
+ */
+function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { width: number; draw(x: number, top: number): Item[] } {
+  const gap = ds.space[2];
+  const labelWidth = spec.label === undefined ? 0 : Math.ceil(measureText('BarlowMedium', spec.label.toUpperCase(), labelSize)) + 2;
+  const runWidth = Math.ceil(measureText('BarlowCondensedSemiBold', spec.widest, fs)) + 2;
+  const runOffset = spec.label === undefined ? 0 : labelWidth + gap;
+  return {
+    width: runOffset + runWidth,
+    draw(x: number, top: number): Item[] {
+      const box = textBox(top, fs);
+      const items: Item[] = [];
+      if (spec.label !== undefined) {
+        items.push(label(`${name}.0`, spec.label, x, canvasYForBaseline(canvasBaseline(top, fs), labelSize), labelWidth, { size: labelSize }));
+      }
+      items.push({
+        kind: 'text',
+        name: `${name}.${spec.label === undefined ? 0 : 1}`,
+        rect: roundRect({ left: x + runOffset, top: box.top, width: runWidth, height: box.height }),
+        text: spec.sample,
+        widest: spec.widest,
+        font: ds.font.data,
+        fontWeight: 'SemiBold',
+        fontSize: fs,
+        textColor: ds.color.text.primary,
+        hAlign: 'left',
+        vAlign: 'top',
+        backgroundColor: TRANSPARENT,
+        ...withBindings({ Text: spec.bind }),
+      });
+      return items;
+    },
+  };
+}
+
+/** A right-hand group: a run of inline parts, or one proportional run of the data face. */
+type HeaderGroup = { id: string; parts: InlinePart[]; run?: undefined } | { id: string; parts?: undefined; run: RunSpec };
+
 export interface PitWallHeaderSpec {
   frame: Rect;
   /** "Pit wall · race" and the like. */
@@ -96,13 +162,18 @@ export interface PitWallHeaderSpec {
   /** 1-based page and page count; a portrait dashboard has one page and draws no squares. */
   page: number;
   pages: number;
-  /** A narrow header drops the wind and the sim clock, which is what the portrait page needs. */
+  /**
+   * A narrow header for the portrait page: it drops the wind, the sim clock, the "local" after the
+   * wall clock and the incident limit, and writes the lap as "Lap 12 / 30" rather than the session
+   * name and "L12 of 30". Every one of those is room the 1080 px sheet does not have.
+   */
   compact?: boolean;
 }
 
 /**
  * The header. Left: wordmark, page name, page squares. Right, from the right edge inwards: the two
- * clocks, the wind, the incident count, the flag, the time left and the session and lap.
+ * clocks, the wind, the track state, the incident count, the flag, the time left and the session
+ * and lap.
  */
 export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'zone' = 'zone'): Item[] {
   const d = densityOf(density);
@@ -112,37 +183,30 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   const labelY = canvasYForBaseline(canvasBaseline(top, fs), d.labelSm);
   const items: Item[] = [];
 
-  const mark = wordmark(`${name}.wordmark`, frame.left + PIT_WALL_HEADER.padX, top - 2, 28);
-  items.push(...mark.items);
-  let x = frame.left + PIT_WALL_HEADER.padX + mark.width + PIT_WALL_HEADER.gap;
-  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName.toUpperCase(), d.labelSm)) + 2;
-  items.push(label(`${name}.page`, spec.pageName, x, labelY, pageWidth, { size: d.labelSm, color: ds.color.text.secondary }));
-  x += pageWidth + PIT_WALL_HEADER.gap;
-  if (spec.pages > 1) {
-    for (let i = 0; i < spec.pages; i++) {
-      items.push(
-        band(
-          `${name}.square${i + 1}`,
-          rect(x + i * (PAGE_SQUARE.size + PAGE_SQUARE.gap), Math.round(top + (fs - PAGE_SQUARE.size) / 2), PAGE_SQUARE.size, PAGE_SQUARE.size),
-          i + 1 === spec.page ? ds.color.text.primary : ds.color.text.dim,
-        ),
-      );
-    }
-  }
-
+  const compact = spec.compact ?? false;
   const hasLimit = not(isNull(incidentLimit()));
-  const groups: { id: string; parts: InlinePart[] }[] = [
-    {
-      id: 'session',
-      parts: [
-        // Sized for "OFFLINE TESTING" and drawn from the right, so that the slack a short name
-        // leaves falls to the left, into the empty middle of the header, rather than opening a
-        // hole between the session name and the lap.
-        { kind: 'label', text: 'RACE', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: ucase(sessionType()) },
-        { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
-        { kind: 'label', text: 'OF 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('OF '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
-      ],
-    },
+  const lapTotal = gt(totalLaps(), num(0));
+  const groups: HeaderGroup[] = [
+    compact
+      ? {
+          id: 'lap',
+          parts: [
+            { kind: 'label', text: 'LAP' },
+            { kind: 'value', sample: '12', bind: fmt(currentLap(), '0'), chars: { digits: 3, specials: 0 } },
+            { kind: 'label', text: '/ 30', widest: WIDEST_LAP_DENOMINATOR, bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
+          ],
+        }
+      : {
+          id: 'session',
+          parts: [
+            // Sized for "OFFLINE TESTING" and drawn from the right, so that the slack a short name
+            // leaves falls to the left, into the empty middle of the header, rather than opening a
+            // hole between the session name and the lap.
+            { kind: 'label', text: 'RACE', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: ucase(sessionType()) },
+            { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
+            { kind: 'label', text: 'OF 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('OF '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
+          ],
+        },
     {
       id: 'timeLeft',
       parts: [
@@ -161,37 +225,70 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       id: 'incidents',
       parts: [
         { kind: 'label', text: 'INC' },
-        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.fuel.low },
-        { kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit },
+        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.alert.incident },
+        ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit } as InlinePart]),
       ],
     },
     {
+      id: 'track',
+      run: { label: 'TRACK', sample: 'DRY', widest: GRIP_WIDEST, bind: trackGrip() },
+    },
+    {
       id: 'wind',
-      parts: [
-        { kind: 'label', text: 'WIND' },
-        { kind: 'value', sample: '12', bind: fmt(windKmh(), '0'), chars: { digits: 3, specials: 0 } },
-        { kind: 'label', text: 'KM/H' },
-      ],
+      run: { sample: '12 km/h', widest: WIDEST_WIND, bind: concat(fmt(windKmh(), '0'), str(' km/h')) },
     },
     {
       id: 'clocks',
       parts: [
         { kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } },
-        { kind: 'label', text: 'LOCAL' },
-        { kind: 'value', sample: '15:07', bind: simClock(), chars: { digits: 5, specials: 1 } },
-        { kind: 'label', text: 'SIM' },
+        ...(compact
+          ? []
+          : ([
+              { kind: 'label', text: 'LOCAL' },
+              { kind: 'value', sample: '15:07', bind: simClock(), chars: { digits: 5, specials: 1 } },
+              { kind: 'label', text: 'SIM' },
+            ] as InlinePart[])),
       ],
     },
   ];
 
-  const shown = spec.compact ? groups.filter((g) => g.id !== 'wind' && g.id !== 'clocks').concat([{ id: 'clock', parts: [{ kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } }, { kind: 'label', text: 'LOCAL' }] }]) : groups;
+  const shown = compact ? groups.filter((g) => g.id !== 'wind' && g.id !== 'track') : groups;
+  const readouts: Item[] = [];
   let right = frame.left + frame.width - PIT_WALL_HEADER.padX;
   for (const group of [...shown].reverse()) {
-    const g = inlineGroup(`${name}.${group.id}`, group.parts, fs, density);
+    const g = group.run ? dataRun(`${name}.${group.id}`, group.run, fs, d.labelSm) : inlineGroup(`${name}.${group.id}`, group.parts, fs, density);
     right -= g.width;
-    items.push(...g.draw(right, top));
+    readouts.push(...g.draw(right, top));
     right -= PIT_WALL_HEADER.groupGap;
   }
+
+  const mark = wordmark(`${name}.wordmark`, frame.left + PIT_WALL_HEADER.padX, top - 2, 28);
+  items.push(...mark.items);
+  let x = frame.left + PIT_WALL_HEADER.padX + mark.width + PIT_WALL_HEADER.gap;
+  const squares = spec.pages > 1 ? spec.pages * PAGE_SQUARE.size + (spec.pages - 1) * PAGE_SQUARE.gap : 0;
+  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName.toUpperCase(), d.labelSm)) + 2;
+  // The loop leaves `right` a group gap clear of everything it drew, which is the room the cluster
+  // has. The squares are counted first because they say which page this is and the name only
+  // repeats it, and a name that does not fit goes whole rather than cut to the room: WPF clips
+  // mid-word and the strip would read "PIT WALL · PORTR".
+  const room = right - x;
+  if (pageWidth + (squares > 0 ? PIT_WALL_HEADER.gap + squares : 0) <= room) {
+    items.push(label(`${name}.page`, spec.pageName, x, labelY, pageWidth, { size: d.labelSm, color: ds.color.text.secondary }));
+    x += pageWidth + PIT_WALL_HEADER.gap;
+  }
+  if (squares > 0) {
+    for (let i = 0; i < spec.pages; i++) {
+      items.push(
+        band(
+          `${name}.square${i + 1}`,
+          rect(x + i * (PAGE_SQUARE.size + PAGE_SQUARE.gap), Math.round(top + (fs - PAGE_SQUARE.size) / 2), PAGE_SQUARE.size, PAGE_SQUARE.size),
+          i + 1 === spec.page ? ds.color.text.primary : ds.color.text.dim,
+        ),
+      );
+    }
+  }
+
+  items.push(...readouts);
   items.push(rule(`${name}.rule`, frame.left, frame.top + frame.height - 1, frame.width, 1));
   return items;
 }

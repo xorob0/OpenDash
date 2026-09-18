@@ -181,13 +181,30 @@ const checkFunctions = (ctx: Context, expression: string, path: string): void =>
   }
 };
 
+/**
+ * Every binding on an item, the one inside its border included.
+ *
+ * A border's colour is bound in `BorderStyle`'s own `Bindings`, which is a different place in the
+ * JSON and the same expression everywhere else: it has to go through the property and function
+ * guards like any other, or a border is the one place a typo survives the build.
+ */
+const bindingsOf = (item: Item): { target: string; binding: Binding; bpath: string; nested: boolean }[] => {
+  const all = Object.entries(item.bindings ?? {})
+    .filter(([, binding]) => binding)
+    .map(([target, binding]) => ({ target, binding: binding as Binding, bpath: `#Bindings.${target}`, nested: false }));
+  const border = 'border' in item ? item.border : undefined;
+  if (border?.colorBinding) {
+    all.push({ target: 'BorderColor', binding: border.colorBinding, bpath: '#BorderStyle.Bindings.BorderColor', nested: true });
+  }
+  return all;
+};
+
 const checkBindings = (ctx: Context, item: Item, path: string): void => {
   const { c } = ctx;
   const allowed = ALLOWED_BINDING_TARGETS[item.kind];
-  for (const [target, binding] of Object.entries(item.bindings ?? {})) {
-    if (!binding) continue;
-    const bpath = `${path}#Bindings.${target}`;
-    if (!allowed.includes(target as BindingTarget)) {
+  for (const { target, binding, bpath: suffix, nested } of bindingsOf(item)) {
+    const bpath = `${path}${suffix}`;
+    if (!nested && !allowed.includes(target as BindingTarget)) {
       c.error('binding/unknown-target', bpath, `${target} cannot be bound on a ${item.kind} item`);
     }
     if (binding.mode === 'gradient') {

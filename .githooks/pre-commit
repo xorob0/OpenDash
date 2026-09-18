@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# Refuse to commit a file somebody else is still holding open.
+#
+# The rule this replaces was a list of four paths, refused for ever. It was right about the risk and
+# wrong about how to measure it: a path is only dangerous while an uncommitted copy of it exists
+# somewhere, and most of the time none does. Refusing it regardless cost a whole session's
+# documentation, which had to be handed over as a patch file and applied by hand.
+#
+# So this asks the question directly, per path, and answers it from the repository rather than from
+# a list: is there live work on this file in another worktree, or in the stash? If there is, it
+# refuses and says where. If there is not, nobody loses anything and the commit proceeds.
+#
+# design/ is the exception and stays refused unconditionally, because that is a standing project
+# rule ("design/ is the design source and is not edited from code", CLAUDE.md) rather than a
+# question about who is holding what.
+#
+# Living here rather than in .git/hooks so that it is reviewed like anything else, and so that every
+# worktree gets the same one. Adopt it with: git config core.hooksPath .githooks
+set -euo pipefail
+
+# Replaying somebody else's commit is the case where these change without anybody having staged a
+# stray edit: both sides touched the file, and git cannot record the result while the path is still
+# unmerged. The resolution is read in the pull request rather than here. A rebase, a cherry-pick and
+# a revert are the same situation as a merge and were refused by the rule this replaces, which left
+# no way out of a conflicted rebase at all.
+for head in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD REBASE_HEAD; do
+  if [ -e "$(git rev-parse --git-path "$head")" ]; then
+    exit 0
+  fi
+done
+for dir in rebase-merge rebase-apply; do
+  if [ -d "$(git rev-parse --git-path "$dir")" ]; then
+    exit 0
+  fi
+done
+
+staged=$(git diff --cached --name-only)
+[ -n "$staged" ] || exit 0
+
+refuse() {
+  local headline="$1"
+  shift
+  echo "pre-commit: $headline" >&2
+  printf '  %s\n' "$@" >&2
+  exit 1
+}
+
+# 1. design/ is the author's, always.
+drawn=$(printf '%s\n' "$staged" | grep -E '^design/' || true)
+if [ -n "$drawn" ]; then
+  refuse "design/ is the design source and is not edited from code:" \
+    $drawn \
+    "" \
+    "unstage with: git restore --staged $(echo $drawn | tr '\n' ' ')" \
+    "where the build and the canvas disagree, say so in the pull request instead of changing either."
+fi
+
+# 2. The author's drafts, refused only while a draft is actually open.
+watched='^(packages/dash/test/tokens\.test\.ts|docs/design/plugin\.md|docs/research/icons\.md)$'
+candidates=$(printf '%s\n' "$staged" | grep -E "$watched" || true)
+[ -n "$candidates" ] || exit 0
+
+if [ "${OPENDASH_COMMIT_ANYWAY:-}" = "1" ]; then
+  echo "pre-commit: OPENDASH_COMMIT_ANYWAY=1, so the draft check is skipped for:" >&2
+  printf '  %s\n' $candidates >&2
+  exit 0
+fi
+
+here=$(git rev-parse --show-toplevel)
+
+# The token test reads the token file, so committing one while the other is being edited is what
+# makes CI fail on a mismatch. They are one decision and are asked about together.
+partners() {
+  case "$1" in
+    packages/dash/test/tokens.test.ts) printf '%s\n%s\n' "$1" "design/tokens.json" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
+# A tracked file with uncommitted changes is a draft. An untracked file whose bytes are already an
+# object in the store was checked out or staged at some point and left behind, which is a leftover
+# and not somebody's work in progress; that distinction is the whole point of this hook, because one
+# of the four watched paths is a live draft today and another is a stale copy of a committed blob.
+live_in_worktree() {
+  local wt="$1" path="$2" line status sha
+  line=$(git -C "$wt" status --porcelain --untracked-files=normal -- "$path" 2>/dev/null | head -1)
+  [ -n "$line" ] || return 1
+  status=${line:0:2}
+  if [ "$status" = "??" ]; then
+    sha=$(git -C "$wt" hash-object -- "$wt/$path" 2>/dev/null) || return 1
+    git cat-file -e "$sha" 2>/dev/null && return 1
+  fi
+  return 0
+}
+
+live_in_stash() {
+  local path="$1" ref
+  for ref in $(git stash list --format='%gd' 2>/dev/null | head -20); do
+    if git stash show --name-only "$ref" 2>/dev/null | grep -qxF "$path"; then
+      echo "$ref"
+      return 0
+    fi
+  done
+  return 1
+}
+
+held=()
+for path in $candidates; do
+  for subject in $(partners "$path"); do
+    while read -r wt; do
+      [ -n "$wt" ] || continue
+      [ "$wt" = "$here" ] && continue
+      if live_in_worktree "$wt" "$subject"; then
+        held+=("$path — $subject is open in $wt")
+      fi
+    done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
+
+    if ref=$(live_in_stash "$subject"); then
+      held+=("$path — $subject is in $ref")
+    fi
+  done
+done
+
+if [ ${#held[@]} -gt 0 ]; then
+  refuse "these have live work elsewhere, and committing them would contradict it:" \
+    "${held[@]}" \
+    "" \
+    "commit or discard the other copy first, or hand this over as a patch:" \
+    "  git diff --cached -- $(echo $candidates | tr '\n' ' ') > handover.patch" \
+    "" \
+    "if you are certain the other copy is stale: OPENDASH_COMMIT_ANYWAY=1 git commit ..."
+fi
+
+exit 0

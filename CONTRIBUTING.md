@@ -26,6 +26,31 @@ dotnet test plugin/OpenDash.Tests
 dotnet build plugin/OpenDash -c Release
 ```
 
+Note that `bun.lock` is written at lockfile version 2, which a bun older than the one that wrote it
+cannot read: such a bun reports "Unknown lockfile version", ignores the file and rewrites it. If your
+`bun install` keeps rewriting the lockfile, that is why, and the remedy is to upgrade bun rather than
+to commit the rewritten file. CI deliberately does not pin bun for this reason.
+
+`global.json` pins that 8, and it is there for a reason rather than out of caution. A newer compiler
+resolves `array.Reverse()` to the span overload in `System.MemoryExtensions`, which reverses in place
+and returns void, where the .NET 8 compiler resolves it to LINQ. The result is code that compiles on
+one machine and not on the other, which has cost this repository three separate fixes. With the pin,
+a local build and the runner read the same source the same way. If you have only a newer SDK, `dotnet`
+will say so plainly instead of compiling something different; install 8 rather than raising the pin.
+
+There is also a pre-commit hook, which is not installed by default:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+It refuses two things. Anything under `design/` it refuses outright, because the canvas is the design
+source and is not edited from code. The author's drafts it refuses only while a draft is actually
+open somewhere, which it works out by looking in every worktree and in the stash rather than by
+consulting a list, so a file nobody is holding commits normally. When it does refuse, it says which
+worktree holds the other copy, and `OPENDASH_COMMIT_ANYWAY=1` is the way past it when you are certain
+that copy is stale.
+
 ## The face is being rebuilt
 
 The list below describes the code as it is: cards, slots and a rung. The settled design is the

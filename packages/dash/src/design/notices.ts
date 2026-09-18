@@ -13,6 +13,7 @@
  */
 
 import path from 'node:path';
+import { assetNamed, type AssetSourceId } from './assets.ts';
 import type { DashPackage, NoticeFile } from '../generator.ts';
 import { VENDORED_FONTS_DIR } from './fontFiles.ts';
 
@@ -20,23 +21,31 @@ import { VENDORED_FONTS_DIR } from './fontFiles.ts';
 export const FONT_LICENCE: NoticeFile = { name: 'OFL.txt', path: path.join(VENDORED_FONTS_DIR, 'OFL.txt') };
 
 /**
- * The notices owed for the images a package carries.
+ * What each source of artwork owes, one entry per source of `design/assets.ts`.
  *
- * Empty until something ships an image. Material Design Icons are Apache 2.0, which requires both
- * the licence text and the NOTICE naming Pictogrammers, and both belong here beside the artwork
- * when #148 brings it.
+ * The record is exhaustive over the sources, so artwork from somewhere new does not compile until
+ * somebody has answered what travels with it. An empty list is that answer and not an oversight:
+ * openDash's own drawings are MIT with the repository they are published from, and nothing
+ * separate has to accompany them. Material Design Icons, which the twelve telltale pictograms are
+ * still waiting on, are Apache 2.0 and will owe both the licence text and the NOTICE naming
+ * Pictogrammers, in the commit that brings the files.
  */
-export const IMAGE_LICENCES: readonly NoticeFile[] = [];
+export const NOTICES_BY_SOURCE: Record<AssetSourceId, readonly NoticeFile[]> = {
+  openDash: [],
+};
 
 /** Every licence `pkg` owes, in the order they are written into the folder. */
 export const noticesForPackage = (pkg: DashPackage): NoticeFile[] => {
   const notices: NoticeFile[] = [];
   if (pkg.fonts.length > 0) notices.push(FONT_LICENCE);
-  if (pkg.dashboards.some((dashboard) => dashboard.images?.length)) {
-    if (IMAGE_LICENCES.length === 0) {
-      throw new Error(`${pkg.folderName} carries images but no licence is registered for them; add it to IMAGE_LICENCES before shipping the artwork`);
+  for (const image of pkg.dashboards.flatMap((dashboard) => dashboard.images ?? [])) {
+    const asset = assetNamed(image.name);
+    if (asset === undefined) {
+      throw new Error(
+        `${pkg.folderName} carries the image ${JSON.stringify(image.name)}, which no asset claims, so no licence is registered for it; add it to ASSETS in design/assets.ts before shipping the artwork`,
+      );
     }
-    notices.push(...IMAGE_LICENCES);
+    for (const notice of NOTICES_BY_SOURCE[asset.source]) if (!notices.some((carried) => carried.name === notice.name)) notices.push(notice);
   }
   return notices;
 };

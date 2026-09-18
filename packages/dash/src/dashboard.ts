@@ -73,8 +73,13 @@ export function buildLayout(layout: Layout, opts: BuildOptions): BuiltLayout {
   return { main, cards };
 }
 
-/** The TTFs the face uses; the others in fonts/ stay for the plugin and future surfaces. */
-export const FACE_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'Barlow-Medium.ttf'] as const;
+/**
+ * The TTFs the face uses; the others in fonts/ stay for the plugin and future surfaces. This is
+ * the set of faces the face draws in rather than the set it could ask for, and `validateOrThrow`
+ * in build.ts refuses a package that draws a weight missing from it, so a weight is added here,
+ * and measured into design/advances.ts, before anything is drawn in it.
+ */
+export const FACE_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'Barlow-Medium.ttf', 'Barlow-Bold.ttf'] as const;
 
 /**
  * Absolute paths of the fonts to copy into `_SHFonts/`, renamed on the way so that SimHub resolves

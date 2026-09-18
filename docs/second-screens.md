@@ -80,6 +80,12 @@ bound, so a setting change moves a zone to another page without touching a file.
 who moves it, and it is the reason the two catalogues have stayed apart: a pit wall zone is chosen
 with a mouse by somebody who is not driving, and a face zone is cycled with a thumb mid-lap.
 
+**A wide zone names what the extra width buys.** Three of its six pages draw more than the standard
+zone's rather than the same thing larger, so the catalogue calls them "Lap history · delta to best",
+"Opponents · best and last" and "Tyres · psi and kPa", where the standard zone keeps the bare module
+name. A page that gains nothing from the width, the inputs trace and the web view, keeps its own
+name in both catalogues.
+
 One zone dashboard exists per distinct zone rectangle a package uses, because a widget scaled to a
 box it was not drawn for would scale its type with it. The zone dashboards are derived from the
 widgets the pages actually placed, so a page that moves a zone cannot leave a dangling file.
@@ -112,8 +118,16 @@ Nothing here is a placeholder for work that is pending. Each is a value the sim 
 | Class header bands | Per-class rows exist only for the player's class (above). |
 | The gain-and-loss bar on the opponents module | It needs a history of the gap, which neither SimHub nor a generated dashboard keeps. The gap itself, refreshed every frame, says the same thing. |
 | Incidents per car | iRacing carries them only in the session YAML, per entry rather than per leaderboard row. Your own count is in the pit wall header. |
-| Track state, strength of field | Neither exists as a SimHub property from iRacing. |
-| Rank triangles, change ticks | SimHub draws rectangles, ellipses and text; a triangle is not among them. A 6 px square in the same colour, in the same place, carries the same meaning. |
+| Strength of field | It does not exist as a SimHub property from iRacing. The catalogue draws it in the session module's third rank, which is therefore built two fields wide rather than three. Track state, listed here until the track module drew it, does exist: `TrackGripStatus` is what band D and the track page's header both bind. |
+| Square car markers, and the two coloured cars beside the grey ones (module 13) | SimHub's `StaticMapItem` carries one player style and one opponent style, each a dot with a radius and a colour, and nothing about shape. Every opponent is therefore the same grey dot: the catalogue's blue and purple markers would need a per-car colour the item does not expose, and class colours, the one per-car colour it does expose, are deliberately off. |
+| Car rectangles, the lane grid and a red outline on the threatening car (module 12) | SimHub's `RadarItem` exposes a scale, a player dot style and an opponent dot style. It draws no grid of its own, draws every opponent alike, and has no notion of a threat, so the cars are dots and the grid lines beneath them are rectangles the module draws itself. |
+| Spotter arrows (module 12) | SimHub has no path, so an arrow can only be a picture, and a picture carries no colour: a flank that is dim when the spotter is quiet and red when it calls would be two files a side. The flanks are rectangles that turn red on the side the spotter is calling, which reads better at a glance than a 46 px arrow would and carries the same meaning without the shape. |
+| The steering dial (module 10) | The catalogue draws a 96 px arc with a dot on its rim, turned by the wheel angle. SimHub draws no arc, and `Rotation` is a number written into the package rather than one of the properties a formula can drive, so nothing on the page can turn. The angle is drawn as a marker running along a track of the same width instead, since `Left` does bind. |
+| Fuel used this stint (module 18) | SimHub publishes the last lap's consumption and the current lap's, and no figure at all for what the tank has given since the stop. Laps since the stop multiplied by the rolling average is an estimate wearing a measurement's label, so the field is left out rather than approximated. |
+| Per-lap fuel, and the fuel target drawn over it (module 19) | The previous-lap family carries ten lap times and their deltas to the session best, and no consumption beside them. Keeping one per lap would mean remembering between frames, which [decisions/0009-does-the-plugin-compute.md](decisions/0009-does-the-plugin-compute.md) refuses; the lap history therefore draws that delta where the catalogue draws fuel. |
+| Round caps and round joins on a trace | `ChartItem` carries a colour, a thickness and a sample count, and nothing about how a line ends or how it turns, so every polyline the canvas draws round is drawn square and mitred here. It is the format rather than a setting left unset, and the only place it shows is a pedal at full application, where the canvas rounds the plateau and the build corners it. |
+| The licence badge and its safety rating, on a list row and on the opponents identity row | iRacing carries the licence in the session YAML and no reader for it has been verified, so the table declares the column and draws nothing in it rather than inventing a letter. The catalogue's 12 px `B` at the `tall` opponents shape is that badge, which is why the shedding table keeps the last lap there instead. |
+| The nationality flag beside a driver, 20 by 14 | A picture rather than text, so it waits on the image assets the flag box is waiting on: one file per country, each with the licence that has to travel with it. |
 
 Three of those (energy, damage, track rivals) ship as modules that say so, off by default, because
 the data exists in other sims and the module should be there when someone runs one.

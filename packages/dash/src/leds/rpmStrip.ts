@@ -27,18 +27,20 @@
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { DEFAULTS, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
+import { DEFAULTS, flagBox, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
 import type { LedCentre, LedRpmStyle } from '../contract.ts';
 import { mirrorAvailable } from '../shift.ts';
-import { OVER_REV_BLINK_MS, ladderColors, ladderOrder, overRev, rungFlashes, rungLit, stepLit, type Ladder } from './ladder.ts';
-import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
+import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
+import { brake as brakeInput, fuelPercent, tankIsLow, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { ALL_EFFECTS, effectContainer, type LedEffect } from './effects.ts';
+import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
+import { ignitionIsOn } from './gates.ts';
+import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { carCentre } from './mirror.ts';
-import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
+import { centreStart, deviceLength, stripLength, type StripShape } from './strip.ts';
 
-const { and, eq, gt, not, num, or, str } = ncalc;
+const { and, eq, not, str } = ncalc;
 
 /** `isnull([OpenDash.LedCentre], 'rpm') = '<which>'`, the gate on each centre function. */
 const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which));
@@ -46,26 +48,67 @@ const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which))
 /** `isnull([OpenDash.LedRpmStyle], 'leftToRight') = '<which>'`, the gate on each style. */
 const styleIs = (which: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(which));
 
+/**
+ * The condition of a container whose group has already decided it. A `CustomStatus` must carry an
+ * `EnabledFormula`, so there is no way to write "always" but to write it; repeating the group's own
+ * trigger in every child would be the same expression spelled `count` times and would read as a
+ * second decision.
+ */
+const TRUE: Expr = 'true';
+
 /** The rev ladder over `count` LEDs, in one style, under one of the two ladders. */
 const rungs = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContainer[] => {
   const order = ladderOrder(style, count);
   const colors = ladderColors(style);
   return Array.from({ length: count }, (_, k) => {
     const rung = order.rungOf(k);
-    const band = Math.min(2, Math.floor((rung * 3) / order.rungs));
     return {
       kind: 'customStatus' as const,
       description: `rev ${String(k + 1).padStart(2, '0')}`,
       startPosition: k + 1,
       ledCount: 1,
-      color: colors[band] ?? colors[2],
+      color: colors[bandOf(rung, order.rungs)] ?? colors[2],
       enabledFormula: { expression: rungLit(which, rung, order.rungs) },
-      ...(rungFlashes(style, rung, order.rungs)
-        ? { blinkFormula: { expression: overRev(which) }, blinkColor: colors[2], blinkDelayMs: OVER_REV_BLINK_MS }
-        : {}),
     };
   });
 };
+
+/**
+ * Over-rev: the whole run in one colour, flashing, over whatever the rungs beneath it were drawing.
+ *
+ * It is a layer rather than a property of the rungs, and that is three corrections in one shape.
+ * Over-rev is a state of the bar and not of its top band, so every style says it the same way and a
+ * driver who changes style changes the ladder's look and not what it tells them. It is one colour —
+ * {@link OVER_REV_COLOR} — rather than each rung's own, so the bar reads as having turned rather
+ * than as having brightened in places. And the off phase is {@link BLINK_OFF} rather than the
+ * colour itself: `StaticColorContainerBase` alternates `Color` with `BlinkingColor`, both fields
+ * held one hex on a flashing rung, and the over-rev flash had therefore never flashed at all.
+ *
+ * `clearBackgroundWhenActive` because a bar that is over-revving is not also a ladder part way up,
+ * and the rate is the catalogue's fast one, so over-rev is the same urgency on the centre that oil
+ * pressure is on a lamp. The gate is the trigger alone; each LED is then unconditionally its
+ * colour, which is what one LED of a bar that has all turned one colour is.
+ */
+const overRevLayer = (count: number, when: Expr): leds.LedContainer => ({
+  kind: 'conditionalGroup',
+  description: 'over-rev',
+  trigger: { expression: when },
+  clearBackgroundWhenActive: true,
+  children: Array.from({ length: count }, (_, k) => ({
+    kind: 'customStatus' as const,
+    description: `over-rev ${String(k + 1).padStart(2, '0')}`,
+    startPosition: k + 1,
+    ledCount: 1,
+    color: OVER_REV_COLOR,
+    enabledFormula: { expression: TRUE },
+    blinkFormula: { expression: TRUE },
+    blinkColor: BLINK_OFF,
+    blinkDelayMs: FAST_BLINK_MS,
+  })),
+});
+
+/** One derived ladder: its rungs, and the over-rev layer that takes the bar from them. */
+const ladderLayers = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContainer[] => [...rungs(count, style, which), overRevLayer(count, overRev(which))];
 
 /**
  * The measured overrides, one `Groups.CustomConditionalGroup` per car and gear the table covers.
@@ -89,23 +132,24 @@ const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[]
         description: `${car.name}, gear ${gear}`,
         trigger: { expression: tabledGear(model, gear) },
         clearBackgroundWhenActive: true,
-        children: Array.from({ length: count }, (_, k) => {
-          const rung = order.rungOf(k);
-          const band = Math.min(2, Math.floor((rung * 3) / order.rungs));
-          const bandStart = Array.from({ length: order.rungs }, (_, i) => i).findIndex((i) => Math.min(2, Math.floor((i * 3) / order.rungs)) === band);
-          const bandCount = Array.from({ length: order.rungs }, (_, i) => i).filter((i) => Math.min(2, Math.floor((i * 3) / order.rungs)) === band).length;
-          return {
-            kind: 'customStatus' as const,
-            description: `rev ${String(k + 1).padStart(2, '0')}`,
-            startPosition: k + 1,
-            ledCount: 1,
-            color: colors[band] ?? colors[2],
-            enabledFormula: { expression: tabledStageLit(points, band, rung - bandStart, bandCount) },
-            ...(rungFlashes(style, rung, order.rungs)
-              ? { blinkFormula: { expression: tabledOverRev(points) }, blinkColor: colors[2], blinkDelayMs: OVER_REV_BLINK_MS }
-              : {}),
-          };
-        }),
+        children: [
+          ...Array.from({ length: count }, (_, k) => {
+            const rung = order.rungOf(k);
+            const band = bandOf(rung, order.rungs);
+            const span = bandSpan(band, order.rungs);
+            return {
+              kind: 'customStatus' as const,
+              description: `rev ${String(k + 1).padStart(2, '0')}`,
+              startPosition: k + 1,
+              ledCount: 1,
+              color: colors[band] ?? colors[2],
+              enabledFormula: { expression: tabledStageLit(points, band, rung - span.start, span.count) },
+            };
+          }),
+          // Inside the measured group rather than beside it, so that a car in the table over-revs on
+          // its own measured blink RPM and never on the one its ladder publishes.
+          overRevLayer(count, tabledOverRev(points)),
+        ],
       };
     }),
   );
@@ -128,13 +172,13 @@ const revCentre = (count: number): leds.LedContainer[] =>
         kind: 'conditionalGroup' as const,
         description: "the car's own shift lights",
         trigger: { expression: mirrorAvailable() },
-        children: rungs(count, style === 'car' ? 'leftToRight' : style, 'mirror'),
+        children: ladderLayers(count, style === 'car' ? 'leftToRight' : style, 'mirror'),
       },
       {
         kind: 'conditionalGroup' as const,
         description: "SimHub's bands, for a car that publishes no ladder",
         trigger: { expression: not(mirrorAvailable()) },
-        children: rungs(count, style === 'car' ? 'leftToRight' : style, 'simhub'),
+        children: ladderLayers(count, style === 'car' ? 'leftToRight' : style, 'simhub'),
       },
       // Last, so a measured gear composes over whichever ladder was derived for the car.
       ...tabledOverrides(count, style === 'car' ? 'leftToRight' : style),
@@ -160,39 +204,66 @@ const pedalBar = (count: number, value: Expr, color: string, label: string): led
 
 /**
  * Throttle and brake filling outwards from the middle: brake takes the left half, running out from
- * the centre, throttle the right. An odd centre gives brake the extra LED, since a driver watching
- * this is watching the brake.
+ * the centre, throttle the right.
+ *
+ * An odd centre keeps the two halves equal and spends the spare LED on the middle, lit white and
+ * lit always. Giving it to brake instead — which is what this did — made the two pedals read at
+ * different scales on half the shapes, so a foot flat on each filled one side one LED further than
+ * the other and the bar was never symmetrical about anything. A standing mark is also the only way
+ * a driver can see where the middle *is* when neither pedal is down.
  */
 const throttleBrakeBar = (count: number): leds.LedContainer[] => {
-  const brakeCount = Math.ceil(count / 2);
-  const throttleCount = count - brakeCount;
-  const brake = Array.from({ length: brakeCount }, (_, k) => ({
+  const middle = count % 2 === 1 ? 1 : 0;
+  const half = (count - middle) / 2;
+  const brake = Array.from({ length: half }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `brake ${String(k + 1).padStart(2, '0')}`,
     // Fills outwards: the LED nearest the middle is the first to light.
-    startPosition: brakeCount - k,
+    startPosition: half - k,
     ledCount: 1,
     color: ds.color.danger.primary,
-    enabledFormula: { expression: stepLit(brakeInput(), k, brakeCount) },
+    enabledFormula: { expression: stepLit(brakeInput(), k, half) },
   }));
-  const throttle = Array.from({ length: throttleCount }, (_, k) => ({
+  const centre: leds.LedContainer[] =
+    middle === 1
+      ? [
+          {
+            kind: 'customStatus' as const,
+            description: 'centre mark',
+            startPosition: half + 1,
+            ledCount: 1,
+            color: ds.color.text.primary,
+            enabledFormula: { expression: TRUE },
+          },
+        ]
+      : [];
+  const throttle = Array.from({ length: half }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `throttle ${String(k + 1).padStart(2, '0')}`,
-    startPosition: brakeCount + 1 + k,
+    startPosition: half + middle + 1 + k,
     ledCount: 1,
     color: ds.color.good.primary,
-    enabledFormula: { expression: stepLit(throttleInput(), k, throttleCount) },
+    enabledFormula: { expression: stepLit(throttleInput(), k, half) },
   }));
-  return [...brake, ...throttle];
+  return [...brake, ...centre, ...throttle];
 };
 
 /**
- * The fuel gauge: a bar that empties, and blinks below five percent. `FuelPercent` is SimHub's own,
- * so there is nothing computed here.
+ * The fuel gauge: a bar that empties, and blinks once the tank is low. The *height* is
+ * `FuelPercent`, which is SimHub's own; the *threshold* is {@link tankIsLow}, the laps remaining
+ * against the one number in laps the driver set.
+ *
+ * The bar used to raise itself at five percent of the tank, which was a third answer to "am I low"
+ * beside the box's and the lamp's. Five percent is also not a threshold a driver can act on: it is
+ * two laps in one car and half a lap in another, which is the whole reason the setting is in laps.
+ *
+ * Slow, which is what the catalogue's own low-fuel lamp blinks at: one condition cannot be urgent on
+ * the centre and merely true on a lamp of the same strip. Its off phase is the low-fuel colour rather
+ * than darkness, because here the second colour is the fact being reported.
  */
 const fuelBar = (count: number): leds.LedContainer[] => {
   const percent = fuelPercent();
-  const low = gt(num(5), percent);
+  const low = tankIsLow();
   return Array.from({ length: count }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `fuel ${String(k + 1).padStart(2, '0')}`,
@@ -202,26 +273,19 @@ const fuelBar = (count: number): leds.LedContainer[] => {
     enabledFormula: { expression: stepLit(percent, k, count) },
     blinkFormula: { expression: and(low, stepLit(percent, k, count)) },
     blinkColor: ds.purpose.fuel.low,
-    blinkDelayMs: OVER_REV_BLINK_MS * 4,
+    blinkDelayMs: SLOW_BLINK_MS,
   }));
 };
 
-/**
- * The five things the centre can be, each behind its own setting value.
- *
- * `rpm` and `rpmOnly` share one rev tree gated on either, rather than carrying a copy each: they
- * differ only in whether the sides light, which is decided over in {@link sides}. The rev tree is
- * already three styles times two ladders, so a second copy of it would be the largest thing in the
- * file and would say nothing new.
- */
+/** The four things the centre can be, each behind its own setting value. */
 const centreFunctions = (count: number): leds.LedContainer[] => [
   {
     kind: 'conditionalGroup',
-    description: 'centre: rpm or rpmOnly',
-    trigger: { expression: or(centreIs('rpm'), centreIs('rpmOnly')) },
+    description: 'centre: rpm',
+    trigger: { expression: centreIs('rpm') },
     children: revCentre(count),
   },
-  ...LED_CENTRES.filter((which) => which !== 'rpm' && which !== 'rpmOnly').map((which) => ({
+  ...LED_CENTRES.filter((which) => which !== 'rpm').map((which) => ({
     kind: 'conditionalGroup' as const,
     description: `centre: ${which}`,
     trigger: { expression: centreIs(which) },
@@ -231,66 +295,55 @@ const centreFunctions = (count: number): leds.LedContainer[] => [
 ];
 
 /**
- * The sides: brake, and only under the default centre. `rpmOnly` is the setting for somebody who
- * wants the strip to say one thing, so its sides stay dark rather than being filled with something
- * they did not ask for.
- */
-const sides = (shape: StripShape): leds.LedContainer[] => {
-  if (shape.left === 0 && shape.right === 0) return [];
-  const brake = brakeInput();
-  const side = (start: number, count: number, label: string): leds.LedContainer => ({
-    kind: 'group',
-    description: `${label} side`,
-    startPosition: start,
-    children: Array.from({ length: count }, (_, k) => ({
-      kind: 'customStatus' as const,
-      description: `${label} brake ${String(k + 1).padStart(2, '0')}`,
-      startPosition: k + 1,
-      ledCount: 1,
-      color: ds.color.danger.primary,
-      enabledFormula: { expression: stepLit(brake, k, count) },
-    })),
-  });
-  return [
-    {
-      kind: 'conditionalGroup',
-      description: 'sides: brake, under the default centre only',
-      trigger: { expression: centreIs('rpm') },
-      children: [
-        ...(shape.left > 0 ? [side(1, shape.left, 'left')] : []),
-        ...(shape.right > 0 ? [side(rightStart(shape), shape.right, 'right')] : []),
-      ],
-    },
-  ];
-};
-
-/**
  * The effect catalogue placed on a shape.
  *
- * Composition order is the ranking: SimHub merges a container over the ones before it, so an
- * effect later in the list wins a tie. That is how a flag beats a spotter and a spotter beats the
- * rev ladder, without a priority field anywhere.
+ * Every condition that is not the pit family lands on one lamp of one LED, which `lamps.ts`
+ * allocates and which is the whole of the ranking: two live conditions on one lamp are resolved by
+ * the lamp's own order rather than by which of them happens to sit later in the catalogue, and two
+ * conditions on different lamps no longer contend at all.
  *
- * A `sides` effect on a shape with no sides — a brow, a bare run — has nowhere to go. It is
- * dropped rather than moved onto the centre, because a brow that flashes its rev LEDs for ABS is
- * saying the wrong thing with the right light.
+ * The lamps are emitted innermost first, so the side lamp — the outermost, and the only thing a
+ * side can say that the centre cannot — is written last on each side and nothing composed above it
+ * can take it.
+ *
+ * A condition whose lamp does not exist on this shape is dropped rather than moved onto the centre,
+ * because a brow that flashes its rev LEDs for ABS is saying the wrong thing with the right light.
+ * The flags are the exception: a shape with no lamps keeps them over the whole run, blanking it, as
+ * every shape did before the lamps arrived. Deriving lamps at the ends of a bare run would reverse
+ * a recorded decision (docs/research/lights-review.md), so a brow keeps what it has until that
+ * decision is made.
  */
 const effects = (shape: StripShape): leds.LedContainer[] => {
-  const runs = (effect: LedEffect): { start: number; count: number }[] => {
-    if (effect.placement === 'all') return [{ start: 1, count: stripLength(shape) }];
-    const left = shape.left > 0 ? [{ start: 1, count: shape.left }] : [];
-    const right = shape.right > 0 ? [{ start: rightStart(shape), count: shape.right }] : [];
-    return effect.placement === 'left' ? left : effect.placement === 'right' ? right : [...left, ...right];
+  const placed = lampsOf(shape);
+  const lampGroup = ({ side, lamp, position }: PlacedLamp): leds.LedContainer[] => {
+    const ranked = lampConditions(lamp, side);
+    if (ranked.length === 0) return [];
+    return [
+      {
+        kind: 'group',
+        description: `${side} ${lamp.label} lamp`,
+        startPosition: position,
+        // Reversed by rank and then flattened, so that a flag's moving and held containers stay
+        // beside each other in the file rather than at opposite ends of the lamp.
+        children: ranked
+          .map((effect, i) => effectContainers(effect, 1, 1, ranked.slice(0, i).map((higher) => higher.when)))
+          .reverse()
+          .flat(),
+      },
+    ];
   };
-  return ALL_EFFECTS().flatMap((effect) => {
-    const placed = runs(effect);
-    if (placed.length === 0) return [];
-    const containers = placed.map(({ start, count }) => effectContainer(effect, start, count));
-    // An exclusive effect blanks what is under it, which is what a conditional group is for.
-    return effect.exclusive
-      ? [{ kind: 'conditionalGroup' as const, description: effect.label, trigger: { expression: effect.when }, clearBackgroundWhenActive: true, children: containers }]
-      : containers;
+  // The whole run, blanked: what a conditional group is for, and what the canvas allows the pit
+  // family alone.
+  const wholeRun = (effect: LedEffect): leds.LedContainer => ({
+    kind: 'conditionalGroup',
+    description: effect.label,
+    trigger: { expression: effect.when },
+    clearBackgroundWhenActive: true,
+    children: effectContainers(effect, 1, stripLength(shape)),
   });
+  const lamps = [...placed].sort((a, b) => b.index - a.index).flatMap(lampGroup);
+  const whole = ALL_EFFECTS().filter((e) => e.role === 'strip' || (placed.length === 0 && e.role === 'race'));
+  return [...lamps, ...whole.map(wholeRun)];
 };
 
 /** What a strip profile is called, in SimHub's profile list. Keeps the slashes: `openDash 4/14/4`. */
@@ -305,8 +358,10 @@ export const rpmStripFileName = (shape: StripShape): string => `openDash ${shape
 /** The whole tree for one shape, before any reversal is applied. */
 const treeFor = (shape: StripShape): leds.LedContainer[] => [
   { kind: 'group', description: 'centre', startPosition: centreStart(shape), children: centreFunctions(shape.centre) },
-  ...sides(shape),
-  // After the rev ladder and the brake sides, so that it composes over them.
+  // After the rev ladder, so that it composes over it. The sides carry nothing but lamps: a brake
+  // gradient used to fill them under the default centre, and a group filled red by the pedal is a
+  // group on which an oil warning cannot come on. A driver who wants a pedal trace asks for one,
+  // through the brake and throttleBrake centres, and gets it where it can be read.
   ...effects(shape),
   // The 3/10/3's two further runs of nine repeat the centre, so a device with three strips says the
   // same thing on all three rather than leaving two of them dark.
@@ -321,9 +376,52 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
 ];
 
 /**
- * The profile for one strip shape. A reversed strip is the same tree inside a `Groups.RemapGroup`
- * that turns logical positions into physical ones, which is the whole reason a new device is a row
- * of numbers rather than a second profile.
+ * The rig's brightness, over everything a strip draws.
+ *
+ * `LightsBrightness`, `LightsNightBrightness` and `LightsNightMode` are named for the rig rather
+ * than for one device, and the panel captions them "for every light openDash drives"; until this
+ * container existed that sentence was untrue, because the only reader of the composed expression
+ * was the flag box (`leds/profile.ts`), so a wheel strip and a brow ignored all three. Both
+ * artefacts now read the one `flagBox.brightness()`, so day, night and the switch resolve in a
+ * single place and the two cannot drift apart.
+ *
+ * `Groups.BrightnessFormulaGroup` is the strip's container of that kind and is one of the fifty-six
+ * SimHub 9.12.6 resolves. It goes through `raw` because the generator models only the containers a
+ * profile has needed so far, and `BrightnessFormula` is the field name its matrix sibling carries,
+ * which was read off a real file; the strip spelling is the same by SimHub's own convention but has
+ * not been seen on a strip, so it is the thing to look at first if a profile loads and ignores the
+ * setting.
+ */
+const brightnessGroup = (children: readonly leds.LedContainer[]): leds.LedContainer => ({
+  kind: 'raw',
+  containerType: 'Groups.BrightnessFormulaGroup',
+  description: 'the rig brightness, day or night',
+  fields: { BrightnessFormula: leds.buildExpressionObject({ expression: flagBox.brightness() }) },
+  children,
+});
+
+/**
+ * The car switched on, over everything a strip draws.
+ *
+ * The box has asked this since it shipped and the strip never did, so a driver sitting in the
+ * garage with the car off had a dark flag box beside a wheel drawing a pit-lane state, a brake
+ * gradient and whatever else had a non-zero property. {@link ignitionIsOn} is the box's own gate,
+ * read from one place by both.
+ *
+ * Unlike the box the strip goes fully dark rather than showing a standby mark: a mark on a strip is
+ * a lit LED, and an LED lit to mean "off" is the confusion this gate exists to remove.
+ */
+const ignitionGroup = (children: readonly leds.LedContainer[]): leds.LedContainer => ({
+  kind: 'conditionalGroup',
+  description: 'only while the car is switched on',
+  trigger: { expression: ignitionIsOn() },
+  children,
+});
+
+/**
+ * The profile for one strip shape. A strip the maker wired in some other order is the same tree
+ * inside a `Groups.RemapGroup` that turns logical positions into physical ones, which is the whole
+ * reason a new device is a row of numbers rather than a second profile.
  */
 export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedProfile {
   const length = deviceLength(shape);
@@ -332,18 +430,25 @@ export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedP
   // its IsActiveBase catches a throwing expression and returns its default of 1.0 — so with the sim
   // closed, where the properties are null, a bare CustomStatus lights up. One native group gates
   // the lot. What the strip does when the game is NOT running is #300.
+  // Brightness sits under the running gate rather than over it: nothing outside that gate paints,
+  // so a brightness group above it would scale nothing and would only cost an evaluation with the
+  // sim closed.
+  // The ignition gate is the innermost of the three, because it is the only one of them a driver
+  // turns on and off within a session. None of the three carries a startPosition: the fit rule in
+  // the generator accumulates offsets down the tree, so a group that carried one would move every
+  // LED beneath it.
   const running: leds.LedContainer = {
     kind: 'raw',
     containerType: 'Groups.GameRunningGroup',
     description: 'only while the sim is running',
-    children: treeFor(shape),
+    children: [brightnessGroup([ignitionGroup(treeFor(shape))])],
   };
   const tree = [running];
   return {
     name: rpmStripProfileName(shape),
     profileId,
     ledCount: length,
-    containers: shape.reversed ? [{ kind: 'remapGroup', description: 'wired from the far end', positions: reversedPositions(length), children: tree }] : tree,
+    containers: shape.positions ? [{ kind: 'remapGroup', description: 'the order this device is wired in', positions: shape.positions, children: tree }] : tree,
   };
 }
 

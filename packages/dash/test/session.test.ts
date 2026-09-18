@@ -1,11 +1,14 @@
 /**
- * The session card's three modes, exercised by evaluating the NCalc the card emits. The
+ * The session's three modes, exercised by evaluating the NCalc the card emits, and the module
+ * beside it reading the same setting. The
  * evaluator covers only the subset those expressions use: [Property] reads, if, isnull, format,
  * timespantoseconds (seconds are passed as numbers), max, truncate, comparison, and/or/!, +, %, /.
  */
 import { describe, expect, test } from 'bun:test';
 import { session, showTime, timedSession, TIME_PLACEHOLDER, UNTIMED_SECONDS } from '../src/cards/session.ts';
 import { rect } from '../src/design/geometry.ts';
+import { MODULES } from '../src/modules/index.ts';
+import { walkItems } from '../src/walk.ts';
 import type { TextItem } from '../src/generator.ts';
 
 type Props = Record<string, unknown>;
@@ -108,5 +111,25 @@ describe('session card modes', () => {
     expect(reading(game(1800, 20, 3, 'laps'))).toEqual({ label: 'LAP', value: '3', dim: false, denominator: '/ 20' });
     expect(reading(game(1800, 0, 112, 'laps'))).toEqual({ label: 'LAP', value: '112', dim: false, denominator: null });
     expect(reading(game(A_WEEK, 5, 7, 'laps'))).toEqual({ label: 'LAP', value: '7', dim: false, denominator: '/ 5' });
+  });
+});
+
+describe('the module reads the same setting as the card', () => {
+  test('a zone shows the lap or the time left, never both', () => {
+    // The setting was the card's alone, so every zone face and every companion drew Lap, Time left
+    // and Laps left side by side whatever the driver had chosen. One of the first two answers the
+    // question now and the rank closes over the other, which is what the setting is for.
+    const module = MODULES.find((m) => m.id === 'session')!;
+    const items = module.build({ frame: rect(0, 0, 445, 286), density: 'zone', prefix: '' });
+    const visible = (name: string): string => {
+      const item = [...walkItems(items)].find((i) => i.name === `${name}.value`);
+      if (!item) throw new Error(`no ${name}`);
+      const formula = item.bindings?.Visible?.formula;
+      return String(typeof formula === 'string' ? formula : formula?.expression);
+    };
+    expect(visible('timeLeft')).toContain('SessionProgress');
+    expect(visible('lap')).toContain('SessionProgress');
+    // Complementary: one is the negation of the other, so exactly one of the two is ever drawn.
+    expect(visible('lap')).toBe(`!(${visible('timeLeft')})`);
   });
 });

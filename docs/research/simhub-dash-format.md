@@ -423,8 +423,22 @@ Verified on the VM on 2026-09-12: one 240 x 180 source drawn by three items into
 240 x 240 and 96 x 72 fills each rect, so the image is stretched to the box rather than letterboxed
 inside it. `Opacity` is a percentage, as it is on every other item.
 
+**An image carries no colour of its own.** Read off the committed `plugin/lib/SimHub.Plugins.dll`
+on 2026-09-16: `ImageItem` declares `Image`, `AutoSize`, `AutoSizeScale` and `ImageData`, which is
+the decoded `ImageSource` and is not serialised, and nothing else. Its whole chain above,
+`GraphicalDash.Models.DrawableItem` then `GDashItemBindingBase` then `BindingBase`, offers exactly
+one colour, `BackgroundColor`, plus a `BorderStyle`; `BackgroundColor` paints the item's box behind
+the picture and not the picture. A lamp that is amber when it lights and grey when it does not is
+therefore two files, one per state, and not one file recoloured. `Visible` is declared on that same
+`DrawableItem` beside `Left`, `Top`, `Width` and `Height`, so it binds as it does on any other item,
+which is how the two files are drawn: two items at the same rect, each hidden by its own
+expression.
+
 Fonts are referenced by family name in `Font`, with `FontWeight` taking WPF weight names such
-as `Normal`, `SemiBold`, `Bold` and `Black`, and the files are shipped in `_SHFonts/`. Blumlaut
+as `Normal`, `SemiBold`, `Bold` and `Black`, and the files are shipped in `_SHFonts/`. `Font`
+holds one family rather than a stack, so a fallback such as Arial Narrow or system-ui cannot be
+expressed at all: what a package does not ship is resolved by WPF to whatever it can find rather
+than to a named alternative, which is why a weight has to be bundled before it may be drawn. Blumlaut
 ships `D-DINCondensed-Bold.ttf`; Daniel Newman ships Reddit Mono, Reddit Sans and Inter.
 
 ### No letter spacing
@@ -432,6 +446,21 @@ ships `D-DINCondensed-Bold.ttf`; Daniel Newman ships Reddit Mono, Reddit Sans an
 No text item in any of the roughly thirty `.djson` files examined carries a letter-spacing,
 tracking or kerning property, and the only `Spacing` key found belongs to `GroupItem`. Label
 tracking is therefore not expressible on the dashboard face.
+
+### The generated map's widths and radii are doubles (2026-09-16)
+
+`GeneratedStaticMapItem` derives from `GeneratedMapItemBase`, which declares `TrackWidth`,
+`TrackBorderWidth`, `MinimumTrackWidth` and `MinimumTrackBorderWidth` as `Double`, and the
+`PlayerStyle` it carries for the player and for the opponents declares `DotRadius`,
+`DotBorderThickness` and `LabelFontSize` the same way. A fractional width is therefore written and
+read without loss, which is why the track module draws the design's 2.5 px outline rather than
+rounding it to three. Read from the metadata of the `SimHub.Plugins.dll` committed under
+`plugin/lib`, which is the 9.12.6 assembly the spike decompiled.
+
+The same class is where the map's shape limits come from: it holds exactly two styles, one for the
+player and one for every opponent, and a style is a dot with a radius and a border. Square markers,
+sector markers and a colour for one named car are consequently not expressible;
+`OverrideColorsWithCarClassColors` is the only per-car colouring on offer and openDash refuses it.
 
 ### Community precedent for source in git
 

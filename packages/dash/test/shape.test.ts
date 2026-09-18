@@ -16,13 +16,18 @@ import {
   columnsAt,
   describeShape,
   heightBandOf,
-  keepsSecondaryRanks,
   promotesLead,
   SHAPE_ARCHETYPES,
   shapeOf,
   widthBandOf,
 } from '../src/second/shape.ts';
-import { densityOf, nextOnRamp, rampOf } from '../src/second/density.ts';
+import { densityForBox, densityOf, nextOnRamp, rampOf, type Density } from '../src/second/density.ts';
+import { zoneFrame } from '../src/second/header.ts';
+import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
+import { fieldsRow } from '../src/modules/module.ts';
+import { rule } from '../src/elements/rule.ts';
+import { fixedRow, stack, type StackRow } from '../src/second/layout.ts';
+import type { FieldSpec } from '../src/second/field.ts';
 import { cellOverruns } from './monoGlyphs.ts';
 import type { Item, TextItem } from '../src/generator.ts';
 
@@ -52,17 +57,15 @@ describe('shape is a pair of bands, not a ratio', () => {
     expect(columnsAt({ width: 'wide', height: 'medium' })).toBe(3);
   });
 
-  test('a short box keeps one rank, which is what a pit wall strip is', () => {
-    expect(keepsSecondaryRanks({ width: 'wide', height: 'short' })).toBe(false);
-    expect(keepsSecondaryRanks({ width: 'wide', height: 'medium' })).toBe(true);
+  test('a tall box promotes its lead value and a medium one does not', () => {
     expect(promotesLead({ width: 'medium', height: 'tall' })).toBe(true);
     expect(promotesLead({ width: 'medium', height: 'medium' })).toBe(false);
   });
 
   test('the real boxes the build produces land in bands that make sense', () => {
     // Not fixtures: these are the boxes companionGeometry and zoneFrame actually hand a module.
-    expect(describeShape(shapeOf({ width: 802, height: 336 }))).toBe('wide/medium'); // companion page
-    expect(describeShape(shapeOf({ width: 432, height: 706 }))).toBe('medium/tall'); // companion portrait
+    expect(describeShape(shapeOf({ width: 802, height: 356 }))).toBe('wide/medium'); // companion page
+    expect(describeShape(shapeOf({ width: 432, height: 726 }))).toBe('medium/tall'); // companion portrait
     expect(describeShape(shapeOf({ width: 607, height: 158 }))).toBe('wide/short'); // pit wall race zone
     expect(describeShape(shapeOf({ width: 1007, height: 211 }))).toBe('wide/medium'); // the wide zone
     expect(describeShape(shapeOf({ width: 455, height: 284 }))).toBe('medium/medium'); // tower zone
@@ -146,6 +149,91 @@ describe('shedding comes before shrinking', () => {
     expect(biggest(tight)).toBe(densityOf('zone').big);
     expect(biggest(roomy)).toBeGreaterThanOrEqual(biggest(tight));
   });
+
+  test('the sectors page labels its columns for the shape it is drawn at', () => {
+    const sectors = MODULES.find((m) => m.id === 'sectors')!;
+    const itemAt = (size: { width: number; height: number }, name: string): TextItem | undefined => {
+      const found = sectors
+        .build({ frame: rect(0, 0, size.width, size.height), density: 'zone', prefix: '' })
+        .flatMap((i) => [...walkItems([i])])
+        .find((i) => i.name === name);
+      return found && found.kind === 'text' ? found : undefined;
+    };
+    // The delta rides in the label where there is width for it, and the colour says it where there
+    // is not: the catalogue writes "S1 · −0.29" at three shapes and a bare "S1" at `tall narrow`,
+    // which is also what lets the rank keep the size the drawing gives it in a 274 px zone.
+    expect(itemAt(SHAPE_ARCHETYPES.wide, 's1.label')?.bindings?.Text?.formula).toContain('−');
+    expect(itemAt(SHAPE_ARCHETYPES.tallNarrow, 's1.label')?.bindings?.Text).toBeUndefined();
+    // And the tall drawing writes one word where the wider ones write two.
+    expect(itemAt(SHAPE_ARCHETYPES.wide, 'sessionBest.label')?.text).toBe('SESSION BEST');
+    expect(itemAt(SHAPE_ARCHETYPES.tall, 'sessionBest.label')?.text).toBe('BEST');
+  });
+
+  test('and sheds what its page declares last rather than whichever row is last', () => {
+    // The nano's zone body. Fuel declares level, time, to add and the average at `tall narrow`, and
+    // draws a level gauge under them that the table does not name because it is not a field. The
+    // stack used to drop its trailing rows, so the gauge went with the average; the declaration now
+    // decides, the average goes first, and the page keeps the gauge the drawing has at every shape.
+    const fuel = MODULES.find((m) => m.id === 'fuel')!;
+    const names = fuel.build({ frame: rect(0, 0, 249, 158), density: 'compact', prefix: 'f.' }).flatMap((i) => [...walkItems([i])]).map((i) => i.name);
+    expect(names).toContain('f.gauge');
+    expect(names.some((n) => n.startsWith('f.level'))).toBe(true);
+  });
+});
+
+/**
+ * How a rank is set out in the line it takes: the plan, the alignment and the spread.
+ *
+ * The mechanism rather than a module. A page asks for one of these because the catalogue draws it,
+ * and what every page does with it is measured by `secondScreens.test.ts` and `textFit.test.ts`.
+ */
+describe('a rank is laid out for the shape of its box', () => {
+  const ctxAt = (width: number, height: number): Parameters<(typeof MODULES)[number]['build']>[0] => ({ frame: rect(0, 0, width, height), density: 'zone' as const, prefix: 'g.' });
+  const cell = (id: string, fs: number): FieldSpec => ({ name: `g.${id}`, id, label: id.toUpperCase(), value: { sample: '88', chars: { digits: 2, specials: 0 }, fs } });
+  const lefts = (items: readonly Item[], suffix: string): number[] =>
+    items.flatMap((i) => [...walkItems([i])]).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith(suffix)).map((i) => i.rect.left);
+
+  test('an equal-column grid puts every line on the same columns', () => {
+    const ctx = ctxAt(600, 280);
+    const specs = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => cell(id, densityOf('zone').mid));
+    const row = fieldsRow(specs, ctx, { lines: 'grid', columns: 3, gap: 20 });
+    const xs = lefts(row.draw(row.height), '.value');
+    expect(xs).toHaveLength(6);
+    // Two lines of three over the same three column edges, rather than two lines packed to their
+    // own widths.
+    expect(xs.slice(3)).toEqual(xs.slice(0, 3));
+    expect(new Set(xs).size).toBe(3);
+  });
+
+  test('one field per line is a line each, whatever the box would hold', () => {
+    const ctx = ctxAt(600, 280);
+    const specs = [cell('a', densityOf('zone').mid), cell('b', densityOf('zone').mid)];
+    const wrapped = fieldsRow(specs, ctx);
+    const perLine = fieldsRow(specs, ctx, { lines: 'perLine' });
+    expect(lefts(wrapped.draw(wrapped.height), '.value')).toHaveLength(2);
+    expect(perLine.height).toBeGreaterThan(wrapped.height);
+  });
+
+  test('a top-aligned line shares its top edge where a baseline one shares its baseline', () => {
+    const ctx = ctxAt(600, 280);
+    const specs = [cell('big', densityOf('zone').big), cell('small', densityOf('zone').small)];
+    const tops = (row: StackRow): number[] => row.draw(row.height).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.label')).map((i) => i.rect.top);
+    expect(new Set(tops(fieldsRow(specs, ctx, { align: 'top' }))).size).toBe(1);
+    expect(new Set(tops(fieldsRow(specs, ctx))).size).toBe(2);
+  });
+
+  test('a spread stack pushes its rows apart and a centred one keeps them together', () => {
+    const frame = rect(0, 0, 600, 300);
+    const rows = ['one', 'two'].map((name) => fixedRow(40, (bottom) => [rule(name, 0, bottom - 1, 10, 1)]));
+    const topsOf = (items: readonly Item[]): number[] => items.flatMap((i) => (i.kind === 'layer' ? [] : [i.rect.top]));
+    const spread = topsOf(stack(frame, rows, 'zone', { justify: 'spaceBetween' }));
+    const centred = topsOf(stack(frame, rows, 'zone'));
+    expect(spread[1]! - spread[0]!).toBeGreaterThan(centred[1]! - centred[0]!);
+    // The declared gap is a minimum rather than the distance, and the last row still ends inside
+    // the frame with its tail reserved.
+    expect(spread[1]!).toBeLessThanOrEqual(frame.height);
+    expect(spread[0]!).toBeGreaterThanOrEqual(frame.top);
+  });
 });
 
 /**
@@ -165,7 +253,39 @@ describe('a rank fills the box it is given', () => {
     const lead = Math.max(...grown.map((i) => i.fontSize));
     expect(lead).toBeGreaterThan(densityOf('compact').big);
     // One column: two lap times fit side by side at 34 px and do not at 46, so growing wraps them.
-    expect(new Set(grown.map((i) => i.rect.left)).size).toBe(1);
+    // Counted by line rather than by a shared left edge, which stopped being the same question when
+    // a narrow zone began centring what is in it: the delta is narrower than a lap time, so it is
+    // centred at a different x while still having the line to itself.
+    expect(new Set(grown.map((i) => i.rect.top)).size).toBe(grown.length);
+  });
+
+  test('and a zone narrow enough for one column centres what is in it', () => {
+    // The two narrow bodies the build really produces: zone B of the 850 x 480 face and of the
+    // 800 x 480 one. Centred in the zone, not in its own glyphs, which is the fault zoneFace's own
+    // centring test is about -- so the measure is the middle of the box against the middle of the
+    // zone, taken on the widest value and on the narrowest.
+    for (const width of [254, 229]) {
+      const drawn = [...walkItems(lapTimes().build({ frame: rect(0, 0, width, 292), density: 'compact', prefix: 'b.' }))].filter(
+        (i): i is TextItem => i.kind === 'text',
+      );
+      // A field is centred whole, and a value that carries a unit or a denominator after it sits at
+      // the left of that field rather than in the middle of it. So the measure is the union of each
+      // field's parts, keyed by the name before the last dot.
+      const fields = new Map<string, { left: number; right: number }>();
+      for (const item of drawn) {
+        const key = item.name.slice(0, item.name.lastIndexOf('.'));
+        const seen = fields.get(key);
+        fields.set(key, {
+          left: Math.min(seen?.left ?? Infinity, item.rect.left),
+          right: Math.max(seen?.right ?? -Infinity, item.rect.left + item.rect.width),
+        });
+      }
+      expect(fields.size).toBeGreaterThan(1);
+      for (const [name, span] of fields) {
+        const centre = (span.left + span.right) / 2;
+        expect({ width, field: name, offBy: Math.abs(centre - width / 2) < 2 }).toMatchObject({ offBy: true });
+      }
+    }
   });
 
   test('and never past the next size up its ramp', () => {
@@ -202,5 +322,60 @@ describe('a rank fills the box it is given', () => {
     const sectors = MODULES.find((m) => m.id === 'sectors')!;
     const items = valuesOf(sectors.build({ frame: rect(0, 0, 737, 270), density: 'zone', prefix: 'b.' }));
     for (const item of items) expect({ name: item.name, onRamp: rampOf('zone').includes(item.fontSize) }).toEqual({ name: item.name, onRamp: true });
+  });
+});
+
+/**
+ * Rule 18 applied to a number, which pit view is the only page on the catalogue artboard to do.
+ *
+ * The drawing gives the refuel quantity 116, 96, 64, 61 and 58 px and the pit time 81, 67, 44, 42
+ * and 40: sizes on no ramp, cut from the height of the box, every pair within a pixel of 1.45 to
+ * one. So the page takes what the options row and the progress bar leave it rather than reading
+ * `d.hero` and `d.mid`, whose 1.88 answered nothing about the box at all. readability-pass.md §6.
+ */
+describe('pit view cuts its two numbers from the box', () => {
+  /** The ratio the catalogue holds between the quantity and the time at every shape it draws. */
+  const RATIO = 1.45;
+  const pitView = MODULES.find((m) => m.id === 'pitView')!;
+  const valuesOf = (items: readonly Item[]): TextItem[] =>
+    items.flatMap((i) => [...walkItems([i])]).filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.value'));
+  const numbersIn = (box: { width: number; height: number }, density: Density): { refuel: number; pitTime: number } => {
+    const drawn = valuesOf(pitView.build({ frame: rect(0, 0, box.width, box.height), density, prefix: 'p.' }));
+    const size = (id: string): number => drawn.find((item) => item.name === `p.${id}.value`)?.fontSize ?? 0;
+    return { refuel: size('refuel'), pitTime: size('pitTime') };
+  };
+
+  test('the catalogue drawings come out at the sizes the catalogue draws them', () => {
+    // `wide` and `tall` are the two the drawing sizes from the box alone. `grid` and `tall narrow`
+    // share their height with a car the build has no artwork for, so both reach the ramp's own top
+    // where the drawing, having spent a third of its width on the car, stops at 61 and at 58.
+    expect(numbersIn(SHAPE_ARCHETYPES.wide, 'zone')).toEqual({ refuel: 64, pitTime: 44 });
+    expect(numbersIn(SHAPE_ARCHETYPES.tall, 'zone')).toEqual({ refuel: 96, pitTime: 66 });
+  });
+
+  test('and hold the ratio at every zone body the build produces', () => {
+    for (const layout of ZONE_FACES) {
+      for (const arrangement of [layout, layoutWithoutRevBar(layout)]) {
+        for (const zone of zonesOf(arrangement)) {
+          if (zone.zone === 'A' || zone.zone === 'D') continue;
+          const density = densityForBox(zone.size);
+          const frame = rect(0, 0, zone.size.width, zone.size.height);
+          const { body } = zoneFrame('zone', { frame, title: 'Pit view', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
+          const { refuel, pitTime } = numbersIn(body, density);
+          const at = `${body.width}x${body.height}`;
+          expect({ at, drew: refuel > 0 && pitTime > 0 }).toMatchObject({ drew: true });
+          expect({ at, refuel, pitTime, held: Math.abs(refuel / pitTime - RATIO) < 0.03 }).toMatchObject({ held: true });
+        }
+      }
+    }
+  });
+
+  test('so a taller box draws them larger, where the ramp alone cannot', () => {
+    // The quantity sits at the top of its ramp, so rule 20's ceiling was exactly 1 for this page
+    // and the 1280 x 400 zone drew the same 64 px as the 1280 x 720 one in a box 296 px shorter.
+    const short = numbersIn({ width: 437, height: 214 }, 'zone');
+    const tall = numbersIn({ width: 437, height: 510 }, 'zone');
+    expect({ short: short.refuel, tall: tall.refuel, grew: tall.refuel > short.refuel }).toMatchObject({ grew: true });
+    expect(tall.refuel).toBeGreaterThan(densityOf('zone').hero);
   });
 });

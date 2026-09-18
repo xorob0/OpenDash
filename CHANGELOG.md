@@ -12,6 +12,101 @@ including any that the plugin does not install.
 From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
 strips, the brows and the flag box, together with a `manifest.json` listing everything published.
 
+## 0.2.0-rc.3 (2026-09-18)
+
+The candidate that finishes the zone face. The whole design canvas was measured against the build,
+requirement by requirement, and the differences were closed: band D now cycles its eight pages,
+zone A its four, and zones B and C the full catalogue of twenty-one, each page drawn at the size its
+own artboard gives it rather than at one size for every face. A flag can now take the whole body of
+the screen instead of the band alone, and whichever format you choose it names all fifteen
+conditions the catalogue holds, where it previously knew six. Besides the face, the flag box gained
+its own settings per panel, the strips gained a wiring order for Fanatec wheels driven through
+Fanalab, and the companion pages itself rather than borrowing SimHub's own ring.
+
+Several of the corrections below are readings that were simply wrong, and had been wrong for some
+time. If you race in a multi-class field, if you drive an imperial rig, or if you rely on the
+spotter, it would be worth reading the Fixed section before anything else.
+
+### Added
+
+- **A flag can take the whole screen.** `OpenDash.<Face>FlagFormat` chooses between the band and a
+  full-screen block over zones B, A and C, and it is a per-screen setting offered on that screen's
+  own pane, so a rim and a main dash in one rig may answer differently. The block is derived from
+  the layout rather than tabulated, which is why it is drawn correctly at all eight sizes and in
+  both rev-bar arrangements.
+- **Fifteen flag conditions rather than six**, on band D and on the full-screen block alike, ranked
+  in the catalogue's own order and reading the same expression in both places. A red flag or a
+  full-course caution therefore draws something, where the full-screen format had previously left
+  the body blank while the band named the condition.
+- **A lap review** after each crossing, off by default. It is the largest of the boxes drawn over
+  zone A and covers the lap-time pop-up while it is out, and it never covers band D, the rev bar,
+  the bar of settled values or the pit limiter banner.
+- **Change notifications**: a setting you turn on the wheel is announced for three seconds, with the
+  direction it moved, for the seven values the sim actually publishes.
+- **Five pit alerts** in the limiter's own rectangle, being engage, disengage, the limiter on in the
+  lane, the ignition off and the engine off. They are ranked among themselves rather than against
+  the flag, so a caution does not blank the limiter band at the moment the pit lane is busiest.
+- **Blue flag detail**: the band may name the class of the car behind, or that car's position and
+  class, as a rig setting on the Data tab.
+- **The flag box settles per panel.** The critical-flags switch, the gear, and the oil and water
+  temperatures moved from the tab header into each matrix's own group, so somebody running one box
+  on flags and another on the gear answers each separately. A settings file written before the move
+  is migrated into all four panels once.
+- **The spotter is an overlay** on the flag box rather than a state that displaces everything under
+  it, so a car alongside no longer blanks the warnings or the gear, and its bar can be made to grow
+  in three steps as the car closes.
+- **A Fanalab wiring order** for the 3/9/3 wheel, shipped as a profile of its own so that the plain
+  3/9/3 keeps working for the Simucube, Cammus and Moza wheels of the same geometry. Twenty-one
+  profiles are now built and installable from the Install tab.
+- **The companion pages itself.** Each of its twenty-one screens is enabled by the module switch and
+  the page property together, which gives it a module to open on, a module a held button shows, and
+  a next-module binding that skips what you have turned off.
+- **A pit wall lists by class** on its own setting, and lends a zone a page on demand while a button
+  is held, giving that zone its own page back on release.
+
+### Changed
+
+- **Labels are 15 px on a face and 13 px on the pit wall**, which is what every sheet draws. The row
+  they sit in stays 13 px in both cases, so nothing else moved and no page sheds a field for it.
+- **Zone A's cluster is cut from its column** rather than capped, the speed reads the unit the driver
+  has chosen rather than always metric, and an eight-speed car no longer ghosts a ninth gear.
+- **The oil and fuel warnings on the flag box are the telltales ISO 2575 registers**, an oil can and
+  a fuel pump, in place of a disc that shared the meatball's silhouette and a tank outline that
+  shared the limiter frame's. Nothing below the flags blinks any more, blinking being the flag
+  layer's own vocabulary for a waved yellow.
+- **The round faces draw a chequered ring at the density their artboards state**, which is 46 checks
+  at 480 and 78 at 800, in place of a constant 24.
+
+### Fixed
+
+- **The class position read the size of the class.** In a multi-class field the bar showed how many
+  cars were in your class rather than where you were in it.
+- **The spotter lamp was lit permanently**, because the two sides were combined in a way that was
+  true whenever either property was present rather than when either reported a car.
+- **The five-lap average left out the newest lap**, so it was always one lap behind.
+- **Zone A's speed and its unit disagreed on an imperial rig**: the value was always metric while the
+  label beside it followed the driver's own setting.
+- **A four-digit car number was drawn underneath the class chip** on the companion, the row having
+  advanced by a fixed cell narrower than the number itself.
+- **A bound unit was measured on its design-time text**, so a driver on a gallons profile lost the
+  last glyph of GAL. A bound unit that declares no widest string is now refused outright.
+- **The companion drew its flag band at 32 px where all three of its sheets draw 12**, which had been
+  quietly shedding the three sector readings from the landscape lap times page.
+- **The flag box showed nothing at all** on a sim that publishes no ignition state, neither of its
+  two branches being satisfied.
+- **The narrow delta page lost its bar**, which every one of the catalogue's four drawings carries.
+
+### Development
+
+- `global.json` pins the .NET SDK and `LangVersion` is a version rather than `latest`, so a local
+  build and the runner read the same source the same way. The two together close a defect that had
+  been fixed three times: on a newer compiler `array.Reverse()` binds to the in-place span overload
+  rather than to LINQ, which compiles on one machine and not on the other. A test now holds the C#
+  surface to the unambiguous spelling.
+- The pre-commit hook moved to `.githooks/` so that it is reviewed like anything else, and it now
+  refuses one of the author's drafts only while a draft of it is genuinely open somewhere, rather
+  than refusing four paths for ever. Adopt it with `git config core.hooksPath .githooks`.
+
 ## 0.2.0-rc.2 (2026-09-13)
 
 The candidate that lights the hardware around the screen, and that asks the car itself where its
