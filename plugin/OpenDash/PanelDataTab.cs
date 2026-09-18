@@ -32,9 +32,25 @@ namespace OpenDashPlugin
         /// for, not what it says.</summary>
         public const string RevBarTitle = "The rev bar";
 
-        public const string RevBarCaption = "Shift lights, a plain RPM bar, or off entirely if this screen's wheel has LEDs of its own. Off gives its room back to the zones.";
+        /// <summary>
+        /// Two answers, not three.
+        /// </summary>
+        /// <remarks>
+        /// "Shift lights" and "RPM bar" were offered as if they were tastes, and they are not: the bar
+        /// has one right behaviour and it is the car's own. Where openDash has a table for the car it
+        /// draws that car's lights ([ADR 0018](docs/decisions/0018-the-cars-own-lights.md)); where it
+        /// has none it draws SimHub's bands, which is an RPM bar that ends in shift lights, and that is
+        /// what almost every car does. A driver asked to choose between them was being asked a question
+        /// openDash should answer, and one of the two answers was worse.
+        ///
+        /// So the row is on or off, and off is the one that still means something: a wheel with its own
+        /// LEDs does not need the strip, and the room goes back to the zones.
+        /// </remarks>
+        public const string RevBarCaption = "On, it mirrors the lights in the car you are driving, or draws an RPM bar that ends in shift lights where openDash has no table for that car. Off gives its room back to the zones, which is what a wheel with LEDs of its own wants.";
 
-        public static readonly string[] RevBarLabels = { "Shift lights", "RPM bar", "Off" };
+        public static readonly string[] RevBarValues = { Contract.RevBarShift, Contract.RevBarOff };
+
+        public static readonly string[] RevBarLabels = { "On", "Off" };
 
         public const string PositionTitle = "Position";
 

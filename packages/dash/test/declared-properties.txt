@@ -243,6 +243,7 @@ OpenDash.CompanionModule19
 OpenDash.CompanionModule20
 OpenDash.CompanionModule21
 OpenDash.CompanionPage
+OpenDash.CompanionFlagFormat
 OpenDash.PitWallRaceA
 OpenDash.PitWallRaceB
 OpenDash.PitWallTowerWide

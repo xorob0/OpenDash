@@ -180,6 +180,9 @@ namespace OpenDashPlugin
             PitWallZones[key] = Normalised(slot, page);
         }
 
+        /// <summary>How this companion draws a flag: off, the strip at the foot, or over the module.</summary>
+        public string CompanionFlagFormat { get; set; }
+
         /// <summary>Which modules are in the rotation. Null on a screen that is not a companion.</summary>
         public bool[] Modules { get; set; }
 
@@ -293,7 +296,7 @@ namespace OpenDashPlugin
                 LapReview = Contract.NormaliseChoice(LapReview, Contract.LapReviewModes, Contract.DefaultLapReview);
                 // Null is kept rather than defaulted: it is what "this face has not been answered
                 // individually" means, and the rig's own answer is what it resolves to.
-                if (RevBar != null) RevBar = Contract.NormaliseChoice(RevBar, Contract.RevBarModes, Contract.DefaultRevBar);
+                if (RevBar != null) RevBar = Contract.MigrateRevBar(RevBar);
             }
             else
             {
@@ -351,6 +354,7 @@ namespace OpenDashPlugin
                     : Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
                 CompanionPage = fresh ? CompanionStart : Contract.NormalisePage(CompanionPage, OpenDashPlugin.Modules.Count, CompanionStart);
                 CompanionPage = Contract.FirstEnabledFrom(CompanionPage, ModuleMask(), OpenDashPlugin.Modules.Count);
+                CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(CompanionFlagFormat);
             }
             else
             {
@@ -358,6 +362,7 @@ namespace OpenDashPlugin
                 CompanionPage = 0;
                 CompanionStart = 0;
                 CompanionQuickGlance = 0;
+                CompanionFlagFormat = null;
             }
         }
 
@@ -459,6 +464,7 @@ namespace OpenDashPlugin
                 Zones = Zones == null ? null : (int[])Zones.Clone(),
                 WideZone = WideZone,
                 PitWallStartPage = PitWallStartPage,
+                CompanionFlagFormat = CompanionFlagFormat,
                 WebViewUrl = WebViewUrl,
                 PitWallQuickGlance = PitWallQuickGlance,
                 PitWallClassOnly = PitWallClassOnly,

@@ -68,7 +68,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildRevBarRow(ScreenInstance screen)
         {
-            var control = BuildSegmented(Contract.RevBarModes, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(screen.Namespace), value =>
+            var control = BuildSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(screen.Namespace), value =>
             {
                 Settings.SetScreenRevBar(screen.Namespace, value);
                 Save();
@@ -970,7 +970,24 @@ namespace OpenDashPlugin
                 })),
                 Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                     BuildModuleSelect(Settings.ScreenCompanionQuickGlance(screen.Namespace), "The module a held button shows", value => screen.CompanionQuickGlance = value),
-                    BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true))));
+                    BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true))),
+                BuildCompanionFlagRow(screen));
+        }
+
+        /// <summary>How this companion draws a flag. Full screen by default, which is what a phone on a
+        /// stand beside the wheel is for: a 12 px strip at that distance says nothing.</summary>
+        private FrameworkElement BuildCompanionFlagRow(ScreenInstance screen)
+        {
+            var text = Ui.VStack(4, Ui.Body("Flags"),
+                Ui.Caption("Full screen takes the module for as long as the flag is out, which is what a screen out of your eyeline is good for. "
+                    + "The bar is the thin strip at the foot. Off leaves the module alone."));
+            text.MaxWidth = 420;
+            var segmented = BuildSegmented(
+                Contract.CompanionFlagFormats,
+                new[] { "Off", "Bar", "Full screen" },
+                Settings.ScreenCompanionFlagFormat(screen.Namespace),
+                value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(); });
+            return Ui.Row(text, segmented);
         }
 
         /// <summary>
@@ -1060,7 +1077,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildSlotsRevBarRow()
         {
-            var control = BuildSegmented(Contract.RevBarModes, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value =>
+            var control = BuildSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value =>
             {
                 Settings.SetRevBar(value);
                 Save();

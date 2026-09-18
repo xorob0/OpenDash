@@ -874,13 +874,31 @@ export const COMPANION_PAGE_SETTING = 'CompanionPage';
 export const DEFAULT_COMPANION_PAGE = 0;
 
 /**
+ * `CompanionFlagFormat`: how a companion draws a flag -- not at all, as the strip, or over the page.
+ *
+ * The face's three-way question asked of the other screen that draws flags, and with a different
+ * default. A face has a gear to protect and a 12 px band that a driver reads at the bottom of their
+ * vision, so `band` is right there. A companion is a phone on a stand that is *not* in the driver's
+ * eyeline: a strip that thin at that distance says nothing, and the page under it is a list they can
+ * look away from. So `full` -- which is also what the rig reported wanting.
+ *
+ * `off` is the third answer and the face has no equivalent, because a face's band costs nothing to
+ * leave on. A companion's full-screen flag costs the whole module, and somebody using theirs as a
+ * dedicated relative will want it left alone.
+ */
+export type CompanionFlagFormat = 'off' | 'band' | 'full';
+export const COMPANION_FLAG_FORMATS: readonly CompanionFlagFormat[] = ['off', 'band', 'full'];
+export const DEFAULT_COMPANION_FLAG_FORMAT: CompanionFlagFormat = 'full';
+export const COMPANION_FLAG_FORMAT_SETTING = 'CompanionFlagFormat';
+
+/**
  * Every property the companion owns, in the order the plugin attaches them.
  *
  * The twenty-one module switches, and then the page. The page is appended rather than inserted for
  * the reason every other name is: both halves of the contract assert this group by index.
  */
 export function companionProperties(): string[] {
-  return [...MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)), COMPANION_PAGE_SETTING];
+  return [...MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)), COMPANION_PAGE_SETTING, COMPANION_FLAG_FORMAT_SETTING];
 }
 
 /**
@@ -1101,6 +1119,10 @@ export const secondScreen = {
   /** `isnull([OpenDash.PitWallRaceA], 0)`: which page one page's zone shows. */
   zonePage: (id: PitWallPageMeta['id'], slot: string): Expr =>
     isnull(prop(propertyName(pitWallZoneSettingName(id, slot))), num(pitWallZoneSlot(id, slot).fallback)),
+  /** `isnull([OpenDash.CompanionFlagFormat], 'full')`: how this companion draws a flag. */
+  companionFlagFormat: (): Expr => isnull(prop(propertyName(COMPANION_FLAG_FORMAT_SETTING)), str(DEFAULT_COMPANION_FLAG_FORMAT)),
+  /** `... = 'band'`: whether this companion is in the given flag format. */
+  companionFlagFormatIs: (format: CompanionFlagFormat): Expr => eq(secondScreen.companionFlagFormat(), str(format)),
   /** `isnull([OpenDash.PitWallPage], 0)`: the landscape page the pit wall is showing. */
   pitWallPage: (): Expr => isnull(prop(propertyName(PIT_WALL_PAGE_SETTING)), num(DEFAULT_PIT_WALL_START_PAGE)),
   /** `isnull([OpenDash.PitWallPage], 0) = 1`: whether this page is the one that is live. */

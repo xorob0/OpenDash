@@ -150,10 +150,10 @@ export const SHEDDING: Record<string, Shedding> = {
   // The catalogue keeps seven of its ten cells at `tall narrow` and drops the three drawn last.
   // The same rule here: the car, the two a driver moves every corner, and the brake bias.
   carSettings: fields({
-    wide: ['car', 'tc', 'abs', 'bb', 'mix', 'arbFront', 'arbRear'],
-    grid: ['car', 'tc', 'abs', 'bb', 'mix', 'arbFront', 'arbRear'],
-    tallNarrow: ['car', 'tc', 'abs', 'bb'],
-    tall: ['car', 'tc', 'abs', 'bb', 'mix', 'arbFront', 'arbRear'],
+    wide: ['tc', 'abs', 'bb', 'mix', 'arbFront', 'arbRear'],
+    grid: ['tc', 'abs', 'bb', 'mix', 'arbFront', 'arbRear'],
+    tallNarrow: ['tc', 'abs', 'bb', 'mix'],
+    tall: ['tc', 'abs', 'bb', 'mix', 'arbFront', 'arbRear'],
   }),
   inputs: nothing('three traces and their bars, cut from the box; rule 18'),
   // Where you are and how long is left survive; the session name and the laps left are what a

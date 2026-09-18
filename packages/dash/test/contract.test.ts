@@ -56,6 +56,7 @@ import {
   REV_BAR_MODES,
   REV_BAR_SETTING,
   BLUE_FLAG_DETAILS,
+  COMPANION_FLAG_FORMAT_SETTING,
   COMPANION_PAGE_SETTING,
   LAP_REVIEW_MODES,
   DEFAULT_LAP_REVIEW,
@@ -121,7 +122,8 @@ describe('settings', () => {
         2 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
-        1 +
+        // The page the companion is showing, and how it draws a flag.
+        2 +
         // Every zone of every pit wall page, then the page it opens on, the page it is showing, the
         // web view address and the class filter.
         allPitWallZoneSettingNames().length +
@@ -141,8 +143,9 @@ describe('settings', () => {
     // given its own answer to what it carries at the top, and 304 before the strip shapes became a
     // grid and the mirror had to publish a run for every centre the grid reaches, and 317 before a
     // pit wall zone belonged to a page: four zones and a wide one became twelve, and the pit wall
-    // gained the page it opens on and the page it is showing.
-    expect(props).toHaveLength(326);
+    // gained the page it opens on and the page it is showing, and 326 before a companion was given
+    // its own answer to how it draws a flag.
+    expect(props).toHaveLength(327);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -250,12 +253,14 @@ describe('settings', () => {
     // The web view address is the pit wall's although its name carries no prefix: it was named
     // before the idiom, and no other screen has a browser page to point anywhere.
     expect(screenProperties(PIT_WALL_PREFIX)).toContain('OpenDash.WebViewUrl');
-    // The twenty-one switches and the page. The start module and the glance module are the plugin's
-    // own state and not properties, because nothing on the screen reads either: the start is applied
-    // once by Init, and the glance is a value the hold copies into the page and back out again.
+    // The twenty-one switches, the page and the flag format. The start module and the glance module
+    // are the plugin's own state and not properties, because nothing on the screen reads either: the
+    // start is applied once by Init, and the glance is a value the hold copies into the page and back
+    // out again.
     expect(screenProperties(COMPANION_PREFIX)).toEqual([
       ...Array.from({ length: MODULE_COUNT }, (_, i) => `${PROPERTY_PREFIX}.${moduleSettingName(i + 1)}`),
       `${PROPERTY_PREFIX}.${COMPANION_PAGE_SETTING}`,
+      `${PROPERTY_PREFIX}.${COMPANION_FLAG_FORMAT_SETTING}`,
     ]);
 
     const own = facePrefix(FACE_SIZES[0]!);

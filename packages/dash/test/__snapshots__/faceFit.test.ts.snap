@@ -10,7 +10,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         wide       one drawing, nothing to shed
   tyres          wide       one drawing, nothing to shed  parts footer compound
   pitView        wide       keeps refuel pitTime  parts tyres
-  carSettings    wide       keeps car tc abs bb mix arbFront arbRear
+  carSettings    wide       keeps tc abs bb mix arbFront arbRear
   inputs         wide       one drawing, nothing to shed  parts steer
   session        wide       keeps type position class lap timeLeft lapsLeft incidents cars
   radar          wide       one drawing, nothing to shed
@@ -33,7 +33,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         wide       one drawing, nothing to shed
   tyres          wide       one drawing, nothing to shed  parts footer compound
   pitView        wide       keeps refuel pitTime  parts tyres
-  carSettings    wide       keeps car tc abs bb mix arbFront arbRear
+  carSettings    wide       keeps tc abs bb mix arbFront arbRear
   inputs         wide       one drawing, nothing to shed  parts steer
   session        wide       keeps type position class lap timeLeft lapsLeft incidents cars
   radar          wide       one drawing, nothing to shed
@@ -56,7 +56,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
-  carSettings    grid       keeps car tc abs bb mix arbFront arbRear
+  carSettings    grid       keeps tc abs bb mix arbFront arbRear
   inputs         grid       one drawing, nothing to shed  parts steer
   session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          grid       one drawing, nothing to shed
@@ -79,7 +79,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
-  carSettings    grid       keeps car tc abs bb mix arbFront arbRear
+  carSettings    grid       keeps tc abs bb mix arbFront arbRear
   inputs         grid       one drawing, nothing to shed  parts steer
   session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          grid       one drawing, nothing to shed
@@ -102,7 +102,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
-  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         grid       one drawing, nothing to shed  parts steer
   session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          grid       one drawing, nothing to shed
@@ -125,7 +125,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
-  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         grid       one drawing, nothing to shed  parts steer
   session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          grid       one drawing, nothing to shed
@@ -148,7 +148,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
-  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         tallNarrow one drawing, nothing to shed
   session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          tallNarrow one drawing, nothing to shed
@@ -171,7 +171,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
-  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         tallNarrow one drawing, nothing to shed
   session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          tallNarrow one drawing, nothing to shed
@@ -194,7 +194,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
-  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         tallNarrow one drawing, nothing to shed
   session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          tallNarrow one drawing, nothing to shed
@@ -217,7 +217,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
-  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         tallNarrow one drawing, nothing to shed
   session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          tallNarrow one drawing, nothing to shed
@@ -240,7 +240,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         tall       one drawing, nothing to shed
   tyres          tall       one drawing, nothing to shed  parts footer compound
   pitView        tall       keeps refuel pitTime
-  carSettings    tall       keeps car tc abs bb mix arbFront arbRear
+  carSettings    tall       keeps tc abs bb mix arbFront arbRear
   inputs         tall       one drawing, nothing to shed
   session        tall       keeps type position class lap timeLeft lapsLeft incidents cars
   radar          tall       one drawing, nothing to shed
@@ -263,7 +263,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         tall       one drawing, nothing to shed
   tyres          tall       one drawing, nothing to shed  parts footer compound
   pitView        tall       keeps refuel pitTime
-  carSettings    tall       keeps car tc abs bb mix arbFront arbRear
+  carSettings    tall       keeps tc abs bb mix arbFront arbRear
   inputs         tall       one drawing, nothing to shed
   session        tall       keeps type position class lap timeLeft lapsLeft incidents cars
   radar          tall       one drawing, nothing to shed
@@ -286,7 +286,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
-  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         tallNarrow one drawing, nothing to shed
   session        tallNarrow keeps position class  sheds type lap timeLeft lapsLeft incidents cars  declared position class lap timeLeft
   radar          tallNarrow one drawing, nothing to shed
@@ -309,7 +309,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
-  carSettings    tallNarrow keeps car tc abs bb  sheds mix arbFront arbRear
+  carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         tallNarrow one drawing, nothing to shed
   session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          tallNarrow one drawing, nothing to shed
@@ -332,7 +332,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
-  carSettings    grid       keeps car tc abs bb  sheds mix arbFront arbRear  declared car tc abs bb mix arbFront arbRear
+  carSettings    grid       keeps tc abs bb mix arbFront arbRear
   inputs         grid       one drawing, nothing to shed  parts steer
   session        grid       keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          grid       one drawing, nothing to shed
@@ -355,7 +355,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
-  carSettings    grid       keeps car tc abs bb  sheds mix arbFront arbRear  declared car tc abs bb mix arbFront arbRear
+  carSettings    grid       keeps tc abs bb mix arbFront arbRear
   inputs         grid       one drawing, nothing to shed  parts steer
   session        grid       keeps position class  sheds type lap timeLeft lapsLeft incidents cars  declared position class lap timeLeft
   radar          grid       one drawing, nothing to shed

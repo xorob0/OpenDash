@@ -433,6 +433,7 @@ namespace OpenDashPlugin
                     // state and not a saved setting: Init puts it back on the start module, exactly as
                     // it puts every zone back on the page it opens on.
                     this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace), () => Settings.ScreenCompanionPage(s.Namespace));
+                    this.AttachDelegate(Contract.CompanionFlagFormatProperty(s.Namespace), () => Settings.ScreenCompanionFlagFormat(s.Namespace));
                 }
                 else if (s.IsPitWall)
                 {
