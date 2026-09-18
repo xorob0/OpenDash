@@ -416,6 +416,47 @@ to let a tight box take that padding back before it gives up the tyre.
 - **Six packages are named and eight keep their folder.** A list that names most of its members
   invites the reader to think the rest are second class.
 
+## 3b. What the branch was reviewed against itself for
+
+After a hundred and four packages had merged, the branch was read back by a fan of seven independent
+reviewers, each given one lens and no ability to write: cross-package contradiction, driver-visible
+regression, a test re-pinned where the old assertion was right, work built and never wired, an
+expression wrong at runtime although the build is green, a merge that dropped one side's intent, and
+a requirement closed against the wrong sheet. Twenty-eight candidate defects were raised, each then
+handed to three further reviewers told to refute it, from three angles: is the behaviour really what
+is claimed, is the evidence sound, and is this already recorded as the author's decision. Thirteen
+survived two or more of their three skeptics. All thirteen are now fixed, and they are listed here
+because several had been shipping since long before this branch.
+
+- **The speed and the word beside it came from two different questions.** Zone A drew the value from
+  the property that is always kilometres per hour while labelling it with the driver's own unit, so
+  an imperial rig read 180 over the word for miles on the one zone a driver reads by reflex, and the
+  companion showed 112 at the same instant. The pit wall's speed trace was the mirror image, a
+  local-unit value under a title that said kilometres. Both now ask one question.
+- **The settings bar's class position was the size of the class.** It read a property SimHub does not
+  publish and fell through to its own default, which was the number of cars in the class, so a driver
+  fourth of twelve read P12.
+- **The spotter lamp was lit at all times.** It read a property every recorded trace has at null,
+  defaulted that to zero, and lit whenever the value was not one. It now reads the two properties
+  SimHub does publish, which are the pair the light strip already reads.
+- **The five-lap average left out the newest lap.** It averaged slots one to five where slot zero is
+  the lap just completed, so the number a driver checks after crossing the line was a lap behind.
+- **The narrow delta page dropped its bar**, justified by a comment saying the catalogue drops it
+  there. The catalogue draws it at all four shapes, with its scale, its rule, its fill and its centre
+  marker. The bar is back and the two short bodies shed the sector deltas instead, recorded.
+- **A sector nobody had set read 0.00** on the one page read sector by sector, where the two lap
+  times beside it read the placeholder.
+- **The fuel tank wrote a fixed "L"** over a value SimHub reports in whatever unit the sim names.
+- **The pit wall drew traction control and ABS as zero** on a car that has neither, which is the one
+  thing the settings bar and the car settings page both take care not to do.
+- **Two deltas wrote the hyphen** where every other delta writes the typographic minus.
+- **The panel's focus ring was two pairs of numbers**, one drawn from and one tested, left by a merge
+  in which both sides had implemented it.
+
+Fifteen more were raised and refuted, which is worth saying because the refutations were as useful as
+the confirmations: most were evidence read off the wrong branch or the wrong sheet, or a decision this
+document already records as yours.
+
 ## 4. The work, in packages
 
 The 1581 gaps group into 150 packages that can be built independently. A package owns a set of
