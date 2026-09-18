@@ -116,6 +116,8 @@ export const CHARS = {
   classPosition: { digits: 10, specials: 0 } as Chars,
   /** A short word: `Race`, `Dry`, `M`. */
   word: { digits: 8, specials: 0 } as Chars,
+  /** `12 / 43`, and `142 / 350` in an endurance race: the two spaces and the slash are the specials. */
+  lapOfTotal: { digits: 6, specials: 3 } as Chars,
 };
 
 /** True when a TimeSpan holds a real lap time rather than the unset `00:00:00`. */
@@ -407,6 +409,46 @@ export const lapsLeft = (): Expr => isnull(game('RemainingLaps'), num(0));
 export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
 
 /**
+ * Whether a fuel figure derived from a lap's consumption means anything yet.
+ *
+ * **A lap has to have been completed, not merely begun.** SimHub publishes `Fuel_LitersPerLap`
+ * before the first crossing by extrapolating the partial lap, so on the out lap it is a number that
+ * changes every frame -- large under braking, small on a straight -- and every figure derived from
+ * it moves with it: the estimated laps, the refuel and the average itself. Reported from a rig as
+ * "really jumpy for the first lap"; the reading is not wrong so much as not yet a reading.
+ *
+ * So the gate is a completed lap. After one, `Fuel_LitersPerLap` is an average over laps that have
+ * finished and it moves only at a crossing, which is the "updated per lap" a driver expects. Before
+ * one, the fields draw {@link NO_VALUE} rather than a figure that will not sit still.
+ *
+ * The estimate is still required to be positive as well. A car whose sim computes no consumption at
+ * all has completed laps and nothing to show for them, and that is the same empty box.
+ */
+export const fuelIsSettled = (): Expr => and(gt(completedLaps(), num(0)), gt(fuelPerLap(), num(0)));
+
+/**
+ * How long the race is expected to run, in laps.
+ *
+ * `TotalLaps` where the session has one, which is every lap-limited race and no timed one. For a
+ * timed race the length is a prediction, and the one SimHub already makes is `RemainingLaps` -- laps
+ * done plus laps to come. Adding rather than reading a second property keeps the two forms in one
+ * expression and means the number always agrees with the remaining-laps figure beside it.
+ */
+export const estimatedRaceLaps = (): Expr => iff(gt(totalLaps(), num(0)), totalLaps(), add(completedLaps(), lapsLeft()));
+
+/**
+ * `12 / 43`: the lap you are on, out of the race's estimated length.
+ *
+ * The lap you are *on* and not the lap you have finished, because that is the number a driver says
+ * out loud. SimHub's `CurrentLap` is already 1 on the opening lap, so it needs no adjusting.
+ *
+ * `--` until there is a length to count against. A timed race has none until the sim has an average
+ * lap to divide by, and a total of zero drawn as "12 / 0" is worse than saying nothing.
+ */
+export const lapOfTotal = (): Expr =>
+  iff(gt(estimatedRaceLaps(), num(0)), concat(fmt(currentLap(), '0'), str(' / '), fmt(estimatedRaceLaps(), '0')), str(NO_VALUE));
+
+/**
  * The tank under the threshold the driver set, which is the sentence three separate drawings had
  * each written for themselves: band D's fuel telltale, the strip's low-fuel state and the hero's
  * fuel pop-up. ADR 0009 puts a derivation that has reached three items behind one name, and this is
@@ -418,15 +460,16 @@ export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap(
  * `LightsLowFuelLaps` with the box's deprecated name behind it, so one number answers "am I low"
  * for every light and every face.
  *
- * **A tank is only low once the sim knows what a lap costs.** SimHub derives `Fuel_RemainingLaps`
- * from `Fuel_LitersPerLap`, and with no lap yet run it publishes zero rather than null -- so
- * "0.0 laps remaining" is not an empty tank, it is a sim that has not been asked to compute one.
+ * **A tank is only low once the sim knows what a lap costs**, which is {@link fuelIsSettled}.
+ * SimHub derives `Fuel_RemainingLaps` from `Fuel_LitersPerLap`, and with no lap yet run it publishes
+ * zero rather than null -- so "0.0 laps remaining" is not an empty tank, it is a sim that has not
+ * been asked to compute one.
  * Without the consumption gate the warning is on at every idle screen, on the band's telltale, in
  * the fuel pop-up, on the flag box and on every strip at once, which is exactly what a driver
  * sitting in the menus saw in 0.3.0-rc.1. The gate is the one the fuel module already draws its
  * "est. laps" behind, so the number and the warning about it now agree about when there is one.
  */
-export const tankIsLow = (): Expr => and(gt(fuelPerLap(), num(0)), lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps()));
+export const tankIsLow = (): Expr => and(fuelIsSettled(), lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps()));
 
 /**
  * Whether the car is switched on. SimHub normalises it from the sim, so this is one of the few

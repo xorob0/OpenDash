@@ -220,8 +220,12 @@ describe('second-screen values', () => {
 
   test('a low tank is one sentence, against the threshold every light reads', () => {
     expect(values.tankIsLow()).toBe(
-      `((${values.fuelPerLap()}) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 999)) < (${flagBox.lowFuelLaps()}))`,
+      `(${values.fuelIsSettled()}) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 999)) < (${flagBox.lowFuelLaps()}))`,
     );
+    // And the gate is a completed lap, not merely an estimate: before the first crossing SimHub
+    // extrapolates the partial lap, so every figure derived from it moves every frame.
+    expect(values.fuelIsSettled()).toContain('CompletedLaps');
+    expect(values.fuelIsSettled()).toContain('Fuel_LitersPerLap');
     // The laps a warning is raised on default high where the laps a field draws default to zero, so
     // a sim that computes none leaves the warning away rather than raising it on every car.
     expect(values.fuelLapsLeft()).toContain(', 0)');
