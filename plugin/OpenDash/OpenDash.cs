@@ -1,18 +1,25 @@
 // OpenDash.cs: the SimHub plugin. Installs the embedded dashboard on startup, exposes the settings as
-// [OpenDash.*] properties and offers the settings panel in SimHub's left menu. It renders nothing and reads
-// no telemetry (no IDataPlugin), by design: see docs/decisions/0003-plugin-settings-through-properties.md.
+// [OpenDash.*] properties and offers the settings panel in SimHub's left menu. It renders nothing:
+// see docs/decisions/0003-plugin-settings-through-properties.md.
+//
+// It does read telemetry, for exactly one thing. ADR 0018 reopened ADR 0009 -- "the plugin does not
+// compute" -- for the car's own LED bar, because there is no SimHub property to derive it from, no
+// expression that could hold an 85-car table and no NCalc clock to flash it with. DataUpdate below
+// is the whole of that: three values in, one frame of colours out, and nothing else in the plugin
+// reads a telemetry value.
 using System;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Controls;
 using System.Windows.Media;
+using GameReaderCommon;
 using SimHub.Plugins;
 
 namespace OpenDashPlugin
 {
     [PluginName("OpenDash")]
     [PluginAuthor("OpenDash contributors")]
-    public class OpenDash : IPlugin, IWPFSettingsV2
+    public class OpenDash : IDataPlugin, IWPFSettingsV2
     {
         /// <summary>SimHub stores the settings as PluginsData/Common/OpenDash.GeneralSettings.json.</summary>
         public const string SettingsKey = "GeneralSettings";
@@ -37,6 +44,18 @@ namespace OpenDashPlugin
 
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
+
+        /// <summary>
+        /// The measured car light tables, fetched onto the machine rather than shipped (ADR 0018).
+        /// Built on first use, like the installer, because it needs the SimHub root the settings name.
+        /// </summary>
+        public CarLightService CarLights =>
+            carLights ?? (carLights = new CarLightService(new ReleaseClient(Version), CarLightLibrary.FolderPath(Installer.SimHubRoot)));
+
+        private CarLightService carLights;
+
+        /// <summary>Monotonic milliseconds for the over-rev flash, which is the only thing openDash times.</summary>
+        private readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
 
         /// <summary>The embedded profile as JSON, which the lights page installs into SimHub.</summary>
         public string FlagBoxJson
@@ -102,6 +121,18 @@ namespace OpenDashPlugin
             }
             AttachProperties();
             AttachActions(pluginManager);
+            try
+            {
+                // Off the startup thread: it reads a folder and may fetch. CheckForUpdates is the
+                // user's one switch for whether openDash reaches the network at all (ADR 0012), and it
+                // covers this too -- with it off, whatever is already on disk is used and nothing is
+                // asked for.
+                CarLights.LoadInBackground(Settings.CheckForUpdates);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Loading the car light tables failed", ex);
+            }
             Log.Info("Dashboard status: " + Installer.Status);
             Log.Info(FlagBoxProfile.Summary(FlagBox));
             // The installer records what it wrote into each folder but never saves; this is the safe moment.
@@ -189,11 +220,53 @@ namespace OpenDashPlugin
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "WaterTemp"), () => Settings.MatrixWaterTemp(m) == 0 ? (int?)null : Settings.MatrixWaterTemp(m));
             }
             // The strips, last, in the order Contract.LightsPropertyNames() declares them. Every
-            // generated .ledsprofile reads exactly these two, so a strip with neither attached can only
-            // ever draw the defaults its isnull() carries.
+            // generated .ledsprofile reads these, so a strip with none of them attached can only ever
+            // draw the defaults its isnull() carries.
             this.AttachDelegate(Contract.LedCentre, () => Settings.LedCentre);
             this.AttachDelegate(Contract.LedRpmStyle, () => Settings.LedRpmStyle);
             this.AttachDelegate(Contract.LedFlagAnimation, () => Settings.LedFlagAnimation);
+            this.AttachDelegate(Contract.LedMirrorFit, () => Settings.LedMirrorFit);
+            // The mirror. Ready is the gate every strip profile's car layer hangs on, and each run is
+            // one fixed-width string the profile slices a colour out of with left(); DataUpdate fills
+            // them. With the tables absent or the car unmeasured, Ready stays 0 and the profile draws
+            // the ladder iRacing publishes, which is what it drew before any of this existed.
+            this.AttachDelegate(Contract.LedMirrorReady, () => CarLights.Ready ? 1 : 0);
+            foreach (var length in Contract.MirrorRunLengths)
+            {
+                var run = length;
+                this.AttachDelegate(Contract.LedMirrorRun(run), () => CarLights.Run(run));
+            }
+        }
+
+        /// <summary>
+        /// One frame of the car's own bar. The only telemetry openDash reads, and the only thing it
+        /// computes (ADR 0018).
+        ///
+        /// <para>It is called at SimHub's data rate, so it does the least it can: with the mirror off
+        /// or the sim closed it sets one field and returns, and the table lookup happens on a car
+        /// change rather than per frame. Nothing here may throw -- SimHub calls this from its own loop
+        /// and an exception here would be one per frame -- so the whole body is guarded and a failure
+        /// leaves the strip on the published ladder.</para>
+        /// </summary>
+        public void DataUpdate(PluginManager pluginManager, ref GameData data)
+        {
+            try
+            {
+                var telemetry = data == null ? null : data.NewData;
+                var on = data != null && data.GameRunning && telemetry != null && Settings.LedRpmStyle == Contract.LedRpmStyleCar;
+                CarLights.Update(
+                    on ? telemetry.CarId : null,
+                    on ? telemetry.Gear : null,
+                    on ? telemetry.Rpms : 0,
+                    Settings.LedMirrorFit == Contract.LedMirrorFitExact ? MirrorFit.Exact : MirrorFit.Stretch,
+                    on,
+                    clock.ElapsedMilliseconds);
+            }
+            catch (Exception)
+            {
+                // Once a frame, silently, and the strip falls back on its own: there is nothing useful
+                // to log sixty times a second and nothing to recover.
+            }
         }
 
         /// <summary>How long shutdown waits for an install that is rewriting DashTemplates.</summary>
@@ -294,7 +367,7 @@ namespace OpenDashPlugin
             }
             // Shared rather than one face's, because the round faces' rev arc and the companion's
             // speedo read it too, and attached last of the shared group because ShiftLights is one of
-            // the names this list has always opened with. XOR-119, XOR-138.
+            // the names this list has always opened with. #170, #189.
             this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
             // And after it, for the same reason: every band that writes a name reads this, on a face
             // and on a card face alike, so it belongs to the rig rather than to a screen.

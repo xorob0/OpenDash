@@ -1,7 +1,7 @@
 /**
  * Which field of which page is secondary: the table, transcribed from the catalogue.
  *
- * Rule 17 says a page sheds its secondary ranks before it shrinks its numerals, and XOR-86 built
+ * Rule 17 says a page sheds its secondary ranks before it shrinks its numerals, and #137 built
  * the shape model that decides when. Neither says **what goes first**, and that is not a mechanism
  * to be derived: it is a design decision taken eighty-four times, once per page per shape, on
  * `design/canvas/ZoneCatalogue.dc.html`. Every drawing there is a row of this table.

@@ -44,7 +44,7 @@ bun run shots --packages "openDash 850x480,openDash 1280x480,openDash Companion,
 Then copy the four PNGs over the ones in `media/readme/`, keeping the names, and say in the commit
 message what moved.
 
-Three of those four cannot be opened by that command today, which is XOR-252. Dash Studio draws a
+Three of those four cannot be opened by that command today, which is #303. Dash Studio draws a
 "Last used" band above the list once a dashboard has been run, the band pushes every row down by
 about 220 px, and `openDashboard` measures its rows from a constant, so the click lands on a
 neighbour: filtering by `openDash` opened the face one row below it. Until the opener measures the

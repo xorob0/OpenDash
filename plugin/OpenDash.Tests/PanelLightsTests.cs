@@ -17,6 +17,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(Contract.LedCentres.Length, PanelLights.CentreLabels.Length);
             Assert.Equal(Contract.LedRpmStyles.Length, PanelLights.RpmStyleLabels.Length);
+            Assert.Equal(Contract.LedMirrorFits.Length, PanelLights.MirrorFitLabels.Length);
             Assert.Equal(Contract.FlagBoxRests.Length, PanelLights.RestLabels.Length);
             Assert.Equal(Contract.FlagBoxSides.Length, PanelLights.SideLabels.Length);
         }
@@ -26,6 +27,7 @@ namespace OpenDashPlugin.Tests
         {
             var every = PanelLights.CentreLabels
                 .Concat(PanelLights.RpmStyleLabels)
+                .Concat(PanelLights.MirrorFitLabels)
                 .Concat(PanelLights.RestLabels)
                 .Concat(PanelLights.SideLabels);
             Assert.All(every, label => Assert.False(string.IsNullOrWhiteSpace(label)));

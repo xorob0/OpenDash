@@ -11,7 +11,7 @@
  * driver has to tell apart may be identical, and none may differ only in hue.** Yellow and waved
  * yellow, black and furled black, the limiter in the lane and out of it are pairs that mean
  * opposite things and are one careless edit apart. On a 64-pixel panel, that colour rule is the
- * only part of XOR-78 that can be checked mechanically at all.
+ * only part of #129 that can be checked mechanically at all.
  */
 import { describe, expect, test } from 'bun:test';
 import { COLUMNS, ROWS } from '../src/leds/profile.ts';
@@ -100,7 +100,7 @@ describe('no two glyphs can be confused', () => {
   });
 
   test('no two differ only in hue, unless both are solid flags', () => {
-    // XOR-78: meaning is not carried by colour alone. A racing flag is the documented exception --
+    // #129: meaning is not carried by colour alone. A racing flag is the documented exception --
     // red, yellow, white and green *are* colours, and inventing a pattern for each would be worse.
     const byShape = new Map<string, Glyph[]>();
     for (const glyph of glyphs) {

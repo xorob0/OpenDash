@@ -2,7 +2,7 @@
  * What a zone shows, rather than where it draws.
  *
  * Every other test in this directory measures geometry: advances against a box, items inside a
- * frame, a tree of rectangles in a snapshot. None of them would have noticed XOR-83, where
+ * frame, a tree of rectangles in a snapshot. None of them would have noticed #134, where
  * `left()` was not a SimHub function and every class and tyre chip drew an empty block with the
  * formula well formed, the item present, the geometry correct and the suite green.
  *
@@ -10,7 +10,7 @@
  * screen index is an expression, so the same mistake costs a zone everything it shows. These are
  * the structural assertions that can be made without evaluating a binding, gathered in one file
  * so that the guarantee is auditable, together with the deliberate breakages proving each guard
- * actually bites. Asserting a computed value waits on XOR-20.
+ * actually bites. Asserting a computed value waits on #71.
  *
  * Two things the ticket asks for cannot be asserted here and are asserted on the plugin side
  * instead, because neither ever reaches a package: the page mask, which the plugin normalises and
@@ -137,7 +137,7 @@ describe('the guards bite', () => {
     expect(errorCodes(pkg)).toContain('widget/screen-index');
   });
 
-  test('a function SimHub does not dispatch fails the build, which is the XOR-83 failure', () => {
+  test('a function SimHub does not dispatch fails the build, which is the #134 failure', () => {
     const pkg = packages()[0]!;
     const widget = widgetsOf(pkg)[0]!;
     widget.bindings = { ...widget.bindings, InitialScreenIndex: { mode: 'formula', formula: 'nosuchfunction([OpenDash.ZoneA])' } };

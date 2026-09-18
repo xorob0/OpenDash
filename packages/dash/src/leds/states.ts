@@ -43,7 +43,7 @@ export const STATE_BLINK_HZ = ds.indicator.flagBand.flashHz;
 /**
  * Limiter on, in the lane: quiet confirmation. A steady frame, not a filled panel — the driver is
  * doing the right thing and does not need to be shouted at. Two pixels thick, so that it is not
- * the black flag's one-pixel outline in a different colour: XOR-78's rule is that meaning cannot
+ * the black flag's one-pixel outline in a different colour: #129's rule is that meaning cannot
  * rest on colour alone, and a driver who cannot see the difference between those two is being told
  * the wrong thing entirely.
  */
@@ -63,7 +63,7 @@ export const LIMITER_IN_LANE: Grid = [
  *
  * It is deliberately not a filled panel. `purpose.pitLimiter` is pure white, the same value as
  * `purpose.flag.white`, so a filled panel here would be the white flag with a blink — and telling
- * a driver "last lap" when you mean "your limiter is on" is the exact failure XOR-78 is about.
+ * a driver "last lap" when you mean "your limiter is on" is the exact failure #129 is about.
  * The token is not changed to fix this: `design/` is the design source and a colour is decided
  * there, so the shape carries the difference instead.
  */

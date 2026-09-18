@@ -1,6 +1,6 @@
 {
   // The scenario the LED profiles are verified against, and the one that proves the mirror rather
-  // than the arithmetic (XOR-250).
+  // than the arithmetic (#301).
   //
   // One slow sweep from below the first light to past the over-rev, so every threshold is crossed
   // where a human can see which LED changed at which RPM: 1200 to 9600 over twenty seconds, against

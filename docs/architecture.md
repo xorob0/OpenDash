@@ -7,7 +7,7 @@
 > ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)): five parts,
 > a catalogue and a wheel button per zone, and a page laid out for the shape of its box.
 >
-> This document is rewritten when the card path is retired (XOR-95), not before, so that it keeps
+> This document is rewritten when the card path is retired (#146), not before, so that it keeps
 > describing the code rather than the intention. Read every mention of a slot below as belonging to
 > that path: `packages/dash/src/zones/` is the other one, and `design/zones.md` describes it.
 >

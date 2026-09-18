@@ -37,7 +37,7 @@ namespace OpenDashPlugin
         /// alone: one threshold answers "am I low" for the strip, the rev bar and the box, and three
         /// copies of it would be three places to disagree. FlagBoxLowFuelLaps is its deprecated alias
         /// and stays attached, because a published property name is a public interface (ADR 0003) and
-        /// an rc.2 user's settings do not vanish without a release of warning (XOR-119).</summary>
+        /// an rc.2 user's settings do not vanish without a release of warning (#170).</summary>
         public const string LightsLowFuelLaps = "LightsLowFuelLaps";
 
         /// <summary>Laps, not litres: a litre threshold means nothing without knowing the car. The name
@@ -167,7 +167,7 @@ namespace OpenDashPlugin
             new Dictionary<string, int> { { "Celcius", 110 }, { "Fahrenheit", 230 }, { "Kelvin", 383 } };
 
         /// <summary>The four matrix contents SimHub composes. A device is the same shape of thing as a
-        /// screen, so it owns its settings as one group (XOR-124), prefixed, exactly as a face does.
+        /// screen, so it owns its settings as one group (#175), prefixed, exactly as a face does.
         ///
         /// Rotation and serpentine wiring are deliberately absent: they are SimHub device settings decided
         /// by the corner the data cable enters, and a second place to set them is a second place to
@@ -275,11 +275,50 @@ namespace OpenDashPlugin
         /// <summary>The revs, with brake on the sides. What the hardware makers put there.</summary>
         public const string DefaultLedCentre = "rpm";
 
-        /// <summary>How the rev ladder fills the strip. It decides the look and never the when: the
-        /// thresholds are the car's own either way (ADR 0014). Mirrors LED_RPM_STYLES in contract.ts.</summary>
-        public static readonly string[] LedRpmStyles = { "leftToRight", "meetInMiddle", "f1" };
+        /// <summary>How the rev ladder fills the strip. The three openDash styles decide the look and
+        /// never the when: the thresholds are the car's own either way (ADR 0014). "car" is not one of
+        /// those -- it is the car's own bar, from the fetched table (ADR 0018). Mirrors LED_RPM_STYLES
+        /// in contract.ts.</summary>
+        public static readonly string[] LedRpmStyles = { "car", "leftToRight", "meetInMiddle", "f1" };
 
-        public const string DefaultLedRpmStyle = "leftToRight";
+        /// <summary>The car's own, because openDash's opinion is that the car is right. A car with no
+        /// table falls back to the ladder iRacing publishes without the driver choosing anything.</summary>
+        public const string DefaultLedRpmStyle = "car";
+
+        /// <summary>What the mirror does when the car's bar and the strip are not the same length.
+        /// Mirrors LED_MIRROR_FITS in contract.ts.</summary>
+        public static readonly string[] LedMirrorFits = { "stretch", "exact" };
+
+        public const string DefaultLedMirrorFit = "stretch";
+
+        /// <summary>Named, because the plugin compares against them: the mirror is on when the style is
+        /// this, and the fit is exact when the setting is that.</summary>
+        public const string LedRpmStyleCar = "car";
+
+        public const string LedMirrorFitExact = "exact";
+
+        /// <summary>Whether the plugin is publishing a mirrored bar this frame. Computed, not chosen:
+        /// it is the one gate the mirror layer of every strip profile hangs on.</summary>
+        public const string LedMirrorReady = "LedMirrorReady";
+
+        public const string LedMirrorFit = "LedMirrorFit";
+
+        /// <summary>
+        /// The run lengths a mirrored bar is published for: every centre length the generated strip
+        /// shapes use, the brows included. Mirrors MIRROR_RUN_LENGTHS in contract.ts, and the two are
+        /// checked against each other, because a length missing here is a strip shape with no mirror
+        /// and nothing that would say so.
+        /// </summary>
+        public static readonly int[] MirrorRunLengths = { 8, 9, 10, 12, 14, 15, 16, 18, 20, 25 };
+
+        /// <summary>How many characters one colour takes in a packed run: #AARRGGBB.</summary>
+        public const int MirrorColorWidth = 9;
+
+        /// <summary>"LedMirror14": a whole run of the car's own bar, as one fixed-width string.</summary>
+        public static string LedMirrorRun(int length)
+        {
+            return "LedMirror" + length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
 
         /// <summary>On: movement is what a flag is read by at the edge of vision.</summary>
         public const bool DefaultLedFlagAnimation = true;
@@ -473,7 +512,7 @@ namespace OpenDashPlugin
         /// <summary>A pit wall: three pages sharing four data zones and one wide zone.</summary>
         public const string KindPitWall = "pitwall";
 
-        /// <summary>A twelve-slot face, from the card model that the zones replaced. Leaves with XOR-95.</summary>
+        /// <summary>A twelve-slot face, from the card model that the zones replaced. Leaves with #146.</summary>
         public const string KindSlots = "slots";
 
         public static readonly string[] ScreenKinds = { KindFace, KindCompanion, KindPitWall, KindSlots };
@@ -573,7 +612,7 @@ namespace OpenDashPlugin
         ///
         /// It is yielded after the twelve slots rather than beside the mode it supersedes: the four
         /// fixed names have shipped and the tests assert them by index, so a new setting is appended
-        /// to this group and never inserted into it. XOR-119, XOR-138.
+        /// to this group and never inserted into it. #170, #189.
         /// </remarks>
         public static IEnumerable<string> SharedPropertyNames()
         {
@@ -1171,9 +1210,10 @@ namespace OpenDashPlugin
         ///
         /// A rig with no matrix and no strip still declares all of them, unlike a screen it does not
         /// have: openDash installs neither profile by itself (ADR 0013), so there is nothing to detect,
-        /// and forty-nine names is not the hundred and thirty-six that made the screens worth
-        /// narrowing. (Thirteen, this said before the matrices had a group each, and thirty-four before
-        /// the four settings a box owns moved under it; it is counted here rather than guessed at.)</summary>
+        /// and sixty-one names is not the hundred and thirty-six that made the screens worth
+        /// narrowing. (Thirteen, this said before the matrices had a group each, thirty-four before
+        /// the four settings a box owns moved under it, and forty-nine before the mirror brought its
+        /// fit, its gate and a run per length; it is counted here rather than guessed at.)</summary>
         public static IEnumerable<string> LightsPropertyNames()
         {
             yield return LightsBrightness;
@@ -1192,7 +1232,7 @@ namespace OpenDashPlugin
             foreach (var name in LedPropertyNames()) yield return name;
         }
 
-        /// <summary>The three a generated .ledsprofile reads, last, as ledProperties() is last in
+        /// <summary>What a generated .ledsprofile reads, last, as ledProperties() is last in
         /// contract.ts. Named apart so that the strips can be pointed at, not so that they are a
         /// category of their own.</summary>
         public static IEnumerable<string> LedPropertyNames()
@@ -1200,6 +1240,9 @@ namespace OpenDashPlugin
             yield return LedCentre;
             yield return LedRpmStyle;
             yield return LedFlagAnimation;
+            yield return LedMirrorFit;
+            yield return LedMirrorReady;
+            foreach (var length in MirrorRunLengths) yield return LedMirrorRun(length);
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a
@@ -1216,7 +1259,7 @@ namespace OpenDashPlugin
         /// `null` is the shape an rc.2 file has -- it was written before the mode existed -- and it
         /// resolves through the deprecated alias, so that a user who had turned the shift lights off
         /// finds the plain RPM bar rather than the shift lights back on. Anything unrecognised
-        /// resolves the same way. XOR-119 is the rule this keeps.
+        /// resolves the same way. #170 is the rule this keeps.
         /// </summary>
         public static string NormaliseRevBar(string value, bool shiftLights)
         {
@@ -1231,7 +1274,7 @@ namespace OpenDashPlugin
         /// A stored "rpmOnly" becomes "rpm", which is where the value was retired. Migrated by name
         /// rather than left to the fallback: the fallback lands on "rpm" only for as long as "rpm" is
         /// the default, and a value no conditional group in the profile matches is a strip whose centre
-        /// goes dark. XOR-119 is the rule that an rc.2 user's settings survive the release.
+        /// goes dark. #170 is the rule that an rc.2 user's settings survive the release.
         /// </remarks>
         public static string NormaliseLedCentre(string value)
         {

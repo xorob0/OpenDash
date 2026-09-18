@@ -28,7 +28,7 @@ import {
 export interface ValidateProfileOptions extends Partial<ValidateOptions> {
   /**
    * How many LEDs the device has. When given, an effect whose `StartPosition` plus `LedCount`
-   * runs past the end fails — the rule XOR-250 asks for, and the reason it is an error rather
+   * runs past the end fails — the rule #301 asks for, and the reason it is an error rather
    * than a warning is that nothing else would ever tell you.
    */
   ledCount?: number;
@@ -43,9 +43,11 @@ const expressionsOf = (c: LedContainer, path: string): { expr: LedExpression; pa
     ? at(c.trigger, 'TriggerFormula')
     : c.kind === 'customStatus'
       ? [...at(c.enabledFormula, 'EnabledFormula'), ...at(c.blinkFormula, 'BlinkFormula')]
-      : c.kind === 'scriptedContent'
-        ? at(c.contentFormula, 'ContentFormula')
-        : [];
+      : c.kind === 'dynamicColor'
+        ? at(c.colorFormula, 'ColorFormula')
+        : c.kind === 'scriptedContent'
+          ? at(c.contentFormula, 'ContentFormula')
+          : [];
 };
 
 /** Every colour a container names, so that none of them can be the shorthand SimHub misreads. */
