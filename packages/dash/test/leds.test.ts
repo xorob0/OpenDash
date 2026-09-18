@@ -28,6 +28,7 @@ import {
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
 import { ignitionIsOn } from '../src/leds/gates.ts';
+import * as values from '../src/second/values.ts';
 import { fuelPercent } from '../src/second/values.ts';
 // The flag box's own states, so that "the strip and the box compare the same thing" is asserted
 // against the box rather than against a copy of what the box is believed to say.
@@ -737,6 +738,30 @@ describe('every generated profile', () => {
       }
     }
     expect(SLOW_BLINK_MS).toBe(Math.round(1000 / ds.indicator.flagBand.flashHz / 2));
+  });
+
+  test('the brake reaches a strip through the centre alone: no centre value fills a side with it', () => {
+    // The sides were a brake gradient under the default centre, and a group filled red by the pedal
+    // is a group on which an oil warning cannot come on. The gradient is gone rather than recoloured:
+    // the ends are lamps, and brake is still offered where it can be read, as a centre function.
+    // This is the assertion that keeps the decision from being undone by a later edit.
+    const brake = values.brake();
+    for (const shape of ALL_SHAPES) {
+      const p = rpmStripProfile(shape, stableGuid(`t/sides/${shape.id}`));
+      const trail = (cs: readonly leds.LedContainer[], path: readonly string[]): { at: string; path: readonly string[] }[] =>
+        cs.flatMap((c) => {
+          const here = [...path, descriptionOf(c)];
+          const reads = JSON.stringify([(c as { enabledFormula?: unknown }).enabledFormula, (c as { trigger?: unknown }).trigger]).includes(brake);
+          return [...(reads ? [{ at: descriptionOf(c), path: here }] : []), ...trail(leds.childrenOf(c), here)];
+        });
+      for (const found of trail(p.containers, [])) {
+        // Under the centre group, or under one of the 3/10/3's further runs, which repeat it.
+        const root = found.path.find((d) => d === 'centre' || d.startsWith('extra run '));
+        expect({ shape: shape.id, at: found.at, under: root }).toMatchObject({ under: expect.any(String) });
+      }
+      // ...and the group itself is gone by name, so a reader does not find a dead comment about it.
+      expect({ shape: shape.id, group: leds.serializeProfile(p).includes('sides: brake') }).toMatchObject({ group: false });
+    }
   });
 
   test('offers every centre function and carries a stable id', () => {
