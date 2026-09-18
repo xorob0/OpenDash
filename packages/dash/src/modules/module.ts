@@ -55,7 +55,11 @@ export interface ModuleContext {
    * When true, a page that lists other cars lists the player's own class rather than the whole
    * field. An expression rather than a flag, because the answer is a plugin setting a driver
    * changes mid-session, and because it is a property of the zone showing the page rather than of
-   * the page: the companion and the pit wall pass nothing and list everybody, as they always have.
+   * the page. A face asks it per zone, because a face's four zones are four rectangles of one
+   * dashboard. A pit wall asks it once for the whole screen, its zones being widgets pointed at one
+   * zone dashboard per rectangle, so two of them are literally the same file and a per-zone answer
+   * could not reach one without reaching the other. The companion passes nothing and lists
+   * everybody.
    */
   classOnly?: Expr;
   /**
