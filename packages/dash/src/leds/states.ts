@@ -246,6 +246,11 @@ export function stateContainers(list: readonly BoxState[], kind: string): Matrix
   }));
 }
 
+/**
+ * No state below the flags sets `blink`, so the first branch is unreachable today. It is kept
+ * rather than deleted because `blink` is what the rule is written in: flagBox.test.ts asserts that
+ * every state here is held, and an invariant with no field to name cannot be tested.
+ */
 const framesOf = (state: BoxState): MatrixFrame[] =>
   state.blink ? blinkFrames(state.grid, DARK, STATE_PALETTE, STATE_BLINK_HZ, state.id) : still(state.grid, STATE_PALETTE, state.id);
 
