@@ -68,6 +68,13 @@ function num(path: string): number {
   return v;
 }
 
+function bool(path: string): boolean {
+  used.push(path);
+  const v = resolveToken(path);
+  if (typeof v !== 'boolean') throw new Error(`tokens: ${path} is not a boolean (${String(v)})`);
+  return v;
+}
+
 function text(path: string): string {
   used.push(path);
   const v = resolveToken(path);
@@ -154,6 +161,17 @@ export const ds = {
       debrisStripe: hex('purpose.flag.debris.stripe'),
     },
     pitLimiter: hex('purpose.pitLimiter'),
+    /**
+     * A pop-up owns two colours of its own rather than borrowing `surface.zone` and `text.primary`
+     * directly: the box is a thing that appears over the hero, and naming its fill and its rule
+     * here is what lets the artboard move either one without moving every zone on the face.
+     */
+    popUp: { surface: hex('purpose.popUp.surface'), rule: hex('purpose.popUp.rule') },
+    /**
+     * Up and down are the same grey on purpose. A change of setting is information about what the
+     * driver just did, not a state of the car, so neither direction takes a state colour.
+     */
+    trend: { up: hex('purpose.trend.up'), down: hex('purpose.trend.down') },
     // The alert colours the face already uses, reached directly by the LED profiles for the same
     // reason the semantic scale is: a strip has no readouts to name a colour after.
     alert: {
@@ -268,6 +286,25 @@ export const ds = {
     /** The flag ring on round faces takes the band's place; its width is the ring's stroke. */
     flagRing: { width: num('indicator.flagRing.width') },
     pitLimiter: { height: num('indicator.pitLimiter.height'), heightSm: num('indicator.pitLimiter.heightSm') },
+    /**
+     * The four transient boxes. Their durations are how long the design says each one is worth
+     * looking at, not a timer a dashboard can run: nothing in a scene graph counts milliseconds, so
+     * a caller compares one of these against a published value that is already a clock. They are
+     * exposed all the same, because the number a condition is written against has to come from the
+     * token file rather than from a literal beside the condition.
+     */
+    alert: { durationMs: num('indicator.alert.durationMs') },
+    popUp: { height: num('indicator.popUp.height'), durationMs: num('indicator.popUp.durationMs') },
+    changeNotification: {
+      height: num('indicator.changeNotification.height'),
+      durationMs: num('indicator.changeNotification.durationMs'),
+      settleFrames: num('indicator.changeNotification.settleFrames'),
+    },
+    lapReview: {
+      height: num('indicator.lapReview.height'),
+      durationMs: num('indicator.lapReview.durationMs'),
+      perSessionType: bool('indicator.lapReview.perSessionType'),
+    },
   },
   card: {
     rung: { L: rung('L'), M: rung('M'), S: rung('S') },
