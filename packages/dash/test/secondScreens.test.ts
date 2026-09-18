@@ -123,6 +123,7 @@ describe('the packages are built and valid', () => {
 describe('the companion', () => {
   const companion = PACKAGES.find((p) => p.def.folder === 'openDash Companion')!;
   const main = companion.pkg.dashboards[0]!;
+  const bothSizes = PACKAGES.filter((p) => p.def.folder.startsWith('openDash Companion'));
 
   test('has one screen per module, in catalogue order', () => {
     expect(main.screens).toHaveLength(MODULE_COUNT);
@@ -175,12 +176,38 @@ describe('the companion', () => {
     expect([...roles]).toEqual(['true;true;false']);
   });
 
+  test('stacks the four bands the artboard draws, which fill the screen exactly', () => {
+    // The flag band is the artboard's 12 px strip, as on the nano face, rather than the 32 px
+    // heightSm token it used to read, which took twenty pixels off the body of all forty-two
+    // screens. Pinned on both sizes so the bands cannot drift again.
+    const bandsOf = (folder: string): number[] => {
+      const g = companionGeometry(COMPANION_SIZES.find((s) => s.folder === folder)!);
+      return [g.header.height, g.module.height, g.dots.height, g.flags.height];
+    };
+    expect(bandsOf('openDash Companion')).toEqual([56, 388, 24, 12]);
+    expect(bandsOf('openDash Companion portrait')).toEqual([56, 758, 24, 12]);
+    for (const size of COMPANION_SIZES) {
+      expect(bandsOf(size.folder).reduce((a, b) => a + b, 0)).toBe(size.height);
+      // What the band arithmetic is for: the box the module is actually handed.
+      const box = contentRect(companionGeometry(size).module, 'companion');
+      expect([box.width, box.height]).toEqual(size.width === 850 ? [802, 356] : [432, 726]);
+    }
+  });
+
   test('draws the header, the dots and the flag band on every screen', () => {
-    for (const screen of main.screens) {
-      const names = itemsOf({ ...main, screens: [screen] }).map((i) => i.name);
-      expect(names.some((n) => n.includes('header.module'))).toBe(true);
-      expect(names.filter((n) => n.includes('.dots.dot'))).toHaveLength(MODULE_COUNT);
-      expect(names.some((n) => n.includes('flag.yellow'))).toBe(true);
+    for (const { pkg } of bothSizes) {
+      const dashboard = pkg.dashboards[0]!;
+      for (const screen of dashboard.screens) {
+        const items = itemsOf({ ...dashboard, screens: [screen] });
+        const names = items.map((i) => i.name);
+        expect(names.some((n) => n.includes('header.module'))).toBe(true);
+        expect(names.filter((n) => n.includes('.dots.dot'))).toHaveLength(MODULE_COUNT);
+        // The rectangle rather than the presence: the body is measured against what is left under
+        // it, so a band that grew back would be a silently shorter page rather than a failure.
+        const band = items.find((i) => i.name.endsWith('.flag.yellow.band')) as RectangleItem;
+        expect(band.rect).toEqual({ left: 0, top: dashboard.height - 12, width: dashboard.width, height: 12 });
+        expect(band.backgroundColor).toBe(ds.purpose.flag.yellow);
+      }
     }
   });
 
