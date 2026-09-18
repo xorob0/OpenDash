@@ -11,7 +11,7 @@ import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
 import { ALL_SHAPES, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
-import { FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
+import { FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
 import { lampsForSide, lampsOf } from '../src/leds/lamps.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -262,12 +262,15 @@ describe('what a lamp is never yielded to', () => {
       const whole = placedOf(profileFor(shape).containers).filter(
         (p) => clears(p.container) && placedOf(leds.childrenOf(p.container), p.start - 1).some((c) => c.count === stripLength(shape)),
       );
-      // A brow has no lamps, so its flags keep the whole run as well; a shape with lamps has the pit
-      // family and the spotter's own switch, which is off unless the driver asks for it.
+      // A bare run has no lamps, so everything a lamp would have carried keeps the whole run: the
+      // flags, then what is happening beside the car over them, then the pit family over everything.
+      // A shape with lamps has the pit family and the spotter's own switch, which is off unless the
+      // driver asks for it.
       const asked = SPOTTER_EFFECTS.map((e) => `${e.label}, whole strip`);
+      const beside = [...TURN_EFFECTS, ...SPOTTER_EFFECTS].map((e) => e.label);
       const expected = lampsOf(shape).length > 0
         ? [...asked, ...PIT_EFFECTS.map((e) => e.label)]
-        : [...flagEffects().map((e) => e.label), ...PIT_EFFECTS.map((e) => e.label)];
+        : [...flagEffects().map((e) => e.label), ...beside, ...PIT_EFFECTS.map((e) => e.label)];
       expect({ shape: shape.id, whole: whole.map((p) => p.description) }).toMatchObject({ whole: expected });
     }
   });

@@ -1201,13 +1201,25 @@ namespace OpenDashPlugin
         /// </remarks>
         private static string FreeBarNamespace(string name, ICollection<string> taken)
         {
-            var slug = Contract.Slug(name);
-            if (slug.Length == 0) slug = "Strip";
-            var candidate = "Led" + slug;
+            // Without the product's own name in front of it. The name box opens on "openDash 0/9/0",
+            // which is right for SimHub's profile list and reads as `LedopenDash090` in a property
+            // name; what a driver wants to find in the property list is what they called the bar.
+            var wanted = name ?? string.Empty;
+            if (wanted.StartsWith(FlagBoxProfile.FilePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                wanted = wanted.Substring(FlagBoxProfile.FilePrefix.Length);
+            }
+            // Slugged with the prefix already on it, not bolted on after. Slug drops a *leading* run of
+            // digits, because a namespace beginning with one reads as a number wherever a property is
+            // parsed -- so slugging "0/9/0" on its own gives nothing at all, and slugging "Led0/9/0"
+            // gives Led090, which is the name a driver would look for.
+            var slug = Contract.Slug("Led" + wanted);
+            if (slug.Length <= 3) slug = "LedStrip";
+            var candidate = slug;
             var n = 2;
             while (taken.Contains(candidate) || Contract.IsReservedNamespace(candidate))
             {
-                candidate = "Led" + slug + n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                candidate = slug + n.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 n++;
             }
             return candidate;

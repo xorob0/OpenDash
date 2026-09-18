@@ -35,7 +35,7 @@ import { brake as brakeInput, fuelPercent, tankIsLow, throttle as throttleInput 
 import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, SPOTTER_EFFECTS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
 import { ignitionIsOn } from './gates.ts';
-import { lampsOf, type PlacedLamp } from './lamps.ts';
+import { lampsOf, type EffectRole, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { carCentre } from './mirror.ts';
 import { centreStart, deviceLength, stripLength, type StripShape } from './strip.ts';
@@ -355,8 +355,16 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
         clearBackgroundWhenActive: true,
         children: effectContainers(effect, 1, stripLength(shape)),
       }));
-  const whole = ALL_EFFECTS().filter((e) => e.role === 'strip' || (placed.length === 0 && e.role === 'race'));
-  return [...lamps, ...spotterWhole, ...whole.map(wholeRun)];
+  // On a shape with no sides the flags take the whole run, and so does a car alongside: there is no
+  // end to put a lamp on, so a strip with no sides drew flags and never a spotter at all -- which the
+  // grid found the moment a brow stopped being a category and became 0/n/0. The spotter is drawn
+  // after the flags rather than before, so it composes over them: that is the lamp model's own
+  // ranking, where the outermost LED belongs to what is happening beside the car and nothing paints
+  // it out.
+  const wholeRoles: readonly EffectRole[] = placed.length === 0 ? ['strip', 'race', 'side'] : ['strip'];
+  const whole = wholeRoles.flatMap((role) => ALL_EFFECTS().filter((e) => e.role === role));
+  const ranked = [...whole.filter((e) => e.role !== 'strip'), ...whole.filter((e) => e.role === 'strip')];
+  return [...lamps, ...spotterWhole, ...ranked.map(wholeRun)];
 };
 
 /** What a strip profile is called, in SimHub's profile list. Keeps the slashes: `openDash 4/14/4`. */
