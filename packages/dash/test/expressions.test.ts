@@ -219,11 +219,21 @@ describe('second-screen values', () => {
   });
 
   test('a low tank is one sentence, against the threshold every light reads', () => {
-    expect(values.tankIsLow()).toBe(`(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 999)) < (${flagBox.lowFuelLaps()})`);
+    expect(values.tankIsLow()).toBe(
+      `((${values.fuelPerLap()}) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 999)) < (${flagBox.lowFuelLaps()}))`,
+    );
     // The laps a warning is raised on default high where the laps a field draws default to zero, so
     // a sim that computes none leaves the warning away rather than raising it on every car.
     expect(values.fuelLapsLeft()).toContain(', 0)');
     expect(values.tankIsLow()).not.toContain(values.fuelLapsLeft());
+  });
+
+  test('a low tank waits for the sim to know what a lap costs, so an idle screen raises nothing', () => {
+    // SimHub publishes Fuel_RemainingLaps as zero, not null, before a lap has been run, so the
+    // threshold alone was true at every idle screen and lit the telltale, the pop-up, the flag box
+    // and every strip at once. The consumption gate is the one the fuel module's own "est. laps"
+    // already draws behind.
+    expect(values.tankIsLow()).toContain(values.fuelPerLap());
   });
 
   test('the box and the strip read one ignition gate, and an unpublished ignition means on', () => {
