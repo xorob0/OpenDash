@@ -41,7 +41,7 @@ import { MINUS, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts'
 import { measureText } from '../design/advances.ts';
 import { densityOf, rampOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
-import { field, fieldTail, valueWidth, type FieldSpec } from '../second/field.ts';
+import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition, carRating, carRelativeGap, driverCode, neighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -65,7 +65,15 @@ const IDENTITY_GAP = 8;
 /** Between the gap and the labels that follow it on its baseline, where a unit takes six. */
 const DETAIL_GAP = 10;
 
-/** The name's box and the car number's cell, both of which the canvas fixes whatever the density. */
+/**
+ * The name's box and the car number's cell as the canvas fixes them, whatever the density.
+ *
+ * They are the row's floors rather than its widths. The canvas cuts both on a sheet whose values
+ * are 16 px, and the companion draws the number at 34, where the four digits of `CHARS.carNumber`
+ * take sixty-four cells of their own: the chip then began twelve pixels inside the number's box and
+ * a four-digit number was drawn under it. Each cell is therefore the canvas's figure or the content
+ * it holds, whichever is wider, which is rule 18 read across the ramp rather than down it.
+ */
 const NAME_WIDTH = 64;
 const NUMBER_WIDTH = 44;
 
@@ -73,8 +81,18 @@ const NUMBER_WIDTH = 44;
 const COLUMN_GAP = 48;
 const RULE = 1;
 
-/** The widest three-letter code, which is what the name's box is measured by. */
+/**
+ * The widest three-letter code, which is what the name's box holds.
+ *
+ * The canvas draws a driver's name here and ellipsises it at 64 px. WPF has no ellipsis to give, so
+ * `driverCode` cuts the name to its three-letter code in NCalc instead and the box holds that; the
+ * canvas's 64 stays as the column's floor, which leaves it about twenty pixels wider than the code
+ * needs. Narrowing it to the code is a change to the row's rhythm and is the author's.
+ */
 const CODE_WIDEST = 'WWW';
+
+/** The box the three-letter code is drawn in, with the pixel `label` leaves itself. */
+const codeWidth = (fs: number): number => Math.ceil(measureText('BarlowMedium', CODE_WIDEST, fs)) + 1;
 
 /** The pieces of a block, most important first, which is the order they are shed from the tail of. */
 const PIECES = ['gap', 'name', 'num', 'class', 'lastLap', 'rating'] as const;
@@ -94,6 +112,35 @@ const SIDES: readonly Side[] = [
   { id: 'ahead', offset: -1, heading: 'AHEAD', position: 3, gap: `${MINUS}1.342`, colour: ds.purpose.delta.faster },
   { id: 'behind', offset: 1, heading: 'BEHIND', position: 5, gap: '+0.722', colour: ds.purpose.delta.slower },
 ];
+
+/** One cell of the identity row: the name's box, the number's cell or the class chip. */
+interface Cell {
+  id: string;
+  width: number;
+  height: number;
+}
+
+/**
+ * The cells of the identity row that fit the block's width, cut from the tail.
+ *
+ * The row used to draw all three whatever the width and clamp the chip to the right edge, which on
+ * a box too narrow for the three slid the chip back over the number rather than shedding it: an
+ * overlap, and the one failure a fit check cannot see, since both cells stay inside the frame. A
+ * module is a function of its rectangle and answers one too small by dropping something, so the
+ * class goes first and the number after it, which is the order `modules/shedding.ts` names them in.
+ *
+ * The last cell standing is kept and capped instead of dropped, a row with nothing in it being a
+ * worse answer than a code WPF clips; that case needs a box narrower than a three-letter name and
+ * no shape the build produces is one.
+ */
+function cellsThatFit(cells: readonly Cell[], width: number): Cell[] {
+  const kept = [...cells];
+  const taken = (): number => kept.reduce((sum, cell) => sum + cell.width, 0) + IDENTITY_GAP * Math.max(0, kept.length - 1);
+  while (kept.length > 1 && taken() > width) kept.pop();
+  const last = kept[0];
+  if (kept.length === 1 && last !== undefined && last.width > width) return [{ ...last, width }];
+  return kept;
+}
 
 /** Width of one of the labels that follow the gap, with the pixel `label` leaves itself. */
 const detailWidth = (text: string, fs: number): number => Math.ceil(measureText('BarlowMedium', text, fs)) + 1;
@@ -136,8 +183,19 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
   // zone one, which is not the same rung of the two ladders, so the instrument says which.
   const numberSize = ctx.density === 'companion' ? d.small : d.tiny;
   const gapSpec: FieldSpec = fld(ctx, `${side.id}.gap`, '', { sample: side.gap, bind: carRelativeGap(idx), chars: CHARS.relativeGap, fs, color: side.colour });
+  // The hash has gone with the label it was: the canvas draws the number alone in its cell, which
+  // is also what the lists do since a `#` overruns a cell cut for digits.
+  const numSpec: FieldSpec = fld(ctx, `${side.id}.num`, '', { sample: '41', bind: carNumber(idx), chars: CHARS.carNumber, fs: numberSize, color: ds.color.text.label });
   const following = details(ctx, side, keep);
-  const identityHeight = Math.max(has('name') ? d.name : 0, has('num') ? numberSize : 0, has('class') ? d.chipHeight : 0);
+  const identity = cellsThatFit(
+    [
+      ...(has('name') ? [{ id: 'name', width: Math.max(NAME_WIDTH, codeWidth(d.name)), height: d.name }] : []),
+      ...(has('num') ? [{ id: 'num', width: Math.max(NUMBER_WIDTH, fieldWidth(numSpec, ctx.density)), height: numberSize }] : []),
+      ...(has('class') ? [{ id: 'class', width: chipWidth(ctx.density), height: d.chipHeight }] : []),
+    ],
+    box.width,
+  );
+  const identityHeight = identity.reduce((tallest, cell) => Math.max(tallest, cell.height), 0);
   const valueHeight = has('gap') ? fs : d.label;
   const gapHeight = has('gap') || following.length > 0 ? valueHeight + fieldTail(gapSpec, ctx.density) : 0;
   const lines = [d.label, identityHeight, gapHeight].filter((line) => line > 0);
@@ -159,20 +217,15 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
       // the line's middle rather than a baseline neither of them would sit on comfortably.
       const centred = (size: number): number => top + (identityHeight - size) / 2;
       let x = box.left;
-      if (has('name')) {
-        items.push(label(`${ctx.prefix}${side.id}.name`, 'TSA', x, centred(d.name), NAME_WIDTH, { size: d.name, color: ds.color.text.primary, bind: driverCode(idx), widest: CODE_WIDEST }));
-        x += NAME_WIDTH + IDENTITY_GAP;
-      }
-      if (has('num')) {
-        // The hash has gone with the label it was: the canvas draws the number alone in its cell,
-        // which is also what the lists do since a `#` overruns a cell cut for digits.
-        const num = fld(ctx, `${side.id}.num`, '', { sample: '41', bind: carNumber(idx), chars: CHARS.carNumber, fs: numberSize, color: ds.color.text.label });
-        items.push(...field(num, x, centred(numberSize) + numberSize, ctx.density, NUMBER_WIDTH));
-        x += NUMBER_WIDTH + IDENTITY_GAP;
-      }
-      if (has('class')) {
-        const width = chipWidth(ctx.density);
-        items.push(...chip(`${ctx.prefix}${side.id}.class`, 'GT3', Math.min(x, box.left + box.width - width), centred(d.chipHeight), ctx.density, { bind: chipText(carClass(idx)), width }));
+      for (const cell of identity) {
+        if (cell.id === 'name') {
+          items.push(label(`${ctx.prefix}${side.id}.name`, 'TSA', x, centred(d.name), cell.width, { size: d.name, color: ds.color.text.primary, bind: driverCode(idx), widest: CODE_WIDEST }));
+        }
+        if (cell.id === 'num') items.push(...field(numSpec, x, centred(numberSize) + numberSize, ctx.density, cell.width));
+        if (cell.id === 'class') {
+          items.push(...chip(`${ctx.prefix}${side.id}.class`, 'GT3', x, centred(d.chipHeight), ctx.density, { bind: chipText(carClass(idx)), width: cell.width }));
+        }
+        x += cell.width + IDENTITY_GAP;
       }
       top += identityHeight + INNER_GAP;
     }
