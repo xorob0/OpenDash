@@ -241,13 +241,14 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>The six controls of the list under the picture, at the size the canvas draws them.</summary>
+        /// <summary>The six controls of the list under the picture, at the size the canvas draws them,
+        /// save the width, which the longest wide-zone label decides.</summary>
         [Fact]
         public void The_zone_list_is_the_size_the_canvas_draws()
         {
             Assert.Equal(14, PanelPitWallPlan.RowGap);
-            Assert.Equal(220, PanelPitWallPlan.SelectWidth);
-            Assert.Equal(220, PanelPitWallPlan.AddressWidth);
+            Assert.Equal(260, PanelPitWallPlan.SelectWidth);
+            Assert.Equal(260, PanelPitWallPlan.AddressWidth);
             Assert.Equal(Theme.ControlHeight, PanelPitWallPlan.SelectHeight);
             Assert.Equal(32, PanelPitWallPlan.SelectHeight);
         }
