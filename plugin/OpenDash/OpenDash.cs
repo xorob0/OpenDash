@@ -338,6 +338,7 @@ namespace OpenDashPlugin
                     }
                     this.AttachDelegate(Contract.PitWallWideProperty(s.Namespace), () => Settings.ScreenWideZone(s.Namespace));
                     this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
+                    this.AttachDelegate(Contract.PitWallClassOnlyProperty(s.Namespace), () => Settings.ScreenPitWallClassOnly(s.Namespace));
                 }
             }
         }

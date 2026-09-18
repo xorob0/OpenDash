@@ -61,6 +61,9 @@ namespace OpenDashPlugin
         /// <summary>The address the Web view zone shows; empty for none.</summary>
         public string WebViewUrl { get; set; }
 
+        /// <summary>Whether this pit wall's board and its zone lists show the player's own class.</summary>
+        public bool PitWallClassOnly { get; set; }
+
         /// <summary>Zone and page a held button shows on this pit wall, released back to where it was,
         /// packed as zone index times a hundred plus the page the way a face's glance is.</summary>
         public int PitWallQuickGlance { get; set; } = Contract.DefaultPitWallQuickGlance;
@@ -208,6 +211,7 @@ namespace OpenDashPlugin
                 WideZone = 0;
                 WebViewUrl = null;
                 PitWallQuickGlance = 0;
+                PitWallClassOnly = false;
             }
 
             if (IsCompanion)
@@ -333,6 +337,7 @@ namespace OpenDashPlugin
                 WideZone = WideZone,
                 WebViewUrl = WebViewUrl,
                 PitWallQuickGlance = PitWallQuickGlance,
+                PitWallClassOnly = PitWallClassOnly,
                 Modules = Modules == null ? null : (bool[])Modules.Clone(),
                 CompanionPage = CompanionPage,
                 CompanionStart = CompanionStart,

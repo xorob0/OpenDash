@@ -379,6 +379,30 @@ describe('the contract', () => {
     }
   });
 
+  test("a pit wall's boards and its list zones ask the screen's own class filter", () => {
+    // The filter is a lookup swap and not a row set: every row is still drawn, and the setting only
+    // decides which car each one addresses. So the assertion is on the row index rather than on the
+    // count, and it has to reach both places a pit wall lists other cars -- the board on the page
+    // itself, and the leaderboard and relative pages a zone can be pointed at.
+    const lookups = (dashboard: Dashboard, screen?: string): string[] =>
+      itemsOf(screen ? { ...dashboard, screens: dashboard.screens.filter((s) => s.name === screen) } : dashboard)
+        .flatMap((item) => Object.values(item.bindings ?? {}))
+        .map((b) => (b as { formula?: string }).formula ?? '')
+        .filter((f) => f.includes('repeatindex()'));
+    for (const { def, pkg } of PACKAGES) {
+      if (def.kind !== 'pitwall') continue;
+      const board = lookups(pkg.dashboards[0]!);
+      expect({ folder: def.folder, found: board.length > 0 }).toMatchObject({ found: true });
+      for (const formula of board) expect(formula).toContain(secondScreen.classOnly());
+      const zones = pkg.dashboards.find((d) => d.name.startsWith('zones-') && !d.name.startsWith('zones-wide'))!;
+      for (const page of ['leaderboard', 'relative']) {
+        const rows = lookups(zones, page);
+        expect({ folder: def.folder, page, found: rows.length > 0 }).toMatchObject({ found: true });
+        for (const formula of rows) expect(formula).toContain(secondScreen.classOnly());
+      }
+    }
+  });
+
   test('the second screens read every second-screen property, and the face reads none of them', () => {
     const used = new Set<string>();
     for (const { pkg } of PACKAGES) {

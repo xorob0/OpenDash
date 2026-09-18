@@ -1207,18 +1207,19 @@ namespace OpenDashPlugin.Tests
             settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
             settings.Normalise();
             var names = settings.DeclaredProperties().ToList();
-            Assert.Equal(shared + 2 * perFace + Modules.Count + 6 + lights, names.Count);
+            Assert.Equal(shared + 2 * perFace + Modules.Count + 7 + lights, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Contains("Face1920x480ZoneA", names);
             Assert.Contains("Face850x480ZoneA", names);
             Assert.Contains("CompanionModule21", names);
             Assert.Contains("WebViewUrl", names);
+            Assert.Contains("PitWallClassOnly", names);
             // And the six faces the rig has not got are not declared at all.
             Assert.DoesNotContain("Face1280x480ZoneA", names);
 
             settings.RemoveScreen("Face850x480");
             settings.Normalise();
-            Assert.Equal(shared + perFace + Modules.Count + 6 + lights, settings.DeclaredProperties().Count());
+            Assert.Equal(shared + perFace + Modules.Count + 7 + lights, settings.DeclaredProperties().Count());
         }
 
         /// <summary>A screen on the stock namespace for its kind and size, as the first one at a size is.</summary>

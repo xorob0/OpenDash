@@ -643,6 +643,11 @@ namespace OpenDashPlugin
             });
             rows.Add(Ui.Row("Wide zone", "The full-width zone on the tower page.", wide));
             rows.Add(Ui.Row("Web view address", "The page the Web view zone shows. http or https only; leave empty for none.", BuildWebViewBox(screen)));
+            // One answer for the screen and not one per zone, as a face has: the four zones are widgets
+            // pointed at one dashboard file per rectangle, so two zones of one column are the same file.
+            var classOnly = BuildToggle(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(); });
+            classOnly.ToolTip = "Show the board, the leaderboard and the relative for your own class";
+            rows.Add(Ui.Row("My class only", "The board and the list zones show the class you are racing in rather than the whole field.", classOnly));
             return rows.ToArray();
         }
 

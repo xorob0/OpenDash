@@ -5,10 +5,13 @@
  *
  * The leaderboard is one continuous list rather than a set of per-class blocks: SimHub exposes
  * per-class rows only for the player's own class, so class headings would be a picture of data
- * that is not there. The class is a chip on every row instead.
+ * that is not there. The class is a chip on every row instead. What the screen's own setting does
+ * offer is the other reading of "by class": `PitWallClassOnly` narrows the list to the player's
+ * class rather than grouping the field into blocks, which is the half of it SimHub can answer.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';
+import { secondScreen } from '../contract.ts';
 import { rect } from '../design/geometry.ts';
 import { rule } from '../elements/rule.ts';
 import { label } from '../elements/label.ts';
@@ -393,7 +396,7 @@ export function racePage(width: number, height: number): Screen {
   ];
   const items: Item[] = [
     ...pitWallHeader('race.header', { frame: header, pageName: 'Pit wall · race', page: 1, pages: 3 }),
-    ...table({ name: 'race.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: RACE_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 34, board: true }),
+    ...table({ name: 'race.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: RACE_COLUMNS, mode: 'full', classOnly: secondScreen.classOnly(), density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: 34, board: true }),
     vRule('race.columnRule', boardWidth, bodyTop, bodyHeight),
   ];
   let y = bodyTop;
@@ -424,7 +427,7 @@ export function towerPage(width: number, height: number): Screen {
   const zoneWidth = Math.floor((columnWidth - 1) / 2);
   const items: Item[] = [
     ...pitWallHeader('tower.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · tower', page: 2, pages: 3 }),
-    ...table({ name: 'tower.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: TOWER_COLUMNS, mode: 'full', density: DENSITY, rows: TOWER_ROWS, rowHeight: 28, board: true }),
+    ...table({ name: 'tower.board', frame: rect(0, bodyTop, boardWidth, bodyHeight), columns: TOWER_COLUMNS, mode: 'full', classOnly: secondScreen.classOnly(), density: DENSITY, rows: TOWER_ROWS, rowHeight: 28, board: true }),
     vRule('tower.columnRule', boardWidth, bodyTop, bodyHeight),
     ...trackPanel('tower.track', rect(columnLeft, bodyTop, columnWidth, trackHeight)),
     rule('tower.trackRule', columnLeft, bodyTop + trackHeight, columnWidth, 1),
@@ -519,7 +522,7 @@ export function portraitPage(width: number, height: number): Screen {
   const rightWidth = width - half - 1;
   const items: Item[] = [
     ...pitWallHeader('portrait.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · portrait', page: 1, pages: 1, compact: true }),
-    ...table({ name: 'portrait.board', frame: rect(0, bodyTop, width, boardHeight), columns: PORTRAIT_COLUMNS, mode: 'full', density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: PORTRAIT_ROW_HEIGHT, board: true }),
+    ...table({ name: 'portrait.board', frame: rect(0, bodyTop, width, boardHeight), columns: PORTRAIT_COLUMNS, mode: 'full', classOnly: secondScreen.classOnly(), density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: PORTRAIT_ROW_HEIGHT, board: true }),
     rule('portrait.boardRule', 0, bodyTop + boardHeight, width, 1),
     ...sessionPanel('portrait.session', rect(0, panelTop, half, panelHeight)),
     vRule('portrait.panelRule', half, panelTop, panelHeight),

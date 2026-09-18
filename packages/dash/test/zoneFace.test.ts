@@ -23,7 +23,7 @@ import {
 } from '../src/contract.ts';
 import { validatePackage, type Dashboard, type RectangleItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
-import { PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
+import { PIT_WALL_CLASS_ONLY_SETTING, PROPERTY_PREFIX, declaredProperties } from '../src/contract.ts';
 import { LINE_SPACING, boxSlack, textBox } from '../src/design/metrics.ts';
 import { measureText } from '../src/design/advances.ts';
 import { packImages } from '../src/build.ts';
@@ -71,8 +71,6 @@ import { SAMPLE_LIT, stageOf } from '../src/components/revSegments.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
-/** The companion and the pit walls, to check the face's new options stay off their screens. */
-const SECOND_SCREENS = SCREEN_PACKAGES.map((def) => buildScreenPackage(def, OPTS));
 // Looked up by identity rather than by folder name, which moved to plain "openDash" in XOR-118.
 const reference = BUILT.find((b) => b.face === zoneFace1920x480)!;
 /** Every zone property carries its face's prefix, so a test that names one has to say whose. */
@@ -1222,13 +1220,25 @@ describe('a zone may list the class a driver is racing in', () => {
     }
   });
 
-  test('the companion and the pit wall list everybody, as they always have', () => {
-    for (const pkg of SECOND_SCREENS) {
+  test('the companion lists everybody, and a pit wall lists by its own screen setting', () => {
+    // A face's filter is a zone's, because a face's zones are four rectangles of one dashboard and
+    // each can be told apart. A pit wall's are widgets pointed at one file per rectangle, so zones A
+    // and B of the race page are the same file: the filter it answers is the screen's, and no face's
+    // ever reaches either second screen.
+    let read = 0;
+    for (const def of SCREEN_PACKAGES) {
+      const pkg = buildScreenPackage(def, OPTS);
+      const allowed = def.kind === 'pitwall' ? [`OpenDash.${PIT_WALL_CLASS_ONLY_SETTING}`] : [];
       for (const dashboard of pkg.dashboards) {
-        const used = propertiesIn(dashboard).filter((p) => p.endsWith('ClassOnly'));
-        expect({ dashboard: dashboard.name, used }).toMatchObject({ used: [] });
+        for (const p of new Set(propertiesIn(dashboard).filter((n) => n.endsWith('ClassOnly')))) {
+          expect({ dashboard: dashboard.name, p, allowed: allowed.includes(p) }).toMatchObject({ allowed: true });
+          read += 1;
+        }
       }
     }
+    // And it is read, rather than declared and drawn by nothing: the three boards and the two list
+    // pages of every zone dashboard ask it.
+    expect(read).toBeGreaterThan(0);
   });
 });
 
