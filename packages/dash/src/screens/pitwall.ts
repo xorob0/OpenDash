@@ -29,8 +29,8 @@ import type { Expr } from '../bind.ts';
 
 const { fmt, concat, str, iff, eq, gt, num, isnull, ucase, driver, game, signed, raw } = ncalc;
 
-/** A pit wall panel draws at zone density: 24 px numerals, 13 px labels. */
-const DENSITY = 'zone' as const;
+/** A pit wall panel draws at zone density with the pit wall's own label: 24 px numerals, 13 px labels. */
+const DENSITY = 'panel' as const;
 
 /** A context for a module drawn inside a pit wall panel. */
 const ctxOf = (frame: Rect, prefix: string): ModuleContext => ({ frame, density: DENSITY, prefix });
