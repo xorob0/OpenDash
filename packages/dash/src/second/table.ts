@@ -287,7 +287,7 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
  *
  * Two forms, and the column picks between them rather than the renderer: a full name where the
  * column can hold one, and the three-letter code the narrow drawings show where it cannot. WPF has
- * no ellipsis to give -- it clips, and XOR-121 records that a name longer than its column has
+ * no ellipsis to give -- it clips, and #172 records that a name longer than its column has
  * nowhere to go -- so the cut is made in NCalc, the way `chipText` cuts a class name. The own row
  * says YOU, which is the one row a driver does not need to read a name to identify.
  */

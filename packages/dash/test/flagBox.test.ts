@@ -2,7 +2,7 @@
  * The flag box profile: the tree's shape, the rules it inherits from the packages, and the thing
  * a matrix gets wrong that a screen does not — which of several live flags it shows.
  *
- * Nothing in the repository evaluates a binding (XOR-20), so `raised()` below carries a small
+ * Nothing in the repository evaluates a binding (#71), so `raised()` below carries a small
  * boolean evaluator for the subset of NCalc these conditions are built from, the way
  * barStrip.test.ts carries an arithmetic one. It is what makes the several-flags-at-once table
  * possible at all.
@@ -546,7 +546,7 @@ describe('the gear, as the resting state', () => {
   });
 
   test('the colour is the shift model, taken from the rev bar', () => {
-    // One relationship learned once and read in two places. XOR-230 replaced SimHub's per-car
+    // One relationship learned once and read in two places. #281 replaced SimHub's per-car
     // bands with the sim's own DriverCarSL* values and changed shiftBands() alone, so the box now
     // carries both ladders: the car's own, and SimHub's for a car that publishes none.
     const bands = shiftBands();
@@ -564,7 +564,7 @@ describe('the gear, as the resting state', () => {
   test('the bands the gear uses are the ones the rev bar segments light at', () => {
     // The real invariant, and the one ADR 0014 turns on: a band is entered at *exactly* the
     // expression the rev bar's first segment of that stage lights at — under both ladders, because
-    // since XOR-230 the bar picks between them per frame and the digit has to pick the same way.
+    // since #281 the bar picks between them per frame and the digit has to pick the same way.
     // String equality rather than a shared colour token: a colour in common would still pass with
     // the two sides reading different properties, which is what this test was doing before.
     const raisedOf = (id: string): string => shiftBands().find((b) => b.id === id)?.raised ?? '';
@@ -586,7 +586,7 @@ describe('the gear, as the resting state', () => {
   });
 
   test("the digit flashes on the bar's over-rev threshold, not merely on the top band", () => {
-    // XOR-233's review, and the defect ADR 0014 says cannot exist. The digit used to flash the
+    // #284's review, and the defect ADR 0014 says cannot exist. The digit used to flash the
     // moment the top band was entered -- `Rpms >= LastRPM` -- while the bar's top band flashes at
     // `max(BlinkRPM, LastRPM)` and stops in the last gear. On a rig with a box and a screen the
     // digit strobed against a solid bar, and went on strobing in top gear where the bar
@@ -772,7 +772,7 @@ describe('the four matrix contents', () => {
 
 describe('the pit family, the spotter and the warnings', () => {
   test('the limiter in the lane and out of it differ in shape, not only in colour', () => {
-    // XOR-78: meaning cannot rest on colour alone, and these two share purpose.pitLimiter.
+    // #129: meaning cannot rest on colour alone, and these two share purpose.pitLimiter.
     const inLane = pitStates().find((s) => s.id === 'limiterInLane');
     const out = pitStates().find((s) => s.id === 'limiterOutOfLane');
     expect(inLane?.grid).not.toEqual(out?.grid);
@@ -963,7 +963,7 @@ describe('the pit family, the spotter and the warnings', () => {
     // Across the families, not only within one. Two things this caught: the limiter in the lane was
     // the black flag's outline in another colour, and the limiter out of the lane was a filled
     // panel in purpose.pitLimiter -- which is pure white, so it was the white flag with a blink.
-    // Telling a driver "last lap" when you mean "your limiter is on" is what XOR-78 is about.
+    // Telling a driver "last lap" when you mean "your limiter is on" is what #129 is about.
     const seen = new Map<string, string>();
     for (const container of all) {
       if (container.kind !== 'animation' || container.description === undefined) continue;

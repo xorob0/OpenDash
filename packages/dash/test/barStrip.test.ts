@@ -3,7 +3,7 @@
  *
  * iRacing omits `dcTractionControl` and `dcABS` on a car without the controls, so the strip has to
  * close over the cells that are not there rather than leave two holes of about fifty pixels in the
- * middle of the bar. Nothing in the repository evaluates a binding (XOR-20), so this file carries
+ * middle of the bar. Nothing in the repository evaluates a binding (#71), so this file carries
  * the smallest evaluator that settles the question: the `Left` expressions the strip emits contain
  * nothing but numbers, the four arithmetic operators and `if(!(isnull(p)), a, b)`, and substituting
  * a presence for every `p` leaves plain arithmetic.

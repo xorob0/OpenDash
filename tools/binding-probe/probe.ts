@@ -140,7 +140,7 @@ const pkg: DashPackage = {
       metadata: {
         title: NAME,
         author: DEFAULT_AUTHOR,
-        description: 'Which properties SimHub applies a binding to (XOR-73)',
+        description: 'Which properties SimHub applies a binding to (#124)',
         version: '0.0.0-probe',
         simHubVersion: '9.12.6',
       },

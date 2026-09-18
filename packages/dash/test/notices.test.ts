@@ -37,7 +37,7 @@ describe('what a package owes', () => {
 
   test('every font the build packs is covered by the licence that travels with it', () => {
     // Asserted on the vendored sources rather than on what the build emits, because the condensed
-    // faces are renamed to openDash Display so that WPF resolves them (XOR-108) and their file
+    // faces are renamed to openDash Display so that WPF resolves them (#159) and their file
     // names no longer say Barlow. The OFL covers Barlow; a face from another foundry would need
     // its own notice, and this is the assertion that would fail rather than a release quietly
     // breaking somebody's licence.

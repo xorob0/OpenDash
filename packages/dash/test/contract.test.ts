@@ -18,6 +18,7 @@ import {
   declaredProperties,
   ledProperties,
   LED_CENTRES,
+  MIRROR_RUN_LENGTHS,
   LED_CENTRE_SETTING,
   LED_FLAG_ANIMATION_SETTING,
   RETIRED_LED_CENTRE,
@@ -94,10 +95,19 @@ describe('settings', () => {
     // The last two terms are the lights, which are not screens but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is six
     // global and ten per matrix, the way every face carries its own group; the strips are the three
-    // that decide what a strip shows. It was nine and six until the four settings a box owns --
-    // critical flags only, the gear and the two temperatures -- moved under the matrix that owns them.
+    // that decide what a strip shows, and then the mirror: its fit, the gate that says there is a
+    // bar to draw, and one packed run per length a centre can be. It was nine and six until the
+    // four settings a box owns -- critical flags only, the gear and the two temperatures -- moved
+    // under the matrix that owns them.
     expect(flagBoxProperties()).toHaveLength(6 + FLAG_BOX_MATRICES.length * 10);
-    expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle', 'OpenDash.LedFlagAnimation']);
+    expect(ledProperties()).toEqual([
+      'OpenDash.LedCentre',
+      'OpenDash.LedRpmStyle',
+      'OpenDash.LedFlagAnimation',
+      'OpenDash.LedMirrorFit',
+      'OpenDash.LedMirrorReady',
+      ...MIRROR_RUN_LENGTHS.map((n) => `OpenDash.LedMirror${n}`),
+    ]);
     // The lone 2 is RevBar and the blue flag detail, which every screen shares with the four modes
     // and the twelve slots.
     expect(props).toHaveLength(
@@ -108,14 +118,15 @@ describe('settings', () => {
     // 256 before the four settings a box owns became four per matrix, which is twelve names more,
     // 269 before the pit wall gained the class filter its board and its list zones read, 270 before
     // band D was allowed to name the car a blue flag is being waved for, 271 before each face was
-    // given its own answer to when the lap review is shown, and 279 before the companion's page
-    // became the plugin's to decide.
-    expect(props).toHaveLength(280);
+    // given its own answer to when the lap review is shown, 279 before the companion's page
+    // became the plugin's to decide, and 280 before the mirror brought its fit, its gate and one
+    // packed run for each of the ten lengths a strip's centre can be.
+    expect(props).toHaveLength(292);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
     expect(props[15]).toBe('OpenDash.Slot12');
-    // The zones are declared here and read by the face from XOR-85. Slot01 to Slot12 stay beside
+    // The zones are declared here and read by the face from #136. Slot01 to Slot12 stay beside
     // them until the card path is retired, because ten faces still read them.
     // Appended to the shared group rather than beside ShiftLights, which has shipped at index 0.
     expect(props[4 + SLOT_MAX]).toBe('OpenDash.RevBar');
@@ -260,7 +271,7 @@ const pluginSource = (file: string): string => readFileSync(path.resolve(import.
 /**
  * The settings panel as one string.
  *
- * It is four tabs across six partial classes since XOR-125, so a test that named SettingsControl.cs
+ * It is four tabs across six partial classes since #176, so a test that named SettingsControl.cs
  * was reading a sixth of it and went green on the strips having moved to the Lights tab. The whole
  * panel is what these assertions mean: a setting is offered somewhere a user can reach it.
  */
@@ -324,6 +335,10 @@ describe('plugin mirror', () => {
     const panel = panelSource();
     expect(panel).toContain('Contract.LedCentres');
     expect(panel).toContain('Contract.LedRpmStyles');
+    expect(panel).toContain('Contract.LedMirrorFits');
+    // Whose measurements they are, on the page that uses them: CC BY-NC-SA asks for attribution and
+    // a user is entitled to know whose numbers light their wheel (ADR 0018).
+    expect(panel).toContain('CarLightLibrary.Attribution');
   });
 
   test('the companion page is attached, and the start and the glance are offered on its pane', () => {

@@ -4,7 +4,7 @@
  * One list, because the face, the pit wall and the flag box rank the same conditions and two
  * lists would eventually disagree about which of two live flags wins. All three surfaces draw all
  * fifteen: the 8x8 box as pictures, the face's band D through `components/flagStrip.ts`, and the
- * pit wall header as a name and a colour. XOR-58 folds the rest of the alert catalogue in here;
+ * pit wall header as a name and a colour. #109 folds the rest of the alert catalogue in here;
  * this is the flag half of it.
  *
  * **What is here is what iRacing publishes.** A drawn alert that never fires is worse than an

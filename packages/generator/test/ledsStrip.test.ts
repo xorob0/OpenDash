@@ -55,6 +55,7 @@ describe('containers', () => {
       { kind: 'remapGroup', positions: [3, 2, 1], children: [] },
       { kind: 'staticColor', ledCount: 1, color: 'Red' },
       { kind: 'customStatus', ledCount: 1, color: 'Red', enabledFormula: { expression: '1' } },
+      { kind: 'dynamicColor', ledCount: 1, colorFormula: { expression: "'Red'" } },
       { kind: 'scriptedContent', ledCount: 1, contentFormula: { expression: 'x', interpreter: 'javascript' } },
       { kind: 'rpmSegments', rpmMode: 'rpms', segments: [{ ledCount: 1, startValue: 7000, color: 'Lime' }] },
       { kind: 'animation', rows: 8, columns: 8, frames: [{ pixels: [['Red']], durationMs: 500 }] },
@@ -65,6 +66,7 @@ describe('containers', () => {
       'Groups.RemapGroup',
       'StaticColor',
       'CustomStatus',
+      'DynamicColor',
       'ScriptedContent',
       'RPMSegments',
       'Animation',
@@ -104,6 +106,28 @@ describe('containers', () => {
       BlinkDelay: 125,
       ContainerType: 'StaticColor',
     });
+  });
+
+  test('a dynamic colour is LedCount and a ColorFormula, and nothing else', () => {
+    // SimHub's own blink fields are deliberately not modelled: a mirrored bar blinks at the car's
+    // interval, which is a number the profile does not have and the plugin does (ADR 0018).
+    const o = leds.buildContainerObject({ kind: 'dynamicColor', ledCount: 1, colorFormula: { expression: "isnull([OpenDash.X], 'Transparent')" }, description: 'led 03' });
+    expect(o).toEqual({
+      Description: 'led 03',
+      LedCount: 1,
+      ColorFormula: { Expression: "isnull([OpenDash.X], 'Transparent')" },
+      ContainerType: 'DynamicColor',
+    });
+  });
+
+  test('a ColorFormula is validated like every other expression', () => {
+    // It is the door the per-car mirror comes through, so an undeclared property in it has to fail
+    // here rather than resolve to Color.Black on somebody's wheel.
+    const opts = { ledCount: 4, propertyPrefix: 'OpenDash', declaredProperties: ['OpenDash.ShiftLights'] };
+    const bad = leds.validateProfile(profile([{ kind: 'dynamicColor', ledCount: 1, colorFormula: { expression: 'isnull([OpenDash.Nope], 0)' } }]), opts);
+    expect(bad.errors.map((e) => e.code)).toEqual(['leds/property-undeclared']);
+    const good = leds.validateProfile(profile([{ kind: 'dynamicColor', ledCount: 1, colorFormula: { expression: "isnull([OpenDash.ShiftLights], 'Transparent')" } }]), opts);
+    expect(good.ok).toBe(true);
   });
 
   test('a remap group writes LedPosition objects, padded to 64, and nests its children', () => {

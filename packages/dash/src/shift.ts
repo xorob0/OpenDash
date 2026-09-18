@@ -98,7 +98,7 @@ export const mirrorStageLit = (stage: number, local: number, count: number): Exp
  * than `[Gear]`, which is a string ("N", "R", "1"), and false whenever the car does not say how
  * many gears it has — so a car that publishes no count keeps flashing as it did.
  *
- * ADR 0014, amended for XOR-233.
+ * ADR 0014, amended for #284.
  */
 export const lastGear = (): Expr => {
   const count = isnull(prop(GEAR_COUNT_PROPERTY), num(0));
@@ -176,7 +176,7 @@ export const stageEntered = (stage: number): Expr => eitherLadder(mirrorStageEnt
  * It is emphatically *not* the same question as `stageEntered(2)`. Under the car's own ladder the
  * top band is entered at `Last` and the flash begins at `max(Blink, Last)`, and it stops in the
  * last gear; a consumer that flashes on the band instead flashes early and keeps flashing where
- * the bar deliberately does not. That divergence is what XOR-233's review found on the flag box,
+ * the bar deliberately does not. That divergence is what #284's review found on the flag box,
  * and it is why the flash is a definition here rather than a boolean each surface interprets.
  */
 export const overRevEither = (): Expr => eitherLadder(mirrorOverRev(), simhubOverRev());

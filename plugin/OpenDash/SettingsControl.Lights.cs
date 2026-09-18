@@ -1,7 +1,7 @@
 // SettingsControl.Lights.cs: the Lights tab -- the flag box, the four matrix contents, the strips, and
 // the three settings that answer for every light on the rig rather than for one device.
 //
-// A tab rather than a card in the rig's row. XOR-231 settles that a light device "is the same shape of
+// A tab rather than a card in the rig's row. #282 settles that a light device "is the same shape of
 // thing as a screen", which is true of the settings model and not of a user: a screen is a rectangle
 // with zones, a box is 64 LEDs with a mounting side, and one row of cards mixing them would have to
 // explain itself. docs/design/plugin.md records the divergence from the canvas.
@@ -50,18 +50,30 @@ namespace OpenDashPlugin
             var panelRows = (StackPanel)panels.Child;
             foreach (var row in matrices) panelRows.Children.Add(row);
 
+            // The attribution row is not decoration. The car tables are somebody else's work under
+            // CC BY-NC-SA 4.0 (ADR 0018), openDash ships none of them, and a user is entitled to know
+            // whose numbers are lighting their wheel.
             var strips = Ui.Section("The strips",
-                Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip from the Install tab, then these three decide what it shows."),
+                Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip from the Install tab, then these decide what it shows."),
                 Ui.Row("Strip centre", "What the middle of the strip shows. The LEDs at the ends are lamps and are not affected by it.",
                     BuildChoice(Contract.LedCentres, PanelLights.CentreLabels, Settings.LedCentre, 220,
                         value => { Settings.LedCentre = value; Save(); })),
-                Ui.Row("Rev style", "How the ladder fills. Meet in middle works inwards from both ends; F1 is a formula wheel's colours, and flashes whole.",
-                    BuildSegmented(Contract.LedRpmStyles, PanelLights.RpmStyleLabels, Settings.LedRpmStyle,
+                // A drop-down rather than a segmented bar, now there are four: the car's own bar, and
+                // openDash's three looks.
+                Ui.Row("Rev style", "The car's own mirrors the shift lights in the car you are driving: its LEDs, its colours, its order, its flash, in the gear you are in. The other three are openDash's own looks, and are what a car we have no measurements for shows.",
+                    BuildChoice(Contract.LedRpmStyles, PanelLights.RpmStyleLabels, Settings.LedRpmStyle, 220,
                         value => { Settings.LedRpmStyle = value; Save(); })),
+                Ui.Row("Car bar size", "Only for the car's own. Fill the strip spreads the car's lights over every LED; true size draws them at their own length in the middle.",
+                    BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,
+                        value => { Settings.LedMirrorFit = value; Save(); })),
                 // A switch rather than a rate: how fast a flag blinks is the standard's decision, and the
                 // driver who asks for this is asking for a rim that stops moving rather than a slower one.
                 Ui.Row("Flag animation", "On, a flag moves, which is what the corner of your eye reads it by. Off holds every flag from the frame it would have settled on and never turns one off.",
-                    BuildToggle(Settings.LedFlagAnimation, on => { Settings.LedFlagAnimation = on; Save(); })));
+                    BuildToggle(Settings.LedFlagAnimation, on => { Settings.LedFlagAnimation = on; Save(); })),
+                Ui.Caption(
+                    CarLightLibrary.Attribution + " openDash ships none of it: the tables are fetched when update checks are on, "
+                        + "and every car works offline afterwards. " + CarLightLibrary.ProjectUrl,
+                    BodyWidth));
 
             // Brightness and night mode are the rig's rather than the box's -- Contract.cs says so in their
             // names -- so they sit under everything a device owns rather than inside the first device that

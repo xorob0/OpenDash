@@ -80,8 +80,9 @@ namespace OpenDashPlugin.Tests
             // became four per matrix, which is twelve names more, 269 before the pit wall gained the
             // class filter its board and its list zones read, 270 before band D was allowed to name the
             // car a blue flag is being waved for, 271 before each face was given its own answer to when
-            // the lap review is shown, and 279 before the companion's page became the plugin's.
-            Assert.Equal(280, names.Count);
+            // the lap review is shown, 279 before the companion's page became the plugin's, and 280
+            // before the mirror brought its fit, its gate and one packed run per length a centre can be.
+            Assert.Equal(292, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -93,7 +94,7 @@ namespace OpenDashPlugin.Tests
             // The zone face's groups follow, one per face that ships, each naming its own screen so
             // that two faces on a rig are configured apart.
             // Appended to the shared group, not inserted beside ShiftLights: the four names above and
-            // the twelve slots have shipped and this test asserts them by index. XOR-119, XOR-138.
+            // the twelve slots have shipped and this test asserts them by index. #170, #189.
             Assert.Equal("RevBar", names[16]);
             Assert.Contains("RevBar", Contract.SharedPropertyNames());
             // And the blue flag detail after it, shared for a different reason: the flag format is
@@ -399,7 +400,13 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(Contract.FlagBoxSpotterAnimation, Contract.LightsPropertyNames());
             Assert.False(Contract.DefaultFlagBoxSpotterAnimation);
             Assert.Contains(Contract.FlagBoxLowFuelLaps, Contract.LightsPropertyNames());
-            Assert.Equal("LedFlagAnimation", Contract.PropertyNames().Last());
+            // The head of the strips' own group is pinned in order, because both halves of the
+            // contract assert it by index; the mirror's runs are declared last of all, after the two
+            // settings a strip profile reads, the switch on a flag's movement, and the fit and the gate.
+            Assert.Equal(
+                new[] { "LedCentre", "LedRpmStyle", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" },
+                Contract.LedPropertyNames().Take(5));
+            Assert.Equal("LedMirror25", Contract.PropertyNames().Last());
             Assert.True(Contract.DefaultFlagBoxGear);
             // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
             Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
@@ -452,25 +459,29 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_strips_declare_the_two_names_every_generated_profile_reads()
+        public void The_strips_declare_the_names_every_generated_profile_reads()
         {
-            // These two were the gap: contract.ts declared them, nineteen generated .ledsprofile files
-            // read them through isnull(), and the plugin had neither constant, delegate nor control, so
-            // every strip could only ever draw its defaults. Both suites were green throughout, which
-            // is why The_two_sides_declare_the_same_properties() exists below.
-            Assert.Equal(new[] { "LedCentre", "LedRpmStyle", "LedFlagAnimation" }, Contract.LedPropertyNames());
-            Assert.Contains(Contract.LedCentre, Contract.LightsPropertyNames());
-            Assert.Contains(Contract.LedRpmStyle, Contract.LightsPropertyNames());
-            Assert.Contains(Contract.LedFlagAnimation, Contract.LightsPropertyNames());
+            // LedCentre and LedRpmStyle were the gap: contract.ts declared them, nineteen generated
+            // .ledsprofile files read them through isnull(), and the plugin had neither constant,
+            // delegate nor control, so every strip could only ever draw its defaults. Both suites were
+            // green throughout, which is why The_two_sides_declare_the_same_properties() exists below.
+            var expected = new List<string> { "LedCentre", "LedRpmStyle", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" };
+            expected.AddRange(Contract.MirrorRunLengths.Select(Contract.LedMirrorRun));
+            Assert.Equal(expected, Contract.LedPropertyNames());
+            foreach (var name in expected) Assert.Contains(name, Contract.LightsPropertyNames());
             // On: movement is what a flag is read by at the edge of vision, and off is the driver
             // asking for a rim that holds rather than blinks.
             Assert.True(Contract.DefaultLedFlagAnimation);
-            // A rig setting rather than a per-device group, unlike a matrix: openDash generates one
-            // profile per strip shape, and every shape reads the same two names.
-            Assert.DoesNotContain(Contract.LedPropertyNames(), n => n.Contains("1") || n.Contains("2"));
+            // Rig settings rather than per-device groups, unlike a matrix: openDash generates one
+            // profile per strip shape. The mirror runs are the exception and are not a device either --
+            // LedMirror14 is a run length, which several shapes share -- so they are held out of this
+            // check rather than allowed to retire it.
+            var mirrorRuns = Contract.MirrorRunLengths.Select(Contract.LedMirrorRun);
+            Assert.DoesNotContain(Contract.LedPropertyNames().Except(mirrorRuns), n => n.Contains("1") || n.Contains("2"));
 
             Assert.Equal(new[] { "rpm", "brake", "throttleBrake", "fuel" }, Contract.LedCentres);
-            Assert.Equal(new[] { "leftToRight", "meetInMiddle", "f1" }, Contract.LedRpmStyles);
+            Assert.Equal(new[] { "car", "leftToRight", "meetInMiddle", "f1" }, Contract.LedRpmStyles);
+            Assert.Equal(new[] { "stretch", "exact" }, Contract.LedMirrorFits);
             // The fifth centre is retired into the first, and migrated by name: the profile carries a
             // conditional group per value, and a stored "rpmOnly" would match none of them.
             Assert.DoesNotContain(Contract.RetiredLedCentre, Contract.LedCentres);
@@ -482,10 +493,18 @@ namespace OpenDashPlugin.Tests
             // safe to fall back from.
             Assert.Contains(Contract.DefaultLedCentre, Contract.LedCentres);
             Assert.Contains(Contract.DefaultLedRpmStyle, Contract.LedRpmStyles);
+            Assert.Contains(Contract.DefaultLedMirrorFit, Contract.LedMirrorFits);
             Assert.Equal("rpm", Contract.DefaultLedCentre);
-            Assert.Equal("leftToRight", Contract.DefaultLedRpmStyle);
+            // The car's own, by default: ADR 0018's opinion is that the car is right, and a car with no
+            // table falls back on its own without the driver choosing anything.
+            Assert.Equal("car", Contract.DefaultLedRpmStyle);
+            Assert.Equal("stretch", Contract.DefaultLedMirrorFit);
             Assert.Equal("rpm", Contract.NormaliseChoice("sparkles", Contract.LedCentres, Contract.DefaultLedCentre));
             Assert.Equal("f1", Contract.NormaliseChoice(" F1 ", Contract.LedRpmStyles, Contract.DefaultLedRpmStyle));
+            // A run length missing here is a strip shape with no mirror and nothing that would say so,
+            // so the list is checked against the shapes themselves in packages/dash/test/leds.test.ts.
+            Assert.Equal(new[] { 8, 9, 10, 12, 14, 15, 16, 18, 20, 25 }, Contract.MirrorRunLengths);
+            Assert.Equal("LedMirror14", Contract.LedMirrorRun(14));
         }
 
         [Fact]

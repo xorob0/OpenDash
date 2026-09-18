@@ -56,7 +56,7 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
  * Zones B, C and D carry a permanent header -- the zone letter, then the page name -- because the
  * canvas says outright that there is no row of page dots and that the letter and the name are what
  * say which page is showing. Zone A carries none: it is the gear, and 22 px of the column it is
- * sized to is too much to spend saying so. What zone A does instead is XOR-103.
+ * sized to is too much to spend saying so. What zone A does instead is #154.
  */
 export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false): Screen {
   const frame = rect(0, 0, size.width, size.height);

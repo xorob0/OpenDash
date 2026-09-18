@@ -52,7 +52,7 @@ describe('which packages a bare run walks', () => {
   });
 
   test('the zone face is among them, under the name it now ships as', () => {
-    // Since XOR-118 the zone face is plain "openDash"; the card face it replaced says "slots", and
+    // Since #169 the zone face is plain "openDash"; the card face it replaced says "slots", and
     // both are captured while the two are being compared.
     expect(FACES).toContain('openDash');
     expect(FACES).toContain('openDash slots 1920x480');

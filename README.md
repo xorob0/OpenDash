@@ -213,6 +213,7 @@ plugin/
   OpenDash/            C# SimHub plugin: installer, properties, settings panel (builds on Linux)
   OpenDash.Tests/      Unit tests for the plugin's pure logic
   lib/                 SimHub reference assemblies, committed so CI can build without SimHub
+site/                  The showcase website: Next.js, deployed as a container. site/README.md
 tools/
   irsdk-emulator/      Synthetic iRacing telemetry feed for testing dashboards without the sim
 docs/
@@ -235,7 +236,8 @@ face, and every text of every package measured against the box SimHub clips it t
 top of that the dashboard and the plugin are checked by hand on a Windows VM running SimHub,
 where [tools/irsdk-emulator](tools/irsdk-emulator/README.md) feeds scripted iRacing telemetry
 so that every card can be seen with real values. `bun run shots` is the same VM photographing a
-package, and it is where the images at the top of this file come from.
+package, and it is where the images at the top of this file come from;
+`bun scripts/modules.ts` is the same loop for the twenty-one companion modules, one to a picture.
 
 ## Contributing
 
