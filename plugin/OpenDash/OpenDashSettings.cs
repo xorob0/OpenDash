@@ -1124,6 +1124,13 @@ namespace OpenDashPlugin
             return screen.PitWallPage;
         }
 
+        /// <summary>How one companion draws a flag: off, the strip at the foot, or over the module.</summary>
+        public string ScreenCompanionFlagFormat(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionFlagFormat : Contract.NormaliseCompanionFlagFormat(screen.CompanionFlagFormat);
+        }
+
         /// <summary>Whether one pit wall lists the player's own class rather than the whole field.</summary>
         public bool ScreenPitWallClassOnly(string ns)
         {
@@ -1363,7 +1370,7 @@ namespace OpenDashPlugin
         /// ShiftLights should see the switch the driver just moved.</summary>
         public void SetRevBar(string mode)
         {
-            RevBar = Contract.NormaliseChoice(mode, Contract.RevBarModes, Contract.DefaultRevBar);
+            RevBar = Contract.MigrateRevBar(mode);
             ShiftLights = RevBar == Contract.RevBarShift;
         }
 

@@ -74,7 +74,7 @@ namespace OpenDashPlugin.Tests
             // and the switch on the spotter bar's movement joined the rig's own names; the eleventh is
             // the switch on the digit's redline flash, which is a panel's own for the same reason.
             Assert.Equal(
-                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 1 + Contract.PitWallZoneSlots.Count + 4 + 6 + Contract.FlagBoxMatrices.Count * 11 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 2 + Contract.PitWallZoneSlots.Count + 4 + 6 + Contract.FlagBoxMatrices.Count * 11 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -89,8 +89,9 @@ namespace OpenDashPlugin.Tests
             // the top, 304 before the strip shapes became a grid and the mirror had to publish a
             // run for every centre the grid reaches, and 317 before a pit wall zone belonged to a page:
             // four zones and a wide one became twelve, and the pit wall gained the page it opens on and
-            // the page it is showing.
-            Assert.Equal(326, names.Count);
+            // the page it is showing, and 326 before a companion was given its own answer to how it
+            // draws a flag.
+            Assert.Equal(327, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -131,8 +132,9 @@ namespace OpenDashPlugin.Tests
             // The page after the switches: live state the screens' enabled expressions follow, and the
             // one companion name that is not a switch. The start and the glance are not properties.
             Assert.Equal("CompanionPage", names[afterFaces + 21]);
+            Assert.Equal("CompanionFlagFormat", names[afterFaces + 22]);
             Assert.Equal(new[] { "PitWallRaceA", "PitWallRaceB", "PitWallTowerWide", "PitWallTowerA", "PitWallTowerB", "PitWallTelemetryA", "PitWallTelemetryB", "PitWallTelemetryC", "PitWallPortraitA", "PitWallPortraitB", "PitWallPortraitC", "PitWallPortraitD", "PitWallStartPage", "PitWallPage", "WebViewUrl", "PitWallClassOnly", "LightsBrightness", "LightsNightBrightness",
-                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 22).Take(22));
+                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 23).Take(22));
             // One filter for the screen, not one per zone: a pit wall zone is a widget pointed at one
             // dashboard file per rectangle, so zones A and B of the race page are the same file. The
             // page they belong to is what tells them apart now, and that is a different question.
@@ -166,10 +168,11 @@ namespace OpenDashPlugin.Tests
             // The web view address is the pit wall's although its name carries no prefix: it was named
             // before the idiom, and no other screen has a browser page to point anywhere.
             Assert.Contains(Contract.WebViewUrl, Contract.ScreenPropertyNames(Contract.PitWallPrefix));
-            // The twenty-one switches and the page. The start module and the glance module are the
-            // plugin's own state and not properties, because nothing on the screen reads either of them.
-            Assert.Equal(Modules.Count + 1, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
-            Assert.Equal("CompanionPage", Contract.ScreenPropertyNames(Contract.CompanionPrefix).Last());
+            // The twenty-one switches, the page and the flag format. The start module and the glance
+            // module are the plugin's own state and not properties, because nothing on the screen reads
+            // either of them.
+            Assert.Equal(Modules.Count + 2, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
+            Assert.Equal("CompanionFlagFormat", Contract.ScreenPropertyNames(Contract.CompanionPrefix).Last());
             Assert.Equal(Contract.FacePropertyNames(Contract.ReferenceFace), Contract.ScreenPropertyNames(Contract.FacePrefix(Contract.ReferenceFace)));
 
             Assert.True(Contract.IsKnownScreen(Contract.FacePrefix(Contract.ReferenceFace)));

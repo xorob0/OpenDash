@@ -33,12 +33,14 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_settings_file_written_before_the_mode_existed_keeps_its_answer()
         {
-            // What Json.NET leaves behind for an rc.2 file: ShiftLights set, RevBar absent.
+            // What Json.NET leaves behind for an rc.2 file: ShiftLights set, RevBar absent. The false
+            // half used to mean the plain RPM bar and now means the one bar there is, because that bar
+            // is retired -- what it never meant, and still does not, is no bar at all.
             var off = new OpenDashSettings { ShiftLights = false, RevBar = null };
-            Assert.Equal(Contract.RevBarRpm, off.RevBarMode());
+            Assert.Equal(Contract.RevBarShift, off.RevBarMode());
             off.Normalise();
-            Assert.Equal(Contract.RevBarRpm, off.RevBar);
-            Assert.False(off.ShiftLights);
+            Assert.Equal(Contract.RevBarShift, off.RevBar);
+            Assert.True(off.ShiftLights);
 
             var on = new OpenDashSettings { ShiftLights = true, RevBar = null };
             on.Normalise();
@@ -58,16 +60,49 @@ namespace OpenDashPlugin.Tests
 
             settings.SetRevBar(Contract.RevBarShift);
             Assert.True(settings.ShiftLights);
-            settings.SetRevBar(Contract.RevBarRpm);
+            settings.SetRevBar(Contract.RevBarOff);
             Assert.False(settings.ShiftLights);
+        }
+
+        /// <summary>
+        /// The plain RPM bar is retired: a file that names it keeps loading and draws the one behaviour.
+        /// </summary>
+        /// <remarks>
+        /// Retired rather than removed, because the value has shipped. What it meant -- a bar that fills
+        /// with the revs and nothing more -- is the worse half of a choice openDash should not have been
+        /// offering: where there is a table the bar is the car's own lights, and where there is not it is
+        /// SimHub's bands, which is an RPM bar that ends in shift lights.
+        /// </remarks>
+        [Fact]
+        public void The_retired_plain_bar_loads_as_the_one_behaviour()
+        {
+            var settings = new OpenDashSettings { RevBar = Contract.RevBarRpm };
+            settings.Normalise();
+            Assert.Equal(Contract.RevBarShift, settings.RevBar);
+
+            // Off is untouched: a wheel with its own LEDs still gets its room back.
+            var off = new OpenDashSettings { RevBar = Contract.RevBarOff };
+            off.Normalise();
+            Assert.Equal(Contract.RevBarOff, off.RevBar);
+
+            // And a screen's own answer migrates the same way.
+            var screen = new ScreenInstance { Kind = Contract.KindFace, Width = 1920, Height = 480, RevBar = Contract.RevBarRpm };
+            screen.Normalise();
+            Assert.Equal(Contract.RevBarShift, screen.RevBar);
+
+            // The panel offers the two that are left, and in that order.
+            Assert.Equal(new[] { Contract.RevBarShift, Contract.RevBarOff }, PanelDataTab.RevBarValues);
+            Assert.Equal(PanelDataTab.RevBarValues.Length, PanelDataTab.RevBarLabels.Length);
         }
 
         [Fact]
         public void An_unreadable_mode_falls_back_through_the_alias()
         {
+            // The alias's two halves both mean a bar now: the plain one it used to name is retired, and
+            // `off` is the only answer that takes the strip away.
             var settings = new OpenDashSettings { ShiftLights = false, RevBar = "sparkles" };
             settings.Normalise();
-            Assert.Equal(Contract.RevBarRpm, settings.RevBar);
+            Assert.Equal(Contract.RevBarShift, settings.RevBar);
 
             // Case and whitespace are the shapes a hand-edited file has.
             var typed = new OpenDashSettings { RevBar = "  OFF " };
@@ -1181,7 +1216,10 @@ namespace OpenDashPlugin.Tests
             var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
             settings.Normalise();
 
-            Assert.False(settings.ShiftLights);
+            // The alias comes back true because the bar comes back on: a file that had the shift lights
+            // switched off had a plain RPM bar, and the plain RPM bar is retired into the one behaviour.
+            Assert.True(settings.ShiftLights);
+            Assert.Equal(Contract.RevBarShift, settings.RevBar);
             Assert.Equal("gear", settings.MatrixRest(1));
             Assert.True(settings.MatrixFlags(1));
             Assert.Equal(100, settings.LightsBrightness);
@@ -1223,11 +1261,11 @@ namespace OpenDashPlugin.Tests
             settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
             settings.Normalise();
             var names = settings.DeclaredProperties().ToList();
-            // Plus one for the companion's page, which is the one name it owns that is not a switch, and
-            // the pit wall's own: a zone per page, the page it opens on, the page it is showing, the URL
-            // and the class filter.
+            // Plus two for the companion's page and its flag format, which are the names it owns that
+            // are not switches, and the pit wall's own: a zone per page, the page it opens on, the page
+            // it is showing, the URL and the class filter.
             var perPitWall = Contract.PitWallZoneSlots.Count + 4;
-            Assert.Equal(shared + 2 * perFace + Modules.Count + 1 + perPitWall + lights, names.Count);
+            Assert.Equal(shared + 2 * perFace + Modules.Count + 2 + perPitWall + lights, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Contains("Face1920x480ZoneA", names);
             Assert.Contains("Face850x480ZoneA", names);
@@ -1239,7 +1277,7 @@ namespace OpenDashPlugin.Tests
 
             settings.RemoveScreen("Face850x480");
             settings.Normalise();
-            Assert.Equal(shared + perFace + Modules.Count + 1 + perPitWall + lights, settings.DeclaredProperties().Count());
+            Assert.Equal(shared + perFace + Modules.Count + 2 + perPitWall + lights, settings.DeclaredProperties().Count());
         }
 
         /// <summary>A screen on the stock namespace for its kind and size, as the first one at a size is.</summary>

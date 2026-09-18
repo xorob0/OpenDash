@@ -91,11 +91,29 @@ namespace OpenDashPlugin
         /// one. The other half of this comment is REV_BAR_MODES in packages/dash/src/contract.ts,
         /// and the two are kept saying the same thing.</para>
         /// </summary>
+        /// <summary>
+        /// What a face carries at the top. `rpm` is retired and still accepted.
+        /// </summary>
+        /// <remarks>
+        /// Retired rather than removed, because it has shipped and a settings file naming it must keep
+        /// loading (#170). What changed is that it is no longer offered: the bar has one right behaviour
+        /// -- the car's own lights where openDash has a table, SimHub's bands where it has none, which
+        /// is an RPM bar ending in shift lights -- and offering the plain bar beside it asked a driver
+        /// to choose between a right answer and a worse one. <see cref="MigrateRevBar"/> moves a stored
+        /// `rpm` onto `shift`; until it runs, this list is what keeps the value legal.
+        /// </remarks>
         public static readonly string[] RevBarModes = { "shift", "rpm", "off" };
         public const string RevBarShift = "shift";
         public const string RevBarRpm = "rpm";
         public const string RevBarOff = "off";
         public const string DefaultRevBar = RevBarShift;
+
+        /// <summary>A stored rev bar mode, with the retired plain bar moved onto the one behaviour.</summary>
+        public static string MigrateRevBar(string mode)
+        {
+            var normalised = NormaliseChoice(mode, RevBarModes, DefaultRevBar);
+            return string.Equals(normalised, RevBarRpm, StringComparison.Ordinal) ? RevBarShift : normalised;
+        }
 
         public static readonly string[] PositionModes = { "overall", "class" };
         public const string DefaultPositionMode = "overall";
@@ -1173,6 +1191,36 @@ namespace OpenDashPlugin
         {
             for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
             yield return CompanionPageProperty(ns);
+            // Last, after the page: both halves of the contract assert this group by index, so a new
+            // name joins the end of it.
+            yield return CompanionFlagFormatProperty(ns);
+        }
+
+        /// <summary>Property name of a companion's flag format: CompanionFlagFormat.</summary>
+        public static string CompanionFlagFormatProperty(string ns)
+        {
+            return ns + "FlagFormat";
+        }
+
+        /// <summary>
+        /// How a companion draws a flag: not at all, as the strip at the foot, or over the module.
+        /// </summary>
+        /// <remarks>
+        /// The face's own question with a third answer and a different default, and both differences
+        /// are about where the screen is. A face is in the driver's eyeline and has a gear to protect,
+        /// so its 12 px band is right; a companion is a phone on a stand beside them, where a strip
+        /// that thin says nothing and the list under it is something they can look away from. `off` is
+        /// the answer a face does not need, because leaving its band on costs nothing and leaving a
+        /// companion's full-screen flag on costs the whole module.
+        /// </remarks>
+        public static readonly string[] CompanionFlagFormats = { "off", "band", "full" };
+
+        public const string DefaultCompanionFlagFormat = "full";
+
+        /// <summary>One of <see cref="CompanionFlagFormats"/>, or the default when it is anything else.</summary>
+        public static string NormaliseCompanionFlagFormat(string format)
+        {
+            return NormaliseChoice(format, CompanionFlagFormats, DefaultCompanionFlagFormat);
         }
 
         /// <summary>Every action one companion registers, in registration order.</summary>
@@ -1425,16 +1473,22 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The rev bar mode a settings file means.
-        ///
-        /// `null` is the shape an rc.2 file has -- it was written before the mode existed -- and it
-        /// resolves through the deprecated alias, so that a user who had turned the shift lights off
-        /// finds the plain RPM bar rather than the shift lights back on. Anything unrecognised
-        /// resolves the same way. #170 is the rule this keeps.
         /// </summary>
+        /// <remarks>
+        /// `null` is the shape an rc.2 file has -- it was written before the mode existed -- and it
+        /// resolves through the deprecated alias. Anything unrecognised resolves the same way. #170 is
+        /// the rule this keeps.
+        ///
+        /// **Both halves of the alias now mean a bar.** `ShiftLights` false used to mean the plain RPM
+        /// bar, and that bar is retired: the choice it belonged to asked a driver to pick between the
+        /// car's own lights and something worse. So a file that had the shift lights switched off still
+        /// gets a bar, drawn the one way there is. The setting that still turns it off is `off`, which
+        /// no alias ever meant and which nobody's file carries by accident.
+        /// </remarks>
         public static string NormaliseRevBar(string value, bool shiftLights)
         {
             var alias = shiftLights ? RevBarShift : RevBarRpm;
-            return string.IsNullOrWhiteSpace(value) ? alias : NormaliseChoice(value, RevBarModes, alias);
+            return MigrateRevBar(string.IsNullOrWhiteSpace(value) ? alias : NormaliseChoice(value, RevBarModes, alias));
         }
 
         /// <summary>

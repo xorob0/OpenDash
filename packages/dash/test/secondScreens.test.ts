@@ -115,7 +115,12 @@ describe('the packages are built and valid', () => {
      * would arrive here as a failure asking which of the two it is.
      */
     test(`${def.folder} binds every value it draws`, () => {
-      const chrome = (name: string): boolean => name.endsWith('.wordmark.open') || name.endsWith('.wordmark.dash');
+      // The wordmark, and the full-screen flag's own name. A flag condition is one layer per flag,
+      // each shown by its own Visible binding, so the word inside it is fixed by which layer it is
+      // rather than read from anywhere: "RED" is the name of the layer, not a value that could be
+      // something else. Binding it would mean one layer asking which flag it was.
+      const chrome = (name: string): boolean =>
+        name.endsWith('.wordmark.open') || name.endsWith('.wordmark.dash') || (name.includes('.flagFull.') && name.endsWith('.name'));
       let values = 0;
       for (const dashboard of pkg.dashboards) {
         for (const item of textsOf(dashboard)) {

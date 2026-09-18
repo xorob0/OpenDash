@@ -2,18 +2,25 @@
  * Module 9, Car settings: the driver-adjustable values. A field whose property the sim does not
  * publish is hidden rather than shown as `--`: the grid should say what this car has, not list
  * what this sim lacks.
+ *
+ * **The car's model and number are not among them.** They used to lead the page, as a label reading
+ * "CAR · PORSCHE 992 CUP" over the number in digit cells, and they are the one thing on it that
+ * cannot change while you drive and that you already know: you chose the car. The row they took is
+ * a row the settings grid now has, which is the page's whole point. The model and the number keep
+ * the places where they identify somebody else -- a leaderboard row, the relative, the opponents
+ * page -- which is where a number is worth a cell.
  */
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
-import { CHARS, absLevel, antiRollFront, antiRollRear, brakeBias, carModel, carNumber, fuelMixture, player, tcLevel } from '../second/values.ts';
+import { CHARS, absLevel, antiRollFront, antiRollRear, brakeBias, fuelMixture, tcLevel } from '../second/values.ts';
 import { defineModule, drawnAt, fieldsRow, fld } from './module.ts';
 import type { Expr } from '../bind.ts';
 import type { FieldSpec } from '../second/field.ts';
 import type { ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
 
-const { fmt, isNull, not, or, gt, num, isnull, concat, str, ucase, raw, game } = ncalc;
+const { fmt, isNull, not, or, gt, num, isnull, raw, game } = ncalc;
 
 /**
  * A setting field that disappears when the sim does not publish the property behind it, and whose
@@ -96,21 +103,6 @@ export const carSettings = defineModule('carSettings', (ctx) => {
   return stack(
     ctx.frame,
     [
-      fieldsRow(
-        [
-          // The model is a proportional label and the number a monospaced value. As one string it
-          // was `GT3 · #12` in cells cut for digits, where the hash clipped and an M or a W in a
-          // car's name would have done the same.
-          fld(
-            ctx,
-            'car',
-            'Car · GT3',
-            { sample: '12', bind: carNumber(player()), chars: CHARS.carNumber, fs: d.mid },
-            { labelBind: concat(str('CAR · '), ucase(carModel())), labelWidest: 'CAR · WWWWWWWWWW' },
-          ),
-        ],
-        ctx,
-      ),
       // One rank rather than two, in the order the catalogue draws them, so that the grid is one
       // block of equal cells: two ranks broke at whatever the first one had room for. The order is
       // the drawing's and not the shedding table's, which is where importance is written.
