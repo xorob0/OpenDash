@@ -105,6 +105,19 @@ export const right = (value: Expr, count: number, from = 0): Expr => `right(${va
 export const blink = (name: string, delayMs: number, enabled: Expr): Expr => `blink(${str(name)}, ${delayMs}, ${enabled})`;
 
 /**
+ * `changed(ms, value)`: true for `ms` after `value` last moved.
+ *
+ * SimHub keeps the window and ages it, which is what lets a dashboard show something for three
+ * seconds without keeping state of its own; ADR 0009 admits it for that reason and refuses
+ * `setvalue` and `getvalue`, with which an expression would keep state of its own.
+ */
+export const changed = (ms: Expr, value: Expr): Expr => `changed(${ms}, ${value})`;
+
+/** `isincreasing(ms, value)` and its opposite: which way `value` moved within the same window. */
+export const isincreasing = (ms: Expr, value: Expr): Expr => `isincreasing(${ms}, ${value})`;
+export const isdecreasing = (ms: Expr, value: Expr): Expr => `isdecreasing(${ms}, ${value})`;
+
+/**
  * Formats a number of seconds as `h:mm:ss` without relying on TimeSpan format strings,
  * whose backslash escapes are awkward inside NCalc string literals.
  */
