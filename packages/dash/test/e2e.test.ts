@@ -633,9 +633,11 @@ describe('the faces a package draws', () => {
       const expected = NO_FLAG_NAME.includes(folder) ? face : [...face, `${ds.font.label} Bold`].sort();
       expect([folder, drawn(join(widget.out, folder))]).toEqual([folder, expected]);
     }
+    // A pit wall draws two more than a companion: the wordmark's Light, and the flag band's name in
+    // Bold. The companion's band is the nano style, which is colour and no word.
     for (const screen of SCREEN_PACKAGES) {
-      const wordmark = screen.kind === 'pitwall' ? [`${ds.font.data} Light`] : [];
-      expect([screen.folder, drawn(join(second.out, screen.folder))]).toEqual([screen.folder, [...face, ...wordmark].sort()]);
+      const wall = screen.kind === 'pitwall' ? [`${ds.font.data} Light`, `${ds.font.label} Bold`] : [];
+      expect([screen.folder, drawn(join(second.out, screen.folder))]).toEqual([screen.folder, [...face, ...wall].sort()]);
     }
   });
 });

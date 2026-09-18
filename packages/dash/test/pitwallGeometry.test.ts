@@ -186,6 +186,7 @@ const REGIONS: { page: string; screen: Screen; size: { width: number; height: nu
     size: LANDSCAPE,
     regions: [
       { name: 'race.header', rect: rect(0, 0, 1920, BODY_TOP) },
+      { name: 'race.body', rect: rect(0, BODY_TOP, 1920, LANDSCAPE_BODY) },
       { name: 'race.board', rect: rect(0, BODY_TOP, 1280, LANDSCAPE_BODY) },
       { name: 'race.columnRule', rect: rect(1280, BODY_TOP, 1, LANDSCAPE_BODY) },
       { name: 'race.column', rect: rect(1281, BODY_TOP, 639, LANDSCAPE_BODY) },
@@ -197,6 +198,7 @@ const REGIONS: { page: string; screen: Screen; size: { width: number; height: nu
     size: LANDSCAPE,
     regions: [
       { name: 'tower.header', rect: rect(0, 0, 1920, BODY_TOP) },
+      { name: 'tower.body', rect: rect(0, BODY_TOP, 1920, LANDSCAPE_BODY) },
       { name: 'tower.board', rect: rect(0, BODY_TOP, 880, LANDSCAPE_BODY) },
       { name: 'tower.columnRule', rect: rect(880, BODY_TOP, 1, LANDSCAPE_BODY) },
       { name: 'tower.column', rect: rect(881, BODY_TOP, 1039, LANDSCAPE_BODY) },
@@ -208,6 +210,7 @@ const REGIONS: { page: string; screen: Screen; size: { width: number; height: nu
     size: LANDSCAPE,
     regions: [
       { name: 'telemetry.header', rect: rect(0, 0, 1920, BODY_TOP) },
+      { name: 'telemetry.body', rect: rect(0, BODY_TOP, 1920, LANDSCAPE_BODY) },
       { name: 'telemetry.plot', rect: rect(0, BODY_TOP, 1280, LANDSCAPE_BODY) },
       { name: 'telemetry.columnRule', rect: rect(1280, BODY_TOP, 1, LANDSCAPE_BODY) },
       { name: 'telemetry.column', rect: rect(1281, BODY_TOP, 639, LANDSCAPE_BODY) },
@@ -219,6 +222,7 @@ const REGIONS: { page: string; screen: Screen; size: { width: number; height: nu
     size: PORTRAIT_SIZE,
     regions: [
       { name: 'portrait.header', rect: rect(0, 0, 1080, BODY_TOP) },
+      { name: 'portrait.body', rect: rect(0, BODY_TOP, 1080, PORTRAIT_SIZE.height - BODY_TOP) },
       { name: 'portrait.board', rect: rect(0, BODY_TOP, 1080, 801) },
       { name: 'portrait.panels', rect: rect(0, 865, 1080, 111) },
       { name: 'portrait.zones', rect: rect(0, 976, 1080, 944) },
@@ -229,6 +233,9 @@ const REGIONS: { page: string; screen: Screen; size: { width: number; height: nu
 /** Which region an item belongs to: the column on a landscape page, the band on the portrait one. */
 const regionFor = (page: string, name: string): string => {
   if (name.startsWith(`${page}.header`)) return `${page}.header`;
+  // The flag is the page's and not a column's: a band the width of the body, or the body itself.
+  // It is the one thing a pit wall draws across the divider, which is the point of drawing it.
+  if (name.startsWith(`${page}.flag`)) return `${page}.body`;
   if (page === 'portrait') {
     if (name.startsWith('portrait.board')) return 'portrait.board';
     if (name.startsWith('portrait.zone')) return 'portrait.zones';
@@ -289,4 +296,53 @@ describe('the telemetry column spends the body it is given', () => {
     expect(footer).toBeLessThanOrEqual(LANDSCAPE.height);
     expect(boxOf(TELEMETRY, 'telemetry.axisName').width).toBe(1280);
   });
+});
+
+/**
+ * The flag, which is the page's and not a readout's.
+ *
+ * The header carried a colour block and a word until a rig reported that it did not work, and the
+ * wall now answers the companion's three-way question instead: off, a band under the header, or the
+ * body. What is pinned here is the geometry, because that is the part a page's own layout can break
+ * -- a band that started at the top of the *screen* would cover the header that says which page it
+ * is, and a full flag that stopped at a column would be a flag over half a wall.
+ */
+describe('the flag belongs to the page', () => {
+  const layerOf = (screen: Screen, name: string): Extract<Item, { kind: 'layer' }> => {
+    const layer = screen.items.find((i): i is Extract<Item, { kind: 'layer' }> => i.kind === 'layer' && i.name === name);
+    if (!layer) throw new Error(`no layer named ${name}`);
+    return layer;
+  };
+  const visibleOf = (item: Item): string => String(item.bindings?.Visible?.formula ?? '');
+
+  for (const [page, screen, size] of [
+    ['race', RACE, LANDSCAPE],
+    ['tower', TOWER, LANDSCAPE],
+    ['telemetry', TELEMETRY, LANDSCAPE],
+    ['portrait', PORTRAIT, PORTRAIT_SIZE],
+  ] as const) {
+    test(`${page} draws both formats over its body and neither over its header`, () => {
+      const band = layerOf(screen, `${page}.flag`);
+      const full = layerOf(screen, `${page}.flagFull`);
+      expect({ band: visibleOf(band), full: visibleOf(full) }).toEqual({
+        band: "(isnull([OpenDash.PitWallFlagFormat], 'band')) = ('band')",
+        full: "(isnull([OpenDash.PitWallFlagFormat], 'band')) = ('full')",
+      });
+      // The band is the header's own height, under it, the width of the page: one object on a wall
+      // of any shape, where a proportion would draw it half as tall on the page twice as wide.
+      const bandBoxes = [...walkItems(band.children)].filter((i): i is Placed => i.kind !== 'layer');
+      const fullBoxes = [...walkItems(full.children)].filter((i): i is Placed => i.kind !== 'layer');
+      expect(bandBoxes.length).toBeGreaterThan(0);
+      expect(fullBoxes.length).toBeGreaterThan(0);
+      const bodyBand = rect(0, BODY_TOP, size.width, PIT_WALL_HEADER.height);
+      const body = rect(0, BODY_TOP, size.width, size.height - BODY_TOP);
+      for (const item of bandBoxes) {
+        const slack = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 0;
+        expect({ page, item: item.name, inside: contains(rect(bodyBand.left, bodyBand.top - slack, bodyBand.width, bodyBand.height + 2 * slack), item.rect) }).toMatchObject({ inside: true });
+      }
+      for (const item of fullBoxes) {
+        expect({ page, item: item.name, inside: contains(body, item.rect) }).toMatchObject({ inside: true });
+      }
+    });
+  }
 });

@@ -15,6 +15,7 @@ import { stack } from '../second/layout.ts';
 import {
   CHARS,
   carPosition,
+  positionDigits,
   classOpponentCount,
   clock,
   currentLap,
@@ -50,7 +51,7 @@ export const session = defineModule('session', (ctx) => {
           fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: d.big }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
-            bind: fmt(carPosition(player()), '0'),
+            bind: positionDigits(player()),
             chars: CHARS.position,
             fs: d.big,
             follower: { kind: 'denominator', text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },

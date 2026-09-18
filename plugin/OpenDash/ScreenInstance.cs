@@ -104,6 +104,11 @@ namespace OpenDashPlugin
         /// <summary>Whether this pit wall's board and its zone lists show the player's own class.</summary>
         public bool PitWallClassOnly { get; set; }
 
+        /// <summary>How this pit wall draws a flag: off, a band under the header, or over the body.
+        /// The companion's question asked of the wall, and what replaced the flag readout the header
+        /// carried.</summary>
+        public string PitWallFlagFormat { get; set; }
+
         /// <summary>Zone and page a held button shows on this pit wall, released back to where it was,
         /// packed as zone index times a hundred plus the page the way a face's glance is.</summary>
         public int PitWallQuickGlance { get; set; } = Contract.DefaultPitWallQuickGlance;
@@ -178,6 +183,18 @@ namespace OpenDashPlugin
 
         /// <summary>How this companion draws a flag: off, the strip at the foot, or over the module.</summary>
         public string CompanionFlagFormat { get; set; }
+
+        /// <summary>
+        /// The module this companion is being forced onto, or -1 for none. Live state, never saved.
+        /// </summary>
+        /// <remarks>
+        /// Held at <see cref="CompanionStart"/> for the first seconds of a SimHub run and then cleared,
+        /// which is the whole of how a companion still opens on a chosen module: one enabled screen is
+        /// one SimHub selects. It is not saved because it describes a moment rather than a preference --
+        /// the preference is CompanionStart, which is.
+        /// </remarks>
+        [JsonIgnore]
+        public int CompanionOpenOn { get; set; } = Contract.DefaultCompanionOpenOn;
 
         /// <summary>Which modules are in the rotation. Null on a screen that is not a companion.</summary>
         public bool[] Modules { get; set; }
@@ -313,6 +330,7 @@ namespace OpenDashPlugin
                 WebViewUrl = fresh ? Contract.DefaultWebViewUrl : Contract.NormaliseUrl(WebViewUrl);
                 PitWallQuickGlance = fresh ? Contract.DefaultPitWallQuickGlance : Contract.NormalisePitWallQuickGlance(PitWallQuickGlance);
                 PitWallPage = fresh ? Contract.DefaultPitWallPage : Contract.NormalisePitWallPage(PitWallPage);
+                PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(PitWallFlagFormat);
                 // Consumed. Leaving them would make the next Normalise migrate over whatever the user
                 // has since chosen, which is a settings file that quietly reverts.
                 Zones = null;
@@ -327,6 +345,7 @@ namespace OpenDashPlugin
                 PitWallQuickGlance = 0;
                 PitWallPage = Contract.DefaultPitWallPage;
                 PitWallClassOnly = false;
+                PitWallFlagFormat = null;
             }
 
             if (IsCompanion)
@@ -351,6 +370,8 @@ namespace OpenDashPlugin
                 CompanionPage = fresh ? CompanionStart : Contract.NormalisePage(CompanionPage, OpenDashPlugin.Modules.Count, CompanionStart);
                 CompanionPage = Contract.FirstEnabledFrom(CompanionPage, ModuleMask(), OpenDashPlugin.Modules.Count);
                 CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(CompanionFlagFormat);
+                // Not reset here: Normalise runs whenever the panel saves, and clearing the force on a
+                // save would drop a companion off its start module because somebody flipped a switch.
             }
             else
             {
@@ -359,6 +380,7 @@ namespace OpenDashPlugin
                 CompanionStart = 0;
                 CompanionQuickGlance = 0;
                 CompanionFlagFormat = null;
+                CompanionOpenOn = Contract.DefaultCompanionOpenOn;
             }
         }
 
@@ -382,6 +404,16 @@ namespace OpenDashPlugin
         {
             if (!IsCompanion) return;
             CompanionPage = Contract.FirstEnabledFrom(CompanionStart, ModuleMask(), OpenDashPlugin.Modules.Count);
+            // And force it, which is what actually moves the screen: the page above is no longer read
+            // by the package. Past the modules the rotation has turned off, because forcing one that is
+            // switched off would leave no screen enabled at all and a companion drawing nothing.
+            CompanionOpenOn = CompanionPage;
+        }
+
+        /// <summary>Stops forcing a module, which hands the paging back to SimHub and to the driver.</summary>
+        public void ReleaseStartModule()
+        {
+            if (IsCompanion) CompanionOpenOn = Contract.DefaultCompanionOpenOn;
         }
 
         /// <summary>
@@ -464,6 +496,7 @@ namespace OpenDashPlugin
                 WebViewUrl = WebViewUrl,
                 PitWallQuickGlance = PitWallQuickGlance,
                 PitWallClassOnly = PitWallClassOnly,
+                PitWallFlagFormat = PitWallFlagFormat,
                 Modules = Modules == null ? null : (bool[])Modules.Clone(),
                 CompanionPage = CompanionPage,
                 CompanionStart = CompanionStart,

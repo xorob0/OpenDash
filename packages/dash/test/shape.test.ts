@@ -315,6 +315,30 @@ describe('a rank fills the box it is given', () => {
     }
   });
 
+  /**
+   * The other half of that rule, and the reason a row has to say which kind it is.
+   *
+   * Fuel is two ranks of numerals over four pixels of level bar. The bar cannot grow and carries no
+   * type, so there is no hierarchy between it and the numerals to lose -- and while every fixed row
+   * vetoed, fuel never grew at any size: its lead stayed at the density's own 46 in a 250 px column
+   * with a third of the width unspent, which is what a rig reported as tiny text in a space that
+   * could be optimized. A row that is furniture now stands aside and is counted in the budget.
+   */
+  test('but a row that is only furniture stands aside and lets the rest grow', () => {
+    const fuel = MODULES.find((m) => m.id === 'fuel')!;
+    const lead = (height: number): number => {
+      const items = valuesOf(fuel.build({ frame: rect(0, 0, 250, height), density: 'zone', prefix: 'b.' }));
+      return Math.max(0, ...items.map((i) => i.fontSize));
+    };
+    const big = densityOf('zone').big;
+    // Taller than the density's own drawing needs, so there is room to spend.
+    expect({ grew: lead(290) > big }).toEqual({ grew: true });
+    expect({ grew: lead(328) > big }).toEqual({ grew: true });
+    // And never past the next name on the ramp, which is the edge that makes it filling rather
+    // than scaling. The gauge is still four pixels either way.
+    expect({ past: lead(328) > nextOnRamp(big, 'zone') }).toEqual({ past: false });
+  });
+
   test('and a stack it cannot grow whole it does not grow at all', () => {
     // Sectors is three drawn sector deltas over a rank of lap times. The drawing cannot grow, so
     // neither may the rank: times grown to the size of the sectors above them are a page with no

@@ -71,6 +71,27 @@ Three landscape pages and one portrait page:
 | Telemetry | Speed, RPM, pedals and steering traced over the last minute, with three zones beside them |
 | Portrait | The field above, session and lap data in the middle, four zones below |
 
+### The header, and the flag
+
+Every page draws one 64 px strip: the wordmark and the page name on the left, and on the right,
+laid out from the right edge inwards, the two clocks, the wind, the track state, the incident
+count, the time left and the session and lap. Each group names itself before its value, which is
+not decoration: the strip once wrote its clocks the other way round, as `14:32 LOCAL 15:07 SIM`,
+and a rig reported being unable to tell which was the wall clock and which was the sim's.
+
+**The flag is not on the strip.** It was, as a colour block and a word built from the six flags
+SimHub normalises, and it did not light on a rig; a 24 px block in the corner of a 1920 px header
+would not have been where anyone looked for a flag even when it did. `OpenDash.PitWallFlagFormat`
+replaces it with the companion's three answers -- `off`, `band` or `full` -- drawn from the full
+fifteen-condition catalogue the face uses. A band is the header's own height, directly under it;
+`full` takes the body. Neither covers the header, because "which page is this and how long is
+left" is the question somebody asks immediately after seeing a flag.
+
+The default is `band` and not the companion's `full`. A companion is a phone showing one module,
+so a full-screen flag costs one list; a pit wall is a board, a track map and four zones that
+somebody is watching *because* of the flag, and covering them the moment a yellow comes out hides
+the cars the yellow is about.
+
 ### Zones
 
 A zone is a widget over a small dashboard that holds every zone page as a screen, with the

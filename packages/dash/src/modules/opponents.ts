@@ -51,7 +51,8 @@ import { densityOf, rampOf } from '../second/density.ts';
 import { chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
-import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition, carRating, carRelativeGap, driverCode, neighbour } from '../second/values.ts';
+import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
+  positionLabelled, carRating, carRelativeGap, driverCode, neighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -215,7 +216,7 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
     items.push(
       label(`${ctx.prefix}${side.id}.heading`, `${side.heading} · P${side.position}`, box.left, top, box.width, {
         size: d.label,
-        bind: concat(str(`${side.heading} · P`), fmt(carPosition(idx), '0')),
+        bind: concat(str(`${side.heading} · `), positionLabelled(idx)),
         widest: `${side.heading} · P99`,
       }),
     );

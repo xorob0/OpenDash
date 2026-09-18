@@ -26,6 +26,7 @@ const {
   eq,
   gt,
   lt,
+  ge,
   and,
   concat,
   fmt,
@@ -211,8 +212,30 @@ export const rowIndex = {
 /** How many cars a split list leaves out: the run between the rows it keeps and the window. */
 export const splitHiddenCars = (topRows: number, rows: number): Expr => sub(splitWindowTop(topRows, rows), num(topRows + 1));
 
-/** The leaderboard index of the car holding the session's best lap. */
-export const sessionBestRow = (): Expr => bestLapPosition();
+/**
+ * The leaderboard index of the car holding the session's best lap, or -1 while there is none.
+ *
+ * **Read as a property, never through `getbestlapopponentleaderboardposition()`.** That function is
+ * `IndexToPosition(lastData?.NewData?.BestLapOpponentPosition).Value`, and the `?.` chain makes the
+ * argument `int?` although the property behind it is a plain `int` defaulting to -1. So on any frame
+ * where SimHub's `NewData` reference is momentarily null -- between the ticks it swaps them on, which
+ * is a race a dashboard evaluating on its own thread can and does observe -- `IndexToPosition` hands
+ * back null and `.Value` throws.
+ *
+ * A throwing NCalc expression does not fail loudly in SimHub. It draws **the empty string**, which is
+ * the same trap `left([Class], 4)` fell into and the reason `ncalcFunctions.ts` exists. Every field
+ * whose text went through this function therefore blanked on those frames and came back on the next:
+ * reported from a rig as the session's best time appearing on the second lap and then "blinking a
+ * lot", steady again once the car stopped and the data stopped being rewritten under it.
+ *
+ * `BestLapOpponentPosition` is a public property of `StatusDataBase`, so SimHub publishes it under
+ * `GameData` like any other, and reading it cannot throw. `IndexToPosition`'s own arithmetic is the
+ * `+ 1`, which applies to a real index and not to the -1 that means "nobody yet".
+ */
+export const sessionBestRow = (): Expr => {
+  const index = isnull(game('BestLapOpponentPosition'), num(-1));
+  return iff(ge(index, num(0)), add(index, num(1)), num(-1));
+};
 
 /** The session's best lap, which is the best lap of that car. */
 export const sessionBestLap = (): Expr => driver('bestlap', sessionBestRow());
@@ -231,7 +254,19 @@ export const carName = (idx: Expr): Expr => isnull(driver('name', idx), str(''))
  * a column header on a table, a field label everywhere else. Rule 19 -- only what fits a cell may
  * be drawn in one -- and a hash never did.
  */
-export const carNumber = (idx: Expr): Expr => isnull(driver('carnumber', idx), str(''));
+/**
+ * A car's race number, or nothing at all before the sim has one.
+ *
+ * **Guarded against a negative**, which is what iRacing hands back for a car it has not placed yet.
+ * A field of AI on the grid drew `#-1` down the number column until their first lap; the `isnull`
+ * caught an absent number and had nothing to say about a present nonsense one. A number is a label
+ * rather than a quantity, so the honest answer for "no number yet" is an empty cell: the column
+ * keeps its width and fills in as the sim learns, where `-1` reads as a fact about the car.
+ */
+export const carNumber = (idx: Expr): Expr => {
+  const value = isnull(driver('carnumber', idx), num(-1));
+  return iff(ge(value, num(0)), fmt(value, '0'), str(''));
+};
 
 /**
  * A driver name cut to the three-letter code the narrow drawings show, upper-cased.
@@ -245,8 +280,25 @@ export const driverCode = (idx: Expr): Expr => ucase(left(isnull(carName(idx), s
 export const carClass = (idx: Expr): Expr => driver('carclass', idx);
 
 /** The position a table shows, overall or in class per the plugin's PositionMode. */
+/**
+ * A car's position, overall or in class, or 0 while the sim has not placed it.
+ *
+ * Zero is kept as the *number* because callers do arithmetic on it and compare it. What changed is
+ * that nothing draws a zero any more: {@link hasPosition} is the guard, and every drawing that
+ * prints a position asks it first. A grid of AI before the green flag has no positions at all, and
+ * a column of `P0` is a row of wrong answers where an empty cell is an honest one.
+ */
 export const carPosition = (idx: Expr): Expr =>
   iff(eq(setting.positionMode(), str('class')), isnull(driver('classposition', idx), num(0)), isnull(driver('position', idx), num(0)));
+
+/** True once the sim has actually placed this car. Positions count from one, so zero is "not yet". */
+export const hasPosition = (idx: Expr): Expr => gt(carPosition(idx), num(0));
+
+/** A position as digits, or `--` before the sim has placed the car: `4`, and `--` on the grid. */
+export const positionDigits = (idx: Expr): Expr => iff(hasPosition(idx), fmt(carPosition(idx), '0'), str(NO_VALUE));
+
+/** A position with the P the drawings prefix it with, or `P--` before the sim has placed the car. */
+export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDigits(idx));
 
 /** Places gained since the start, signed; 0 when the sim does not track it. */
 export const carRankChange = (idx: Expr): Expr => isnull(driver('positiongain', idx), num(0));

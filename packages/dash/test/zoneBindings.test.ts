@@ -122,6 +122,46 @@ describe('every zone selects a page it has', () => {
   });
 });
 
+/**
+ * The two SimHub functions that throw, and the rule that no package may call one.
+ *
+ * `getbestlapopponentleaderboardposition` is
+ * `IndexToPosition(lastData?.NewData?.BestLapOpponentPosition).Value`. The property behind the `?.`
+ * chain is a plain int defaulting to -1, so the only way the argument goes null is the chain -- a
+ * frame on which SimHub's `NewData` is momentarily absent, which is a race a dashboard evaluating on
+ * its own thread observes while the data is being rewritten under it. `.Value` then throws, and a
+ * throwing expression draws the empty string exactly as a mis-dispatched one does.
+ *
+ * The symptom is a field that blanks for a frame and comes back: reported from a rig as the session
+ * best appearing on the second timed lap and then "blinking a lot", steady again once the car
+ * stopped. `second/values.ts` reads the published property instead, and this is what keeps it read
+ * that way -- the same shape of guard `ncalcFunctions.ts` exists for, one failure mode along.
+ */
+describe('no package calls a SimHub function that can throw', () => {
+  const THROWING = ['getbestlapopponentleaderboardposition', 'getbestlapopponentleaderboardposition_playerclassonly'];
+
+  test('because a throwing expression draws the empty string, exactly as a mis-dispatched one does', () => {
+    const formulas: string[] = [];
+    for (const pkg of everyPackage().map((owned) => owned.pkg)) {
+      for (const dashboard of pkg.dashboards) {
+        for (const screen of dashboard.screens) {
+          if (screen.enabledExpression) formulas.push(screen.enabledExpression);
+          for (const item of walkItems(screen.items)) {
+            for (const binding of Object.values(item.bindings ?? {})) formulas.push(String(binding.formula ?? ''));
+          }
+        }
+      }
+    }
+    expect(formulas.length).toBeGreaterThan(0);
+    for (const name of THROWING) {
+      expect({ name, called: formulas.some((f) => f.includes(name)) }).toEqual({ name, called: false });
+    }
+    // And the replacement is genuinely read, so this cannot pass by the session best having been
+    // dropped from every package instead.
+    expect(formulas.some((f) => f.includes('GameData.BestLapOpponentPosition'))).toBe(true);
+  });
+});
+
 describe('the guards bite', () => {
   test('a property nobody declared fails the build, wherever it is read', () => {
     const pkg = packages()[0]!;

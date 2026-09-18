@@ -22,6 +22,7 @@ namespace OpenDashPlugin
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
         public const string PitWallClassOnly = "PitWallClassOnly";
+        public const string PitWallFlagFormat = "PitWallFlagFormat";
 
         /// <summary>The lights. Not a screen, but their settings are properties for the same reason the
         /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.
@@ -546,8 +547,40 @@ namespace OpenDashPlugin
             new FaceSize(600, 686, FaceBody.Column, new[] { 234, 160, 150 }, true, 1, 36, 46, 546, 56),
         };
 
-        /// <summary>The face a rig is most likely to have, and where a pre-face setting is migrated to.</summary>
+        /// <summary>
+        /// Where a pre-face setting is migrated to, and the face the panel draws its picture of.
+        /// </summary>
+        /// <remarks>
+        /// **Frozen, and not the same question as which size a driver is offered first.** A settings
+        /// file written before the faces were separated has its zones migrated onto this one, and that
+        /// already happened for everybody on 0.3.0-rc.2; moving it now would take a rig's settings off
+        /// the face they landed on and put them on another. <see cref="PreferredFaceWidth"/> is the
+        /// other question and is free to differ.
+        /// </remarks>
         public static FaceSize ReferenceFace { get { return FaceSizes[0]; } }
+
+        /// <summary>
+        /// The size the Add a screen dialog opens on: 850 x 480.
+        /// </summary>
+        /// <remarks>
+        /// What openDash is tested on and what most of the screens running it actually are. The dialog
+        /// used to open on whichever size came first in the catalogue, which is the 1920 x 480 -- the
+        /// widest, the one the artboards lead with, and not the one most people have. A driver whose
+        /// screen is something else still has to say so, which the caption already asks of them.
+        /// </remarks>
+        public const int PreferredFaceWidth = 850;
+
+        public const int PreferredFaceHeight = 480;
+
+        /// <summary>The face of that size, or null when nothing ships at it.</summary>
+        public static FaceSize? FaceOf(int width, int height)
+        {
+            foreach (var face in FaceSizes)
+            {
+                if (face.Width == width && face.Height == height) return face;
+            }
+            return null;
+        }
 
         /// <summary>
         /// The prefix a face's settings carry, for instance "Face1920x480".
@@ -678,6 +711,7 @@ namespace OpenDashPlugin
                 // Last, after the web view: the six before it have shipped and both halves of the
                 // contract assert the group by index, so a new one joins the end of it.
                 yield return PitWallClassOnlyProperty(ns);
+                yield return PitWallFlagFormatProperty(ns);
                 yield break;
             }
             // A slots face reads the twelve shared slot properties and nothing of its own, which is why
@@ -716,6 +750,7 @@ namespace OpenDashPlugin
                 yield return PitWallPage;
                 yield return WebViewUrl;
                 yield return PitWallClassOnly;
+                yield return PitWallFlagFormat;
                 yield break;
             }
             throw new ArgumentOutOfRangeException("prefix", prefix, "no screen carries that prefix");
@@ -1094,6 +1129,24 @@ namespace OpenDashPlugin
         /// DEFAULT_PIT_WALL_CLASS_ONLY in contract.ts.</summary>
         public const bool DefaultPitWallClassOnly = false;
 
+        /// <summary>How a pit wall draws a flag: "off", "band" or "full". The companion's three
+        /// answers, asked of the other big screen, and it is what replaced the flag readout the
+        /// header used to carry -- six normalised properties and a 24 px block, which did not light
+        /// on a rig and would not have been where anyone looked for a flag even when it did.
+        ///
+        /// "band" rather than the companion's "full": a pit wall is a board, a track map and four
+        /// zones that somebody is watching because of the flag, so covering them the moment a yellow
+        /// comes out hides the cars the yellow is about. Mirrors DEFAULT_PIT_WALL_FLAG_FORMAT in
+        /// contract.ts.</summary>
+        public const string DefaultPitWallFlagFormat = "band";
+
+        /// <summary>One of <see cref="CompanionFlagFormats"/>, or the default when it is anything
+        /// else. The same three answers as a companion's, so the same list.</summary>
+        public static string NormalisePitWallFlagFormat(string format)
+        {
+            return NormaliseChoice(format, CompanionFlagFormats, DefaultPitWallFlagFormat);
+        }
+
         /// <summary>The class filter of every face zone, in letter order.</summary>
         public static bool[] DefaultFaceZoneClassOnly()
         {
@@ -1198,7 +1251,29 @@ namespace OpenDashPlugin
             // Last, after the page: both halves of the contract assert this group by index, so a new
             // name joins the end of it.
             yield return CompanionFlagFormatProperty(ns);
+            yield return CompanionOpenOnProperty(ns);
         }
+
+        /// <summary>Property name of the module a companion is being forced onto: CompanionOpenOn.</summary>
+        public static string CompanionOpenOnProperty(string ns)
+        {
+            return ns + "OpenOn";
+        }
+
+        /// <summary>Force nothing, which is what every frame but the first few seconds reads.</summary>
+        public const int DefaultCompanionOpenOn = -1;
+
+        /// <summary>
+        /// How long after SimHub loads a companion is held on its start module.
+        /// </summary>
+        /// <remarks>
+        /// Long enough for SimHub to have loaded the dashboard and evaluated its screens, short enough
+        /// that a driver reaching for the screen is never fighting it. The window exists because the
+        /// only way a plugin can choose a screen is to leave exactly one enabled and let SimHub move
+        /// off the others; once it has moved, everything re-enables around a selection SimHub has no
+        /// reason to leave, and a tap pages from there.
+        /// </remarks>
+        public static readonly TimeSpan CompanionOpenOnWindow = TimeSpan.FromSeconds(6);
 
         /// <summary>Property name of a companion's flag format: CompanionFlagFormat.</summary>
         public static string CompanionFlagFormatProperty(string ns)
@@ -1228,10 +1303,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every action one companion registers, in registration order.</summary>
+        /// <summary>
+        /// None. A companion is paged by SimHub, not by openDash.
+        /// </summary>
+        /// <remarks>
+        /// There were two -- next module, and hold for a glance -- and both moved `CompanionPage`,
+        /// which is what the screens were gated on. That gate is why a tap did nothing: SimHub's only
+        /// touch gesture maps a tap to the previous or next screen, and its navigation walks the
+        /// screens whose expression is true, so with one of twenty-one enabled there was nowhere to
+        /// go. The rotation alone gates them now, so SimHub's own per-dashboard "Next screen" binding
+        /// pages a companion from a wheel button and a tap pages it from the screen.
+        ///
+        /// Registering an action that no longer moves anything would put a dead row in SimHub's
+        /// Controls and events, which is worse than not offering one. #362 is where they come back if
+        /// SimHub ever gives a plugin a way to choose the screen itself.
+        /// </remarks>
         public static IEnumerable<string> CompanionActionNames(string ns)
         {
-            yield return NextModuleActionFor(ns);
-            yield return HoldQuickGlanceActionFor(ns);
+            yield break;
         }
 
         /// <summary>
@@ -1316,6 +1405,15 @@ namespace OpenDashPlugin
         public static string PitWallClassOnlyProperty(string ns)
         {
             return ns + "ClassOnly";
+        }
+
+        /// <summary>Property name of a pit wall's flag format: PitWallFlagFormat, or GarageFlagFormat
+        /// on a second one. The same shape as a face's and a companion's, and the same suffix: three
+        /// kinds of screen ask one question and a second spelling of it would be a second answer to
+        /// keep in step.</summary>
+        public static string PitWallFlagFormatProperty(string ns)
+        {
+            return ns + "FlagFormat";
         }
 
         /// <summary>Default page of a zone, by its letter.</summary>

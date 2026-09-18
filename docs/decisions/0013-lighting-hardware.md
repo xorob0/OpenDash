@@ -216,3 +216,50 @@ in-process route avoids both, because SimHub stays the only writer.
 SimHub's own persisted `activeProfileId`, so after installing, the box still runs whatever it was
 running. The panel and the guide both say to pick it on the device; openDash does not switch it,
 because which profile a user's hardware runs is theirs to choose.
+
+## Amended, 2026-09-18: there is no such thing as "SimHub's LED profiles"
+
+The amendment above says the plugin hands a profile to `SerialDashPlugin.Settings.RGBLedsDriver` and
+lets SimHub save its own settings. That is right about the mechanism and wrong about the target,
+because it names one device and calls it SimHub.
+
+`SerialDashPluginSettings.RGBLedsDriver` is `new RGBLedsDriver("PluginsData\Common\ArduinoRGBLedsSettings.json")`:
+the **Arduino RGB LEDs** device, and nothing else. Every other set of LEDs SimHub drives has a
+driver of its own — each wheel, button plate or brow that SimHub knows as a device is a
+`LedModuleDevice` holding a `LedModuleSettings` with its own `RGBLedsDriver`, its own `LedsSettings`,
+its own profile list and its own file. A profile in one list is invisible in every other.
+
+So a bar added for a wheel was parsed, added, saved and verified correctly — into a list the wheel
+does not read. Reported from a rig as a 3-9-3 bar named "wheel" simply not being in the wheel's
+profile list, which is exactly what it was. The install reported success, because it was successful;
+the mistake was upstream of it, in believing there was one list to succeed into.
+
+**A bar therefore names its device, and the panel asks.** `LedBar.Device` holds the answer,
+`LedTargets` resolves it against SimHub, and `LedTargets.All()` is the list the picker offers:
+
+```
+PluginManager.GetInstance().GetPlugin<DevicesPlugin>()
+  .GetDevices<LedModuleDevice>()            // flattens composites: a wheel that is an LCD *and*
+                                            // a LED module yields both
+  .ledModuleSettings.LedsDriver.Settings    // that device's own profile list
+```
+
+all public, no reflection, the same shape as the chain the first amendment established. Saving is
+two calls, because SimHub stores these two ways: a module built with a file name has a
+`SettingsFileName` and `SaveSettings()` writes it, and one built without is serialised into its
+device's own settings by `DevicesPlugin.SaveSettings()`. Which of the two a device is cannot be read
+off the public surface, and both are what SimHub does itself, so both are called.
+
+A bar written before this existed reads as the Arduino's, because that is where those bars actually
+went. It is a statement about the past rather than a default anybody chose; a new bar takes what the
+picker offered, which is the one LED device when there is one and a choice when there is not.
+
+**What this does not fix.** The flag box matrix has the same shape of problem: `LedModuleSettings`
+carries a `MatrixDriver` as well, so a matrix built into a wheel is a list openDash still cannot
+reach, and the Install tab's matrix row still means the Arduino's. It is not the reported bug and
+the machinery here is what it will be built on. [#363](https://github.com/xorob0/OpenDash/issues/363).
+
+A device's LEDs are also not the only ones out of reach: a bitmap display device carries a
+`LedsDriver` of its own (`BitmapDisplaySettings.LedsDriver`), and `BitmapDisplayDevice<T>` is
+generic with no non-generic interface exposing its settings, so those are reached by naming every
+concrete settings type or not at all. None is offered today.

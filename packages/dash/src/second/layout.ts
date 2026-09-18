@@ -43,10 +43,25 @@ export interface StackRow {
     order: readonly string[];
     without(ids: readonly string[]): StackRow | undefined;
   };
+  /**
+   * True for a row that cannot grow and should not stop the rest of the stack from growing.
+   *
+   * The distinction {@link filled} turns on. A row with no `fill` is one rule 20 cannot resize, and
+   * there are two kinds of those: furniture that carries no type of its own -- a fuel gauge, a rev
+   * bar, a colour strip -- and a drawing whose proportions are read against the numerals beside it.
+   * The first should take its height out of the budget and stand aside; the second has to veto,
+   * because growing the type around it is what breaks it.
+   */
+  rigid?: boolean;
 }
 
-/** A row helper for the common case of items that do not depend on where they land. */
-export const fixedRow = (height: number, draw: (bottom: number) => Item[]): StackRow => ({ height, draw });
+/**
+ * A row helper for the common case of items that do not depend on where they land.
+ *
+ * `rigid` says the row cannot grow *and does not stop the rest of the stack growing*. Without it a
+ * fixed row vetoes rule 20 for the whole page; see {@link filled} for why both answers are needed.
+ */
+export const fixedRow = (height: number, draw: (bottom: number) => Item[], rigid = false): StackRow => ({ height, draw, rigid });
 
 /** The content box of a module: its rect less the density's padding. */
 export function contentRect(frame: Rect, density: Density): Rect {
@@ -133,12 +148,22 @@ export function rowsThatFit(rows: readonly StackRow[], height: number, gap: numb
  */
 function filled(rows: readonly StackRow[], height: number, step: number): readonly StackRow[] {
   if (stackHeight(rows, step) > height - 2 * ROW_TAIL) return rows;
+  // All of the stack grows or none of it does, and the exception is a row that says it is furniture.
+  //
+  // The rule is about hierarchy: a page whose sector strip is a drawing and whose lap times are
+  // fields would otherwise grow the times alone until they matched the sectors above them, and the
+  // hierarchy the sizes exist to express is the thing that would go. But it was applied to *every*
+  // row without a `fill`, and a fuel gauge is four pixels of bar with no type in it at all -- there
+  // is no hierarchy between it and the numerals above it to lose. The effect was that fuel, the
+  // speedo and every other page carrying a bar or a trace never grew at any size, which is the
+  // "tiny text in a module space that could very well be optimized" a rig reported: fuel's numerals
+  // stayed at 46 px in a 250 px column with a third of the width unspent.
+  //
+  // So a row declares which it is. `rigid` keeps its height and stands aside, which is what the
+  // paragraph above this function has always promised; anything else still vetoes.
   const fills = rows.map((row) => row.fill);
-  // All of the stack grows or none of it does. A page whose sector strip is a drawing and whose lap
-  // times are fields would otherwise grow the times alone until they matched the sectors above
-  // them, and the hierarchy the sizes exist to express is the thing that would go.
-  if (fills.some((f) => f === undefined)) return rows;
-  const live = fills as NonNullable<StackRow['fill']>[];
+  if (rows.some((row) => row.fill === undefined && !row.rigid)) return rows;
+  const live = fills.filter((f): f is NonNullable<StackRow['fill']> => f !== undefined);
   if (live.length === 0) return rows;
   const ceiling = Math.min(...live.map((f) => f.ceiling));
   const lead = Math.max(...live.map((f) => f.lead));
@@ -146,7 +171,9 @@ function filled(rows: readonly StackRow[], height: number, step: number): readon
   // Stepped in whole pixels of the largest value, biggest first, so what comes out is a font size a
   // person could have chosen rather than the end of a bisection.
   for (let size = Math.floor(lead * ceiling); size > lead; size--) {
-    const grown = rows.map((row) => row.fill?.at(size / lead));
+    // A rigid row is carried through unchanged: its height is part of the budget the growing rows
+    // are measured against, which is exactly what the note above this function describes.
+    const grown = rows.map((row) => (row.fill ? row.fill.at(size / lead) : row));
     if (grown.some((row) => row === undefined || row.height <= 0)) continue;
     const candidate = grown as StackRow[];
     // The room is the box less the tail at each end, because the stack is centred: a block that

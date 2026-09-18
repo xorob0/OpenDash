@@ -48,7 +48,7 @@ namespace OpenDashPlugin.Tests
             var settings = new OpenDashSettings { LedCentre = "brake", LedRpmStyle = Contract.LedRpmStyleCar, LedFlagAnimation = false };
             settings.Normalise();
 
-            var bar = settings.AddLedBar("3-9-3", "Rim");
+            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
             Assert.Equal("Rim", bar.Name);
             Assert.Equal("LedRim", bar.Namespace);
             Assert.Equal("brake", settings.BarCentre(bar.Namespace));
@@ -62,8 +62,8 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings();
             settings.Normalise();
-            var rim = settings.AddLedBar("3-9-3", "Rim");
-            var brow = settings.AddLedBar("brow-15", "Brow");
+            var rim = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            var brow = settings.AddLedBar("brow-15", "Brow", LedBar.ArduinoDevice);
 
             rim.Centre = "rpm";
             brow.Centre = "fuel";
@@ -89,8 +89,8 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings();
             settings.Normalise();
-            var first = settings.AddLedBar("3-9-3", "Rim");
-            var second = settings.AddLedBar("3-9-3", "Rim");
+            var first = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            var second = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
             Assert.NotEqual(first.Namespace, second.Namespace);
             Assert.NotEqual(first.Name, second.Name);
             Assert.NotEqual(LedBarProfile.IdFor(first.Namespace), LedBarProfile.IdFor(second.Namespace));
@@ -101,7 +101,7 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings { LedCentre = "fuel" };
             settings.Normalise();
-            var bar = settings.AddLedBar("3-9-3", "Rim");
+            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
             bar.Centre = "brake";
             Assert.True(settings.RemoveLedBar(bar.Namespace));
             // A delegate outlives the bar it was attached for until SimHub restarts, so the reader has to
@@ -246,13 +246,67 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings();
             settings.Normalise();
-            var bar = settings.AddLedBar("0-9-0", "openDash 0/9/0");
+            var bar = settings.AddLedBar("0-9-0", "openDash 0/9/0", LedBar.ArduinoDevice);
             Assert.Equal("openDash 0/9/0", bar.Name);
             Assert.Equal("Led090", bar.Namespace);
 
             // And a name of the driver's own is simply slugged.
-            var rim = settings.AddLedBar("3-9-3", "Rim");
+            var rim = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
             Assert.Equal("LedRim", rim.Namespace);
         }
+        /// <summary>
+        /// A bar remembers which of SimHub's LED devices its profile went to.
+        /// </summary>
+        /// <remarks>
+        /// SimHub keeps one profile list per LED device, in that device's own file, and a profile in one
+        /// is invisible in every other. openDash installed into the Arduino RGB LEDs device whatever the
+        /// strip was, so a 3-9-3 bar added for a wheel was written, saved and verified correctly into a
+        /// list the wheel does not read -- reported from a rig as the profile simply not being there.
+        /// These pin the vocabulary the settings file holds; LedTargets resolves it against SimHub.
+        /// </remarks>
+        [Fact]
+        public void A_bar_records_the_device_its_profile_went_to()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var wheel = Guid.Parse("0f8b4c1e-6d2a-4f3b-9c17-2a5e8d4b7c60");
+
+            var bar = settings.AddLedBar("3-9-3", "Wheel", LedBar.DeviceId(wheel));
+            Assert.Equal("device:0f8b4c1e-6d2a-4f3b-9c17-2a5e8d4b7c60", bar.Device);
+            Assert.Equal(bar.Device, settings.BarDevice(bar.Namespace));
+            Assert.Equal(wheel, LedBar.DeviceInstanceOf(bar.Device));
+            Assert.Equal(bar.Device, bar.Copy().Device);
+        }
+
+        /// <summary>A bar written before openDash knew there was more than one device is read as the
+        /// Arduino's, because that is where those bars were actually installed. It is a statement about
+        /// the past, not a preference.</summary>
+        [Fact]
+        public void A_bar_with_no_device_is_the_arduinos()
+        {
+            Assert.Equal(LedBar.ArduinoDevice, LedBar.NormaliseDevice(null));
+            Assert.Equal(LedBar.ArduinoDevice, LedBar.NormaliseDevice("   "));
+            Assert.Equal(LedBar.ArduinoDevice, LedBar.NormaliseDevice(LedBar.ArduinoDevice));
+
+            var bar = new LedBar { Shape = "3-9-3" };
+            bar.Normalise();
+            Assert.Equal(LedBar.ArduinoDevice, bar.Device);
+        }
+
+        /// <summary>An id openDash cannot read is not kept. A bar pointed at nothing would install
+        /// nowhere and say it had, which is the shape of the bug this field exists to close.</summary>
+        [Fact]
+        public void An_unreadable_device_id_falls_back_rather_than_being_kept()
+        {
+            Assert.Equal(LedBar.ArduinoDevice, LedBar.NormaliseDevice("device:not-a-guid"));
+            Assert.Equal(LedBar.ArduinoDevice, LedBar.NormaliseDevice("wheel"));
+            Assert.Null(LedBar.DeviceInstanceOf("wheel"));
+            Assert.Null(LedBar.DeviceInstanceOf(null));
+            // Round trips, and the spelling is the one a settings file already holds.
+            var id = LedBar.DeviceId(Guid.Empty);
+            Assert.Equal("device:00000000-0000-0000-0000-000000000000", id);
+            Assert.Equal(id, LedBar.NormaliseDevice(" " + id + " "));
+        }
+
     }
 }

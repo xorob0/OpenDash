@@ -313,7 +313,7 @@ namespace OpenDashPlugin
             // The three answers, held here and read by whichever control last wrote one. The name is the
             // only one the driver types, so it is the only one that has to remember whether they have.
             var type = types[0];
-            PackageEntry entry = PanelAddScreen.Offered(type)[0];
+            PackageEntry entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
             var typed = false;
 
             var name = new TextBox
@@ -350,9 +350,9 @@ namespace OpenDashPlugin
             Action showSize = () =>
             {
                 var offered = PanelAddScreen.Offered(type);
-                entry = offered[0];
+                entry = offered[PanelAddScreen.PreferredIndex(type)];
                 var question = PanelAddScreen.Question(type);
-                sizeHost.Content = question == SizeQuestion.None ? null : BuildSizeRow(type, offered, question, 0, choose);
+                sizeHost.Content = question == SizeQuestion.None ? null : BuildSizeRow(type, offered, question, PanelAddScreen.PreferredIndex(type), choose);
                 fillName();
                 refreshNote();
             };

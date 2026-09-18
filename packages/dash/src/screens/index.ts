@@ -31,11 +31,15 @@ export const SCREEN_PACKAGES: readonly ScreenPackageDef[] = [
 ];
 
 /**
- * The fonts a second screen needs: the face's three, plus Barlow Condensed Light, which the pit
+ * The fonts a second screen needs: the face's four, plus Barlow Condensed Light, which the pit
  * wall wordmark's "open" is set in. One list serves both screens, so a companion carries Light
  * without drawing it; the build only refuses the other direction, a weight drawn with no file.
+ *
+ * Barlow Bold is here because the pit wall's flag band names its flag, and `alertBandName` sets
+ * that one label in Bold on every surface that draws it. The companion's band is the nano style and
+ * draws no name, which is why the list did without it until the wall had a band of its own.
  */
-export const SCREEN_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'BarlowCondensed-Light.ttf', 'Barlow-Medium.ttf'] as const;
+export const SCREEN_FONT_FILES = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'BarlowCondensed-Light.ttf', 'Barlow-Medium.ttf', 'Barlow-Bold.ttf'] as const;
 
 export function fontsForScreens(): string[] {
   const dir = path.resolve(import.meta.dir, '..', '..', 'fonts');

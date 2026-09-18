@@ -96,7 +96,25 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
     idle: true,
     pit: false,
     backgroundColor: ds.color.surface.base,
-    enabledExpression: secondScreen.moduleShown(page),
+    // The rotation alone, not the rotation and the plugin's page.
+    //
+    // **This is what makes tapping the screen work.** SimHub's only touch gesture on a dashboard is
+    // `ProcessSimpleTouch`, which maps a tap on the left or right half to the previous or next
+    // screen -- and `Dashboard.SelectNextScreen` walks `GetActiveScreens()`, which keeps only the
+    // screens whose expression is true. While openDash enabled exactly one of the twenty-one, that
+    // list had one member and next and previous were both no-ops: tapping a companion did nothing at
+    // all, which is what a rig reported.
+    //
+    // So SimHub owns the paging here and `CompanionPage` no longer drives it.
+    //
+    // The second half of the expression is how the start module survives that. It is false on every
+    // ordinary frame -- so the rotation alone decides what exists and a tap pages it -- and true for
+    // the few seconds after SimHub loads during which the plugin names one module. One screen left
+    // standing is one SimHub selects, which is the same mechanism the old gate ran on, used once
+    // instead of every frame. The held glance needs it twice and cannot have it: coming back means
+    // naming the module the driver was on, and SimHub neither publishes that nor lets a plugin ask.
+    // #362.
+    enabledExpression: secondScreen.moduleLive(page),
     items,
   };
 }
@@ -104,11 +122,14 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
 /** The companion dashboard: 21 screens, one per module, in page order, one of them enabled. */
 export function companionDashboard(size: CompanionSize, metadata: DashboardMetadata): Dashboard {
   return {
+    // A companion is a phone or a tablet and the tap is how it is driven, so it asks for the simple
+    // mode rather than leaving it to whatever the display's own setting happens to be. SimHub reads
+    // this only while that setting is on automatic, so somebody who has chosen a mode keeps it.
+    metadata: { ...metadata, touchMode: 'simple' },
     name: size.folder,
     width: size.width,
     height: size.height,
     backgroundColor: ds.color.surface.base,
     screens: Array.from({ length: MODULE_COUNT }, (_, i) => companionScreen(size, i + 1)),
-    metadata,
   };
 }

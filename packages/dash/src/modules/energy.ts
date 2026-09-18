@@ -91,7 +91,7 @@ export const energy = defineModule('energy', (ctx) => {
             value: 68,
             visibleBind: published(LEVEL),
           }),
-        ]),
+        ], true),
       ],
       ctx.density,
       { justify: 'spaceBetween' },

@@ -45,7 +45,7 @@ const leftClusterRight = (items: Item[]): number => Math.max(...boxed(items).fil
 
 describe('the pit wall header', () => {
   test('lays the landscape readouts out in the canvas order', () => {
-    expect(readoutGroups(header(1920, false)).map((g) => g.id)).toEqual(['session', 'timeLeft', 'flag', 'incidents', 'track', 'wind', 'clocks']);
+    expect(readoutGroups(header(1920, false)).map((g) => g.id)).toEqual(['session', 'timeLeft', 'incidents', 'track', 'wind', 'simClock', 'localClock']);
   });
 
   test('draws the track state as a word rather than in the digit cells', () => {
@@ -58,15 +58,28 @@ describe('the pit wall header', () => {
   });
 
   test('reads the lap rather than the session on the portrait page, and drops the wind and the track state', () => {
-    expect(readoutGroups(header(1080, true)).map((g) => g.id)).toEqual(['lap', 'timeLeft', 'flag', 'incidents', 'clocks']);
+    expect(readoutGroups(header(1080, true)).map((g) => g.id)).toEqual(['lap', 'timeLeft', 'incidents', 'localClock']);
     expect(partsOf(header(1080, true), 'lap').map((i) => i.text)).toEqual(['LAP', '12', '/ 30']);
   });
 
   test('keeps the incident limit and the sim clock on the landscape pages and sheds both on the portrait one', () => {
     expect(partsOf(header(1920, false), 'incidents').map((i) => i.text)).toEqual(['INC', '3x', '/ 17']);
-    expect(partsOf(header(1920, false), 'clocks').map((i) => i.text)).toEqual(['14:32', 'LOCAL', '15:07', 'SIM']);
     expect(partsOf(header(1080, true), 'incidents').map((i) => i.text)).toEqual(['INC', '3x']);
-    expect(partsOf(header(1080, true), 'clocks').map((i) => i.text)).toEqual(['14:32']);
+    expect(partsOf(header(1080, true), 'simClock')).toEqual([]);
+  });
+
+  test('names each clock in front of its own value, and never behind it', () => {
+    // The strip read "14:32 LOCAL 15:07 SIM" and was reported from a rig as not saying which clock
+    // was the real one; every other group on it names itself first, and now these two do as well.
+    expect(partsOf(header(1920, false), 'simClock').map((i) => i.text)).toEqual(['SIM', '15:07']);
+    expect(partsOf(header(1920, false), 'localClock').map((i) => i.text)).toEqual(['LOCAL', '14:32']);
+    expect(partsOf(header(1080, true), 'localClock').map((i) => i.text)).toEqual(['LOCAL', '14:32']);
+  });
+
+  test('draws no flag on the strip', () => {
+    // It was six normalised properties and a 24 px block, it did not light on a rig, and the flag
+    // is now the page's own -- a band or the full screen, chosen in the plugin like the companion's.
+    for (const items of [header(1920, false), header(1080, true)]) expect(partsOf(items, 'flag')).toEqual([]);
   });
 
   test('draws the incident count in amber', () => {

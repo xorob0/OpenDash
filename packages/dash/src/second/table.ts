@@ -34,7 +34,8 @@ import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, splitHiddenCars } from './values.ts';
+import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition,
+  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, splitHiddenCars } from './values.ts';
 
 const { iff, str, fmt, eq, ne, num, and, not, gt, lt, abs, concat, left, ucase, isnull } = ncalc;
 
@@ -374,7 +375,7 @@ function cellPit(ctx: CellContext): Item[] {
 const compoundChipWidth = (d: DensitySpec): number => Math.ceil(2 * d.chipPadding + 14);
 
 /** The position, which the canvas prefixes with a P: `P4`, not `4`. */
-const positionText = (idx: Expr): Expr => concat(str('P'), fmt(carPosition(idx), '0'));
+const positionText = (idx: Expr): Expr => positionLabelled(idx);
 
 /** `P` and two digits, all four of which are drawn in the digit cell: `P` is 0.457 em against 0.47. */
 const POSITION_CHARS: Chars = { digits: 3, specials: 0 };

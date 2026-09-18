@@ -42,27 +42,44 @@ const INK = 'G';
 const DARK_PANEL: Grid = Array.from({ length: 8 }, () => '........');
 
 /**
- * The eleven gears, each drawn on the whole 8 by 8 grid with two-pixel strokes.
+ * The eleven gears, each drawn on the whole 8 by 8 grid with strokes two LEDs thick **in both
+ * directions**.
  *
  * Two pixels rather than one because a single-pixel stroke on a diffused panel read at the edge of
- * vision is a smudge. 6, 8 and 9 are deliberately one family: the same bowl with the same waist,
- * differing in exactly one stem -- 6 has no upper right, 9 has no lower left, 8 has both -- because
- * on sixty-four pixels the reliable way to tell a pair apart is one whole missing stroke and not a
- * curve. Every glyph uses all eight rows, and the round ones are symmetric about the panel's
- * centre; the columns a glyph leaves dark are its own counters, not a margin it was dropped into.
+ * vision is a smudge. The first cut of this font only half kept that promise: the uprights were two
+ * columns wide and every crossbar was one row tall, so a 3 was three hairlines between two solid
+ * stems and the digits read as though they were falling apart. Reported from a rig as lines drawn a
+ * single LED wide.
+ *
+ * Eight rows hold exactly three two-row bars and the two single rows between them, which is what
+ * makes the ten-digit set a seven-segment one: top, middle and bottom bars, and a left or right stem
+ * in each gap. That is not a stylistic choice so much as the only arrangement the panel has room for
+ * once every stroke has to be two thick, and it has the happy property that the digits differ by a
+ * whole missing stem rather than by a curve -- which is the reliable way to tell a pair apart on
+ * sixty-four pixels.
+ *
+ * `leds.test.ts` holds every glyph to the rule: no maximal run of lit LEDs, across or down, is
+ * shorter than two.
  */
 export const GEAR_FONT: Readonly<Record<string, Grid>> = {
-  R: ['GGGGGG..', 'GG...GG.', 'GG...GG.', 'GG...GG.', 'GGGGGG..', 'GG.GG...', 'GG..GG..', 'GG...GG.'],
-  N: ['GG....GG', 'GGG...GG', 'GGGG..GG', 'GG.GG.GG', 'GG.GG.GG', 'GG..GGGG', 'GG...GGG', 'GG....GG'],
-  '1': ['...GG...', '..GGG...', '.GGGG...', '...GG...', '...GG...', '...GG...', '...GG...', '.GGGGGG.'],
-  '2': ['.GGGGGG.', 'GG....GG', '......GG', '.....GG.', '...GGG..', '..GG....', '.GG.....', 'GGGGGGGG'],
-  '3': ['GGGGGGGG', '.....GG.', '....GG..', '..GGGGG.', '......GG', '......GG', 'GG....GG', '.GGGGGG.'],
-  '4': ['......GG', '.....GGG', '....GGGG', '...GG.GG', '..GG..GG', 'GGGGGGGG', '......GG', '......GG'],
-  '5': ['GGGGGGGG', 'GG......', 'GG......', '.GGGGGG.', '......GG', '......GG', 'GG....GG', '.GGGGGG.'],
-  '6': ['.GGGGGG.', 'GG......', 'GG......', '.GGGGGG.', 'GG....GG', 'GG....GG', 'GG....GG', '.GGGGGG.'],
-  '7': ['GGGGGGGG', '......GG', '.....GG.', '....GG..', '...GG...', '..GG....', '..GG....', '..GG....'],
-  '8': ['.GGGGGG.', 'GG....GG', 'GG....GG', '.GGGGGG.', 'GG....GG', 'GG....GG', 'GG....GG', '.GGGGGG.'],
-  '9': ['.GGGGGG.', 'GG....GG', 'GG....GG', '.GGGGGG.', '......GG', '......GG', '......GG', '.GGGGGG.'],
+  // The bowl over a leg that steps inboard: a diagonal two thick cannot be drawn in the rows left
+  // under the bowl, so the leg is two uprights offset by one stem instead.
+  R: ['.GGGGG..', '.GGGGG..', '.GG..GG.', '.GG..GG.', '.GGGGG..', '.GGGGG..', '.GG.GG..', '.GG.GG..'],
+  // The diagonal steps two rows at a time for the same reason, which keeps every column of it two
+  // deep and every row of it two wide.
+  N: ['.GG..GG.', '.GG..GG.', '.GGG.GG.', '.GGG.GG.', '.GG.GGG.', '.GG.GGG.', '.GG..GG.', '.GG..GG.'],
+  '1': ['..GGG...', '..GGG...', '...GG...', '...GG...', '...GG...', '...GG...', '.GGGGGG.', '.GGGGGG.'],
+  '2': ['.GGGGGG.', '.GGGGGG.', '.....GG.', '.GGGGGG.', '.GGGGGG.', '.GG.....', '.GGGGGG.', '.GGGGGG.'],
+  '3': ['.GGGGGG.', '.GGGGGG.', '.....GG.', '.GGGGGG.', '.GGGGGG.', '.....GG.', '.GGGGGG.', '.GGGGGG.'],
+  // Two stems joined by the middle bar, the right one carrying on to the floor. The old 4 hung its
+  // crossbar off a diagonal and was the one glyph a rig picked out as not looking like its digit.
+  '4': ['.GG..GG.', '.GG..GG.', '.GG..GG.', '.GGGGGG.', '.GGGGGG.', '.....GG.', '.....GG.', '.....GG.'],
+  '5': ['.GGGGGG.', '.GGGGGG.', '.GG.....', '.GGGGGG.', '.GGGGGG.', '.....GG.', '.GGGGGG.', '.GGGGGG.'],
+  '6': ['.GGGGGG.', '.GGGGGG.', '.GG.....', '.GGGGGG.', '.GGGGGG.', '.GG..GG.', '.GGGGGG.', '.GGGGGG.'],
+  // The tail steps rather than slopes, two rows per step, so no column of it is a single LED deep.
+  '7': ['.GGGGGG.', '.GGGGGG.', '....GG..', '....GG..', '...GG...', '...GG...', '..GG....', '..GG....'],
+  '8': ['.GGGGGG.', '.GGGGGG.', '.GG..GG.', '.GGGGGG.', '.GGGGGG.', '.GG..GG.', '.GGGGGG.', '.GGGGGG.'],
+  '9': ['.GGGGGG.', '.GGGGGG.', '.GG..GG.', '.GGGGGG.', '.GGGGGG.', '.....GG.', '.GGGGGG.', '.GGGGGG.'],
 };
 
 /** The gears iRacing reports, as SimHub's `Gear` string gives them. */

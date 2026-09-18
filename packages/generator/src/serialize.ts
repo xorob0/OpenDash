@@ -505,7 +505,8 @@ export const buildMetadataObject = (dashboard: Dashboard): JsonObject => {
     OverlaySizeWarning: true,
     MetadataVersion: METADATA_VERSION,
     EnableOnDashboardMessaging: false,
-    PreferredTouchMode: 0,
+    // DashboardPreferredTouchMode: User, Simple, Advanced.
+    PreferredTouchMode: { user: 0, simple: 1, advanced: 2 }[m.touchMode ?? 'user'],
   };
 };
 

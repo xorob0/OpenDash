@@ -98,13 +98,17 @@ export const fuel = defineModule('fuel', (ctx) => {
         ],
         ctx,
       ),
-      blockRow(gaugeHeight, (bottom) =>
-        [
+      // Rigid: four pixels of bar under the numerals, with no type in it to hold a hierarchy
+      // against, so it takes its height out of the budget rather than stopping the page growing.
+      blockRow(
+        gaugeHeight,
+        (bottom) => [
           levelGauge(`${ctx.prefix}gauge`, rect(ctx.frame.left, bottom - gaugeHeight, ctx.frame.width, gaugeHeight), fuelPercent(), {
             fillBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
             value: 38,
           }),
         ],
+        true,
       ),
     ],
     ctx.density,

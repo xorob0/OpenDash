@@ -57,6 +57,7 @@ import {
   REV_BAR_SETTING,
   BLUE_FLAG_DETAILS,
   COMPANION_FLAG_FORMAT_SETTING,
+  COMPANION_OPEN_ON_SETTING,
   COMPANION_PAGE_SETTING,
   LAP_REVIEW_MODES,
   DEFAULT_LAP_REVIEW,
@@ -122,12 +123,12 @@ describe('settings', () => {
         2 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
-        // The page the companion is showing, and how it draws a flag.
-        2 +
-        // Every zone of every pit wall page, then the page it shows, the web view address and the
-        // class filter.
-        allPitWallZoneSettingNames().length +
+        // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
         3 +
+        // Every zone of every pit wall page, then the page it shows, the web view address, the
+        // class filter and how it draws a flag.
+        allPitWallZoneSettingNames().length +
+        4 +
         flagBoxProperties().length +
         ledProperties().length,
     );
@@ -143,9 +144,11 @@ describe('settings', () => {
     // given its own answer to what it carries at the top, and 304 before the strip shapes became a
     // grid and the mirror had to publish a run for every centre the grid reaches, and 317 before a
     // pit wall zone belonged to a page: four zones and a wide one became twelve, and the pit wall
-    // gained the page it shows, and 325 before a companion was given its own answer to how it draws
-    // a flag.
-    expect(props).toHaveLength(326);
+    // gained the page it shows, 325 before a companion was given its own answer to how it draws a
+    // flag, 326 before it was given the module the plugin holds it on while SimHub loads, and 327
+    // before the pit wall was given the same three-way answer as the companion and the header's
+    // flag readout, which did not work on a rig, was taken off the strip.
+    expect(props).toHaveLength(328);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -172,7 +175,7 @@ describe('settings', () => {
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat|LapReview)/.test(p))).toEqual([]);
     const lights = flagBoxProperties().length + ledProperties().length;
-    expect(props.slice(-(lights + 15), -lights)).toEqual([
+    expect(props.slice(-(lights + 16), -lights)).toEqual([
       'OpenDash.PitWallRaceA',
       'OpenDash.PitWallRaceB',
       'OpenDash.PitWallTowerWide',
@@ -188,6 +191,7 @@ describe('settings', () => {
       'OpenDash.PitWallPage',
       'OpenDash.WebViewUrl',
       'OpenDash.PitWallClassOnly',
+      'OpenDash.PitWallFlagFormat',
     ]);
     // One filter for the screen and not one per zone: a pit wall zone is a widget pointed at one
     // dashboard file per rectangle, so zones A and B of the race page are the same file.
@@ -260,6 +264,7 @@ describe('settings', () => {
       ...Array.from({ length: MODULE_COUNT }, (_, i) => `${PROPERTY_PREFIX}.${moduleSettingName(i + 1)}`),
       `${PROPERTY_PREFIX}.${COMPANION_PAGE_SETTING}`,
       `${PROPERTY_PREFIX}.${COMPANION_FLAG_FORMAT_SETTING}`,
+      `${PROPERTY_PREFIX}.${COMPANION_OPEN_ON_SETTING}`,
     ]);
 
     const own = facePrefix(FACE_SIZES[0]!);
@@ -383,19 +388,33 @@ describe('plugin mirror', () => {
     expect(panel).toContain('CarLightLibrary.Attribution');
   });
 
-  test('the companion page is attached, and the start and the glance are offered on its pane', () => {
-    // The page is the one of the three the dashboard reads, so it is the one that is a property; the
-    // other two are the plugin's own state and reach the screen only by being copied into the page.
-    // What has to be true of them is that a user can set them, which is what this pins: a setting the
-    // panel never writes can only be reached by hand-editing the settings file.
+  /**
+   * The companion's page is published and nothing reads it, and the pane says who does the paging.
+   *
+   * This used to pin the opposite: the page attached, and a start module and a held glance offered
+   * on the pane to move it. All three are gone, and the reason is that they were what stopped a tap
+   * working -- SimHub's only touch gesture maps a tap to the previous or next screen, its navigation
+   * walks the screens whose expression is true, and openDash enabled exactly one of the twenty-one.
+   *
+   * The property is still attached because it has shipped and #170 is the rule that an rc user's
+   * properties do not vanish without a release of warning. What has to be true now is that the pane
+   * does not offer a control that moves nothing, and that it says where the paging went.
+   */
+  test('the companion page is attached, and its pane says SimHub does the paging', () => {
     expect(pluginSource('Contract.cs')).toContain('public static string CompanionPageProperty(string ns)');
     expect(pluginSource('OpenDash.cs')).toContain('this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace)');
     const panel = panelSource();
+    // The start module writes its setting and forces it, which is what moves the screen now: the
+    // page above is no longer read by the package.
     expect(panel).toContain('screen.CompanionStart = value;');
-    expect(panel).toContain('screen.CompanionQuickGlance = value');
-    // And the button that replaces SimHub's own ring, which one enabled screen at a time gives up.
-    expect(panel).toContain('Contract.NextModuleActionFor(screen.Namespace)');
-    expect(panel).toContain('Contract.HoldQuickGlanceActionFor(screen.Namespace)');
+    expect(panel).toContain('screen.OpenOnStartModule();');
+    // The glance does not, because coming back needs a module openDash cannot name. #362.
+    expect(panel).not.toContain('screen.CompanionQuickGlance = value');
+    // And no binder offers an action the companion no longer registers.
+    expect(panel).not.toContain('Contract.NextModuleActionFor(screen.Namespace)');
+    // The sentence that replaced them names both ways a companion is paged.
+    expect(panel).toContain('Tap the left or right half of the screen');
+    expect(panel).toContain('Next screen');
   });
 
   test('Cards.cs lists the catalogue: number, id, label and display name, in order', () => {

@@ -35,6 +35,7 @@ import {
   airTemperature,
   bestLap,
   carPosition,
+  positionLabelled,
   carRelativeGap,
   CHARS,
   clock,
@@ -207,7 +208,7 @@ const sectors: readonly BandField[] = [
  * The catalogue draws a 16 by 11 country flag between the two, which nothing publishes a country
  * for; it is the same missing source as the licence badge on the opponents page.
  */
-const relativePosition = (idx: string): string => concat(str('P'), fmt(carPosition(idx), '0'));
+const relativePosition = (idx: string): string => positionLabelled(idx);
 
 const relative: readonly BandField[] = [
   {
