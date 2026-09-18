@@ -48,7 +48,9 @@ export function zoneScreen(page: PitWallZonePageMeta, kind: ZoneKind, size: Size
   // label the plugin puts in its wide-zone dropdown, where a suffix would read as a second page.
   const title = kind === 'wide' ? `${page.name} · Wide` : page.name;
   const { items: chrome, body } = zoneFrame(page.id, { frame, title, counter: { kind: 'static', page: page.number + 1, pages: pages.length } });
-  const density = kind === 'wide' ? 'wide' : 'zone';
+  // A zone dashboard is a pit wall screen, so both kinds label at the pit wall's 13 rather than the
+  // face's 15: `PitWallZones.dc.html` writes eighty `.lblt` and not one `.lbl`.
+  const density = kind === 'wide' ? 'wide' : 'panel';
   const items: Item[] = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.` })];
   return pageScreen(page.id, items);
 }
