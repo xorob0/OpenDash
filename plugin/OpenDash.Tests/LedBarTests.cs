@@ -24,7 +24,7 @@ namespace OpenDashPlugin.Tests
                 if (!Directory.Exists(folder)) continue;
                 var file = Directory.GetFiles(folder, "*" + FlagBoxProfile.ProfileExtension)
                     .FirstOrDefault(f => FlagBoxProfile.ShapeIdOf(Path.GetFileName(f)) == "3-9-3");
-                if (file != null) return File.ReadAllText(file);
+                if (file != null) return FlagBoxProfile.ReadFile(file);
             }
             return null;
         }

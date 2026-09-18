@@ -30,17 +30,25 @@ namespace OpenDashPlugin.Tests
         /// and the row order must not depend on it.</summary>
         private static IList<LightProfile> FullBuild()
         {
-            var ids = new[]
+            var ids = new List<string>();
+            foreach (var side in new[] { 0, 1, 2, 3, 4 })
             {
-                "0-10-0", "0-12-0", "0-16-0", "0-8-0", "0-9-0", "2-10-2", "3-10-3", "3-9-3",
-                "3-9-3-fanalab", "4-14-4", "4-14-4-reversed", "4-8-4", "4-9-4", "5-10-5",
-                "brow-12", "brow-15", "brow-16", "brow-18", "brow-20", "brow-25", "brow-9",
-            };
-            return ids.Select(id => new LightProfile(id, "openDash " + PanelLightRows.Label(new LightProfile(id, null)))).ToList();
+                for (var centre = 4; centre <= 12; centre++) ids.Add(side + "-" + centre + "-" + side);
+            }
+            for (var centre = 13; centre <= 25; centre++) ids.Add("0-" + centre + "-0");
+            // 3-10-3 is in the grid's own range and the legacy row spells it, so it appears once.
+            ids.Remove("3-10-3");
+            ids.AddRange(new[] { "4-14-4", "4-14-4-reversed", "3-10-3", "3-9-3-fanalab", "5-10-5" });
+            // Shuffled, because FlagBoxProfile.StripResourceNames hands them over in the assembly's own
+            // order and the row order must not depend on it.
+            return ids
+                .OrderBy(id => id, StringComparer.Ordinal)
+                .Select(id => new LightProfile(id, "openDash " + PanelLightRows.Label(new LightProfile(id, null))))
+                .ToList();
         }
 
         [Fact]
-        public void A_full_build_draws_the_eight_rows_the_canvas_draws()
+        public void A_full_build_draws_a_row_per_named_device_and_a_row_per_side_length()
         {
             var rows = PanelLightRows.Rows(FullBuild());
             Assert.Equal(
@@ -48,12 +56,14 @@ namespace OpenDashPlugin.Tests
                 {
                     "openDash 4/14/4",
                     "openDash 4/14/4 reversed",
-                    "openDash 3/9/3",
                     "openDash 3/9/3 Fanalab",
                     "openDash 3/10/3",
-                    "openDash 2/10/2 · 4/8/4 · 4/9/4 · 5/10/5",
-                    "openDash 0/8/0 … 0/16/0",
-                    "openDash brow 9 … 25",
+                    "openDash 0/4/0 … 0/25/0",
+                    "openDash 1/4/1 … 1/12/1",
+                    "openDash 2/4/2 … 2/12/2",
+                    "openDash 3/4/3 … 3/12/3",
+                    "openDash 4/4/4 … 4/12/4",
+                    "openDash 5/10/5",
                 },
                 rows.Select(r => r.Name));
             Assert.Equal(
@@ -61,22 +71,25 @@ namespace OpenDashPlugin.Tests
                 {
                     "strip · SimRep MLD, Ascher",
                     "strip · SimRep MLD, wired from the far end",
-                    "strip · Fanatec, Simucube, Moza",
                     "strip · Fanatec through Fanalab",
+                    // Eight and not nine: 3/10/3 is a named shape and has a row of its own above.
                     "strip · GridSim Lab GTSL Pro",
-                    "strips",
-                    "bare runs, five lengths",
-                    "brows, seven lengths",
+                    "bare runs and brows, 22 lengths",
+                    "strips, one LED at each end, nine lengths",
+                    "strips, two LEDs at each end, nine lengths",
+                    "strips, three LEDs at each end, eight lengths",
+                    "strips, four LEDs at each end, nine lengths",
+                    "strip, five LEDs at each end",
                 },
                 rows.Select(r => r.Caption));
 
-            // Every profile the build carries is behind exactly one row, or a press somewhere installs a
-            // profile no row named and a shape is offered twice.
+            // Every profile in exactly one row: a shape offered twice, or not at all, is the failure
+            // this counts against.
             var members = rows.SelectMany(r => r.ShapeIds).ToList();
-            Assert.Equal(21, members.Count);
-            Assert.Equal(21, members.Distinct(StringComparer.Ordinal).Count());
-            Assert.Equal(FullBuild().Select(p => p.ShapeId).OrderBy(x => x, StringComparer.Ordinal), members.OrderBy(x => x, StringComparer.Ordinal));
-            Assert.Equal(new[] { 1, 1, 1, 1, 1, 4, 5, 7 }, rows.Select(r => r.ShapeIds.Count));
+            var all = FullBuild().Select(p => p.ShapeId).ToList();
+            Assert.Equal(all.Count, members.Count);
+            Assert.Equal(all.Count, members.Distinct(StringComparer.Ordinal).Count());
+            Assert.Equal(all.OrderBy(x => x, StringComparer.Ordinal), members.OrderBy(x => x, StringComparer.Ordinal));
         }
 
         [Fact]
@@ -84,9 +97,8 @@ namespace OpenDashPlugin.Tests
         {
             // The name is read off the members rather than written down, so a length added to strip.ts
             // moves the end of the range instead of leaving it a length short.
-            var rows = PanelLightRows.Rows(FullBuild().Concat(new[] { new LightProfile("0-20-0", "openDash 0/20/0"), new LightProfile("brow-30", "openDash brow 30") }));
-            Assert.Contains(rows, r => r.Name == "openDash 0/8/0 … 0/20/0" && r.Caption == "bare runs, six lengths");
-            Assert.Contains(rows, r => r.Name == "openDash brow 9 … 30" && r.Caption == "brows, eight lengths");
+            var rows = PanelLightRows.Rows(FullBuild().Concat(new[] { new LightProfile("0-30-0", "openDash 0/30/0") }));
+            Assert.Contains(rows, r => r.Name == "openDash 0/4/0 … 0/30/0" && r.Caption == "bare runs and brows, 23 lengths");
         }
 
         [Fact]
@@ -239,9 +251,9 @@ namespace OpenDashPlugin.Tests
             return Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "leds", "strip.ts");
         }
 
-        /// <summary>STRIP_SHAPES, read off the `wheel(...)` and `fanalab(...)` rows the generator is a list
-        /// of. The brows are not here: they carry one device list for all seven and the panel groups them
-        /// all the same.</summary>
+        /// <summary>The shapes the generator still names a device for, read off the `wheel(...)` and
+        /// `fanalab(...)` rows of LEGACY_SHAPES. The grid names none: it is sides against centres and the
+        /// panel groups it by side, so there is nothing left to caption by hardware.</summary>
         /// <remarks>
         /// A row's id is its geometry plus whatever suffix its spelling adds, which is the one thing about
         /// strip.ts this has to know twice. `wheel(..., { reversed: true })` and `fanalab(...)` are the two
@@ -320,19 +332,30 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_brow_lengths_the_generator_emits_are_the_lengths_the_row_counts()
+        public void The_grid_is_one_row_per_side_length_over_a_range_of_centres()
         {
-            // The brows are one `.map` over a list of lengths, so the count in "brows, seven lengths" is
-            // that list's length and nothing else.
-            var text = File.ReadAllText(StripTs());
-            var lengths = Regex.Match(text, @"BROW_SHAPES[^=]*=\s*\[([\d, ]+)\]\.map");
-            Assert.True(lengths.Success, "BROW_SHAPES is no longer a .map over a list of lengths in " + StripTs());
-            var ids = lengths.Groups[1].Value.Split(',').Select(n => "brow-" + n.Trim()).ToList();
+            // Sixty-odd shapes joined into one row with middle dots is a line nobody can read. What a
+            // driver picks between is how many LEDs sit at the ends, so that is the row, and the centres
+            // under it are a range rather than a list.
+            var ids = new List<string>();
+            foreach (var side in new[] { 0, 1, 2 })
+            {
+                for (var centre = 4; centre <= 12; centre++) ids.Add(side + "-" + centre + "-" + side);
+            }
+            for (var centre = 13; centre <= 25; centre++) ids.Add("0-" + centre + "-0");
 
             var rows = PanelLightRows.Rows(ids.Select(id => new LightProfile(id, null)));
-            var brows = Assert.Single(rows);
-            Assert.Equal(ids.Count, brows.ShapeIds.Count);
-            Assert.Equal("brows, " + PanelLightRows.Word(ids.Count) + " lengths", brows.Caption);
+            Assert.Equal(3, rows.Count);
+            Assert.Equal("openDash 0/4/0 … 0/25/0", rows[0].Name);
+            Assert.Equal("bare runs and brows, 22 lengths", rows[0].Caption);
+            Assert.Equal("openDash 1/4/1 … 1/12/1", rows[1].Name);
+            Assert.Equal("strips, one LED at each end, nine lengths", rows[1].Caption);
+            Assert.Equal("strips, two LEDs at each end, nine lengths", rows[2].Caption);
+            // Every shape is in exactly one row, which is what stops a profile being offered twice or
+            // not at all.
+            var members = rows.SelectMany(r => r.ShapeIds).ToList();
+            Assert.Equal(ids.Count, members.Count);
+            Assert.Equal(ids.OrderBy(x => x, StringComparer.Ordinal), members.OrderBy(x => x, StringComparer.Ordinal));
         }
 
         [Fact]
@@ -357,15 +380,19 @@ namespace OpenDashPlugin.Tests
                 {
                     "openDash 4/14/4",
                     "openDash 4/14/4 reversed",
-                    "openDash 3/9/3",
                     "openDash 3/9/3 Fanalab",
                     "openDash 3/10/3",
-                    "openDash 2/10/2 · 4/8/4 · 4/9/4 · 5/10/5",
-                    "openDash 0/8/0 … 0/16/0",
-                    "openDash brow 9 … 25",
+                    "openDash 0/4/0 … 0/25/0",
+                    "openDash 1/4/1 … 1/12/1",
+                    "openDash 2/4/2 … 2/12/2",
+                    "openDash 3/4/3 … 3/12/3",
+                    "openDash 4/4/4 … 4/12/4",
+                    "openDash 5/10/5",
                 },
                 rows.Select(r => r.Name));
-            Assert.Equal(21, rows.SelectMany(r => r.ShapeIds).Count());
+            // Sixty-two: five sides of nine centres and thirteen longer bare runs, less the one the
+            // legacy list already spells, plus the five that shipped before the grid.
+            Assert.Equal(62, rows.SelectMany(r => r.ShapeIds).Count());
             // The flag box is not one of them: it is its own row and its own driver, and handing a strip
             // to the matrix driver is the hazard FlagBoxProfile exists to prevent.
             Assert.DoesNotContain(rows, r => r.Name == FlagBoxProfile.ProfileName);
@@ -386,7 +413,7 @@ namespace OpenDashPlugin.Tests
                 return files
                     .Select(f => new LightProfile(
                         FlagBoxProfile.ShapeIdOf(Path.GetFileName(f)),
-                        FlagBoxProfile.ProfileNameOf(File.ReadAllText(f))))
+                        FlagBoxProfile.ProfileNameOf(FlagBoxProfile.ReadFile(f))))
                     .ToList();
             }
             return null;

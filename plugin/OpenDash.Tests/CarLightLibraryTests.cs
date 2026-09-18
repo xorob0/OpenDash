@@ -214,8 +214,9 @@ namespace OpenDashPlugin.Tests
                     Assert.StartsWith("#", color);
                 }
             }
-            // A length no strip shape uses is not published, and asking for one is empty rather than an error.
-            Assert.Equal(string.Empty, service.Run(13));
+            // A length no strip shape uses is not published, and asking for one is empty rather than an
+            // error. The grid reaches twenty-five, so what nobody uses is a run past its end.
+            Assert.Equal(string.Empty, service.Run(26));
         }
 
         [Fact]
