@@ -44,8 +44,16 @@ const { game, gt, num, isnull, iff, str } = ncalc;
  * twenty metres into a 158 px nano zone as into a 510 px tall one, so the box changed and what it
  * showed did not. The divisor puts the companion's own plot back at the 1.25 it was drawn at, and
  * the two bounds are where a radar stops being readable at either end.
+ *
+ * The divisor was 260, fitted against a companion page 336 px tall, and that page was the one the
+ * build produced while the flag band was wrongly taking the 32 px `heightSm` token instead of the
+ * artboard's 12. The band is twelve now and the page is 356, at which 260 gives 1.37, a hair under
+ * the ceiling and well past the figure the sheet draws. 285 is what returns the page that exists to
+ * the canvas's 1.25. The three shortest boxes -- the race zone, the nano and the 600 x 686 strip --
+ * come to rest on the 0.55 floor rather than a little above it, which is the floor doing its work:
+ * a plot that short has reached the most track it can show and stay readable.
  */
-export const radarScaleFor = (plot: Rect): number => Math.max(0.55, Math.min(1.4, Math.round((100 * Math.min(plot.width, plot.height)) / 260) / 100));
+export const radarScaleFor = (plot: Rect): number => Math.max(0.55, Math.min(1.4, Math.round((100 * Math.min(plot.width, plot.height)) / 285) / 100));
 
 /**
  * The spotter flank: a proportion of the frame's width, bounded, with the canvas's own gap beside
