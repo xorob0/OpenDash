@@ -50,6 +50,7 @@ import {
   localClock,
   minutesClock,
   NO_TIME,
+  NO_VALUE,
   roadTemperature,
   sectorTime,
   simClock,
@@ -120,7 +121,10 @@ const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)
 const fuel: readonly BandField[] = [
   { id: 'fuel', label: 'Fuel', sample: '15.12', bind: fmt(fuelLevel(), '0.00'), chars: { digits: 5, specials: 1 }, after: 'L', afterBind: fuelUnit(), afterWidest: 'GAL', color: ds.purpose.fuel.nominal },
   { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(fuelTimeLeft()), chars: CHARS.minutesClock },
-  { id: 'laps', label: 'Est. laps', sample: '13.1', bind: fmt(fuelLapsLeft(), '0.0'), chars: CHARS.consumption },
+  // Behind the consumption gate, which is the same one the fuel module draws its own est. laps
+  // behind. SimHub publishes the remaining laps as zero before it has a per-lap figure, so an idle
+  // screen said "0.0" with the confidence of a reading rather than saying it had none.
+  { id: 'laps', label: 'Est. laps', sample: '13.1', bind: iff(gt(fuelPerLap(), num(0)), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)), chars: CHARS.consumption },
   { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
   { id: 'perLap', label: 'Per lap', sample: '1.432', bind: fmt(fuelPerLap(), '0.000'), chars: { digits: 5, specials: 1 } },
   { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: fmt(fuelLastLap(), '0.000'), chars: { digits: 5, specials: 1 } },

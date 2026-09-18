@@ -1,0 +1,11 @@
+import { openDashboard, placeDashboards, captureDashboard, maximiseSimHub } from './gui.ts';
+import { resolveHost, sleep } from './vm.ts';
+const host = resolveHost();
+const [name, out, w, h] = [process.argv[2]!, process.argv[3]!, Number(process.argv[4]), Number(process.argv[5])];
+maximiseSimHub(host, 120);
+const r = openDashboard(host, { name });
+console.log(r.stdout.trim(), r.stderr.trim());
+sleep(5);
+console.log(placeDashboards(host, 0, 0, { name, width: w, height: h }).stdout.trim());
+sleep(3);
+console.log(captureDashboard(host, name, out).stdout.trim());
