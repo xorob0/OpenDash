@@ -477,6 +477,50 @@ to let a tight box take that padding back before it gives up the tyre.
   taken one name off the list. Two of them are surfaces the panel currently reaches into the colour
   ramp for.
 
+### What the ninth round left for you, and the close of the work
+
+All one hundred and forty-eight packages are closed. What follows is what the last round decided
+that only you can confirm.
+
+- **The blue flag detail is a rig setting and the band alone carries it.** The full-screen format
+  does not, because one size serves all fifteen of its names and is the widest of them divided into
+  the block, so a "BLUE · P24 LMP2" would set RED, BLACK and SAFETY at a third of their height on
+  every face. It defaults to nothing, so the band draws what it always drew until you change it.
+- **The lap review defaults to off.** It covers the gear for four seconds of every crossing and the
+  pop-up already gives the two figures a driver waits for. It ranks by geometry rather than by an
+  exclusion chain, so it covers the lap-time pop-up and the change notification and never covers band
+  D, the rev bar, the bar or the limiter banner.
+- **The lap review offers three session values rather than the canvas's four.** Practice is left out
+  because the spellings SimHub publishes for a practice session are verified by no committed trace,
+  and a value that silently never matches is worse than one not offered.
+- **The companion is paged by openDash rather than by SimHub's own ring.** Each of its twenty-one
+  screens is enabled when its module is on and the page property names it, which is the mechanism the
+  face's two rev-bar arrangements already use. The cost is the Next and Previous ring, replaced by a
+  binding that skips the modules a driver has turned off.
+- **The pit wall's quick glance and the companion's declare no property**, because a second-screen
+  property has to be read by a package and nothing reads a glance value. Both are plugin state on the
+  screen, triggered by a hold, and both give the borrowed page back on release.
+- **The pit wall's class filter is one setting per screen.** A face's four zones are four rectangles
+  of one dashboard, so each may be asked separately; a pit wall's are widgets pointed at one zone
+  dashboard per rectangle, so two of them are the same file.
+- **Change notifications are an item with SimHub's own `changed()` window, not an overlay screen.**
+  The premise that a binding holds no memory no longer holds, which makes the two overlay duration
+  properties redundant and leaves the generator untouched.
+- **The pit alerts are five, ranked among themselves and not against band D.** Gating them on "no
+  flag is showing" would blank the limiter band under a full-course caution, which is when the pit
+  lane is busiest.
+- **The traces were re-recorded on the VM.** Four properties reached a binding for the first time and
+  eight left, and every one of the eight is a reading a decision in this document removed. The
+  recording caught a defect that would have shipped in silence: a raw telemetry boolean arrives as
+  `true` where the game data's booleans arrive as `1`, and the gate had been written for the latter.
+- **Two settings had shipped declared, mirrored and attached with no control to reach them.** The
+  flag format was one, which made a whole format unreachable, and the blue flag detail was the other.
+  Both are reachable now, and a rig setting with no control fails the suite rather than a reader.
+- **The plugin's zone select was widened from 220 to 260 px.** The number the old comment attributed
+  to the canvas is the face pane's quick-glance select rather than this one, and the longest wide page
+  name measures about 158, so 220 would probably have held it. The wider box is insurance against a
+  clipped page name, which only shows on the VM.
+
 ## 3b. What the branch was reviewed against itself for
 
 After a hundred and four packages had merged, the branch was read back by a fan of seven independent
