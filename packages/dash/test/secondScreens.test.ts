@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { measureText, type MeasuredFace } from '../src/design/advances.ts';
-import { LINE_SPACING, cells, monoWidth } from '../src/design/metrics.ts';
+import { LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
 import {
   MODULE_CATALOGUE,
   MODULE_COUNT,
@@ -25,7 +25,8 @@ import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox } from '../src/second/density.ts';
-import { DENOMINATOR_GAP, UNIT_GAP, field, type Follower } from '../src/second/field.ts';
+import { CHARS } from '../src/second/values.ts';
+import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
 import { contains, rect } from '../src/design/geometry.ts';
@@ -677,6 +678,38 @@ describe('a bar drawn under a value', () => {
         fill: ds.color.text.primary,
       });
     }
+  });
+});
+
+/**
+ * The artboard sample and the character budget beside it, and which of the two is allowed to decide
+ * the drawing.
+ *
+ * The budget is the declaration: it is what the binding may grow to, and it is what the value's box
+ * and the follower after it are cut from. The sample is design-time text, drawn in DashStudio in
+ * the binding's place, and it is a string chosen to make a screenshot read well. The box used to be
+ * the wider of the two, so a sample past its budget silently moved the geometry of whatever module
+ * declared it, and nothing said so; the thirty-seven sample declarations in `src/modules` were
+ * therefore a thirty-seven-way opportunity to design a page by typing a longer number into it.
+ *
+ * `valueCells` refuses the pair instead. Nothing in the catalogue trips it today, which is what
+ * makes it worth writing down: the check above builds every module into every box the build
+ * produces, and every one of those fields goes through `field`, so the catalogue is held to this
+ * wherever it is drawn rather than wherever somebody remembered to look.
+ */
+describe('a value is drawn from its budget and not from its sample', () => {
+  const spec = (sample: string, chars: Chars): FieldSpec => ({ name: 'probe', label: 'Last', value: { sample, chars, fs: 46 } });
+
+  test('a sample inside its budget is drawn, and the box is the budget', () => {
+    const mono = cells('SemiBold', 46);
+    const items = field(spec('1:43.234', CHARS.lapTime), 0, 200, 'companion');
+    const value = items.find((i): i is TextItem => i.name === 'probe.value')!;
+    expect(value.text).toBe('1:43.234');
+    expect(value.rect.width).toBeGreaterThanOrEqual(monoWidth(mono, CHARS.lapTime));
+  });
+
+  test('and a sample past it is refused, with the module and both counts named', () => {
+    expect(() => field(spec('1:43.234', { digits: 3, specials: 1 }), 0, 200, 'companion')).toThrow(/probe.*1:43\.234.*6\+2 cells.*3\+1/);
   });
 });
 
