@@ -12,6 +12,76 @@ including any that the plugin does not install.
 From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
 strips, the brows and the flag box, together with a `manifest.json` listing everything published.
 
+## 0.3.0-rc.4 (2026-09-18)
+
+The second candidate cut from rig testing, and the one to have if your LEDs are in your wheel.
+
+**An LED profile now goes to the device you say, because there is no shared list to go to.** SimHub
+keeps one profile list per LED device, in that device's own file, and a profile in one is invisible
+in every other. openDash installed into the Arduino RGB LEDs device whatever the strip was, so a bar
+added for a wheel was parsed, added, saved and verified correctly -- into a list the wheel does not
+read. Every part of the install worked; what was wrong was upstream of it. A bar now names its
+device and the panel asks: one device on the rig and it simply says where the profile went, several
+and it is a drop-down, none and it says what to add in SimHub first. A bar you already have reads as
+the Arduino's, because that is where it actually went.
+
+**The pit wall's flag left the header and became the page's.** It was a colour block and a word in
+the corner of a 1920 px strip, built from the six flags SimHub normalises out of the fifteen the
+face knows -- so it stayed dark under a red flag or a full-course caution, which are the two it was
+most wanted for. It is now the companion's three-way setting, off / bar / full screen, drawn from
+the full catalogue, with the bar directly under the header and the full flag over the body.
+
+**Tapping a companion changes the module.** SimHub's only touch gesture walks the screens whose
+expression is true, and openDash was leaving exactly one of the twenty-one enabled, so a tap had
+nowhere to go. SimHub owns the paging now, which also makes its own per-dashboard "Next screen"
+work on a wheel button.
+
+**Every stroke of a matrix digit is two LEDs thick.** The uprights were two columns wide and the
+crossbars one row tall, so a 3 was three hairlines between two solid stems and the digits read as
+though they were coming apart.
+
+### Added
+
+- **A "Which device" row on every LED bar**, and on the add-a-bar page. Moving a bar reinstalls its
+  profile on the device you chose and takes the old copy out of every other, so nothing is left
+  behind reading properties that now drive something else.
+- **A pit wall flag setting**: off, a bar under the header, or the body. `band` is the default,
+  where a companion's is `full` -- a pit wall is a board, a track map and four zones that somebody
+  is watching *because* of the flag, so covering them at the moment a yellow comes out hides the
+  cars the yellow is about.
+- **"Opens on" is back on the companion.** SimHub moves off a screen that stops being enabled, so
+  leaving one module enabled for a few seconds after SimHub loads still selects it; openDash just
+  cannot do that on every frame without breaking the tap. The held glance needs the same trick twice
+  and does not come back yet; see [#362](https://github.com/xorob0/OpenDash/issues/362).
+
+### Changed
+
+- **Add a screen opens on 850 x 480**, which is what most screens running openDash are, rather than
+  on whichever size came first in the catalogue.
+- **The pit wall's two clocks name themselves first**, as every other group on the strip does. They
+  were the one group written the other way round -- `14:32 LOCAL 15:07 SIM` -- so which was the wall
+  clock and which the sim's was a rule you had to know, and the two pairs sat a word apart where
+  everything else sits a group gap apart.
+- **The 4 on a matrix panel is two stems and a crossbar**, rather than a bar hung off a diagonal.
+
+### Fixed
+
+- **A profile added for a wheel reaches the wheel.** See above; it is the headline of this release.
+- **Pages fill the box they are given.** A row that cannot grow used to veto growth for the whole
+  page, which caught fuel's level bar, the speedo's rev well, pit view's progress bar and the energy
+  page's gauge along with the drawings the rule was written for. Those four never grew at any size.
+  Fuel at the 850 x 480 zone goes from 46 px numerals to 60, and from 170 of its 250 pixels to 216.
+- **A field that read a class or a car went blank rather than drawing.** A SimHub function that
+  throws draws the empty string and logs nothing, so `left([Class], 4)` on a car without a class
+  emptied its field for ever. Every package is now checked against the functions that can throw.
+- **Sectors stop blinking on the second lap.** The best-lap opponent's position came through a
+  SimHub function whose argument chain can be momentarily null while the data is rewritten, and a
+  throw on one frame draws nothing on that frame. It reads the published property instead.
+- **A car the sim has not placed draws nothing, not P0.** A grid of AI before the green flag drew a
+  column of zeroes.
+- **A car number waits until there is one.** iRacing hands back -1 for a car it has not placed, so a
+  field of AI drew `#-1` down the number column until their first lap.
+
 ## 0.3.0-rc.3 (2026-09-18)
 
 The candidate that was tested on a real rig rather than on the VM, which is why most of what follows
