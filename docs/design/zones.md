@@ -188,6 +188,15 @@ height, since a band has no header row to put it in and counts no cycle.
 Drawn over zone A as a full-width white banner with dark text while the limiter is on: at 1920 it
 is 824, 111, 272 × 30. It is not a page and it is not part of the catalogue; it covers.
 
+**Five pit alerts share that one rectangle, ranked among themselves and not against band D.** Engage
+the limiter, disengage it, the limiter on in the lane, the ignition off and the engine off are one
+ordered list, of which at most one is ever out, each carrying its own test of whether the car is in
+the lane rather than the list carrying one. They are deliberately **not** ranked under the flag: the
+two draw in different rectangles and never contend, so gating the pit list on "no flag is showing"
+would blank the limiter band under a full-course caution, which is precisely when the pit lane is
+busiest. `ENGAGE LIMITER` is guarded on the presence of the in-car control itself, since a car
+without one should not be told to use it.
+
 ---
 
 ## 2. The shape model
@@ -858,6 +867,11 @@ setting iRacing has no property for is worse than a narrower strip. Band D's pag
 under the same mode, although none of them carries an optional field today: the car page removed an
 oil pressure the sim does not wire rather than drawing 0.0, which is a reading and a wrong one, and
 it gave those readings up when D8 became the telltale rank.
+
+A change of setting is announced the same way, and one token of its group is deliberately unread:
+`indicator.changeNotification.settleFrames` exists for a rotary swept through its positions, and
+SimHub's own `changed()` window already collapses a sweep into one notification, so nothing settles
+a value that the window has not settled already.
 
 **A telltale that is unlit keeps its place and is drawn dim.** A lamp coming on is then a change of
 colour and not of layout: one that vanished and returned would move every lamp beside it at the
