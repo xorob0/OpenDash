@@ -47,6 +47,53 @@ namespace OpenDashPlugin.Tests
             return new DashboardInstaller(root, log, packages, record);
         }
 
+        // What the "This plugin" pill says, which is a question about the rig and not about the build
+
+        /// <summary>
+        /// A size nobody added does not make the plugin "not installed".
+        /// </summary>
+        /// <remarks>
+        /// Since ADR 0017 a screen exists because somebody added it, so a package outside the rig is
+        /// never written -- and the pill aggregated over every package the build embeds, which meant it
+        /// read NOT INSTALLED for ever on a rig whose every screen was installed and current. Seen on the
+        /// test rig with the portrait sizes nobody owns.
+        /// </remarks>
+        [Fact]
+        public void The_pill_ignores_a_package_the_rig_never_asked_for()
+        {
+            var installer = Installer(TwoPackages());
+            installer.Wanted = new[] { SmallFolder };
+            installer.EnsureInstalled(force: true);
+
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+            // The package outside the rig still reports itself honestly on its own row; it simply does
+            // not speak for the rig.
+            Assert.Equal(InstallStatus.NotInstalled, installer.Packages.Single(p => p.FolderName == "openDash").Status);
+            Assert.Equal(InstallStatus.UpToDate, installer.Packages.Single(p => p.FolderName == SmallFolder).Status);
+        }
+
+        /// <summary>A screen the rig does want and has not got still turns the pill, which is the whole
+        /// reason the pill exists.</summary>
+        [Fact]
+        public void The_pill_still_answers_for_a_screen_the_rig_wants()
+        {
+            var installer = Installer(TwoPackages());
+            installer.Wanted = new[] { SmallFolder, "openDash" };
+            installer.Refresh();
+            Assert.Equal(InstallStatus.NotInstalled, installer.Status);
+        }
+
+        /// <summary>A new user has an empty rig: nothing installed and nothing outstanding, so the pill
+        /// is not red at them before they have added anything.</summary>
+        [Fact]
+        public void An_empty_rig_has_nothing_outstanding()
+        {
+            var installer = Installer(TwoPackages());
+            installer.Wanted = new string[0];
+            installer.EnsureInstalled(force: true);
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+        }
+
         // Somebody's Dash Studio work, and whether an install destroys it
 
         /// <summary>

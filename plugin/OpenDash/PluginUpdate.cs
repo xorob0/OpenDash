@@ -15,6 +15,15 @@
 // -- the file it replaces is copied aside first -- and a swap that cannot happen leaves the plugin
 // exactly as it is rather than half replaced.
 //
+// **The waiter is armed when the file is staged, not at shutdown.** `End` was the obvious place and it
+// is the wrong one: SimHub did not reach it on the test rig at all -- the window close timed out and
+// the process was killed, so the staged assembly simply sat there and the driver's next session ran
+// the old plugin against the new dashboards, which is the exact failure this exists to prevent. A
+// shutdown hook only fires on the shutdowns that go well. Arming at stage time covers a crash, a kill
+// and a clean exit alike, because the waiter is already outside the process by the time any of them
+// happen; `Init` arms it again for a swap that timed out waiting, and since a waiter only outlives a
+// SimHub that has gone, the two can never be waiting at once.
+//
 // Pure but for the file system: no SimHub types, so OpenDash.Tests compiles it and pins the staging,
 // the script and the decision.
 using System;
@@ -55,10 +64,17 @@ namespace OpenDashPlugin
 
         public const string ScriptName = "opendash-swap-plugin.cmd";
 
-        /// <summary>How long the script waits for SimHub to go before giving up, in seconds. Long enough
-        /// for a slow shutdown, short enough that a machine which never closes SimHub is not left with a
-        /// process spinning for the rest of the session.</summary>
-        public const int WaitSeconds = 120;
+        /// <summary>
+        /// How long the script waits for SimHub to go before giving up, in seconds.
+        /// </summary>
+        /// <remarks>
+        /// Generous, because the waiter is armed the moment the assembly is staged and a race weekend is
+        /// longer than any shutdown: it has to survive a driver who presses Update and then drives for an
+        /// afternoon. It is not the safety net -- `Init` arming it again is -- so the only cost of the
+        /// number being too small is one more session on the old plugin, and the only cost of it being
+        /// too large is an idle cmd.exe.
+        /// </remarks>
+        public const int WaitSeconds = 4 * 60 * 60;
 
         public static string StagedPath(string simHubRoot)
         {
@@ -191,21 +207,26 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Writes the script and starts it, detached, so that it outlives the process that asked for it.
+        /// Writes the script and starts it, detached, so that it outlives the process that armed it.
         /// </summary>
         /// <remarks>
-        /// Called from `End`, which is the last thing SimHub gives a plugin, and does nothing at all
-        /// unless an assembly is actually staged. `UseShellExecute` false with no window, so a driver
-        /// closing SimHub does not get a console flashing at them.
+        /// Called when an assembly is staged and again from `Init`, and does nothing at all unless one
+        /// actually is. The waiter spends its whole life watching for this process to end, so arming it
+        /// early is what makes the swap survive a crash or a kill rather than only a tidy shutdown.
+        /// `UseShellExecute` false with no window, so nobody gets a console flashing at them.
         /// </remarks>
         public static bool Launch(string simHubRoot, IInstallLog log = null)
         {
             log = log ?? NullInstallLog.Instance;
             if (!Pending(simHubRoot)) return false;
             var script = ScriptPath(simHubRoot);
+            if (!Arm(simHubRoot))
+            {
+                log.Error("The plugin swap script could not be written, so the plugin is unchanged.");
+                return false;
+            }
             try
             {
-                File.WriteAllText(script, SwapScript(simHubRoot), new UTF8Encoding(false));
                 var start = new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
@@ -215,12 +236,53 @@ namespace OpenDashPlugin
                     WorkingDirectory = FlagBoxProfile.FolderPath(simHubRoot),
                 };
                 Process.Start(start);
-                log.Info("Started the plugin swap; it takes effect as soon as SimHub has closed.");
+                log.Info("The new plugin is put in place as soon as SimHub closes.");
                 return true;
             }
             catch (Exception e)
             {
                 log.Error("The plugin swap could not be started, so the plugin is unchanged: " + e);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Puts the swap script where the waiter will read it, and says whether one can be run.
+        /// </summary>
+        /// <remarks>
+        /// Apart from <see cref="Launch"/> because starting a process is the one thing a test cannot do
+        /// here, and this is the whole of the decision. A waiter that is already running holds the file
+        /// open, so the write fails -- and that is the right answer rather than an error, because the
+        /// script it is running says the same thing (the paths do not change between stagings) and the
+        /// arming that matters has already happened.
+        /// </remarks>
+        public static bool Arm(string simHubRoot)
+        {
+            var script = ScriptPath(simHubRoot);
+            try
+            {
+                Directory.CreateDirectory(FlagBoxProfile.FolderPath(simHubRoot));
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            return Write(script, SwapScript(simHubRoot)) || File.Exists(script);
+        }
+
+        private static bool Write(string path, string text)
+        {
+            try
+            {
+                File.WriteAllText(path, text, new UTF8Encoding(false));
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
                 return false;
             }
         }

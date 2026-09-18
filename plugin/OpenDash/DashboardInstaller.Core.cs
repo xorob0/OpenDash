@@ -302,7 +302,20 @@ namespace OpenDashPlugin
                 Report(progress, (double)results.Count / names.Count);
             }
             Packages = results;
-            Status = results.Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
+            // Over the packages the rig wants, and not over every package the plugin embeds.
+            //
+            // Since ADR 0017 a screen exists because somebody added it, so a package nobody added is
+            // never written -- and aggregating over all of them meant the worst was permanently
+            // NotInstalled for the portrait sizes nobody owns. The pill under "This plugin" then read
+            // NOT INSTALLED for ever, on a rig whose every screen was installed and current, which is
+            // the one thing a status pill must not do. A package outside the rig is not missing; it is
+            // not asked for, and the row for it says so on its own line.
+            //
+            // An empty rig aggregates to UpToDate, which is right: a new user has nothing installed and
+            // nothing outstanding, and what the panel owes them is the Rig tab, not a red pill.
+            var mine = results.Where(result => Includes(wanted, result.FolderName)).ToList();
+            Status = (mine.Count == 0 ? results.Where(result => result.Status == InstallStatus.Failed) : mine)
+                .Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
             LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null);
 
             var primary = results.FirstOrDefault(result => result.FolderName == PrimaryFolder) ?? results[0];

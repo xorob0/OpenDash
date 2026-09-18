@@ -98,6 +98,10 @@ namespace OpenDashPlugin
                 // Before installing, not after: a staging folder left by an interrupted update is a complete
                 // extracted dashboard sitting in DashTemplates, and they accumulate one per abandoned update.
                 PackageExtractor.RemoveOrphanedStaging(Installer.SimHubRoot, new SimHubInstallLog());
+                // And arm the plugin swap again if one is still waiting: the waiter armed when the
+                // assembly was staged gives up after a while, and a session that reaches here with a
+                // staged assembly is a session where the last swap did not happen. Inert otherwise.
+                PluginUpdate.Launch(Installer.SimHubRoot, new SimHubInstallLog());
                 // The rig decides what is written. Before ADR 0017 this wrote every package the plugin
                 // embeds on every start, so a user who owned one screen found fourteen dashboards in
                 // SimHub's list; now a screen exists because somebody added it. Nothing outside the rig
@@ -308,10 +312,6 @@ namespace OpenDashPlugin
                 }
             }
             SaveSettings();
-            // Last of all, and after the settings are on disk: a plugin the update staged is put in place
-            // by a detached process that waits for this one to exit (PluginUpdate). It does nothing at all
-            // unless something is staged, and a swap that cannot happen leaves the plugin as it is.
-            PluginUpdate.Launch(Installer.SimHubRoot, new SimHubInstallLog());
         }
 
         public Control GetWPFSettingsControl(PluginManager pluginManager)

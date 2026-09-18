@@ -50,7 +50,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.False(PluginUpdate.Pending(root));
             Assert.False(PluginUpdate.Launch(root));
-            // And launching nothing writes nothing, so a shutdown on an untouched install is inert.
+            // And launching nothing writes nothing, so a start on an untouched install is inert.
             Assert.False(File.Exists(PluginUpdate.ScriptPath(root)));
         }
 
@@ -103,6 +103,27 @@ namespace OpenDashPlugin.Tests
             var nonsense = PluginUpdate.Stage(Encoding.UTF8.GetBytes("not a zip"), root);
             Assert.False(nonsense.Ok);
             Assert.False(PluginUpdate.Pending(root));
+        }
+
+        /// <summary>
+        /// Arming twice does not fail, because the first waiter holds the script open.
+        /// </summary>
+        /// <remarks>
+        /// The script says the same thing either way -- the paths do not change between stagings -- so a
+        /// write that cannot happen is not a reason to report the swap unarmed. Reporting false here would
+        /// put "openDash itself could not be updated" in front of a driver whose update was fine.
+        /// </remarks>
+        [Fact]
+        public void Arming_again_over_a_script_that_cannot_be_written_still_counts_as_armed()
+        {
+            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
+            File.WriteAllText(PluginUpdate.ScriptPath(root), PluginUpdate.SwapScript(root));
+            using (File.Open(PluginUpdate.ScriptPath(root), FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                // Windows refuses the write while it is held; Linux allows it, and both end armed.
+                // Arm and not Launch: starting a process is the one thing this cannot do here.
+                Assert.True(PluginUpdate.Arm(root));
+            }
         }
 
         [Fact]
