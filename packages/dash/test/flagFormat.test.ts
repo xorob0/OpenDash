@@ -15,8 +15,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { zone as zoneSetting } from '../src/contract.ts';
-import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, flagFullNameSize } from '../src/components/flagFull.ts';
-import { flagVisible } from '../src/components/flagStrip.ts';
+import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, FLAG_FULL_NAME_RATIO, flagFullNameSize } from '../src/components/flagFull.ts';
 import { bandRaised, conditionVisible, FLAG_CATALOGUE } from '../src/flags.ts';
 import { measureText } from '../src/design/advances.ts';
 import { bottom, contains, overlaps, rect, right } from '../src/design/geometry.ts';
@@ -26,8 +25,30 @@ import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, type ZoneLayout } from '../src/zones/index.ts';
 import { bodyRect } from '../src/zones/layout.ts';
 
-/** The six states the block draws, in the order the component lists them. */
-const STATES = ['black', 'chequered', 'yellow', 'blue', 'white', 'green'] as const;
+/** The states the block draws, which are the catalogue's conditions in the catalogue's order. */
+const STATES: readonly string[] = FLAG_CATALOGUE.map((c) => c.id);
+
+/**
+ * What each condition reads as on the block, pinned here rather than derived, because the table in
+ * the component is the answer to "what does a driver see" and a silent edit of it is a change to
+ * the face. The chequer is absent: it is the board and carries no name.
+ */
+const BLOCK_NAME: Record<string, string> = {
+  red: 'RED',
+  disqualify: 'DSQ',
+  furled: 'FURLED',
+  black: 'BLACK',
+  meatball: 'MEATBALL',
+  caution: 'SAFETY',
+  yellowWaving: 'YELLOW',
+  yellow: 'YELLOW',
+  debris: 'DEBRIS',
+  blue: 'BLUE',
+  white: 'WHITE',
+  green: 'GREEN',
+  startSet: 'SET',
+  startReady: 'READY',
+};
 
 /** Every arrangement of every face: the one the sheets draw, and the one with the rev bar's room given back. */
 const ARRANGEMENTS: { face: ZoneLayout; arrangement: ZoneLayout; revBar: boolean }[] = ZONE_FACES.flatMap((face) => [
@@ -154,25 +175,22 @@ describe('the two formats cannot both draw', () => {
       // And inside them the same conditions, ranked from the one catalogue rather than from two
       // lists that could disagree about which of two live flags wins.
       //
-      // The two no longer rank them by the same expression. The band draws all fifteen conditions
-      // of FLAG_CATALOGUE off the `SessionFlagsDetails` bits, while the block still draws the six
-      // SimHub normalises, off the `Flag_*` properties; both take their order from that catalogue,
-      // through FACE_FLAG_PRIORITY, so within the six they cannot disagree. What the block cannot
-      // say it does not say: under a red flag or a full-course caution the band names it and the
-      // block draws nothing. Moving the block onto the catalogue as well is the author's, since it
-      // would measure every name in the block down to fit "DISQUALIFIED".
+      // Both now rank them by the same expression. The block drew the six properties SimHub
+      // normalises until the format read the catalogue, which meant that under a red flag or a
+      // full-course caution the band named the condition and the block, having no state for it,
+      // drew nothing at all: a driver who had chosen the format that cannot be missed saw the one
+      // thing it was chosen for least. Fifteen conditions on both sides, same order, same
+      // `bandRaised` reading, so the two formats differ in the rectangle and in nothing else.
       const bandStates = bandGroup.children.filter((c): c is LayerItem => c.kind === 'layer').map((c) => c.name.slice('flag.'.length));
       const fullStates = fullGroup.children.filter((c): c is LayerItem => c.kind === 'layer').map((c) => c.name.slice('flagFull.'.length));
       expect(fullStates).toEqual([...STATES]);
-      expect(bandStates).toEqual(FLAG_CATALOGUE.map((c) => c.id));
-      // Every state of the block is a condition of the catalogue, ranked among the band's in the
-      // same relative order.
-      expect(bandStates.filter((id) => fullStates.includes(id))).toEqual(FLAG_CATALOGUE.filter((c) => c.faceFlag !== undefined).map((c) => c.id));
+      expect(bandStates).toEqual([...STATES]);
       for (const id of STATES) {
         expect({ id, band: stateOf(bandGroup, id).name, full: stateOf(fullGroup, id).name }).toMatchObject({ id, band: `flag.${id}`, full: `flagFull.${id}` });
-        const condition = FLAG_CATALOGUE.find((c) => c.id === id);
-        expect({ id, full: visibleOf(stateOf(fullGroup, id)) }).toEqual({ id, full: flagVisible(condition!.faceFlag!) });
-        expect({ id, band: visibleOf(stateOf(bandGroup, id)) }).toEqual({ id, band: conditionVisible(condition!, false, FLAG_CATALOGUE, bandRaised) });
+        const condition = FLAG_CATALOGUE.find((c) => c.id === id)!;
+        const ranked = conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised);
+        expect({ id, full: visibleOf(stateOf(fullGroup, id)) }).toEqual({ id, full: ranked });
+        expect({ id, band: visibleOf(stateOf(bandGroup, id)) }).toEqual({ id, band: ranked });
       }
     });
   }
@@ -193,7 +211,8 @@ describe('the full-screen name fits the block it is centred on', () => {
       // the box SimHub hands WPF as MaxTextWidth.
       const full = groupOf(faceItems(arrangement, { revBar }), 'flagFull');
       const names = [...walkItems(full.children)].filter((i): i is TextItem => i.kind === 'text');
-      expect(names.map((n) => n.name)).toEqual(['flagFull.black.name', 'flagFull.yellow.name', 'flagFull.blue.name', 'flagFull.white.name', 'flagFull.green.name']);
+      expect(names.map((n) => n.name)).toEqual(STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => `flagFull.${id}.name`));
+      expect(names.map((n) => n.text)).toEqual(STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => BLOCK_NAME[id]!));
       for (const item of names) {
         expect({ item: item.name, font: item.font, weight: item.fontWeight, size: item.fontSize }).toMatchObject({ font: ds.font.data, weight: 'Bold', size });
         const drawn = measureText('BarlowCondensedBold', item.text, item.fontSize);
@@ -223,6 +242,24 @@ describe('the full-screen name fits the block it is centred on', () => {
     // 0.447 of a 546 px block is 244 px, and YELLOW at 244 px is half as wide again as the face.
     expect(measureText('BarlowCondensedBold', 'YELLOW', Math.floor(0.447 * block.height))).toBeGreaterThan(block.width);
     expect(flagFullNameSize(block)).toBeLessThan(Math.floor(0.447 * block.height));
+  });
+
+  test('and the catalogue costs the type on one face only, which is what the short names buy', () => {
+    // The size is the widest name divided into the block, so the whole cost of drawing fifteen
+    // conditions rather than six is the difference between the widest of each set. Shortened to the
+    // sheets' one word, that is MEATBALL against YELLOW, and it is only binding where the block is
+    // narrow against its height: every landscape face still lands on the fraction the sheets quote,
+    // and the portrait one drops from 183 px to 143. The band's own labels would have made it 69,
+    // which is why the block does not simply write them.
+    const widest = (names: readonly string[]): string => names.reduce((a, b) => (measureText('BarlowCondensedBold', b, 1) > measureText('BarlowCondensedBold', a, 1) ? b : a));
+    expect(widest(FLAG_FULL_NAMES)).toBe('MEATBALL');
+    expect(FLAG_FULL_NAMES).toEqual([...new Set(STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => BLOCK_NAME[id]!))]);
+    const unchanged = ZONE_FACES.filter((f) => f.folder !== 'openDash 600x686');
+    for (const face of unchanged) {
+      const block = bodyRect(face);
+      expect({ face: face.folder, size: flagFullNameSize(block) }).toEqual({ face: face.folder, size: Math.floor(FLAG_FULL_NAME_RATIO * block.height) });
+    }
+    expect(flagFullNameSize(bodyRect(ZONE_FACES.find((f) => f.folder === 'openDash 600x686')!))).toBe(143);
   });
 });
 
