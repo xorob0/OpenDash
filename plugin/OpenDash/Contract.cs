@@ -18,6 +18,7 @@ namespace OpenDashPlugin
         public const string PositionMode = "PositionMode";
         public const string DeltaReference = "DeltaReference";
         public const string SessionProgress = "SessionProgress";
+        public const string BlueFlagDetail = "BlueFlagDetail";
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
         public const string PitWallClassOnly = "PitWallClassOnly";
@@ -104,6 +105,23 @@ namespace OpenDashPlugin
 
         public static readonly string[] SessionProgressModes = { "auto", "laps", "time" };
         public const string DefaultSessionProgress = "auto";
+
+        /// <summary>
+        /// What a blue flag band says beyond its colour: nothing, the class of the car behind, or
+        /// that car's position and class. Mirrors BLUE_FLAG_DETAILS in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Shared and not a face's, which is the difference from the flag format beside it. The
+        /// format decides how much of one screen a flag takes and so differs between a rim read at
+        /// arm's length and a display in the corner of the eye; this decides what a band is allowed
+        /// to say, which is the same answer wherever it is written. Appended to the shared group
+        /// after the rev bar, since both halves of the contract assert that group by index.
+        /// </remarks>
+        public static readonly string[] BlueFlagDetails = { "none", "class", "positionClass" };
+
+        /// <summary>Nothing extra: a blue flag is read by its colour, and the class of the car
+        /// behind is a thing to ask for rather than a thing to be given while lifting.</summary>
+        public const string DefaultBlueFlagDetail = "none";
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -565,6 +583,7 @@ namespace OpenDashPlugin
             yield return SessionProgress;
             for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
             yield return RevBar;
+            yield return BlueFlagDetail;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
@@ -599,6 +618,24 @@ namespace OpenDashPlugin
         /// <summary>The band, which is what the face has always drawn: a flag over the whole face takes
         /// the gear with it, and that is a choice rather than a default.</summary>
         public const string DefaultFlagFormat = "band";
+
+        /// <summary>
+        /// When a face shows the lap review: never, in a race, or in every session. Mirrors
+        /// LAP_REVIEW_MODES in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Three values and not the canvas's four. "Race" is the one session name openDash can match
+        /// with certainty; a "practice" value would have to match a set of spellings -- lone, open,
+        /// offline testing, warmup -- that no committed trace carries, and a value that silently
+        /// never matches is worse than one that is not offered.
+        /// </remarks>
+        public static readonly string[] LapReviewModes = { "off", "race", "all" };
+
+        /// <summary>Off: the panel covers the gear for four seconds of every lap, and the lap-time
+        /// pop-up already gives a driver the two figures they wait for at the line in a third of the
+        /// room. What takes the face is asked for, which is why the flag format defaults to the band
+        /// as well.</summary>
+        public const string DefaultLapReview = "off";
 
         /// <summary>
         /// The characters a namespace may be spelled with, and the rule that produces one from a name.
@@ -676,6 +713,17 @@ namespace OpenDashPlugin
         public static string FlagFormatProperty(FaceSize face)
         {
             return FlagFormatProperty(FacePrefix(face));
+        }
+
+        /// <summary>Property name of a face's lap review: Face1920x480LapReview.</summary>
+        public static string LapReviewProperty(string ns)
+        {
+            return ns + "LapReview";
+        }
+
+        public static string LapReviewProperty(FaceSize face)
+        {
+            return LapReviewProperty(FacePrefix(face));
         }
 
         /// <summary>
@@ -821,6 +869,7 @@ namespace OpenDashPlugin
             // Last, after the glance: the names before it have shipped and both halves of the contract
             // assert the group by index, so a new one joins the end of it.
             yield return FlagFormatProperty(ns);
+            yield return LapReviewProperty(ns);
         }
 
         public static IEnumerable<string> FacePropertyNames(FaceSize face)
@@ -934,6 +983,12 @@ namespace OpenDashPlugin
             return ModuleProperty(CompanionPrefix, module);
         }
 
+        /// <summary>Property name of a companion's live page: CompanionPage.</summary>
+        public static string CompanionPageProperty(string ns)
+        {
+            return ns + "Page";
+        }
+
         /// <summary>The module a companion opens on, and the one a held button shows: lap times, which
         /// is the first in page order, and the track map, which is what a glance is usually for. Both
         /// count from zero, so the track map is module 13 at page 12.</summary>
@@ -941,19 +996,28 @@ namespace OpenDashPlugin
 
         public const int DefaultCompanionQuickGlance = 12;
 
+        /// <summary>The page a companion reads before anything has set one, which is the first module.
+        /// Mirrors DEFAULT_COMPANION_PAGE in contract.ts: a package installed without the plugin opens
+        /// on lap times and, having nothing to move it, stays there.</summary>
+        public const int DefaultCompanionPage = 0;
+
         /// <summary>
-        /// Every property one companion owns, in attachment order.
+        /// Every property one companion owns, in attachment order: the module switches, then the page.
         /// </summary>
         /// <remarks>
-        /// The modules alone. The plugin also holds the module a companion is showing, the one it opens
-        /// on and the one a held button shows -- the two wheel actions move them -- but none of the
-        /// three is a property yet: a second-screen property has to be read by a package, which
-        /// packages/dash/test/secondScreens.test.ts enforces, and the companion cannot read a page
-        /// setting while it is twenty-one top-level screens that SimHub itself pages.
+        /// The start module and the glance module are not among them, and that is the idiom rather than
+        /// an omission: a second-screen property has to be read by a package, which
+        /// packages/dash/test/secondScreens.test.ts enforces, and nothing on the screen reads either of
+        /// them. The start is applied once by Init and the glance is a value the hold copies into the
+        /// page and copies back on release, which is exactly how a pit wall's own glance works.
+        ///
+        /// The page is appended after the twenty-one rather than put in front of them, because both
+        /// halves of the contract assert this group by index.
         /// </remarks>
         public static IEnumerable<string> CompanionPropertyNames(string ns)
         {
             for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
+            yield return CompanionPageProperty(ns);
         }
 
         /// <summary>Every action one companion registers, in registration order.</summary>

@@ -128,12 +128,14 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpLRTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRFTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":1}
+{"p":"OpenDash.BlueFlagDetail","v":"none"}
 {"p":"OpenDash.DeltaReference","v":"session"}
 {"p":"OpenDash.Face1280x400BarLeft1","v":0}
 {"p":"OpenDash.Face1280x400BarLeft2","v":1}
 {"p":"OpenDash.Face1280x400BarRight1","v":5}
 {"p":"OpenDash.Face1280x400BarRight2","v":6}
 {"p":"OpenDash.Face1280x400FlagFormat","v":"band"}
+{"p":"OpenDash.Face1280x400LapReview","v":"off"}
 {"p":"OpenDash.Face1280x400ZoneA","v":0}
 {"p":"OpenDash.Face1280x400ZoneB","v":0}
 {"p":"OpenDash.Face1280x400ZoneBClassOnly","v":false}
@@ -147,6 +149,7 @@
 {"p":"OpenDash.Face1280x480BarRight1","v":5}
 {"p":"OpenDash.Face1280x480BarRight2","v":6}
 {"p":"OpenDash.Face1280x480FlagFormat","v":"band"}
+{"p":"OpenDash.Face1280x480LapReview","v":"off"}
 {"p":"OpenDash.Face1280x480ZoneA","v":0}
 {"p":"OpenDash.Face1280x480ZoneB","v":0}
 {"p":"OpenDash.Face1280x480ZoneBClassOnly","v":false}
@@ -160,6 +163,7 @@
 {"p":"OpenDash.Face1280x720BarRight1","v":5}
 {"p":"OpenDash.Face1280x720BarRight2","v":6}
 {"p":"OpenDash.Face1280x720FlagFormat","v":"band"}
+{"p":"OpenDash.Face1280x720LapReview","v":"off"}
 {"p":"OpenDash.Face1280x720ZoneA","v":0}
 {"p":"OpenDash.Face1280x720ZoneB","v":0}
 {"p":"OpenDash.Face1280x720ZoneBClassOnly","v":false}
@@ -173,6 +177,7 @@
 {"p":"OpenDash.Face1920x480BarRight1","v":5}
 {"p":"OpenDash.Face1920x480BarRight2","v":6}
 {"p":"OpenDash.Face1920x480FlagFormat","v":"band"}
+{"p":"OpenDash.Face1920x480LapReview","v":"off"}
 {"p":"OpenDash.Face1920x480ZoneA","v":0}
 {"p":"OpenDash.Face1920x480ZoneB","v":0}
 {"p":"OpenDash.Face1920x480ZoneBClassOnly","v":false}
@@ -184,6 +189,7 @@
 {"p":"OpenDash.Face600x686BarLeft1","v":0}
 {"p":"OpenDash.Face600x686BarRight1","v":5}
 {"p":"OpenDash.Face600x686FlagFormat","v":"band"}
+{"p":"OpenDash.Face600x686LapReview","v":"off"}
 {"p":"OpenDash.Face600x686ZoneA","v":0}
 {"p":"OpenDash.Face600x686ZoneB","v":0}
 {"p":"OpenDash.Face600x686ZoneBClassOnly","v":false}
@@ -193,6 +199,7 @@
 {"p":"OpenDash.Face600x686ZoneCPages","v":2097151}
 {"p":"OpenDash.Face600x686ZoneD","v":0}
 {"p":"OpenDash.Face800x286FlagFormat","v":"band"}
+{"p":"OpenDash.Face800x286LapReview","v":"off"}
 {"p":"OpenDash.Face800x286ZoneA","v":0}
 {"p":"OpenDash.Face800x286ZoneB","v":0}
 {"p":"OpenDash.Face800x286ZoneBClassOnly","v":false}
@@ -206,6 +213,7 @@
 {"p":"OpenDash.Face800x480BarRight1","v":5}
 {"p":"OpenDash.Face800x480BarRight2","v":6}
 {"p":"OpenDash.Face800x480FlagFormat","v":"band"}
+{"p":"OpenDash.Face800x480LapReview","v":"off"}
 {"p":"OpenDash.Face800x480ZoneA","v":0}
 {"p":"OpenDash.Face800x480ZoneB","v":0}
 {"p":"OpenDash.Face800x480ZoneBClassOnly","v":false}
@@ -219,6 +227,7 @@
 {"p":"OpenDash.Face850x480BarRight1","v":5}
 {"p":"OpenDash.Face850x480BarRight2","v":6}
 {"p":"OpenDash.Face850x480FlagFormat","v":"band"}
+{"p":"OpenDash.Face850x480LapReview","v":"off"}
 {"p":"OpenDash.Face850x480ZoneA","v":0}
 {"p":"OpenDash.Face850x480ZoneB","v":0}
 {"p":"OpenDash.Face850x480ZoneBClassOnly","v":false}

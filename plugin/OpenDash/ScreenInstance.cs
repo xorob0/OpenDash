@@ -52,6 +52,17 @@ namespace OpenDashPlugin
         /// </remarks>
         public string FlagFormat { get; set; }
 
+        /// <summary>
+        /// When this face shows the lap review: "off", "race" or "all". Null on a screen that is not
+        /// a face.
+        /// </summary>
+        /// <remarks>
+        /// Beside FlagFormat and for the same reason, only more so: the review takes the hero for
+        /// four seconds at every crossing, so a rig with a display on the desk and a rim in the
+        /// driver's hands wants it on the one and certainly not on the other.
+        /// </remarks>
+        public string LapReview { get; set; }
+
         /// <summary>Page each pit wall data zone shows. Null on a screen that is not a pit wall.</summary>
         public int[] Zones { get; set; }
 
@@ -178,11 +189,13 @@ namespace OpenDashPlugin
                 if (Face == null) Face = new FaceSettings();
                 Face.Normalise();
                 FlagFormat = Contract.NormaliseChoice(FlagFormat, Contract.FlagFormats, Contract.DefaultFlagFormat);
+                LapReview = Contract.NormaliseChoice(LapReview, Contract.LapReviewModes, Contract.DefaultLapReview);
             }
             else
             {
                 Face = null;
                 FlagFormat = null;
+                LapReview = null;
             }
 
             if (IsPitWall)
@@ -333,6 +346,7 @@ namespace OpenDashPlugin
                 Package = Package,
                 Face = Face == null ? null : Face.Clone(),
                 FlagFormat = FlagFormat,
+                LapReview = LapReview,
                 Zones = Zones == null ? null : (int[])Zones.Clone(),
                 WideZone = WideZone,
                 WebViewUrl = WebViewUrl,

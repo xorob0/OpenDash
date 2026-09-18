@@ -53,6 +53,12 @@ import {
   PROPERTY_PREFIX,
   REV_BAR_MODES,
   REV_BAR_SETTING,
+  BLUE_FLAG_DETAILS,
+  COMPANION_PAGE_SETTING,
+  LAP_REVIEW_MODES,
+  DEFAULT_LAP_REVIEW,
+  lapReviewSettingName,
+  BLUE_FLAG_DETAIL_SETTING,
   SESSION_PROGRESS_MODES,
   setting,
   SLOT_MAX,
@@ -82,8 +88,9 @@ describe('settings', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
     // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
-    // page, mask, start and the class filter -- plus the bar's ends, the glance and the flag format.
-    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 2;
+    // page, mask, start and the class filter -- plus the bar's ends, the glance, the flag format and
+    // the lap review.
+    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 3;
     // The last two terms are the lights, which are not screens but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is six
     // global and ten per matrix, the way every face carries its own group; the strips are the three
@@ -91,15 +98,19 @@ describe('settings', () => {
     // critical flags only, the gear and the two temperatures -- moved under the matrix that owns them.
     expect(flagBoxProperties()).toHaveLength(6 + FLAG_BOX_MATRICES.length * 10);
     expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle', 'OpenDash.LedFlagAnimation']);
-    // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
+    // The lone 2 is RevBar and the blue flag detail, which every screen shares with the four modes
+    // and the twelve slots.
     expect(props).toHaveLength(
-      4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 3 + flagBoxProperties().length + ledProperties().length,
+      4 + SLOT_MAX + 2 + FACE_SIZES.length * perFace + MODULE_COUNT + 1 + PIT_WALL_ZONE_LETTERS.length + 3 + flagBoxProperties().length + ledProperties().length,
     );
     // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
     // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
     // 256 before the four settings a box owns became four per matrix, which is twelve names more,
-    // and 269 before the pit wall gained the class filter its board and its list zones read.
-    expect(props).toHaveLength(270);
+    // 269 before the pit wall gained the class filter its board and its list zones read, 270 before
+    // band D was allowed to name the car a blue flag is being waved for, 271 before each face was
+    // given its own answer to when the lap review is shown, and 279 before the companion's page
+    // became the plugin's to decide.
+    expect(props).toHaveLength(280);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -108,6 +119,10 @@ describe('settings', () => {
     // them until the card path is retired, because ten faces still read them.
     // Appended to the shared group rather than beside ShiftLights, which has shipped at index 0.
     expect(props[4 + SLOT_MAX]).toBe('OpenDash.RevBar');
+    // Appended after it for the same reason, and shared rather than a face's: the flag *format* is
+    // per screen because it decides how much of one screen a flag takes, whereas what a band is
+    // allowed to say is the same answer wherever it is written.
+    expect(props[5 + SLOT_MAX]).toBe('OpenDash.BlueFlagDetail');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -116,9 +131,11 @@ describe('settings', () => {
     expect(props).toContain('OpenDash.Face800x286QuickGlance');
     expect(props).toContain('OpenDash.Face1920x480FlagFormat');
     expect(props).toContain('OpenDash.Face600x686FlagFormat');
+    expect(props).toContain('OpenDash.Face1920x480LapReview');
+    expect(props).toContain('OpenDash.Face800x286LapReview');
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
     // settings silently shared with every other.
-    expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat)/.test(p))).toEqual([]);
+    expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat|LapReview)/.test(p))).toEqual([]);
     const lights = flagBoxProperties().length + ledProperties().length;
     expect(props.slice(-(lights + 7), -lights)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl', 'OpenDash.PitWallClassOnly']);
     // One filter for the screen and not one per zone: a pit wall zone is a widget pointed at one
@@ -148,6 +165,13 @@ describe('settings', () => {
     expect(flagFormatSettingName(FACE_SIZES[0]!)).toBe('Face1920x480FlagFormat');
     expect(zone.flagFormat(FACE_SIZES[0]!)).toBe("isnull([OpenDash.Face1920x480FlagFormat], 'band')");
     expect(zone.flagFormatIs(FACE_SIZES[6]!, 'full')).toBe("(isnull([OpenDash.Face800x286FlagFormat], 'band')) = ('full')");
+    // The lap review is the face's own for the same reason, and off on every one of them until
+    // somebody asks: the panel covers the gear for four seconds of every lap.
+    expect(LAP_REVIEW_MODES).toEqual(['off', 'race', 'all']);
+    expect(DEFAULT_LAP_REVIEW).toBe('off');
+    for (const face of FACE_SIZES) expect(facePropertyNames(face)).toContain(lapReviewSettingName(face));
+    expect(lapReviewSettingName(FACE_SIZES[0]!)).toBe('Face1920x480LapReview');
+    expect(zone.lapReview(FACE_SIZES[0]!)).toBe("isnull([OpenDash.Face1920x480LapReview], 'off')");
   });
 
   test('every property belongs to one screen or to every screen', () => {
@@ -170,12 +194,20 @@ describe('settings', () => {
     // RevBar is shared too, and has to be: only a rectangular face has a second arrangement, but the
     // round faces' rev arc and the companion's speedo draw the same segments and read the same
     // setting, and a screen may not read a property another screen owns.
-    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)), REV_BAR_SETTING].map((n) => `${PROPERTY_PREFIX}.${n}`));
+    expect(shared).toEqual(
+      [...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)), REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING].map((n) => `${PROPERTY_PREFIX}.${n}`),
+    );
 
     // The web view address is the pit wall's although its name carries no prefix: it was named
     // before the idiom, and no other screen has a browser page to point anywhere.
     expect(screenProperties(PIT_WALL_PREFIX)).toContain('OpenDash.WebViewUrl');
-    expect(screenProperties(COMPANION_PREFIX)).toHaveLength(MODULE_COUNT);
+    // The twenty-one switches and the page. The start module and the glance module are the plugin's
+    // own state and not properties, because nothing on the screen reads either: the start is applied
+    // once by Init, and the glance is a value the hold copies into the page and back out again.
+    expect(screenProperties(COMPANION_PREFIX)).toEqual([
+      ...Array.from({ length: MODULE_COUNT }, (_, i) => `${PROPERTY_PREFIX}.${moduleSettingName(i + 1)}`),
+      `${PROPERTY_PREFIX}.${COMPANION_PAGE_SETTING}`,
+    ]);
 
     const own = facePrefix(FACE_SIZES[0]!);
     expect(foreignProperties(own)).not.toContain('OpenDash.Face1920x480ZoneA');
@@ -294,6 +326,21 @@ describe('plugin mirror', () => {
     expect(panel).toContain('Contract.LedRpmStyles');
   });
 
+  test('the companion page is attached, and the start and the glance are offered on its pane', () => {
+    // The page is the one of the three the dashboard reads, so it is the one that is a property; the
+    // other two are the plugin's own state and reach the screen only by being copied into the page.
+    // What has to be true of them is that a user can set them, which is what this pins: a setting the
+    // panel never writes can only be reached by hand-editing the settings file.
+    expect(pluginSource('Contract.cs')).toContain('public static string CompanionPageProperty(string ns)');
+    expect(pluginSource('OpenDash.cs')).toContain('this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace)');
+    const panel = panelSource();
+    expect(panel).toContain('screen.CompanionStart = value;');
+    expect(panel).toContain('screen.CompanionQuickGlance = value');
+    // And the button that replaces SimHub's own ring, which one enabled screen at a time gives up.
+    expect(panel).toContain('Contract.NextModuleActionFor(screen.Namespace)');
+    expect(panel).toContain('Contract.HoldQuickGlanceActionFor(screen.Namespace)');
+  });
+
   test('Cards.cs lists the catalogue: number, id, label and display name, in order', () => {
     const source = pluginSource('Cards.cs');
     const cards = [...source.matchAll(/new Card\((\d+), "([^"]*)", "([^"]*)", "([^"]*)", "[^"]*"\)/g)].map((m) => ({
@@ -319,10 +366,23 @@ describe('plugin mirror', () => {
     expect(source).toContain(`public const string DefaultRevBar = ${revBarConst(DEFAULTS.RevBar)};`);
     expect(source).toContain(`FlagFormats = ${csArray(FLAG_FORMATS)};`);
     expect(source).toContain(`public const string DefaultFlagFormat = "${DEFAULT_FLAG_FORMAT}";`);
+    expect(source).toContain(`LapReviewModes = ${csArray(LAP_REVIEW_MODES)};`);
+    expect(source).toContain(`public const string DefaultLapReview = "${DEFAULT_LAP_REVIEW}";`);
+    // And offered on the panel, beside the flag format: a setting nothing in the panel writes can
+    // only be reached by hand-editing the settings file, which is how the flag format shipped once.
+    expect(panelSource()).toContain('Contract.LapReviewModes');
     // And offered on the panel, which is the half of a setting that makes it one. The format was
     // declared, mirrored and attached with nothing in the panel writing it, so the only way to draw
     // a flag over the body was to hand-edit the settings file.
     expect(panelSource()).toContain('Contract.FlagFormats');
+    // The blue flag detail is shared, so it sits beside the four modes rather than beside the flag
+    // format. There is no panel assertion under it: the row that writes it belongs on the Data tab,
+    // which is the tab for settings that mean the same thing on every screen, and until it is there
+    // the setting sits at its default and the band draws what it has always drawn.
+    expect(source).toContain(`public const string ${BLUE_FLAG_DETAIL_SETTING} = "${BLUE_FLAG_DETAIL_SETTING}";`);
+    expect(source).toContain(`BlueFlagDetails = ${csArray(BLUE_FLAG_DETAILS)};`);
+    expect(source).toContain(`public const string DefaultBlueFlagDetail = "${DEFAULTS.BlueFlagDetail}";`);
+    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${BLUE_FLAG_DETAIL_SETTING},`);
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);
