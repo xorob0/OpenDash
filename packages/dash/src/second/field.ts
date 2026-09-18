@@ -137,11 +137,32 @@ export function charsOfText(text: string, mono: Monospace): Chars {
   return { digits: text.length - specials, specials };
 }
 
+/**
+ * The cells a value's box is cut from, which is its character budget and nothing else.
+ *
+ * The budget is what the binding can grow to; the sample is the design-time text DashStudio draws
+ * in its place. The two used to be taken whichever way was wider, so that a sample longer than its
+ * budget was never clipped in the editor -- and a sample is a string somebody typed to make a
+ * screenshot read well, so that `Math.max` let it decide the built geometry instead: the box, and
+ * the follower after it, both moved with it. A sample outside its budget is a fault in the module
+ * that declares it and is refused here rather than absorbed, the way `numeral` refuses a glyph that
+ * cannot be drawn in a cell. The budget is widened where the two disagree, never the sample cut,
+ * because the sample is what the author drew.
+ */
+export function valueCells(spec: FieldSpec, mono: Monospace): number {
+  const budget = monoWidth(mono, spec.value.chars);
+  const drawn = charsOfText(spec.value.sample, mono);
+  if (monoWidth(mono, drawn) > budget) {
+    throw new Error(
+      `field ${spec.name}: the sample ${JSON.stringify(spec.value.sample)} takes ${drawn.digits}+${drawn.specials} cells, past the ${spec.value.chars.digits}+${spec.value.chars.specials} its budget declares; widen the budget`,
+    );
+  }
+  return budget;
+}
+
 export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
   const mono = cells(spec.value.weight ?? 'SemiBold', spec.value.fs);
-  // The budget is what the binding can grow to; the sample is what DashStudio draws today. The box
-  // takes whichever is wider, so a sample longer than its budget is never clipped in the editor.
-  const width = Math.max(monoWidth(mono, spec.value.chars), monoWidth(mono, charsOfText(spec.value.sample, mono)));
+  const width = valueCells(spec, mono);
   const follower = spec.value.follower;
   if (!follower) return width;
   return width + followerGap(follower) + followerWidth(follower, d, spec.value.fs);
@@ -212,6 +233,10 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   const below = hasLabel && spec.labelBelow === true;
   const valueY = bottom - spec.value.fs - (below ? d.labelRow + LABEL_BELOW_GAP : 0);
   const width = maxWidth ?? fieldWidth(spec, density);
+  // Before anything is placed, and whether or not the width was measured here: a caller that hands
+  // its own `maxWidth` goes through no measurement at all, so this is the one point every drawn
+  // field passes through.
+  const cellsWidth = valueCells(spec, cells(spec.value.weight ?? 'SemiBold', spec.value.fs));
   if (hasLabel) {
     // The row is the sheets' 13 px and the run inside it is the ramp's 15, centred: `label` takes
     // the run's own line box, so the row's top is offset by half the difference the way
@@ -229,7 +254,6 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
       }),
     );
   }
-  const mono = cells(spec.value.weight ?? 'SemiBold', spec.value.fs);
   items.push(
     numeral(`${spec.name}.value`, spec.value.sample, x, valueY, spec.value.fs, spec.value.chars, {
       weight: spec.value.weight,
@@ -243,7 +267,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   );
   const follower = spec.value.follower;
   if (follower) {
-    const followerX = x + Math.max(monoWidth(mono, spec.value.chars), monoWidth(mono, charsOfText(spec.value.sample, mono))) + followerGap(follower);
+    const followerX = x + cellsWidth + followerGap(follower);
     const fs = followerSize(follower, d, spec.value.fs);
     const y = canvasYForBaseline(canvasBaseline(valueY, spec.value.fs), fs);
     const box = Math.max(followerWidth(follower, d, spec.value.fs), x + width - followerX);
