@@ -736,8 +736,12 @@ describe('the radar is cut from its box', () => {
     // The two boxes readability-pass.md §16 puts side by side: a nano zone and a tall face zone
     // were drawing the same twenty metres of track at the same scale.
     expect(radarIn(build(249, 158)).scale).toBeLessThan(radarIn(build(437, 510)).scale!);
-    // And the companion page keeps the 1.25 the canvas was measured at.
+    // 802 by 336 is a fixture, not the companion page any more: the page is 356 tall since the
+    // flag band came down to the artboard's 12, and `radarScaleFor`'s 260 divisor was fitted to
+    // the shorter box, so the real page now draws 1.37 against the canvas's 1.25. Which of the two
+    // moves is the author's, and it belongs to radar.ts rather than here.
     expect(radarIn(build(802, 336, 'companion')).scale!).toBeCloseTo(1.25, 1);
+    expect(radarIn(build(802, 356, 'companion')).scale!).toBeCloseTo(1.37, 2);
   });
 
   test('the grid the canvas draws under the cars is four rects behind the plot', () => {
