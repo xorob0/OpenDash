@@ -42,6 +42,7 @@ namespace OpenDashPlugin
                     BodyWidth),
                 BuildFacePicture(screen, face),
                 BuildStripCaption(face),
+                BuildRevBarRow(screen),
                 BuildFlagFormatRow(screen),
                 BuildLapReviewRow(screen),
                 BuildFaceWarning(screen),
@@ -49,6 +50,34 @@ namespace OpenDashPlugin
             };
             RefreshFaceWarning(screen);
             return Ui.VStack(12, rows.ToArray());
+        }
+
+        /// <summary>
+        /// What this screen carries at the top: the shift lights, a plain RPM bar, or nothing.
+        /// </summary>
+        /// <remarks>
+        /// On the screen's own pane rather than on the Data tab, and it is the row that most obviously
+        /// never belonged there: a wheel whose rim already carries LEDs across its top wants no rev bar
+        /// and the display on the desk beside it wants one, and the rig-wide switch answered for both.
+        /// Both arrangements are built into every face and SimHub shows the one this picks, so the
+        /// choice costs no reinstall; off redraws the face without the well, and the zones start where
+        /// the recess did.
+        ///
+        /// First of the three rows under the plan, because it is the one that changes the plan: the
+        /// other two decide what covers the face and this decides what the face is.
+        /// </remarks>
+        private FrameworkElement BuildRevBarRow(ScreenInstance screen)
+        {
+            var control = BuildSegmented(Contract.RevBarModes, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(screen.Namespace), value =>
+            {
+                Settings.SetScreenRevBar(screen.Namespace, value);
+                Save();
+                // The plan above redraws without the well, which is the whole of what Off does.
+                Redraw();
+            });
+            var row = Ui.Row(PanelDataTab.RevBarTitle, PanelDataTab.RevBarCaption, control);
+            row.Width = BodyWidth;
+            return row;
         }
 
         /// <summary>Which of the two formats a flag takes on this screen.</summary>
@@ -327,7 +356,22 @@ namespace OpenDashPlugin
         {
             var toggle = BuildToggle(screen.Face.IsClassOnly(letter), on => { screen.Face.SetClassOnly(letter, on); Save(); });
             toggle.ToolTip = "Show the leaderboard and the relative in zone " + letter + " for your own class";
-            return Ui.HStack(PanelFacePlan.CellGap, toggle, Ui.Text("My class only", Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary));
+            toggle.VerticalAlignment = VerticalAlignment.Center;
+            toggle.HorizontalAlignment = HorizontalAlignment.Left;
+            // Measured inside a vertical stack, which is not a nicety. SHToggleButton declares no size of
+            // its own and grows to whatever it is measured against; every other toggle on the panel sits
+            // in a row of automatic height and so is measured against infinity, but this one is docked to
+            // the bottom of a cell as tall as the face's body, and it drew as a white disc filling zone B
+            // and zone C. A vertical StackPanel measures its children with an infinite height, which is
+            // the same question the rows ask and gets the same answer, without this file having to know
+            // what size SimHub draws a switch at.
+            var sized = Ui.VStack(0, toggle);
+            sized.VerticalAlignment = VerticalAlignment.Center;
+            // And a floor under its width, because SimHub's switch draws wider than it measures: the
+            // label beside it started underneath the knob. A floor rather than a fixed width, so a switch
+            // that is genuinely wider than this still gets the room it asks for.
+            sized.MinWidth = PanelFacePlan.SwitchWidth;
+            return Ui.HStack(PanelFacePlan.CellGap, sized, Ui.Text("My class only", Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary));
         }
 
         /// <summary>
@@ -963,7 +1007,34 @@ namespace OpenDashPlugin
                     + "first ones.",
                     BodyWidth),
                 picture,
+                BuildSlotsRevBarRow(),
                 BuildSlotWarning());
+        }
+
+        /// <summary>
+        /// What a card face carries at the top, which is the rig-wide `RevBar` and not a screen's own.
+        /// </summary>
+        /// <remarks>
+        /// A zone face answers this on its own pane, under its own property. A card face owns no
+        /// properties at all -- it reads the twelve shared slots and nothing else, which is why two of
+        /// them cannot be told apart -- so its arc reads the rig-wide name, and this row is where that
+        /// name is still written from. It is a property of the model being retired rather than
+        /// something this fixes, and it is here so that a driver with a round face does not lose the
+        /// switch when the zone faces take their own.
+        /// </remarks>
+        private FrameworkElement BuildSlotsRevBarRow()
+        {
+            var control = BuildSegmented(Contract.RevBarModes, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value =>
+            {
+                Settings.SetRevBar(value);
+                Save();
+            });
+            var row = Ui.Row(
+                PanelDataTab.RevBarTitle,
+                "Shift lights, a plain arc, or off. A card face has no settings of its own, so this is the answer for every card face on the rig.",
+                control);
+            row.Width = BodyWidth;
+            return row;
         }
 
         private FrameworkElement BuildSlotGrid(int firstSlot)

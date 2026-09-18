@@ -63,6 +63,18 @@ namespace OpenDashPlugin
         /// </remarks>
         public string LapReview { get; set; }
 
+        /// <summary>
+        /// What this face carries at the top: "shift", "rpm" or "off". Null on a screen that is not
+        /// a face; null on a face means "whatever the rig says", which is how a settings file written
+        /// before the setting was per screen keeps drawing what its owner chose.
+        /// </summary>
+        /// <remarks>
+        /// Beside FlagFormat for the same reason, and it is the one a driver notices first: a wheel
+        /// whose rim already carries LEDs across its top wants no rev bar, and the display on the
+        /// desk beside it wants one. The rig-wide answer turned both off together.
+        /// </remarks>
+        public string RevBar { get; set; }
+
         /// <summary>Page each pit wall data zone shows. Null on a screen that is not a pit wall.</summary>
         public int[] Zones { get; set; }
 
@@ -190,12 +202,16 @@ namespace OpenDashPlugin
                 Face.Normalise();
                 FlagFormat = Contract.NormaliseChoice(FlagFormat, Contract.FlagFormats, Contract.DefaultFlagFormat);
                 LapReview = Contract.NormaliseChoice(LapReview, Contract.LapReviewModes, Contract.DefaultLapReview);
+                // Null is kept rather than defaulted: it is what "this face has not been answered
+                // individually" means, and the rig's own answer is what it resolves to.
+                if (RevBar != null) RevBar = Contract.NormaliseChoice(RevBar, Contract.RevBarModes, Contract.DefaultRevBar);
             }
             else
             {
                 Face = null;
                 FlagFormat = null;
                 LapReview = null;
+                RevBar = null;
             }
 
             if (IsPitWall)
@@ -347,6 +363,7 @@ namespace OpenDashPlugin
                 Face = Face == null ? null : Face.Clone(),
                 FlagFormat = FlagFormat,
                 LapReview = LapReview,
+                RevBar = RevBar,
                 Zones = Zones == null ? null : (int[])Zones.Clone(),
                 WideZone = WideZone,
                 WebViewUrl = WebViewUrl,

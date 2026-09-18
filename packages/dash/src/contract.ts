@@ -518,6 +518,18 @@ export const DEFAULT_FLAG_FORMAT: FlagFormat = 'band';
 export const flagFormatSettingName = (face: FaceSize): string => `${facePrefix(face)}FlagFormat`;
 
 /**
+ * `Face1920x480RevBar`: what the top of *this* face carries.
+ *
+ * Per screen, and it should always have been. A rig with a 1920 on the dash and an 850 on the rim
+ * is two screens at two distances, and the wheel that carries its own LEDs across the top is one of
+ * them and not the other -- so "off, my wheel already has lights" was a rig-wide answer that turned
+ * the bar off on the display as well. The rig-wide {@link REV_BAR_SETTING} stays attached as the
+ * fallback below it, both because it has shipped and because the round faces' arc and the speedo
+ * module still read it.
+ */
+export const revBarSettingName = (face: FaceSize): string => `${facePrefix(face)}RevBar`;
+
+/**
  * When this face shows the lap review: never, in a race, or in every session.
  *
  * Per screen for the reason the flag format is, and more strongly: the review is 1200 by 160 and
@@ -562,6 +574,18 @@ export const zone = {
   barField: (face: FaceSize, slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(face, slot))), num(DEFAULT_BAR_FIELDS[slot])),
   /** `isnull([OpenDash.Face1920x480ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
   classOnly: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(face, z))), String(DEFAULT_ZONE_CLASS_ONLY)),
+  /**
+   * `isnull([OpenDash.Face1920x480RevBar], isnull([OpenDash.RevBar], ...))`: what this face carries
+   * at the top.
+   *
+   * Three fallbacks deep, and each earns its place: this face's own answer, then the rig's, then
+   * the deprecated `ShiftLights` a package installed beside an rc.2 plugin would find. A settings
+   * file written before the setting was per screen therefore keeps drawing what its owner chose,
+   * on every face, until they answer one of them individually.
+   */
+  revBar: (face: FaceSize): Expr => isnull(prop(propertyName(revBarSettingName(face))), setting.revBar()),
+  /** `... = 'off'`: whether this face is in the given rev bar mode. */
+  revBarIs: (face: FaceSize, mode: RevBarMode): Expr => eq(zone.revBar(face), str(mode)),
   /** `isnull([OpenDash.Face1920x480FlagFormat], 'band')`: how this face draws a flag. */
   flagFormat: (face: FaceSize): Expr => isnull(prop(propertyName(flagFormatSettingName(face))), str(DEFAULT_FLAG_FORMAT)),
   /** `isnull([OpenDash.Face1920x480FlagFormat], 'band') = 'full'`: whether this face is in the given format. */
@@ -582,7 +606,7 @@ export const zone = {
 export function facePropertyNames(face: FaceSize): string[] {
   const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
-  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face), lapReviewSettingName(face)];
+  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face), lapReviewSettingName(face), revBarSettingName(face)];
 }
 
 /** Every zone property of every face that ships. */
@@ -1035,17 +1059,27 @@ export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
     criticalOnly: (): Expr => read('CriticalOnly', String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
     /** The gear as this panel's resting state. */
     gear: (): Expr => read('Gear', String(DEFAULT_FLAG_BOX_GEAR)),
+    /**
+     * Whether this panel's digit flashes while the car is over-revving.
+     *
+     * Per panel rather than per rig, and a switch rather than a fact, because the flash is the one
+     * thing on the box that repeats what a screen and a strip are already saying: a driver with a
+     * rev bar in front of them has been told to shift twice before the box joins in, and a box
+     * mounted in the corner of a monitor stand strobing at the edge of vision is what they turn
+     * off. Off leaves the digit in the redline colour, which is still the whole of the message.
+     */
+    gearBlink: (): Expr => read('GearBlink', String(DEFAULT_FLAG_BOX_GEAR_BLINK)),
     /** Defaulted **per unit** from SimHub's own `TemperatureUnit`, as the global one was. */
     oilTemp: (): Expr => read('OilTemp', defaultByUnit(DEFAULT_OIL_TEMP)),
     waterTemp: (): Expr => read('WaterTemp', defaultByUnit(DEFAULT_WATER_TEMP)),
   };
 };
 
-/** The ten property names of one matrix, in the order the plugin attaches them. */
+/** The eleven property names of one matrix, in the order the plugin attaches them. */
 export const flagBoxMatrixProperties = (matrix: FlagBoxMatrix): string[] =>
   // The four that moved here from the tab are appended rather than interleaved, for the reason
   // every other list in this file is: both halves of the contract are pinned in order.
-  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side', 'CriticalOnly', 'Gear', 'OilTemp', 'WaterTemp'].map((n) => flagBoxMatrixSetting(matrix, n));
+  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side', 'CriticalOnly', 'Gear', 'OilTemp', 'WaterTemp', 'GearBlink'].map((n) => flagBoxMatrixSetting(matrix, n));
 
 /**
  * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a
@@ -1087,6 +1121,13 @@ export const DEFAULT_LIGHTS_NIGHT_MODE = false;
 
 /** On. The gear is the box's resting state; off leaves the panel dark rather than showing something else. */
 export const DEFAULT_FLAG_BOX_GEAR = true;
+
+/**
+ * On. The digit flashes while the car is over-revving, which is the box's half of the one shift
+ * message the rev bar and the strip also carry, and a driver who has only the box would lose the
+ * loudest part of it if this defaulted off.
+ */
+export const DEFAULT_FLAG_BOX_GEAR_BLINK = true;
 
 /**
  * Laps, not litres. A litre threshold means nothing without knowing the car; laps remaining means

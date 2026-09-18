@@ -53,6 +53,11 @@ namespace OpenDashPlugin
 
         /// <summary>Between the letter, the page select and the count, and between the class filter and
         /// the control above it.</summary>
+        /// <summary>The room a switch is given in a zone cell. SimHub's SHToggleButton renders wider than
+        /// it measures, so the label beside one needs a floor under the switch's width rather than the
+        /// gap alone; 46 is the knob and its track with the gap clear of both.</summary>
+        public const double SwitchWidth = 46;
+
         public const double CellGap = 9;
 
         /// <summary>The two ends of the bar, which are not the same width: the right end carries a class

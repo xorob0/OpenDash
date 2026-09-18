@@ -139,6 +139,7 @@ export const STRIP_SHAPES: readonly StripShape[] = [
   wheel(4, 14, 4, { devices: ['SimRep Engineering MLD', 'Ascher Racing'] }),
   wheel(4, 14, 4, { reversed: true, devices: ['SimRep Engineering MLD, wired from the far end'] }),
   wheel(2, 10, 2, { devices: ['generic WS2812b runs'] }),
+  wheel(4, 8, 4, { devices: ['generic WS2812b runs'] }),
   wheel(4, 9, 4, { devices: ['generic WS2812b runs'] }),
   wheel(5, 10, 5, { devices: ['generic WS2812b runs'] }),
   wheel(0, 8, 0, { devices: ['generic WS2812b runs'] }),

@@ -339,6 +339,13 @@ namespace OpenDashPlugin
             return Digits(shape.Left) + "/" + Digits(shape.Centre) + "/" + Digits(shape.Right) + wiring;
         }
 
+        /// <summary>A shape id as the panel writes it -- "3/9/3", "brow 15" -- without a profile to read
+        /// the name off. What the bar list needs: it names a shape before any profile for it exists.</summary>
+        public static string ShapeLabel(string shapeId)
+        {
+            return Label(new LightProfile(shapeId, null));
+        }
+
         private static string Prefixed(string label)
         {
             return FlagBoxProfile.FilePrefix + label;

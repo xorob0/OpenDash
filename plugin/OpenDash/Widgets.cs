@@ -219,7 +219,9 @@ namespace OpenDashPlugin
             var left = iconPath == null
                 ? (FrameworkElement)text
                 : HStack(PanelMetrics.RowIconGap, Icon(iconPath, Theme.TextLabel), text);
-            var row = Row(left, HStack(PanelMetrics.RowRightGap, pill, button));
+            // A row with nothing to press is the package list, which says what is on disk and offers no
+            // action: HStack of a null child would throw, so the pill stands alone.
+            var row = Row(left, button == null ? (FrameworkElement)pill : HStack(PanelMetrics.RowRightGap, pill, button));
             row.Height = PanelMetrics.RowHeight;
             return new Border
             {

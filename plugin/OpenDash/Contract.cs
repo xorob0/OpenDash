@@ -156,6 +156,11 @@ namespace OpenDashPlugin
         /// <summary>On: the gear is what the box shows when nothing is happening.</summary>
         public const bool DefaultFlagBoxGear = true;
 
+        /// <summary>On. The digit flashing while the car is over-revving is the box's half of the shift
+        /// message the rev bar and the strip also carry, and a driver who owns only the box would lose
+        /// the loudest part of it if this defaulted off.</summary>
+        public const bool DefaultFlagBoxGearBlink = true;
+
         public const int DefaultFlagBoxLowFuelLaps = 2;
 
         /// <summary>120 C and 110 C, and their equivalents, so a default is right in whatever unit is set.
@@ -188,9 +193,9 @@ namespace OpenDashPlugin
             return "FlagBoxMatrix" + matrix + name;
         }
 
-        /// <summary>The ten names of one matrix, in attachment order. The last four moved here from the
-        /// tab, and are appended rather than interleaved because both halves of the contract pin this
-        /// list in order.</summary>
+        /// <summary>The eleven names of one matrix, in attachment order. The four that moved here from
+        /// the tab, and the flash switch after them, are appended rather than interleaved because both
+        /// halves of the contract pin this list in order.</summary>
         public static IEnumerable<string> FlagBoxMatrixProperties(int matrix)
         {
             yield return FlagBoxMatrixProperty(matrix, "Rest");
@@ -203,6 +208,7 @@ namespace OpenDashPlugin
             yield return FlagBoxMatrixProperty(matrix, "Gear");
             yield return FlagBoxMatrixProperty(matrix, "OilTemp");
             yield return FlagBoxMatrixProperty(matrix, "WaterTemp");
+            yield return FlagBoxMatrixProperty(matrix, "GearBlink");
         }
 
         /// <summary>Critical-flags-only off on every panel, and the gear on on every panel: the defaults
@@ -218,6 +224,13 @@ namespace OpenDashPlugin
         {
             var values = new bool[FlagBoxMatrices.Count];
             for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxGear;
+            return values;
+        }
+
+        public static bool[] DefaultFlagBoxGearBlinks()
+        {
+            var values = new bool[FlagBoxMatrices.Count];
+            for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxGearBlink;
             return values;
         }
 
@@ -765,6 +778,20 @@ namespace OpenDashPlugin
             return LapReviewProperty(FacePrefix(face));
         }
 
+        /// <summary>Property name of what a face carries at the top: Face1920x480RevBar. Per screen,
+        /// because a wheel whose rim already has LEDs across it and a display that has none are two
+        /// screens on one rig, and the rig-wide RevBar answered for both at once. The rig-wide name
+        /// stays attached as the fallback underneath it.</summary>
+        public static string RevBarProperty(string ns)
+        {
+            return ns + "RevBar";
+        }
+
+        public static string RevBarProperty(FaceSize face)
+        {
+            return RevBarProperty(FacePrefix(face));
+        }
+
         /// <summary>
         /// The actions a driver binds to a wheel button. Named as verbs, because a property is a noun:
         /// `OpenDash.QuickGlance` is what the glance is set to and `OpenDash.HoldQuickGlance` is the
@@ -909,6 +936,7 @@ namespace OpenDashPlugin
             // assert the group by index, so a new one joins the end of it.
             yield return FlagFormatProperty(ns);
             yield return LapReviewProperty(ns);
+            yield return RevBarProperty(ns);
         }
 
         public static IEnumerable<string> FacePropertyNames(FaceSize face)
@@ -1178,6 +1206,19 @@ namespace OpenDashPlugin
         /// </remarks>
         public static IEnumerable<string> PropertyNames(IEnumerable<ScreenInstance> screens)
         {
+            return PropertyNames(screens, null);
+        }
+
+        /// <summary>
+        /// Every property a rig of screens and a rig of LED bars attach, in attachment order.
+        /// </summary>
+        /// <remarks>
+        /// The bars come last, after the rig-wide light names they are instances of, for the reason the
+        /// screens come after the shared ones: an instance's group is appended and never interleaved, so
+        /// a rig with no bars declares exactly the list the pin holds.
+        /// </remarks>
+        public static IEnumerable<string> PropertyNames(IEnumerable<ScreenInstance> screens, IEnumerable<LedBar> bars)
+        {
             foreach (var name in SharedPropertyNames()) yield return name;
             if (screens != null)
             {
@@ -1188,6 +1229,12 @@ namespace OpenDashPlugin
                 }
             }
             foreach (var name in LightsPropertyNames()) yield return name;
+            if (bars == null) yield break;
+            foreach (var bar in bars)
+            {
+                if (bar == null || string.IsNullOrEmpty(bar.Namespace)) continue;
+                foreach (var name in LedBarProfile.Properties(bar.Namespace)) yield return name;
+            }
         }
 
         /// <summary>Every property of every screen OpenDash ships, which is what contract.ts declares
