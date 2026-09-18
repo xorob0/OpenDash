@@ -423,7 +423,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The census is what is embedded, which is the rule the Install tab's rows already follow: a
         /// shape this build does not carry is not offered and cannot be added as a bar whose profile does
-        /// not exist. The wirings are left out -- a reversed or Fanalab profile is the same geometry
+        /// not exist. The wirings are left out -- a reversed or Fanatec profile is the same geometry
         /// wired another way and has no place in a question about how many LEDs there are.
         /// </remarks>
         private static IList<EmbeddedShape> EmbeddedShapes()

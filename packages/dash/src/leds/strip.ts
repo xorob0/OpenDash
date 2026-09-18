@@ -32,8 +32,8 @@ export interface StripShape {
    * them.
    *
    * A list rather than a "reversed" flag because the far end is not the only way a device differs:
-   * a Fanatec wheel read through Fanalab presents its runs in an order that is no reversal of
-   * anything, and a boolean cannot say it.
+   * a Fanatec wheel presents its runs in an order that is no reversal of anything, and a boolean
+   * cannot say it.
    */
   positions?: readonly number[];
   /**
@@ -63,20 +63,26 @@ export const rightStart = (s: StripShape): number => s.left + s.centre + 1;
 export const reversedPositions = (length: number): readonly number[] => Array.from({ length }, (_, i) => length - i);
 
 /**
- * Logical-to-physical positions for a wheel read through Fanalab, which presents the centre's rev
- * LEDs first, then the right-hand flag LEDs from the outside in, then the left-hand ones.
+ * Logical-to-physical positions for a Fanatec wheel as SimHub's own Fanatec device presents it: the
+ * centre's rev LEDs first, then the right-hand flag LEDs from the inside out, then the left-hand
+ * ones.
  *
- * Read off DNR's own `RemapGroup` rather than measured here: nobody on this project owns the wheel,
- * so the order is the best evidence available and not a confirmed fact, which is why it ships as a
- * shape of its own and not as a correction to one people have installed.
+ * **Measured, not inferred.** A working `Any Game - Daniel Newman Racing - Fanatec 3-9-3.ledsprofile`
+ * from a rig with the wheel opens with exactly this `Groups.RemapGroup`:
  *
- * Two things a rig would settle and this cannot. The direction is the one `LedRemapGroup` states,
- * `positions[i]` being the physical LED that logical `i` paints; were SimHub to mean the inverse,
- * every lamp would land on the far side of the wheel and the correction would be to invert this one
- * function. And the left group is read as running outside in, as the right one does, which is what
- * the review's wording carries rather than something measured.
+ *     13, 14, 15,  1, 2, 3, 4, 5, 6, 7, 8, 9,  12, 11, 10
+ *
+ * which is what this function returns for 3/9/3, position for position. So the device is not a
+ * fifteen-LED run at all: physical 1-9 are the nine RevLEDs and physical 10-15 are the six FlagLEDs,
+ * three per side with the right-hand group wired inwards. A profile that ignores this paints the revs
+ * across physical 4-12 -- half of the rev cluster and half of the flag LEDs -- which is why the plain
+ * 3/9/3 lights "only some of them" and starts the bar from the middle of the wheel.
+ *
+ * It is SimHub's own Fanatec LED device and not Fanalab, which is the correction this replaces: the
+ * profile above drives the wheel through SimHub with Fanalab nowhere in it, and captioning the shape
+ * for Fanalab sent the one person with the hardware past the only profile that would have worked.
  */
-export const fanalabPositions = (s: StripShape): readonly number[] => [
+export const fanatecPositions = (s: StripShape): readonly number[] => [
   ...Array.from({ length: s.left }, (_, i) => s.centre + s.right + 1 + i),
   ...Array.from({ length: s.centre }, (_, i) => i + 1),
   // Counted from the innermost, because logical position climbs inwards to outwards on the right.
@@ -109,16 +115,16 @@ const wheel = (left: number, centre: number, right: number, { reversed, ...extra
 };
 
 /**
- * The same geometry as its plain sibling, wired the way Fanalab presents it.
+ * The same geometry as its plain sibling, wired the way a Fanatec wheel presents it.
  *
  * A second row rather than a correction to the first. A profile's identity reaches the panel through
  * its file name, so changing the existing 3/9/3's physical order would silently relight every wheel
- * that has it installed — including the Simucube, Cammus and Moza wheels of that shape, which are
+ * that has it installed -- including the Simucube, Cammus and Moza wheels of that shape, which are
  * wired in order and would break. The reversed 4/14/4 beside the plain one is the precedent.
  */
-const fanalab = (left: number, centre: number, right: number, extra: WheelOptions = {}): StripShape => {
+const fanatec = (left: number, centre: number, right: number, extra: WheelOptions = {}): StripShape => {
   const base = wheel(left, centre, right, extra);
-  return { ...base, id: `${base.id}-fanalab`, label: `${base.label} Fanalab`, positions: fanalabPositions(base) };
+  return { ...base, id: `${base.id}-fanatec`, label: `${base.label} Fanatec`, positions: fanatecPositions(base) };
 };
 
 /**
@@ -168,12 +174,18 @@ export const GRID_SHAPES: readonly StripShape[] = [
  * from here and this list only ever shrinks. Three of them are geometries the ranges do not reach --
  * a centre of fourteen, a side of five -- and two are wirings rather than geometries, which is why
  * they sit beside their plain siblings rather than replacing them.
+ *
+ * A wiring stays a named row while the geometry is a grid, and that is not an inconsistency. How many
+ * LEDs a strip has is something its owner can count; the order the maker wired them in is not, and
+ * generating a remapped twin of all forty-five sided shapes would offer forty-four profiles no device
+ * on earth answers to. A wiring is evidence about one product, and it is added when somebody produces
+ * that evidence.
  */
 export const LEGACY_SHAPES: readonly StripShape[] = [
   wheel(4, 14, 4, { devices: ['SimRep Engineering MLD', 'Ascher Racing'] }),
   wheel(4, 14, 4, { reversed: true, devices: ['SimRep Engineering MLD, wired from the far end'] }),
   wheel(3, 10, 3, { devices: ['GridSim Lab GTSL Pro'], extraRuns: { count: 2, length: 9 } }),
-  fanalab(3, 9, 3, { devices: ['Fanatec ClubSport / Podium wheels driven through Fanalab'] }),
+  fanatec(3, 9, 3, { devices: ['Fanatec ClubSport / Podium wheels, on the Fanatec LED device in SimHub'] }),
   wheel(5, 10, 5, { devices: ['generic WS2812b runs'] }),
 ];
 

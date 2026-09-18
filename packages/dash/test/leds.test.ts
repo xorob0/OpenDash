@@ -81,7 +81,7 @@ describe('the strip shapes', () => {
     // themselves in somebody else's list. What is still named is what falls outside the ranges.
     for (const shape of GRID_SHAPES) expect({ id: shape.id, devices: shape.devices }).toMatchObject({ devices: undefined });
     for (const shape of LEGACY_SHAPES) expect({ id: shape.id, named: (shape.devices?.length ?? 0) > 0 }).toMatchObject({ named: true });
-    expect(shapeById('3-9-3-fanalab')?.devices).toContain('Fanatec ClubSport / Podium wheels driven through Fanalab');
+    expect(shapeById('3-9-3-fanatec')?.devices).toContain('Fanatec ClubSport / Podium wheels, on the Fanatec LED device in SimHub');
     expect(shapeById('4-14-4')?.devices).toContain('SimRep Engineering MLD');
     expect(shapeById('3-10-3')?.extraRuns).toEqual({ count: 2, length: 9 });
     // A brow is a bare run, which is what the grid calls it: 0/15/0 and no idea of its own.
@@ -103,17 +103,17 @@ describe('the strip shapes', () => {
     expect(leds.containerTypeOf(profileFor('4-14-4').containers[0]!)).toBe('Groups.GameRunningGroup');
   });
 
-  test('the Fanalab order is a remap too, and it is no reversal of anything', () => {
-    const shape = shapeById('3-9-3-fanalab')!;
-    // The device presents the nine rev LEDs first, then the right flag LEDs from the outside in,
-    // then the left. `positions[i]` is the physical LED logical `i` paints, so the centre's nine
-    // land on physical 1..9, the right side's outermost on physical 10 and the left side's on 13.
+  test('the Fanatec order is a remap too, and it is no reversal of anything', () => {
+    const shape = shapeById('3-9-3-fanatec')!;
+    // Read off a working DNR profile from a rig with the wheel, whose RemapGroup opens with exactly
+    // this list. The device presents its nine RevLEDs first and its six FlagLEDs after, three a side
+    // with the right-hand group wired inwards; `positions[i]` is the physical LED logical `i` paints.
     expect(shape.positions).toEqual([13, 14, 15, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 11, 10]);
     expect(shape.positions).not.toEqual(reversedPositions(15));
     // Every physical LED of the device is painted by exactly one logical one, or a lamp lands nowhere.
     expect(new Set(shape.positions!).size).toBe(deviceLength(shape));
 
-    const p = profileFor('3-9-3-fanalab');
+    const p = profileFor('3-9-3-fanatec');
     expect(leds.containerTypeOf(p.containers[0]!)).toBe('Groups.RemapGroup');
     // The plain 3/9/3 keeps its own order: the Simucube, Cammus and Moza wheels of that shape are
     // wired in order, and a driver who installed it must not have it relit underneath them.
@@ -124,7 +124,7 @@ describe('the strip shapes', () => {
   test('only a shape the maker wired in an order of its own is remapped, and it covers every LED of the device', () => {
     // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
     // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
-    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual(['3-9-3-fanalab', '4-14-4-reversed']);
+    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual(['3-9-3-fanatec', '4-14-4-reversed']);
     // SetResultBase indexes Positions[i] for every lit LED, so a list shorter than the run throws
     // once per frame. The validator catches it, and this catches a row that forgot to grow.
     for (const s of ALL_SHAPES.filter((s) => s.positions)) {

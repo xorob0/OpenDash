@@ -29,6 +29,12 @@ namespace OpenDashPlugin
 
         public string Reason { get; set; }
 
+        /// <summary>Whether the new plugin is staged and will be put in place when SimHub closes.</summary>
+        public bool PluginStaged { get; set; }
+
+        /// <summary>Why the plugin could not be staged, when the dashboards went in and it did not.</summary>
+        public string PluginReason { get; set; }
+
         /// <summary>What to tell the user afterwards, including the reopen sentence when anything changed.</summary>
         public string Line
         {
@@ -40,11 +46,17 @@ namespace OpenDashPlugin
                     // What did land still has to be said, or a person cannot tell what state they are in.
                     return Updated.Count == 0 ? failure : failure + " " + Updated.Count + " of them were replaced before it stopped. " + UpdateWording.Reopen;
                 }
-                if (Updated.Count == 0 && HeldBack.Count > 0) return "Nothing was replaced, because every dashboard has been edited since OpenDash wrote it.";
-                if (Updated.Count == 0) return "There was nothing to replace.";
-                var line = Updated.Count == 1 ? "Updated 1 dashboard. " : "Updated " + Updated.Count + " dashboards. ";
-                if (HeldBack.Count > 0) line += (HeldBack.Count == 1 ? "1 was left alone because it has been edited. " : HeldBack.Count + " were left alone because they have been edited. ");
+                var line = Updated.Count == 1 ? "Updated 1 dashboard. " : Updated.Count > 1 ? "Updated " + Updated.Count + " dashboards. " : string.Empty;
+                if (Updated.Count == 0 && HeldBack.Count > 0) line = "No dashboard was replaced, because every dashboard has been edited since openDash wrote it. ";
+                else if (Updated.Count == 0 && !PluginStaged) return "There was nothing to replace.";
+                else if (Updated.Count == 0) line = "The dashboards were already up to date. ";
+                if (Updated.Count > 0 && HeldBack.Count > 0) line += (HeldBack.Count == 1 ? "1 was left alone because it has been edited. " : HeldBack.Count + " were left alone because they have been edited. ");
                 if (NotCarried.Count > 0) line += (NotCarried.Count == 1 ? "1 is not in this release and was not touched. " : NotCarried.Count + " are not in this release and were not touched. ");
+                // The restart sentence replaces the reopen one rather than joining it: a plugin that is
+                // about to be swapped makes "SimHub does not need restarting" false, and of the two
+                // instructions the restart is the one that also reopens the dashboard.
+                if (PluginStaged) return line + UpdateWording.Restart;
+                if (PluginReason != null) line += "openDash itself could not be updated (" + PluginReason + "). ";
                 return line + UpdateWording.Reopen;
             }
         }
@@ -137,7 +149,12 @@ namespace OpenDashPlugin
             if (installer == null || release == null) return new UpdateOutcome { Reason = "there is nothing to apply" };
 
             var plan = UpdatePlan.For(installer.Packages, release);
-            if (plan.IsEmpty)
+            // The plugin is fetched with the packages and not instead of them. A release that moves a
+            // property name moves the dashboard that reads it in the same release, so updating one half
+            // and not the other is the mismatch this whole path exists to avoid -- and it fails silently,
+            // as a field drawing its fallback for ever with nothing in any log.
+            var pluginAsset = release.PluginAsset();
+            if (plan.IsEmpty && pluginAsset == null)
             {
                 return new UpdateOutcome { Ok = true, NotCarried = plan.NotCarried };
             }
@@ -146,8 +163,28 @@ namespace OpenDashPlugin
             // Each download owns one slice of the first half, and reports inside its own slice as its bytes arrive.
             // A package is a few megabytes over a home connection, so a bar that moved only between packages would
             // stand still for the part of the run that actually takes the time.
-            var slice = 0.5 / plan.Items.Count;
+            var downloads = plan.Items.Count + (pluginAsset == null ? 0 : 1);
+            var slice = 0.5 / downloads;
             var fetchedSoFar = 0;
+
+            // The plugin first, and a failure to get it stops the run before anything on disk is touched.
+            // That is the same rule the packages already follow, applied to the half that cannot be
+            // rolled back by reinstalling: staging it after the dashboards had gone in would leave a
+            // machine whose plugin is a release behind its packages with no way back but a manual
+            // download.
+            byte[] pluginBytes = null;
+            if (pluginAsset != null)
+            {
+                var fetched = source.GetBytes(pluginAsset.DownloadUrl, within => progress?.Invoke(within * slice));
+                if (!fetched.Ok) return new UpdateOutcome { Reason = "openDash itself could not be downloaded (" + fetched.Reason + ")" };
+                if (!Digest.Matches(fetched.Bytes, pluginAsset.Digest))
+                {
+                    return new UpdateOutcome { Reason = "openDash itself did not arrive as GitHub published it, so nothing was installed" };
+                }
+                pluginBytes = fetched.Bytes;
+                fetchedSoFar++;
+            }
+
             foreach (var item in plan.Items)
             {
                 var from = fetchedSoFar * slice;
@@ -161,10 +198,16 @@ namespace OpenDashPlugin
                 fetchedSoFar++;
             }
 
+            // Staged before the dashboards are written, because staging is a file written beside the one
+            // in use and changes nothing until SimHub exits; the swap itself is PluginUpdate's, out of
+            // this process entirely.
+            var staged = pluginBytes == null ? null : PluginUpdate.Stage(pluginBytes, installer.SimHubRoot, log);
+
             // Everything is in hand before anything on disk is touched, so a download that fails half way through
             // leaves the machine as it was rather than half updated.
             var target = new DashboardInstaller(installer.SimHubRoot, log, downloaded, installer.Record);
-            target.EnsureInstalled(force: true, replaceEdited: replaceEdited, progress: within => progress?.Invoke(0.5 + within * 0.5));
+            if (plan.IsEmpty) progress?.Invoke(1);
+            else target.EnsureInstalled(force: true, replaceEdited: replaceEdited, progress: within => progress?.Invoke(0.5 + within * 0.5));
 
             // A package that failed to install is a failure, whatever the others did. Reporting Ok because the run
             // finished, and putting the reason in a field the wording ignored, told a user their dashboards were
@@ -183,6 +226,8 @@ namespace OpenDashPlugin
                 Failed = failed,
                 NotCarried = plan.NotCarried,
                 Reason = failed.Count == 0 ? null : (target.LastError ?? string.Join(", ", failed) + " could not be installed"),
+                PluginStaged = staged != null && staged.Ok,
+                PluginReason = staged == null || staged.Ok ? null : staged.Error,
             };
         }
 

@@ -38,7 +38,7 @@ namespace OpenDashPlugin.Tests
             for (var centre = 13; centre <= 25; centre++) ids.Add("0-" + centre + "-0");
             // 3-10-3 is in the grid's own range and the legacy row spells it, so it appears once.
             ids.Remove("3-10-3");
-            ids.AddRange(new[] { "4-14-4", "4-14-4-reversed", "3-10-3", "3-9-3-fanalab", "5-10-5" });
+            ids.AddRange(new[] { "4-14-4", "4-14-4-reversed", "3-10-3", "3-9-3-fanatec", "5-10-5" });
             // Shuffled, because FlagBoxProfile.StripResourceNames hands them over in the assembly's own
             // order and the row order must not depend on it.
             return ids
@@ -56,7 +56,7 @@ namespace OpenDashPlugin.Tests
                 {
                     "openDash 4/14/4",
                     "openDash 4/14/4 reversed",
-                    "openDash 3/9/3 Fanalab",
+                    "openDash 3/9/3 Fanatec",
                     "openDash 3/10/3",
                     "openDash 0/4/0 … 0/25/0",
                     "openDash 1/4/1 … 1/12/1",
@@ -71,7 +71,7 @@ namespace OpenDashPlugin.Tests
                 {
                     "strip · SimRep MLD, Ascher",
                     "strip · SimRep MLD, wired from the far end",
-                    "strip · Fanatec through Fanalab",
+                    "strip · Fanatec wheels in SimHub",
                     // Eight and not nine: 3/10/3 is a named shape and has a row of its own above.
                     "strip · GridSim Lab GTSL Pro",
                     "bare runs and brows, 22 lengths",
@@ -252,11 +252,11 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The shapes the generator still names a device for, read off the `wheel(...)` and
-        /// `fanalab(...)` rows of LEGACY_SHAPES. The grid names none: it is sides against centres and the
+        /// `fanatec(...)` rows of LEGACY_SHAPES. The grid names none: it is sides against centres and the
         /// panel groups it by side, so there is nothing left to caption by hardware.</summary>
         /// <remarks>
         /// A row's id is its geometry plus whatever suffix its spelling adds, which is the one thing about
-        /// strip.ts this has to know twice. `wheel(..., { reversed: true })` and `fanalab(...)` are the two
+        /// strip.ts this has to know twice. `wheel(..., { reversed: true })` and `fanatec(...)` are the two
         /// wirings that make a second profile of one geometry, so both are read here or the caption mirror
         /// below would see two shapes claiming the same id.
         /// </remarks>
@@ -264,14 +264,14 @@ namespace OpenDashPlugin.Tests
         {
             var text = File.ReadAllText(StripTs());
             var shapes = new List<GeneratedShape>();
-            foreach (Match row in Regex.Matches(text, @"^\s*(wheel|fanalab)\((\d+), (\d+), (\d+)(?:, \{(.*)\})?\),\s*$", RegexOptions.Multiline))
+            foreach (Match row in Regex.Matches(text, @"^\s*(wheel|fanatec)\((\d+), (\d+), (\d+)(?:, \{(.*)\})?\),\s*$", RegexOptions.Multiline))
             {
                 var options = row.Groups[5].Value;
                 shapes.Add(new GeneratedShape
                 {
                     Id = row.Groups[2].Value + "-" + row.Groups[3].Value + "-" + row.Groups[4].Value
                         + (options.Contains("reversed: true") ? "-reversed" : string.Empty)
-                        + (row.Groups[1].Value == "fanalab" ? "-fanalab" : string.Empty),
+                        + (row.Groups[1].Value == "fanatec" ? "-fanatec" : string.Empty),
                     Devices = Devices(options),
                 });
             }
@@ -380,7 +380,7 @@ namespace OpenDashPlugin.Tests
                 {
                     "openDash 4/14/4",
                     "openDash 4/14/4 reversed",
-                    "openDash 3/9/3 Fanalab",
+                    "openDash 3/9/3 Fanatec",
                     "openDash 3/10/3",
                     "openDash 0/4/0 … 0/25/0",
                     "openDash 1/4/1 … 1/12/1",
