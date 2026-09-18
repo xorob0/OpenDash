@@ -17,7 +17,7 @@ import {
   secondScreen,
   secondScreenProperties,
 } from '../src/contract.ts';
-import { validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { ncalc, validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
 import { MODULES, pageBuilder } from '../src/modules/index.ts';
@@ -741,6 +741,20 @@ describe('the small text that follows a value', () => {
     const valueEnd = monoWidth(cells('SemiBold', 64), { digits: 3, specials: 1 });
     expect(followerOf({ text: 'L' }, 64).rect.left).toBe(Math.round(valueEnd + UNIT_GAP));
     expect(followerOf({ kind: 'denominator', text: '/ 24' }, 64).rect.left).toBe(Math.round(valueEnd + DENOMINATOR_GAP));
+  });
+
+  /**
+   * The unit is where a binding draws a string the box was never measured for. `L` and `gal` are
+   * the pair: nine pixels of box against the twenty-four `GAL` wants, and the box was the one the
+   * author typed. Nothing could have caught it, the fit checks measuring the sample the item
+   * carries, so the declaration is made compulsory rather than checked afterwards.
+   */
+  test('a bound unit is measured by the widest it declares', () => {
+    expect(followerOf({ text: 'L', bind: ncalc.str('gal'), widest: 'gal' }, 64).rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText('BarlowMedium', 'GAL', ds.size.labelSm)));
+  });
+
+  test('and a bound unit that declares none is refused rather than measured on its sample', () => {
+    expect(() => followerOf({ text: 'L', bind: ncalc.str('gal') }, 64)).toThrow(/bound and declares no widest/);
   });
 
   test('a denominator is a numeral at 0.7 of the value it follows', () => {
