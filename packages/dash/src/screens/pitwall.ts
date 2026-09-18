@@ -407,10 +407,10 @@ export function racePage(width: number, height: number): Screen {
     y += 1;
   }
   const zoneHeight = Math.floor((bodyTop + bodyHeight - y - 1) / 2);
-  items.push(zoneWidget('race.zoneA', rect(columnLeft, y, columnWidth, zoneHeight), 'standard', 'A'));
+  items.push(zoneWidget('race.zoneA', rect(columnLeft, y, columnWidth, zoneHeight), 'standard', 'race', 'A'));
   items.push(rule('race.zoneRule', columnLeft, y + zoneHeight, columnWidth, 1));
-  items.push(zoneWidget('race.zoneB', rect(columnLeft, y + zoneHeight + 1, columnWidth, zoneHeight), 'standard', 'B'));
-  return { name: 'race', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
+  items.push(zoneWidget('race.zoneB', rect(columnLeft, y + zoneHeight + 1, columnWidth, zoneHeight), 'standard', 'race', 'B'));
+  return { name: 'race', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(0) };
 }
 
 /** The tower page: a compact field list, the track, and three zones. */
@@ -431,13 +431,13 @@ export function towerPage(width: number, height: number): Screen {
     vRule('tower.columnRule', boardWidth, bodyTop, bodyHeight),
     ...trackPanel('tower.track', rect(columnLeft, bodyTop, columnWidth, trackHeight)),
     rule('tower.trackRule', columnLeft, bodyTop + trackHeight, columnWidth, 1),
-    zoneWidget('tower.wide', rect(columnLeft, bodyTop + trackHeight + 1, columnWidth, wideHeight), 'wide', 'wide'),
+    zoneWidget('tower.wide', rect(columnLeft, bodyTop + trackHeight + 1, columnWidth, wideHeight), 'wide', 'tower', 'Wide'),
     rule('tower.wideRule', columnLeft, bodyTop + trackHeight + 1 + wideHeight, columnWidth, 1),
-    zoneWidget('tower.zoneC', rect(columnLeft, zonesTop, zoneWidth, zoneHeight), 'standard', 'C'),
+    zoneWidget('tower.zoneA', rect(columnLeft, zonesTop, zoneWidth, zoneHeight), 'standard', 'tower', 'A'),
     vRule('tower.zoneRule', columnLeft + zoneWidth, zonesTop, zoneHeight),
-    zoneWidget('tower.zoneD', rect(columnLeft + zoneWidth + 1, zonesTop, zoneWidth, zoneHeight), 'standard', 'D'),
+    zoneWidget('tower.zoneB', rect(columnLeft + zoneWidth + 1, zonesTop, zoneWidth, zoneHeight), 'standard', 'tower', 'B'),
   ];
-  return { name: 'tower', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
+  return { name: 'tower', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(1) };
 }
 
 /** The telemetry page: the traces of the last minute of driving, and three zones beside them. */
@@ -477,10 +477,10 @@ export function telemetryPage(width: number, height: number): Screen {
   const zoneHeight = Math.floor((bodyHeight - 2) / 3);
   (['A', 'B', 'C'] as const).forEach((letter, i) => {
     const top = bodyTop + i * (zoneHeight + 1);
-    items.push(zoneWidget(`telemetry.zone${letter}`, rect(zoneLeft, top, zoneWidth, zoneHeight), 'standard', letter));
+    items.push(zoneWidget(`telemetry.zone${letter}`, rect(zoneLeft, top, zoneWidth, zoneHeight), 'standard', 'telemetry', letter));
     if (i < 2) items.push(rule(`telemetry.zone${letter}.rule`, zoneLeft, top + zoneHeight, zoneWidth, 1));
   });
-  return { name: 'telemetry', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
+  return { name: 'telemetry', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(2) };
 }
 
 /**
@@ -528,13 +528,13 @@ export function portraitPage(width: number, height: number): Screen {
     vRule('portrait.panelRule', half, panelTop, panelHeight),
     ...lapDataPanel('portrait.lapData', rect(half + 1, panelTop, rightWidth, panelHeight)),
     rule('portrait.panelBottomRule', 0, panelTop + panelHeight, width, 1),
-    zoneWidget('portrait.zoneA', rect(0, zonesTop, half, zoneHeight), 'standard', 'A'),
+    zoneWidget('portrait.zoneA', rect(0, zonesTop, half, zoneHeight), 'standard', 'portrait', 'A'),
     vRule('portrait.zoneRuleTop', half, zonesTop, zoneHeight),
-    zoneWidget('portrait.zoneB', rect(half + 1, zonesTop, rightWidth, zoneHeight), 'standard', 'B'),
+    zoneWidget('portrait.zoneB', rect(half + 1, zonesTop, rightWidth, zoneHeight), 'standard', 'portrait', 'B'),
     rule('portrait.zoneRuleMiddle', 0, zonesTop + zoneHeight, width, 1),
-    zoneWidget('portrait.zoneC', rect(0, zonesTop + zoneHeight + 1, half, zoneHeight), 'standard', 'C'),
+    zoneWidget('portrait.zoneC', rect(0, zonesTop + zoneHeight + 1, half, zoneHeight), 'standard', 'portrait', 'C'),
     vRule('portrait.zoneRuleBottom', half, zonesTop + zoneHeight + 1, zoneHeight),
-    zoneWidget('portrait.zoneD', rect(half + 1, zonesTop + zoneHeight + 1, rightWidth, zoneHeight), 'standard', 'D'),
+    zoneWidget('portrait.zoneD', rect(half + 1, zonesTop + zoneHeight + 1, rightWidth, zoneHeight), 'standard', 'portrait', 'D'),
   ];
   return { name: 'portrait', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
 }
@@ -552,7 +552,19 @@ export const PIT_WALL_SIZES: readonly PitWallSize[] = [
   { folder: 'openDash Pit wall portrait', width: 1080, height: 1920, description: '1080 x 1920, one page', portrait: true },
 ];
 
-/** The pit wall dashboard: three landscape pages, or the one portrait page. */
+/**
+ * The pit wall dashboard: three landscape pages, or the one portrait page.
+ *
+ * **Only one landscape page is live at a time**, chosen by `PitWallPage`, which the plugin sets from
+ * `PitWallStartPage` when SimHub starts and a bindable action moves. That is what makes "which type I
+ * want as default" answerable at all: a dashboard opens on the first screen whose expression is true,
+ * and nothing else about a screen can be made to depend on a setting.
+ *
+ * The cost is that SimHub's own next-screen navigation no longer walks the three, because it skips a
+ * screen whose expression is false; the openDash action replaces it and can be bound to a key as well
+ * as to a wheel button. It is the same mechanism the companion has used since it shipped, for the same
+ * reason, and `secondScreen.moduleShown` is where that is written down.
+ */
 export function pitWallDashboard(size: PitWallSize, metadata: DashboardMetadata): Dashboard {
   const screens = size.portrait ? [portraitPage(size.width, size.height)] : [racePage(size.width, size.height), towerPage(size.width, size.height), telemetryPage(size.width, size.height)];
   return { name: size.folder, width: size.width, height: size.height, backgroundColor: ds.color.surface.base, screens, metadata };

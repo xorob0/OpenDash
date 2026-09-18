@@ -176,7 +176,7 @@ describe('the guards bite', () => {
     // A companion page is a screen behind an enabled expression rather than a widget, so that is
     // where the reading happens and where the rule has to bite.
     const screen = pkg.dashboards[0]!.screens[0]!;
-    screen.enabledExpression = `isnull([${PROPERTY_PREFIX}.PitWallZoneA], 0) > 0`;
+    screen.enabledExpression = `isnull([${PROPERTY_PREFIX}.PitWallRaceA], 0) > 0`;
 
     const codes = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreignProperties(COMPANION_PREFIX) }).errors.map((e) => e.code);
     expect(codes).toContain('property/another-screens');

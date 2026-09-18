@@ -29,8 +29,8 @@ import {
   FLAG_BOX_LOW_FUEL_LAPS_SETTING,
   FLAG_BOX_MATRICES,
   LIGHTS_LOW_FUEL_LAPS_SETTING,
-  PIT_WALL_DEFAULT_WIDE_ZONE_PAGE,
-  PIT_WALL_DEFAULT_ZONE_PAGES,
+  PIT_WALL_PAGES,
+  pitWallZoneSettingNames,
   MODULE_CATALOGUE,
   MODULE_COUNT,
   moduleAt,
@@ -38,6 +38,7 @@ import {
   moduleSettingName,
   secondScreen,
   PIT_WALL_WIDE_ZONE_PAGES,
+  allPitWallZoneSettingNames,
   PIT_WALL_ZONE_LETTERS,
   PIT_WALL_ZONE_PAGES,
   pitWallZoneSettingName,
@@ -115,7 +116,18 @@ describe('settings', () => {
     // The lone 2 is RevBar and the blue flag detail, which every screen shares with the four modes
     // and the twelve slots.
     expect(props).toHaveLength(
-      4 + SLOT_MAX + 2 + FACE_SIZES.length * perFace + MODULE_COUNT + 1 + PIT_WALL_ZONE_LETTERS.length + 3 + flagBoxProperties().length + ledProperties().length,
+      4 +
+        SLOT_MAX +
+        2 +
+        FACE_SIZES.length * perFace +
+        MODULE_COUNT +
+        1 +
+        // Every zone of every pit wall page, then the page it opens on, the page it is showing, the
+        // web view address and the class filter.
+        allPitWallZoneSettingNames().length +
+        4 +
+        flagBoxProperties().length +
+        ledProperties().length,
     );
     // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
     // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
@@ -127,8 +139,10 @@ describe('settings', () => {
     // packed run for each of the ten lengths a strip's centre can be, 292 before each matrix was
     // given its own answer to whether the digit flashes through the redline, 296 before each face was
     // given its own answer to what it carries at the top, and 304 before the strip shapes became a
-    // grid and the mirror had to publish a run for every centre the grid reaches.
-    expect(props).toHaveLength(317);
+    // grid and the mirror had to publish a run for every centre the grid reaches, and 317 before a
+    // pit wall zone belonged to a page: four zones and a wide one became twelve, and the pit wall
+    // gained the page it opens on and the page it is showing.
+    expect(props).toHaveLength(326);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -155,7 +169,24 @@ describe('settings', () => {
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat|LapReview)/.test(p))).toEqual([]);
     const lights = flagBoxProperties().length + ledProperties().length;
-    expect(props.slice(-(lights + 7), -lights)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl', 'OpenDash.PitWallClassOnly']);
+    expect(props.slice(-(lights + 16), -lights)).toEqual([
+      'OpenDash.PitWallRaceA',
+      'OpenDash.PitWallRaceB',
+      'OpenDash.PitWallTowerWide',
+      'OpenDash.PitWallTowerA',
+      'OpenDash.PitWallTowerB',
+      'OpenDash.PitWallTelemetryA',
+      'OpenDash.PitWallTelemetryB',
+      'OpenDash.PitWallTelemetryC',
+      'OpenDash.PitWallPortraitA',
+      'OpenDash.PitWallPortraitB',
+      'OpenDash.PitWallPortraitC',
+      'OpenDash.PitWallPortraitD',
+      'OpenDash.PitWallStartPage',
+      'OpenDash.PitWallPage',
+      'OpenDash.WebViewUrl',
+      'OpenDash.PitWallClassOnly',
+    ]);
     // One filter for the screen and not one per zone: a pit wall zone is a widget pointed at one
     // dashboard file per rectangle, so zones A and B of the race page are the same file.
     expect(secondScreen.classOnly()).toBe('isnull([OpenDash.PitWallClassOnly], false)');
@@ -230,7 +261,7 @@ describe('settings', () => {
     const own = facePrefix(FACE_SIZES[0]!);
     expect(foreignProperties(own)).not.toContain('OpenDash.Face1920x480ZoneA');
     expect(foreignProperties(own)).toContain('OpenDash.Face850x480ZoneA');
-    expect(foreignProperties(own)).toContain('OpenDash.PitWallZoneA');
+    expect(foreignProperties(own)).toContain('OpenDash.PitWallRaceA');
     // A card face owns nothing and every group is foreign to it.
     expect(foreignProperties()).toHaveLength(owned.length);
     expect(() => screenProperties('Face1x1')).toThrow(RangeError);
@@ -435,7 +466,8 @@ describe('the second screens', () => {
   test('module settings are two-digit and zero-padded', () => {
     expect(moduleSettingName(1)).toBe('CompanionModule01');
     expect(moduleSettingName(21)).toBe('CompanionModule21');
-    expect(pitWallZoneSettingName('A')).toBe('PitWallZoneA');
+    expect(pitWallZoneSettingName('race', 'A')).toBe('PitWallRaceA');
+    expect(pitWallZoneSettingName('tower', 'Wide')).toBe('PitWallTowerWide');
   });
 
   test('every zone page names a module, save the web view', () => {
@@ -449,19 +481,38 @@ describe('the second screens', () => {
     for (const page of PIT_WALL_WIDE_ZONE_PAGES) expect(page.id === 'web' || page.id === 'carTelemetry' || ids.has(page.id)).toBe(true);
   });
 
-  test('the defaults name real pages', () => {
-    for (const letter of PIT_WALL_ZONE_LETTERS) expect(PIT_WALL_ZONE_PAGES[PIT_WALL_DEFAULT_ZONE_PAGES[letter]]).toBeDefined();
-    expect(PIT_WALL_ZONE_PAGES[PIT_WALL_DEFAULT_ZONE_PAGES.A]?.id).toBe('fuel');
-    expect(PIT_WALL_ZONE_PAGES[PIT_WALL_DEFAULT_ZONE_PAGES.C]?.id).toBe('relative');
-    expect(PIT_WALL_WIDE_ZONE_PAGES[PIT_WALL_DEFAULT_WIDE_ZONE_PAGE]?.id).toBe('carTelemetry');
+  test('every zone belongs to one page, and its fallback names a real page of its own kind', () => {
+    for (const page of PIT_WALL_PAGES) {
+      for (const slot of page.zones) {
+        const catalogue = slot.kind === 'wide' ? PIT_WALL_WIDE_ZONE_PAGES : PIT_WALL_ZONE_PAGES;
+        expect({ page: page.id, slot: slot.slot, page_exists: catalogue[slot.fallback] !== undefined }).toMatchObject({ page_exists: true });
+      }
+    }
+    expect(PIT_WALL_ZONE_PAGES[2]?.id).toBe('opponents');
+    expect(PIT_WALL_WIDE_ZONE_PAGES[5]?.id).toBe('carTelemetry');
+  });
+
+  /**
+   * The bug this split fixes: the race page's zone A and the telemetry page's zone A were one
+   * setting, so pointing one somewhere moved the other with it and no part of the panel said so.
+   */
+  test('no two zones of two pages share a setting', () => {
+    const names = PIT_WALL_PAGES.flatMap((page) => page.zones.map((z) => pitWallZoneSettingName(page.id, z.slot)));
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toContain('PitWallRaceA');
+    expect(names).toContain('PitWallTelemetryA');
+    // And a package reads only the settings of the pages it draws.
+    expect(pitWallZoneSettingNames(true)).not.toContain('PitWallPortraitA');
+    expect(pitWallZoneSettingNames(false)).toEqual(['PitWallPortraitA', 'PitWallPortraitB', 'PitWallPortraitC', 'PitWallPortraitD']);
   });
 
   test('a module reads as a number, so SimHub can treat it as a screen switch', () => {
     // SimHub enables a screen when its expression evaluates above zero; a boolean converts to 1.
     expect(secondScreen.moduleEnabled(1)).toBe('isnull([OpenDash.CompanionModule01], 1)');
     expect(secondScreen.moduleEnabled(6)).toBe('isnull([OpenDash.CompanionModule06], 0)');
-    expect(secondScreen.zonePage('C')).toBe('isnull([OpenDash.PitWallZoneC], 4)');
-    expect(secondScreen.wideZonePage()).toBe('isnull([OpenDash.PitWallWide], 5)');
+    expect(secondScreen.zonePage('tower', 'A')).toBe('isnull([OpenDash.PitWallTowerA], 4)');
+    expect(secondScreen.zonePage('tower', 'Wide')).toBe('isnull([OpenDash.PitWallTowerWide], 5)');
+    expect(secondScreen.pitWallPageIs(1)).toBe('(isnull([OpenDash.PitWallPage], 0)) = (1)');
     expect(secondScreen.webViewUrl()).toBe("isnull([OpenDash.WebViewUrl], '')");
   });
 });

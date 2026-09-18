@@ -8,7 +8,7 @@
  * a box it was not drawn for would scale its type with it.
  */
 import type { Dashboard, DashboardMetadata, Item, Screen, WidgetItem } from '../generator.ts';
-import { secondScreen, PIT_WALL_WIDE_ZONE_PAGES, PIT_WALL_ZONE_PAGES, type PitWallZoneLetter, type PitWallZonePageMeta } from '../contract.ts';
+import { secondScreen, pitWallZoneSlot, PIT_WALL_WIDE_ZONE_PAGES, PIT_WALL_ZONE_PAGES, type PitWallPageMeta, type PitWallZonePageMeta } from '../contract.ts';
 import { rect } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { pageScreen, pagedDashboard, pagedWidget } from '../pagedDashboard.ts';
@@ -69,15 +69,28 @@ export function zoneDashboard(kind: ZoneKind, size: Size, metadata: DashboardMet
   });
 }
 
-/** A zone on a page: the widget that embeds the zone dashboard, its page bound to the setting. */
-export function zoneWidget(name: string, frame: { left: number; top: number; width: number; height: number }, kind: ZoneKind, letter: PitWallZoneLetter | 'wide'): WidgetItem {
+/**
+ * A zone on a page: the widget that embeds the zone dashboard, its page bound to that page's setting.
+ *
+ * The page id is half the address and the slot is the other half, because a zone belongs to a page:
+ * `race` A and `telemetry` A are two rectangles on two pages and two settings, where they used to be
+ * two rectangles reading one. The fallback is the slot's own, so a package with no plugin opens every
+ * zone on what its page was designed to show rather than on one list shared across all of them.
+ */
+export function zoneWidget(
+  name: string,
+  frame: { left: number; top: number; width: number; height: number },
+  kind: ZoneKind,
+  page: PitWallPageMeta['id'],
+  slot: string,
+): WidgetItem {
   const size = { width: frame.width, height: frame.height };
   return pagedWidget({
     name,
     rect: { ...frame },
     fileName: `${zoneDashboardName(kind, size)}.djson`,
-    initialScreenIndex: letter === 'wide' ? 5 : { A: 0, B: 1, C: 4, D: 2 }[letter],
-    page: letter === 'wide' ? secondScreen.wideZonePage() : secondScreen.zonePage(letter),
+    initialScreenIndex: pitWallZoneSlot(page, slot).fallback,
+    page: secondScreen.zonePage(page, slot),
     backgroundColor: TRANSPARENT,
   });
 }

@@ -19,6 +19,7 @@ import {
   secondScreenProperties,
 } from '../src/contract.ts';
 import { ncalc, validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { PIT_WALL_PAGES, type PitWallPageMeta } from '../src/contract.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
 import { MODULES, pageBuilder } from '../src/modules/index.ts';
@@ -292,11 +293,12 @@ describe('the pit wall', () => {
       .filter((i) => i.kind === 'widget')
       .map((i) => i.bindings?.InitialScreenIndex?.formula)
       .filter((f): f is string => typeof f === 'string');
-    expect(bound).toContain(secondScreen.zonePage('A'));
-    expect(bound).toContain(secondScreen.zonePage('B'));
-    expect(bound).toContain(secondScreen.zonePage('C'));
-    expect(bound).toContain(secondScreen.zonePage('D'));
-    expect(bound).toContain(secondScreen.wideZonePage());
+    // Every zone of every landscape page, each its own: the race page's A and the telemetry page's A
+    // are two settings, which is the whole of what the split fixed.
+    for (const page of PIT_WALL_PAGES.filter((p: PitWallPageMeta) => p.landscape)) {
+      for (const slot of page.zones) expect(bound).toContain(secondScreen.zonePage(page.id, slot.slot));
+    }
+    expect(new Set(bound).size).toBe(bound.length);
   });
 
   test('a zone dashboard holds every page of its kind, in the order the plugin lists them', () => {
@@ -421,7 +423,13 @@ describe('the contract', () => {
       }
     }
     const text = [...used].join(' ');
-    for (const p of secondScreenProperties()) expect({ p, read: text.includes(p) }).toEqual({ p, read: true });
+    // All but the one the plugin keeps to itself. `PitWallStartPage` is what a pit wall's live
+    // `PitWallPage` is set from when SimHub starts, and a package binding that read it instead would
+    // ignore the action that moves the page -- which is the same reason a face's own Start and glance
+    // settings are the plugin's and not a binding's.
+    const pluginOnly = new Set(['OpenDash.PitWallStartPage']);
+    for (const p of secondScreenProperties().filter((n) => !pluginOnly.has(n))) expect({ p, read: text.includes(p) }).toEqual({ p, read: true });
+    for (const p of pluginOnly) expect({ p, read: text.includes(p) }).toEqual({ p, read: false });
     // The dash settings are shared: the second screens read the modes too, but never a slot.
     expect(text).toContain('OpenDash.PositionMode');
     for (const p of dashProperties().filter((n) => n.includes('.Slot'))) expect(text).not.toContain(p);

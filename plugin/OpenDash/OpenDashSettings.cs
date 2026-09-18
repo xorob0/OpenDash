@@ -1082,19 +1082,46 @@ namespace OpenDashPlugin
             if (screen != null) screen.EndQuickGlance();
         }
 
-        public int ScreenZone(string ns, string letter)
+        /// <summary>The page one zone of one pit wall shows, by the key naming its page and slot.</summary>
+        public int ScreenZone(string ns, string key)
         {
-            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
+            var slot = Contract.PitWallZoneSlotByKey(key);
+            if (slot == null) throw new ArgumentOutOfRangeException("key");
             var screen = ScreenByNamespace(ns);
-            if (screen == null || screen.Zones == null || index >= screen.Zones.Length) return Contract.PitWallDefaultZonePages[index];
-            return Contract.NormaliseZonePage(screen.Zones[index], Contract.PitWallDefaultZonePages[index]);
+            // A delegate outlives the screen it was attached for until SimHub restarts, so the reader has
+            // to answer something rather than throw on SimHub's data thread.
+            return screen == null ? slot.Fallback : screen.ZonePage(key);
         }
 
-        public int ScreenWideZone(string ns)
+        /// <summary>Which of the three landscape pages one pit wall opens on.</summary>
+        public int ScreenPitWallStartPage(string ns)
         {
             var screen = ScreenByNamespace(ns);
-            return screen == null ? Contract.DefaultWideZonePage : Contract.NormaliseWideZonePage(screen.WideZone);
+            return screen == null ? Contract.DefaultPitWallStartPage : Contract.NormalisePitWallStartPage(screen.PitWallStartPage);
+        }
+
+        /// <summary>
+        /// The landscape page one pit wall is showing now.
+        /// </summary>
+        /// <remarks>
+        /// Live state rather than a setting, the way `CompanionPage` is: the package gates each of its
+        /// three screens on this, so it is what decides which one is up. It opens on the start page and
+        /// the cycle action moves it, which is why a pit wall can be told which page to come up on at all
+        /// -- nothing else about a screen can be made to follow a setting.
+        /// </remarks>
+        public int ScreenPitWallPage(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultPitWallStartPage : Contract.NormalisePitWallStartPage(screen.PitWallPage);
+        }
+
+        /// <summary>Moves one pit wall to the next of its three pages, and returns the one it landed on.</summary>
+        public int CycleScreenPitWallPage(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen == null) return Contract.DefaultPitWallStartPage;
+            screen.PitWallPage = (Contract.NormalisePitWallStartPage(screen.PitWallPage) + 1) % Contract.PitWallPageNames.Length;
+            return screen.PitWallPage;
         }
 
         /// <summary>Whether one pit wall lists the player's own class rather than the whole field.</summary>

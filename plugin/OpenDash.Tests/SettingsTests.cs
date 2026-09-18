@@ -204,8 +204,9 @@ namespace OpenDashPlugin.Tests
             Assert.False(companion.Modules[20]);
 
             var wall = Screen(Contract.KindPitWall, 1920, 1080);
-            Assert.Equal(new[] { 0, 1, 4, 2 }, wall.Zones);
-            Assert.Equal(5, wall.WideZone);
+            // Every zone of every page, each on the page its own slot names.
+            foreach (var slot in Contract.PitWallZoneSlots) Assert.Equal(slot.Fallback, wall.ZonePage(slot.Key));
+            Assert.Equal(Contract.DefaultPitWallStartPage, wall.PitWallStartPage);
             Assert.Equal("", wall.WebViewUrl);
         }
 
@@ -236,9 +237,19 @@ namespace OpenDashPlugin.Tests
                 WebViewUrl = "javascript:alert(1)",
             };
             wall.Normalise();
-            // 99 is not a page, so zone A falls back; zone B keeps the 3 the file gave it.
-            Assert.Equal(new[] { 0, 3, 4, 2 }, wall.Zones);
-            Assert.Equal(Contract.DefaultWideZonePage, wall.WideZone);
+            // 99 is not a page, so the zones the old A drew fall back; the ones it drew with a 3 keep it.
+            // The old four were the race page's A and B and the tower page's pair, and the telemetry
+            // page drew A, B and C, which is where each of these lands.
+            Assert.Equal(0, wall.ZonePage("RaceA"));
+            Assert.Equal(3, wall.ZonePage("RaceB"));
+            // 99 was not a page, so the telemetry page's A falls back to its own default rather than to
+            // the race page's: each slot keeps the page it was designed to open on.
+            Assert.Equal(8, wall.ZonePage("TelemetryA"));
+            Assert.Equal(3, wall.ZonePage("TelemetryB"));
+            Assert.Equal(Contract.DefaultWideZonePage, wall.ZonePage("TowerWide"));
+            // And the legacy fields are consumed, so the next Normalise cannot migrate over a choice
+            // made since.
+            Assert.Null(wall.Zones);
             Assert.Equal("", wall.WebViewUrl);
         }
 
@@ -252,21 +263,26 @@ namespace OpenDashPlugin.Tests
             source.Rig.Add(companion);
             source.Rig.Add(wall);
             companion.Modules[5] = true;
-            wall.Zones[1] = 7;
-            wall.WideZone = 1;
+            wall.SetZonePage("RaceB", 7);
+            wall.SetZonePage("TowerWide", 1);
             wall.WebViewUrl = "https://garage61.net";
 
             var copy = new OpenDashSettings();
             copy.CopyFrom(source);
             Assert.True(copy.ScreenByNamespace(Contract.CompanionPrefix).Modules[5]);
-            Assert.Equal(7, copy.ScreenZone(Contract.PitWallPrefix, "B"));
-            Assert.Equal(1, copy.ScreenWideZone(Contract.PitWallPrefix));
+            Assert.Equal(7, copy.ScreenZone(Contract.PitWallPrefix, "RaceB"));
+            Assert.Equal(1, copy.ScreenZone(Contract.PitWallPrefix, "TowerWide"));
             Assert.Equal("https://garage61.net", copy.ScreenWebViewUrl(Contract.PitWallPrefix));
+            // And the telemetry page's own A is untouched by the race page's, which is the whole point of
+            // the split: one setting each.
+            Assert.Equal(8, copy.ScreenZone(Contract.PitWallPrefix, "TelemetryA"));
 
-            // The copy is independent: it holds its own screens and its own arrays.
+            // The copy is independent: it holds its own screens and its own dictionaries.
             companion.Modules[5] = false;
+            wall.SetZonePage("RaceB", 3);
             Assert.True(copy.ScreenByNamespace(Contract.CompanionPrefix).Modules[5]);
-            Assert.Throws<ArgumentOutOfRangeException>(() => copy.ScreenZone(Contract.PitWallPrefix, "E"));
+            Assert.Equal(7, copy.ScreenZone(Contract.PitWallPrefix, "RaceB"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => copy.ScreenZone(Contract.PitWallPrefix, "RaceZ"));
         }
 
         // --- The dash face ---------------------------------------------------------------------
@@ -832,7 +848,7 @@ namespace OpenDashPlugin.Tests
             rim.Face.SetStart("B", 9);
             rim.Face.SetBarField("Left1", 3);
             settings.ScreenByNamespace(Contract.CompanionPrefix).Modules[5] = true;
-            settings.ScreenByNamespace(Contract.PitWallPrefix).Zones[0] = 3;
+            settings.ScreenByNamespace(Contract.PitWallPrefix).SetZonePage("RaceA", 3);
             settings.ScreenByNamespace(Contract.PitWallPrefix).WebViewUrl = "https://garage61.net";
 
             var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
@@ -842,7 +858,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(9, read.ScreenFace("Rim").Start("B"));
             Assert.Equal(3, read.ScreenFace("Rim").BarField("Left1"));
             Assert.True(read.ScreenByNamespace(Contract.CompanionPrefix).Modules[5]);
-            Assert.Equal(3, read.ScreenZone(Contract.PitWallPrefix, "A"));
+            Assert.Equal(3, read.ScreenZone(Contract.PitWallPrefix, "RaceA"));
             Assert.Equal("https://garage61.net", read.ScreenWebViewUrl(Contract.PitWallPrefix));
             // The names and the folders survive, which is what makes the two 1280x480 screens tellable
             // apart in SimHub's own dashboard list.
@@ -1207,8 +1223,11 @@ namespace OpenDashPlugin.Tests
             settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
             settings.Normalise();
             var names = settings.DeclaredProperties().ToList();
-            // Plus one for the companion's page, which is the one name it owns that is not a switch.
-            Assert.Equal(shared + 2 * perFace + Modules.Count + 1 + 7 + lights, names.Count);
+            // Plus one for the companion's page, which is the one name it owns that is not a switch, and
+            // the pit wall's own: a zone per page, the page it opens on, the page it is showing, the URL
+            // and the class filter.
+            var perPitWall = Contract.PitWallZoneSlots.Count + 4;
+            Assert.Equal(shared + 2 * perFace + Modules.Count + 1 + perPitWall + lights, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Contains("Face1920x480ZoneA", names);
             Assert.Contains("Face850x480ZoneA", names);
@@ -1220,7 +1239,7 @@ namespace OpenDashPlugin.Tests
 
             settings.RemoveScreen("Face850x480");
             settings.Normalise();
-            Assert.Equal(shared + perFace + Modules.Count + 1 + 7 + lights, settings.DeclaredProperties().Count());
+            Assert.Equal(shared + perFace + Modules.Count + 1 + perPitWall + lights, settings.DeclaredProperties().Count());
         }
 
         /// <summary>A screen on the stock namespace for its kind and size, as the first one at a size is.</summary>
@@ -1395,7 +1414,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(1280, face.Width);
             // The zones the user had set are the zones they still have.
             Assert.Equal(2, face.Face.Start("B"));
-            Assert.Equal(3, upgraded.ScreenByNamespace("PitWall").WideZone);
+            Assert.Equal(3, upgraded.ScreenByNamespace("PitWall").ZonePage("TowerWide"));
             Assert.Equal("Companion", upgraded.ScreenByNamespace("Companion").Name);
         }
 
@@ -1406,11 +1425,15 @@ namespace OpenDashPlugin.Tests
             // allow renaming a published property -- so only the stock pit wall keeps that spelling.
             var stock = Contract.ScreenPropertyNames(Contract.KindPitWall, Contract.PitWallPrefix).ToList();
             Assert.Contains("WebViewUrl", stock);
-            Assert.Contains("PitWallWide", stock);
+            Assert.Contains("PitWallTowerWide", stock);
+            Assert.Contains("PitWallRaceA", stock);
+            Assert.Contains("PitWallStartPage", stock);
 
             var second = Contract.ScreenPropertyNames(Contract.KindPitWall, "Garage").ToList();
             Assert.Contains("GarageWebViewUrl", second);
-            Assert.Contains("GarageWide", second);
+            Assert.Contains("GarageTowerWide", second);
+            Assert.Contains("GarageRaceA", second);
+            Assert.Contains("GarageStartPage", second);
             Assert.DoesNotContain("WebViewUrl", second);
             Assert.Empty(stock.Intersect(second));
         }
@@ -1447,7 +1470,7 @@ namespace OpenDashPlugin.Tests
             Assert.Null(confused.Modules);
             Assert.Null(confused.FlagFormat);
             Assert.Null(confused.LapReview);
-            Assert.NotNull(confused.Zones);
+            Assert.NotNull(confused.PitWallZones);
         }
 
         [Fact]
@@ -1589,19 +1612,25 @@ namespace OpenDashPlugin.Tests
             var wall = settings.ScreenOf("PitWall");
             Assert.Equal(Contract.DefaultPitWallQuickGlance, wall.PitWallQuickGlance);
 
-            // Zone C, the relative by default, lent to the radar and handed back on release.
-            wall.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(2, 9);
+            // The tower page's A, the relative by default, lent to the radar and handed back on release.
+            // The glance numbers the landscape zones that draw the standard catalogue, and the tower
+            // page's A is the third of them: race A, race B, tower A.
+            var glanceZones = Contract.GlanceZoneSlots();
+            var towerA = glanceZones.ToList().FindIndex(slot => slot.Key == "TowerA");
+            wall.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(towerA, 9);
             settings.BeginScreenGlance("PitWall");
-            Assert.Equal(9, settings.ScreenZone("PitWall", "C"));
-            // The other zones stay where they are, and a second press while one is held does nothing.
-            Assert.Equal(Contract.PitWallDefaultZonePages[1], settings.ScreenZone("PitWall", "B"));
+            Assert.Equal(9, settings.ScreenZone("PitWall", "TowerA"));
+            // The other zones stay where they are -- including the race page's A, which used to be the
+            // same setting -- and a second press while one is held does nothing.
+            Assert.Equal(0, settings.ScreenZone("PitWall", "RaceA"));
+            Assert.Equal(1, settings.ScreenZone("PitWall", "RaceB"));
             settings.BeginScreenGlance("PitWall");
             settings.EndScreenGlance("PitWall");
-            Assert.Equal(Contract.PitWallDefaultZonePages[2], settings.ScreenZone("PitWall", "C"));
+            Assert.Equal(4, settings.ScreenZone("PitWall", "TowerA"));
             // A release with no press does nothing rather than restoring a page nobody took.
-            wall.Zones[2] = 6;
+            wall.SetZonePage("TowerA", 6);
             settings.EndScreenGlance("PitWall");
-            Assert.Equal(6, settings.ScreenZone("PitWall", "C"));
+            Assert.Equal(6, settings.ScreenZone("PitWall", "TowerA"));
 
             // A stored glance outside the catalogue reads as the default, and a screen the rig no
             // longer holds reads the default too rather than throwing on SimHub's own thread.
