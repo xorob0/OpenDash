@@ -36,6 +36,13 @@ namespace OpenDashPlugin
                 Settings.SessionProgress = value;
                 Save();
             });
+            // A rig setting rather than a per-screen one: what the band may say about the car behind is
+            // the same answer on the wheel as on the pit wall, which is what this whole tab is for.
+            var blueFlag = BuildSegmented(Contract.BlueFlagDetails, new[] { "Nothing", "Class", "Position and class" }, Settings.BlueFlagDetail, value =>
+            {
+                Settings.BlueFlagDetail = value;
+                Save();
+            });
 
             // A gap of this tab's own rather than the section default: PanelDataTab.RowGap says why, and
             // passing it here is what keeps Install and Lights on the twenty they are drawn at.
@@ -44,7 +51,8 @@ namespace OpenDashPlugin
                 Ui.Row(PanelDataTab.RevBarTitle, PanelDataTab.RevBarCaption, revBar),
                 Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position),
                 Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta),
-                Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)));
+                Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session),
+                Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)));
         }
     }
 }

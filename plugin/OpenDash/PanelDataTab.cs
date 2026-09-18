@@ -48,5 +48,9 @@ namespace OpenDashPlugin
         public const string SessionTitle = "Session progress";
 
         public const string SessionCaption = "Auto shows laps when the session declares a lap count, time otherwise.";
+
+        public const string BlueFlagTitle = "Blue flag detail";
+
+        public const string BlueFlagCaption = "What the band says beside the blue: nothing, the class of the car behind, or its position and class.";
     }
 }
