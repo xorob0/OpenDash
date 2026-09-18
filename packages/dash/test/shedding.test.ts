@@ -166,8 +166,8 @@ describe('a shape takes the answer of one of the four the catalogue draws', () =
     expect(archetypeOf(shapeOf({ width: 607, height: 158 }))).toBe('grid');
     expect(archetypeOf(shapeOf({ width: 1007, height: 211 }))).toBe('wide');
     expect(archetypeOf(shapeOf({ width: 269, height: 194 }))).toBe('tallNarrow');
-    expect(archetypeOf(shapeOf({ width: 802, height: 336 }))).toBe('wide'); // the companion page
-    expect(archetypeOf(shapeOf({ width: 432, height: 706 }))).toBe('tall'); // the companion in portrait
+    expect(archetypeOf(shapeOf({ width: 802, height: 356 }))).toBe('wide'); // the companion page
+    expect(archetypeOf(shapeOf({ width: 432, height: 726 }))).toBe('tall'); // the companion in portrait
   });
 });
 
