@@ -33,7 +33,7 @@ namespace OpenDashPlugin.Tests
             var ids = new[]
             {
                 "0-10-0", "0-12-0", "0-16-0", "0-8-0", "0-9-0", "2-10-2", "3-10-3", "3-9-3",
-                "3-9-3-fanalab", "4-14-4", "4-14-4-reversed", "4-9-4", "5-10-5",
+                "3-9-3-fanalab", "4-14-4", "4-14-4-reversed", "4-8-4", "4-9-4", "5-10-5",
                 "brow-12", "brow-15", "brow-16", "brow-18", "brow-20", "brow-25", "brow-9",
             };
             return ids.Select(id => new LightProfile(id, "openDash " + PanelLightRows.Label(new LightProfile(id, null)))).ToList();
@@ -51,7 +51,7 @@ namespace OpenDashPlugin.Tests
                     "openDash 3/9/3",
                     "openDash 3/9/3 Fanalab",
                     "openDash 3/10/3",
-                    "openDash 2/10/2 · 4/9/4 · 5/10/5",
+                    "openDash 2/10/2 · 4/8/4 · 4/9/4 · 5/10/5",
                     "openDash 0/8/0 … 0/16/0",
                     "openDash brow 9 … 25",
                 },
@@ -73,10 +73,10 @@ namespace OpenDashPlugin.Tests
             // Every profile the build carries is behind exactly one row, or a press somewhere installs a
             // profile no row named and a shape is offered twice.
             var members = rows.SelectMany(r => r.ShapeIds).ToList();
-            Assert.Equal(20, members.Count);
-            Assert.Equal(20, members.Distinct(StringComparer.Ordinal).Count());
+            Assert.Equal(21, members.Count);
+            Assert.Equal(21, members.Distinct(StringComparer.Ordinal).Count());
             Assert.Equal(FullBuild().Select(p => p.ShapeId).OrderBy(x => x, StringComparer.Ordinal), members.OrderBy(x => x, StringComparer.Ordinal));
-            Assert.Equal(new[] { 1, 1, 1, 1, 1, 3, 5, 7 }, rows.Select(r => r.ShapeIds.Count));
+            Assert.Equal(new[] { 1, 1, 1, 1, 1, 4, 5, 7 }, rows.Select(r => r.ShapeIds.Count));
         }
 
         [Fact]
@@ -360,12 +360,12 @@ namespace OpenDashPlugin.Tests
                     "openDash 3/9/3",
                     "openDash 3/9/3 Fanalab",
                     "openDash 3/10/3",
-                    "openDash 2/10/2 · 4/9/4 · 5/10/5",
+                    "openDash 2/10/2 · 4/8/4 · 4/9/4 · 5/10/5",
                     "openDash 0/8/0 … 0/16/0",
                     "openDash brow 9 … 25",
                 },
                 rows.Select(r => r.Name));
-            Assert.Equal(20, rows.SelectMany(r => r.ShapeIds).Count());
+            Assert.Equal(21, rows.SelectMany(r => r.ShapeIds).Count());
             // The flag box is not one of them: it is its own row and its own driver, and handing a strip
             // to the matrix driver is the hazard FlagBoxProfile exists to prevent.
             Assert.DoesNotContain(rows, r => r.Name == FlagBoxProfile.ProfileName);

@@ -173,6 +173,11 @@ namespace OpenDashPlugin
 
         public bool[] FlagBoxMatrixGear { get; set; } = Contract.DefaultFlagBoxGears();
 
+        /// <summary>Whether this panel's digit flashes while the car is over-revving. Per panel, because
+        /// a box in the corner of a monitor stand strobing at the edge of vision is what a driver with a
+        /// rev bar in front of them turns off, and the box on the wheel is not.</summary>
+        public bool[] FlagBoxMatrixGearBlink { get; set; } = Contract.DefaultFlagBoxGearBlinks();
+
         /// <summary>Zero means "not set", so that the profile's own per-unit default applies. A driver in
         /// Fahrenheit who has never opened this page must not get a Celsius number.</summary>
         public int[] FlagBoxMatrixOilTemp { get; set; } = Contract.DefaultFlagBoxTemps();
@@ -214,6 +219,8 @@ namespace OpenDashPlugin
 
         public bool MatrixGear(int matrix) => Pick(FlagBoxMatrixGear, matrix, Contract.DefaultFlagBoxGear);
 
+        public bool MatrixGearBlink(int matrix) => Pick(FlagBoxMatrixGearBlink, matrix, Contract.DefaultFlagBoxGearBlink);
+
         public int MatrixOilTemp(int matrix) => Pick(FlagBoxMatrixOilTemp, matrix, 0);
 
         public int MatrixWaterTemp(int matrix) => Pick(FlagBoxMatrixWaterTemp, matrix, 0);
@@ -239,6 +246,7 @@ namespace OpenDashPlugin
             FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxMatrixCriticalOnly = Resize(FlagBoxMatrixCriticalOnly, Contract.DefaultFlagBoxCriticalOnlys(), v => true);
             FlagBoxMatrixGear = Resize(FlagBoxMatrixGear, Contract.DefaultFlagBoxGears(), v => true);
+            FlagBoxMatrixGearBlink = Resize(FlagBoxMatrixGearBlink, Contract.DefaultFlagBoxGearBlinks(), v => true);
             FlagBoxMatrixOilTemp = Resize(FlagBoxMatrixOilTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
             FlagBoxMatrixWaterTemp = Resize(FlagBoxMatrixWaterTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
             // After the arrays are four long, so the migration has four slots to fill.
@@ -1077,6 +1085,7 @@ namespace OpenDashPlugin
             FlagBoxWaterTemp = other.FlagBoxWaterTemp;
             FlagBoxMatrixCriticalOnly = other.FlagBoxMatrixCriticalOnly == null ? null : (bool[])other.FlagBoxMatrixCriticalOnly.Clone();
             FlagBoxMatrixGear = other.FlagBoxMatrixGear == null ? null : (bool[])other.FlagBoxMatrixGear.Clone();
+            FlagBoxMatrixGearBlink = other.FlagBoxMatrixGearBlink == null ? null : (bool[])other.FlagBoxMatrixGearBlink.Clone();
             FlagBoxMatrixOilTemp = other.FlagBoxMatrixOilTemp == null ? null : (int[])other.FlagBoxMatrixOilTemp.Clone();
             FlagBoxMatrixWaterTemp = other.FlagBoxMatrixWaterTemp == null ? null : (int[])other.FlagBoxMatrixWaterTemp.Clone();
             FlagBoxRest = other.FlagBoxRest == null ? null : (string[])other.FlagBoxRest.Clone();

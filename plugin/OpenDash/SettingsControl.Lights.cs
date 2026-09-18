@@ -125,6 +125,11 @@ namespace OpenDashPlugin
                     // the rig's, which is what they had become by sitting above every panel at once.
                     Ui.Row("Critical flags only", "Quiet until something matters: drops the chequer, the white, the green and the start gantry.", BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[m - 1] = on; Save(); })),
                     Ui.Row("Show the gear", "What this panel shows when nothing else is on it. Off leaves it dark.", BuildToggle(Settings.MatrixGear(m), on => { Settings.FlagBoxMatrixGear[m - 1] = on; Save(); })),
+                    // Per panel, because a box on the wheel and a box on a monitor stand do not want the
+                    // same answer: the one at the edge of vision strobing through the redline is what a
+                    // driver who already has a rev bar turns off. Off leaves the digit in the redline
+                    // colour, which is still the whole of the message.
+                    Ui.Row("Flash the gear at the redline", "The digit blinks while the engine is over-revving. Off keeps it steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
                     Ui.Row("Oil temperature", "In your own unit; 0 uses the default for it (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
                     Ui.Row("Water temperature", "In your own unit; 0 uses the default for it (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
             });

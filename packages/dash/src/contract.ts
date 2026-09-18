@@ -1035,17 +1035,27 @@ export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
     criticalOnly: (): Expr => read('CriticalOnly', String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
     /** The gear as this panel's resting state. */
     gear: (): Expr => read('Gear', String(DEFAULT_FLAG_BOX_GEAR)),
+    /**
+     * Whether this panel's digit flashes while the car is over-revving.
+     *
+     * Per panel rather than per rig, and a switch rather than a fact, because the flash is the one
+     * thing on the box that repeats what a screen and a strip are already saying: a driver with a
+     * rev bar in front of them has been told to shift twice before the box joins in, and a box
+     * mounted in the corner of a monitor stand strobing at the edge of vision is what they turn
+     * off. Off leaves the digit in the redline colour, which is still the whole of the message.
+     */
+    gearBlink: (): Expr => read('GearBlink', String(DEFAULT_FLAG_BOX_GEAR_BLINK)),
     /** Defaulted **per unit** from SimHub's own `TemperatureUnit`, as the global one was. */
     oilTemp: (): Expr => read('OilTemp', defaultByUnit(DEFAULT_OIL_TEMP)),
     waterTemp: (): Expr => read('WaterTemp', defaultByUnit(DEFAULT_WATER_TEMP)),
   };
 };
 
-/** The ten property names of one matrix, in the order the plugin attaches them. */
+/** The eleven property names of one matrix, in the order the plugin attaches them. */
 export const flagBoxMatrixProperties = (matrix: FlagBoxMatrix): string[] =>
   // The four that moved here from the tab are appended rather than interleaved, for the reason
   // every other list in this file is: both halves of the contract are pinned in order.
-  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side', 'CriticalOnly', 'Gear', 'OilTemp', 'WaterTemp'].map((n) => flagBoxMatrixSetting(matrix, n));
+  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side', 'CriticalOnly', 'Gear', 'OilTemp', 'WaterTemp', 'GearBlink'].map((n) => flagBoxMatrixSetting(matrix, n));
 
 /**
  * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a
@@ -1087,6 +1097,13 @@ export const DEFAULT_LIGHTS_NIGHT_MODE = false;
 
 /** On. The gear is the box's resting state; off leaves the panel dark rather than showing something else. */
 export const DEFAULT_FLAG_BOX_GEAR = true;
+
+/**
+ * On. The digit flashes while the car is over-revving, which is the box's half of the one shift
+ * message the rev bar and the strip also carry, and a driver who has only the box would lose the
+ * loudest part of it if this defaulted off.
+ */
+export const DEFAULT_FLAG_BOX_GEAR_BLINK = true;
 
 /**
  * Laps, not litres. A litre threshold means nothing without knowing the car; laps remaining means
