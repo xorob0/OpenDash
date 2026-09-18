@@ -452,13 +452,20 @@ namespace OpenDashPlugin
             var found = shapes.FirstOrDefault(entry => string.Equals(entry.Id, shape, StringComparison.Ordinal));
             var embedded = found == null ? null : found.Json;
             var ok = embedded != null;
+            string note = null;
             if (ok)
             {
                 var plan = InstallBar(bar, embedded);
                 ok = plan.State == FlagBoxInstallState.UpToDate;
+                note = plan.Note;
             }
             Redraw();
-            AnnounceLights(ok ? PanelLights.BarAdded(bar.Name) : PanelLights.BarAddFailed(bar.Name), ok ? Theme.TextSecondary : Theme.Caution);
+            // A note is not a failure, so the line stays the ordinary one and gains a sentence. The one
+            // note there is says the device is listing its maker's built-in profiles, which is the only
+            // way an install can be correct and still leave nothing for the driver to select.
+            var line = ok ? PanelLights.BarAdded(bar.Name) : PanelLights.BarAddFailed(bar.Name);
+            if (ok && note != null) line += " " + note;
+            AnnounceLights(line, ok && note == null ? Theme.TextSecondary : Theme.Caution);
         }
 
         private static FlagBoxPlan InstallBar(LedBar bar, string embedded)
