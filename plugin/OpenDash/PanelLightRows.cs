@@ -79,7 +79,7 @@ namespace OpenDashPlugin
         /// The id as geometry, or null when it is not one of the two shapes the generator writes.
         /// </summary>
         /// <remarks>
-        /// The other half of `wheel()` and `fanalab()` in packages/dash/src/leds/strip.ts, which
+        /// The other half of `wheel()` and `fanatec()` in packages/dash/src/leds/strip.ts, which
         /// spell the id `${left}-${centre}-${right}` with a wiring suffix appended and `brow-${n}`. Reading it
         /// back rather than carrying a table is what lets a shape added there be grouped here without an
         /// edit; an id this cannot read is not guessed at, it gets a row of its own.
@@ -152,14 +152,14 @@ namespace OpenDashPlugin
         public const string Unavailable =
             "SimHub's LED settings are not available, so openDash cannot install a strip profile.";
 
-        /// <summary>The id suffixes a wiring adds, which `wheel(..., { reversed: true })` and `fanalab(...)`
+        /// <summary>The id suffixes a wiring adds, which `wheel(..., { reversed: true })` and `fanatec(...)`
         /// in packages/dash/src/leds/strip.ts spell. A suffix this does not know is not guessed at: the shape
         /// falls through to a row of its own.</summary>
         public const string ReversedSuffix = "reversed";
 
-        public const string FanalabSuffix = "fanalab";
+        public const string FanatecSuffix = "fanatec";
 
-        internal static readonly IList<string> WiringSuffixes = new[] { ReversedSuffix, FanalabSuffix };
+        internal static readonly IList<string> WiringSuffixes = new[] { ReversedSuffix, FanatecSuffix };
 
         public const string Wheel = "wheel";
         public const string Brow = "brow";
@@ -187,7 +187,7 @@ namespace OpenDashPlugin
             {
                 new KeyValuePair<string, string>("4-14-4", "strip" + Join + "SimRep MLD, Ascher"),
                 new KeyValuePair<string, string>("4-14-4-reversed", "strip" + Join + "SimRep MLD, wired from the far end"),
-                new KeyValuePair<string, string>("3-9-3-fanalab", "strip" + Join + "Fanatec through Fanalab"),
+                new KeyValuePair<string, string>("3-9-3-fanatec", "strip" + Join + "Fanatec wheels in SimHub"),
                 new KeyValuePair<string, string>("3-10-3", "strip" + Join + "GridSim Lab GTSL Pro"),
             };
 
@@ -338,9 +338,9 @@ namespace OpenDashPlugin
             var shape = LightShape.Parse(profile.ShapeId);
             if (shape == null) return profile.ShapeId;
             if (shape.Placement == Brow) return Brow + " " + Digits(shape.Centre);
-            // rpmStripProfileName() writes the reversed suffix in lower case and the Fanalab one as the
-            // product's own name, so the fallback cannot simply append the suffix it read.
-            var wiring = shape.Wiring == FanalabSuffix ? " Fanalab" : shape.Wiring == ReversedSuffix ? " reversed" : string.Empty;
+            // rpmStripProfileName() writes the reversed suffix in lower case and the Fanatec one as the
+            // maker's own name, so the fallback cannot simply append the suffix it read.
+            var wiring = shape.Wiring == FanatecSuffix ? " Fanatec" : shape.Wiring == ReversedSuffix ? " reversed" : string.Empty;
             return Digits(shape.Left) + "/" + Digits(shape.Centre) + "/" + Digits(shape.Right) + wiring;
         }
 

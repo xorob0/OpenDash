@@ -9,7 +9,7 @@
  * and which therefore carries a `schemaVersion`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { COMPANION_PREFIX, declaredProperties, facePrefix, foreignProperties, PIT_WALL_PREFIX, PROPERTY_PREFIX } from './contract.ts';
 import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
@@ -508,6 +508,8 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const manifestPath = path.join(out, MANIFEST_FILE);
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   log(`wrote ${relative(manifestPath)}`);
+
+  for (const stale of sweep(out, manifest)) log(`removed ${relative(stale)} (nothing builds it any more)`);
   return {
     out,
     strategy,
@@ -519,6 +521,36 @@ export function build(opts: BuildOptions = {}): BuildResult {
     manifest,
     manifestPath,
   };
+}
+
+/**
+ * Deletes the artefacts of an earlier build that this one did not write.
+ *
+ * The output directory is not emptied first, because a build that began by deleting everything would
+ * leave nothing at all behind when it threw half way through, and a failed build should cost the last
+ * good one. So the sweep runs at the end, when the manifest is the settled list of what this build
+ * produces, and removes only the two kinds of file the manifest names: a package and a light profile.
+ * Anything else in the directory -- `fonts/`, an unpacked package folder, whatever somebody left there
+ * -- is left where it is.
+ *
+ * The reason this exists is a shape that was renamed. `openDash 3/9/3 Fanalab` became
+ * `openDash 3/9/3 Fanatec`, the build wrote the new file, and the old one sat in `build/` until
+ * scripts/package.sh copied it into the plugin's resources: the release then carried a profile no
+ * source builds, offering a wiring order the panel no longer captions. A removed screen size would do
+ * the same, and would be installed by anyone who pressed the button beside it.
+ */
+function sweep(out: string, manifest: Manifest): string[] {
+  const wanted = new Set<string>([...manifest.packages.map((p) => p.file), ...manifest.ledProfiles]);
+  const removed: string[] = [];
+  for (const entry of readdirSync(out, { withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const isArtefact = entry.name.endsWith(PACKAGE_EXTENSION) || entry.name.endsWith(leds.LEDS_PROFILE_EXTENSION);
+    if (!isArtefact || wanted.has(entry.name)) continue;
+    const stale = path.join(out, entry.name);
+    rmSync(stale, { force: true });
+    removed.push(stale);
+  }
+  return removed;
 }
 
 const describe = (e: unknown): string => (e instanceof Error ? e.message : String(e));

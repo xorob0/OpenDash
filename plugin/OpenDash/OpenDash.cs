@@ -308,6 +308,10 @@ namespace OpenDashPlugin
                 }
             }
             SaveSettings();
+            // Last of all, and after the settings are on disk: a plugin the update staged is put in place
+            // by a detached process that waits for this one to exit (PluginUpdate). It does nothing at all
+            // unless something is staged, and a swap that cannot happen leaves the plugin as it is.
+            PluginUpdate.Launch(Installer.SimHubRoot, new SimHubInstallLog());
         }
 
         public Control GetWPFSettingsControl(PluginManager pluginManager)

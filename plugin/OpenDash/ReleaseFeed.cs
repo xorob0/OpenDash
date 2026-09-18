@@ -69,6 +69,19 @@ namespace OpenDashPlugin
             var published = folderName.Replace(' ', '.') + ReleaseFeed.PackageSuffix;
             return Assets.FirstOrDefault(a => string.Equals(a.Name, published, StringComparison.Ordinal));
         }
+
+        /// <summary>
+        /// The asset carrying the plugin itself, or null on a release that does not publish one.
+        /// </summary>
+        /// <remarks>
+        /// Null rather than an error for every release cut before the plugin could replace itself, and
+        /// for a hand-cut release that published only dashboards: the update then does what it always
+        /// did, which is the dashboards and nothing else.
+        /// </remarks>
+        public ReleaseAsset PluginAsset()
+        {
+            return Assets.FirstOrDefault(a => string.Equals(a.Name, PluginUpdate.AssetName, StringComparison.Ordinal));
+        }
     }
 
     public static class ReleaseFeed
