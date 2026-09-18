@@ -187,6 +187,32 @@ namespace OpenDashPlugin.Tests
             Assert.Null(LedBarProfile.For(new LedBar { Namespace = "LedRim" }, null));
         }
 
+        /// <summary>
+        /// A profile installed onto a device that is listing its maker's built-in profiles carries the
+        /// sentence saying so.
+        /// </summary>
+        /// <remarks>
+        /// The state behind the "my new profile does not appear in SimHub" report. SimHub's dropdown is
+        /// bound to `AvailableProfiles`, which is `BuiltInProfiles` while that switch is on, so a correct
+        /// install leaves the driver with nothing to select and no reason given. The note is what gives
+        /// the reason; `FlagBoxInstaller` puts it on every plan of an install made in that state.
+        /// </remarks>
+        [Fact]
+        public void Built_in_mode_is_a_note_rather_than_a_failure()
+        {
+            Assert.True(FlagBoxInstallPlan.BuiltInModeOf(true, true));
+            // Either half off and the device lists the saved profiles, which is where ours goes.
+            Assert.False(FlagBoxInstallPlan.BuiltInModeOf(true, false));
+            Assert.False(FlagBoxInstallPlan.BuiltInModeOf(false, true));
+            Assert.False(FlagBoxInstallPlan.BuiltInModeOf(false, false));
+            // It names the switch rather than describing the symptom, because the switch is the fix.
+            Assert.Contains("built-in profiles", FlagBoxInstallPlan.BuiltInModeNote, StringComparison.Ordinal);
+            // A plan carrying it is still a plan that worked: nothing to repeat, nothing to undo.
+            var plan = new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, Note = FlagBoxInstallPlan.BuiltInModeNote };
+            Assert.Equal(FlagBoxInstallState.UpToDate, plan.State);
+            Assert.False(plan.WouldChange);
+        }
+
         /// <summary>A hand-edited file cannot reach a profile as itself.</summary>
         [Fact]
         public void Normalise_repairs_a_bar_that_was_written_by_hand()
