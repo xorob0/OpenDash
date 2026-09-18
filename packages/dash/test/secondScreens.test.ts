@@ -668,6 +668,8 @@ describe('a bar drawn under a value', () => {
     return drawn;
   };
 
+  // Four at both densities, which is `fuel.ts`'s decision rather than an agreement between the two
+  // sheets: the companion sheet draws every bar at six and no bar at four.
   test('is four pixels tall on the companion as in a zone, with the canvas track and fill', () => {
     for (const density of ['companion', 'zone'] as const) {
       const drawn = gaugeOf(density);
@@ -917,12 +919,12 @@ describe('the radar is cut from its box', () => {
     // The two boxes readability-pass.md §16 puts side by side: a nano zone and a tall face zone
     // were drawing the same twenty metres of track at the same scale.
     expect(radarIn(build(249, 158)).scale).toBeLessThan(radarIn(build(437, 510)).scale!);
-    // 802 by 336 is a fixture, not the companion page any more: the page is 356 tall since the
-    // flag band came down to the artboard's 12, and `radarScaleFor`'s 260 divisor was fitted to
-    // the shorter box, so the real page now draws 1.37 against the canvas's 1.25. Which of the two
-    // moves is the author's, and it belongs to radar.ts rather than here.
-    expect(radarIn(build(802, 336, 'companion')).scale!).toBeCloseTo(1.25, 1);
-    expect(radarIn(build(802, 356, 'companion')).scale!).toBeCloseTo(1.37, 2);
+    // And the canvas's own figure, on the page the build really hands the module rather than on the
+    // 802 by 336 fixture this used to measure. That fixture was the page the companion produced
+    // while its flag band was wrongly 32 px tall, and the divisor had been fitted to it, so the page
+    // that shipped drew 1.37 and the suite went on agreeing with a rectangle nobody was given.
+    const page = moduleBoxes().find((b) => b.name === 'openDash Companion page')!;
+    expect(radarIn(MODULES.find((m) => m.id === 'radar')!.build({ frame: page.frame, density: page.density, prefix: 'radar.' })).scale).toBe(1.25);
   });
 
   test('the grid the canvas draws under the cars is four rects behind the plot', () => {
