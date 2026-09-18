@@ -1066,14 +1066,14 @@ Spotter carRight
 ......GG
 
 Warning oilHot
-...DD...
-..DDDD..
-.DDDDDD.
-DDDDDDDD
-DDDDDDDD
-.DDDDDD.
-..DDDD..
-...DD...
+.......D
+......D.
+.....D..
+.DDDDD..
+DDDDDDD.
+DDDDDDD.
+.DDDDD..
+...D....
 
 Warning waterHot
 ..DD..DD
@@ -1086,14 +1086,14 @@ D....DD.
 ........
 
 Warning lowFuel
-.EEEEEE.
-.E....E.
-.E....E.
-.E....E.
-.E....E.
-.E....E.
-.EEEEEE.
-.EEEEEE.
+.EEEEE..
+.E...E.E
+.EEEEE.E
+.E...E.E
+.E...EEE
+.E...E..
+.E...E..
+EEEEEEE.
 
 Gear R redline
 .BBBB...
