@@ -7,6 +7,9 @@
  */
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
+// The shapes, for the run lengths the mirror publishes. strip.ts imports nothing, so this is the
+// one direction the two can face.
+import { ALL_SHAPES } from './leds/strip.ts';
 
 const { add, and, concat, div, eq, fmt, iff, isnull, left, lt, mod, num, or, prop, str, truncate } = ncalc;
 
@@ -95,15 +98,17 @@ export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['car', 'leftToRight', 'me
 export const LED_MIRROR_FITS: readonly LedMirrorFit[] = ['stretch', 'exact'];
 
 /**
- * The run lengths the plugin publishes a mirrored bar for: every centre length {@link ALL_SHAPES}
- * uses, the brows included.
+ * The run lengths the plugin publishes a mirrored bar for: every centre length a shape uses.
  *
- * It is a list rather than a range because each entry is a property name, and a property name is a
- * public interface. A new strip shape whose centre is not in this list gets no mirror at all --
- * silently, since the profile simply reads a property nobody attaches -- so `leds.test.ts` checks
- * the two lists against each other.
+ * Derived from the shapes rather than written down beside them. It was a list, and a list is a
+ * second place to remember: a shape whose centre was not in it got no mirror at all, silently, since
+ * the profile simply reads a property nobody attaches. Deriving it means the grid can grow a centre
+ * without anybody noticing they owed this file a line -- which is the same reason the grid exists.
+ *
+ * Each entry is still a property name and a property name is still a public interface (ADR 0003), so
+ * the list is sorted and `declared-properties.txt` pins what comes out of it.
  */
-export const MIRROR_RUN_LENGTHS: readonly number[] = [8, 9, 10, 12, 14, 15, 16, 18, 20, 25];
+export const MIRROR_RUN_LENGTHS: readonly number[] = [...new Set(ALL_SHAPES.map((shape) => shape.centre))].sort((a, b) => a - b);
 
 /** How many characters one colour takes in a packed run: `#AARRGGBB`. */
 export const MIRROR_COLOR_WIDTH = 9;
@@ -121,6 +126,7 @@ export const DEFAULTS = {
   LedRpmStyle: 'car' as LedRpmStyle,
   LedMirrorFit: 'stretch' as LedMirrorFit,
   LedFlagAnimation: true,
+  LedSpotterWhole: false,
   // Nothing extra, because a blue flag is read by its colour and the band is the one place a
   // driver already knows to look; the class of the car behind is a thing to ask for rather than a
   // thing to be given while lifting.
@@ -169,7 +175,7 @@ export function dashProperties(): string[] {
 
 /** The properties only a generated LED profile reads. ADR 0013. */
 export function ledProperties(): string[] {
-  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING, LED_MIRROR_FIT_SETTING, LED_MIRROR_READY, ...MIRROR_RUN_LENGTHS.map(ledMirrorRunName)].map(propertyName);
+  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING, LED_MIRROR_FIT_SETTING, LED_MIRROR_READY, ...MIRROR_RUN_LENGTHS.map(ledMirrorRunName), LED_SPOTTER_WHOLE_SETTING].map(propertyName);
 }
 
 /** The name of the setting choosing what the middle of a strip shows. */
@@ -193,6 +199,22 @@ export const LED_FLAG_ANIMATION_SETTING = 'LedFlagAnimation';
 
 /** The name of the setting choosing how a car's bar is fitted to a strip that is a different length. */
 export const LED_MIRROR_FIT_SETTING = 'LedMirrorFit';
+
+/**
+ * Whether a car alongside takes the whole strip rather than the lamp at that end.
+ *
+ * Off, because the lamps are what a side is for: one LED at each end, the outermost, is what
+ * peripheral vision reaches and it leaves the rev ladder readable while the car is there. On is for
+ * the driver who wants to be unable to miss it, and for the strips where a lamp is not enough — a
+ * brow above a monitor has no ends to speak of, and a wheel whose sides are one LED has a lamp
+ * carrying three roles at once.
+ *
+ * The side it is on is still the side it lights: whole means the whole run, not both runs, so a car
+ * on the right fills the strip amber and a car on the left fills it too, and the two are the same
+ * picture. That is the cost of the setting and the reason it is off by default; a driver asking for
+ * it is asking for "something is beside me" rather than "something is beside me on this side".
+ */
+export const LED_SPOTTER_WHOLE_SETTING = 'LedSpotterWhole';
 
 /**
  * Whether the plugin is publishing a mirrored bar this frame: it has a table for this car, the
@@ -263,6 +285,8 @@ export const setting = {
   ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
   /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
   ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
+  /** `isnull([OpenDash.LedSpotterWhole], false)`: whether a car alongside takes the whole strip. */
+  ledSpotterWhole: (): Expr => isnull(prop(propertyName(LED_SPOTTER_WHOLE_SETTING)), String(DEFAULTS.LedSpotterWhole)),
   /** `isnull([OpenDash.BlueFlagDetail], 'none')`: what a blue band says beyond its colour. */
   blueFlagDetail: (): Expr => isnull(prop(propertyName(BLUE_FLAG_DETAIL_SETTING)), str(DEFAULTS.BlueFlagDetail)),
   /** `isnull([OpenDash.BlueFlagDetail], 'none') = 'class'`: whether the band is in the given detail. */

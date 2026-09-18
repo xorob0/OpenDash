@@ -53,9 +53,29 @@ namespace OpenDashPlugin
 
         public const string BarNameCaption = "Yours. It names the group here and the profile in SimHub's own LED profile list.";
 
-        public const string BarShapeTitle = "What shape is it";
+        public const string BarEndsTitle = "LEDs at each end";
 
-        public const string BarShapeCaption = "How many LEDs, and how they are grouped: the run in the middle carries the revs and the groups at the ends are lamps.";
+        public const string BarEndsCaption = "The group at each end of the strip, which carries the lamps: a car alongside, the flags, your car's own warnings and the aids. None means the whole strip is one run, which is what a brow above a monitor is.";
+
+        public const string BarCentreTitle = "LEDs in the middle";
+
+        public const string BarCentreCaption = "The run between them, which carries the rev ladder. Count the LEDs on your strip and take the ends off; the line below says what that adds up to.";
+
+        /// <summary>The line under the two numbers: what they add up to and what the profile will be
+        /// called. A driver counts LEDs, and this is where the two counts are checked against the total
+        /// they actually have.</summary>
+        public static string BarShapeNote(int side, int centre)
+        {
+            var total = side * 2 + centre;
+            var shape = side + "/" + centre + "/" + side;
+            return total + (total == 1 ? " LED in all" : " LEDs in all") + ", as " + shape + ".";
+        }
+
+        /// <summary>What a bar of this shape is called before the driver types over it.</summary>
+        public static string BarShapeId(int side, int centre)
+        {
+            return side + "-" + centre + "-" + side;
+        }
 
         /// <summary>What is said once a bar exists, which is the step SimHub does not take for you:
         /// installing adds a profile, it does not select one on the device.</summary>

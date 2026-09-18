@@ -76,7 +76,7 @@ namespace OpenDashPlugin
                 Redraw();
             });
             var row = Ui.Row(PanelDataTab.RevBarTitle, PanelDataTab.RevBarCaption, control);
-            row.Width = BodyWidth;
+            row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
         }
 
@@ -100,7 +100,7 @@ namespace OpenDashPlugin
                 "Flags",
                 "Band D hands a flag the strip at the foot. Full screen hands it zones B, A and C together, which cannot be missed and takes the gear with it for as long as the flag is out.",
                 control);
-            row.Width = BodyWidth;
+            row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
         }
 
@@ -126,7 +126,7 @@ namespace OpenDashPlugin
                 "A panel over the gear for four seconds at the line: the lap you have just done, its sectors, what it was worth against "
                 + "the session best and the lap before, and the fuel it cost. Races means the sessions your sim calls Race.",
                 control);
-            row.Width = BodyWidth;
+            row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
         }
 
@@ -582,7 +582,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildWheelButtons(ScreenInstance screen, Contract.FaceSize face)
         {
-            var wrap = new WrapPanel { Width = BodyWidth };
+            var wrap = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Left };
             foreach (var letter in PanelFacePlan.ZoneOrder(face))
             {
                 var pair = Ui.HStack(8,
@@ -863,7 +863,7 @@ namespace OpenDashPlugin
         {
             var columns = PanelCompanionPlan.ModuleColumns;
             var rows = (Modules.Count + columns - 1) / columns;
-            var grid = new Grid { Width = BodyWidth, HorizontalAlignment = HorizontalAlignment.Left };
+            var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch };
             for (var c = 0; c < columns; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             for (var r = 0; r < rows; r++) grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             for (var i = 0; i < Modules.Count; i++)
@@ -1033,7 +1033,7 @@ namespace OpenDashPlugin
                 PanelDataTab.RevBarTitle,
                 "Shift lights, a plain arc, or off. A card face has no settings of its own, so this is the answer for every card face on the rig.",
                 control);
-            row.Width = BodyWidth;
+            row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
         }
 

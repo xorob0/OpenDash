@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
 import { MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE, ledMirrorRunName, propertyName, setting, type LedCentre } from '../src/contract.ts';
-import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
+import { ALL_SHAPES, GRID_SHAPES, LEGACY_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
 import { canMirror, carCentre, mirrorRun } from '../src/leds/mirror.ts';
@@ -75,18 +75,17 @@ describe('the strip shapes', () => {
     }
   });
 
-  test('the named device families are the shapes people actually own', () => {
-    expect(shapeById('3-9-3')?.devices).toContain('Fanatec ClubSport / Podium wheels');
-    expect(shapeById('3-9-3-fanalab')?.devices).toContain('Fanatec ClubSport / Podium wheels driven through Fanalab');
+  test('name a device only where one is outside the grid, and a brow is simply a strip with no sides', () => {
+    // The grid names nothing. A driver knows how many LEDs their strip has and how they are grouped,
+    // and those two numbers are the whole of what a profile needs; a device table asked them to find
+    // themselves in somebody else's list. What is still named is what falls outside the ranges.
+    for (const shape of GRID_SHAPES) expect({ id: shape.id, devices: shape.devices }).toMatchObject({ devices: undefined });
+    for (const shape of LEGACY_SHAPES) expect({ id: shape.id, named: (shape.devices?.length ?? 0) > 0 }).toMatchObject({ named: true });
+    expect(shapeById('3-9-3-fanatec')?.devices).toContain('Fanatec ClubSport / Podium wheels, on the Fanatec LED device in SimHub');
     expect(shapeById('4-14-4')?.devices).toContain('SimRep Engineering MLD');
-    // The shapes no maker's name attaches to are the ones someone wires themselves.
-    for (const id of ['2-10-2', '4-9-4', '5-10-5', '0-8-0', '0-9-0', '0-10-0', '0-12-0', '0-16-0']) expect(shapeById(id)?.devices).toEqual(['generic WS2812b runs']);
-    // A row with nothing beside it is a row the panel and the guide cannot describe, so none ships unattributed.
-    for (const s of ALL_SHAPES) expect({ id: s.id, attributed: (s.devices?.length ?? 0) > 0 }).toMatchObject({ attributed: true });
     expect(shapeById('3-10-3')?.extraRuns).toEqual({ count: 2, length: 9 });
-    // A brow is a strip with no sides, which is why it needs no module of its own.
-    for (const b of BROW_SHAPES) expect({ id: b.id, left: b.left, right: b.right, placement: b.placement }).toMatchObject({ left: 0, right: 0, placement: 'brow' });
-    expect(BROW_SHAPES.map((b) => b.centre)).toEqual([9, 12, 15, 16, 18, 20, 25]);
+    // A brow is a bare run, which is what the grid calls it: 0/15/0 and no idea of its own.
+    for (const centre of [13, 15, 25]) expect({ id: `0-${centre}-0`, shape: shapeById(`0-${centre}-0`) }).toMatchObject({ shape: { left: 0, right: 0, centre } });
   });
 
   test('an extra run counts towards the device length, so the fit rule measures the whole device', () => {
@@ -104,17 +103,17 @@ describe('the strip shapes', () => {
     expect(leds.containerTypeOf(profileFor('4-14-4').containers[0]!)).toBe('Groups.GameRunningGroup');
   });
 
-  test('the Fanalab order is a remap too, and it is no reversal of anything', () => {
-    const shape = shapeById('3-9-3-fanalab')!;
-    // The device presents the nine rev LEDs first, then the right flag LEDs from the outside in,
-    // then the left. `positions[i]` is the physical LED logical `i` paints, so the centre's nine
-    // land on physical 1..9, the right side's outermost on physical 10 and the left side's on 13.
+  test('the Fanatec order is a remap too, and it is no reversal of anything', () => {
+    const shape = shapeById('3-9-3-fanatec')!;
+    // Read off a working DNR profile from a rig with the wheel, whose RemapGroup opens with exactly
+    // this list. The device presents its nine RevLEDs first and its six FlagLEDs after, three a side
+    // with the right-hand group wired inwards; `positions[i]` is the physical LED logical `i` paints.
     expect(shape.positions).toEqual([13, 14, 15, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 11, 10]);
     expect(shape.positions).not.toEqual(reversedPositions(15));
     // Every physical LED of the device is painted by exactly one logical one, or a lamp lands nowhere.
     expect(new Set(shape.positions!).size).toBe(deviceLength(shape));
 
-    const p = profileFor('3-9-3-fanalab');
+    const p = profileFor('3-9-3-fanatec');
     expect(leds.containerTypeOf(p.containers[0]!)).toBe('Groups.RemapGroup');
     // The plain 3/9/3 keeps its own order: the Simucube, Cammus and Moza wheels of that shape are
     // wired in order, and a driver who installed it must not have it relit underneath them.
@@ -125,7 +124,7 @@ describe('the strip shapes', () => {
   test('only a shape the maker wired in an order of its own is remapped, and it covers every LED of the device', () => {
     // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
     // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
-    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id)).toEqual(['3-9-3-fanalab', '4-14-4-reversed']);
+    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual(['3-9-3-fanatec', '4-14-4-reversed']);
     // SetResultBase indexes Positions[i] for every lit LED, so a list shorter than the run throws
     // once per frame. The validator catches it, and this catches a row that forgot to grow.
     for (const s of ALL_SHAPES.filter((s) => s.positions)) {
@@ -277,7 +276,9 @@ describe("the car's own lights", () => {
   });
 
   test('a run nobody publishes is refused rather than generated', () => {
-    expect(() => mirrorRun(13)).toThrow(/MIRROR_RUN_LENGTHS/);
+    // 26 rather than 13: the grid reaches twenty-five, so what nobody publishes is a run past its end.
+    expect(() => mirrorRun(26)).toThrow(/MIRROR_RUN_LENGTHS/);
+    expect(() => mirrorRun(3)).toThrow(/MIRROR_RUN_LENGTHS/);
   });
 
   test('each LED slices its own colour out of the one string the plugin publishes', () => {
@@ -593,16 +594,18 @@ describe('the effect catalogue', () => {
     for (const dead of ['WaterPressure', 'KERS', 'GameData.Headlight']) expect({ dead, inProfile: text.includes(dead) }).toMatchObject({ inProfile: false });
   });
 
-  test('a shape with no sides has no lamps, so what needs one is dropped rather than moved onto the rev LEDs', () => {
-    expect(lampsOf(shapeById('brow-25')!)).toEqual([]);
-    const brow = textOf(profileFor('brow-25'));
-    // The spotters and the assists have nowhere to go on a brow...
-    expect(brow).not.toContain('Car alongside, left');
+  test('a shape with no sides keeps what needs no lamp on the whole run, and drops the aids', () => {
+    expect(lampsOf(shapeById('0-25-0')!)).toEqual([]);
+    const brow = textOf(profileFor('0-25-0'));
+    // The aids have nowhere to go on a bare run and are dropped rather than moved onto the ladder:
+    // an ABS light over the revs is a light in the one place the driver is reading a number.
     expect(brow).not.toContain('ABS active');
     expect(brow).not.toContain('lamp');
-    // ...but the flags keep the whole run there, which is what every shape did before the lamps
-    // arrived and is what a brow keeps until whether a bare run derives lamps of its own is decided.
+    // The flags keep the whole run, which is what every shape did before the lamps arrived, and so
+    // does a car alongside — a bare run has no end to put a lamp on, so it drew flags and never a
+    // spotter at all, which is a brow that cannot tell you somebody is there.
     expect(brow).toContain('Yellow flag');
+    expect(brow).toContain('Car alongside, left');
     expect(brow).toContain('Pit limiter on');
   });
 });
@@ -758,7 +761,10 @@ describe('every generated profile', () => {
     // It gave the odd LED to brake and painted it red, so on half the shapes the two pedals read at
     // different scales: a foot flat on each filled one side one LED further than the other.
     const odd = ALL_SHAPES.filter((s) => s.centre % 2 === 1);
-    expect(odd.map((s) => s.id)).toEqual(['3-9-3', '3-9-3-fanalab', '4-9-4', '0-9-0', 'brow-9', 'brow-15', 'brow-25']);
+    // Derived rather than listed: the grid generates every centre from four to twelve, so an odd one
+    // is most of it, and a list here would be a second copy of the ranges.
+    expect(odd.length).toBeGreaterThan(20);
+    expect(odd.every((s) => s.centre % 2 === 1)).toBe(true);
     for (const shape of odd) {
       const kids = centreChildren(shape, 'throttleBrake');
       const of = (prefix: string): leds.LedContainer[] => kids.filter((c) => String(descriptionOf(c)).startsWith(prefix));
@@ -843,12 +849,13 @@ describe('every generated profile', () => {
     // Ids are stableGuid of a path, so a rebuild never churns them and SimHub never sees a duplicate.
     const ids = ALL_SHAPES.map((s) => rpmStripProfile(s, stableGuid(`openDash/leds/${s.id}`)).profileId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(rpmStripProfile(STRIP_SHAPES[0]!, stableGuid('openDash/leds/3-9-3')).profileId).toBe(stableGuid('openDash/leds/3-9-3'));
+    expect(rpmStripProfile(shapeById('3-9-3')!, stableGuid('openDash/leds/3-9-3')).profileId).toBe(stableGuid('openDash/leds/3-9-3'));
   });
 
   test('names itself after the shape, in the form SimHub lists', () => {
     expect(rpmStripProfileName(shapeById('4-14-4')!)).toBe('openDash 4/14/4');
-    expect(rpmStripProfileName(shapeById('brow-25')!)).toBe('openDash brow 25');
+    // A brow is a bare run and is named as one: 0/25/0, which is the whole of what it is.
+    expect(rpmStripProfileName(shapeById('0-25-0')!)).toBe('openDash 0/25/0');
     expect(rpmStripFileName(shapeById('4-14-4')!)).toBe('openDash 4-14-4');
   });
 });

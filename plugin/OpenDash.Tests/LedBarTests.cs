@@ -24,7 +24,7 @@ namespace OpenDashPlugin.Tests
                 if (!Directory.Exists(folder)) continue;
                 var file = Directory.GetFiles(folder, "*" + FlagBoxProfile.ProfileExtension)
                     .FirstOrDefault(f => FlagBoxProfile.ShapeIdOf(Path.GetFileName(f)) == "3-9-3");
-                if (file != null) return File.ReadAllText(file);
+                if (file != null) return FlagBoxProfile.ReadFile(file);
             }
             return null;
         }
@@ -125,7 +125,7 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_rewrite_moves_three_names_two_fields_and_nothing_else()
+        public void The_rewrite_moves_the_bars_own_names_two_fields_and_nothing_else()
         {
             var embedded = BuiltStripProfile();
             if (embedded == null) return;
@@ -205,6 +205,28 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultLedCentre, settings.LedBarList()[0].Centre);
             Assert.Equal(Contract.DefaultLedRpmStyle, settings.LedBarList()[0].RpmStyle);
             Assert.NotEqual(settings.LedBarList()[0].Namespace, settings.LedBarList()[1].Namespace);
+        }
+
+        /// <summary>
+        /// The name box opens on the product's own name for the shape, which is right in SimHub's
+        /// profile list and wrong in a property name.
+        /// </summary>
+        /// <remarks>
+        /// `openDash 0/9/0` slugs to `LedopenDash090`, which is what a driver would have to find in
+        /// SimHub's property list to bind anything to their own strip. The prefix comes off first.
+        /// </remarks>
+        [Fact]
+        public void A_bar_named_after_the_product_does_not_carry_the_product_into_its_properties()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var bar = settings.AddLedBar("0-9-0", "openDash 0/9/0");
+            Assert.Equal("openDash 0/9/0", bar.Name);
+            Assert.Equal("Led090", bar.Namespace);
+
+            // And a name of the driver's own is simply slugged.
+            var rim = settings.AddLedBar("3-9-3", "Rim");
+            Assert.Equal("LedRim", rim.Namespace);
         }
     }
 }

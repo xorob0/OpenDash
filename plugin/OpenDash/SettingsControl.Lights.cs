@@ -13,6 +13,7 @@
 // ADR 0013 is why the page exists; docs/design/flag-box.md is what the box draws.
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -137,7 +138,7 @@ namespace OpenDashPlugin
             var cancel = Ui.LinkButton("Cancel");
             cancel.Click += (sender, args) => Redraw();
             var nameRow = Ui.Row(PanelLights.PanelNameTitle, PanelLights.PanelNameCaption, name);
-            nameRow.Width = BodyWidth;
+            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddPanel,
                 Ui.Caption("It will be " + PanelLights.PanelSlot(slot) + ", which is the content number to pick on the device itself."),
                 nameRow,
@@ -199,7 +200,7 @@ namespace OpenDashPlugin
                 Redraw();
             };
             var row = Ui.Row(new Border(), Ui.HStack(12, rename, remove));
-            row.Width = BodyWidth;
+            row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
         }
 
@@ -225,7 +226,7 @@ namespace OpenDashPlugin
             var cancel = Ui.LinkButton("Cancel");
             cancel.Click += (sender, args) => Redraw();
             var nameRow = Ui.Row(PanelLights.PanelNameTitle, PanelLights.PanelNameCaption, name);
-            nameRow.Width = BodyWidth;
+            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + (Settings.MatrixName(matrix) ?? ("Matrix " + matrix)),
                 nameRow,
                 Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
@@ -263,6 +264,14 @@ namespace OpenDashPlugin
                             if (live != null) live.FlagAnimation = on;
                             Save();
                         })),
+                    // Per bar, because a brow above a monitor has no ends to speak of and a rim does.
+                    Ui.Row("A car alongside lights the whole bar", "Off, it lights the LED at that end, which leaves the rev ladder readable while the car is there. On, the whole strip goes amber, which cannot be missed and says nothing about which side.",
+                        BuildToggle(Settings.BarSpotterWhole(ns), on =>
+                        {
+                            var live = Settings.LedBarByNamespace(ns);
+                            if (live != null) live.SpotterWhole = on;
+                            Save();
+                        })),
                     BuildLedBarActions(ns));
             });
         }
@@ -278,7 +287,7 @@ namespace OpenDashPlugin
             remove.ToolTip = "Take this bar off the rig and its profile out of SimHub.";
             remove.Click += (sender, args) => RemoveLedBar(ns);
             var row = Ui.Row(new Border(), Ui.HStack(12, rename, remove));
-            row.Width = BodyWidth;
+            row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
         }
 
@@ -301,9 +310,15 @@ namespace OpenDashPlugin
                 return;
             }
 
-            var ids = shapes.Select(entry => entry.Key).ToArray();
-            var labels = ids.Select(PanelLightRows.ShapeLabel).ToArray();
-            var shape = ids[0];
+            // Two numbers rather than a list of sixty-three. A driver knows how many LEDs their strip
+            // has and how they are grouped, which is exactly A and B; a drop-down asked them to find
+            // "3/9/3" among every other geometry and to know that is what their wheel is called.
+            var sides = shapes.Select(entry => entry.Side).Distinct().OrderBy(n => n).ToArray();
+            var side = sides.Contains(3) ? 3 : sides[0];
+            var centres = shapes.Where(e => e.Side == side).Select(e => e.Centre).OrderBy(n => n).ToArray();
+            var centre = centres.Contains(9) ? 9 : centres[0];
+
+            var note = Ui.Caption(string.Empty);
             var name = new TextBox
             {
                 Width = 280,
@@ -311,37 +326,60 @@ namespace OpenDashPlugin
                 FontSize = Theme.SizeLabel,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Left,
-                Text = DefaultBarName(shape),
             };
             var typed = false;
             name.TextChanged += (sender, args) => typed = name.IsKeyboardFocusWithin;
+            var centreHost = new ContentControl { HorizontalAlignment = HorizontalAlignment.Right };
 
-            var shapeRow = Ui.Row(PanelLights.BarShapeTitle, PanelLights.BarShapeCaption,
-                BuildChoice(ids, labels, shape, 280, value =>
-                {
-                    shape = value;
-                    if (!typed) name.Text = DefaultBarName(value);
-                }));
-            shapeRow.Width = BodyWidth;
+            Action refresh = () =>
+            {
+                note.Text = PanelLights.BarShapeNote(side, centre);
+                if (!typed) name.Text = DefaultBarName(PanelLights.BarShapeId(side, centre));
+            };
+            Action showCentres = () =>
+            {
+                centres = shapes.Where(e => e.Side == side).Select(e => e.Centre).OrderBy(n => n).ToArray();
+                // A side of none reaches twenty-five and a side of four stops at twelve, so the choice
+                // of centre follows the choice of ends rather than offering lengths nothing is built for.
+                if (!centres.Contains(centre)) centre = centres.Contains(9) ? 9 : centres[0];
+                centreHost.Content = BuildChoice(
+                    centres.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                    centres.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                    centre.ToString(CultureInfo.InvariantCulture),
+                    120,
+                    value =>
+                    {
+                        centre = int.Parse(value, CultureInfo.InvariantCulture);
+                        refresh();
+                    });
+                refresh();
+            };
+
+            var endsRow = Ui.Row(PanelLights.BarEndsTitle, PanelLights.BarEndsCaption,
+                BuildSegmented(
+                    sides.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                    sides.Select(n => n == 0 ? "None" : n.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                    side.ToString(CultureInfo.InvariantCulture),
+                    value =>
+                    {
+                        side = int.Parse(value, CultureInfo.InvariantCulture);
+                        showCentres();
+                    }));
+            endsRow.HorizontalAlignment = HorizontalAlignment.Stretch;
+            var centreRow = Ui.Row(PanelLights.BarCentreTitle, PanelLights.BarCentreCaption, centreHost);
+            centreRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             var nameRow = Ui.Row(PanelLights.BarNameTitle, PanelLights.BarNameCaption, name);
-            nameRow.Width = BodyWidth;
+            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
+            showCentres();
 
             var add = Ui.OutlineButton(PanelLights.AddBar, PanelMetrics.RowButtonHeight);
             add.MinWidth = ButtonMinWidth;
-            add.Click += (sender, args) => AddLedBar(shape, name.Text, shapes);
+            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre), name.Text, shapes);
             var cancel = Ui.LinkButton("Cancel");
             cancel.Click += (sender, args) => Redraw();
 
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar, shapeRow, nameRow,
+            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar, endsRow, centreRow, note, nameRow,
                 Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
-        }
-
-        /// <summary>What the name box opens on: the name the build gave the profile for that shape, so
-        /// the row in SimHub's own LED profile list says whose it is rather than reading as a bare
-        /// geometry among everybody else's profiles.</summary>
-        private static string DefaultBarName(string shape)
-        {
-            return FlagBoxProfile.FilePrefix + PanelLightRows.ShapeLabel(shape);
         }
 
         private FrameworkElement BuildAddLedBarRow()
@@ -354,43 +392,65 @@ namespace OpenDashPlugin
             return add;
         }
 
+        /// <summary>What the name box opens on: the name the build gave the profile for that shape, so
+        /// the row in SimHub's own LED profile list says whose it is rather than reading as a bare
+        /// geometry among everybody else's profiles.</summary>
+        private static string DefaultBarName(string shape)
+        {
+            return FlagBoxProfile.FilePrefix + PanelLightRows.ShapeLabel(shape);
+        }
+
+        /// <summary>One shape this build embedded: its geometry, and the profile written for it.</summary>
+        private sealed class EmbeddedShape
+        {
+            public EmbeddedShape(string id, int side, int centre, string json)
+            {
+                Id = id;
+                Side = side;
+                Centre = centre;
+                Json = json;
+            }
+
+            public string Id { get; private set; }
+            public int Side { get; private set; }
+            public int Centre { get; private set; }
+            public string Json { get; private set; }
+        }
+
         /// <summary>
-        /// Every strip shape this build embedded, as shape id to profile JSON, in the order the canvas
-        /// puts them.
+        /// Every A/B/A shape this build embedded, read back as the two numbers it was generated from.
         /// </summary>
         /// <remarks>
-        /// The order matters because it decides what the list opens on. Sorted by id it opened on
-        /// "0/10/0", a bare run nobody owns; PanelLightRows.Rows is the canvas's own order and opens on
-        /// the wheels, which is what a driver adding their first bar has.
+        /// The census is what is embedded, which is the rule the Install tab's rows already follow: a
+        /// shape this build does not carry is not offered and cannot be added as a bar whose profile does
+        /// not exist. The wirings are left out -- a reversed or Fanatec profile is the same geometry
+        /// wired another way and has no place in a question about how many LEDs there are.
         /// </remarks>
-        private static IList<KeyValuePair<string, string>> EmbeddedShapes()
+        private static IList<EmbeddedShape> EmbeddedShapes()
         {
             var log = new SimHubInstallLog();
             var assembly = typeof(OpenDash).Assembly;
-            var json = new Dictionary<string, string>(StringComparer.Ordinal);
-            var profiles = new List<LightProfile>();
+            var shapes = new List<EmbeddedShape>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var resource in FlagBoxProfile.StripResourceNames(assembly))
             {
                 var id = FlagBoxProfile.ShapeIdOf(resource);
-                if (id == null || json.ContainsKey(id)) continue;
+                if (id == null || !seen.Add(id)) continue;
+                var geometry = LightShape.Parse(id);
+                if (geometry == null || geometry.Wiring != null || geometry.Left != geometry.Right) continue;
                 var text = FlagBoxProfile.ResourceText(assembly, resource, log);
                 if (text == null) continue;
-                json[id] = text;
-                profiles.Add(new LightProfile(id, FlagBoxProfile.ProfileNameOf(text)));
+                shapes.Add(new EmbeddedShape(id, geometry.Left, geometry.Centre, text));
             }
-            var ordered = new List<KeyValuePair<string, string>>();
-            foreach (var row in PanelLightRows.Rows(profiles))
-            {
-                foreach (var id in row.ShapeIds) ordered.Add(new KeyValuePair<string, string>(id, json[id]));
-            }
-            return ordered;
+            return shapes;
         }
 
-        private void AddLedBar(string shape, string name, IList<KeyValuePair<string, string>> shapes)
+        private void AddLedBar(string shape, string name, IList<EmbeddedShape> shapes)
         {
             var bar = Settings.AddLedBar(shape, name);
             Save();
-            var embedded = shapes.FirstOrDefault(entry => string.Equals(entry.Key, shape, StringComparison.Ordinal)).Value;
+            var found = shapes.FirstOrDefault(entry => string.Equals(entry.Id, shape, StringComparison.Ordinal));
+            var embedded = found == null ? null : found.Json;
             var ok = embedded != null;
             if (ok)
             {
@@ -457,7 +517,7 @@ namespace OpenDashPlugin
             var cancel = Ui.LinkButton("Cancel");
             cancel.Click += (sender, args) => Redraw();
             var nameRow = Ui.Row(PanelLights.BarNameTitle, PanelLights.BarNameCaption, name);
-            nameRow.Width = BodyWidth;
+            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + bar.Name,
                 nameRow,
                 Ui.Caption("Only the name changes. Its settings stay as they are and its properties keep the names they have, "

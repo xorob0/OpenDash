@@ -93,6 +93,45 @@ namespace OpenDashPlugin
             return string.IsNullOrEmpty(shapeId) ? null : FilePrefix + shapeId + ProfileExtension;
         }
 
+        /// <summary>
+        /// A profile's text, whether the bytes are JSON or a gzip of it.
+        /// </summary>
+        /// <remarks>
+        /// The grid is sixty-three shapes and a profile is a third of a megabyte of NCalc, four fifths
+        /// of it the same conditions written out once per LED; embedded raw that is twenty megabytes of
+        /// assembly for files nobody reads. Gzip takes it to five hundred kilobytes, and the file name
+        /// does not change with it -- the resource is still `openDash 3-9-3.ledsprofile`, so every name,
+        /// every selection and every shape id is what it was, and only the reading of the bytes knows.
+        ///
+        /// Sniffed rather than declared, so a Resources folder filled by hand with plain files works
+        /// exactly as one filled by `scripts/package.sh` does. 0x1F 0x8B is gzip's own magic.
+        /// </remarks>
+        public static string TextOf(Stream stream)
+        {
+            if (stream == null) return null;
+            var buffered = new MemoryStream();
+            stream.CopyTo(buffered);
+            var bytes = buffered.ToArray();
+            if (bytes.Length >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B)
+            {
+                using (var packed = new MemoryStream(bytes))
+                using (var unpacked = new System.IO.Compression.GZipStream(packed, System.IO.Compression.CompressionMode.Decompress))
+                using (var reader = new StreamReader(unpacked, new UTF8Encoding(false)))
+                {
+                    return reader.ReadToEnd();
+                }
+            }
+            return new UTF8Encoding(false).GetString(bytes);
+        }
+
+        /// <summary>One profile file from disk, packed or not. What the tests read the build's own output
+        /// with, so they read it the way the plugin does rather than assuming it is text.</summary>
+        public static string ReadFile(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+            using (var stream = File.OpenRead(path)) return TextOf(stream);
+        }
+
         /// <summary>Where the profile is left: SimHub/OpenDash/. Its own folder rather than PluginsData,
         /// because PluginsData is where SimHub keeps files it owns and this one is for the user to pick up.</summary>
         public const string FolderName = "OpenDash";
@@ -185,10 +224,7 @@ namespace OpenDashPlugin
                 using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
                     if (stream == null) return null;
-                    using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
-                    {
-                        return reader.ReadToEnd();
-                    }
+                    return TextOf(stream);
                 }
             }
             catch (Exception e)

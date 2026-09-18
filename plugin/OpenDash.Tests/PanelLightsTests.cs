@@ -44,5 +44,26 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(Contract.RetiredLedCentre, Contract.LedCentres);
             Assert.DoesNotContain("RPM only", PanelLights.CentreLabels);
         }
+
+        /// <summary>
+        /// The two numbers a driver is asked for, and the line that checks them against the strip they
+        /// are holding.
+        /// </summary>
+        /// <remarks>
+        /// A list of sixty-three geometries asked somebody to find "3/9/3" among every other one and to
+        /// know that is what their wheel is called. Two numbers is what they can count.
+        /// </remarks>
+        [Fact]
+        public void The_shape_note_says_what_the_two_numbers_add_up_to()
+        {
+            Assert.Equal("15 LEDs in all, as 3/9/3.", PanelLights.BarShapeNote(3, 9));
+            Assert.Equal("15 LEDs in all, as 0/15/0.", PanelLights.BarShapeNote(0, 15));
+            Assert.Equal("3-9-3", PanelLights.BarShapeId(3, 9));
+            Assert.Equal("0-15-0", PanelLights.BarShapeId(0, 15));
+            // The ends are what carries the lamps and the middle is what carries the revs, which is the
+            // one thing the two captions have to get the right way round.
+            Assert.Contains("lamps", PanelLights.BarEndsCaption);
+            Assert.Contains("rev ladder", PanelLights.BarCentreCaption);
+        }
     }
 }

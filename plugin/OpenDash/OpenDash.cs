@@ -98,6 +98,10 @@ namespace OpenDashPlugin
                 // Before installing, not after: a staging folder left by an interrupted update is a complete
                 // extracted dashboard sitting in DashTemplates, and they accumulate one per abandoned update.
                 PackageExtractor.RemoveOrphanedStaging(Installer.SimHubRoot, new SimHubInstallLog());
+                // And arm the plugin swap again if one is still waiting: the waiter armed when the
+                // assembly was staged gives up after a while, and a session that reaches here with a
+                // staged assembly is a session where the last swap did not happen. Inert otherwise.
+                PluginUpdate.Launch(Installer.SimHubRoot, new SimHubInstallLog());
                 // The rig decides what is written. Before ADR 0017 this wrote every package the plugin
                 // embeds on every start, so a user who owned one screen found fourteen dashboards in
                 // SimHub's list; now a screen exists because somebody added it. Nothing outside the rig
@@ -250,6 +254,7 @@ namespace OpenDashPlugin
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedCentre), () => Settings.BarCentre(ns));
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedRpmStyle), () => Settings.BarRpmStyle(ns));
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedFlagAnimation), () => Settings.BarFlagAnimation(ns));
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedSpotterWhole), () => Settings.BarSpotterWhole(ns));
             }
         }
 

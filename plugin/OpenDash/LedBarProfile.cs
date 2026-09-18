@@ -19,7 +19,7 @@ namespace OpenDashPlugin
     public static class LedBarProfile
     {
         /// <summary>
-        /// The three properties a bar owns, which are the ones a rewrite moves under its namespace.
+        /// The properties a bar owns, which are the ones a rewrite moves under its namespace.
         /// </summary>
         /// <remarks>
         /// Everything else a strip profile reads stays rig-wide and is deliberately not here.
@@ -28,7 +28,10 @@ namespace OpenDashPlugin
         /// well; and `LedMirrorReady` with the packed `LedMirror<n>` runs is the *car's* own shift
         /// pattern, which is a fact about the car and not a setting on a strip.
         /// </remarks>
-        public static readonly string[] BarSettings = { Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation };
+        public static readonly string[] BarSettings =
+        {
+            Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation, Contract.LedSpotterWhole,
+        };
 
         /// <summary>`LedCentre` under one bar's namespace: `RimLedCentre`.</summary>
         public static string Property(string ns, string setting)

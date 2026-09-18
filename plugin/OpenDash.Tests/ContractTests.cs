@@ -85,9 +85,10 @@ namespace OpenDashPlugin.Tests
             // the lap review is shown, 279 before the companion's page became the plugin's, 280
             // before the mirror brought its fit, its gate and one packed run per length a centre can
             // be, 292 before each matrix was given its own answer to whether the digit flashes
-            // through the redline, and 296 before each face was given its own answer to what it
-            // carries at the top.
-            Assert.Equal(304, names.Count);
+            // through the redline, 296 before each face was given its own answer to what it carries at
+            // the top, and 304 before the strip shapes became a grid and the mirror had to publish a
+            // run for every centre the grid reaches.
+            Assert.Equal(317, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -411,7 +412,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(
                 new[] { "LedCentre", "LedRpmStyle", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" },
                 Contract.LedPropertyNames().Take(5));
-            Assert.Equal("LedMirror25", Contract.PropertyNames().Last());
+            Assert.Equal(Contract.LedSpotterWhole, Contract.PropertyNames().Last());
             Assert.True(Contract.DefaultFlagBoxGear);
             // Matrix 1 does everything, 2 to 4 are off: one box works out of the box.
             Assert.True(Contract.DefaultFlagBoxMatrixOn(1));
@@ -472,6 +473,9 @@ namespace OpenDashPlugin.Tests
             // green throughout, which is why The_two_sides_declare_the_same_properties() exists below.
             var expected = new List<string> { "LedCentre", "LedRpmStyle", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" };
             expected.AddRange(Contract.MirrorRunLengths.Select(Contract.LedMirrorRun));
+            // Appended after the runs rather than beside the three it belongs with, for the reason every
+            // other addition is appended: both halves of the contract pin this list in order.
+            expected.Add(Contract.LedSpotterWhole);
             Assert.Equal(expected, Contract.LedPropertyNames());
             foreach (var name in expected) Assert.Contains(name, Contract.LightsPropertyNames());
             // On: movement is what a flag is read by at the edge of vision, and off is the driver
@@ -483,6 +487,9 @@ namespace OpenDashPlugin.Tests
             // check rather than allowed to retire it.
             var mirrorRuns = Contract.MirrorRunLengths.Select(Contract.LedMirrorRun);
             Assert.DoesNotContain(Contract.LedPropertyNames().Except(mirrorRuns), n => n.Contains("1") || n.Contains("2"));
+            // Four to twenty-five without a gap: the grid generates every centre in that range, so a
+            // missing one is a shape whose mirror reads a property nobody attaches.
+            Assert.Equal(Enumerable.Range(4, 22), Contract.MirrorRunLengths);
 
             Assert.Equal(new[] { "rpm", "brake", "throttleBrake", "fuel" }, Contract.LedCentres);
             Assert.Equal(new[] { "car", "leftToRight", "meetInMiddle", "f1" }, Contract.LedRpmStyles);
@@ -508,7 +515,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("f1", Contract.NormaliseChoice(" F1 ", Contract.LedRpmStyles, Contract.DefaultLedRpmStyle));
             // A run length missing here is a strip shape with no mirror and nothing that would say so,
             // so the list is checked against the shapes themselves in packages/dash/test/leds.test.ts.
-            Assert.Equal(new[] { 8, 9, 10, 12, 14, 15, 16, 18, 20, 25 }, Contract.MirrorRunLengths);
+            Assert.Equal(Enumerable.Range(4, 22), Contract.MirrorRunLengths);
             Assert.Equal("LedMirror14", Contract.LedMirrorRun(14));
         }
 

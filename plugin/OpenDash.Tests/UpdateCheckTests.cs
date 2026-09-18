@@ -60,8 +60,28 @@ namespace OpenDashPlugin.Tests
             // release and its owner would never be offered a candidate.
             Assert.Equal("0.1.0-rc.2", UpdateCheck.ComparableInstalled(Versioning.UnknownVersion, "0.1.0-rc.2"));
             Assert.Equal("0.1.0-rc.2", UpdateCheck.ComparableInstalled(null, "0.1.0-rc.2"));
-            Assert.Equal("0.2.0", UpdateCheck.ComparableInstalled("0.2.0", "0.1.0-rc.2"));
             Assert.Null(UpdateCheck.ComparableInstalled(null, null));
+            // And with nothing to fall back to, what is installed is all there is.
+            Assert.Equal("0.2.0", UpdateCheck.ComparableInstalled("0.2.0", null));
+        }
+
+        /// <summary>
+        /// The half that is behind decides, which is the only way a plugin left behind by its dashboards is
+        /// ever offered an update again.
+        /// </summary>
+        /// <remarks>
+        /// Seen on the test rig: the dashboards went to 0.3.0-rc.2 and the assembly stayed at rc.1 because the
+        /// swap happens after SimHub exits, and the panel then said "You have the newest release" with no way
+        /// left to move the plugin. Reading the older of the two keeps the offer up until both halves are there.
+        /// </remarks>
+        [Fact]
+        public void A_plugin_behind_its_dashboards_is_still_offered_the_release()
+        {
+            Assert.Equal("0.3.0-rc.1", UpdateCheck.ComparableInstalled("0.3.0-rc.2", "0.3.0-rc.1"));
+            // And the other way round: dashboards a release behind a plugin that moved first.
+            Assert.Equal("0.3.0-rc.1", UpdateCheck.ComparableInstalled("0.3.0-rc.1", "0.3.0-rc.2"));
+            // Level pegging is simply that version.
+            Assert.Equal("0.3.0-rc.2", UpdateCheck.ComparableInstalled("0.3.0-rc.2", "0.3.0-rc.2"));
         }
 
         // IsPreRelease

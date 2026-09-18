@@ -60,17 +60,20 @@ const SECOND_AID_IDS: readonly string[] = ['drs', 'p2p'];
 /**
  * The lamps of one side, outermost first.
  *
- * A side of one is the side lamp alone, by the same rule that drops the aids at two: what is left
- * when there is no room is the outermost, which is the one thing a side can say that the centre
- * cannot. A side longer than five keeps the five-lamp assignment and leaves the rest to the brake
- * gradient, because no shape has one and inventing a sixth role for a strip nobody owns would be a
- * lamp with no meaning attached.
+ * A side of one carries three roles on its one LED, and it used to carry only the outermost. That
+ * read well until the grid generated a 1/n/1: a strip with no sides at all gives the flags the whole
+ * run, so adding one LED to each end *lost the flags altogether* — a driver who bought a wheel with
+ * one lamp a side would have seen a car alongside and never a yellow. Sharing is the rule everywhere
+ * below four lamps and this is simply where it ends up: side, then race, then the car's own, with
+ * the aids dropped as they are at two. A side longer than five keeps the five-lamp assignment and
+ * leaves the rest to the brake gradient, because no shape has one and inventing a sixth role for a
+ * strip nobody owns would be a lamp with no meaning attached.
  */
 export const lampsForSide = (count: number): readonly Lamp[] =>
   count <= 0
     ? []
     : count === 1
-      ? [SIDE]
+      ? [lamp('side', 'side, flag and car', ['side', 'race', 'car'])]
       : count === 2
         ? [SIDE, lamp('car', 'car and flag', ['car', 'race'])]
         : count === 3
