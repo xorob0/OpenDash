@@ -178,13 +178,17 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
     }
     if (gapHeight > 0) {
       let x = box.left;
+      // On the line box's own bottom rather than on the row's, which is `fieldTail` lower: the row
+      // reserves that tail so the line box may hang into it, and a field placed on the reserved
+      // edge spends it above the value instead, which at 46 px doubles the six above the row.
+      const lineBottom = top + valueHeight;
       if (has('gap')) {
-        items.push(...field(gapSpec, x, top + gapHeight, ctx.density));
+        items.push(...field(gapSpec, x, lineBottom, ctx.density));
         x += Math.ceil(valueWidth(gapSpec, d)) + DETAIL_GAP;
       }
       // On the gap's own baseline, where the canvas sets them: the reading and the recaps of it
       // read as one line rather than as a line with a caption under it.
-      const baseline = canvasBaseline(top + gapHeight - valueHeight, valueHeight);
+      const baseline = canvasBaseline(lineBottom - valueHeight, valueHeight);
       for (const detail of following) {
         const width = detailWidth(detail.text, d.label);
         items.push(label(`${ctx.prefix}${side.id}.${detail.id}`, detail.text, x, canvasYForBaseline(baseline, d.label), width, { size: d.label, bind: detail.bind, widest: detail.text }));

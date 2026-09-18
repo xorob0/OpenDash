@@ -494,6 +494,64 @@ describe('the opponents page keeps both cars', () => {
   }
 });
 
+/**
+ * The two gaps the opponents drawing is built out of: six down the block, between the heading, the
+ * identity row and the metric row, and ten across the metric row, between the gap and each of the
+ * recaps that share its baseline.
+ *
+ * Neither is something a fit check can see. The six under the identity row was really twelve,
+ * because the metric row was placed on the bottom edge its own height reserves for the tail the
+ * value's line box hangs below it, and a field placed on the reserved edge spends that tail above
+ * the value instead. A block six pixels loose inside still fits every box that has room for it,
+ * and every box here had room, so the drawing was wrong everywhere and green everywhere.
+ *
+ * Measured between canvas line boxes rather than between SimHub boxes, since the canvas gap is a
+ * gap between `line-height: 1` boxes and the WPF box is a fifth of the font size taller. The
+ * pixel of tolerance is what the rounding of each edge to whole pixels costs.
+ */
+describe('the opponents block keeps the gaps the canvas draws it with', () => {
+  const opponents = MODULES.find((m) => m.id === 'opponents')!;
+  const INNER = 6;
+  const ACROSS = 10;
+  /** The canvas line box of a text, recovered from the SimHub box `textBox` made of it. */
+  const lineOf = (i: TextItem): number => i.rect.top + 0.1 * i.fontSize;
+  const topOf = (i: TextItem | RectangleItem): number => (i.kind === 'text' ? lineOf(i) : i.rect.top);
+  const bottomOf = (i: TextItem | RectangleItem): number => (i.kind === 'text' ? lineOf(i) + i.fontSize : i.rect.top + i.rect.height);
+  const baselineOf = (i: TextItem): number => lineOf(i) + 0.9 * i.fontSize;
+
+  for (const box of moduleBoxes()) {
+    for (const side of ['ahead', 'behind']) {
+      test(`${side} on a ${box.name}`, () => {
+        const items = opponents.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+        const at = (id: string): TextItem | RectangleItem | undefined => {
+          const found = items.find((i) => i.name === `${side}.${id}`);
+          return found?.kind === 'text' || found?.kind === 'rect' ? found : undefined;
+        };
+        const heading = at('heading');
+        expect({ box: box.name, side, heading: heading !== undefined }).toMatchObject({ heading: true });
+        // The identity row's height is its tallest piece, which is the chip wherever one is kept
+        // and the number where the ramp draws it taller, so the row is the union of what it holds.
+        const present = (ids: readonly string[]): (TextItem | RectangleItem)[] => ids.map(at).filter((i): i is TextItem | RectangleItem => i !== undefined);
+        const identity = present(['name', 'num.value', 'class.block']);
+        const metric = present(['gap.value', 'lastLap', 'rating']);
+        const lines = [[heading!], identity, metric].filter((line) => line.length > 0);
+        for (const [i, line] of lines.slice(1).entries()) {
+          const gap = Math.min(...line.map(topOf)) - Math.max(...lines[i]!.map(bottomOf));
+          expect({ box: box.name, side, line: i + 1, loose: Math.abs(gap - INNER) > 1 }).toMatchObject({ loose: false });
+        }
+
+        const row = metric.filter((i): i is TextItem => i.kind === 'text');
+        // One row, not a line with a caption under it: the recaps sit on the gap's own baseline.
+        expect({ box: box.name, side, baselines: [...new Set(row.map(baselineOf))].length }).toMatchObject({ baselines: 1 });
+        for (const [i, part] of row.slice(1).entries()) {
+          const previous = row[i]!;
+          expect({ box: box.name, part: part.name, gap: part.rect.left - (previous.rect.left + previous.rect.width) }).toMatchObject({ gap: ACROSS });
+        }
+      });
+    }
+  }
+});
+
 describe('a bar drawn under a value', () => {
   const gaugeOf = (density: Density) => {
     const module = MODULES.find((m) => m.id === 'fuel')!;
