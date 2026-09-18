@@ -126,14 +126,26 @@ namespace OpenDashPlugin
             foreach (var row in rows)
             {
                 var members = row.ShapeIds;
-                drawn.Add(BuildLightRow(
+                // No press. A strip profile reaches SimHub as an LED bar's, under the name its owner gave
+                // it, because two strips that share one profile share one set of settings -- which is the
+                // thing the bars exist to stop. This row is the census: which shapes this build draws
+                // for, and whether anything of ours is in SimHub for them.
+                drawn.Add(BuildCensusRow(
                     row.Name,
                     row.Caption,
                     FlagBoxInstallPlan.Combine(members.Select(id => byId[id])),
-                    () => FlagBoxInstallPlan.Combine(Install(members.Select(id => json[id]).ToList())),
-                    current => PanelLightRows.Tooltip(members.Count, current.State, current.InstalledVersion)));
+                    PanelLightRows.Tooltip(members.Count, FlagBoxInstallPlan.Combine(members.Select(id => byId[id])).State, null)));
             }
             return drawn;
+        }
+
+        /// <summary>A row with no press: what the shape is and what SimHub holds for it.</summary>
+        private FrameworkElement BuildCensusRow(string name, string caption, FlagBoxPlan plan, string tooltip)
+        {
+            var state = PanelCopy.LightRow(plan.State, plan.InstalledVersion);
+            var row = Ui.InstallRow(null, name, caption, Ui.StatusPill(PanelLightRows.DotHex(plan.State), state.State, state.StateHex), null);
+            row.ToolTip = tooltip;
+            return row;
         }
 
         /// <summary>

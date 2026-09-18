@@ -239,6 +239,18 @@ namespace OpenDashPlugin
                 var run = length;
                 this.AttachDelegate(Contract.LedMirrorRun(run), () => CarLights.Run(run));
             }
+            // One group per bar the rig holds, under that bar's own namespace, which is what lets two
+            // strips be configured apart: the profile installed for a bar carries these names as
+            // literals, rewritten from the rig-wide ones above by LedBarProfile. The namespace is
+            // captured rather than the bar, because the panel replaces the settings object on every
+            // change and a delegate holding the old bar would report the old value for ever.
+            foreach (var bar in Settings.LedBarList())
+            {
+                var ns = bar.Namespace;
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedCentre), () => Settings.BarCentre(ns));
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedRpmStyle), () => Settings.BarRpmStyle(ns));
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedFlagAnimation), () => Settings.BarFlagAnimation(ns));
+            }
         }
 
         /// <summary>
@@ -256,7 +268,10 @@ namespace OpenDashPlugin
             try
             {
                 var telemetry = data == null ? null : data.NewData;
-                var on = data != null && data.GameRunning && telemetry != null && Settings.LedRpmStyle == Contract.LedRpmStyleCar;
+                // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no
+                // opinion falls back to: the mirror is one computation feeding every strip, so gating it
+                // on one setting would leave a second bar set to the car's own reading a run nothing fills.
+                var on = data != null && data.GameRunning && telemetry != null && Settings.AnyCarLadderWanted();
                 CarLights.Update(
                     on ? telemetry.CarId : null,
                     on ? telemetry.Gear : null,
