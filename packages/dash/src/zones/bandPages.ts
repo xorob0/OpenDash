@@ -42,6 +42,7 @@ import {
   fuel as fuelLevel,
   fuelLapsLeft,
   fuelLastLap,
+  fuelIsSettled,
   fuelPerLap,
   fuelTimeLeft,
   fuelUnit,
@@ -124,7 +125,7 @@ const fuel: readonly BandField[] = [
   // Behind the consumption gate, which is the same one the fuel module draws its own est. laps
   // behind. SimHub publishes the remaining laps as zero before it has a per-lap figure, so an idle
   // screen said "0.0" with the confidence of a reading rather than saying it had none.
-  { id: 'laps', label: 'Est. laps', sample: '13.1', bind: iff(gt(fuelPerLap(), num(0)), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)), chars: CHARS.consumption },
+  { id: 'laps', label: 'Est. laps', sample: '13.1', bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)), chars: CHARS.consumption },
   { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
   { id: 'perLap', label: 'Per lap', sample: '1.432', bind: fmt(fuelPerLap(), '0.000'), chars: { digits: 5, specials: 1 } },
   { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: fmt(fuelLastLap(), '0.000'), chars: { digits: 5, specials: 1 } },
