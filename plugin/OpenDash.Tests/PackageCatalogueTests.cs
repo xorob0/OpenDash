@@ -146,7 +146,13 @@ namespace OpenDashPlugin.Tests
             var source = new MemoryPackageSource();
             // Added back to front so that the order asserted below is the catalogue's own work and not
             // the order the packages happened to arrive in.
-            foreach (var package in Release.Reverse())
+            //
+            // Spelled as a plain call on Enumerable rather than as `Release.Reverse()`, because from
+            // C# 13 the span extensions in System.MemoryExtensions become applicable to an array and
+            // beat the LINQ ones on it. `MemoryExtensions.Reverse(Span<T>)` reverses in place and
+            // returns void, so the extension-method spelling compiles on an SDK 8 machine and fails
+            // on the runner with CS1579. This spelling means one thing on every compiler.
+            foreach (var package in Enumerable.Reverse(Release))
             {
                 source.Add("OpenDashPlugin.Resources." + package.Folder + ".simhubdash",
                     Package(package.Folder, package.Width, package.Height));
