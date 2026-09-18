@@ -67,7 +67,9 @@ be distinctive would cost drivers real recognition time.
 |---|---|---|
 | OpenDash cyan | `color.brand.primary` | `#33D9F2` |
 
-Logo, plugin panel, documentation, website. Never on the dash face.
+Logo, plugin panel, documentation, website. Never on the dash face. Which surfaces of the panel
+may carry it is enumerated in [plugin.md](plugin.md), where the enumeration on the canvas and the
+one the panel draws are recorded as disagreeing.
 
 ## Typography
 
