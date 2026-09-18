@@ -64,8 +64,8 @@ describe('shape is a pair of bands, not a ratio', () => {
 
   test('the real boxes the build produces land in bands that make sense', () => {
     // Not fixtures: these are the boxes companionGeometry and zoneFrame actually hand a module.
-    expect(describeShape(shapeOf({ width: 802, height: 336 }))).toBe('wide/medium'); // companion page
-    expect(describeShape(shapeOf({ width: 432, height: 706 }))).toBe('medium/tall'); // companion portrait
+    expect(describeShape(shapeOf({ width: 802, height: 356 }))).toBe('wide/medium'); // companion page
+    expect(describeShape(shapeOf({ width: 432, height: 726 }))).toBe('medium/tall'); // companion portrait
     expect(describeShape(shapeOf({ width: 607, height: 158 }))).toBe('wide/short'); // pit wall race zone
     expect(describeShape(shapeOf({ width: 1007, height: 211 }))).toBe('wide/medium'); // the wide zone
     expect(describeShape(shapeOf({ width: 455, height: 284 }))).toBe('medium/medium'); // tower zone

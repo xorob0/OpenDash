@@ -138,11 +138,10 @@ describe('the companion', () => {
     const screen = main.screens.find((s) => s.name === 'lapTimes')!;
     const labels = [...walkItems(screen.items)].filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.label') && !i.name.includes('.header.'));
     const rows = [...new Set(labels.map((l) => l.rect.top))].sort((a, b) => a - b);
-    // Three ranks, where the artboard draws four: the sector rank needs 348 px of content and the
-    // page has 336, because the flag band below it is the token's 32 rather than the artboard's 12.
-    // docs/research/design-audit.md carries that disagreement; design/tokens.json is not edited
-    // from code.
-    expect(rows).toHaveLength(3);
+    // Four ranks, as the artboard draws. The sector rank needs 348 px of content and used to be
+    // shed, because the flag band above took the token's 32 px rather than the artboard's 12 and
+    // left the page 336 tall; at the artboard's 356 it fits.
+    expect(rows).toHaveLength(4);
     const pitches = new Set<number>();
     for (const top of rows) {
       const lefts = labels
@@ -386,6 +385,10 @@ describe('a monospaced value only draws glyphs that fit its cell', () => {
  * real box, so the guarantee read stronger than it was — a module could pass and still overflow
  * what the build hands it. Nothing overflowed, which is why nobody noticed, and the shape model is
  * about to ask modules to fill their height.
+ *
+ * The companion's 356 has since become the built height too, the flag band having come down from
+ * the 32 px token to the artboard's 12, but that is a coincidence rather than a reason to write
+ * any of these down again.
  */
 export function moduleBoxes(): { name: string; frame: Rect; density: Density }[] {
   const boxes: { name: string; frame: Rect; density: Density }[] = [];

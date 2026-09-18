@@ -1,7 +1,7 @@
 /**
  * A module: one page. The companion shows one at a time, a pit wall zone embeds one, and a zone of
  * the dash face cycles through them. A module is a function of a rect, a density and a shape, so
- * the same code draws the 802 x 336 companion page and the 607 x 158 zone strip, and nothing about
+ * the same code draws the 802 x 356 companion page and the 607 x 158 zone strip, and nothing about
  * a module knows which screen it is on.
  *
  * Modules are listed in contract.ts, which the plugin mirrors, so this file only binds a builder

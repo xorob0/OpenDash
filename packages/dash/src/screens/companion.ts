@@ -20,7 +20,12 @@ import { ds } from '../tokens.ts';
 
 /** Height of the page-dot row and of the flag band at the bottom edge. */
 export const DOTS_HEIGHT = 24;
-export const FLAG_HEIGHT = ds.indicator.flagBand.heightSm;
+/**
+ * The canvas draws a 12 px strip here, as on the nano face, too thin for a label; no token holds
+ * that value, so it is written locally as `layouts/800x286.ts` already does. The heightSm token is
+ * 32, which stole twenty pixels from the module body on all forty-two screens.
+ */
+export const FLAG_HEIGHT = 12;
 
 export interface CompanionSize {
   folder: string;
