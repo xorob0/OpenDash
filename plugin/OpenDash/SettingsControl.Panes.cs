@@ -356,7 +356,22 @@ namespace OpenDashPlugin
         {
             var toggle = BuildToggle(screen.Face.IsClassOnly(letter), on => { screen.Face.SetClassOnly(letter, on); Save(); });
             toggle.ToolTip = "Show the leaderboard and the relative in zone " + letter + " for your own class";
-            return Ui.HStack(PanelFacePlan.CellGap, toggle, Ui.Text("My class only", Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary));
+            toggle.VerticalAlignment = VerticalAlignment.Center;
+            toggle.HorizontalAlignment = HorizontalAlignment.Left;
+            // Measured inside a vertical stack, which is not a nicety. SHToggleButton declares no size of
+            // its own and grows to whatever it is measured against; every other toggle on the panel sits
+            // in a row of automatic height and so is measured against infinity, but this one is docked to
+            // the bottom of a cell as tall as the face's body, and it drew as a white disc filling zone B
+            // and zone C. A vertical StackPanel measures its children with an infinite height, which is
+            // the same question the rows ask and gets the same answer, without this file having to know
+            // what size SimHub draws a switch at.
+            var sized = Ui.VStack(0, toggle);
+            sized.VerticalAlignment = VerticalAlignment.Center;
+            // And a floor under its width, because SimHub's switch draws wider than it measures: the
+            // label beside it started underneath the knob. A floor rather than a fixed width, so a switch
+            // that is genuinely wider than this still gets the room it asks for.
+            sized.MinWidth = PanelFacePlan.SwitchWidth;
+            return Ui.HStack(PanelFacePlan.CellGap, sized, Ui.Text("My class only", Theme.SizeLabel, FontWeights.Normal, Theme.TextSecondary));
         }
 
         /// <summary>
