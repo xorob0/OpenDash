@@ -64,20 +64,21 @@ namespace OpenDashPlugin.Tests
             // Four settings, twelve slots, the rev bar mode, the zone face of every face that ships
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance
             // and the flag format), twenty-one companion modules, four pit wall zones, the wide zone,
-            // the URL, and the flag box.
+            // the URL, the pit wall's class filter, and the flag box.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1;
             // Six global flag box settings and ten per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
             // only, the gear and the two temperature thresholds moved under the matrix that owns them,
             // and the switch on the spotter bar's movement joined the rig's own names.
             Assert.Equal(
-                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 6 + Contract.FlagBoxMatrices.Count * 10 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 3 + 6 + Contract.FlagBoxMatrices.Count * 10 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
             // LedRpmStyle were declared by one side only. 256 before the four settings a box owns
-            // became four per matrix, which is twelve names more.
-            Assert.Equal(269, names.Count);
+            // became four per matrix, which is twelve names more, and 269 before the pit wall gained the
+            // class filter its board and its list zones read.
+            Assert.Equal(270, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -109,8 +110,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LightsBrightness", "LightsNightBrightness", "LightsNightMode",
-                "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 21).Take(12));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "PitWallClassOnly", "LightsBrightness", "LightsNightBrightness",
+                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 21).Take(13));
+            // One filter for the screen, not one per zone: a pit wall zone is a widget pointed at one
+            // dashboard file per rectangle, so zones A and B of the race page are the same file.
+            Assert.False(Contract.DefaultPitWallClassOnly);
+            Assert.Equal("PitWallClassOnly", Contract.PitWallClassOnlyProperty(Contract.PitWallPrefix));
+            Assert.Equal("GarageClassOnly", Contract.PitWallClassOnlyProperty("Garage"));
+            Assert.Single(names.Where(n => n.EndsWith("PitWallClassOnly", StringComparison.Ordinal)));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 

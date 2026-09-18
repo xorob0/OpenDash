@@ -20,6 +20,7 @@ namespace OpenDashPlugin
         public const string SessionProgress = "SessionProgress";
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
+        public const string PitWallClassOnly = "PitWallClassOnly";
 
         /// <summary>The lights. Not a screen, but their settings are properties for the same reason the
         /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.
@@ -494,6 +495,9 @@ namespace OpenDashPlugin
                 foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(ns, letter);
                 yield return PitWallWideProperty(ns);
                 yield return WebViewUrlProperty(ns);
+                // Last, after the web view: the six before it have shipped and both halves of the
+                // contract assert the group by index, so a new one joins the end of it.
+                yield return PitWallClassOnlyProperty(ns);
                 yield break;
             }
             // A slots face reads the twelve shared slot properties and nothing of its own, which is why
@@ -531,6 +535,7 @@ namespace OpenDashPlugin
                 foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
                 yield return PitWallWide;
                 yield return WebViewUrl;
+                yield return PitWallClassOnly;
                 yield break;
             }
             throw new ArgumentOutOfRangeException("prefix", prefix, "no screen carries that prefix");
@@ -856,6 +861,13 @@ namespace OpenDashPlugin
         /// that hides nobody but says it does.</summary>
         public const bool DefaultZoneClassOnly = false;
 
+        /// <summary>Whether a pit wall's board and its zone lists show the player's own class. One
+        /// answer for the screen and not one per zone, as a face has: a pit wall's zones are widgets
+        /// pointed at one dashboard file per rectangle, so two zones of one column are the same file
+        /// and could not be told apart. Off, for the reason a face's is off. Mirrors
+        /// DEFAULT_PIT_WALL_CLASS_ONLY in contract.ts.</summary>
+        public const bool DefaultPitWallClassOnly = false;
+
         /// <summary>The class filter of every face zone, in letter order.</summary>
         public static bool[] DefaultFaceZoneClassOnly()
         {
@@ -997,6 +1009,13 @@ namespace OpenDashPlugin
         public static string WebViewUrlProperty(string ns)
         {
             return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? WebViewUrl : ns + "WebViewUrl";
+        }
+
+        /// <summary>Property name of a pit wall's class filter: PitWallClassOnly, or GarageClassOnly
+        /// on a second one.</summary>
+        public static string PitWallClassOnlyProperty(string ns)
+        {
+            return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? PitWallClassOnly : ns + "ClassOnly";
         }
 
         /// <summary>Default page of a zone, by its letter.</summary>

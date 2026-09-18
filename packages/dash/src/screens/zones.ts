@@ -51,7 +51,10 @@ export function zoneScreen(page: PitWallZonePageMeta, kind: ZoneKind, size: Size
   // A zone dashboard is a pit wall screen, so both kinds label at the pit wall's 13 rather than the
   // face's 15: `PitWallZones.dc.html` writes eighty `.lblt` and not one `.lbl`.
   const density = kind === 'wide' ? 'wide' : 'panel';
-  const items: Item[] = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.` })];
+  // The class filter is the screen's, so every zone of a pit wall answers it the same way: four
+  // widgets share one zone dashboard per rectangle, and a filter told apart per zone could not
+  // reach one of two zones drawn from the same file.
+  const items: Item[] = [...chrome, ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, classOnly: secondScreen.classOnly() })];
   return pageScreen(page.id, items);
 }
 

@@ -231,6 +231,7 @@ OpenDash.PitWallZoneC
 OpenDash.PitWallZoneD
 OpenDash.PitWallWide
 OpenDash.WebViewUrl
+OpenDash.PitWallClassOnly
 OpenDash.LightsBrightness
 OpenDash.LightsNightBrightness
 OpenDash.LightsNightMode

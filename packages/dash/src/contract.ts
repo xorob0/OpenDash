@@ -146,7 +146,7 @@ export const LED_FLAG_ANIMATION_SETTING = 'LedFlagAnimation';
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
-  const pitWall = [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING];
+  const pitWall = [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING];
   return [...companionProperties(), ...pitWall].map(propertyName);
 }
 
@@ -559,7 +559,7 @@ export function screenProperties(prefix: string): string[] {
   const face = faceForPrefix(prefix);
   if (face) return facePropertyNames(face).map(propertyName);
   if (prefix === PIT_WALL_PREFIX) {
-    return [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING].map(propertyName);
+    return [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING].map(propertyName);
   }
   if (prefix === COMPANION_PREFIX) return companionProperties().map(propertyName);
   throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
@@ -759,6 +759,21 @@ export const pitWallZoneSettingName = (letter: PitWallZoneLetter): string => `Pi
 export const PIT_WALL_WIDE_ZONE_SETTING = 'PitWallWide';
 export const WEB_VIEW_SETTING = 'WebViewUrl';
 
+/**
+ * `PitWallClassOnly`: whether this pit wall's lists show the player's own class.
+ *
+ * One setting for the screen and not one per zone, as a face has. A face's zones are four
+ * rectangles of one dashboard and each can be told apart; a pit wall's are four widgets pointed at
+ * one zone dashboard per rectangle, so zones A and B of the race page are the same file and a
+ * per-zone filter could not reach one of them without reaching the other. The board beside them is
+ * the screen's own and takes the same answer.
+ *
+ * Off, for the reason the face's is off: most racing is single-class, and a driver in one would not
+ * thank us for a leaderboard that hides nobody but says it does.
+ */
+export const PIT_WALL_CLASS_ONLY_SETTING = 'PitWallClassOnly';
+export const DEFAULT_PIT_WALL_CLASS_ONLY = false;
+
 /** The URL the web view page shows until the user sets one. Empty means "nothing configured". */
 export const DEFAULT_WEB_VIEW_URL = '';
 
@@ -775,6 +790,8 @@ export const secondScreen = {
   wideZonePage: (): Expr => isnull(prop(propertyName(PIT_WALL_WIDE_ZONE_SETTING)), num(PIT_WALL_DEFAULT_WIDE_ZONE_PAGE)),
   /** `isnull([OpenDash.WebViewUrl], '')`: the address of the web view page. */
   webViewUrl: (): Expr => isnull(prop(propertyName(WEB_VIEW_SETTING)), str(DEFAULT_WEB_VIEW_URL)),
+  /** `isnull([OpenDash.PitWallClassOnly], false)`: whether this pit wall's lists show the player's class. */
+  classOnly: (): Expr => isnull(prop(propertyName(PIT_WALL_CLASS_ONLY_SETTING)), String(DEFAULT_PIT_WALL_CLASS_ONLY)),
 };
 
 // --- The flag box ---------------------------------------------------------------------------

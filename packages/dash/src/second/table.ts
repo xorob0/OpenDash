@@ -548,8 +548,9 @@ export interface TableSpec {
  *
  * SimHub has a class-only twin of each of the two lookups a table uses, so filtering to the
  * player's class is the same question asked of a different function rather than a row set built
- * somewhere else. With no `classOnly` the expression is the bare lookup it has always been, so
- * nothing the companion or the pit wall draws changes shape.
+ * somewhere else. With no `classOnly` the expression is the bare lookup it has always been, which
+ * is what the companion still passes; the pit wall passes its screen's own setting, so the same
+ * rows are drawn either way and only the car each one addresses moves.
  */
 function rowIndexFor(spec: TableSpec, centre: number): Expr {
   if (spec.mode === 'class') return rowIndex.inClass();

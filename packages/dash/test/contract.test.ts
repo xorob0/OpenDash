@@ -93,12 +93,13 @@ describe('settings', () => {
     expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle', 'OpenDash.LedFlagAnimation']);
     // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
-      4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 2 + flagBoxProperties().length + ledProperties().length,
+      4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 3 + flagBoxProperties().length + ledProperties().length,
     );
     // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
     // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
-    // 256 before the four settings a box owns became four per matrix, which is twelve names more.
-    expect(props).toHaveLength(269);
+    // 256 before the four settings a box owns became four per matrix, which is twelve names more,
+    // and 269 before the pit wall gained the class filter its board and its list zones read.
+    expect(props).toHaveLength(270);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -119,7 +120,11 @@ describe('settings', () => {
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat)/.test(p))).toEqual([]);
     const lights = flagBoxProperties().length + ledProperties().length;
-    expect(props.slice(-(lights + 6), -lights)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl']);
+    expect(props.slice(-(lights + 7), -lights)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl', 'OpenDash.PitWallClassOnly']);
+    // One filter for the screen and not one per zone: a pit wall zone is a widget pointed at one
+    // dashboard file per rectangle, so zones A and B of the race page are the same file.
+    expect(secondScreen.classOnly()).toBe('isnull([OpenDash.PitWallClassOnly], false)');
+    expect(props.filter((p) => p.endsWith('PitWallClassOnly'))).toHaveLength(1);
     // The lights come last, after the screens, because they are the artefacts the plugin does not
     // install; see ADR 0013. The flag box first, then the strips.
     expect(props.slice(-lights)).toEqual([...flagBoxProperties(), ...ledProperties()]);
