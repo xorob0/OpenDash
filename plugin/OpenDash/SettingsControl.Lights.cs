@@ -38,7 +38,10 @@ namespace OpenDashPlugin
                 // against rc.2 has to keep the number its driver chose. It stays on the tab rather than
                 // moving with the other four: it is the rig's one answer to "am I low", read by the strip
                 // and the faces as well, and a per-box copy would be four more places to disagree.
-                Ui.Row("Low fuel, laps", "One answer for every light: the box, the screens' fuel telltale and the pop-up all light when the laps left in the tank fall under this. Laps, not litres: litres mean nothing without the car.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })));
+                Ui.Row("Low fuel, laps", "One answer for every light: the box, the screens' fuel telltale and the pop-up all light when the laps left in the tank fall under this. Laps, not litres: litres mean nothing without the car.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })),
+                // Off by default, unlike the flags' own switch on the strips: movement on this box
+                // means act, and a car alongside is something you live with for half a straight.
+                Ui.Row("Spotter bar grows", "On, the bar grows inwards from the edge; off it is simply there. The bar is painted over whatever else is on the panel either way, so a flag stays readable under it.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
 
             var panels = Ui.Section("What each panel does",
                 Ui.Caption(

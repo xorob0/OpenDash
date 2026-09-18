@@ -85,11 +85,11 @@ describe('settings', () => {
     // page, mask, start and the class filter -- plus the bar's ends, the glance and the flag format.
     const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 2;
     // The last two terms are the lights, which are not screens but whose settings are properties for
-    // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is five
+    // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is six
     // global and ten per matrix, the way every face carries its own group; the strips are the three
     // that decide what a strip shows. It was nine and six until the four settings a box owns --
     // critical flags only, the gear and the two temperatures -- moved under the matrix that owns them.
-    expect(flagBoxProperties()).toHaveLength(5 + FLAG_BOX_MATRICES.length * 10);
+    expect(flagBoxProperties()).toHaveLength(6 + FLAG_BOX_MATRICES.length * 10);
     expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle', 'OpenDash.LedFlagAnimation']);
     // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
@@ -98,7 +98,7 @@ describe('settings', () => {
     // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
     // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
     // 256 before the four settings a box owns became four per matrix, which is twelve names more.
-    expect(props).toHaveLength(268);
+    expect(props).toHaveLength(269);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');

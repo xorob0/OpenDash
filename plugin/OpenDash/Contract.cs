@@ -42,6 +42,12 @@ namespace OpenDashPlugin
         /// that shipped, now the deprecated alias of LightsLowFuelLaps and attached beside it.</summary>
         public const string FlagBoxLowFuelLaps = "FlagBoxLowFuelLaps";
 
+        /// <summary>Whether the spotter bar grows inwards or is simply there. The rig's rather than a
+        /// box's, for the reason the brightness trio is: a driver who finds a moving bar distracting
+        /// finds it distracting on every panel. Off by default, unlike the flags' own switch, because
+        /// movement on this box means act and a car alongside informs.</summary>
+        public const string FlagBoxSpotterAnimation = "FlagBoxSpotterAnimation";
+
         /// <summary>The four names a box used to share with every other box: quiet until something
         /// matters, the gear at rest, and the two temperature thresholds. They are now
         /// FlagBoxMatrix&lt;N&gt;CriticalOnly and its siblings, since a rig with a box in each corner
@@ -227,6 +233,9 @@ namespace OpenDashPlugin
         /// <summary>Off. A box that stays dark through a chequered flag is a surprise, and a surprise is
         /// a worse default than a busy one.</summary>
         public const bool DefaultFlagBoxCriticalOnly = false;
+
+        /// <summary>Off: the bar is there rather than growing. Movement on this box means act.</summary>
+        public const bool DefaultFlagBoxSpotterAnimation = false;
 
         /// <summary>What the middle of a strip shows: the revs, the brake, throttle and brake from the
         /// middle outwards, or the fuel. Mirrors LED_CENTRES in contract.ts.</summary>
@@ -1055,7 +1064,7 @@ namespace OpenDashPlugin
         ///
         /// A rig with no matrix and no strip still declares all of them, unlike a screen it does not
         /// have: openDash installs neither profile by itself (ADR 0013), so there is nothing to detect,
-        /// and forty-eight names is not the hundred and thirty-six that made the screens worth
+        /// and forty-nine names is not the hundred and thirty-six that made the screens worth
         /// narrowing. (Thirteen, this said before the matrices had a group each, and thirty-four before
         /// the four settings a box owns moved under it; it is counted here rather than guessed at.)</summary>
         public static IEnumerable<string> LightsPropertyNames()
@@ -1068,6 +1077,7 @@ namespace OpenDashPlugin
             // and both halves of the contract assert its head by index, so a new name joins the end of
             // the group and is never inserted into it.
             yield return LightsLowFuelLaps;
+            yield return FlagBoxSpotterAnimation;
             foreach (var matrix in FlagBoxMatrices)
             {
                 foreach (var name in FlagBoxMatrixProperties(matrix)) yield return name;

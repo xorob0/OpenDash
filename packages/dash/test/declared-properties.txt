@@ -236,6 +236,7 @@ OpenDash.LightsNightBrightness
 OpenDash.LightsNightMode
 OpenDash.FlagBoxLowFuelLaps
 OpenDash.LightsLowFuelLaps
+OpenDash.FlagBoxSpotterAnimation
 OpenDash.FlagBoxMatrix1Rest
 OpenDash.FlagBoxMatrix1Flags
 OpenDash.FlagBoxMatrix1Pit
