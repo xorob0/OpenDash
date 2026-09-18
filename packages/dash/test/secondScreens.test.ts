@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { measureText, type MeasuredFace } from '../src/design/advances.ts';
-import { LINE_SPACING, cells, monoWidth } from '../src/design/metrics.ts';
+import { LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
 import {
   MODULE_CATALOGUE,
   MODULE_COUNT,
@@ -17,7 +17,7 @@ import {
   secondScreen,
   secondScreenProperties,
 } from '../src/contract.ts';
-import { validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
+import { ncalc, validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
 import { MODULES, pageBuilder } from '../src/modules/index.ts';
@@ -25,7 +25,8 @@ import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox } from '../src/second/density.ts';
-import { DENOMINATOR_GAP, UNIT_GAP, field, type Follower } from '../src/second/field.ts';
+import { CHARS } from '../src/second/values.ts';
+import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
 import { contains, rect } from '../src/design/geometry.ts';
@@ -43,7 +44,13 @@ const PACKAGES = SCREEN_PACKAGES.map((def) => {
   packImages(pkg);
   return { def, pkg };
 });
-const BRAND = /#00E5FF/i;
+/**
+ * The three cyans the identity is drawn in, which is what `build.test.ts`, `layouts.test.ts` and
+ * `e2e.test.ts` all match on. This was `/#00E5FF/i`, a hexadecimal that appears nowhere in the
+ * repository and is no colour of openDash's, so the four checks below passed on any package
+ * whatever it drew and would have gone on passing the day cyan reached a companion.
+ */
+const BRAND = /#(33D9F2|5CE1F5|22909F)/i;
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
 const faceOf = (item: TextItem): MeasuredFace => {
@@ -86,6 +93,36 @@ describe('the packages are built and valid', () => {
 
     test(`${def.folder} draws no brand colour`, () => {
       expect(JSON.stringify(pkg.dashboards)).not.toMatch(BRAND);
+    });
+
+    /**
+     * Every value on a second screen is read from the sim, and the sample beside it in the source
+     * is what DashStudio draws rather than a number anybody may rely on.
+     *
+     * That held by authorship alone. A module shipping a literal where a binding belongs draws a
+     * figure that never changes, which is the one failure that survives every other check here: it
+     * fits its box, it stays on its canvas, it validates, and on a screen it is a plausible reading
+     * that happens to be frozen. The face a value is drawn in is what separates the two, so the
+     * selection is the data face rather than a list of item names: a value added tomorrow is
+     * measured the day it is added, and one renamed is still measured.
+     *
+     * The wordmark is the only chrome set in that face, being the identity's own pair of weights,
+     * and it is excluded by the two names it draws under. The page counters and the delta's axis
+     * ticks are chrome too, and they are outside the selection already because they are set in the
+     * label face; that was checked rather than assumed, and a counter that moved into the data face
+     * would arrive here as a failure asking which of the two it is.
+     */
+    test(`${def.folder} binds every value it draws`, () => {
+      const chrome = (name: string): boolean => name.endsWith('.wordmark.open') || name.endsWith('.wordmark.dash');
+      let values = 0;
+      for (const dashboard of pkg.dashboards) {
+        for (const item of textsOf(dashboard)) {
+          if (item.font !== ds.font.data || chrome(item.name)) continue;
+          values += 1;
+          expect({ dashboard: dashboard.name, item: item.name, text: item.text, bound: item.bindings?.Text?.formula !== undefined }).toMatchObject({ bound: true });
+        }
+      }
+      expect(values).toBeGreaterThan(0);
     });
 
     test(`${def.folder} fits every text in its box`, () => {
@@ -622,6 +659,52 @@ describe('the opponents block keeps the gaps the canvas draws it with', () => {
   }
 });
 
+/**
+ * The identity row across, which is the one line of this page that no fit check can speak for.
+ *
+ * The three cells are placed by arithmetic rather than by a rank, so two of them can sit on top of
+ * each other while every item stays inside the frame and inside its own box: the drawing is wrong
+ * and every check is green. It happened. The name's box and the number's cell were taken from the
+ * canvas as two fixed numbers, 64 and 44, and the canvas cuts them on a sheet whose values are
+ * 16 px; the companion draws its number at 34, where four digits take sixty-four cells of their
+ * own, so the class chip began twelve pixels inside the number's box and a four-digit car number
+ * was drawn underneath it. The row also clamped the chip to the right edge instead of shedding it,
+ * which is the same overlap waiting for a box narrow enough to reach it.
+ *
+ * What is asserted is only that the cells do not overlap, not the gap between them: a cell is the
+ * canvas's column or the content, whichever is wider, so a number drawn in a 44 px cell that needs
+ * 35 leaves nine pixels of the column after it and that is the column doing its job.
+ */
+describe('the opponents identity row sets its cells side by side', () => {
+  const opponents = MODULES.find((m) => m.id === 'opponents')!;
+  /** In the order the row sets them, which is also the order they are shed in. */
+  const CELLS = ['name', 'num.value', 'class.block'];
+  const cellsOf = (items: readonly Item[], side: string): Exclude<Item, { kind: 'layer' }>[] =>
+    CELLS.map((id) => items.find((i) => i.name === `${side}.${id}`)).filter((i): i is Exclude<Item, { kind: 'layer' }> => i !== undefined && i.kind !== 'layer');
+
+  // A narrow zone sheds the row down to nothing, and a row of nothing overlaps nothing, so this is
+  // what keeps the check from passing because it found no cells anywhere.
+  test('the companion page draws all three of them', () => {
+    const page = moduleBoxes().find((b) => b.name === 'openDash Companion page')!;
+    const items = opponents.build({ frame: page.frame, density: page.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+    expect(cellsOf(items, 'ahead').map((i) => i.name)).toEqual(['ahead.name', 'ahead.num.value', 'ahead.class.block']);
+  });
+
+  for (const box of moduleBoxes()) {
+    for (const side of ['ahead', 'behind']) {
+      test(`${side} on a ${box.name}`, () => {
+        const items = opponents.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+        const drawn = cellsOf(items, side);
+        for (const [i, cell] of drawn.slice(1).entries()) {
+          const previous = drawn[i]!;
+          const gap = cell.rect.left - (previous.rect.left + previous.rect.width);
+          expect({ box: box.name, side, after: previous.name, cell: cell.name, gap, overlaps: gap < 0 }).toMatchObject({ overlaps: false });
+        }
+      });
+    }
+  }
+});
+
 describe('a bar drawn under a value', () => {
   const gaugeOf = (density: Density) => {
     const module = MODULES.find((m) => m.id === 'fuel')!;
@@ -631,6 +714,8 @@ describe('a bar drawn under a value', () => {
     return drawn;
   };
 
+  // Four at both densities, which is `fuel.ts`'s decision rather than an agreement between the two
+  // sheets: the companion sheet draws every bar at six and no bar at four.
   test('is four pixels tall on the companion as in a zone, with the canvas track and fill', () => {
     for (const density of ['companion', 'zone'] as const) {
       const drawn = gaugeOf(density);
@@ -641,6 +726,38 @@ describe('a bar drawn under a value', () => {
         fill: ds.color.text.primary,
       });
     }
+  });
+});
+
+/**
+ * The artboard sample and the character budget beside it, and which of the two is allowed to decide
+ * the drawing.
+ *
+ * The budget is the declaration: it is what the binding may grow to, and it is what the value's box
+ * and the follower after it are cut from. The sample is design-time text, drawn in DashStudio in
+ * the binding's place, and it is a string chosen to make a screenshot read well. The box used to be
+ * the wider of the two, so a sample past its budget silently moved the geometry of whatever module
+ * declared it, and nothing said so; the thirty-seven sample declarations in `src/modules` were
+ * therefore a thirty-seven-way opportunity to design a page by typing a longer number into it.
+ *
+ * `valueCells` refuses the pair instead. Nothing in the catalogue trips it today, which is what
+ * makes it worth writing down: the check above builds every module into every box the build
+ * produces, and every one of those fields goes through `field`, so the catalogue is held to this
+ * wherever it is drawn rather than wherever somebody remembered to look.
+ */
+describe('a value is drawn from its budget and not from its sample', () => {
+  const spec = (sample: string, chars: Chars): FieldSpec => ({ name: 'probe', label: 'Last', value: { sample, chars, fs: 46 } });
+
+  test('a sample inside its budget is drawn, and the box is the budget', () => {
+    const mono = cells('SemiBold', 46);
+    const items = field(spec('1:43.234', CHARS.lapTime), 0, 200, 'companion');
+    const value = items.find((i): i is TextItem => i.name === 'probe.value')!;
+    expect(value.text).toBe('1:43.234');
+    expect(value.rect.width).toBeGreaterThanOrEqual(monoWidth(mono, CHARS.lapTime));
+  });
+
+  test('and a sample past it is refused, with the module and both counts named', () => {
+    expect(() => field(spec('1:43.234', { digits: 3, specials: 1 }), 0, 200, 'companion')).toThrow(/probe.*1:43\.234.*6\+2 cells.*3\+1/);
   });
 });
 
@@ -672,6 +789,20 @@ describe('the small text that follows a value', () => {
     const valueEnd = monoWidth(cells('SemiBold', 64), { digits: 3, specials: 1 });
     expect(followerOf({ text: 'L' }, 64).rect.left).toBe(Math.round(valueEnd + UNIT_GAP));
     expect(followerOf({ kind: 'denominator', text: '/ 24' }, 64).rect.left).toBe(Math.round(valueEnd + DENOMINATOR_GAP));
+  });
+
+  /**
+   * The unit is where a binding draws a string the box was never measured for. `L` and `gal` are
+   * the pair: nine pixels of box against the twenty-four `GAL` wants, and the box was the one the
+   * author typed. Nothing could have caught it, the fit checks measuring the sample the item
+   * carries, so the declaration is made compulsory rather than checked afterwards.
+   */
+  test('a bound unit is measured by the widest it declares', () => {
+    expect(followerOf({ text: 'L', bind: ncalc.str('gal'), widest: 'gal' }, 64).rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText('BarlowMedium', 'GAL', ds.size.labelSm)));
+  });
+
+  test('and a bound unit that declares none is refused rather than measured on its sample', () => {
+    expect(() => followerOf({ text: 'L', bind: ncalc.str('gal') }, 64)).toThrow(/bound and declares no widest/);
   });
 
   test('a denominator is a numeral at 0.7 of the value it follows', () => {
@@ -834,12 +965,12 @@ describe('the radar is cut from its box', () => {
     // The two boxes readability-pass.md §16 puts side by side: a nano zone and a tall face zone
     // were drawing the same twenty metres of track at the same scale.
     expect(radarIn(build(249, 158)).scale).toBeLessThan(radarIn(build(437, 510)).scale!);
-    // 802 by 336 is a fixture, not the companion page any more: the page is 356 tall since the
-    // flag band came down to the artboard's 12, and `radarScaleFor`'s 260 divisor was fitted to
-    // the shorter box, so the real page now draws 1.37 against the canvas's 1.25. Which of the two
-    // moves is the author's, and it belongs to radar.ts rather than here.
-    expect(radarIn(build(802, 336, 'companion')).scale!).toBeCloseTo(1.25, 1);
-    expect(radarIn(build(802, 356, 'companion')).scale!).toBeCloseTo(1.37, 2);
+    // And the canvas's own figure, on the page the build really hands the module rather than on the
+    // 802 by 336 fixture this used to measure. That fixture was the page the companion produced
+    // while its flag band was wrongly 32 px tall, and the divisor had been fitted to it, so the page
+    // that shipped drew 1.37 and the suite went on agreeing with a rectangle nobody was given.
+    const page = moduleBoxes().find((b) => b.name === 'openDash Companion page')!;
+    expect(radarIn(MODULES.find((m) => m.id === 'radar')!.build({ frame: page.frame, density: page.density, prefix: 'radar.' })).scale).toBe(1.25);
   });
 
   test('the grid the canvas draws under the cars is four rects behind the plot', () => {

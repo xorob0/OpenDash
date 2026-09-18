@@ -41,9 +41,17 @@ const lowFuel = () => lt(fuelLapsLeft(), num(1));
 const consumption = (value: string, guard: string) => ({ sample: '2.84', bind: iff(guard, fmt(value, '0.00'), str(NO_VALUE)), chars: CHARS.consumption });
 
 /**
- * A bar drawn under a value is four pixels tall on the canvas, on the companion as on a zone. The
- * density's `bar` is the six-pixel one that sits beside a label, which is the tyre wear's shape and
- * not this one.
+ * A bar drawn under a value, at the four pixels the zone sheet gives it.
+ *
+ * This used to say four "on the companion as on a zone", and the two sheets do not agree: every bar
+ * of `CompanionModules.dc.html` is six pixels and it draws no four-pixel bar anywhere, while
+ * `ZoneCatalogue.dc.html` uses both. Four is kept at both densities all the same, since the bar is
+ * a reading's own underline rather than a row of its own and the thinner line is what keeps it from
+ * reading as one; whether the companion should follow its own sheet to six is the author's, and it
+ * is a question about the sheets rather than about this module.
+ *
+ * The density's `bar` is the six-pixel one that sits beside a label, which is the tyre wear's shape
+ * and not this one.
  */
 const VALUE_BAR = 4;
 
@@ -61,7 +69,7 @@ export const fuel = defineModule('fuel', (ctx) => {
             chars: CHARS.fuel,
             fs: d.big,
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
-            follower: { text: 'L', bind: fuelUnit() },
+            follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
           }),
           fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(fuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
           fld(ctx, 'lapsLeft', 'Est. laps', {

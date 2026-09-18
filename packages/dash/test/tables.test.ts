@@ -18,7 +18,9 @@ import { MODULES } from '../src/modules/index.ts';
 import { LEADERBOARD_COLUMNS } from '../src/modules/leaderboard.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { densityForBox, type Density } from '../src/second/density.ts';
+import { contentRect } from '../src/second/layout.ts';
 import { columnWidths } from '../src/second/table.ts';
+import { COMPANION_SIZES, companionGeometry } from '../src/screens/index.ts';
 import { walkItems } from '../src/walk.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
 import type { Item, Rect, RectangleItem, TextItem } from '../src/generator.ts';
@@ -27,6 +29,17 @@ const build = (id: string, width: number, height: number, density: Density): Ite
   MODULES.find((m) => m.id === id)!.build({ frame: rect(0, 0, width, height), density, prefix: '' });
 
 const flat = (items: readonly Item[]): Item[] => items.flatMap((i) => [...walkItems([i])]);
+
+/**
+ * The companion page's own box, taken from the geometry that hands it out.
+ *
+ * It was written here as 802 by 336 while the flag band was wrongly 32 px tall. The band is the
+ * artboard's 12 now and the page is 356, so the fixtures below were measuring a rectangle the build
+ * stopped producing; they passed, which is what a literal copied out of a build does until the
+ * build moves under it.
+ */
+const COMPANION_PAGE = contentRect(companionGeometry(COMPANION_SIZES.find((s) => s.folder === 'openDash Companion')!).module, 'companion');
+
 
 /** The one stamped row definition, and how many copies of it the table asks SimHub for. */
 function rowsOf(items: readonly Item[]): { count: number; pitch: number; cells: TextItem[]; names: string[] } {
@@ -167,7 +180,7 @@ describe('a zone draws no header and the companion draws one', () => {
   });
 
   test('the companion page keeps its legend', () => {
-    const names = rowsOf(build('leaderboard', 802, 336, 'companion')).names;
+    const names = rowsOf(build('leaderboard', COMPANION_PAGE.width, COMPANION_PAGE.height, 'companion')).names;
     expect(names.some((n) => n.includes('.head.pos'))).toBe(true);
   });
 });
@@ -187,7 +200,7 @@ describe('the values a row writes', () => {
   });
 
   test('the leader reads Lead and the iRating reads thousands to one decimal', () => {
-    const board = build('leaderboard', 802, 336, 'companion');
+    const board = build('leaderboard', COMPANION_PAGE.width, COMPANION_PAGE.height, 'companion');
     expect(formulaOf(cell(board, 'gap'), 'Text')).toContain("'Lead'");
     const rating = build('relative', 600, 242, 'zone');
     // The column is declared but no shape keeps it yet, so the format is checked where it is written.
@@ -198,7 +211,7 @@ describe('the values a row writes', () => {
     for (const id of ['pos', 'name', 'gap']) expect({ id, lifts: formula(id, 'TextColor').includes('#F5F7FA') }).toEqual({ id, lifts: true });
     // The car number stays in the label ink on every row, the player's included.
     expect(formula('num', 'TextColor')).toBe("'#5A6069'");
-    const board = build('leaderboard', 802, 336, 'companion');
+    const board = build('leaderboard', COMPANION_PAGE.width, COMPANION_PAGE.height, 'companion');
     for (const id of ['last', 'best']) {
       expect({ id, lifts: formulaOf(cell(board, id), 'TextColor').includes('#F5F7FA') }).toEqual({ id, lifts: false });
     }

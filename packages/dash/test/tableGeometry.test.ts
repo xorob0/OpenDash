@@ -14,7 +14,9 @@ import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { PORTRAIT_COLUMNS, RACE_COLUMNS, TOWER_COLUMNS, portraitPage, racePage, towerPage } from '../src/screens/pitwall.ts';
 import { PIT_WALL_HEADER } from '../src/screens/pitwallHeader.ts';
+import { contentRect } from '../src/second/layout.ts';
 import { columnWidths, type ColumnId } from '../src/second/table.ts';
+import { COMPANION_SIZES, companionGeometry } from '../src/screens/index.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Item, RectangleItem, TextItem } from '../src/generator.ts';
@@ -26,6 +28,17 @@ import type { Item, RectangleItem, TextItem } from '../src/generator.ts';
  * `tables.test.ts` is where.
  */
 const CELL_GAP = 0;
+
+/**
+ * The companion page's own box, taken from the geometry that hands it out.
+ *
+ * It was written here as 802 by 336 while the flag band was wrongly 32 px tall. The band is the
+ * artboard's 12 now and the page is 356, so the fixtures below were measuring a rectangle the build
+ * stopped producing; they passed, which is what a literal copied out of a build does until the
+ * build moves under it.
+ */
+const COMPANION_PAGE = contentRect(companionGeometry(COMPANION_SIZES.find((s) => s.folder === 'openDash Companion')!).module, 'companion');
+
 
 interface Board {
   page: string;
@@ -162,7 +175,7 @@ describe('the other two tables keep the row they already drew', () => {
   test('and the companion draws a legend over that row rather than a board', () => {
     // The header is what tells a board from a list, and only on a pit wall page: the companion
     // heads its leaderboard and still draws the catalogue's row underneath.
-    const items = build('leaderboard', 802, 336, 'companion');
+    const items = build('leaderboard', COMPANION_PAGE.width, COMPANION_PAGE.height, 'companion');
     expect(items.some((i) => i.name.includes('.head.pos'))).toBe(true);
     expect(items.find((i) => i.name.endsWith('.row.rule'))).toBeUndefined();
     expect(items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.pos'))!.rect.left).toBe(6);

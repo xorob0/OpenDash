@@ -31,7 +31,7 @@ export const speedo = defineModule('speedo', (ctx) => {
             bind: fmt(speed(), '0'),
             chars: CHARS.speed,
             fs: d.hero,
-            follower: { text: 'km/h', bind: speedUnit() },
+            follower: { text: 'km/h', bind: speedUnit(), widest: 'km/h' },
           }),
           fld(ctx, 'rpm', 'RPM', { sample: '7,420', bind: fmt(rpm(), '#,0'), chars: CHARS.rpm, fs: d.big }),
           // The number the bar above it turns red at, from the same model rather than SimHub's own
