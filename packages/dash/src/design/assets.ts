@@ -99,8 +99,24 @@ export const WHEEL_CHANGE_TICK: DashAsset = { name: 'wheel-change-tick', file: '
 export const RANK_UP: DashAsset = { name: 'rank-up', file: 'rank-up.png', source: 'openDash' };
 export const RANK_DOWN: DashAsset = { name: 'rank-down', file: 'rank-down.png', source: 'openDash' };
 
+/**
+ * The two marks of a change notification: the setting the driver has just moved went up, or it went
+ * down.
+ *
+ * The same triangle as the rank marks, and deliberately not the same file. These are rendered from
+ * `purpose.trend.up` and `purpose.trend.down`, which both resolve to `color.text.secondary`, where
+ * the rank marks are rendered from the delta greens and reds: the canvas's rule is that which way a
+ * setting moved is information rather than a state, so the two conventions have to stay two files
+ * and a later reader has to find the colour written down beside the drawing.
+ *
+ * Rendered at 56, which is the 14 px the notification draws them at times the four the rank marks
+ * are rendered at.
+ */
+export const TREND_UP: DashAsset = { name: 'trend-up', file: 'trend-up.png', source: 'openDash' };
+export const TREND_DOWN: DashAsset = { name: 'trend-down', file: 'trend-down.png', source: 'openDash' };
+
 /** Every asset a package may carry. */
-export const ASSETS: readonly DashAsset[] = [WHEEL_CHANGE_TICK, RANK_UP, RANK_DOWN];
+export const ASSETS: readonly DashAsset[] = [WHEEL_CHANGE_TICK, RANK_UP, RANK_DOWN, TREND_UP, TREND_DOWN];
 
 /** The asset an image item's `image` names, or undefined when nothing here claims it. */
 export const assetNamed = (name: string): DashAsset | undefined => ASSETS.find((asset) => asset.name === name);

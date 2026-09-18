@@ -441,11 +441,22 @@ describe('the parts the face draws itself', () => {
     }
   });
 
-  test('the pit limiter covers zone A rather than taking room of its own', () => {
+  test('the pit alerts cover zone A rather than taking room of its own', () => {
     const z = zoneFace1920x480.zones;
     expect(z.pitLimiter.left).toBeGreaterThanOrEqual(z.zoneA.left);
     expect(z.pitLimiter.left + z.pitLimiter.width).toBeLessThanOrEqual(z.zoneA.left + z.zoneA.width);
-    expect(names).toContain('pitLimiter');
+    // Five states over the one rectangle, so the family costs the face no room the limiter did not
+    // already take and only the winning one is ever drawn.
+    const drawn = all.filter((i) => i.name.startsWith('pitAlert.'));
+    expect(drawn.length).toBeGreaterThan(0);
+    const banner = z.pitLimiter;
+    for (const item of drawn) {
+      if (item.kind === 'layer') continue;
+      const r = item.rect;
+      const inside =
+        r.left >= banner.left && r.left + r.width <= banner.left + banner.width && r.top >= banner.top && r.top + r.height <= banner.top + banner.height;
+      expect({ item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+    }
   });
 
   test('the bar is drawn and is not a zone', () => {
@@ -726,8 +737,11 @@ describe('what the first photograph of the face showed', () => {
   test('band D sits in the well the artboards recess it into, and the face draws it there too', () => {
     for (const { face, built } of BUILT) {
       const band = face.zones.band;
-      const ground = faceItems(face).find((i): i is RectangleItem => i.kind === 'rect' && i.name === 'band.ground')!;
+      const items = faceItems(face);
+      const ground = items.find((i): i is RectangleItem => i.kind === 'rect' && i.name === 'band.ground')!;
       expect({ face: face.folder, rect: ground.rect, colour: ground.backgroundColor }).toEqual({ face: face.folder, rect: band, colour: ds.purpose.block.well });
+      // Before the widget, so the band's pages draw over the well rather than under it.
+      expect({ face: face.folder, ground: items.indexOf(ground) < items.findIndex((i) => i.name === 'zoneD') }).toMatchObject({ ground: true });
       // The widget paints its own dashboard's ground over the face, so the band's pages have to be
       // drawn in the well rather than have one painted behind them.
       const dashboard = built.zones.find((d) => d.name === zoneDashboardName('band', { width: band.width, height: band.height }))!;
