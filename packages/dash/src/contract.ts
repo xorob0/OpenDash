@@ -236,7 +236,7 @@ export const ledMirrorRunName = (length: number): string => `LedMirror${length}`
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
-  const pitWall = [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING];
+  const pitWall = [...allPitWallZoneSettingNames(), PIT_WALL_START_PAGE_SETTING, PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING];
   return [...companionProperties(), ...pitWall].map(propertyName);
 }
 
@@ -730,7 +730,7 @@ export function screenProperties(prefix: string): string[] {
   const face = faceForPrefix(prefix);
   if (face) return facePropertyNames(face).map(propertyName);
   if (prefix === PIT_WALL_PREFIX) {
-    return [...PIT_WALL_ZONE_LETTERS.map(pitWallZoneSettingName), PIT_WALL_WIDE_ZONE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING].map(propertyName);
+    return [...allPitWallZoneSettingNames(), PIT_WALL_START_PAGE_SETTING, PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING].map(propertyName);
   }
   if (prefix === COMPANION_PREFIX) return companionProperties().map(propertyName);
   throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
@@ -932,14 +932,130 @@ export const PIT_WALL_WIDE_ZONE_PAGES: readonly PitWallZonePageMeta[] = [
 export const PIT_WALL_ZONE_LETTERS = ['A', 'B', 'C', 'D'] as const;
 export type PitWallZoneLetter = (typeof PIT_WALL_ZONE_LETTERS)[number];
 
-/** Default page of each zone: fuel, tyres, relative and opponents, which is what a spotter watches. */
-export const PIT_WALL_DEFAULT_ZONE_PAGES: Record<PitWallZoneLetter, number> = { A: 0, B: 1, C: 4, D: 2 };
+/**
+ * The pages a pit wall draws, and the zones each of them places.
+ *
+ * **A zone belongs to a page, and this is what that fixes.** The four letters used to be the pit
+ * wall's zones full stop, so the race page's A and the telemetry page's A were one setting: pointing
+ * the race page's top zone at the fuel silently pointed the telemetry page's top zone there too, and
+ * the tower page's pair collided with the telemetry page's lower two the same way. Nobody could tell
+ * that from the panel, which listed four zones under one heading and drew a picture of three pages
+ * around them. Reported as "I was not able to change the different zones", which is what it looks
+ * like from the outside: you change one and another changes with it.
+ *
+ * Three pages of a landscape pit wall and the one portrait page, each owning its own. The portrait
+ * page is a separate package and could have shared the race page's, but a spotter who has both
+ * installed has two screens with different shapes and no reason to want them locked together.
+ */
+export interface PitWallZoneSlot {
+  /** What the page calls this zone: the letter it draws, or `Wide` for the one that spans a column. */
+  slot: string;
+  kind: 'standard' | 'wide';
+  /** The page it shows until somebody chooses, an index into the catalogue for its kind. */
+  fallback: number;
+}
 
-/** Default page of the wide zone: the car telemetry trace with the settings grid beside it. */
-export const PIT_WALL_DEFAULT_WIDE_ZONE_PAGE = 5;
+export interface PitWallPageMeta {
+  id: 'race' | 'tower' | 'telemetry' | 'portrait';
+  /** What the panel calls this page. Also the middle of its settings' names. */
+  name: string;
+  /** Whether it is a page of the landscape package (the portrait one is its own package). */
+  landscape: boolean;
+  zones: readonly PitWallZoneSlot[];
+}
 
-/** `PitWallZoneA` .. `PitWallZoneD`. */
-export const pitWallZoneSettingName = (letter: PitWallZoneLetter): string => `PitWallZone${letter}`;
+/**
+ * What each zone opens on.
+ *
+ * Chosen per page rather than copied across them, which is the point of the split: the race page
+ * watches the field, the tower page has the wide zone for the telemetry trace and its pair for the
+ * lists, and the telemetry page already draws the traces so its zones are given what the traces do
+ * not say. A spotter who wants the fuel on all three can still say so; they simply are not made to.
+ */
+export const PIT_WALL_PAGES: readonly PitWallPageMeta[] = [
+  {
+    id: 'race',
+    name: 'Race',
+    landscape: true,
+    zones: [
+      { slot: 'A', kind: 'standard', fallback: 0 },
+      { slot: 'B', kind: 'standard', fallback: 1 },
+    ],
+  },
+  {
+    id: 'tower',
+    name: 'Tower',
+    landscape: true,
+    zones: [
+      { slot: 'Wide', kind: 'wide', fallback: 5 },
+      { slot: 'A', kind: 'standard', fallback: 4 },
+      { slot: 'B', kind: 'standard', fallback: 2 },
+    ],
+  },
+  {
+    id: 'telemetry',
+    name: 'Telemetry',
+    landscape: true,
+    zones: [
+      { slot: 'A', kind: 'standard', fallback: 8 },
+      { slot: 'B', kind: 'standard', fallback: 0 },
+      { slot: 'C', kind: 'standard', fallback: 1 },
+    ],
+  },
+  {
+    id: 'portrait',
+    name: 'Portrait',
+    landscape: false,
+    zones: [
+      { slot: 'A', kind: 'standard', fallback: 0 },
+      { slot: 'B', kind: 'standard', fallback: 1 },
+      { slot: 'C', kind: 'standard', fallback: 4 },
+      { slot: 'D', kind: 'standard', fallback: 2 },
+    ],
+  },
+];
+
+export const pitWallPage = (id: PitWallPageMeta['id']): PitWallPageMeta => {
+  const page = PIT_WALL_PAGES.find((p) => p.id === id);
+  if (!page) throw new Error(`no pit wall page ${id}`);
+  return page;
+};
+
+export const pitWallZoneSlot = (id: PitWallPageMeta['id'], slot: string): PitWallZoneSlot => {
+  const found = pitWallPage(id).zones.find((z) => z.slot === slot);
+  if (!found) throw new Error(`pit wall page ${id} has no zone ${slot}`);
+  return found;
+};
+
+/** `PitWallRaceA`, `PitWallTowerWide`, `PitWallTelemetryC`. */
+export const pitWallZoneSettingName = (id: PitWallPageMeta['id'], slot: string): string =>
+  `${PIT_WALL_PREFIX}${pitWallPage(id).name}${slot}`;
+
+/** Every zone setting a pit wall of this orientation reads, in the order the panel lists them. */
+export const pitWallZoneSettingNames = (landscape: boolean): string[] =>
+  PIT_WALL_PAGES.filter((page) => page.landscape === landscape).flatMap((page) => page.zones.map((z) => pitWallZoneSettingName(page.id, z.slot)));
+
+/** Every zone setting of every pit wall page, which is what the plugin attaches. */
+export const allPitWallZoneSettingNames = (): string[] => PIT_WALL_PAGES.flatMap((page) => page.zones.map((z) => pitWallZoneSettingName(page.id, z.slot)));
+
+/**
+ * `PitWallStartPage`: which of the three landscape pages the pit wall opens on.
+ *
+ * A pit wall is left running on a second monitor, and which page it comes up on is the one thing a
+ * spotter cannot change without walking over to it. The pages stay navigable -- this chooses the one
+ * that is live, and the binding below moves it -- so nothing is taken away by answering it.
+ */
+export const PIT_WALL_START_PAGE_SETTING = 'PitWallStartPage';
+
+/** `PitWallPage`: the page the pit wall is showing now. Live state the plugin holds, not a setting. */
+export const PIT_WALL_PAGE_SETTING = 'PitWallPage';
+
+/** The race page, which is what it opened on before there was a choice. */
+export const DEFAULT_PIT_WALL_START_PAGE = 0;
+
+/** The landscape pages, in the order the package draws them and the plugin numbers them. */
+export const PIT_WALL_LANDSCAPE_PAGES = PIT_WALL_PAGES.filter((page) => page.landscape);
+
 export const PIT_WALL_WIDE_ZONE_SETTING = 'PitWallWide';
 export const WEB_VIEW_SETTING = 'WebViewUrl';
 
@@ -982,10 +1098,13 @@ export const secondScreen = {
    * arrangements of a zone face are chosen by.
    */
   moduleShown: (number: number): Expr => and(secondScreen.moduleEnabled(number), eq(secondScreen.companionPage(), num(number - 1))),
-  /** `isnull([OpenDash.PitWallZoneA], 0)`: which page a zone's widget shows. */
-  zonePage: (letter: PitWallZoneLetter): Expr => isnull(prop(propertyName(pitWallZoneSettingName(letter))), num(PIT_WALL_DEFAULT_ZONE_PAGES[letter])),
-  /** `isnull([OpenDash.PitWallWide], 5)`. */
-  wideZonePage: (): Expr => isnull(prop(propertyName(PIT_WALL_WIDE_ZONE_SETTING)), num(PIT_WALL_DEFAULT_WIDE_ZONE_PAGE)),
+  /** `isnull([OpenDash.PitWallRaceA], 0)`: which page one page's zone shows. */
+  zonePage: (id: PitWallPageMeta['id'], slot: string): Expr =>
+    isnull(prop(propertyName(pitWallZoneSettingName(id, slot))), num(pitWallZoneSlot(id, slot).fallback)),
+  /** `isnull([OpenDash.PitWallPage], 0)`: the landscape page the pit wall is showing. */
+  pitWallPage: (): Expr => isnull(prop(propertyName(PIT_WALL_PAGE_SETTING)), num(DEFAULT_PIT_WALL_START_PAGE)),
+  /** `isnull([OpenDash.PitWallPage], 0) = 1`: whether this page is the one that is live. */
+  pitWallPageIs: (number: number): Expr => eq(secondScreen.pitWallPage(), num(number)),
   /** `isnull([OpenDash.WebViewUrl], '')`: the address of the web view page. */
   webViewUrl: (): Expr => isnull(prop(propertyName(WEB_VIEW_SETTING)), str(DEFAULT_WEB_VIEW_URL)),
   /** `isnull([OpenDash.PitWallClassOnly], false)`: whether this pit wall's lists show the player's class. */

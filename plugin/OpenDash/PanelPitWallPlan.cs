@@ -154,63 +154,71 @@ namespace OpenDashPlugin
             new Page("Tower",
                 new Panel("Tower", 4, 4, 110, 134, false),
                 new Panel("Wide", 118, 4, 131, 59, true),
-                new Panel("C", 118, 67, 63, 71, true),
-                new Panel("D", 185, 67, 63, 71, true)),
+                new Panel("A", 118, 67, 63, 71, true),
+                new Panel("B", 185, 67, 63, 71, true)),
             new Page("Telemetry",
                 new Panel("A", 4, 4, 243, 39, true),
                 new Panel("B", 4, 49, 243, 41, true),
                 new Panel("C", 4, 96, 243, 39, true)),
         };
 
-        private static readonly Dictionary<string, ZonePlace[]> ZonePlaces = new Dictionary<string, ZonePlace[]>(StringComparer.Ordinal)
+        /// <summary>
+        /// Where on its own page each zone sits.
+        /// </summary>
+        /// <remarks>
+        /// One place each, now that a zone belongs to a page. The table used to give A two places -- the
+        /// race page's upper right and the telemetry page's top -- because it was one setting drawn in two
+        /// pages, and the caption saying so was the only warning a driver got that moving one moved both.
+        /// </remarks>
+        private static readonly Dictionary<string, string> ZoneWhere = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            { "A", new[] { new ZonePlace("Race", "upper right"), new ZonePlace("Telemetry", "top") } },
-            { "B", new[] { new ZonePlace("Race", "lower right"), new ZonePlace("Telemetry", "middle") } },
-            { "C", new[] { new ZonePlace("Tower", "lower left"), new ZonePlace("Telemetry", "bottom") } },
-            { "D", new[] { new ZonePlace("Tower", "lower right") } },
+            { "RaceA", "upper right" },
+            { "RaceB", "lower right" },
+            { "TowerWide", "across the top of the right column" },
+            { "TowerA", "lower left" },
+            { "TowerB", "lower right" },
+            { "TelemetryA", "top" },
+            { "TelemetryB", "middle" },
+            { "TelemetryC", "bottom" },
+            { "PortraitA", "upper left" },
+            { "PortraitB", "upper right" },
+            { "PortraitC", "lower left" },
+            { "PortraitD", "lower right" },
         };
 
-        /// <summary>Every place one zone is drawn, which is two for A, B and C and one for D.</summary>
-        public static IReadOnlyList<ZonePlace> PlacesOf(string letter)
+        /// <summary>The caption of one zone's row: "Race page, upper right." Written from the table above
+        /// rather than beside it, so the words cannot drift from the picture the panel draws.</summary>
+        public static string ZoneDescription(Contract.PitWallZoneSlot slot)
         {
-            ZonePlace[] places;
-            if (letter != null && ZonePlaces.TryGetValue(letter, out places)) return places;
-            return new ZonePlace[0];
-        }
-
-        /// <summary>The caption of one zone's row: "Race page, upper right. Telemetry page, top." Written
-        /// from the places above rather than beside them, so that the words cannot drift from the picture
-        /// the same table draws.</summary>
-        public static string ZoneDescription(string letter)
-        {
-            var text = new StringBuilder();
-            foreach (var place in PlacesOf(letter))
-            {
-                if (text.Length > 0) text.Append(' ');
-                text.Append(place.Page).Append(" page, ").Append(place.Where).Append('.');
-            }
-            return text.ToString();
+            if (slot == null) return string.Empty;
+            string where;
+            if (!ZoneWhere.TryGetValue(slot.Key, out where)) return string.Empty;
+            return slot.Page + " page, " + where + ".";
         }
 
         /// <summary>Every zone and page the quick glance can be set to, packed the way
-        /// Contract.PitWallQuickGlanceValue packs them, in Contract.PitWallZoneLetters order.</summary>
+        /// Contract.PitWallQuickGlanceValue packs them, in GlanceZones order.</summary>
         public static int[] GlanceOptions()
         {
             var values = new List<int>();
-            for (var zone = 0; zone < Contract.PitWallZoneLetters.Length; zone++)
+            var zones = Contract.GlanceZoneSlots();
+            for (var zone = 0; zone < zones.Count; zone++)
             {
                 for (var page = 0; page < ZonePages.Standard.Count; page++) values.Add(Contract.PitWallQuickGlanceValue(zone, page));
             }
             return values.ToArray();
         }
 
-        /// <summary>"Zone C · Relative": one control names the zone and the page together, because a
-        /// glance is one choice and the two halves of it mean nothing apart.</summary>
+        /// <summary>"Tower A · Relative": one control names the zone and the page together, because a
+        /// glance is one choice and the two halves of it mean nothing apart. The page's name is in it now
+        /// that a zone belongs to one, or two of the eight would read the same.</summary>
         public static string GlanceLabel(int value)
         {
             var glance = Contract.NormalisePitWallQuickGlance(value);
-            var letter = Contract.PitWallZoneLetters[Contract.QuickGlanceZone(glance)];
-            return "Zone " + letter + " · " + ZonePages.StandardName(Contract.QuickGlancePage(glance));
+            var zones = Contract.GlanceZoneSlots();
+            var index = Contract.QuickGlanceZone(glance);
+            var slot = index >= 0 && index < zones.Count ? zones[index] : zones[0];
+            return slot.Page + " " + slot.Slot + " · " + ZonePages.StandardName(Contract.QuickGlancePage(glance));
         }
 
         /// <summary>The page of that title, or null. Used by the tests to hold a sentence against the

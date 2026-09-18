@@ -669,6 +669,31 @@ namespace OpenDashPlugin
                         BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true)))));
         }
 
+        /// <summary>Which of the three pages this pit wall comes up on, which is the one thing about it a
+        /// spotter cannot change without walking over to the screen.</summary>
+        private FrameworkElement BuildPitWallStartPageRow(ScreenInstance screen)
+        {
+            var select = new ComboBox
+            {
+                Width = PanelPitWallPlan.SelectWidth,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                ToolTip = "The page this pit wall opens on",
+            };
+            Ui.Field(select, PanelPitWallPlan.SelectHeight);
+            foreach (var name in Contract.PitWallPageNames) select.Items.Add(name);
+            select.SelectedIndex = Contract.NormalisePitWallStartPage(screen.PitWallStartPage);
+            select.SelectionChanged += (sender, args) =>
+            {
+                if (select.SelectedIndex < 0) return;
+                screen.PitWallStartPage = Contract.NormalisePitWallStartPage(select.SelectedIndex);
+                // Live as well as saved, so the screen in front of you moves rather than waiting for the
+                // next start. Somebody choosing a default is looking at the thing they are choosing for.
+                screen.PitWallPage = screen.PitWallStartPage;
+                Save();
+            };
+            return Ui.Row("Opens on", "The page this pit wall shows when SimHub starts. A binding moves it from there.", select);
+        }
+
         /// <summary>The one page the glance shows, zone and page together, as the face's own select is.</summary>
         private ComboBox BuildPitWallGlanceSelect(ScreenInstance screen)
         {
@@ -692,27 +717,38 @@ namespace OpenDashPlugin
             return select;
         }
 
-        /// <summary>The four zones, the wide zone and the address, in that order.</summary>
+        /// <summary>
+        /// One group per page, then the address and the filter.
+        /// </summary>
+        /// <remarks>
+        /// Grouped by page because a zone belongs to one. Four rows under a single heading, beside a
+        /// picture of three pages, was a panel that could not say which page it was talking about -- and
+        /// underneath it the race page's zone A and the telemetry page's were the same setting, so
+        /// pointing one somewhere moved the other. Each page's zones now sit under that page's name and
+        /// answer only for it.
+        /// </remarks>
         private UIElement[] BuildPitWallRows(ScreenInstance screen)
         {
             var rows = new List<UIElement>();
-            foreach (var letter in Contract.PitWallZoneLetters)
+            rows.Add(BuildPitWallStartPageRow(screen));
+            foreach (var pageName in Contract.PitWallPageNames)
             {
-                var captured = letter;
-                var index = Array.IndexOf(Contract.PitWallZoneLetters, captured);
-                var select = BuildZoneSelect(ZonePages.Standard, screen.Zones[index], page =>
+                var slots = new List<UIElement>();
+                foreach (var slot in Contract.PitWallZoneSlots)
                 {
-                    screen.Zones[index] = Contract.NormaliseZonePage(page, Contract.PitWallDefaultZonePages[index]);
-                    Save();
-                });
-                rows.Add(Ui.Row("Zone " + captured, PanelPitWallPlan.ZoneDescription(captured), select));
+                    if (!slot.Landscape || !string.Equals(slot.Page, pageName, StringComparison.Ordinal)) continue;
+                    var captured = slot;
+                    var select = BuildZoneSelect(
+                        captured.Wide ? ZonePages.Wide : ZonePages.Standard,
+                        screen.ZonePage(captured.Key),
+                        page => { screen.SetZonePage(captured.Key, page); Save(); });
+                    slots.Add(Ui.Row(
+                        captured.Wide ? "Wide zone" : "Zone " + captured.Slot,
+                        PanelPitWallPlan.ZoneDescription(captured),
+                        select));
+                }
+                rows.Add(Ui.Section(pageName + " page", slots.ToArray()));
             }
-            var wide = BuildZoneSelect(ZonePages.Wide, screen.WideZone, page =>
-            {
-                screen.WideZone = Contract.NormaliseWideZonePage(page);
-                Save();
-            });
-            rows.Add(Ui.Row("Wide zone", "The full-width zone on the tower page.", wide));
             rows.Add(Ui.Row("Web view address", "The page the Web view zone shows. http or https only; leave empty for none.", BuildWebViewBox(screen)));
             // One answer for the screen and not one per zone, as a face has: the four zones are widgets
             // pointed at one dashboard file per rectangle, so two zones of one column are the same file.

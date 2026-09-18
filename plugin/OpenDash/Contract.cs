@@ -127,6 +127,74 @@ namespace OpenDashPlugin
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
         public static readonly string[] PitWallZoneLetters = { "A", "B", "C", "D" };
 
+        /// <summary>One zone of one pit wall page: where it is, what it can show, and what it opens on.</summary>
+        public sealed class PitWallZoneSlot
+        {
+            public PitWallZoneSlot(string page, string slot, bool wide, int fallback, bool landscape)
+            {
+                Page = page;
+                Slot = slot;
+                Wide = wide;
+                Fallback = fallback;
+                Landscape = landscape;
+            }
+
+            /// <summary>The page's name, which is also the middle of the setting's name: Race, Tower.</summary>
+            public string Page { get; private set; }
+
+            /// <summary>What the page calls it: a letter, or "Wide" for the one that spans a column.</summary>
+            public string Slot { get; private set; }
+
+            public bool Wide { get; private set; }
+
+            /// <summary>The page it opens on, an index into the catalogue for its kind.</summary>
+            public int Fallback { get; private set; }
+
+            /// <summary>False for the portrait package's zones, which are a different package's.</summary>
+            public bool Landscape { get; private set; }
+
+            /// <summary>`RaceA`, `TowerWide`: the setting's name without the screen's namespace.</summary>
+            public string Key { get { return Page + Slot; } }
+        }
+
+        /// <summary>
+        /// Every zone of every pit wall page, in the order the panel draws them.
+        /// </summary>
+        /// <remarks>
+        /// **A zone belongs to a page**, which is the mirror of PIT_WALL_PAGES in
+        /// packages/dash/src/contract.ts and the fix for a zone that could not be changed on its own.
+        /// The four letters used to be the pit wall's zones full stop, so the race page's A and the
+        /// telemetry page's A were one setting and moving either moved both -- while the panel listed
+        /// four zones under one heading and drew a picture of three pages around them.
+        /// </remarks>
+        public static readonly IReadOnlyList<PitWallZoneSlot> PitWallZoneSlots = new[]
+        {
+            new PitWallZoneSlot("Race", "A", false, 0, true),
+            new PitWallZoneSlot("Race", "B", false, 1, true),
+            new PitWallZoneSlot("Tower", "Wide", true, 5, true),
+            new PitWallZoneSlot("Tower", "A", false, 4, true),
+            new PitWallZoneSlot("Tower", "B", false, 2, true),
+            new PitWallZoneSlot("Telemetry", "A", false, 8, true),
+            new PitWallZoneSlot("Telemetry", "B", false, 0, true),
+            new PitWallZoneSlot("Telemetry", "C", false, 1, true),
+            new PitWallZoneSlot("Portrait", "A", false, 0, false),
+            new PitWallZoneSlot("Portrait", "B", false, 1, false),
+            new PitWallZoneSlot("Portrait", "C", false, 4, false),
+            new PitWallZoneSlot("Portrait", "D", false, 2, false),
+        };
+
+        /// <summary>The landscape pages, in the order the package draws them and the plugin numbers them.</summary>
+        public static readonly string[] PitWallPageNames = { "Race", "Tower", "Telemetry" };
+
+        /// <summary>`PitWallStartPage`: which of the three the pit wall opens on.</summary>
+        public const string PitWallStartPage = "PitWallStartPage";
+
+        /// <summary>`PitWallPage`: the page it is showing now. Live state, the way CompanionPage is.</summary>
+        public const string PitWallPage = "PitWallPage";
+
+        /// <summary>The race page, which is what a pit wall opened on before there was a choice.</summary>
+        public const int DefaultPitWallStartPage = 0;
+
         /// <summary>Default page of zones A to D: fuel, tyres, relative and opponents, which is what a spotter watches.</summary>
         public static readonly IReadOnlyList<int> PitWallDefaultZonePages = new[] { 0, 1, 4, 2 };
 
@@ -136,11 +204,14 @@ namespace OpenDashPlugin
         /// <summary>The web view page shows nothing until the user sets an address.</summary>
         public const string DefaultWebViewUrl = "";
 
-        /// <summary>The zone and page a held button shows on a pit wall: zone D, the leaderboard.
+        /// <summary>The zone and page a held button shows on a pit wall: the tower page's B, the
+        /// leaderboard.
         ///
-        /// Zone D because it is the one a glance can borrow without hiding what the glance is for: A
-        /// and B carry the fuel and the tyres a stop is planned on, C the relative a spotter calls
-        /// from, and D the two cars either side, which the leaderboard says more about anyway.</summary>
+        /// That one because it is the one a glance can borrow without hiding what the glance is for:
+        /// the race page's pair carry the fuel and the tyres a stop is planned on, the tower page's A
+        /// the relative a spotter calls from, and its B the two cars either side, which the
+        /// leaderboard says more about anyway. Index four of the glance list: race A, race B, tower A,
+        /// tower B.</summary>
         public const int DefaultPitWallQuickGlance = 3 * 100 + 5;
 
         /// <summary>Percent. SimHub's own global brightness for the device applies on top of this.</summary>
@@ -577,8 +648,9 @@ namespace OpenDashPlugin
             }
             if (string.Equals(kind, KindPitWall, StringComparison.Ordinal))
             {
-                foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(ns, letter);
-                yield return PitWallWideProperty(ns);
+                foreach (var slot in PitWallZoneSlots) yield return ZoneProperty(ns, slot);
+                yield return PitWallStartPageProperty(ns);
+                yield return PitWallPageProperty(ns);
                 yield return WebViewUrlProperty(ns);
                 // Last, after the web view: the six before it have shipped and both halves of the
                 // contract assert the group by index, so a new one joins the end of it.
@@ -617,8 +689,9 @@ namespace OpenDashPlugin
             }
             if (string.Equals(prefix, PitWallPrefix, StringComparison.Ordinal))
             {
-                foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
-                yield return PitWallWide;
+                foreach (var slot in PitWallZoneSlots) yield return ZoneProperty(slot);
+                yield return PitWallStartPage;
+                yield return PitWallPage;
                 yield return WebViewUrl;
                 yield return PitWallClassOnly;
                 yield break;
@@ -1124,17 +1197,51 @@ namespace OpenDashPlugin
             yield return HoldQuickGlanceActionFor(ns);
         }
 
-        /// <summary>Property name of a pit wall zone: PitWallZoneA .. PitWallZoneD.</summary>
-        public static string ZoneProperty(string ns, string letter)
+        /// <summary>Property name of a pit wall zone: `PitWallRaceA`, or `GarageRaceA` on a second one.</summary>
+        public static string ZoneProperty(string ns, PitWallZoneSlot slot)
         {
-            var index = Array.IndexOf(PitWallZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            return ns + "Zone" + letter;
+            if (slot == null) throw new ArgumentNullException("slot");
+            return ns + slot.Key;
         }
 
-        public static string ZoneProperty(string letter)
+        public static string ZoneProperty(PitWallZoneSlot slot)
         {
-            return ZoneProperty(PitWallPrefix, letter);
+            return ZoneProperty(PitWallPrefix, slot);
+        }
+
+        /// <summary>The landscape zones a quick glance can borrow, in the order it numbers them. The
+        /// wide zone is left out: a glance swaps one page for another of the same kind, and the wide
+        /// catalogue is not the standard one.</summary>
+        public static IReadOnlyList<PitWallZoneSlot> GlanceZoneSlots()
+        {
+            var slots = new List<PitWallZoneSlot>();
+            foreach (var slot in PitWallZoneSlots)
+            {
+                if (slot.Landscape && !slot.Wide) slots.Add(slot);
+            }
+            return slots;
+        }
+
+        /// <summary>The slot one key names, or null when nothing does.</summary>
+        public static PitWallZoneSlot PitWallZoneSlotByKey(string key)
+        {
+            foreach (var slot in PitWallZoneSlots)
+            {
+                if (string.Equals(slot.Key, key, StringComparison.Ordinal)) return slot;
+            }
+            return null;
+        }
+
+        /// <summary>`PitWallStartPage`, or `GarageStartPage` on a second pit wall.</summary>
+        public static string PitWallStartPageProperty(string ns)
+        {
+            return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? PitWallStartPage : ns + "StartPage";
+        }
+
+        /// <summary>`PitWallPage`, or `GaragePage` on a second pit wall.</summary>
+        public static string PitWallPageProperty(string ns)
+        {
+            return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? PitWallPage : ns + "Page";
         }
 
         /// <summary>Property name of a pit wall's wide zone: PitWallWide, or GarageWide on a second one.</summary>
@@ -1408,18 +1515,18 @@ namespace OpenDashPlugin
         /// <summary>A pit wall zone and a standard page packed the way a face's glance is packed.</summary>
         public static int PitWallQuickGlanceValue(int zoneIndex, int page)
         {
-            if (zoneIndex < 0 || zoneIndex >= PitWallZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
+            if (zoneIndex < 0 || zoneIndex >= GlanceZoneSlots().Count) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
             return zoneIndex * 100 + page;
         }
 
         /// <summary>Returns the pit wall glance when both halves are in range, else the default. The
-        /// page is a standard one because the four data zones are standard; the wide zone spans a
-        /// column of the tower page and is not among them.</summary>
+        /// page is a standard one because the zones a glance can borrow are the standard ones; the wide
+        /// zone spans a column of the tower page and is not among them.</summary>
         public static int NormalisePitWallQuickGlance(int value)
         {
             if (value < 0) return DefaultPitWallQuickGlance;
             var zoneIndex = QuickGlanceZone(value);
-            if (zoneIndex >= PitWallZoneLetters.Length) return DefaultPitWallQuickGlance;
+            if (zoneIndex >= GlanceZoneSlots().Count) return DefaultPitWallQuickGlance;
             return ZonePages.IsValidStandard(QuickGlancePage(value)) ? value : DefaultPitWallQuickGlance;
         }
 
@@ -1439,6 +1546,12 @@ namespace OpenDashPlugin
         public static int NormaliseWideZonePage(int page)
         {
             return ZonePages.IsValidWide(page) ? page : DefaultWideZonePage;
+        }
+
+        /// <summary>Which of the three landscape pages a pit wall opens on; anything else is the race page.</summary>
+        public static int NormalisePitWallStartPage(int page)
+        {
+            return page >= 0 && page < PitWallPageNames.Length ? page : DefaultPitWallStartPage;
         }
 
         /// <summary>
