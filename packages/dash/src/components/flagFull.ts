@@ -10,9 +10,10 @@
  *
  * It is a sibling of `flagStrip` rather than a mode of it, and the two now read one list: every
  * condition of `FLAG_CATALOGUE`, ranked by the band's own `conditionVisible`, so that the format a
- * driver chose cannot change which flag is out. It drew the six properties SimHub normalises until
- * this file's last revision, which meant that under a red flag or a full-course caution the band
- * named the condition and the block, having no state for it, drew nothing at all.
+ * driver chose cannot change which flag is out. When the format first landed it drew the six
+ * properties SimHub normalises, which meant that under a red flag or a full-course caution the band
+ * named the condition and the block, having no state for it, drew nothing at all: the driver who had
+ * asked for the flag that cannot be missed saw the least of it.
  *
  * The three shapes are `alertBand`'s and are drawn here rather than called: a filled block named in
  * `purpose.flag.onFlag`, an outlined block named in the alert's colour over an opaque ground, and
@@ -50,16 +51,16 @@ export const FLAG_FULL_NAME_RATIO = 0.447;
 export const FLAG_FULL_NAME_PAD = ds.space[6];
 
 /**
- * What each condition reads as on the block: the band's label shortened to the one word the sheets
- * write across it.
+ * What each condition reads as on the block: the band's label cut to one word, in the manner of the
+ * five the FaceVariants sheets drew.
  *
  * A table rather than the band's own label, because the block's name is a fact about the block's
  * width. One size serves every state, that size is the widest name divided into the block, and the
  * band writes "BLACK FLAG · FURLED": taking the labels as they are would set every name on the
- * portrait face at 69 px where the sheets draw 244, which is a block a driver reads the flag off
- * rather than the word. Shortened, the widest is MEATBALL, and the only face that pays anything at
- * all for the other nine conditions is the portrait one, at 143 px against the 183 the five names
- * before them allowed.
+ * portrait face at 69 px where the sheets draw 244, which is neither the block the sheets drew nor a
+ * word worth the body. Cut, the widest is MEATBALL, and the only face that pays anything at all for
+ * the nine conditions the block did not use to have is the portrait one, at 143 px against the 183
+ * the five sheet names allowed.
  *
  * The standing and the waved yellow read the same word and are told apart by the flash, which is
  * the rule the flag box keeps under "waving is blinking"; they cannot be out at once, so the block
