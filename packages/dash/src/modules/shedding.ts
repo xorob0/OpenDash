@@ -200,14 +200,24 @@ export const SHEDDING: Record<string, Shedding> = {
     tallNarrow: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name'],
     tall: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.lastLap', 'behind.lastLap'],
   }),
-  gear: nothing('the gear, cut from the box; rule 18'),
-  // The stint is the laps and the stops. The time, the total, the average and the driver are the
-  // recap, and the driver goes first of those: a page read from the pit wall already knows whose.
+  // The gear is the drawing and the two readings are the tail. Every shape keeps both, because the
+  // page is cut so that they fit wherever the gear is worth drawing at all; the one box that cannot
+  // hold them -- the 150 px strip -- drops them in the module itself, where the gear's own size is
+  // the thing being decided, and gives the whole box back to the gear.
+  gear: fields({
+    wide: ['speed', 'rpm'],
+    grid: ['speed', 'rpm'],
+    tallNarrow: ['speed', 'rpm'],
+    tall: ['speed', 'rpm'],
+  }),
+  // The stint is where you are in the race and how much longer the tank lasts; the stops and the
+  // recap follow. The lap out of the total goes first at every shape, because a page that has room
+  // for one figure should spend it on the one a driver says out loud.
   stint: fields({
-    wide: ['stintLaps', 'stintTime', 'completed', 'stops', 'lastStop', 'avgLap', 'driver'],
-    grid: ['stintLaps', 'stops', 'lastStop'],
-    tallNarrow: ['stintLaps', 'stops', 'lastStop'],
-    tall: ['stintLaps', 'stintTime', 'completed', 'stops', 'lastStop', 'avgLap', 'driver'],
+    wide: ['lap', 'fuelTime', 'stintTime', 'stintLaps', 'completed', 'stops', 'lastStop', 'avgLap'],
+    grid: ['lap', 'fuelTime', 'stintLaps', 'stops'],
+    tallNarrow: ['lap', 'fuelTime', 'stintLaps', 'stops'],
+    tall: ['lap', 'fuelTime', 'stintTime', 'stintLaps', 'completed', 'stops', 'lastStop', 'avgLap'],
   }),
   lapHistory: nothing('lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops'),
   damage: nothing('one line of prose: iRacing publishes no damage'),

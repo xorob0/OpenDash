@@ -471,7 +471,8 @@ a short box sheds the same line from both cars rather than emptying one of them.
 | 14 | Leaderboard | `pos` · `num` · `name` · `class` · `gap` · `best` · `last` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
 | 15 | Relative | `pos` · `num` · `name` · `class` · `gap` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
 | 16 | Opponents | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.num` · `behind.num` · `ahead.class` · `behind.class` · `ahead.lastLap` · `behind.lastLap` · `ahead.rating` · `behind.rating` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.num` · `behind.num` · `ahead.class` · `behind.class` · `ahead.lastLap` · `behind.lastLap` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.lastLap` · `behind.lastLap` |
-| 18 | Stint | `stintLaps` · `stintTime` · `completed` · `stops` · `lastStop` · `avgLap` · `driver` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stintTime` · `completed` · `stops` · `lastStop` · `avgLap` · `driver` |
+| 17 | Gear | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
+| 18 | Stint | `lap` · `fuelTime` · `stintTime` · `stintLaps` · `completed` · `stops` · `lastStop` · `avgLap` | `lap` · `fuelTime` · `stintLaps` · `stops` | `lap` · `fuelTime` · `stintLaps` · `stops` | `lap` · `fuelTime` · `stintTime` · `stintLaps` · `completed` · `stops` · `lastStop` · `avgLap` |
 
 Pages with nothing to shed, and why:
 
@@ -480,7 +481,6 @@ Pages with nothing to shed, and why:
 - **Inputs** (`inputs`) — three traces and their bars, cut from the box; rule 18.
 - **Radar** (`radar`) — the cars beside you, cut from the box; rule 18.
 - **Track** (`track`) — the map, cut from the box; rule 18.
-- **Gear** (`gear`) — the gear, cut from the box; rule 18.
 - **Lap history** (`lapHistory`) — lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops.
 - **Damage** (`damage`) — one line of prose: iRacing publishes no damage.
 - **Track rivals** (`trackRivals`) — one line of prose: SimHub times sectors, not segments.

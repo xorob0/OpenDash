@@ -18,8 +18,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    wide       keeps pos num name class gap best last
   relative       wide       keeps pos num name class gap
   opponents      wide       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
-  gear           wide       one drawing, nothing to shed
-  stint          wide       keeps stintLaps stintTime completed stops lastStop avgLap driver
+  gear           wide       keeps speed rpm
+  stint          wide       keeps lap fuelTime stintTime stintLaps completed stops lastStop avgLap
   lapHistory     wide       one drawing, nothing to shed  parts head
   damage         wide       one drawing, nothing to shed
   trackRivals    wide       one drawing, nothing to shed
@@ -41,8 +41,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    wide       keeps pos num name class gap best last
   relative       wide       keeps pos num name class gap
   opponents      wide       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
-  gear           wide       one drawing, nothing to shed
-  stint          wide       keeps stintLaps stintTime completed stops lastStop avgLap driver
+  gear           wide       keeps speed rpm
+  stint          wide       keeps lap fuelTime stintTime stintLaps completed stops lastStop avgLap
   lapHistory     wide       one drawing, nothing to shed  parts head
   damage         wide       one drawing, nothing to shed
   trackRivals    wide       one drawing, nothing to shed
@@ -64,8 +64,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    grid       keeps pos num name class gap  sheds best last
   relative       grid       keeps pos num name class gap
   opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
-  gear           grid       one drawing, nothing to shed
-  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           grid       keeps speed rpm
+  stint          grid       keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     grid       one drawing, nothing to shed  parts head
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
@@ -87,8 +87,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    grid       keeps pos num name class gap  sheds best last
   relative       grid       keeps pos num name class gap
   opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
-  gear           grid       one drawing, nothing to shed
-  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           grid       keeps speed rpm
+  stint          grid       keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     grid       one drawing, nothing to shed  parts head
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
@@ -110,8 +110,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    grid       keeps pos num name class gap  sheds best last
   relative       grid       keeps pos num name class gap
   opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num  sheds ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating  declared ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap
-  gear           grid       one drawing, nothing to shed
-  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           grid       keeps speed rpm
+  stint          grid       keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
@@ -133,8 +133,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    grid       keeps pos num name class gap  sheds best last
   relative       grid       keeps pos num name class gap
   opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
-  gear           grid       one drawing, nothing to shed
-  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           grid       keeps speed rpm
+  stint          grid       keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
@@ -156,8 +156,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    tallNarrow keeps pos name gap  sheds num class best last
   relative       tallNarrow keeps pos name gap  sheds num class
   opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
-  gear           tallNarrow one drawing, nothing to shed
-  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           tallNarrow keeps speed rpm
+  stint          tallNarrow keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
@@ -179,8 +179,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    tallNarrow keeps pos name gap  sheds num class best last
   relative       tallNarrow keeps pos name gap  sheds num class
   opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
-  gear           tallNarrow one drawing, nothing to shed
-  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           tallNarrow keeps speed rpm
+  stint          tallNarrow keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
@@ -202,8 +202,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    tallNarrow keeps pos name gap  sheds num class best last
   relative       tallNarrow keeps pos name gap  sheds num class
   opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
-  gear           tallNarrow one drawing, nothing to shed
-  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           tallNarrow keeps speed rpm
+  stint          tallNarrow keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
@@ -225,8 +225,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    tallNarrow keeps pos name gap  sheds num class best last
   relative       tallNarrow keeps pos name gap  sheds num class
   opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
-  gear           tallNarrow one drawing, nothing to shed
-  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           tallNarrow keeps speed rpm
+  stint          tallNarrow keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
@@ -248,8 +248,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    tall       keeps pos num name class gap  sheds best last
   relative       tall       keeps pos num name class gap
   opponents      tall       keeps ahead.gap behind.gap ahead.name behind.name ahead.lastLap behind.lastLap  sheds ahead.num behind.num ahead.class behind.class ahead.rating behind.rating
-  gear           tall       one drawing, nothing to shed
-  stint          tall       keeps stintLaps stintTime completed stops lastStop avgLap driver
+  gear           tall       keeps speed rpm
+  stint          tall       keeps lap fuelTime stintTime stintLaps completed stops lastStop avgLap
   lapHistory     tall       one drawing, nothing to shed
   damage         tall       one drawing, nothing to shed
   trackRivals    tall       one drawing, nothing to shed
@@ -271,8 +271,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    tall       keeps pos num name class gap  sheds best last
   relative       tall       keeps pos num name class gap
   opponents      tall       keeps ahead.gap behind.gap ahead.name behind.name ahead.lastLap behind.lastLap  sheds ahead.num behind.num ahead.class behind.class ahead.rating behind.rating
-  gear           tall       one drawing, nothing to shed
-  stint          tall       keeps stintLaps stintTime completed stops lastStop avgLap driver
+  gear           tall       keeps speed rpm
+  stint          tall       keeps lap fuelTime stintTime stintLaps completed stops lastStop avgLap
   lapHistory     tall       one drawing, nothing to shed
   damage         tall       one drawing, nothing to shed
   trackRivals    tall       one drawing, nothing to shed
@@ -294,8 +294,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    tallNarrow keeps pos name gap  sheds num class best last
   relative       tallNarrow keeps pos name gap  sheds num class
   opponents      tallNarrow keeps ahead.gap behind.gap  sheds ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating  declared ahead.gap behind.gap ahead.name behind.name
-  gear           tallNarrow one drawing, nothing to shed
-  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           tallNarrow keeps -  sheds speed rpm  declared speed rpm
+  stint          tallNarrow keeps lap fuelTime  sheds stintTime stintLaps completed stops lastStop avgLap  declared lap fuelTime stintLaps stops
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
@@ -317,8 +317,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    tallNarrow keeps pos name gap  sheds num class best last
   relative       tallNarrow keeps pos name gap  sheds num class
   opponents      tallNarrow keeps ahead.gap behind.gap ahead.name behind.name  sheds ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap ahead.rating behind.rating
-  gear           tallNarrow one drawing, nothing to shed
-  stint          tallNarrow keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           tallNarrow keeps speed rpm
+  stint          tallNarrow keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
@@ -340,8 +340,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    grid       keeps pos num name class gap  sheds best last
   relative       grid       keeps pos num name class gap
   opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
-  gear           grid       one drawing, nothing to shed
-  stint          grid       keeps stintLaps stops lastStop  sheds stintTime completed avgLap driver
+  gear           grid       keeps -  sheds speed rpm  declared speed rpm
+  stint          grid       keeps lap fuelTime stintLaps stops  sheds stintTime completed lastStop avgLap
   lapHistory     grid       one drawing, nothing to shed  parts head
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
@@ -363,8 +363,8 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   leaderboard    grid       keeps pos num name class gap  sheds best last
   relative       grid       keeps pos num name class gap
   opponents      grid       keeps ahead.gap behind.gap ahead.name behind.name ahead.num behind.num ahead.class behind.class ahead.lastLap behind.lastLap  sheds ahead.rating behind.rating
-  gear           grid       one drawing, nothing to shed
-  stint          grid       keeps stintLaps  sheds stintTime completed stops lastStop avgLap driver  declared stintLaps stops lastStop
+  gear           grid       keeps -  sheds speed rpm  declared speed rpm
+  stint          grid       keeps lap fuelTime  sheds stintTime stintLaps completed stops lastStop avgLap  declared lap fuelTime stintLaps stops
   lapHistory     grid       one drawing, nothing to shed  parts head
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
