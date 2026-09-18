@@ -196,13 +196,13 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.LightsBrightness, () => Settings.LightsBrightness);
             this.AttachDelegate(Contract.LightsNightBrightness, () => Settings.LightsNightBrightness);
             this.AttachDelegate(Contract.LightsNightMode, () => Settings.LightsNightMode);
-            this.AttachDelegate(Contract.FlagBoxCriticalOnly, () => Settings.FlagBoxCriticalOnly);
-            this.AttachDelegate(Contract.FlagBoxGear, () => Settings.FlagBoxGear);
+            // One number under two names. LightsLowFuelLaps is what the contract reads first and
+            // FlagBoxLowFuelLaps is the name that shipped, so both carry the threshold the driver set
+            // and a profile of either vintage finds it. The field keeps the old spelling because that
+            // is what a settings file on disk is keyed by.
             this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
-            // Zero means "not set": the profile then applies its own default, which is per unit, so a
-            // driver in Fahrenheit who has never opened this page does not get a Celsius number.
-            this.AttachDelegate(Contract.FlagBoxOilTemp, () => Settings.FlagBoxOilTemp == 0 ? (int?)null : Settings.FlagBoxOilTemp);
-            this.AttachDelegate(Contract.FlagBoxWaterTemp, () => Settings.FlagBoxWaterTemp == 0 ? (int?)null : Settings.FlagBoxWaterTemp);
+            this.AttachDelegate(Contract.LightsLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
+            this.AttachDelegate(Contract.FlagBoxSpotterAnimation, () => Settings.FlagBoxSpotterAnimation);
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 var m = matrix;
@@ -212,12 +212,19 @@ namespace OpenDashPlugin
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixSpotter(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "CriticalOnly"), () => Settings.MatrixCriticalOnly(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Gear"), () => Settings.MatrixGear(m));
+                // Zero means "not set": the profile then applies its own default, which is per unit, so
+                // a driver in Fahrenheit who has never opened this page does not get a Celsius number.
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "OilTemp"), () => Settings.MatrixOilTemp(m) == 0 ? (int?)null : Settings.MatrixOilTemp(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "WaterTemp"), () => Settings.MatrixWaterTemp(m) == 0 ? (int?)null : Settings.MatrixWaterTemp(m));
             }
             // The strips, last, in the order Contract.LightsPropertyNames() declares them. Every
-            // generated .ledsprofile reads exactly these two, so a strip with neither attached can only
-            // ever draw the defaults its isnull() carries.
+            // generated .ledsprofile reads these, so a strip with none of them attached can only ever
+            // draw the defaults its isnull() carries.
             this.AttachDelegate(Contract.LedCentre, () => Settings.LedCentre);
             this.AttachDelegate(Contract.LedRpmStyle, () => Settings.LedRpmStyle);
+            this.AttachDelegate(Contract.LedFlagAnimation, () => Settings.LedFlagAnimation);
             this.AttachDelegate(Contract.LedMirrorFit, () => Settings.LedMirrorFit);
             // The mirror. Ready is the gate every strip profile's car layer hangs on, and each run is
             // one fixed-width string the profile slices a colour out of with left(); DataUpdate fills
@@ -362,6 +369,9 @@ namespace OpenDashPlugin
             // speedo read it too, and attached last of the shared group because ShiftLights is one of
             // the names this list has always opened with. #170, #189.
             this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
+            // And after it, for the same reason: every band that writes a name reads this, on a face
+            // and on a card face alike, so it belongs to the rig rather than to a screen.
+            this.AttachDelegate(Contract.BlueFlagDetail, () => Settings.BlueFlagDetail);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
@@ -385,6 +395,8 @@ namespace OpenDashPlugin
                         this.AttachDelegate(Contract.BarFieldProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).BarField(captured));
                     }
                     this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
+                    this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
+                    this.AttachDelegate(Contract.LapReviewProperty(s.Namespace), () => Settings.ScreenLapReview(s.Namespace));
                 }
                 else if (s.IsCompanion)
                 {
@@ -393,6 +405,10 @@ namespace OpenDashPlugin
                         var captured = module;
                         this.AttachDelegate(Contract.ModuleProperty(s.Namespace, captured), () => Settings.ScreenModule(s.Namespace, captured));
                     }
+                    // The page the companion is on, which its screens' enabled expressions follow. Live
+                    // state and not a saved setting: Init puts it back on the start module, exactly as
+                    // it puts every zone back on the page it opens on.
+                    this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace), () => Settings.ScreenCompanionPage(s.Namespace));
                 }
                 else if (s.IsPitWall)
                 {
@@ -403,12 +419,14 @@ namespace OpenDashPlugin
                     }
                     this.AttachDelegate(Contract.PitWallWideProperty(s.Namespace), () => Settings.ScreenWideZone(s.Namespace));
                     this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
+                    this.AttachDelegate(Contract.PitWallClassOnlyProperty(s.Namespace), () => Settings.ScreenPitWallClassOnly(s.Namespace));
                 }
             }
         }
 
         /// <summary>
-        /// The five actions a driver binds to a wheel button: one per zone, and one held for a glance.
+        /// The actions a driver binds to a wheel button: five per face, one per zone and one held for a
+        /// glance, and two per companion, the next module and a glance held on the same idiom.
         ///
         /// Registered through the PluginManager rather than through `this.AddAction`, and that is not
         /// a style choice. The extension method assigns null over the release callback before passing
@@ -441,6 +459,31 @@ namespace OpenDashPlugin
                     typeof(OpenDash),
                     (manager, name) => Settings.ScreenFace(ns).BeginQuickGlance(),
                     (manager, name) => Settings.ScreenFace(ns).EndQuickGlance());
+            }
+            // A companion has two of its own: one that advances it past the modules the rotation
+            // leaves off, and one held for a glance, which is the same pair a face has under other
+            // names. They go through the manager for the same reason the face's do.
+            //
+            // A pit wall has the glance alone: it cycles nothing, every panel being on screen at once,
+            // but the canvas asks for a page called up on demand over a zone's assigned one and the
+            // hold is the same gesture under whatever SimHub binds it to.
+            foreach (var screen in Settings.RigScreens())
+            {
+                if (screen == null) continue;
+                var ns = screen.Namespace;
+                if (screen.IsCompanion)
+                {
+                    pluginManager.AddAction(Contract.NextModuleActionFor(ns), typeof(OpenDash), (manager, name) => Settings.CycleScreenModule(ns), null);
+                }
+                else if (!screen.IsPitWall)
+                {
+                    continue;
+                }
+                pluginManager.AddAction(
+                    Contract.HoldQuickGlanceActionFor(ns),
+                    typeof(OpenDash),
+                    (manager, name) => Settings.BeginScreenGlance(ns),
+                    (manager, name) => Settings.EndScreenGlance(ns));
             }
         }
     }

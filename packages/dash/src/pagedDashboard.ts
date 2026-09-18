@@ -30,6 +30,14 @@ export interface PagedDashboardSpec {
   metadata: DashboardMetadata;
   /** The one line the metadata carries about what this file is. */
   description: string;
+  /**
+   * What the pages are drawn on; the base surface unless the part is recessed.
+   *
+   * A widget paints its own dashboard's ground over whatever the face drew under it, so a zone that
+   * sits in a well has to be built in that well rather than have one painted behind it. Band D is
+   * the one that does.
+   */
+  background?: `#${string}`;
 }
 
 /** A dashboard of one screen per page: what a zone widget points at. */
@@ -38,7 +46,7 @@ export function pagedDashboard(spec: PagedDashboardSpec): Dashboard {
     name: spec.name,
     width: spec.size.width,
     height: spec.size.height,
-    backgroundColor: ds.color.surface.base,
+    backgroundColor: spec.background ?? ds.color.surface.base,
     screens: spec.screens,
     metadata: { ...spec.metadata, title: `${spec.metadata.title} ${spec.name}`, description: spec.description },
   };
@@ -80,11 +88,11 @@ export function pagedWidget(spec: PagedWidgetSpec): WidgetItem {
 }
 
 /** One screen of a paged dashboard: a page named after itself, drawn from the items given. */
-export const pageScreen = (name: string, items: Item[]): Screen => ({
+export const pageScreen = (name: string, items: Item[], background: `#${string}` = ds.color.surface.base): Screen => ({
   name,
   inGame: true,
   idle: true,
   pit: false,
-  backgroundColor: ds.color.surface.base,
+  backgroundColor: background,
   items,
 });

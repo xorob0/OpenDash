@@ -41,14 +41,46 @@ export type Shedding =
  *
  * A real box is not always one of the four: the pit wall hands a module 607 x 158 and the nano a
  * 269 x 194 zone, and neither is on the canvas. A short box takes the answer of the narrower shape
- * of the same width, because what a short box has is room for one rank -- which is the same
- * constraint from the other side.
+ * of the same width, because what a short box has is room for less -- which is the same constraint
+ * from the other side, and the table below is where "less" is written page by page.
  */
 export function archetypeOf(shape: Shape): Archetype {
   if (shape.height === 'short') return shape.width === 'wide' ? 'grid' : 'tallNarrow';
   if (shape.width === 'narrow') return 'tallNarrow';
   if (shape.width === 'wide') return 'wide';
   return shape.height === 'tall' ? 'tall' : 'grid';
+}
+
+/**
+ * Where the `grid` drawing stops answering a `grid` box, for the two pages that say so.
+ *
+ * The medium height band runs from 200 to 400 px and holds both the catalogue's `grid` 430 x 300
+ * and the 1280 x 400 face's zone body, 437 x 214. Two pages cannot be drawn the same way in both,
+ * and `FaceVariants1280x400` marks them: car settings draws seven cells where 214 px has room for
+ * four, and lap history draws a header row where 214 px would rather have another lap. Both take
+ * the `tall narrow` drawing there, which is the sheet the canvas points at.
+ *
+ * A floor rather than a band of its own, because it is two pages out of twenty-one: a fifth shape
+ * would put a fifth column on every row of the table and nineteen of them would repeat the fourth.
+ * It sits between the 1280 x 400 face's two arrangements, 214 and 248 px, and the 1280 x 480
+ * face's 276, which the canvas draws from the `grid` sheet.
+ */
+export const GRID_FLOOR = 260;
+
+/** The pages that take the `tall narrow` drawing in a `grid` box shorter than the floor. */
+export const PREFERS_TALL_NARROW: readonly string[] = ['carSettings', 'lapHistory'];
+
+/**
+ * The drawing a page takes in a real box: its shape's answer, unless the page asks for another.
+ *
+ * The shape is the box's own answer and the box is what an override measures, because the bands
+ * cannot tell 437 x 214 from 430 x 300 and the canvas draws those two differently.
+ */
+export function archetypeFor(page: string | undefined, shape: Shape, box: { height: number }): Archetype {
+  const archetype = archetypeOf(shape);
+  if (archetype !== 'grid' || shape.width !== 'medium') return archetype;
+  if (page !== undefined && box.height < GRID_FLOOR && PREFERS_TALL_NARROW.includes(page)) return 'tallNarrow';
+  return archetype;
 }
 
 const fields = (keeps: Keeps): Shedding => ({ kind: 'fields', keeps });
@@ -62,28 +94,43 @@ const nothing = (why: string): Shedding => ({ kind: 'nothing', why });
  * three per-lap consumptions where the zone drawing gives it one -- the field is kept at `wide`,
  * the fullest form, and follows the drawing everywhere else. Where the drawing names a field the
  * module does not have yet, it is simply not here; the module is what this table is about.
+ *
+ * The five rows that deliberately keep more than the drawing are listed in `docs/design/zones.md`
+ * §5, so that a reader holding a drawing against a zone finds the argument rather than a bug.
  */
 export const SHEDDING: Record<string, Shedding> = {
-  // Six values at `wide`, four at `grid`: the laps and the estimate go, and the delta stays,
+  // Twelve values at `wide`, four at `grid`: the laps and the estimate go, and the delta stays,
   // which is the clearest proof in the catalogue that shedding is not dropping the tail. At
   // `tall narrow` only the two times a driver compares on a lap.
+  //
+  // The last six are the fullest form and belong to `wide` alone. The companion artboard draws
+  // all twelve, the catalogue's own page description names nine, and the two zone drawings that
+  // are `tall` draw six; a box that cannot hold the tail takes it off in this order anyway.
   lapTimes: fields({
-    wide: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
+    wide: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta', 'average5', 'position', 'stintLap', 's1', 's2', 's3'],
     grid: ['last', 'sessionBest', 'yourBest', 'delta'],
     tallNarrow: ['last', 'sessionBest', 'yourBest', 'delta'],
     tall: ['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta'],
   }),
-  // One value and a bar it is drawn against; there is nothing secondary to lose. The catalogue
-  // draws three sector deltas under the bar that this page does not build yet (#222).
-  delta: fields({ wide: ['delta'], grid: ['delta'], tallNarrow: ['delta'], tall: ['delta'] }),
+  // The number and the same comparison sector by sector, which the catalogue keeps at every shape:
+  // a zone narrow enough for one column spends the bar and the scale on the number and keeps the
+  // three sectors, so the rank has nothing secondary of its own. The bar, the scale and the rule
+  // are furniture rather than fields and are declared in `PARTS`.
+  delta: fields({
+    wide: ['delta', 's1', 's2', 's3'],
+    grid: ['delta', 's1', 's2', 's3'],
+    tallNarrow: ['delta', 's1', 's2', 's3'],
+    tall: ['delta', 's1', 's2', 's3'],
+  }),
   // The three sectors are the page and stay at every shape. Of the three lap times under them the
   // drawings keep two, and not the same two: your own best and the last lap in a narrow zone, the
-  // last lap and the session best in a tall one.
+  // last lap and the session best in a tall one. The session's best of each sector is the
+  // companion artboard's own last rank and stays at `wide`, the fullest form.
   sectors: fields({
-    wide: ['yourBest', 'last', 'sessionBest'],
-    grid: ['yourBest', 'last', 'sessionBest'],
-    tallNarrow: ['yourBest', 'last'],
-    tall: ['last', 'sessionBest'],
+    wide: ['s1', 's2', 's3', 'yourBest', 'last', 'sessionBest', 'bestS1', 'bestS2', 'bestS3'],
+    grid: ['s1', 's2', 's3', 'yourBest', 'last', 'sessionBest'],
+    tallNarrow: ['s1', 's2', 's3', 'yourBest', 'last'],
+    tall: ['s1', 's2', 's3', 'last', 'sessionBest'],
   }),
   // The redline is a number a driver reads once a car, so it is the first thing the speedo drops.
   speedo: fields({ wide: ['speed', 'rpm', 'redline'], grid: ['speed', 'rpm'], tallNarrow: ['speed', 'rpm'], tall: ['speed', 'rpm'] }),
@@ -112,10 +159,10 @@ export const SHEDDING: Record<string, Shedding> = {
   // Where you are and how long is left survive; the session name and the laps left are what a
   // driver can infer from the rest.
   session: fields({
-    wide: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft'],
+    wide: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft', 'incidents', 'cars'],
     grid: ['position', 'class', 'lap', 'timeLeft'],
     tallNarrow: ['position', 'class', 'lap', 'timeLeft'],
-    tall: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft'],
+    tall: ['type', 'position', 'class', 'lap', 'timeLeft', 'lapsLeft', 'incidents', 'cars'],
   }),
   radar: nothing('the cars beside you, cut from the box; rule 18'),
   track: nothing('the map, cut from the box; rule 18'),
@@ -135,26 +182,73 @@ export const SHEDDING: Record<string, Shedding> = {
     tallNarrow: ['pos', 'name', 'gap'],
     tall: ['pos', 'num', 'name', 'class', 'gap'],
   }),
-  // Two blocks, each a gap with a name, a number, a class chip and a line of detail. A narrow zone
-  // keeps the gap and who it belongs to, which is the whole of what the page is for: the catalogue
-  // draws the code and the gap there and nothing else.
+  // Two blocks, each a gap with a name, a number, a class chip, the last lap and the rating. A
+  // narrow zone keeps the gap and who it belongs to, which is the whole of what the page is for:
+  // the catalogue draws the code and the gap there and nothing else.
+  //
+  // Named in pairs, the car ahead's field and the car behind's twin together, because this is the
+  // one page whose rank is two of the same thing. Shedding reads the order as importance, so an
+  // order that listed one car and then the other would take the whole of the second car off before
+  // it touched the first, and a page about the car ahead and the car behind would be drawing one
+  // of them. The pairs make a short box shed the same line from both.
+  //
+  // `tall` keeps the last lap where the drawing puts a licence badge this build has no read for,
+  // and no class chip: the catalogue's 12 px `B` there is the badge and not a class. zones.md §5.
   opponents: fields({
-    wide: ['ahead.gap', 'ahead.name', 'ahead.num', 'ahead.class', 'ahead.detail', 'behind.gap', 'behind.name', 'behind.num', 'behind.class', 'behind.detail'],
-    grid: ['ahead.gap', 'ahead.name', 'ahead.num', 'ahead.class', 'ahead.detail', 'behind.gap', 'behind.name', 'behind.num', 'behind.class', 'behind.detail'],
-    tallNarrow: ['ahead.gap', 'ahead.name', 'behind.gap', 'behind.name'],
-    tall: ['ahead.gap', 'ahead.name', 'ahead.class', 'ahead.detail', 'behind.gap', 'behind.name', 'behind.class', 'behind.detail'],
+    wide: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.num', 'behind.num', 'ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap', 'ahead.rating', 'behind.rating'],
+    grid: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.num', 'behind.num', 'ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap'],
+    tallNarrow: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name'],
+    tall: ['ahead.gap', 'behind.gap', 'ahead.name', 'behind.name', 'ahead.lastLap', 'behind.lastLap'],
   }),
   gear: nothing('the gear, cut from the box; rule 18'),
-  // The stint is the laps and the stops. The time, the total and the driver are the recap.
+  // The stint is the laps and the stops. The time, the total, the average and the driver are the
+  // recap, and the driver goes first of those: a page read from the pit wall already knows whose.
   stint: fields({
-    wide: ['stintLaps', 'stintTime', 'completed', 'driver', 'stops', 'lastStop'],
+    wide: ['stintLaps', 'stintTime', 'completed', 'stops', 'lastStop', 'avgLap', 'driver'],
     grid: ['stintLaps', 'stops', 'lastStop'],
     tallNarrow: ['stintLaps', 'stops', 'lastStop'],
-    tall: ['stintLaps', 'stintTime', 'completed', 'driver', 'stops', 'lastStop'],
+    tall: ['stintLaps', 'stintTime', 'completed', 'stops', 'lastStop', 'avgLap', 'driver'],
   }),
-  lapHistory: nothing('three columns and as many rows as fit; there is no fourth to drop'),
+  lapHistory: nothing('lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops'),
   damage: nothing('one line of prose: iRacing publishes no damage'),
   trackRivals: nothing('one line of prose: SimHub times sectors, not segments'),
+};
+
+/**
+ * The second table: the parts of a page that are neither fields nor columns.
+ *
+ * A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap
+ * history is rows under a header, pit view's tyre service is the summary word the drawing writes as
+ * one line together with the four corner toggles beside it, and tyres closes its four corners with
+ * a line saying where the pressures come from. The
+ * catalogue draws each of these at some shapes and not at others -- the `tall narrow` delta is the
+ * number and its label alone, and neither the `tall narrow` nor the `tall` lap history has a header
+ * over its rows -- and none of it was declared. A narrow box lost them to `rowsThatFit` instead,
+ * which is arithmetic arriving at a design decision one pixel at a time and getting it wrong at
+ * every size in the case of the tyres caption.
+ *
+ * Apart from `SHEDDING` because it answers a different question. That table is what a rank sheds;
+ * this is what furniture the page keeps around it, and a page may have an entry in both.
+ */
+export const PARTS: Record<string, Keeps> = {
+  // Every one of the four drawings carries the bar, its scale and the rule under it, the narrow one
+  // included: the catalogue's `tall narrow · 274 by 300` draws a 16 px track, four 24 px marks, the
+  // fill, the centre marker and the hairline, above the three sector deltas. This row said the
+  // opposite for the narrow column and spent the page's whole furniture on the number.
+  delta: { wide: ['bar', 'scale', 'rule'], grid: ['bar', 'scale', 'rule'], tallNarrow: ['bar', 'scale', 'rule'], tall: ['bar', 'scale', 'rule'] },
+  // The summary word and the four corner toggles beside it are the drawing's `Tyres · RIGHTS`;
+  // the fast repair and the tear-off stay at every shape.
+  pitView: { wide: ['tyres'], grid: ['tyres'], tallNarrow: [], tall: [] },
+  // The captions say how the tread fills the drawing and what the tick on it means, and the chip
+  // over the grid names the compound. A column that narrow has room for neither, and the
+  // catalogue's `tall narrow` drawing is the four corners and nothing else.
+  tyres: { wide: ['footer', 'compound'], grid: ['footer', 'compound'], tallNarrow: [], tall: ['footer', 'compound'] },
+  // The steering is a fourth column beside the three pedals, and the catalogue draws it at the two
+  // shapes with the width for it. A narrow zone spends that width on the trace instead, which is
+  // where pedal application is read as a shape.
+  inputs: { wide: ['steer'], grid: ['steer'], tallNarrow: [], tall: [] },
+  // A header costs one lap of the ten, which a tall box would rather spend on the lap.
+  lapHistory: { wide: ['head'], grid: ['head'], tallNarrow: [], tall: [] },
 };
 
 /** What a page does when it cannot keep everything. Throws for a page the table does not name. */
@@ -164,12 +258,12 @@ export function sheddingFor(page: string): Shedding {
   return entry;
 }
 
-/** The ids a page keeps at a shape, or undefined for a page with nothing to shed. */
-export function keepsAt(page: string | undefined, shape: Shape): readonly string[] | undefined {
+/** The ids a page keeps at a drawing, or undefined for a page with nothing to shed. */
+export function keepsAt(page: string | undefined, archetype: Archetype): readonly string[] | undefined {
   if (page === undefined) return undefined;
   const entry = SHEDDING[page];
   if (!entry || entry.kind === 'nothing') return undefined;
-  return entry.keeps[archetypeOf(shape)];
+  return entry.keeps[archetype];
 }
 
 /**
@@ -178,26 +272,29 @@ export function keepsAt(page: string | undefined, shape: Shape): readonly string
  * A page the table does not name keeps everything, which is what a module built outside the
  * catalogue -- the two zone pages that are not modules -- should do.
  */
-export function keptAt<T extends { id?: string }>(all: readonly T[], page: string | undefined, shape: Shape): T[] {
-  const keeps = keepsAt(page, shape);
+export function keptAt<T extends { id?: string }>(all: readonly T[], page: string | undefined, archetype: Archetype): T[] {
+  const keeps = keepsAt(page, archetype);
   if (!keeps) return [...all];
   return all.filter((item) => item.id === undefined || keeps.includes(item.id));
 }
 
 /**
- * Whether a page keeps one named part at a shape.
+ * Whether a page keeps one named part at a drawing.
  *
- * For the parts of a page that are not fields and not columns: a class chip beside a gap, a line
- * of detail under it. A page with nothing declared keeps everything.
+ * A page that declares its parts is answered from `PARTS`; the rest are answered from their rank,
+ * which is where a class chip beside a gap and the line of detail under it are declared. A page
+ * with nothing declared either way keeps everything.
  */
-export function keepsPart(id: string, page: string | undefined, shape: Shape): boolean {
-  const keeps = keepsAt(page, shape);
+export function keepsPart(id: string, page: string | undefined, archetype: Archetype): boolean {
+  const parts = page === undefined ? undefined : PARTS[page];
+  if (parts) return parts[archetype].includes(id);
+  const keeps = keepsAt(page, archetype);
   return keeps === undefined || keeps.includes(id);
 }
 
 /** The same, for a page whose members are bare ids: the columns of a table. */
-export function keptIds<T extends string>(all: readonly T[], page: string | undefined, shape: Shape): T[] {
-  const keeps = keepsAt(page, shape);
+export function keptIds<T extends string>(all: readonly T[], page: string | undefined, archetype: Archetype): T[] {
+  const keeps = keepsAt(page, archetype);
   if (!keeps) return [...all];
   return all.filter((id) => keeps.includes(id));
 }

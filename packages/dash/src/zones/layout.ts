@@ -33,6 +33,26 @@ export interface ZoneRects {
   pitLimiter: Rect;
 }
 
+/**
+ * The bar's own scale, read off each artboard rather than taken from the zone density ramp.
+ *
+ * The artboards draw two of them: a 34 px value over a 24 px denominator in 57 px strip columns on
+ * the 56 and 54 px bars, and 28 over 20 in 54 px columns on the 50 and 46 px ones. The gap is 22 on
+ * every landscape face and 12 at 600 x 686, where one field per end and five cells share 600 pixels.
+ * Everything else about the bar -- the 13 px label row, the five pixels under it, the six before a
+ * denominator, the twenty of side padding -- is the same on every artboard and lives in `bar.ts`.
+ */
+export interface BarScale {
+  /** Between the two fields of an end, between an end and the strip, and between two strip cells. */
+  gap: number;
+  /** An end field's value, and a strip cell's. */
+  valueSize: number;
+  /** The dimmer second value after the first, as "/ 32" is drawn after a lap. */
+  denominatorSize: number;
+  /** A strip column, before the even-width rule rounds it up. */
+  stripCell: number;
+}
+
 export interface ZoneLayout {
   /** Package folder and main dashboard name, e.g. `openDash zones 1920x480`. */
   folder: string;
@@ -42,6 +62,16 @@ export interface ZoneLayout {
   background: Hex;
   zones: ZoneRects;
   /**
+   * The gap between two of the fifteen rev segments: 8 at 1920, 6 at 1280, 4 at 850 and below.
+   *
+   * A field per face rather than one constant, and read off the artboard like every other number in
+   * this directory: the three figures are what `design/canvas/Dash.dc.html` and its siblings draw in
+   * the flex row that holds the segments, and `design/tokens.json` shiftLights.segments writes the
+   * same three down. They look like a ramp, but a face is entitled to disagree with the ramp, which
+   * is why this is a number the face states rather than one derived from its width.
+   */
+  revBarGap: number;
+  /**
    * Whether band D draws a corner block at each end. The artboards draw them at 1920x480,
    * 1280x480, 1280x400 and 1280x720 and not at 850x480, 800x286 or 600x686; the threshold is those
    * drawings rather than a round number.
@@ -49,6 +79,8 @@ export interface ZoneLayout {
   bandCorners: boolean;
   /** How many fields the bar's ends carry: two each on a wide face, one each in portrait. */
   barFieldsPerEnd: 1 | 2;
+  /** The sizes the artboard draws the bar at. Absent on the nano, which has no bar. */
+  bar?: BarScale;
 }
 
 /** The rect a zone occupies. */
@@ -99,7 +131,25 @@ export const zoneLayoutDescription = (width: number, height: number): string => 
 export const revBarReclaim = (zones: ZoneRects): number => (zones.bar?.top ?? bodyTop(zones)) - zones.revBarWell.top;
 
 /** The top of the body: the highest of the three zones, which is all three of them in landscape. */
-const bodyTop = (zones: ZoneRects): number => Math.min(zones.zoneA.top, zones.zoneB.top, zones.zoneC.top);
+export const bodyTop = (zones: ZoneRects): number => Math.min(zones.zoneA.top, zones.zoneB.top, zones.zoneC.top);
+
+/**
+ * The body as one rectangle: zones B, A and C together, the seams between them included, full width.
+ *
+ * Derived rather than tabulated, which is what makes the full-screen flag one component instead of
+ * eight tables. It reproduces every rectangle the FaceVariants sheets quote -- 1280 x 320 at y 99,
+ * 1280 x 258 at 87, 1280 x 554 at 105, 1920 x 314 at 105, 800 x 328 at 91, 850 x 328 at 91,
+ * 800 x 194 at 33 and 600 x 546 at 83 -- and gives the two arrangements and the faces the sheets do
+ * not draw for nothing. Both edges are taken from all three zones rather than from zone B's top and
+ * zone C's bottom, because the portrait face stacks A over B over C and neither is the body's edge
+ * there.
+ */
+export function bodyRect(layout: ZoneLayout): Rect {
+  const z = layout.zones;
+  const top = bodyTop(z);
+  const bottom = Math.max(z.zoneA.top + z.zoneA.height, z.zoneB.top + z.zoneB.height, z.zoneC.top + z.zoneC.height);
+  return { left: 0, top, width: layout.width, height: bottom - top };
+}
 
 /** `rect` moved up by `by`, keeping its size. */
 const liftedBy = (r: Rect, by: number): Rect => ({ ...r, top: r.top - by });

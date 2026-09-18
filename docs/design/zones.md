@@ -25,7 +25,7 @@ The same five parts on every rectangular face. Only their sizes change.
 | | |
 |---|---|
 | **Rev bar** | Shift lights in a recessed well, full width, never moves. It can be turned off entirely, in which case the face is drawn in its second arrangement and the well's room goes to the zones. |
-| **The bar** | What the car is set to and where the session is: a field at each end that a driver may swap, and a settings strip between them that hides what the game does not expose. |
+| **The bar** | What the car is set to and where the session is: two fields at each end that a driver may swap, one per end at 600 × 686, and a settings strip between them that hides what the game does not expose. |
 | **Zone B** | A page from the catalogue of twenty-one. |
 | **Zone A** | The one read by reflex: gear, gear and speed, speed, or the track. |
 | **Zone C** | A page from the same catalogue of twenty-one. |
@@ -39,6 +39,14 @@ There is **no row of page dots**. The zone letter and the page name say what is 
 
 Read from the artboards. Every number is a rect of `left, top, width x height` on the face's own
 canvas.
+
+One part is separated from the next by a single pixel rather than by a gap. Every artboard leaves
+an empty row above each row of the body and above band D, and, where the body is a row of zones, an
+empty column between them, and it draws a 1 px rule in `surface.raised` in each: at 1280 × 480 the
+two rows are y 98 and y 419 and the two columns are x 469 and x 810, while the portrait face, which
+stacks its zones, has four rows, at y 82, 317, 478 and 629, and no column at all. The build reads
+those boundaries off the rects rather than tabulating them, so that the arrangement below, which no
+artboard gives, is ruled the same way.
 
 **1920 × 480** — `Dash.dc.html`, the reference face
 
@@ -139,6 +147,9 @@ The rule, in `zonesWithoutRevBar`:
   C keep both their rectangles and their zone dashboards.
 - Band D does not move: it is measured from the bottom edge and the bottom edge has not changed. The
   pit limiter moves with zone A, because that is what it is drawn over.
+- The rules rise with the parts they separate, since they are read off the rects. The nano is the
+  one face where the body then starts on row 1, leaving no row above it for a rule to sit in, so
+  that arrangement draws the rule above band D and none above its body.
 
 | Face | Given back | Of the height | Bar | Body |
 |---|---|---|---|---|
@@ -163,10 +174,28 @@ about 17% on a package.
 Every zone but A carries a **22 px header line**: the zone letter in the label style, then the
 page name. Zone A has none, which is the one thing the model leaves open — see §8.
 
+The frame around it is the artboards' and not the pit wall's. A face zone is padded `6px 12px`, its
+header row is 22 px of 15 px labels in `color.text.label`, and 4 px separate that row from the page,
+which leaves a 769 × 314 zone a body of 745 × 276 and the nano's 269 × 194 one of 245 × 156. The pit
+wall's zones keep the 28 px row over 16 px of padding `PitWallZones.dc.html` draws them with, so
+`zoneFrameMetrics` takes a chrome beside its density and the two frames no longer share one table.
+
+Band D carries the letter alone, drawn by the face at the band's own side padding and centred on its
+height, since a band has no header row to put it in and counts no cycle.
+
 ### The pit limiter
 
 Drawn over zone A as a full-width white banner with dark text while the limiter is on: at 1920 it
 is 824, 111, 272 × 30. It is not a page and it is not part of the catalogue; it covers.
+
+**Five pit alerts share that one rectangle, ranked among themselves and not against band D.** Engage
+the limiter, disengage it, the limiter on in the lane, the ignition off and the engine off are one
+ordered list, of which at most one is ever out, each carrying its own test of whether the car is in
+the lane rather than the list carrying one. They are deliberately **not** ranked under the flag: the
+two draw in different rectangles and never contend, so gating the pit list on "no flag is showing"
+would blank the limiter band under a full-course caution, which is precisely when the pit lane is
+busiest. `ENGAGE LIMITER` is guarded on the presence of the in-car control itself, since a car
+without one should not be told to use it.
 
 ---
 
@@ -184,6 +213,17 @@ the other.
 - **Width** picks the column set and the rank width.
 - **Height** picks the row count, and whether the lead values are promoted.
 
+**Where "nothing is ever scaled down" gives.** The rule is about a rank with something left to shed
+and it holds there. It cannot hold for a rank with nothing left, because a value that neither sheds
+nor shrinks is a value WPF clips. Five places therefore shrink as a floor, each argued where it
+stands: `second/field.ts`, when one field is left and shedding it would leave the page empty;
+`second/wheel.ts`, where a tyre corner is two numbers and a bar and none of them is secondary;
+`second/sectors.ts`, where a sector time steps down a ladder until it fits its third of the box;
+`zones/bandPages.ts`, where a band rank is one row; and `second/placeholder.ts`, for the line of
+prose saying a reading is missing, which clipped would be the worst of both. A reader who finds one
+of them has found the floor of the rule rather than a breach of it, and the canvas owes the same
+qualification.
+
 **Rule 20.** *A rank fills the box it is given. It grows until it meets an edge, and there are
 three: the height of the box, the width of the box, and the next size up its density ramp.*
 
@@ -199,8 +239,10 @@ stretched to a rectangle. Three consequences worth knowing:
 - **All of the stack grows or none of it does.** A page whose sectors are a drawing and whose lap
   times are fields would otherwise grow the times alone until they matched the sectors above them.
 - **Growing is what stacks a narrow zone.** Two lap times fit side by side in a 254 px zone at
-  34 px and do not at 46 px, so the rank wraps to one column on its way up. `columnsAt` is still the
-  declaration of what a shape may hold; it is not a second mechanism.
+  34 px and do not at 46 px, so the rank wraps to one column on its way up. `columnsAt` is the
+  declaration of what a shape may hold rather than a cap on the wrap: it names the columns of a page
+  that asks for a grid, and it is what says a zone is down to one column and should centre what is
+  in it.
 - **A stack already too tall for its box does not grow.** It has nothing to spend, and rule 17 is
   about to take a row off it.
 - **A rank may not grow into a worse shape than it started in.** Almost every rank on the catalogue
@@ -215,6 +257,22 @@ The room a grown stack may take is its box less its own tail at each end, not th
 which is two pixels at 24 px and seven at 75 px. A constant was enough while every value was a ramp
 size in a box with slack. A value grown into its box is exactly where it stops being enough.
 
+**How a rank is set out** is three questions rather than one. Its lines are the greedy wrap by
+default, one field to a line where the page asks for that, or an equal-column grid of `columnsAt`
+cells where the catalogue draws one. Within a line the fields share the baseline of the largest,
+because a row mixes sizes, unless the page asks them to share their top edge instead. The line then
+sits where the shape puts it: a zone narrow enough for one column centres what is in it, and a wider
+one draws from its left edge. A page may also spread its ranks over the whole height rather than
+centring them as one block, which is what the catalogue's own wrappers do for eight of the
+twenty-one pages; section 10 records that this choice belongs to the page and not to the shape.
+
+**What a box too short takes off is the page's declaration, not its last row.** The stack sheds the
+least important id the shedding table names, one at a time, and builds the rank again without it;
+only once nothing declared is left to shed does it drop a trailing row, which is how a gauge, a
+strip or a table goes, since none of those declares an id. Before this, a 249 × 158 zone took fuel's
+level gauge off with the average it sat under, although the table keeps the average and every
+drawing of the page has a gauge.
+
 The four shapes the catalogue draws, which are the test fixtures:
 
 | Shape | Size | What it does |
@@ -227,6 +285,12 @@ The four shapes the catalogue draws, which are the test fixtures:
 A fifth band, `strip`, survives these because the pit wall already hands a module 607 × 158 and
 1007 × 211, and it is not on the canvas. Say so in the code rather than pretending it is.
 
+A `short` box is given no fifth drawing of its own. It takes the drawing of the next shape down —
+a wide one takes `grid`, a medium or narrow one takes `tall narrow` — because what a short box has
+is room for less, and §5 is where "less" is written page by page. That is the whole of the rule,
+and it lives in `archetypeOf`; a predicate beside the bands saying that a short box keeps one rank
+stated it a second time in other words, so it is gone.
+
 **Rule 18.** *A drawing is cut from its box. Never placed in it at a fixed size.* A tyre is as
 tall as the readings beside it; a car is capped at a third of the zone width however tall the box
 is; the traces take what is left. The catalogue gives the car at 142 wide in `wide`, 129 in
@@ -236,8 +300,10 @@ is; the traces take what is left. The catalogue gives the car at 142 wide in `wi
 Condensed's digits are proportional and SimHub cannot ask the font for its tabular ones, so every
 value is drawn with SimHub's monospace cells, cut to hold the widest ink a value can draw. WPF
 clips a glyph that overruns one, so `#`, `%`, `&`, `@`, `M`, `W`, `m` and `w` are never part of a
-value. A car number is drawn bare and its hash belongs to the label; a class beside a number is a
-proportional label and a monospaced value, not one string.
+value. A car number is drawn bare and its hash belongs to the label. A class beside a number is the one
+value that is text rather than a number, and the bar draws it as the artboard does, as a single
+proportional run of "GT3 · P4" measured from the widest class and place it promises to hold; a
+cell would hold the dot and the letters, but only by spacing them as digits.
 
 ---
 
@@ -255,7 +321,20 @@ Strength of field was the eleventh and is not built, because SimHub publishes it
 and OpenDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
 named here only so that a reader of an older draft knows where it went.
 
-The default is Race and Lap on the left, Position and Class on the right.
+The default is Race and Lap on the left, Position and Class on the right. The left end is drawn
+from the left edge and the right end from the right one, each field flush to the padding on its
+own side, and the class reads "GT3 · P4".
+
+The bar is drawn at a scale of its own rather than at the zone density ramp's. Every artboard
+gives it a 15 px label in a 13 px row, five pixels under it, six between a value and the dimmer
+"/ 32" after it, and twenty of side padding; what changes with the face is the value, the
+denominator, the strip column and the gap between two readouts:
+
+| face | value | denominator | column | gap |
+|---|---|---|---|---|
+| 1920 × 480, 1280 × 480, 1280 × 720 | 34 | 24 | 57 | 22 |
+| 1280 × 400, 850 × 480, 800 × 480 | 28 | 20 | 54 | 22 |
+| 600 × 686 | 28 | 20 | 54 | 12 |
 
 Between them is the **car settings strip**: slip, TC, cut, bias, ABS, map, diff. It draws what the
 game exposes and **hides what it does not**, because a strip drawing an empty box for a setting
@@ -268,15 +347,17 @@ narrow face that is not seven cells:
 | face | cells |
 |---|---|
 | 1920 × 480, 1280 × 480, 1280 × 400, 1280 × 720 | all seven |
-| 600 × 686 | slip, TC, bias, ABS — one field per end leaves more room than two |
-| 850 × 480 | TC, bias |
-| 800 × 480 | bias |
+| 600 × 686 | slip, TC, cut, bias, ABS — one field per end leaves more room than two |
+| 850 × 480 | slip, TC, bias, ABS |
+| 800 × 480 | TC, bias, ABS |
 | 800 × 286 | there is no bar |
 
-A cell is measured at the size its value is drawn in, which is the size the bar's end fields use.
-Bias is the one cell that is wider than its own label: "50.5" at 34 px takes 58 px where the other
-six still measure their four-letter label. That is what costs the 850 its ABS cell and the 800 its
-TC, and it is the reason those two rows are shorter than the canvas draws them.
+A cell is the artboard's column rather than a measurement of its own reading, so the seven read as
+a rank of equal cells; it is rounded up to an even width, because the strip closes over what is
+missing and centres on half of what is left. Every cell therefore takes the column rounded up, 58
+on the faces drawn at 57 and 54 on those drawn at 54. A reading wider than its column would widen
+that one cell rather than lose a digit, although none is: "Bias 50.5" is the widest of the seven
+and fills its column exactly at 34 px, 57 of 57, with four pixels to spare at 28.
 
 **The order it sheds in is not the order it draws in.** A driver on a GT3 car moves the brake bias
 every corner and has TC and ABS on wheel dials; the mixture changes once a stint; slip, cut and the
@@ -286,6 +367,16 @@ bias, TC, ABS, slip, cut, map, diff — and what it draws is still the canvas's 
 This is a decision the canvas does not make. It was forced by the first photograph of the 850 × 480
 face, where the five cells that had no shedding rule were drawn straight over the right-hand
 fields: BIAS on POSITION, ABS on the slash of "3 / 24".
+
+Two of the seven cells do not read what their label promises, and settling them belongs to the
+canvas rather than to the build. DIFF is bound to the rear anti-roll bar, which the car settings
+page already draws under the label ARB R, so that one reading is published twice under two names.
+SLIP, moreover, is bound to the throttle shape, which is a throttle map rather than a slip target.
+SimHub normalises neither a differential nor a slip setting, and a car that offers either publishes
+it under a name of its own, so the question cannot be settled by looking a property up: what is
+required is a statement of which in-car adjustment each of the two cells is meant to show. Until
+that statement exists both cells are drawn as they are, and the disagreement is recorded here
+rather than resolved quietly in the code.
 
 The bar is the one region of the face that is not a zone and does not cycle. It is settled by
 definition, and that is what earns it the space.
@@ -299,10 +390,16 @@ height, not width.
 
 | | Page | What it draws |
 |---|---|---|
-| A1 | Gear, speed, revs | The gear with the gear below and above ghosted either side, the speed under it, the revs under that. **The default.** |
+| A1 | Gear, speed, revs | The gear with the gear below and above ghosted either side, the speed under it with its unit beside it, the revs under that. The three take 55, 19 and 11 per cent of the column's height. **The default.** |
 | A2 | Gear alone | The gear as large as the column allows, nothing else. |
-| A3 | Speed | The speed as the largest value, the gear demoted to a small readout. |
-| A4 | Track | The track map with every car on it. |
+| A3 | Speed | The speed as the largest value at 44 per cent of the column, the gear under it at 24 in the secondary ink, each with its label beside it. |
+| A4 | Track | The track map with every car on it, titleless and inset by the column's padding. |
+
+Every page is cut from the column under rule 18 rather than drawn at a size of its own: no run here
+is on the density ramp and none is capped at `ds.size.gear`, which stays the card and round faces'
+size. What bounds a run is the box, its line box down and its cells across, and what a column is
+too narrow for is shrunk rather than drawn outside it. Whatever is left over is split above the page
+and below it, so a page is centred in its column as well as cut from it.
 
 ---
 
@@ -356,20 +453,25 @@ everything the page carries, the companion artboard's fields included, which is 
 page is not changed by any of this. The declaration is read before the box is measured, and what
 does not fit still sheds afterwards: a declared set is a design decision and a box is a fact.
 
+The order inside a cell is importance, most important first, which is also the order a box too small
+takes fields off the end of. Opponents is the one row where that order interleaves, since its rank
+is two of the same thing: the car ahead's field and the car behind's twin are named together so that
+a short box sheds the same line from both cars rather than emptying one of them.
+
 | № | Page | `wide` | `grid` | `tall narrow` | `tall` |
 |---|---|---|---|---|---|
-| 1 | Lap times | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` |
-| 2 | Delta | `delta` | `delta` | `delta` | `delta` |
-| 3 | Sectors | `yourBest` · `last` · `sessionBest` | `yourBest` · `last` · `sessionBest` | `yourBest` · `last` | `last` · `sessionBest` |
+| 1 | Lap times | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` · `average5` · `position` · `stintLap` · `s1` · `s2` · `s3` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `delta` | `last` · `sessionBest` · `yourBest` · `laps` · `estimated` · `delta` |
+| 2 | Delta | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` | `delta` · `s1` · `s2` · `s3` |
+| 3 | Sectors | `s1` · `s2` · `s3` · `yourBest` · `last` · `sessionBest` · `bestS1` · `bestS2` · `bestS3` | `s1` · `s2` · `s3` · `yourBest` · `last` · `sessionBest` | `s1` · `s2` · `s3` · `yourBest` · `last` | `s1` · `s2` · `s3` · `last` · `sessionBest` |
 | 4 | Speedo | `speed` · `rpm` · `redline` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
 | 5 | Fuel | `level` · `time` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` | `level` · `time` · `toAdd` · `average` | `level` · `time` · `toAdd` · `average` | `level` · `time` · `toAdd` · `lastLap` · `thisLap` · `average` · `lapsLeft` |
 | 8 | Pit view | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` | `refuel` · `pitTime` |
 | 9 | Car settings | `car` · `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `car` · `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` | `car` · `tc` · `abs` · `bb` | `car` · `tc` · `abs` · `bb` · `mix` · `arbFront` · `arbRear` |
-| 11 | Session | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` | `position` · `class` · `lap` · `timeLeft` | `position` · `class` · `lap` · `timeLeft` | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` |
+| 11 | Session | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` | `position` · `class` · `lap` · `timeLeft` | `position` · `class` · `lap` · `timeLeft` | `type` · `position` · `class` · `lap` · `timeLeft` · `lapsLeft` · `incidents` · `cars` |
 | 14 | Leaderboard | `pos` · `num` · `name` · `class` · `gap` · `best` · `last` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
 | 15 | Relative | `pos` · `num` · `name` · `class` · `gap` | `pos` · `num` · `name` · `class` · `gap` | `pos` · `name` · `gap` | `pos` · `num` · `name` · `class` · `gap` |
-| 16 | Opponents | `ahead.gap` · `ahead.name` · `ahead.num` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.num` · `behind.class` · `behind.detail` | `ahead.gap` · `ahead.name` · `ahead.num` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.num` · `behind.class` · `behind.detail` | `ahead.gap` · `ahead.name` · `behind.gap` · `behind.name` | `ahead.gap` · `ahead.name` · `ahead.class` · `ahead.detail` · `behind.gap` · `behind.name` · `behind.class` · `behind.detail` |
-| 18 | Stint | `stintLaps` · `stintTime` · `completed` · `driver` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stintTime` · `completed` · `driver` · `stops` · `lastStop` |
+| 16 | Opponents | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.num` · `behind.num` · `ahead.class` · `behind.class` · `ahead.lastLap` · `behind.lastLap` · `ahead.rating` · `behind.rating` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.num` · `behind.num` · `ahead.class` · `behind.class` · `ahead.lastLap` · `behind.lastLap` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.lastLap` · `behind.lastLap` |
+| 18 | Stint | `stintLaps` · `stintTime` · `completed` · `stops` · `lastStop` · `avgLap` · `driver` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stops` · `lastStop` | `stintLaps` · `stintTime` · `completed` · `stops` · `lastStop` · `avgLap` · `driver` |
 
 Pages with nothing to shed, and why:
 
@@ -379,12 +481,79 @@ Pages with nothing to shed, and why:
 - **Radar** (`radar`) — the cars beside you, cut from the box; rule 18.
 - **Track** (`track`) — the map, cut from the box; rule 18.
 - **Gear** (`gear`) — the gear, cut from the box; rule 18.
-- **Lap history** (`lapHistory`) — three columns and as many rows as fit; there is no fourth to drop.
+- **Lap history** (`lapHistory`) — lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops.
 - **Damage** (`damage`) — one line of prose: iRacing publishes no damage.
 - **Track rivals** (`trackRivals`) — one line of prose: SimHub times sectors, not segments.
 
 A drawing is cut from its box rather than shed (rule 18), and a page that says it has no data is
 one line of prose with nothing in it to drop.
+
+### Where the build keeps more than the drawing
+
+The table is the catalogue read off page by page, and in five places it is deliberately not what the
+catalogue draws. Each of them is a decision rather than a drift, so each is recorded here: a reader
+holding a drawing against a zone should find the argument rather than suspect a bug.
+
+- **Lap times at `tall narrow`.** Four values where the drawing has two, which §10 argues from the
+  234 px of a real zone the drawing leaves empty. The catalogue owes the redraw.
+- **Fuel at `wide` and at `tall`.** The last lap, this lap and the five-lap average, where the zone
+  drawing carries one per-lap cell. The three come from the companion artboard, which is what the
+  `wide` row is for; the narrower shapes keep the average alone, since one number three ways is
+  still one number.
+- **Leaderboard at `wide`.** The best and the last lap, two columns the zone drawing does not carry
+  and the companion's list does. The trade runs the other way as well: the drawing gives the row a
+  rating column, and neither list declares one.
+- **Stint at `wide` and at `tall`.** The driver, where the drawing closes the page with the pit
+  window. The window is not a field the module builds, and a handover is what the recap is read for.
+- **Car settings at every shape.** The module draws the seven settings iRacing exposes and the
+  drawing draws ten, so what is kept is the proportion rather than the count: `tall narrow` drops
+  the three drawn last, which leaves four here against the drawing's seven.
+- **Opponents at `tall`.** The last lap, where the drawing has a licence badge instead. The badge
+  is one the module has no read for, and the 12 px `B` the catalogue draws there is that badge and
+  not the class chip an earlier transcription of this row took it for, so the class does not appear
+  at that shape either.
+
+Everywhere else the drawing names a field the module does not build, which is the opposite case and
+is not a deviation: delta's three sector deltas, the rating on a list row and the pit window. They
+are simply not in the table, because the table is about the module.
+
+### The parts that are not fields
+
+A page is not only a rank. Delta is a number with a bar under it and a scale under that, lap history
+is rows under a header, pit view's tyre service is the summary word the drawing writes as the one
+line `Tyres · RIGHTS` together with the four corner toggles that say which corner rather than which
+pair, tyres sets its four corners under a compound chip and over the caption saying where its
+pressures come from, and inputs puts the steering after its three pedals. The catalogue draws each
+of these at some shapes and not at others, so they are declared the same way a field is, in `PARTS`
+beside the table above. An empty cell is a part the drawing does not carry at that shape.
+
+| № | Page | `wide` | `grid` | `tall narrow` | `tall` |
+|---|---|---|---|---|---|
+| 2 | Delta | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` |
+| 7 | Tyres | `footer` · `compound` | `footer` · `compound` |  | `footer` · `compound` |
+| 8 | Pit view | `tyres` | `tyres` |  |  |
+| 10 | Inputs | `steer` | `steer` |  |  |
+| 19 | Lap history | `head` | `head` |  |  |
+
+Two tables rather than one because they answer two questions: the first is what a rank sheds, this
+is what furniture the page keeps around it, and a page may appear in both. Until they were
+declared, a narrow box lost them to `rowsThatFit` instead, which is arithmetic arriving at a design
+decision one pixel at a time, and in the tyres caption's case arriving at the wrong one: the module
+sized its two rows to the frame exactly, so the caption was dropped at every size the build
+produces rather than at the one shape the catalogue drops it.
+
+### A page that takes another page's drawing
+
+The medium height band runs from 200 to 400 px and holds both the catalogue's `grid 430 × 300` and
+the 1280 × 400 face's zone body, which is 437 × 214. Two pages cannot be drawn the same way in
+both, and `FaceVariants1280x400` marks them: car settings draws seven cells where 214 px has room
+for four, and lap history draws a header row where 214 px would rather have one more lap. **Both
+take the `tall narrow` drawing in a `grid` box shorter than 260 px**, which is the floor between
+that face's two arrangements, 214 and 248 px, and the 1280 × 480 face's 276 px, drawn from the
+`grid` sheet.
+
+A floor for two pages rather than a fifth shape for all of them, because a fifth column on the
+table would repeat the fourth on nineteen rows.
 
 What a rank does with a field that is **not there at all** is a different question from this one,
 and the answer is in [§11](#11-a-field-that-is-not-there).
@@ -396,6 +565,14 @@ leaderboard and the relative need that the companion never gave them, and it is 
 zone rather than one switch for the whole face, because the point of it is zone B listing the race
 while zone C lists the class a driver is actually racing in. It sits in the face's own group with
 every other zone setting, so a rig with a face on the wheel and one beside it filters them apart.
+
+**A pit wall asks it once for the whole screen**, which is the one place the rule differs, and the
+cause is a file rather than a preference. A face's four zones are four rectangles of one dashboard,
+so each may be asked separately. A pit wall's zones are widgets pointed at one zone dashboard per
+rectangle, so zones A and B of the race page are literally the same file, and a per-zone filter
+could not reach one without reaching the other. `OpenDash.PitWallClassOnly` is therefore one setting
+per pit wall screen, rather than one per zone and rather than one for the rig, since a rig may hold
+two pit walls and a board belongs to the screen it is drawn on.
 
 It is **not** `PositionMode`. That setting is which number a position column shows; this one is who
 is in the list at all, and one class counted by overall position is a legitimate thing to ask for.
@@ -423,7 +600,10 @@ exists. Without the plugin, the mask reads as its default and the counter says "
 
 ## 6. Band D — eight pages
 
-A band the full width of the face showing one page at a time.
+A band the full width of the face showing one page at a time, recessed into the same `block.well`
+the rev bar and the bar sit in. The well is the band's own ground rather than a rectangle behind its
+widget, because a widget paints its dashboard's background over whatever the face drew underneath;
+the face draws one there as well, so that a face whose zone D widget has not resolved is still right.
 
 | | Page | | Page |
 |---|---|---|---|
@@ -440,22 +620,74 @@ drawn at 1920 × 480, 1280 × 480, 1280 × 400 and 1280 × 720, and absent at 85
 600 × 686. The threshold is those drawings, not a round number.
 
 **A page sheds its last field before the rank overflows**, with nothing spread to fill. The rank is
-packed and centred in what the corners leave, never in the whole band. No shipped page reaches that
-limit: the widest catalogue entry holds five fields, and five fit at 600 × 56, which is the
-narrowest band. The shedding rule is therefore a guarantee about a page that grows, not a
-description of one that exists.
+packed and centred in what the side padding, the zone letter and the corners leave, never in the
+whole band. The artboards draw the shedding rather than only describing it: the fuel page is seven
+fields at 1920, six at 1280, five in the catalogue's 1200-wide reference and three at 600, and the
+build sheds the sixth at 1280 because the corner blocks it measures are wider than the ones the
+drawing sketches.
+
+**The gaps and sizes are each face's own.** Band D is padded 16 px at the sides and 12 in portrait,
+its three groups sit 22 apart, a corner block's two fields 18, and a page's fields 34 at the three
+1280 faces, 26 at 1920, 850 and the nano and 18 at 600. A label sits 5 px above its value and a
+unit 5 px after it. `bandMetrics` in `packages/dash/src/zones/bandPages.ts` is that table, read off
+the band of each face's artboard.
+
+**D8 is a rank of lamps rather than of fields.** The page carries the twelve telltales the
+1280 × 480 artboard draws, in its order: a tyre beside three straight lines, a tyre beside three
+slanted lines, the windscreen wiper, a car above two wavy tracks, ABS, ESP, the engine, a fuel can,
+the battery, the speed limiter, the tyre pressure warning and the car door. Each lamp is a 38 × 32
+box with a 1 px border and a 20 px pictogram centred in it, the border and the pictogram carrying one
+colour between them, and the lamps sit 10 px apart, centred in the same room a page of fields is
+centred in. A lamp that is not lit keeps its place and is drawn dark, which is the rule
+[§11](#11-a-field-that-is-not-there) states, whereas a band too narrow for twelve sheds from the
+tail, so that the 600 × 686 face draws eleven. The state colours are `purpose.telltale`, that is to
+say info blue, good green, caution amber, danger red and neutral white over a dark `off`, and they
+are the one place on the face where a colour is conventional rather than chosen, ISO 2575 having
+fixed them. `packages/dash/src/zones/telltales.ts` is the rank.
+
+Two parts of that drawing are absences rather than refusals, and [§10](#10-where-the-canvas-contradicts-itself)
+records each: the pictogram files are not in the repository, and nine of the twelve lamps have
+nothing that lights them.
 
 **A flag takes the band over.** While a flag is out, the flag has the band, because an alert
 outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so the same sixty
 pixels goes to whichever has the better claim. The band draws as a filled bar with a 3 px border
 in the flag's colour and the flag's name in dark text.
 
-The black flag is the one exception, and it is drawn light on dark rather than dark on light. Its
-token, `purpose.flag.black`, is `#F5F7FA`, which is the ink and not the ground: a band filled with
-it would be indistinguishable from the white flag at `#FFFFFF`. So the black flag fills with
-`surface.base`, keeps the border, and writes its name in `purpose.flag.black`. The canvas captions
-it "outlined", which it no longer is, because a transparent flag left the page underneath fully
-readable and a flag takes the band over.
+**It draws the whole flag catalogue, which is fifteen conditions and not six.** The band used to
+read the six `Flag_*` properties SimHub normalises, and those are a lossy summary of what iRacing
+publishes: `Flag_Yellow` folds the standing yellow, the waved yellow and both cautions into one
+band, and `Flag_Black` is only the `black` bit. A red flag, a disqualification, a furled black, a
+meatball, a full-course caution, a waved yellow, the debris flag and the start gantry were therefore
+drawn by the 8x8 box and invisible on the dash, and the face's own ranking disagreed with the box's
+about which of two live flags won. The band reads `FLAG_CATALOGUE` in
+`packages/dash/src/flags.ts` now, through the same `conditionVisible` the box ranks with, so the
+three surfaces that draw flags cannot disagree. Which condition takes which shape, and which rank,
+is tabulated in [flag-box.md](flag-box.md), which remains the single place a condition is refused
+with its reason.
+
+Three consequences are worth stating. The band is iRacing's, as the box already was, since
+`SessionFlagsDetails` is a raw iRacing field: on another sim it stays dark rather than drawing an
+approximation of a flag nobody published. The flash belongs to the waved yellow and no longer to the
+standing one, the folded property having strobed both. And the green flag alone reads a normalised
+property, `Flag_Green`, because iRacing holds the `green` bit for a whole green-flag stint and
+SimHub's own limiter on that property is the only clock there is; without it band D would be a solid
+green bar over the fuel page for an entire race.
+
+**Three shapes and no fourth**, which is the canvas's rule for the alert catalogue and is
+`packages/dash/src/components/alertBand.ts`: a filled bar, a bar outlined in the alert's colour over
+an opaque ground, and the chequer. The black family and the start gantry take the outlined form, and
+the black flag is the reason it exists. Its token, `purpose.flag.black`, is `#F5F7FA`, which is the
+ink and not the ground: a band filled with it would be indistinguishable from the white flag at
+`#FFFFFF`. So the black flag fills with `surface.base`, keeps the border, and writes its name in
+`purpose.flag.black`. The canvas captions it "outlined", which it now is again in the sense the
+canvas means, an edge and a name in the alert's colour, though never with a transparent ground: a
+transparent flag left the page underneath fully readable and a flag takes the band over.
+
+**The nano writes no name.** Its twelve pixels are colour alone, so the conditions that share a
+colour share a band there: a debris flag reads as a yellow, and the three members of the black
+family as one outline. That is the price of the strip's height rather than a decision of the
+catalogue's, and it is why the names exist on every other face.
 
 ---
 
@@ -510,6 +742,22 @@ comparison is by page **id** and not page number, because the four catalogues ov
 track page and module 13 are one drawing under two numbers, and a comparison by number would miss
 exactly the duplicate a driver would notice.
 
+**A pit wall holds its glance rather than storing a property.** A second-screen property has to be
+read by a package, which the suite enforces, and nothing reads a glance value: the glance works by
+moving the zone-page settings the dashboard already reads and putting them back on release. It is
+consequently plugin state on the screen rather than a declared property, exactly as the companion's
+own glance is, and the trigger is a hold bound through `<ns>HoldQuickGlance`, a hold rather than a
+click because a hold cannot be left on by accident, which matters most on a screen nobody is
+watching continuously. The four data zones are its targets; the wide zone is not one.
+
+The quick glance is a fifth participant in that comparison, and it reads "Zone C and the quick
+glance both show the track." It is compared against each zone's *start* page rather than against
+the whole cycle, exactly as the zones are compared with each other, because a glance set to a page
+a zone can cycle to is something somebody may well want and warning about it would be a false alarm
+on every second rig. The page is named with an article and a lower-case noun, "the relative", save
+where a name lists what a page draws rather than naming one thing: "Gear, speed, revs" does not read
+after an article, so it keeps the spelling the drop-down uses.
+
 ---
 
 ## 8. What a zone does when its page changes
@@ -549,15 +797,60 @@ a mistake in this document.
 
 | | |
 |---|---|
-| Band D's page count | The catalogue heading reads "band D · seven pages" and the drawings are D1 through D8. **Eight is taken**, because the drawings are more specific than the caption, and the mask is sized for eight either way. |
-| The bar's fields | Described as "three fields a driver may swap", specced as one per end, and drawn as two per end on every face. **Two per end is taken**, because that is what is drawn. |
+| Band D's page count | The catalogue heading reads "band D · seven pages", its anatomy row reads "fuel by default, and six more pages", and the drawings are D1 through D8. **Eight is taken**, because the drawings are more specific than the captions and the mask is sized for eight either way. D8 now draws the twelve-lamp rank the artboard gives it, in place of the water, oil, oil pressure, fuel pressure and voltage readings it carried in the meantime. Those five are consequently drawn nowhere on the face any longer, no module of zones B and C carrying them either, and whether the face owes them a home of their own is the author's to say. |
+| The bar's fields | The catalogue's anatomy says "three fields a driver may swap", the Foundations anatomy on the Main artboard says "a field at each end", and every face artboard draws two at each end. **Two per end is taken**, because that is what is drawn; §1 and §3 above both say so now, the first of them having repeated the one-per-end caption until this row was written. The catalogue those fields are chosen from is ten entries where the artboard draws eleven, strength of field being the one that went, under [ADR 0009](../decisions/0009-does-the-plugin-compute.md), because SimHub publishes it in no form at all. |
 | Zone C's capacity | Stated as ten drivers at 1920; seven rows are drawn. |
 | Page dots | `pageIndicator` is still in the component list, against "there is no row of page dots". |
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
 | The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see #159. |
-| The telltales | Twenty-eight Material Design Icons are named and the build "rasterises the chosen twelve", which are not listed. Owed before #148 starts. |
-| The face with no rev bar | #189 offered three answers — leave the gap, reclaim it, or give the band to something else — and said the artboards would choose. The canvas still draws neither the third state nor the face without a rev bar, and `Plugin.dc.html` still reads "the rev bar stays". **Reclaim is taken**, because the gap reads as a mis-crop and on the nano it is a ninth of the screen; the rectangles above are derived by one rule and are the thing to delete when the artboards arrive. |
+| The telltales' pictograms | Twenty-eight Material Design Icons are named on the canvas and the build "rasterises the chosen twelve", which are not listed, so the twelve are still owed as files. An `ImageItem` carries no tint, which the format research verifies, and a lamp therefore owes one file per colour it can be drawn in: nineteen in all, being a dark file for each of the twelve and a lit file for each of the seven that the drawing or a source gives a colour to. They are named `telltale-<lamp>-<state>` in `packages/dash/src/zones/telltales.ts`, and the rank draws whichever of them `design/assets.ts` holds, so the lamps gain their pictograms in the commit that brings the artwork together with its Apache 2.0 licence and the notice naming Pictogrammers. Until then a lamp is its box. |
+| What lights a telltale | Three of the twelve have a source and nine do not. The engine reads the `EngineWarnings` bits for water temperature and oil pressure, the fuel can reads the same low-fuel threshold every other light openDash drives reads, and the speed limiter reads `PitLimiterOn`. Nothing lights the two tyre lamps, the wiper, the car above the wavy tracks, ABS, ESP, the battery, the tyre pressure warning or the door: iRacing publishes no wiper, stability, tyre pressure or door state at all, `dcABS` is the level the driver has dialled in rather than an intervention, and a battery lamp reading the raw voltage would need a threshold nobody has chosen. **The nine are built and left dark**, because a dark lamp asserts nothing whereas a lamp bound to a property that means something else asserts the wrong thing. Which property lights each of them is the author's to answer, and two further answers are owed with it: the colour of the engine lamp, which the artboard draws dark and which is taken as danger red here because both bits it reads are failures rather than advisories, and the source of the count the artboard draws in the wiper's corner. That count is recorded in `telltales.ts` and is not drawn, for the reason the relative page's country flag is not drawn. |
+| Band D's value size | Every 60 and 58 px band draws its page values at 34 px over a 13 px label, 5 px apart. WPF's line box around a 34 px value runs 60.6 px from the top of that label, so the band clips it by a pixel. **The value shrinks** — 32 at 60, 30 at 58 — because a clipped numeral reads as a rendering fault. The band would have to grow, or the drawing come down; the 54 and 56 px bands draw 24 and are honoured exactly. |
+| The face with no rev bar | #189 offered three answers, namely leave the gap, reclaim it, or give the band to something else, and said the artboards would choose. Since the second pass of 15 September the FaceVariants sheets do draw the third state and both arrangements beside each other, so this row no longer reads as it did. What the rev-bar-off drawing still carries, however, is the rev bar itself: an 822 × 28 rectangle at (14, 6) on the 850 sheet, a 576 × 24 one at (12, 6) on the 600, underneath a bar that has already risen into its room. **The caption is taken over the rectangle**, and `faceItems` leaves the well and the segments out entirely rather than hiding them; `Plugin.dc.html`, for its part, still reads "the rev bar stays". Reclaim is taken for the room, because the gap reads as a mis-crop and on the nano it is a ninth of the screen, and the rectangles in §1 remain derived by one rule and remain the thing to delete when drawn ones arrive. |
+| The slot counts in the titles | `canvas.json` titles the 1920 × 480 artboard "MVP · 12 slots" and the 1280 × 720 one "wheel screens · 12 slots", while what each draws underneath is the five-part zone face [ADR 0006](../decisions/0006-the-zone-face.md) settled, and `Dash.dc.html` keeps `.slotbox`, `.card` and `.grid4` in its stylesheet with nothing using them. **The drawing is taken**: a `ZoneLayout` declares no slot count at all, and twelve matches nothing on the 1280 × 720 body either, whose bar draws eleven readouts and whose band draws ten and three lamps. The twelve-slot package does still build beside the zone face, since `LAYOUTS` keeps `layout1920x480` and `build.ts` walks both lists until #146 retires the card path. |
+| The six slots of the 850 | The same convention gives 850 × 480 "5in · 6 slots", and nothing six-fold is drawn there. The only reading that yields six is the parts themselves, that is to say the bar's left end, its settings strip and its right end, then zones B and C and band D. **The parts are taken**, because that is what the artboard draws and what `faceItems` composes; the count is vocabulary left over from the model the face replaced. |
+| The "D grid" chip | Every FaceVariants sheet chips band D as `grid`, whereas the band it draws is 1280 × 60, or 800 × 58 on the nano, which `second/shape.ts` bands as wide and short rather than as the 430 × 300 the `grid` archetype is. **Neither is taken, because the band does not consult the shape model at all**: `bandPages.ts` draws one centred rank for a wide short box, and only zones B and C ask `shapeOf` for their page. The 600 × 686 sheet chips its own zones B and C the same way, and they measure 600 × 160 and 600 × 150, which is wide and short again. |
+| The strip at 850 × 480 and 800 × 480 | Both artboards caption five cells, namely slip, TC, cut, bias and ABS, and the build keeps four at 850 and three at 800, which §3 tabulates and `barStrip.test.ts` pins. **The artboards' own scale is taken**: each face now draws the bar at the size its artboard gives it, so the narrower faces gain cells the earlier measured layout had shed. What the two still drop is cut at 850 and cut and slip at 800, and the cause is the ends rather than the strip, each end being laid out from its own edge for the widest entry the catalogue holds rather than for the entry actually selected. Raising the count further therefore means narrowing the reserved end or measuring the strip's values below the size the end fields use, and the canvas has made neither decision. The 600 × 686 sheet is no longer a disagreement: it draws its five cells in fixed 54 px columns at a 12 px gap, which is what the build now does, with four pixels to spare that the widest class name governs. |
+| The 600 × 686 well | The size's own chip names a 36 px well above the bar. The artboard draws the well at 6, 2, 588 × 32 with the segments at 12, 6, 576 × 24, and the bar begins at y 36, so that 36 is the room above the bar, being a 2 px face margin, the 32 px well and a 2 px gap, rather than the height of anything. **The artboard is taken** and §1 tabulates the 32. Were the well itself meant to be 36, the rect in `faces/600x686.ts` would move and `revBarReclaim` would become 38, which moves the second arrangement's table as well. |
+| Zone A, centred or filled | The face artboards centre zone A's block in its column, `justify-content: center` with a 198 px gear in a 320 px column at 1280 × 480, while the FaceVariants sheets caption the same zone "Zone A fills its column. Padding stays; empty height does not". **Both are taken, and they turn out not to disagree**: every page is cut from the column, each run being a share of its height rather than a size of its own, and what is then left over goes half above the page and half below it, so all four fill and all four centre. What the sheets ask for and the format refuses is the last three per cent of the gear, which is the subject of the row below. |
+| The catalogue's zone A against the per-size sheets | The two draw different pages. The catalogue's A1 is a 62 per cent gear over a speed and no revs, its A2 carries the ghosted neighbours and its A3 puts an rpm value between the speed and the gear; the FaceVariants sheets give A1 the three runs at 55, 19 and 11 per cent, A2 the gear alone and A3 two rows. **The per-size sheets are taken**, being the more specific drawing and there being eight of them, with two exceptions that cost nothing: the ghosts stay on A1, where they have always been, and A3 draws the rpm beside the speed wherever the column is wide enough to hold the group, which today is the 600 × 686 face and nowhere else. The gaps disagree too, the Dash artboards drawing 3 px at the nano and 6 at 850 × 480 where the variants sheets draw 4 and 7; **the sheets are taken**, as a share of the column rather than a literal per face. |
+| Zone A's gear at 86 per cent | Every FaceVariants sheet draws A2's gear at about 86 per cent of the column, 282 px in 328 and 167 in 194. **The line box is taken instead**, which is about 82: SimHub hands the box to WPF as `MaxTextHeight` and WPF clips what does not fit, so a box has to hold the whole 1.2 em line, and `zoneFace.test.ts` keeps every box inside its dashboard. The twelve pixels between the two are the leading under the baseline, which a digit does not use but the "N" and the "R" the gear also draws do. Reaching 86 means letting the box be cut below its line box, which is the author's to decide. |
+| The hero that never moves | The Main artboard reads "Gear, speed, rev bar, flag and pit limiter are fixed per layout. Every other value is a card". **It predates the model**: zone A cycles four pages under ADR 0006, so the gear gives way to the speed or to the track map on a button press, and the speed was card 12 rather than part of the hero even under the model the sentence describes. Only the rev bar, the flag and the pit limiter are fixed on the zone face. The sentence wants marking superseded, as the DashComponents slot numbers already are. |
+| DashComponents' zone A | The component sheet calls zone A "fixed on every layout" and describes the rev bar 40 tall in its well over a 1 px rule, the gear alone, a flag band 40 tall at the bottom edge and the limiter above the gear. That is the card face, which still builds and still draws precisely that. **The zone face follows the Zones artboards instead**: a 56 px bar of settled values takes the place of the rule under the rev bar, the segments are 32 tall inside a 40 px well, and the flag takes band D's sixty pixels rather than a strip of its own. The section wants the same superseded marking as its slot numbers. |
+| The same five parts on every face | The catalogue's anatomy says the five parts differ only in size from one rectangular face to the next. Two of the per-size artboards draw otherwise: 800 × 286 has no bar at all, which leaves four parts, and 600 × 686 stacks A over B over C rather than setting B beside A beside C. **The per-size artboards are taken**, being the more specific drawing, and §1 tabulates both departures. |
+| The gap chips on the face sheets | Each `FaceVariants` sheet counts the pages that do not fit its rectangle as the catalogue draws them, and the 1280 × 720 and 1280 × 480 sheets give every one of the twenty-one a shed count of nought. The catalogue's own `tall` drawings do shed: sectors keeps two of its three lap times, a leaderboard row loses its best and its last, and the opponents blocks lose the car number. **The drawings are taken**, since §5 was read off them; the counts are annotation over the top of them. |
 | Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [#327](https://github.com/xorob0/OpenDash/issues/327) and the twenty tickets under it. |
+| Session's sixth field | The catalogue labels it *Est. laps* at `wide` and at `tall`, where the build labels it *Laps left*. **The build's label is kept**, on two grounds. Firstly, the value behind it is `RemainingLaps`, which is the session's own count of laps still to run, and no research note here describes that property as an estimate, so *Est.* would be a claim the datum does not make. Secondly, *Est. laps* is already the label of the fuel page's sixth field, where it carries `Computed.Fuel_RemainingLaps`, that is to say the range left in the tank; two pages drawing the same two words over two different quantities is precisely the confusion the rename would introduce. Either the catalogue renames this one, or the session field is rebound to something that is genuinely estimated. |
+| Session's third rank | The catalogue draws Strength, Incidents and Cars at `wide` and at `tall`, and **two of the three are built**. Strength of field is left out under [ADR 0009](../decisions/0009-does-the-plugin-compute.md), which found it published by SimHub in no form at all and struck it from the bar's catalogue of end fields for the same reason. The row is therefore two fields wide rather than three, and it closes over the hole the way [§11](#11-a-field-that-is-not-there) describes. |
+| Lap history's third column | The catalogue draws the fuel each lap cost, at every shape, where the pit wall's wide page draws the delta to the session best. **The delta is taken, and only at `wide`**, because no previous-lap property carries a consumption beside the time and keeping one per lap would be the plugin remembering between frames, which [ADR 0009](../decisions/0009-does-the-plugin-compute.md) refuses. The three narrower shapes therefore list two columns where the drawing lists three, and [second-screens.md](../second-screens.md) records the datum that is not there. |
+| A slower lap's colour | The catalogue paints every lap slower than the session best in red and draws no middle band, whereas the module steps through caution at half a second behind and danger at a full second. **The ladder is kept**, since a lap half a second off and a lap a second off are two readings and a driver acts differently on them. The two were nonetheless the same red for as long as the caution branch read `purpose.fuel.low`, which resolves to the danger colour, so the ladder said nothing until that was put right. |
+| Lap history's row count | The catalogue lists six laps at `wide` and at `grid` and seven at the two tall shapes, while the companion artboard lists seven in a box the shape model reads as `wide`. **The catalogue is taken**, being the drawing of record at the four shapes, so the companion page lists six. A box too short for its declared count lists fewer regardless, which is why zone C of the 600 × 686 face lists four where its own sheet draws six. |
+| The ramp ceiling at `tall` | Rule 20 stops a rank at the next size up its ramp, which is one step of about 1.35, while the catalogue promotes far harder at `tall`: lap times 46 to 88, the delta 64 to 132, the speedo 64 to 128, and fuel, sectors, stint and session 34 to 76. Either the ceiling is too low or the drawings are, and nobody has decided which; the ceiling stands until somebody does, since it is what keeps filling a box distinct from scaling into one. |
+| The mini-sector strip | The catalogue and both companion artboards draw twelve mini-sectors under the sector times. **Three cells are taken**, one per real sector, because SimHub times sectors and not segments and [ADR 0009](../decisions/0009-does-the-plugin-compute.md) forbids inventing the data a twelve-cell strip would need. The canvas owes either a redraw at three or a caption saying the twelve are notional. The same strip is a second disagreement of its own: the FaceVariants sheets draw the sectors page as two ranks with nothing between them, so the 6 px strip the build puts there is an addition the drawings do not carry, and it is deliberate rather than accidental. |
+| Lap times at the companion | The companion artboard draws twelve fields in four ranks of 64, 46, 46 and 34, and the build draws nine: at the module box the build really hands the page, 802 by 336, the four ranks come to 337 px against 332 of room and the sector rank is shed. The 20 px are the flag band, which the artboard draws 12 high and `ds.indicator.flagBand.heightSm` gives 32. **The shedding is taken** rather than a page drawn past its box, and the twelfth field returns if the band ever comes down to the artboard's height. |
+| The sector deltas' size | The companion draws the delta page's S1/S2/S3 rank at 34 px and the catalogue draws it at 34 as well, which is `small` on one ramp and `mid` on the other; the page therefore names the ramp rung by density rather than by one token. The same question decides the recap under the sectors: 34 on the companion and 24 in a zone are both `small`, and a compact zone's `small` is 18 where the 800 × 480 sheet chips 24. |
+| Three sector columns in a narrow zone | The catalogue draws the sectors page as three columns at every shape, including `tall narrow`, where three 34 px sector times and their gaps need 286 px of a 274 px zone. The build used to reach three columns by stepping the rank down to 18 px, which is the page shrinking the reading it exists for. **The rank now keeps 34 and wraps to two lines and one**, per rule 17; the canvas owes the redraw, as it does for lap times at the same shape. |
+| Spreading or centring | Whether a page spreads its ranks over the full height or centres them as one block is decided page by page on the catalogue and not by shape: sectors, fuel, session, stint, the speedo and car settings spread at all four shapes, lap times spreads at three and centres at `tall narrow`, the delta centres at three and spreads at `tall`, and the lists, the drawings and the pit view centre everywhere. The engine therefore takes it from the page (`justify: 'spaceBetween'` on `stack`) and centres by default. |
+| A short box's ranks | `keepsSecondaryRanks` says a short box keeps one rank, while `archetypeOf` hands a wide short box the `grid` answer, which keeps two. The code follows `archetypeOf`, and the helper is unused. Either the short boxes the build produces get a fifth declared answer, agreed with the canvas, or the helper goes so that one rule governs. |
+
+### Every variant the 1280 × 480 sheet lists
+
+`FaceVariants1280x480.dc.html` is captioned "Every variant this size can be in, and every page each
+of its zones can show", which is a stronger claim than the two screens `faceScreen` builds, so the
+list is worth reading item by item. The same sheet exists at each of the other seven sizes and
+lists the same things.
+
+| What the sheet draws | Where the build stands |
+|---|---|
+| The two arrangements, rev bar on and rev bar off | **Built**, as the two screens of one `.djson` with complementary `ScreenEnabledExpression`s. |
+| Zone A's four pages, A1 to A4 | **Built**, as `zoneface-zoneA-340x320` and again at 340 × 361 for the second arrangement. Three of the four carry a `proposed` chip on the sheet and are built regardless, the fourth being the catalogue's own track page. |
+| Twenty-one pages for zone B and twenty-one for zone C | **Built**, as the one `zoneface-module-469x320` both zones point at, and again at 469 × 361. |
+| Band D's eight pages, D1 to D8 | **Built**, as `zoneface-band-1280x60`. What D8 is still short of is in the table above. |
+| The flag over the band, in six colours | **Built, and wider than the sheet asks**: `flagStrip` draws all fifteen conditions of `FLAG_CATALOGUE` over band D's rectangle, in the three shapes of the alert catalogue, where the sheet draws the six SimHub normalises. The black family keeps a `surface.base` ground rather than its own token, which is the ink. |
+| A full-screen flag over zones B, A and C, with `OpenDash.FlagFormat` set to band or full | **Built.** The property carries a face's prefix, as the zone settings do, and it is declared, mirrored, defaulted to `band` and offered on the screen's own pane. It did not need the further pair of arrangements this row once predicted: `components/flagFull.ts` draws one opaque block over the body rectangle, derived from the layout, and `face.ts` gates the band group and the block against each other, so one screen carries both. `flagFormat.test.ts` holds the block against the sheets at all eight sizes and in both rev-bar arrangements. The block reads band D's own fifteen-condition catalogue through the band's own expression, and names each condition in a word short enough for a block measured on the longest of them, which is MEATBALL. |
+| The chips "bar: 2 fields per end" and "band corners: yes" | **Built**: `barFieldsPerEnd` is 2 and `bandCorners` is true at this size. |
+| The chips "A grid", "B grid", "C grid" and "D grid" | Three of the four are what `shapeOf` returns for those rectangles. The fourth is the disagreement recorded above. |
+| A growth factor per page of zones B and C, from ×1.08 to ×2.07 | **Recorded, not checked.** A rank grows by rule 20 until it meets the width, the height or the next size on its ramp, and nothing compares the factor it reaches against the factor the sheet chips. |
 
 ---
 
@@ -570,13 +863,34 @@ arise.
 **A field the sim does not publish is removed, and the rank closes over the hole.** The band says
 it plainly: nothing is spread to fill, the rank is packed and centred in what the corners leave.
 The bar's strip hides what the game does not expose, because a strip drawing an empty box for a
-setting iRacing has no property for is worse than a narrower strip. Band D's car page removes an
-oil pressure the sim does not wire rather than drawing 0.0, which is a reading and a wrong one.
+setting iRacing has no property for is worse than a narrower strip. Band D's pages are laid out
+under the same mode, although none of them carries an optional field today: the car page removed an
+oil pressure the sim does not wire rather than drawing 0.0, which is a reading and a wrong one, and
+it gave those readings up when D8 became the telltale rank.
+
+**The lap review is the largest of the boxes drawn over zone A**, at `min(1200, face width)` by 160,
+centred on the hero rectangle and clamped to the face, and it is pushed last, so while it is out it
+covers the lap-time pop-up and the change notification, whose frames it contains in both directions.
+The ranking is by geometry rather than by an exclusion chain, because a chain would have to reach
+into the pop-ups, whose conditions know nothing of a face and so cannot ask which face's setting is
+on. What it never covers is band D, the rev bar well, the bar of settled values or the limiter
+banner, the pit alerts being pushed before the whole transient family. It sheds the fuel pair, then
+the driver line and its sector strip, before it shrinks anything, and the two deltas are the floor:
+a review shed down to a lap time alone would say less than the pop-up it replaces. It is off by
+default, for the reason the band is the default flag format.
+
+A change of setting is announced the same way, and one token of its group is deliberately unread:
+`indicator.changeNotification.settleFrames` exists for a rotary swept through its positions, and
+SimHub's own `changed()` window already collapses a sweep into one notification, so nothing settles
+a value that the window has not settled already.
 
 **A telltale that is unlit keeps its place and is drawn dim.** A lamp coming on is then a change of
 colour and not of layout: one that vanished and returned would move every lamp beside it at the
 moment the driver most needs to read them. DRS, push to pass and the spotter sit in the band's
-right-hand corner and behave this way.
+right-hand corner and behave this way, and so does the twelve-lamp rank of page D8, which is the
+case the rule was written for. A lamp that nothing publishes a state for is likewise drawn dark in
+its place rather than left out of the row, since a row of eleven would say something about the car
+that is not true.
 
 Both rules are deliberate and they contradict each other, which is why the choice is a mode of one
 component — `packages/dash/src/second/rank.ts`, `when: 'close'` or `when: 'dim'` — rather than a

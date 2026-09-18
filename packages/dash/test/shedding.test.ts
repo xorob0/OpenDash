@@ -13,20 +13,52 @@ import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { LEADERBOARD_COLUMNS } from '../src/modules/leaderboard.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
-import { SHEDDING, archetypeOf, keepsAt, sheddingFor, type Archetype } from '../src/modules/shedding.ts';
+import { PARTS, PREFERS_TALL_NARROW, SHEDDING, archetypeFor, archetypeOf, keepsAt, sheddingFor, type Archetype } from '../src/modules/shedding.ts';
+import { densityForBox, type Density } from '../src/second/density.ts';
+import { zoneFrame } from '../src/second/header.ts';
 import { ARCHETYPES, SHAPE_ARCHETYPES, shapeOf } from '../src/second/shape.ts';
 import { walkItems } from '../src/walk.ts';
+import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 
-/** Every item name a page draws at a shape, which is how a declared id is checked against reality. */
-const namesAt = (id: string, archetype: Archetype): string[] => {
-  const size = SHAPE_ARCHETYPES[archetype];
+/** Every item name a page draws in a box, which is how a declared id is checked against reality. */
+const namesIn = (id: string, box: { width: number; height: number }, density: Density = 'zone'): string[] => {
   const module = MODULES.find((m) => m.id === id)!;
-  const items = module.build({ frame: rect(0, 0, size.width, size.height), density: 'zone', prefix: '' });
+  const items = module.build({ frame: rect(0, 0, box.width, box.height), density, prefix: '' });
   return items.flatMap((item) => [...walkItems([item])]).map((item) => item.name);
 };
 
+/** The same at one of the four shapes the catalogue draws. */
+const namesAt = (id: string, archetype: Archetype): string[] => namesIn(id, SHAPE_ARCHETYPES[archetype]);
+
 /** The ids a page actually drew: an item is `<id>.label`, `<id>.value`, `<id>.text` and so on. */
 const drewId = (names: readonly string[], id: string): boolean => names.some((name) => name === id || name.startsWith(`${id}.`));
+
+/** A table's cells are named after the row rather than after the page, so a column reads as a suffix. */
+const drewColumn = (names: readonly string[], id: string): boolean => names.some((name) => name.endsWith(`.row.${id}`) || name.includes(`.row.${id}.`));
+
+/**
+ * What proves a part was drawn, where the page does not draw it under its own name.
+ *
+ * Pit view's tyre service is the one: the catalogue writes it as the single line `Tyres · RIGHTS`
+ * and the module draws that summary and one toggle per corner beside it, the summary saying which
+ * pair and the toggles which corner, so the part is declared as the drawing names it and proved by
+ * everything the module draws for it.
+ */
+const PART_ITEMS: Record<string, readonly string[]> = { 'pitView.tyres': ['tyres', 'FrontLeft', 'FrontRight', 'RearLeft', 'RearRight'] };
+
+const drewPart = (names: readonly string[], page: string, id: string): boolean =>
+  (PART_ITEMS[`${page}.${id}`] ?? [id]).every((item) => drewId(names, item));
+
+/** The ids a page declares at a drawing but does not draw in this box. */
+const undrawn = (page: string, names: readonly string[], archetype: Archetype): string[] => {
+  const entry = SHEDDING[page]!;
+  const missing: string[] = [];
+  if (entry.kind === 'fields') missing.push(...entry.keeps[archetype].filter((id) => !drewId(names, id)));
+  if (entry.kind === 'columns') missing.push(...entry.keeps[archetype].filter((id) => !drewColumn(names, id)));
+  const parts = PARTS[page];
+  if (parts) missing.push(...parts[archetype].filter((id) => !drewPart(names, page, id)));
+  return missing;
+};
 
 describe('every page declares its shedding order', () => {
   test('one entry per page of the catalogue, and no more', () => {
@@ -64,6 +96,66 @@ describe('every page declares its shedding order', () => {
   });
 });
 
+describe('the parts that are neither fields nor columns', () => {
+  test('a page declares no part it cannot draw', () => {
+    for (const [page, parts] of Object.entries(PARTS)) {
+      const names = namesAt(page, 'wide');
+      expect({ page, missing: parts.wide.filter((id) => !drewPart(names, page, id)) }).toEqual({ page, missing: [] });
+    }
+  });
+
+  test('and draws a part at the shapes that declare it, and at no other', () => {
+    for (const [page, parts] of Object.entries(PARTS)) {
+      for (const archetype of ARCHETYPES) {
+        const names = namesAt(page, archetype);
+        const drawn = parts.wide.filter((id) => drewPart(names, page, id));
+        expect({ page, archetype, drawn }).toEqual({ page, archetype, drawn: [...parts[archetype]] });
+      }
+    }
+  });
+
+  test('the tyres caption is the one that was being lost to arithmetic, and is not any more', () => {
+    // The module sized its two rows to the frame exactly, so `rowsThatFit` shed the caption at
+    // every size rather than at the one shape the catalogue drops it.
+    expect(drewId(namesIn('tyres', { width: 437, height: 276 }), 'footer')).toBe(true);
+    expect(drewId(namesIn('tyres', { width: 254, height: 292 }, 'compact'), 'footer')).toBe(false);
+  });
+});
+
+describe('two pages take a drawing the bands cannot ask for', () => {
+  const drawingOf = (page: string, box: { width: number; height: number }): Archetype => archetypeFor(page, shapeOf(box), box);
+
+  test('a grid box shorter than the floor gives them the tall narrow drawing', () => {
+    // The 1280 x 400 face's zone body in both arrangements, against the 1280 x 480 face's.
+    for (const page of PREFERS_TALL_NARROW) {
+      expect({ page, at: drawingOf(page, { width: 437, height: 214 }) }).toEqual({ page, at: 'tallNarrow' });
+      expect({ page, at: drawingOf(page, { width: 437, height: 248 }) }).toEqual({ page, at: 'tallNarrow' });
+      expect({ page, at: drawingOf(page, { width: 437, height: 276 }) }).toEqual({ page, at: 'grid' });
+      // The catalogue's own grid drawing is drawn at 430 x 300 and stays itself.
+      expect({ page, at: drawingOf(page, SHAPE_ARCHETYPES.grid) }).toEqual({ page, at: 'grid' });
+      // A wide short box is the 600 x 686 face and the pit wall's strips, which is a different
+      // question and answered by `archetypeOf` alone.
+      expect({ page, at: drawingOf(page, { width: 580, height: 124 }) }).toEqual({ page, at: 'grid' });
+    }
+  });
+
+  test('and no other page is moved by it', () => {
+    for (const { id } of MODULE_CATALOGUE) {
+      if (PREFERS_TALL_NARROW.includes(id)) continue;
+      expect({ id, at: drawingOf(id, { width: 437, height: 214 }) }).toEqual({ id, at: 'grid' });
+    }
+  });
+
+  test('so the 1280 x 400 zone draws four car settings cells and a lap history with no header', () => {
+    const box = { width: 437, height: 214 };
+    const settings = namesIn('carSettings', box);
+    expect(['car', 'tc', 'abs', 'bb'].every((id) => drewId(settings, id))).toBe(true);
+    expect(['mix', 'arbFront', 'arbRear'].some((id) => drewId(settings, id))).toBe(false);
+    expect(drewId(namesIn('lapHistory', box), 'head')).toBe(false);
+    expect(drewId(namesIn('lapHistory', { width: 437, height: 276 }), 'head')).toBe(true);
+  });
+});
+
 describe('a shape takes the answer of one of the four the catalogue draws', () => {
   test('the four archetypes are themselves', () => {
     for (const name of ARCHETYPES) expect({ name, of: archetypeOf(shapeOf(SHAPE_ARCHETYPES[name])) }).toEqual({ name, of: name });
@@ -74,15 +166,19 @@ describe('a shape takes the answer of one of the four the catalogue draws', () =
     expect(archetypeOf(shapeOf({ width: 607, height: 158 }))).toBe('grid');
     expect(archetypeOf(shapeOf({ width: 1007, height: 211 }))).toBe('wide');
     expect(archetypeOf(shapeOf({ width: 269, height: 194 }))).toBe('tallNarrow');
-    expect(archetypeOf(shapeOf({ width: 802, height: 336 }))).toBe('wide'); // the companion page
-    expect(archetypeOf(shapeOf({ width: 432, height: 706 }))).toBe('tall'); // the companion in portrait
+    expect(archetypeOf(shapeOf({ width: 802, height: 356 }))).toBe('wide'); // the companion page
+    expect(archetypeOf(shapeOf({ width: 432, height: 726 }))).toBe('tall'); // the companion in portrait
   });
 });
 
 describe('the two the ticket works through', () => {
-  test('lap times keeps six at wide and four at grid and at tall narrow', () => {
+  test('lap times keeps twelve at wide, six at tall and four at grid and at tall narrow', () => {
     const at = (shape: Archetype): readonly string[] => (sheddingFor('lapTimes') as { keeps: Record<Archetype, readonly string[]> }).keeps[shape];
-    expect(at('wide')).toHaveLength(6);
+    // Twelve is the companion artboard's drawing: the six a zone draws, then the five-lap average,
+    // the position and the stint lap, then the three sectors of the last lap. The catalogue's own
+    // zone drawings keep six, so `tall` keeps six and the extra rank lives at `wide` alone.
+    expect(at('wide')).toHaveLength(12);
+    expect(at('tall')).toEqual(['last', 'sessionBest', 'yourBest', 'laps', 'estimated', 'delta']);
     expect(at('grid')).toEqual(['last', 'sessionBest', 'yourBest', 'delta']);
     // The catalogue draws two here and the build takes four: a zone that stacks one column has the
     // height for them, and 234 px of the base face's zone B was empty. zones.md §10 records it.
@@ -96,12 +192,14 @@ describe('the two the ticket works through', () => {
   });
 
   test('relative keeps position, code and gap at tall narrow, and every column at wide', () => {
-    expect(keepsAt('relative', shapeOf(SHAPE_ARCHETYPES.tallNarrow))).toEqual(['pos', 'name', 'gap']);
-    expect(keepsAt('relative', shapeOf(SHAPE_ARCHETYPES.wide))).toEqual([...RELATIVE_COLUMNS]);
+    expect(keepsAt('relative', 'tallNarrow')).toEqual(['pos', 'name', 'gap']);
+    expect(keepsAt('relative', 'wide')).toEqual([...RELATIVE_COLUMNS]);
 
+    // Read off the row rather than the header: a zone table draws no header row, because no drawing
+    // on the catalogue or on any face artboard has one, so the cells are where a kept column shows.
     const narrow = namesAt('relative', 'tallNarrow');
-    expect(narrow.some((n) => n.includes('head.class'))).toBe(false);
-    expect(narrow.some((n) => n.includes('head.gap'))).toBe(true);
+    expect(narrow.some((n) => n.includes('row.class'))).toBe(false);
+    expect(narrow.some((n) => n.includes('row.gap'))).toBe(true);
   });
 });
 
@@ -114,20 +212,27 @@ describe('the two the ticket works through', () => {
  */
 describe('docs/design/zones.md carries the same table', () => {
   const doc = readFileSync(new URL('../../../docs/design/zones.md', import.meta.url), 'utf8');
-  const section = doc.slice(doc.indexOf('### The table'), doc.indexOf('## 6. Band D'));
+  const PARTS_HEADING = '### The parts that are not fields';
+  const section = doc.slice(doc.indexOf('### The table'), doc.indexOf(PARTS_HEADING));
+  const partsSection = doc.slice(doc.indexOf(PARTS_HEADING), doc.indexOf('## 6. Band D'));
   const cells = (text: string): string[] =>
     text
       .split('·')
       .map((part) => part.trim().replace(/`/g, ''))
       .filter((part) => part.length > 0);
-
-  test('every page that sheds has a row, and the row is the declaration', () => {
+  /** The four cells of a row of either table, by the page name they are written against. */
+  const rowsOf = (text: string): Map<string, string[][]> => {
     const rows = new Map<string, string[][]>();
-    for (const line of section.split('\n')) {
+    for (const line of text.split('\n')) {
       if (!line.startsWith('| ') || line.startsWith('| № ') || line.startsWith('|---')) continue;
       const [, , page, ...rest] = line.split('|').map((c) => c.trim());
       rows.set(page!, rest.slice(0, 4).map(cells));
     }
+    return rows;
+  };
+
+  test('every page that sheds has a row, and the row is the declaration', () => {
+    const rows = rowsOf(section);
     const written = new Map(MODULE_CATALOGUE.filter((m) => SHEDDING[m.id]!.kind !== 'nothing').map((m) => [m.name, m.id]));
     expect([...rows.keys()].sort()).toEqual([...written.keys()].sort());
     for (const [name, id] of written) {
@@ -146,10 +251,146 @@ describe('docs/design/zones.md carries the same table', () => {
     const expected = new Map(Object.entries(SHEDDING).flatMap(([id, entry]) => (entry.kind === 'nothing' ? [[id, entry.why] as const] : [])));
     expect(Object.fromEntries(listed)).toEqual(Object.fromEntries(expected));
   });
+
+  test('and the second table, the parts that are neither fields nor columns', () => {
+    const rows = rowsOf(partsSection);
+    const written = new Map(MODULE_CATALOGUE.filter((m) => PARTS[m.id]).map((m) => [m.name, m.id]));
+    expect([...rows.keys()].sort()).toEqual([...written.keys()].sort());
+    for (const [name, id] of written) {
+      const parts = PARTS[id]!;
+      expect({ id, row: rows.get(name) }).toEqual({ id, row: [parts.wide, parts.grid, parts.tallNarrow, parts.tall].map((ids) => [...ids]) });
+    }
+  });
+});
+
+/**
+ * The last check, and the one no table can make on its own: at every rectangle the build really
+ * hands a zone, the ids a page draws are the ids it declares.
+ *
+ * A declaration is a design decision and a box is a fact, so the two can disagree. Where they do,
+ * something dropped the field after the declaration had kept it: `rowsThatFit` taking a row off the
+ * stack, a rank shedding its tail to fit the width, a list's column popping for the name beside it.
+ * Each of those is a shed nobody decided, and each belongs to a ticket of its own. They are pinned
+ * below rather than tolerated, so that a new one fails this suite instead of a reviewer, and so
+ * that fixing one is a line removed from the list.
+ */
+describe('at every zone body the build produces, the ids drawn are the ids declared', () => {
+  /** Page by page, what a real zone body drops although the table kept it. */
+  const UNDECLARED: Record<string, readonly string[]> = {
+    // A fourth lap time does not fit a 156 px body beside three others at their grown size, so the
+    // rank sheds the delta the `grid` drawing keeps. readability-pass.md §1 owns the redraw. The
+    // 1280 x 400 zone left this list when the face took the artboards' frame: 22 px of header
+    // inside 6 px of padding gives it 445 by 220 where the pit wall's 28 over 16 gave 437 by 214,
+    // and the fourth time fits in the six pixels.
+    '800x286 269x194 lapTimes': ['delta'],
+    // The delta page's own furniture against its sector deltas. The catalogue draws both in its
+    // `tall narrow · 274 by 300`, and the nano's zone is 269 by 194: a hundred and six pixels
+    // shorter, which is the bar, its scale, the rule and the three deltas over again. The bar is
+    // what the page is named for, so what goes is the sectors and the rule that separates them.
+    '800x286 269x194 delta': ['s1', 's2', 's3', 'rule'],
+    '800x286 269x226 delta': ['s1', 's2', 's3', 'rule'],
+    // The refuel figure and the five-lap average are the last two fields of a rank the 600 x 686
+    // face's 114 px zones have no room for: two ranks plus the level bar need about 124 px at the
+    // compact ramp, so the two lead readings are what survive. The nano keeps its rank whole now
+    // that fuel leads with the tank, the time and the laps rather than spreading three readings
+    // over one line.
+    '600x686 600x160 fuel': ['toAdd', 'average'],
+    '600x686 600x150 fuel': ['toAdd', 'average'],
+    // Both cars are drawn at every one of these now, and what is left is a line the two of them
+    // shed together. The nano's 156 px body holds two headings and two gaps at 34 px and not the
+    // driver codes between them: rule 17 takes the identity rather than the reading the page is
+    // for, and 34 is already the compact ramp's largest. The two 600 x 686 zones left this list
+    // when a wide box too short to stack took the side-by-side arrangement the canvas gives the
+    // wide zone, which draws both cars whole at 576 by 112.
+    '800x286 269x194 opponents': ['ahead.name', 'behind.name'],
+    // The 220 px body holds the identity row or the class chip and the last lap, not both, so the
+    // pair that goes is the one the catalogue's own `tall` drawing drops first.
+    '1280x400 469x258 opponents': ['ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap'],
+    // The mixture goes with the two anti-roll bars, which the 122 px band could not hold either.
+    // The cells are an equal-column grid now, so a line is three of them whatever their width:
+    // six cells are two lines and so are four, and the band has room for one. Shedding the pair
+    // the catalogue drops last no longer buys the line back, so the rank goes on to the cell above
+    // them in the table. readability-pass.md §7 owns the redraw of this page at a band this short.
+    '600x686 600x160 carSettings': ['mix', 'arbFront', 'arbRear'],
+    '600x686 600x150 carSettings': ['mix', 'arbFront', 'arbRear'],
+    // Zone C of the 600 x 686 face is where a second row stops fitting at all, and zone B joins it
+    // now that the frame takes the artboards' 6 by 12 padding rather than the 16 it had, which is
+    // six pixels of body height and eight of width. The delta loses its three sector deltas, the
+    // rule that belongs with them and its scale; the sectors lose their three lap times; the
+    // session loses its lap and its time left, and the stint the two stops its lead coming off
+    // `d.hero` had just bought back. The catalogue draws all of these at all four of its shapes,
+    // so each is a box it does not draw rather than a drawing withdrawn, and each is the
+    // readability pass's subject rather than the frame's: readability-pass.md §2, §9 and §13.
+    '1280x400 469x258 delta': ['s1', 's2', 's3', 'rule'],
+    // A fourth lap time does not fit the 445 x 220 body beside three others at their grown size,
+    // so the rank sheds the delta the `grid` drawing keeps; readability-pass.md §1 owns the redraw.
+    '1280x400 469x258 lapTimes': ['delta'],
+    '600x686 600x160 delta': ['s1', 's2', 's3', 'scale', 'rule'],
+    '600x686 600x150 delta': ['s1', 's2', 's3', 'scale', 'rule'],
+    '600x686 600x150 lapTimes': ['delta'],
+    '600x686 600x150 sectors': ['yourBest', 'last', 'sessionBest'],
+    '600x686 600x150 session': ['lap', 'timeLeft'],
+    '600x686 600x150 stint': ['stops', 'lastStop'],
+    // The compound chip is centred over the tyre grid, which is the axle line between the two rows
+    // of the car. These two zones are wide and short, so the page takes its four corners as one row
+    // of four -- two rows of cells in 112 px leaves a corner one reading -- and a single row has no
+    // axle line to put a chip on. The page names its compound at every other zone the build gives
+    // it; readability-pass.md §15 owns the redraw of the narrow tyre page.
+    '600x686 600x160 tyres': ['compound'],
+    '600x686 600x150 tyres': ['compound'],
+    // The nano's 194 px zone keeps the three sectors at the size the drawing gives them and loses
+    // the two lap times under them, which is rule 17 taking the recap rather than shrinking the
+    // reading the page exists for. The 800 x 480 face's 292 px zone keeps both.
+    '800x286 269x194 sectors': ['yourBest', 'last'],
+    // The nano's session keeps the position and the class, which is what the page is read for, and
+    // sheds the lap and the time left: its two counters each carry a denominator now, and a
+    // denominator at 0.7 of a value is wider than the small label it replaced.
+    '800x286 269x194 session': ['lap', 'timeLeft'],
+  };
+
+  /** Every rectangle the build hands a zone: both arrangements of every face, deduplicated. */
+  const bodies = ((): [string, { body: { width: number; height: number }; density: Density }][] => {
+    const seen = new Map<string, { body: { width: number; height: number }; density: Density }>();
+    for (const layout of ZONE_FACES) {
+      for (const arrangement of [layout, layoutWithoutRevBar(layout)]) {
+        for (const zone of zonesOf(arrangement)) {
+          if (zone.zone === 'A' || zone.zone === 'D') continue;
+          const key = `${layout.width}x${layout.height} ${zone.size.width}x${zone.size.height}`;
+          if (seen.has(key)) continue;
+          const density = densityForBox(zone.size);
+          // The body a zone really gives its page. Neither the counter nor the letter moves it:
+          // `zoneFrame` cuts the body from the frame, the density and the chrome, and a face zone's
+          // chrome is the artboards' 22 px row inside 6px 12px rather than the pit wall's.
+          const { body } = zoneFrame('zone', { frame: rect(0, 0, zone.size.width, zone.size.height), title: 'Lap times', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
+          seen.set(key, { body, density });
+        }
+      }
+    }
+    return [...seen.entries()];
+  })();
+
+  test('the faces really produce the rectangles this is checked against', () => {
+    // Not a count: the eight faces' own rectangles are their business. What matters here is that
+    // the list is the build's and not a copy of it, so the two below are spot checks.
+    expect(bodies.map(([key]) => key)).toContain('1280x400 469x258');
+    expect(bodies.map(([key]) => key)).toContain('600x686 600x150');
+    expect(bodies.length).toBeGreaterThan(8);
+  });
+
+  test('and every page at every one of them draws what it declared', () => {
+    const found: Record<string, string[]> = {};
+    for (const [key, { body, density }] of bodies) {
+      for (const { id } of MODULE_CATALOGUE) {
+        const missing = undrawn(id, namesIn(id, body, density), archetypeFor(id, shapeOf(body), body));
+        if (missing.length > 0) found[`${key} ${id}`] = missing;
+      }
+    }
+    expect(found).toEqual(UNDECLARED as Record<string, string[]>);
+  });
 });
 
 test('a page the table does not name is an error rather than a page that keeps everything', () => {
   expect(() => sheddingFor('nosuchpage')).toThrow(/no page/);
   // The two zone pages that are not modules go through no table at all.
-  expect(keepsAt(undefined, shapeOf(SHAPE_ARCHETYPES.wide))).toBeUndefined();
+  expect(keepsAt(undefined, 'wide')).toBeUndefined();
 });

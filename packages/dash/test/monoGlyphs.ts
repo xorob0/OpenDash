@@ -12,11 +12,12 @@
  * character nobody measured fails here rather than on somebody's dash.
  */
 import { measureText, type MeasuredFace } from '../src/design/advances.ts';
+import { MINUS } from '../src/design/metrics.ts';
 import type { TextItem } from '../src/generator.ts';
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
 export const faceOf = (item: TextItem): MeasuredFace => {
-  if (item.font === 'Barlow') return 'BarlowMedium';
+  if (item.font === 'Barlow') return item.fontWeight === 'Bold' ? 'BarlowBold' : 'BarlowMedium';
   if (item.fontWeight === 'Bold') return 'BarlowCondensedBold';
   if (item.fontWeight === 'Light') return 'BarlowCondensedLight';
   return 'BarlowCondensedSemiBold';
@@ -142,13 +143,16 @@ export function drawableLiterals(expression: string): string[] {
 
 /**
  * Digits are always drawable whether or not the sample happens to show them, because every
- * monospaced value is a number at heart and any of the ten can arrive at runtime.
+ * monospaced value is a number at heart and any of the ten can arrive at runtime. The minus is in
+ * for the same reason: a value is signed wherever it can go negative, its sample is as often the
+ * positive one, and the glyph a signed value reaches the screen with is U+2212 rather than the
+ * hyphen the .NET formatter writes.
  */
-const DIGITS = '0123456789';
+const ALWAYS_DRAWN = `0123456789${MINUS}`;
 
 /** Every character a monospaced item can put on the screen. */
 export function drawableGlyphs(item: TextItem): Set<string> {
-  const glyphs = new Set<string>(DIGITS);
+  const glyphs = new Set<string>(ALWAYS_DRAWN);
   for (const source of [item.text, item.widest ?? '', ...drawableLiterals(textExpression(item))]) {
     for (const ch of source) glyphs.add(ch);
   }

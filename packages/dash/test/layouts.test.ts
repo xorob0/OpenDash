@@ -12,9 +12,10 @@
 import { describe, expect, test } from 'bun:test';
 import { CARDS } from '../src/cards/index.ts';
 import { PRESSURE_TIERS, pressureTier, pressureTierFor } from '../src/cards/tyrePressures.ts';
-import { CHEQUER_COUNT, CHEQUER_SIZE, CHEQUER_STEP } from '../src/components/flagRing.ts';
+import { CHEQUER_SIZE, chequerCount, chequerRim, chequerStep } from '../src/components/flagRing.ts';
 import { FLAG_STRIP_STYLES } from '../src/components/flagStrip.ts';
-import { GEAR_SIZES, gear } from '../src/components/gear.ts';
+import { FLAG_CATALOGUE } from '../src/flags.ts';
+import { GEAR_SIZES, gear, ghostedGearWidth } from '../src/components/gear.ts';
 import { gridColumnWidth } from '../src/components/grid2x2.ts';
 import { revArcAngle } from '../src/components/revArc.ts';
 import { declaredProperties, defaultCardForSlot, slotSettingName } from '../src/contract.ts';
@@ -22,8 +23,8 @@ import { buildLayout, buildPackage } from '../src/dashboard.ts';
 import { centre, contains, distance, overlaps, rect, type Rect } from '../src/design/geometry.ts';
 import { FONT_METRICS, WPF_BASELINE } from '../src/design/metrics.ts';
 import { rungForSlot, rungSpec, type Rung } from '../src/design/rung.ts';
-import { itemBounds, type Dashboard, type DrawableItem, type EllipseItem, type Item, type LayerItem } from '../src/generator.ts';
-import { hero, type HeroGeometry } from '../src/hero/hero.ts';
+import { itemBounds, type Dashboard, type DrawableItem, type EllipseItem, type Item, type LayerItem, type TextItem } from '../src/generator.ts';
+import { gearItems, hero, type HeroGeometry } from '../src/hero/hero.ts';
 import {
   cardRung,
   LAYOUTS,
@@ -179,7 +180,9 @@ describe('every layout', () => {
       test('the grid cards keep every value in its column: text inside the column, boxes inside the slot, no overdraw', () => {
         const origin = rect(0, 0, layout.slotSize.width, layout.slotSize.height);
         const rung = cardRung(layout);
-        const colWidth = gridColumnWidth(origin, rung);
+        // A grid whose cells carry a sub-value draws wider columns, so each card is measured
+        // against the column it is actually laid out in rather than against the plain grid's.
+        const columnWidth = (id: string): number => gridColumnWidth(origin, rung, id === 'tyreTemps' && rung.rung === 'L' ? 18 : undefined);
         /** Width of the text an item actually draws, in its own monospace cells. */
         const textWidth = (it: DrawableItem): number => {
           if (it.kind !== 'text' || !it.monospace) throw new Error(`${it.name} is not a monospaced value`);
@@ -189,9 +192,20 @@ describe('every layout', () => {
         for (const id of ['tyreTemps', 'tyrePressures']) {
           const screen = cards.screens.find((s) => s.name === id);
           if (!screen) throw new Error(`${id} has no screen`);
-          const cells = screen.items.filter((i): i is DrawableItem => hasRect(i) && i.kind === 'text' && !i.name.endsWith('.label'));
-          expect(cells.map((c) => c.name)).toEqual(['fl', 'fr', 'rl', 'rr'].map((corner) => `${id}.${corner}`));
-          for (const c of cells) {
+          const corners = ['fl', 'fr', 'rl', 'rr'];
+          const drawn = screen.items.filter((i): i is DrawableItem => hasRect(i) && i.kind === 'text' && !i.name.endsWith('.label'));
+          const cells = drawn.filter((c) => !c.name.includes('.sub'));
+          expect(cells.map((c) => c.name)).toEqual(corners.map((corner) => `${id}.${corner}`));
+          // The tread left under a tyre temperature is a value in the same column and is measured
+          // with the rest; the canvas draws it at rung L only. Its per-cent sign is a label rather
+          // than a cell, so that one is checked by its box.
+          const subs = drawn.filter((c) => c.name.endsWith('.sub'));
+          expect(subs.map((c) => c.name)).toEqual(id === 'tyreTemps' && rung.rung === 'L' ? corners.map((corner) => `${id}.${corner}.sub`) : []);
+          for (const u of drawn.filter((c) => c.name.endsWith('.subunit'))) {
+            expect({ card: id, unit: u.name, right: u.rect.left + u.rect.width, inside: u.rect.left + u.rect.width <= layout.slotSize.width }).toMatchObject({ inside: true });
+          }
+          const colWidth = columnWidth(id);
+          for (const c of [...cells, ...subs]) {
             // The glyphs fit the column; the box may take the gap and the padding, since WPF clips to it.
             expect({ card: id, cell: c.name, text: textWidth(c), colWidth, fits: textWidth(c) <= colWidth }).toMatchObject({ fits: true });
             expect({ card: id, cell: c.name, right: c.rect.left + c.rect.width, inside: c.rect.left + c.rect.width <= layout.slotSize.width }).toMatchObject({ inside: true });
@@ -565,9 +579,12 @@ describe('800 x 286 nano', () => {
     expect(items.map((i) => i.name).filter((n) => n.startsWith('hero.'))).toEqual(['hero.gear']);
   });
 
-  test('the 12 px flag strip has no labels, a 2 px black outline and 6 px checks', () => {
+  test('the 12 px flag strip has no labels, a 2 px outline and 6 px checks', () => {
+    // The strip draws the whole catalogue, one layer per condition, rather than the six properties
+    // SimHub normalises: a red flag, a disqualification, a furled black, a meatball, a full-course
+    // caution, a waved yellow, the debris flag and the start gantry are on the nano too now.
     const flags = items.filter((i): i is LayerItem => i.kind === 'layer' && i.name.startsWith('flag.'));
-    expect(flags.map((f) => f.name)).toEqual(['flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']);
+    expect(flags.map((f) => f.name)).toEqual(FLAG_CATALOGUE.map((c) => `flag.${c.id}`));
     for (const f of flags) {
       for (const child of walkItems(f.children)) {
         expect(child.kind).toBe('rect');
@@ -575,28 +592,48 @@ describe('800 x 286 nano', () => {
         if (hasRect(child)) expect(contains(rect(0, 274, 800, 12), child.rect)).toBe(true);
       }
     }
-    for (const id of ['yellow', 'blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
-    const black = layerNamed(items, 'flag.black').children[0];
-    if (black?.kind !== 'rect') throw new Error('black band');
-    expect(black.border).toEqual({ color: '#F5F7FA', top: 2, bottom: 2, left: 2, right: 2 });
-    // Opaque, and the darkest ground there is: a flag takes the strip over, and the black flag was
-    // the one that did not, leaving whatever it covered readable underneath it.
-    expect(black.backgroundColor).toBe('#0A0B0D');
+    // A filled band with nothing to say at this size is one rectangle; a flashing one is two.
+    for (const id of ['red', 'meatball', 'blue', 'white', 'green']) expect(layerNamed(items, `flag.${id}`).children).toHaveLength(1);
+    expect(layerNamed(items, 'flag.yellowWaving').children.map((c) => c.name)).toEqual(['flag.yellowWaving.band', 'flag.yellowWaving.flash']);
+    // The outlined form, which the black family and the start gantry share.
+    for (const id of ['black', 'disqualify', 'furled']) {
+      const outlined = layerNamed(items, `flag.${id}`).children[0];
+      if (outlined?.kind !== 'rect') throw new Error(`${id} band`);
+      expect({ id, border: outlined.border }).toEqual({ id, border: { color: '#F5F7FA', top: 2, bottom: 2, left: 2, right: 2 } });
+      // Opaque, and the darkest ground there is: a flag takes the strip over, and the black flag was
+      // the one that did not, leaving whatever it covered readable underneath it.
+      expect({ id, ground: outlined.backgroundColor }).toEqual({ id, ground: '#0A0B0D' });
+    }
+    for (const id of ['startSet', 'startReady']) {
+      const outlined = layerNamed(items, `flag.${id}`).children[0];
+      if (outlined?.kind !== 'rect') throw new Error(`${id} band`);
+      expect({ id, colour: outlined.border?.color, ground: outlined.backgroundColor }).toEqual({ id, colour: '#00D96A', ground: '#0A0B0D' });
+    }
     // 800 / 6 = 133.3 columns, so the last check (column 133, row 1) is clipped to 2 px.
     const checks = layerNamed(items, 'flag.chequered').children.slice(1).filter(hasRect);
     expect(checks).toHaveLength(2 * Math.ceil(800 / 6 / 2));
     for (const c of checks) expect(c.rect.height).toBe(6);
     expect(checks.map((c) => c.rect.width).filter((w) => w !== 6)).toEqual([2]);
-    expect(layerNamed(items, 'flag.yellow').blink).toEqual({ enabled: true, delayMs: 250 });
+    // The flash is a band over the fill and not the layer: a blinking layer draws nothing for half
+    // of every cycle, and what a flag covers has to stay covered.
+    expect(layerNamed(items, 'flag.yellowWaving').blink).toBeUndefined();
+    expect(layerNamed(items, 'flag.yellowWaving').children[1]?.blink).toEqual({ enabled: true, delayMs: 250 });
   });
 
   test('the standard strip of the other faces keeps its labels and 3 px outline', () => {
     const standard = buildLayout(layout1280x480, opts).main.screens[0]!.items;
-    const yellow = layerNamed(standard, 'flag.yellow');
-    expect(yellow.children.map((c) => c.name)).toEqual(['flag.yellow.band', 'flag.yellow.label']);
+    const waved = layerNamed(standard, 'flag.yellowWaving');
+    expect(waved.children.map((c) => c.name)).toEqual(['flag.yellowWaving.band', 'flag.yellowWaving.label', 'flag.yellowWaving.flash']);
     const black = layerNamed(standard, 'flag.black').children[0];
     if (black?.kind !== 'rect') throw new Error('black band');
     expect(black.border?.top).toBe(3);
+    // Every name the catalogue gives, drawn once and only at the standard size.
+    const named = FLAG_CATALOGUE.filter((c) => c.band.shape !== 'chequer');
+    for (const condition of named) {
+      const label = layerNamed(standard, `flag.${condition.id}`).children.find((c) => c.name.endsWith('.label'));
+      if (label?.kind !== 'text') throw new Error(`${condition.id} label`);
+      expect({ id: condition.id, text: label.text }).toEqual({ id: condition.id, text: condition.band.shape === 'chequer' ? '' : condition.band.label });
+    }
   });
 });
 
@@ -644,6 +681,8 @@ interface RoundRow {
   slot: [number, number];
   origins: number[][];
   face: { cx: number; cy: number; r: number };
+  /** Checks of the chequered ring, which is a count of the rim rather than a constant of the component. */
+  checks: number;
   hero: HeroGeometry;
   cardPadding?: { y: number; x: number };
 }
@@ -659,6 +698,7 @@ const ROUND_ROWS: RoundRow[] = [
     slot: [140, 108],
     origins: [[20, 186], [320, 186]],
     face: FACE_480,
+    checks: 46,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 240, cy: 240, r: 206 }, segment: { width: 22, height: 14 } },
       // The gap between the two slots, which takes the spec's 260 gear without a size of its own.
@@ -675,9 +715,11 @@ const ROUND_ROWS: RoundRow[] = [
     // Left column, right column, then the bottom row.
     origins: [[44, 290], [44, 404], [576, 290], [576, 404], [210, 562], [410, 562]],
     face: FACE_800,
+    checks: 78,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 400, cy: 400, r: 352 }, segment: { width: 30, height: 18 } },
-      gear: { rect: rect(240, 260, 320, 280) },
+      // The gear with its two neighbours ghosted, at the 0.4 of it this artboard draws.
+      gear: { rect: rect(240, 260, 320, 280), neighbours: { gap: 16, ratio: 0.4 } },
       pitLimiter: rect(300, 176, 200, 36),
       flags: { kind: 'flagRing', face: FACE_800 },
     },
@@ -685,8 +727,23 @@ const ROUND_ROWS: RoundRow[] = [
   },
 ];
 
+/** The gear's own items: its two ghosted neighbours first, on the face whose hero asks for them. */
+const gearNames = (row: RoundRow): string[] => (row.hero.gear.neighbours ? ['hero.gear.below', 'hero.gear.above', 'hero.gear'] : ['hero.gear']);
+
 /** The items of a round face's hero, in the order the main screen draws them (the ring last, so it is the outermost element). */
-const ROUND_HERO_NAMES = ['revArc.shiftLights', 'revArc.shiftLightsSimHub', 'revArc.rpmBar', 'hero.gear', 'pitLimiter', 'flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green'];
+const roundHeroNames = (row: RoundRow): string[] => [
+  'revArc.shiftLights',
+  'revArc.shiftLightsSimHub',
+  'revArc.rpmBar',
+  ...gearNames(row),
+  'pitLimiter',
+  'flag.black',
+  'flag.chequered',
+  'flag.yellow',
+  'flag.blue',
+  'flag.white',
+  'flag.green',
+];
 
 describe('the round faces, row by row of the spec table', () => {
   test('the table covers every round layout, each once', () => {
@@ -718,8 +775,8 @@ describe('the round faces, row by row of the spec table', () => {
       });
 
       test('carries the round hero: rev arc layers, the gear, the pit limiter and six flag rings, then the slots', () => {
-        expect(items.map((i) => i.name)).toEqual([...ROUND_HERO_NAMES, ...layout.slots.map((_, i) => slotSettingName(i + 1))]);
-        expect(hero(layout.hero).map((i) => i.name)).toEqual(ROUND_HERO_NAMES);
+        expect(items.map((i) => i.name)).toEqual([...roundHeroNames(row), ...layout.slots.map((_, i) => slotSettingName(i + 1))]);
+        expect(hero(layout.hero).map((i) => i.name)).toEqual(roundHeroNames(row));
       });
 
       test('every rev arc segment centre lies on its circle within 1 px and is rotated by its angle', () => {
@@ -771,20 +828,41 @@ describe('the round faces, row by row of the spec table', () => {
         expect(items.filter((i) => i.kind === 'layer' && i.name.startsWith('flag.')).map((i) => i.name)).toEqual(['flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']);
       });
 
-      test('the chequered ring is 24 white 20 x 12 checks at 15 degree steps, centred 6 px inside the rim, and nothing else', () => {
+      test('the chequered ring is white 16 x 12 checks alternating with dark of the same width the whole way round, offset half a step, on a rim that keeps their corners on the face, and nothing else', () => {
         const checks = layerNamed(items, 'flag.chequered').children;
-        expect(checks).toHaveLength(CHEQUER_COUNT);
-        expect(CHEQUER_COUNT).toBe(24);
-        expect(CHEQUER_STEP).toBe(15);
-        expect(CHEQUER_SIZE).toEqual({ width: 20, height: 12 });
+        const rim = chequerRim(face);
+        const count = chequerCount(face);
+        const step = chequerStep(face);
+        expect(count).toBe(row.checks);
+        expect(count % 2).toBe(0);
+        expect(CHEQUER_SIZE).toEqual({ width: 16, height: 12 });
+        expect(checks).toHaveLength(count);
+        // What makes it a chequer rather than dots on a ring: the dark arc between two checks is
+        // the check's own width, within the pixel the rim cannot divide evenly.
+        const gap = (2 * Math.PI * rim.r) / count - CHEQUER_SIZE.width;
+        expect(Math.abs(gap - CHEQUER_SIZE.width)).toBeLessThanOrEqual(1);
+        // The ring is still the outer 12 px of the face: the rim gives up only the fraction of a
+        // pixel by which a chord's corners overshoot its outer edge.
+        expect(face.r - rim.r).toBeGreaterThanOrEqual(CHEQUER_SIZE.height / 2);
+        expect(face.r - rim.r).toBeLessThan(CHEQUER_SIZE.height / 2 + 1);
         checks.forEach((c, k) => {
           if (c.kind !== 'rect') throw new Error('check');
           expect(c.name).toBe(`flag.chequered.c${pad2(k)}`);
           expect(c.backgroundColor).toBe('#F5F7FA');
-          expect(c.rotation ?? 0).toBe(k * 15);
-          expect({ width: c.rect.width, height: c.rect.height }).toEqual({ width: 20, height: 12 });
-          expect(Math.abs(distance(centre(c.rect), centrePoint) - (face.r - 6))).toBeLessThanOrEqual(1);
+          expect(c.rotation ?? 0).toBe((k + 0.5) * step);
+          expect({ width: c.rect.width, height: c.rect.height }).toEqual({ width: 16, height: 12 });
+          expect(Math.abs(distance(centre(c.rect), centrePoint) - rim.r)).toBeLessThanOrEqual(1);
           expect(c.border?.radius).toBeUndefined();
+          // Corners, not the centre: a check near twelve o'clock left the canvas by a third of a
+          // pixel while its centre was still comfortably on the rim.
+          const half = { x: CHEQUER_SIZE.width / 2, y: CHEQUER_SIZE.height / 2 };
+          const a = ((c.rotation ?? 0) * Math.PI) / 180;
+          for (const sx of [-1, 1])
+            for (const sy of [-1, 1]) {
+              const p = centre(c.rect);
+              const corner = { x: p.x + sx * half.x * Math.cos(a) - sy * half.y * Math.sin(a), y: p.y + sx * half.x * Math.sin(a) + sy * half.y * Math.cos(a) };
+              expect({ name: c.name, corner, inside: distance(corner, centrePoint) <= face.r }).toMatchObject({ inside: true });
+            }
         });
       });
 
@@ -802,7 +880,10 @@ describe('the round faces, row by row of the spec table', () => {
           const halfDiagonal = Math.hypot(s.rect.width, s.rect.height) / 2;
           expect(distance(centre(s.rect), centrePoint) + halfDiagonal).toBeLessThanOrEqual(inner);
         }
-        for (const name of ['hero.gear', 'pitLimiter.band']) {
+        // Every box of the gear cluster, not only the gear's: on the 800 the ghosts are what reach
+        // nearest the slots, and an assertion that covers the centre numeral alone covers the one
+        // box that was never in doubt.
+        for (const name of [...gearNames(row), 'pitLimiter.band']) {
           const item = [...walkItems(items)].find((i) => i.name === name);
           if (!item || !hasRect(item)) throw new Error(`${name} has no rect`);
           for (const c of corners(item.rect)) expect({ name, corner: c, inside: distance(c, centrePoint) <= inner }).toMatchObject({ inside: true });
@@ -816,8 +897,8 @@ describe('the round faces, row by row of the spec table', () => {
         const segments = [...layerNamed(items, 'revArc.shiftLights').children, ...layerNamed(items, 'revArc.shiftLightsSimHub').children, ...layerNamed(items, 'revArc.rpmBar').children].filter(hasRect);
         const checks = layerNamed(items, 'flag.chequered').children.filter(hasRect);
         expect(segments).toHaveLength(45);
-        expect(checks).toHaveLength(CHEQUER_COUNT);
-        const heroBoxes = ['hero.gear', 'pitLimiter.band'].map((name) => {
+        expect(checks).toHaveLength(chequerCount(face));
+        const heroBoxes = [...gearNames(row), 'pitLimiter.band'].map((name) => {
           const item = [...walkItems(items)].find((i) => i.name === name);
           if (!item || !hasRect(item)) throw new Error(`${name} has no rect`);
           return { name, rect: item.rect };
@@ -872,16 +953,70 @@ describe('480 round', () => {
 
 describe('800 round', () => {
   const layout = layout800round;
+  const cluster = gearItems(layout.hero.gear).filter((i): i is TextItem => i.kind === 'text');
+  const clusterItem = (name: string): TextItem => {
+    const item = cluster.find((i) => i.name === name);
+    if (!item) throw new Error(`the cluster draws no ${name}`);
+    return item;
+  };
 
-  test('the hero is the gear alone, centred in the 320 x 280 column, its glyphs inside the column', () => {
-    expect(layout.hero.gear).toEqual({ rect: rect(240, 260, 320, 280) });
-    const [gearItem] = gear(rect(240, 260, 320, 280));
-    if (gearItem?.kind !== 'text') throw new Error('gear returns one text item');
+  test('the hero is the gear with its neighbours: the previous, the current and the next gear in one row', () => {
+    expect(layout.hero.gear).toEqual({ rect: rect(240, 260, 320, 280), neighbours: { gap: 16, ratio: 0.4 } });
+    // The ghosts are drawn first and read left to right, so the row is 3 4 5 across the column.
+    expect(cluster.map((i) => i.name)).toEqual(['hero.gear.below', 'hero.gear.above', 'hero.gear']);
+    expect([...cluster].sort((a, b) => a.rect.left - b.rect.left).map((i) => i.text)).toEqual(['3', '4', '5']);
+  });
+
+  test('the gear is 260 Bold, its cell centred in the 320 x 280 column and its box five pixels above the bottom slots', () => {
+    const gearItem = clusterItem('hero.gear');
     expect([gearItem.fontSize, gearItem.fontWeight]).toEqual([260, 'Bold']);
     expect(gearItem.rect).toEqual({ left: 332, top: 244, width: 140, height: 313 });
     // The cell, not the box, is centred: 136 in 320 leaves 92 either side.
     const cell = gearItem.monospace?.charWidth ?? 0;
     expect(Math.abs(gearItem.rect.left - 240 - (560 - (gearItem.rect.left + cell)))).toBeLessThanOrEqual(1);
+    expect(gearItem.rect.top + gearItem.rect.height).toBe(Math.max(...layout.slots.map((s) => s.top)) - 5);
+    // The cluster adds no box the plain gear would not have drawn, so the neighbours cost nothing down.
+    expect(gear(layout.hero.gear.rect)[0]).toEqual(gearItem);
+  });
+
+  test('the neighbours are 104 px SemiBold in the dim ink, 16 px off the gear cell either side, the row centred on the face', () => {
+    const below = clusterItem('hero.gear.below');
+    const above = clusterItem('hero.gear.above');
+    for (const ghost of [below, above]) {
+      expect([ghost.fontSize, ghost.fontWeight, ghost.textColor]).toEqual([104, 'SemiBold', '#33383F']);
+      // 0.4 of the gear, in the gear's own letter-wide cell: ceil(0.52 x 104) = 55, and 4 px of slack.
+      expect(ghost.monospace?.charWidth).toBe(55);
+      expect(ghost.rect.width).toBe(55 + 4);
+    }
+    expect(below.rect).toEqual({ left: 261, top: 338, width: 59, height: 126 });
+    expect(above.rect).toEqual({ left: 484, top: 338, width: 59, height: 126 });
+    const gearItem = clusterItem('hero.gear');
+    const cell = gearItem.monospace!.charWidth;
+    expect(gearItem.rect.left - (below.rect.left + below.monospace!.charWidth)).toBe(16);
+    expect(above.rect.left - (gearItem.rect.left + cell)).toBe(16);
+    // The cells are symmetric about the gear's, so what the row draws is centred on the face even
+    // though the boxes are not: each one takes its slack to the right.
+    expect((below.rect.left + above.rect.left + above.monospace!.charWidth) / 2).toBe(400);
+  });
+
+  test('the neighbour reads the gear as text, and the one above is hidden in the car top gear', () => {
+    const below = clusterItem('hero.gear.below');
+    const above = clusterItem('hero.gear.above');
+    // Mapped rather than added: SimHub publishes the gear as a string, so [Gear] + 1 is "31" in third.
+    expect(below.bindings?.Text?.formula).toContain("if(([DataCorePlugin.GameData.Gear]) = ('3'), '2'");
+    expect(above.bindings?.Text?.formula).toContain("if(([DataCorePlugin.GameData.Gear]) = ('3'), '4'");
+    for (const ghost of [below, above]) expect(ghost.bindings?.Text?.formula).not.toContain('+');
+    expect(below.bindings?.Visible).toBeUndefined();
+    expect(above.bindings?.Visible?.formula).toBeDefined();
+  });
+
+  test('a column too narrow for the row drops the neighbours rather than drawing them over a slot', () => {
+    // What the 480 round would do if it were given the cluster: its gear sits in the 160 px between
+    // two slots and the row needs 286, so the ghosts go and the gear keeps its size.
+    const narrow = { ...layout480round.hero.gear, neighbours: { gap: 16, ratio: 0.4 } };
+    expect(gearItems(narrow).map((i) => i.name)).toEqual(['hero.gear']);
+    expect(ghostedGearWidth(GEAR_SIZES.standard, { gap: 16, ratio: 0.4 })).toBe(286);
+    expect(narrow.rect.width).toBeLessThan(286);
   });
 
   test('the pit limiter is the standard 36 px block, 200 wide, centred over the gear and 48 px above the column', () => {

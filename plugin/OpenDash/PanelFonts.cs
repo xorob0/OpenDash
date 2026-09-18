@@ -20,6 +20,7 @@ namespace OpenDashPlugin
         {
             "Barlow-Regular.ttf",
             "Barlow-Medium.ttf",
+            "Barlow-SemiBold.ttf",
             "openDashDisplay-Light.ttf",
             "openDashDisplay-SemiBold.ttf",
             "openDashDisplay-Bold.ttf",

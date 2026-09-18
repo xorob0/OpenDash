@@ -17,6 +17,7 @@ import {
   main,
   MANIFEST_FILE,
   MANIFEST_SCHEMA_VERSION,
+  packImages,
   PANEL_FONTS_DIR,
   parseArgs,
   readVersion,
@@ -25,11 +26,29 @@ import {
   validateStripProfileOrThrow,
   type BuildResult,
 } from '../src/build.ts';
+import { chequerCount } from '../src/components/flagRing.ts';
 import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
+import { assetBox, imageOf, VENDORED_IMAGES_DIR, WHEEL_CHANGE_TICK } from '../src/design/assets.ts';
 import { fontsForPanel, needsRename, renameFamily, renamedFileName } from '../src/design/fontFiles.ts';
-import { FONT_LICENCE } from '../src/design/notices.ts';
-import { FONTS_DIR, isGuid, isNormalisedHex, ITEM_TYPES, leds, listFiles, PACKAGE_EXTENSION, readZip, stableGuid } from '../src/generator.ts';
+import { FONT_LICENCE, noticesForPackage } from '../src/design/notices.ts';
+import {
+  FONTS_DIR,
+  isGuid,
+  isNormalisedHex,
+  ITEM_TYPES,
+  leds,
+  listFiles,
+  PACKAGE_EXTENSION,
+  readZip,
+  RESOURCES_EXTENSION,
+  stableGuid,
+  subfamilyHasWeight,
+  writePackage,
+  zipPackage,
+  type DashPackage,
+  type ZippedPackage,
+} from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
 import { SCREEN_PACKAGES } from '../src/screens/index.ts';
@@ -39,6 +58,8 @@ import { ALL_SHAPES, deviceLength } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { ds } from '../src/tokens.ts';
+import { itemsOf } from '../src/walk.ts';
+import { familyOf, fontName, loadFont, NAME_ID } from '../../../tools/measure-font/measure.ts';
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 interface JsonItem {
@@ -63,7 +84,7 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-const FONT_FILES = [`${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/openDashDisplay-Bold.ttf`, `${FONTS_DIR}/openDashDisplay-SemiBold.ttf`];
+const FONT_FILES = [`${FONTS_DIR}/Barlow-Bold.ttf`, `${FONTS_DIR}/Barlow-Medium.ttf`, `${FONTS_DIR}/openDashDisplay-Bold.ttf`, `${FONTS_DIR}/openDashDisplay-SemiBold.ttf`];
 
 const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -224,11 +245,16 @@ describe('widget build on disk', () => {
       const bytes = readFileSync(p.zipped.path);
       expect(Buffer.compare(bytes, p.zipped.bytes)).toBe(0);
       // A card face carries cards.djson; a zone face carries one dashboard per distinct zone
-      // rectangle and catalogue, which the package itself is the list of.
+      // rectangle and catalogue, which the package itself is the list of. A dashboard that draws a
+      // picture carries its own sidecar beside the two, which the pit view's tick is the first of.
       const expected = [
         ...FONT_FILES,
         FONT_LICENCE.name,
-        ...p.pkg.dashboards.flatMap((d) => [`${d.name}.djson`, `${d.name}.djson.metadata`]),
+        ...p.pkg.dashboards.flatMap((d) => [
+          `${d.name}.djson`,
+          `${d.name}.djson.metadata`,
+          ...(d.images?.length ? [`${d.name}${RESOURCES_EXTENSION}`] : []),
+        ]),
       ]
         .sort(byCodeUnit)
         .map((f) => `${folder}/${f}`);
@@ -247,7 +273,7 @@ describe('widget build on disk', () => {
    * them under a family WPF will not fold into Barlow. What has to hold is that the difference is
    * exactly the rename and nothing else, which is checked by doing the rename here and comparing.
    */
-  test('the bundled fonts are the three face fonts as fonts/ holds them, renamed, in every package', () => {
+  test('the bundled fonts are the face fonts as fonts/ holds them, renamed, in every package', () => {
     for (const folder of FOLDERS) {
       const fontsDir = join(widget.out, folder, FONTS_DIR);
       expect(readdirSync(fontsDir).sort()).toEqual(FACE_FONT_FILES.map(renamedFileName).sort());
@@ -290,8 +316,27 @@ describe('widget build on disk', () => {
 });
 
 describe('the emitted JSON', () => {
-  const documents = (): { file: string; doc: JsonItem; text: string }[] =>
-    [widget, inline].flatMap((r) => FOLDERS.flatMap((folder) => djsonFiles(join(r.out, folder)).map((file) => ({ file, doc: readJson(file), text: readFileSync(file, 'utf8') }))));
+  /**
+   * Every dashboard the build writes, not only the card faces.
+   *
+   * It used to fold the two card builds over `FOLDERS` alone, which left the zone faces and both
+   * second screens outside every rule below it. Since the zone face became the dash face that is
+   * the surface the rules are most about, and the brand-colour guard in particular was watching the
+   * one part of the build it was not written for.
+   */
+  const documents = (): { file: string; doc: JsonItem; text: string }[] => {
+    const read = (file: string): { file: string; doc: JsonItem; text: string } => ({ file, doc: readJson(file), text: readFileSync(file, 'utf8') });
+    // The zone faces are a widget build only, since a zone is a widget: the inline build writes the
+    // card folders and nothing else, which is why the folders are read per build rather than in one
+    // list. The second screens are their own build and name their folders themselves.
+    const folders = (r: typeof widget): string[] => (r === widget ? [...FOLDERS, ...ZONE_FOLDERS] : FOLDERS);
+    return [
+      ...[widget, inline].flatMap((r) => folders(r).flatMap((folder) => djsonFiles(join(r.out, folder)).map(read))),
+      ...readdirSync(second.out, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .flatMap((e) => djsonFiles(join(second.out, e.name)).map(read)),
+    ];
+  };
 
   test('has $type as the first key of every item, one of the five kinds, with unique GUID ids', () => {
     for (const { file, doc } of documents()) {
@@ -322,9 +367,13 @@ describe('the emitted JSON', () => {
         expect(e.EllipseThickness === 12 || e.EllipseThickness === 3).toBe(true);
       }
       const rotated = items.filter((i) => 'Rotation' in i);
-      // 14 rev segments per layer (the one at the top is not rotated) and 23 checks (the one at the top is not).
-      // Three rev layers since ADR 0014: the car's own ladder, SimHub's bands, and the plain RPM bar.
-      expect(rotated).toHaveLength(14 * 3 + 23);
+      const { flags } = layout.hero;
+      if (flags.kind !== 'flagRing') throw new Error(`${layout.folder} draws no flag ring`);
+      // 14 rev segments per layer (the one at the top is not rotated) and every check of the ring,
+      // which the larger face carries more of, none of them at the top since the chequer took the
+      // band's phase and starts half a step in. Three rev layers since ADR 0014: the car's own
+      // ladder, SimHub's bands, and the plain RPM bar.
+      expect(rotated).toHaveLength(14 * 3 + chequerCount(flags.face));
       for (const r of rotated) {
         const keys = Object.keys(r);
         expect(keys.indexOf('Rotation')).toBe(keys.indexOf('Height') + 1);
@@ -339,10 +388,15 @@ describe('the emitted JSON', () => {
 
   test('writes every colour as #AARRGGBB', () => {
     for (const { file, doc, text } of documents()) {
-      const colours = stringsOf(doc).filter((s) => s.value.startsWith('#'));
+      // Not every string opening with a hash is a colour: the board's number column is headed with
+      // a bare "#", and a drawn character is a `Text` rather than a colour key. The rest of the
+      // rule stands, so a malformed colour under any other key still fails here.
+      const colours = stringsOf(doc).filter((s) => s.value.startsWith('#') && s.key !== 'Text');
       expect(colours.length).toBeGreaterThan(0);
       for (const c of colours) expect({ file, ...c, ok: isNormalisedHex(c.value) }).toEqual({ file, ...c, ok: true });
-      for (const m of text.matchAll(/"(#[0-9A-Za-z]*)"/g)) expect(m[1]).toMatch(/^#[0-9A-F]{8}$/);
+      // One or more characters after the hash, for the same reason: the bare "#" the board heads its
+      // number column with is a glyph. Anything longer is claiming to be a colour and must be one.
+      for (const m of text.matchAll(/"(#[0-9A-Za-z]+)"/g)) expect(m[1]).toMatch(/^#[0-9A-F]{8}$/);
       for (const key of ['BackgroundColor', 'TextColor', 'BorderColor', 'StartColor', 'EndColor', 'MiddleColor', 'FillColor', 'EllipseColor']) {
         for (const c of colours.filter((s) => s.key === key)) expect(c.value).toMatch(/^#[0-9A-F]{8}$/);
       }
@@ -532,6 +586,60 @@ describe('second screens on disk', () => {
   });
 });
 
+describe('the faces a package draws', () => {
+  /** Every package folder the two builds wrote: the card faces, the zone faces and the four screens. */
+  const written = (): string[] => [...[...FOLDERS, ...ZONE_FOLDERS].map((f) => join(widget.out, f)), ...SCREEN_PACKAGES.map((s) => join(second.out, s.folder))];
+
+  /** The faces a written folder ships, read out of the name table of each file in `_SHFonts/`. */
+  const facesOf = (folder: string): { family: string; subfamily: string }[] =>
+    readdirSync(join(folder, FONTS_DIR))
+      .filter((f) => f.toLowerCase().endsWith('.ttf'))
+      .map((f) => {
+        const font = loadFont(join(folder, FONTS_DIR, f));
+        return { family: familyOf(font) ?? '', subfamily: fontName(font, NAME_ID.typographicSubfamily) ?? fontName(font, NAME_ID.subfamily) ?? '' };
+      });
+
+  /** Every distinct family and weight the written .djson files of a folder draw in. */
+  const drawnBy = (folder: string): [family: string, weight: string][] => {
+    const drawn = new Map<string, [string, string]>();
+    for (const file of djsonFiles(folder)) {
+      for (const item of itemsOfDocument(readJson(file))) {
+        if (typeof item.Font === 'string' && typeof item.FontWeight === 'string') drawn.set(`${item.Font} ${item.FontWeight}`, [item.Font, item.FontWeight]);
+      }
+    }
+    return [...drawn.values()];
+  };
+
+  test('every weight a package draws is a file that package ships', () => {
+    // The gate in build.ts refuses this on the model; this asks it of what SimHub would actually
+    // import, since a face is shipped only once it is in `_SHFonts/`. A weight with no file is
+    // resolved by WPF to whatever it can find, so every advance in design/advances.ts, and the fit
+    // textFit.test.ts proved with it, would belong to a face the package does not carry.
+    for (const folder of written()) {
+      const faces = facesOf(folder);
+      const unshipped = drawnBy(folder).filter(([family, weight]) => !faces.some((f) => f.family === family && subfamilyHasWeight(f.subfamily, weight)));
+      expect({ folder: basename(folder), unshipped }).toEqual({ folder: basename(folder), unshipped: [] });
+    }
+  });
+
+  test('the faces drawn are the three the tokens name, the flag name in Bold, and the wordmark Light on a pit wall', () => {
+    const drawn = (folder: string): string[] => drawnBy(folder).map(([family, weight]) => `${family} ${weight}`).sort();
+    const face = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`].sort();
+    // The flag band writes its name in the artboards' 700. The round faces name no flag, drawing
+    // the ring instead, and the nano's card face draws no label at all, so those three keep the
+    // three the tokens name.
+    const NO_FLAG_NAME = ['openDash 480 round', 'openDash 800 round', 'openDash slots 800x286'];
+    for (const folder of [...FOLDERS, ...ZONE_FOLDERS]) {
+      const expected = NO_FLAG_NAME.includes(folder) ? face : [...face, `${ds.font.label} Bold`].sort();
+      expect([folder, drawn(join(widget.out, folder))]).toEqual([folder, expected]);
+    }
+    for (const screen of SCREEN_PACKAGES) {
+      const wordmark = screen.kind === 'pitwall' ? [`${ds.font.data} Light`] : [];
+      expect([screen.folder, drawn(join(second.out, screen.folder))]).toEqual([screen.folder, [...face, ...wordmark].sort()]);
+    }
+  });
+});
+
 describe('validation gate', () => {
   test('a package that fails validation throws and writes nothing', () => {
     const rules = layout1920x480.rules;
@@ -557,6 +665,22 @@ describe('validation gate', () => {
       validateOrThrow(pkg);
     } catch (e) {
       expect((e as BuildError).issues.map((i) => i.code)).toEqual(['property/undeclared']);
+    }
+  });
+
+  test('an item drawn in a weight the package does not ship is an error', () => {
+    // A warning would be printed and the package written anyway, which is how a run measured in
+    // one face and drawn in another would reach a rig. Light is the case at hand: the second
+    // screens ship it for the wordmark and a face package does not.
+    const pkg = buildPackage(layout1920x480, { version: '0.0.0-test' });
+    const text = itemsOf(pkg.dashboards[0]!).find((i) => i.kind === 'text');
+    expect(text).toBeDefined();
+    text!.fontWeight = 'Light';
+    expect(() => validateOrThrow(pkg)).toThrow(/does not ship/);
+    try {
+      validateOrThrow(pkg);
+    } catch (e) {
+      expect((e as BuildError).issues.map((i) => i.code)).toEqual(['font/weight-missing']);
     }
   });
 
@@ -624,6 +748,67 @@ describe('command line', () => {
     expect(readVersion()).toMatch(/^\d+\.\d+\.\d+/);
     expect(readVersion()).toBe(readFileSync(join(import.meta.dir, '..', '..', '..', 'VERSION'), 'utf8').trim());
     expect(() => readVersion(join(root, 'missing'))).toThrow(/cannot read/);
+  });
+});
+
+/**
+ * The picture path, end to end: an item draws an asset, the packer declares it on the dashboard it
+ * landed on, and the file reaches the archive inside the `.ressources` sidecar.
+ *
+ * Asserted on a card package composed here rather than on a shipped one, because the card faces
+ * draw no picture of their own: the pit view's tick is the first drawing to use an asset, and it
+ * lands on the zone faces and the second screens instead. The registry, the packer and the sidecar
+ * are therefore kept known good on a package whose contents this test controls.
+ */
+describe('an image asset reaches the archive', () => {
+  const tick = imageOf(WHEEL_CHANGE_TICK);
+  const folder = layout1920x480.folder;
+  const drawing = (name: string): DashPackage => {
+    const pkg = buildPackage(layout1920x480, { version: '0.0.0-test' });
+    pkg.dashboards[0]!.screens[0]!.items.push({ kind: 'image', name: 'tyre.fl.change', image: name, rect: assetBox({ left: 0, top: 0, width: 40, height: 40 }, tick) });
+    return pkg;
+  };
+
+  let out: string;
+  let pkg: DashPackage;
+  let zipped: ZippedPackage;
+  beforeAll(() => {
+    out = join(root, 'images');
+    pkg = drawing(WHEEL_CHANGE_TICK.name);
+    packImages(pkg);
+    pkg.notices = noticesForPackage(pkg);
+    writePackage(pkg, out);
+    zipped = zipPackage(out, folder);
+  });
+
+  test('the dashboard declares the asset its own items draw, and only that one', () => {
+    expect(pkg.dashboards[0]!.images).toEqual([tick]);
+    // cards.djson draws no picture, so it gets no Images list and no sidecar of its own.
+    expect(pkg.dashboards[1]!.images).toBeUndefined();
+    expect(validateOrThrow(pkg)).toEqual([]);
+  });
+
+  test('the descriptor states the file that is packed beside it', () => {
+    const bytes = new Uint8Array(readFileSync(join(VENDORED_IMAGES_DIR, WHEEL_CHANGE_TICK.file)));
+    const doc = readJson(join(out, folder, `${folder}.djson`));
+    expect(doc.Images).toEqual([
+      { Name: WHEEL_CHANGE_TICK.name, Extension: '.png', Modified: false, Optimized: false, Width: tick.width, Height: tick.height, Length: bytes.length, MD5: tick.md5 },
+    ]);
+    expect(itemsOfDocument(doc).filter((i) => i.$type === ITEM_TYPES.image).map((i) => i.Image)).toEqual([WHEEL_CHANGE_TICK.name]);
+  });
+
+  test('the file travels in the sidecar, and the sidecar in the .simhubdash', () => {
+    const sidecar = join(out, folder, `${folder}${RESOURCES_EXTENSION}`);
+    expect(existsSync(sidecar)).toBe(true);
+    const packed = readZip(new Uint8Array(readFileSync(sidecar)));
+    expect(Object.keys(packed)).toEqual([`${WHEEL_CHANGE_TICK.name}.png`]);
+    expect(packed[`${WHEEL_CHANGE_TICK.name}.png`]).toEqual(new Uint8Array(readFileSync(join(VENDORED_IMAGES_DIR, WHEEL_CHANGE_TICK.file))));
+    expect(zipped.entries).toContain(`${folder}/${folder}${RESOURCES_EXTENSION}`);
+  });
+
+  test('a drawing whose picture no asset claims fails the build rather than shipping a hole', () => {
+    expect(() => packImages(drawing('mdi-car-brake-abs'))).toThrow(BuildError);
+    expect(() => packImages(drawing('mdi-car-brake-abs'))).toThrow(/not an asset/);
   });
 });
 

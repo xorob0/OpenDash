@@ -72,6 +72,22 @@ Two consequences follow for the catalogue:
   comes from. Ten fields, not eleven. Drawing a field that can never have a value is worse than
   not offering it.
 
+### State that is SimHub's own
+
+One could think that the refusal above forbids every value which depends on what happened a moment
+ago. In reality it forbids only a place of our own in which such a value is kept. SimHub's
+`changed(ms, value)` reports that a property has moved within a window, and it is dispatched by the
+engine and declared in `ncalcFunctions.ts`; the window is state, but it is SimHub's state, kept and
+aged by SimHub, and an expression that asks for it is reading a property exactly as
+`Fuel_RemainingLaps` is read. Thus an alert which must stand for a few seconds after a count moves,
+of which the incident notice is the first, is written with `changed()` rather than waiting on
+#167, and the package remains complete on its own, since a dashboard installed without the
+plugin evaluates the same window.
+
+The allowance is for reading what the host already remembers and does not extend to `setvalue` and
+`getvalue`, with which an expression would keep state of its own. Those would be a computing plugin
+written in NCalc, which is the thing this record refuses, and they remain unused.
+
 ## What would reopen this
 
 An expression is not a good place for arithmetic that is long, shared between many items, or

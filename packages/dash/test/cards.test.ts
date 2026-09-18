@@ -44,13 +44,24 @@ describe('cards', () => {
     const items = CARDS[1]!.build(rect(0, 0, 255, 187), 'x.');
     const [label, value] = items;
     if (label?.kind !== 'text' || value?.kind !== 'text') throw new Error('readout');
-    expect(label.rect).toEqual({ left: 16, top: 51, width: 223, height: 19 });
+    expect(label.rect).toEqual({ left: 16, top: 50, width: 223, height: 19 });
     // 220 px of cells plus the slack that keeps WPF from clipping the last glyph.
     expect(value.rect).toEqual({ left: 16, top: 65, width: 224, height: 78 });
     expect(value.fontSize).toBe(64);
     const grid = CARDS[10]!.build(rect(0, 0, 255, 187), 'x.');
-    const rects = grid.map((i) => ('rect' in i ? [i.rect.left, i.rect.top] : null));
-    expect(rects).toEqual([[16, 35], [16, 50], [136, 50], [16, 100], [136, 100]]);
+    const placed = (items: typeof grid, name: string) => {
+      const item = items.find((i) => i.name === name);
+      if (item?.kind !== 'text') throw new Error(`${name} is not a text item`);
+      return [item.rect.left, item.rect.top, item.fontSize];
+    };
+    const corners = ['x.fl', 'x.fr', 'x.rl', 'x.rr'];
+    expect(['x.label', ...corners].map((n) => placed(grid, n))).toEqual([[16, 30, 15], [16, 49, 34], [137, 49, 34], [16, 104, 34], [137, 104, 34]]);
+    // At rung L the tread left follows the temperature on a second line, its per-cent sign after
+    // the cells; the shorter slots keep the plain numerals and drop both.
+    expect(['x.fl.sub', 'x.fl.subunit'].map((n) => placed(grid, n))).toEqual([[16, 87, 13], [37, 87, 13]]);
+    for (const shorter of [rect(0, 0, 223, 156), rect(0, 0, 140, 104)]) {
+      expect(CARDS[10]!.build(shorter, 'x.').map((i) => i.name)).toEqual(['x.label', ...corners]);
+    }
     const row = CARDS[4]!.build(rect(0, 0, 255, 187), 'x.');
     const denominator = row[2];
     if (denominator?.kind !== 'text') throw new Error('denominator');

@@ -34,12 +34,126 @@ namespace OpenDashPlugin
 
         /// <summary>"1280 × 480", as the panel writes a size.</summary>
         public string SizeLabel { get { return Width + " × " + Height; } }
+
+        /// <summary>
+        /// What the panel calls this package: "Main DDU", or the folder where the design names none.
+        /// </summary>
+        /// <remarks>
+        /// The folder is the fallback rather than a refusal because it is what SimHub's own dashboard
+        /// list shows, so a package the design has not named is still findable by the word both places
+        /// print. Eight of the fourteen a release carries are in that state.
+        /// </remarks>
+        public string DisplayName
+        {
+            get
+            {
+                var named = PackageCatalogue.NameFor(Folder);
+                return named ?? Folder ?? string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// The size line the design gives this package, and null where it names none.
+        /// </summary>
+        /// <remarks>
+        /// Null rather than the size, because the caller's own rendering carries more than a size: the
+        /// one kind the canvas draws no icon for is written on that line instead, and a package whose
+        /// size could not be read has none to write. A caption here overrides both, which is how the
+        /// round face reads "480 round" where its pixels say 480 × 480.
+        /// </remarks>
+        public string SizeCaption
+        {
+            get { return PackageCatalogue.CaptionFor(Folder); }
+        }
     }
 
     public static class PackageCatalogue
     {
         /// <summary>The folder of the 1920x480 zone face, which is the one package whose name carries no size.</summary>
         public const string PrimaryFolder = "openDash";
+
+        /// <summary>One package the design names, with the size line it writes beside the name.</summary>
+        private sealed class NamedPackage
+        {
+            public NamedPackage(string folder, string name, string caption)
+            {
+                Folder = folder;
+                Name = name;
+                Caption = caption;
+            }
+
+            public string Folder { get; private set; }
+            public string Name { get; private set; }
+            public string Caption { get; private set; }
+        }
+
+        /// <summary>
+        /// The packages the design names, in the order it lists them.
+        /// </summary>
+        /// <remarks>
+        /// Keyed on the folder, which is the one identity a package keeps from the dash build through the
+        /// zip into DashTemplates. That makes this a fourth place knowing those folder names, beside
+        /// PrimaryFolder, DashboardInstaller.PrimaryFolder and the layouts' own `folder` fields, so
+        /// PackageCatalogueTests reads the dash sources back and fails the build when one is renamed on
+        /// one side only.
+        ///
+        /// The caption is written out rather than derived from the size because "480 round" is not a size
+        /// at all: that package is 480 × 480 pixels and round, and the shape is the fact a buyer of the
+        /// screen recognises. The rest match their metadata, which the tests pin.
+        ///
+        /// Six of the fourteen packages a release carries are here. Naming the other eight is the
+        /// author's and not this table's, so they keep the folder and the size line they have today.
+        /// </remarks>
+        private static readonly NamedPackage[] NamedPackages =
+        {
+            new NamedPackage(PrimaryFolder, "Main DDU", "1920 × 480"),
+            new NamedPackage("openDash 850x480", "Rim", "850 × 480"),
+            new NamedPackage("openDash Pit wall", "Pit wall", "1920 × 1080"),
+            new NamedPackage("openDash Companion", "Phone", "850 × 480"),
+            new NamedPackage("openDash 800x286", "Nano", "800 × 286"),
+            new NamedPackage("openDash 480 round", "Round", "480 round"),
+        };
+
+        /// <summary>Every folder the design names, for the test that pins them against the dash build.</summary>
+        internal static IEnumerable<string> NamedFolders()
+        {
+            foreach (var named in NamedPackages) yield return named.Folder;
+        }
+
+        /// <summary>The name the design gives a folder, or null where it gives none.</summary>
+        internal static string NameFor(string folder)
+        {
+            var named = Lookup(folder);
+            return named == null ? null : named.Name;
+        }
+
+        /// <summary>The size line the design gives a folder, or null where it gives none.</summary>
+        internal static string CaptionFor(string folder)
+        {
+            var named = Lookup(folder);
+            return named == null ? null : named.Caption;
+        }
+
+        private static NamedPackage Lookup(string folder)
+        {
+            if (string.IsNullOrEmpty(folder)) return null;
+            foreach (var named in NamedPackages)
+            {
+                if (string.Equals(named.Folder, folder, StringComparison.OrdinalIgnoreCase)) return named;
+            }
+            return null;
+        }
+
+        /// <summary>Where the design puts a folder in its own list, and behind every one of them a folder
+        /// it does not name.</summary>
+        private static int NamedOrder(string folder)
+        {
+            for (var i = 0; i < NamedPackages.Length; i++)
+            {
+                if (string.Equals(NamedPackages[i].Folder, folder, StringComparison.OrdinalIgnoreCase)) return i;
+            }
+            return int.MaxValue;
+        }
 
         /// <summary>
         /// What kind of screen a folder name and size describe.
@@ -48,6 +162,12 @@ namespace OpenDashPlugin
         /// Order matters. The slots faces carry a size that is also a zone face's, so they are recognised
         /// by their name before the size is consulted; the round faces are not in FACE_SIZES at all and
         /// fall through to slots, which is what they are (ADR 0006 leaves them on the card model).
+        ///
+        /// The design draws the round face with the face icon, which would want it classified as one, but
+        /// a kind is not a label: MigratedRig takes a screen's namespace from it, and a round face read as
+        /// a face would take "Face480x480" and attach a whole zone contract to a package that has no
+        /// zones, which ADR 0003 makes a published interface. So the kind stays what the package is and
+        /// the design's word for it is carried by the name table below instead.
         /// </remarks>
         public static string Classify(string folder, int width, int height)
         {
@@ -173,10 +293,14 @@ namespace OpenDashPlugin
                     report.Warn("Could not read the package " + name + ": " + ex.Message);
                 }
             }
-            // Faces first and largest first, then the companions and the pit walls, so that the list the
-            // panel offers opens on the thing most rigs are adding.
+            // The packages the design names first, in its order, which is neither by kind nor by size: it
+            // opens on the main dash and puts the pit wall third, between the two screens a driver looks
+            // at. Everything it does not name keeps the old rule behind them -- faces largest first, then
+            // the companions and the pit walls -- so that a package the design has not reached is still
+            // offered somewhere sensible rather than at random.
             return entries
-                .OrderBy(entry => KindOrder(entry.Kind))
+                .OrderBy(entry => NamedOrder(entry.Folder))
+                .ThenBy(entry => KindOrder(entry.Kind))
                 .ThenByDescending(entry => entry.Width * entry.Height)
                 .ThenBy(entry => entry.Folder, StringComparer.Ordinal)
                 .ToList();

@@ -12,8 +12,10 @@ namespace OpenDashPlugin.Tests
 {
     public class ThemeTests
     {
+        /// <summary>A constant and the token path its trailing comment names. The sign belongs to the
+        /// value, because a tracking token is negative and would otherwise go unread and unheld.</summary>
         private static readonly Regex Constant = new Regex(
-            @"public const (?<type>string|double) (?<name>\w+) = (?<value>""[^""]*""|[0-9.]+);\s*//\s*(?<path>[\w.]+)",
+            @"public const (?<type>string|double) (?<name>\w+) = (?<value>""[^""]*""|-?[0-9.]+);\s*//\s*(?<path>[\w.]+)",
             RegexOptions.Compiled);
 
         public static IEnumerable<object[]> Constants()
@@ -57,7 +59,8 @@ namespace OpenDashPlugin.Tests
             }
         }
 
-        /// <summary>Walks a dotted path; a node with a "value" yields it, and a string of the form {a.b.c} is an alias.</summary>
+        /// <summary>Walks a dotted path; a node with a "value" yields it, a key sitting beside that "value" is
+        /// reached by naming it (control.focusRing.offset), and a string of the form {a.b.c} is an alias.</summary>
         private static JsonElement Resolve(JsonElement root, string path, int depth)
         {
             if (depth > 10) throw new InvalidDataException("alias loop at " + path);

@@ -3,7 +3,13 @@
        lives in /VERSION; it becomes the assembly, file and informational version of OpenDash.dll. -->
   <PropertyGroup>
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../VERSION').Trim())</Version>
-    <LangVersion>latest</LangVersion>
+    <!-- A version and not `latest`. `latest` is a floating token settled by whichever compiler reads
+         it, so the language ran ahead of the pinned target frameworks whenever a runner carried a
+         newer SDK, and `array.Reverse()` began binding to the in-place span overload instead of to
+         LINQ. That cost three separate fixes (2d2683d, 6397a11, and once more on this branch). 12.0
+         is the net8.0 default and is far above net48's own 7.3, so nothing loses a feature by it;
+         global.json pins the SDK beside this, and either alone would have prevented the last one. -->
+    <LangVersion>12.0</LangVersion>
     <Nullable>disable</Nullable>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>

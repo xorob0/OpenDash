@@ -1,13 +1,24 @@
 /**
  * The companion: a phone or a tablet beside the wheel showing one module at a time.
  *
- * Every module is a screen of one dashboard, in catalogue order, and the plugin decides which
- * screens exist by way of each screen's enabled expression. SimHub skips a disabled screen in its
- * Next/Previous ring, so a user who turns eight modules off pages through thirteen.
+ * Every module is a screen of one dashboard, in catalogue order, and **the plugin decides which one
+ * is up**: a screen is enabled when the rotation leaves its module on and `OpenDash.CompanionPage`
+ * names it, so exactly one of the twenty-one is enabled at any moment and SimHub shows that one.
+ * `EditorModel.CheckGameModeScreen` re-evaluates every screen's expression each frame and moves off
+ * a screen that has stopped being enabled, which is the same mechanism the two arrangements of a
+ * zone face are chosen by, and it is what gives the companion the two things a face already had: a
+ * module it opens on, and a module a held button shows.
+ *
+ * **What it costs is SimHub's own Next and Previous ring.** With one screen enabled the ring has
+ * nowhere to move to, so `CompanionNextModule` replaces it -- a plugin action bound to a wheel
+ * button, which advances past whatever the driver has turned off. A package installed without the
+ * plugin therefore opens on the first module and stays there, where before it could be paged; that
+ * is the price of a start page and a glance, and it is the same price the paged form would have
+ * charged.
  *
  * Every screen carries the same roles (in game and idle, not pit). SimHub only filters screens by
- * role when the roles differ between them, so keeping them identical means the ring works whether
- * or not a game is running, which is what a companion is for.
+ * role when the roles differ between them, so keeping them identical means the page shows whether or
+ * not a game is running, which is what a companion is for.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { MODULE_CATALOGUE, MODULE_COUNT, secondScreen } from '../contract.ts';
@@ -20,7 +31,12 @@ import { ds } from '../tokens.ts';
 
 /** Height of the page-dot row and of the flag band at the bottom edge. */
 export const DOTS_HEIGHT = 24;
-export const FLAG_HEIGHT = ds.indicator.flagBand.heightSm;
+/**
+ * The canvas draws a 12 px strip here, as on the nano face, too thin for a label; no token holds
+ * that value, so it is written locally as `layouts/800x286.ts` already does. The heightSm token is
+ * 32, which stole twenty pixels from the module body on all forty-two screens.
+ */
+export const FLAG_HEIGHT = 12;
 
 export interface CompanionSize {
   folder: string;
@@ -62,12 +78,12 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
     idle: true,
     pit: false,
     backgroundColor: ds.color.surface.base,
-    enabledExpression: secondScreen.moduleEnabled(page),
+    enabledExpression: secondScreen.moduleShown(page),
     items,
   };
 }
 
-/** The companion dashboard: 21 screens, one per module, in page order. */
+/** The companion dashboard: 21 screens, one per module, in page order, one of them enabled. */
 export function companionDashboard(size: CompanionSize, metadata: DashboardMetadata): Dashboard {
   return {
     name: size.folder,
