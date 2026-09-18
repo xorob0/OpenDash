@@ -26,6 +26,10 @@ dotnet test plugin/OpenDash.Tests
 dotnet build plugin/OpenDash -c Release
 ```
 
+Both workflows pin bun to the version in `bun install` above, for the same reason the SDK is pinned
+below: the TypeScript half carries 2,400 tests, and running them on whichever bun a runner happens to
+ship is the same gamble in a different language.
+
 `global.json` pins that 8, and it is there for a reason rather than out of caution. A newer compiler
 resolves `array.Reverse()` to the span overload in `System.MemoryExtensions`, which reverses in place
 and returns void, where the .NET 8 compiler resolves it to LINQ. The result is code that compiles on

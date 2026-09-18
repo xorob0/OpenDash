@@ -451,7 +451,10 @@ namespace OpenDashPlugin.Tests
             // ADR 0017 rests on that rewrite being total, so it is checked on the real thing rather
             // than only on a package shaped like it.
             var package = Path.Combine(RepoPaths.BuildOutput(), "openDash 1280x480.simhubdash");
-            if (!File.Exists(package)) return;
+            // Asserted rather than returned on. BuildOutputFact skips this class when there is no build
+            // at all, but it looks at openDash.simhubdash, and this test reads a different package; a
+            // quiet return would have let the whole case pass having checked nothing.
+            Assert.True(File.Exists(package), package + " is missing although the build output is present; run `bun run build`");
 
             int before;
             using (var zip = ZipFile.OpenRead(package))
