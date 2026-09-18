@@ -43,7 +43,13 @@ const PACKAGES = SCREEN_PACKAGES.map((def) => {
   packImages(pkg);
   return { def, pkg };
 });
-const BRAND = /#00E5FF/i;
+/**
+ * The three cyans the identity is drawn in, which is what `build.test.ts`, `layouts.test.ts` and
+ * `e2e.test.ts` all match on. This was `/#00E5FF/i`, a hexadecimal that appears nowhere in the
+ * repository and is no colour of openDash's, so the four checks below passed on any package
+ * whatever it drew and would have gone on passing the day cyan reached a companion.
+ */
+const BRAND = /#(33D9F2|5CE1F5|22909F)/i;
 
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
 const faceOf = (item: TextItem): MeasuredFace => {
@@ -86,6 +92,36 @@ describe('the packages are built and valid', () => {
 
     test(`${def.folder} draws no brand colour`, () => {
       expect(JSON.stringify(pkg.dashboards)).not.toMatch(BRAND);
+    });
+
+    /**
+     * Every value on a second screen is read from the sim, and the sample beside it in the source
+     * is what DashStudio draws rather than a number anybody may rely on.
+     *
+     * That held by authorship alone. A module shipping a literal where a binding belongs draws a
+     * figure that never changes, which is the one failure that survives every other check here: it
+     * fits its box, it stays on its canvas, it validates, and on a screen it is a plausible reading
+     * that happens to be frozen. The face a value is drawn in is what separates the two, so the
+     * selection is the data face rather than a list of item names: a value added tomorrow is
+     * measured the day it is added, and one renamed is still measured.
+     *
+     * The wordmark is the only chrome set in that face, being the identity's own pair of weights,
+     * and it is excluded by the two names it draws under. The page counters and the delta's axis
+     * ticks are chrome too, and they are outside the selection already because they are set in the
+     * label face; that was checked rather than assumed, and a counter that moved into the data face
+     * would arrive here as a failure asking which of the two it is.
+     */
+    test(`${def.folder} binds every value it draws`, () => {
+      const chrome = (name: string): boolean => name.endsWith('.wordmark.open') || name.endsWith('.wordmark.dash');
+      let values = 0;
+      for (const dashboard of pkg.dashboards) {
+        for (const item of textsOf(dashboard)) {
+          if (item.font !== ds.font.data || chrome(item.name)) continue;
+          values += 1;
+          expect({ dashboard: dashboard.name, item: item.name, text: item.text, bound: item.bindings?.Text?.formula !== undefined }).toMatchObject({ bound: true });
+        }
+      }
+      expect(values).toBeGreaterThan(0);
     });
 
     test(`${def.folder} fits every text in its box`, () => {
