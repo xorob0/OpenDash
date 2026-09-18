@@ -27,7 +27,7 @@ import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
 import type { Expr } from '../bind.ts';
 
-const { fmt, concat, str, iff, eq, gt, num, isnull, ucase, driver, game } = ncalc;
+const { fmt, concat, str, iff, eq, gt, num, isnull, ucase, driver, game, signed, raw } = ncalc;
 
 /** A pit wall panel draws at zone density: 24 px numerals, 13 px labels. */
 const DENSITY = 'zone' as const;
@@ -123,7 +123,7 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Lap delta' });
   const value = referenceDelta();
-  const deltaField = fld(ctxOf(body, `${name}.`), 'delta', 'VS SESSION BEST', { sample: '-0.21', bind: fmt(value, '0.00', true), chars: CHARS.delta, fs: d.big, colorBind: deltaColour(value) }, {
+  const deltaField = fld(ctxOf(body, `${name}.`), 'delta', 'VS SESSION BEST', { sample: '\u22120.21', bind: signed(value, '0.00'), chars: CHARS.delta, fs: d.big, colorBind: deltaColour(value) }, {
     labelBind: referenceLabel(),
     labelWidest: 'VS ALL-TIME BEST',
   });
@@ -219,9 +219,14 @@ export function trackPanel(name: string, frame: Rect): Item[] {
         fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
         fld(ctx, 'road', 'Road', { sample: '31', bind: fmt(roadTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
         fld(ctx, 'air', 'Air', { sample: '24', bind: fmt(airTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
-        fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }),
-        fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }),
-        fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(isnull(game('BrakeBias'), num(0)), '0.0'), chars: CHARS.setting, fs: d.small }),
+        // Each of the three hides where the car has no such control, which is the rule the settings
+        // bar and the car settings page both apply to the same readings: SimHub normalises traction
+        // control and ABS into `TCLevel` and `ABSLevel` and reports 0 for a car with neither, so a
+        // cell drawn unconditionally says the dial is turned off where there is no dial. The test is
+        // the raw iRacing field behind each, which is absent rather than zero.
+        fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(raw('dcTractionControl')) }),
+        fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(raw('dcABS')) }),
+        fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(isnull(game('BrakeBias'), num(0)), '0.0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(game('BrakeBias')) }),
       ],
       right,
       DENSITY,
@@ -249,6 +254,9 @@ const GEAR_RANGE = { min: -1, max: 8 } as const;
  * publishes it and every other sim would then trace a flat line at neutral, which is a picture of
  * data that is not there. Neutral and anything unrecognised fall to zero.
  */
+/** True while the sim publishes this reading at all, which is how a cell without a control hides. */
+const present = (expr: Expr): Expr => ncalc.not(ncalc.isNull(expr));
+
 const gearNumber = (): Expr =>
   Array.from({ length: GEAR_RANGE.max }, (_, i) => i + 1).reduce<Expr>(
     (fallback, g) => iff(eq(game('Gear'), str(String(g))), num(g), fallback),

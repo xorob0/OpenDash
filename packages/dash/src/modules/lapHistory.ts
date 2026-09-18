@@ -26,7 +26,7 @@ import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, pageKeeps } from './module.ts';
 import type { Archetype } from './shedding.ts';
 
-const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull } = ncalc;
+const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull, signed } = ncalc;
 
 /**
  * A delta this far behind the session best is drawn in caution, and twice that in danger.
@@ -112,7 +112,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
     ...(drawsDelta
       ? [
           numeral(`${ctx.prefix}row.delta`, '+0.594', deltaX, valueTop, fs, CHARS.delta, {
-            bind: fmt(delta, '0.000', true),
+            bind: signed(delta, '0.000'),
             colorBind: deltaColour,
             width: deltaWidth,
             hAlign: 'right',
