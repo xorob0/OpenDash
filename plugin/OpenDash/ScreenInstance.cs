@@ -61,6 +61,10 @@ namespace OpenDashPlugin
         /// <summary>The address the Web view zone shows; empty for none.</summary>
         public string WebViewUrl { get; set; }
 
+        /// <summary>Zone and page a held button shows on this pit wall, released back to where it was,
+        /// packed as zone index times a hundred plus the page the way a face's glance is.</summary>
+        public int PitWallQuickGlance { get; set; } = Contract.DefaultPitWallQuickGlance;
+
         /// <summary>Which modules are in the rotation. Null on a screen that is not a companion.</summary>
         public bool[] Modules { get; set; }
 
@@ -76,6 +80,10 @@ namespace OpenDashPlugin
         public int CompanionQuickGlance { get; set; } = Contract.DefaultCompanionQuickGlance;
 
         private int glanceRestore = -1;
+
+        /// <summary>Which zone a pit wall glance borrowed, so that the release gives back the one it
+        /// took. A companion has one page and needs no such thing.</summary>
+        private int glanceZone = -1;
 
         /// <summary>Whether a glance is being held here; a second press while one is does nothing.</summary>
         public bool GlanceHeld { get { return glanceRestore >= 0; } }
@@ -192,12 +200,14 @@ namespace OpenDashPlugin
                 Zones = zones;
                 WideZone = fresh ? Contract.DefaultWideZonePage : Contract.NormaliseWideZonePage(WideZone);
                 WebViewUrl = fresh ? Contract.DefaultWebViewUrl : Contract.NormaliseUrl(WebViewUrl);
+                PitWallQuickGlance = fresh ? Contract.DefaultPitWallQuickGlance : Contract.NormalisePitWallQuickGlance(PitWallQuickGlance);
             }
             else
             {
                 Zones = null;
                 WideZone = 0;
                 WebViewUrl = null;
+                PitWallQuickGlance = 0;
             }
 
             if (IsCompanion)
@@ -279,16 +289,29 @@ namespace OpenDashPlugin
         /// </remarks>
         public void BeginQuickGlance()
         {
-            if (!IsCompanion || GlanceHeld) return;
-            glanceRestore = CompanionPage;
-            CompanionPage = Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
+            if (GlanceHeld) return;
+            if (IsCompanion)
+            {
+                glanceRestore = CompanionPage;
+                CompanionPage = Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
+                return;
+            }
+            if (!IsPitWall || Zones == null) return;
+            var glance = Contract.NormalisePitWallQuickGlance(PitWallQuickGlance);
+            var zone = Contract.QuickGlanceZone(glance);
+            if (zone >= Zones.Length) return;
+            glanceZone = zone;
+            glanceRestore = Zones[zone];
+            Zones[zone] = Contract.QuickGlancePage(glance);
         }
 
-        /// <summary>Puts the companion back where it was. A release with no press does nothing.</summary>
+        /// <summary>Puts the screen back where it was. A release with no press does nothing.</summary>
         public void EndQuickGlance()
         {
             if (!GlanceHeld) return;
-            CompanionPage = glanceRestore;
+            if (IsCompanion) CompanionPage = glanceRestore;
+            else if (Zones != null && glanceZone >= 0 && glanceZone < Zones.Length) Zones[glanceZone] = glanceRestore;
+            glanceZone = -1;
             glanceRestore = -1;
         }
 
@@ -309,6 +332,7 @@ namespace OpenDashPlugin
                 Zones = Zones == null ? null : (int[])Zones.Clone(),
                 WideZone = WideZone,
                 WebViewUrl = WebViewUrl,
+                PitWallQuickGlance = PitWallQuickGlance,
                 Modules = Modules == null ? null : (bool[])Modules.Clone(),
                 CompanionPage = CompanionPage,
                 CompanionStart = CompanionStart,

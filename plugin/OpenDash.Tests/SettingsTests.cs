@@ -1534,6 +1534,36 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_pit_wall_glance_borrows_one_zone_and_gives_it_back()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindPitWall, 1920, 1080));
+            settings.Normalise();
+            var wall = settings.ScreenOf("PitWall");
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, wall.PitWallQuickGlance);
+
+            // Zone C, the relative by default, lent to the radar and handed back on release.
+            wall.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(2, 9);
+            settings.BeginScreenGlance("PitWall");
+            Assert.Equal(9, settings.ScreenZone("PitWall", "C"));
+            // The other zones stay where they are, and a second press while one is held does nothing.
+            Assert.Equal(Contract.PitWallDefaultZonePages[1], settings.ScreenZone("PitWall", "B"));
+            settings.BeginScreenGlance("PitWall");
+            settings.EndScreenGlance("PitWall");
+            Assert.Equal(Contract.PitWallDefaultZonePages[2], settings.ScreenZone("PitWall", "C"));
+            // A release with no press does nothing rather than restoring a page nobody took.
+            wall.Zones[2] = 6;
+            settings.EndScreenGlance("PitWall");
+            Assert.Equal(6, settings.ScreenZone("PitWall", "C"));
+
+            // A stored glance outside the catalogue reads as the default, and a screen the rig no
+            // longer holds reads the default too rather than throwing on SimHub's own thread.
+            wall.PitWallQuickGlance = 411;
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, settings.ScreenPitWallQuickGlance("PitWall"));
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, settings.ScreenPitWallQuickGlance("Gone"));
+        }
+
+        [Fact]
         public void The_five_actions_are_named_as_verbs()
         {
             // Five per face, because two faces on one rig have to cycle apart.

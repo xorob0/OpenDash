@@ -381,11 +381,22 @@ namespace OpenDashPlugin
             // A companion has two of its own: one that advances it past the modules the rotation
             // leaves off, and one held for a glance, which is the same pair a face has under other
             // names. They go through the manager for the same reason the face's do.
+            //
+            // A pit wall has the glance alone: it cycles nothing, every panel being on screen at once,
+            // but the canvas asks for a page called up on demand over a zone's assigned one and the
+            // hold is the same gesture under whatever SimHub binds it to.
             foreach (var screen in Settings.RigScreens())
             {
-                if (screen == null || !screen.IsCompanion) continue;
+                if (screen == null) continue;
                 var ns = screen.Namespace;
-                pluginManager.AddAction(Contract.NextModuleActionFor(ns), typeof(OpenDash), (manager, name) => Settings.CycleScreenModule(ns), null);
+                if (screen.IsCompanion)
+                {
+                    pluginManager.AddAction(Contract.NextModuleActionFor(ns), typeof(OpenDash), (manager, name) => Settings.CycleScreenModule(ns), null);
+                }
+                else if (!screen.IsPitWall)
+                {
+                    continue;
+                }
                 pluginManager.AddAction(
                     Contract.HoldQuickGlanceActionFor(ns),
                     typeof(OpenDash),

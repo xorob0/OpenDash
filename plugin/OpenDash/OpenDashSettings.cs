@@ -768,6 +768,13 @@ namespace OpenDashPlugin
             return screen == null ? Contract.DefaultWideZonePage : Contract.NormaliseWideZonePage(screen.WideZone);
         }
 
+        /// <summary>The zone and page a held button shows on one pit wall.</summary>
+        public int ScreenPitWallQuickGlance(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultPitWallQuickGlance : Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance);
+        }
+
         public string ScreenWebViewUrl(string ns)
         {
             var screen = ScreenByNamespace(ns);
