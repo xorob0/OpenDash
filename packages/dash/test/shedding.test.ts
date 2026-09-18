@@ -330,7 +330,19 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     '600x686 600x150 lapTimes': ['delta'],
     '600x686 600x150 sectors': ['yourBest', 'last', 'sessionBest'],
     '600x686 600x150 session': ['lap', 'timeLeft'],
-    '600x686 600x150 stint': ['stops', 'lastStop'],
+    // The gear keeps its two readings at every shape the table names, and drops them in the three
+    // boxes too short to draw the glyph beside them: the module hands the whole box back to the gear
+    // there rather than showing three things nobody can read. Declared as a shed the table did not
+    // make, because that is what it is -- the decision is the module's own and lives in its floor.
+    '600x686 600x150 gear': ['speed', 'rpm'],
+    '600x686 600x160 gear': ['speed', 'rpm'],
+    '800x286 269x194 gear': ['speed', 'rpm'],
+    // The stint's lead rank is now three clocks rather than three counts, so the two narrow zones
+    // that could hold its tail no longer can: the page keeps the lap and the fuel time, which is
+    // what it exists to say, and sheds the stint laps and the stops behind them. Same subject as
+    // the rest of this block -- readability-pass.md §13 -- and a wider zone still draws all eight.
+    '600x686 600x150 stint': ['stintLaps', 'stops'],
+    '800x286 269x194 stint': ['stintLaps', 'stops'],
     // The compound chip is centred over the tyre grid, which is the axle line between the two rows
     // of the car. These two zones are wide and short, so the page takes its four corners as one row
     // of four -- two rows of cells in 112 px leaves a corner one reading -- and a single row has no
