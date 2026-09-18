@@ -26,6 +26,7 @@ import {
   validateStripProfileOrThrow,
   type BuildResult,
 } from '../src/build.ts';
+import { chequerCount } from '../src/components/flagRing.ts';
 import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
 import { assetBox, imageOf, VENDORED_IMAGES_DIR, WHEEL_CHANGE_TICK } from '../src/design/assets.ts';
@@ -366,10 +367,13 @@ describe('the emitted JSON', () => {
         expect(e.EllipseThickness === 12 || e.EllipseThickness === 3).toBe(true);
       }
       const rotated = items.filter((i) => 'Rotation' in i);
-      // 14 rev segments per layer (the one at the top is not rotated) and all 24 checks, none of
-      // which sits at the top since the chequer took the band's phase and starts half a step in.
-      // Three rev layers since ADR 0014: the car's own ladder, SimHub's bands, and the plain RPM bar.
-      expect(rotated).toHaveLength(14 * 3 + 24);
+      const { flags } = layout.hero;
+      if (flags.kind !== 'flagRing') throw new Error(`${layout.folder} draws no flag ring`);
+      // 14 rev segments per layer (the one at the top is not rotated) and every check of the ring,
+      // which the larger face carries more of, none of them at the top since the chequer took the
+      // band's phase and starts half a step in. Three rev layers since ADR 0014: the car's own
+      // ladder, SimHub's bands, and the plain RPM bar.
+      expect(rotated).toHaveLength(14 * 3 + chequerCount(flags.face));
       for (const r of rotated) {
         const keys = Object.keys(r);
         expect(keys.indexOf('Rotation')).toBe(keys.indexOf('Height') + 1);
