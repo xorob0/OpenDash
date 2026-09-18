@@ -312,6 +312,10 @@ describe('plugin mirror', () => {
     expect(source).toContain(`public const string DefaultRevBar = ${revBarConst(DEFAULTS.RevBar)};`);
     expect(source).toContain(`FlagFormats = ${csArray(FLAG_FORMATS)};`);
     expect(source).toContain(`public const string DefaultFlagFormat = "${DEFAULT_FLAG_FORMAT}";`);
+    // And offered on the panel, which is the half of a setting that makes it one. The format was
+    // declared, mirrored and attached with nothing in the panel writing it, so the only way to draw
+    // a flag over the body was to hand-edit the settings file.
+    expect(panelSource()).toContain('Contract.FlagFormats');
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);

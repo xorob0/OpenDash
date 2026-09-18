@@ -42,11 +42,36 @@ namespace OpenDashPlugin
                     BodyWidth),
                 BuildFacePicture(screen, face),
                 BuildStripCaption(face),
+                BuildFlagFormatRow(screen),
                 BuildFaceWarning(screen),
                 BuildWheelButtons(screen, face),
             };
             RefreshFaceWarning(screen);
             return Ui.VStack(12, rows.ToArray());
+        }
+
+        /// <summary>Which of the two formats a flag takes on this screen.</summary>
+        /// <remarks>
+        /// On the screen's own pane rather than on the Data tab, because it is the one flag setting that
+        /// is not the same decision everywhere: a rig with a rim and a display in the corner of the eye
+        /// wants the rim readable and the corner impossible to miss. Both formats are built into every
+        /// face and SimHub shows the one this picks, as it does with the rev bar, so the choice costs no
+        /// reinstall. Under the plan of the face rather than above it, since the plan is what shows where
+        /// band D and the body are.
+        /// </remarks>
+        private FrameworkElement BuildFlagFormatRow(ScreenInstance screen)
+        {
+            var control = BuildSegmented(Contract.FlagFormats, new[] { "Band D", "Full screen" }, Settings.ScreenFlagFormat(screen.Namespace), value =>
+            {
+                screen.FlagFormat = value;
+                Save();
+            });
+            var row = Ui.Row(
+                "Flags",
+                "Band D hands a flag the strip at the foot. Full screen hands it zones B, A and C together, which cannot be missed and takes the gear with it for as long as the flag is out.",
+                control);
+            row.Width = BodyWidth;
+            return row;
         }
 
         private TextBlock BuildStripCaption(Contract.FaceSize face)
