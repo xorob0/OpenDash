@@ -12,6 +12,116 @@ including any that the plugin does not install.
 From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
 strips, the brows and the flag box, together with a `manifest.json` listing everything published.
 
+## 0.3.0-rc.2 (2026-09-18)
+
+The candidate that puts the zones back on the screen. In 0.3.0-rc.1 a single corner radius was
+computed as 3.5999999999999996 and written into a field SimHub reads as an integer, and because
+SimHub refuses the whole file rather than that one number, every screen made of the module
+sub-dashboard drew nothing at all: zone B, zone C, both companions and every zone of every pit wall.
+Nothing reached the log, which is why the rest of the face drew normally around an empty middle. If
+you installed rc.1, this is the release to replace it with.
+
+Besides that, the rig model finishes the move the screens began. An RGB strip is something you add
+and name, with the settings its own profile reads, rather than a shape the whole rig answers for at
+once, and a flag box panel is an instance in the same way. Moreover, the rev bar became a per-screen
+answer, so a rim whose wheel already carries LEDs across its top and a display on the desk beside it
+are no longer switched off together. A rig therefore starts with no strips and no panels, while a
+settings file written against rc.1 keeps whatever was doing something in it.
+
+Two of the readings below were simply wrong before the sim had measured a lap, and both concern
+fuel: on an idle screen the tank read as low in five places at once, and band D estimated zero laps
+remaining rather than saying that it had no estimate.
+
+### Added
+
+- **An LED bar is a strip you added, with settings of its own.** A bar has a name, a shape and a
+  namespace frozen at creation, the way a screen does ([ADR 0017](docs/decisions/0017-a-screen-is-an-instance.md)):
+  adding one installs a profile of that name into SimHub, and that profile is the embedded one with
+  the bar's namespace written through its three settings, so a wheel and a brow on one rig can
+  finally be told to show different things in their middles, to fill their ladders differently and to
+  animate a flag or to hold it. Removing the bar takes the profile back out. What is the rig's stays
+  the rig's, which is brightness, night mode, the low-fuel threshold and the car's own shift pattern.
+  A rig starts with no bars, because a profile paints hardware somebody owns and openDash does not
+  guess at what that is ([ADR 0013](docs/decisions/0013-lighting-hardware.md)).
+- **A matrix panel is an instance as well.** Four numbered groups of eleven settings, one of them
+  switched on because it happened to be first, is a page for hardware most people own none of. Add
+  one, give it the name you will recognise it by, and it arrives working. A settings file written
+  before this keeps every slot that was doing something, which on the shipped defaults is matrix 1
+  alone, so nobody's box goes dark because the model under it changed.
+- **The rev bar is per screen.** `OpenDash.<Face>RevBar` falls back to the rig-wide `OpenDash.RevBar`,
+  which still falls back to the deprecated `ShiftLights`, so a settings file written before this
+  keeps drawing what its owner chose until they answer one face individually. The row moved from the
+  Data tab onto each face's own pane, above the flag format; the card faces own no properties at all,
+  so theirs keeps writing the rig-wide name and says so where it is drawn.
+- **A screen can change size** without being removed and added again, which had been throwing away
+  its zones and every wheel button bound to it. The namespace is frozen through a resize as it is
+  through a rename, so the settings and the bindings survive and only the folder is rewritten.
+- **A 4/8/4 wheel**, being sides of four around a centre of eight. The table carried 4/9/4 and 4/14/4
+  either side of it and nothing at eight, so a wheel of that geometry had to borrow a profile that
+  paints one LED it does not have. Twenty-two profiles are built now, being twenty-one shapes and the
+  flag box.
+- **The redline flash on the flag box is a switch per panel.** `FlagBoxMatrix<N>GearBlink` is on by
+  default, and turning it off leaves the digit in its redline colour, so nothing is lost but the
+  strobe. The flash is the box repeating what the rev bar and the strip have already said twice,
+  which is worth answering for one box and not for another, for the reason every other flag box
+  setting became per panel.
+
+### Changed
+
+- **Adding a screen asks what it is first.** It had been one drop-down of every package the build
+  carries, reading "480 × 850 · companion", which is two questions at once in a vocabulary a driver
+  has no reason to know. The question now is what kind of screen, then how big only where there is a
+  choice, and for the companion and the pit wall that second question is which way round rather than
+  a resolution. Every kind says in one line what it is, and the name box opens on something
+  recognisable.
+- **The gear fills the flag box panel.** The digit was a 5 by 7 glyph dropped into the corner of the
+  8 by 8 grid, with one column of margin on the left, two on the right and the bottom row dark, so it
+  read as small and off-centre beside a flag that filled the panel, and a driver counted the row and
+  the column that never lit. The font is redrawn on the whole panel with two-pixel strokes, and 6, 8
+  and 9 are one family with one stroke between them, which is the only difference that survives sixty
+  pixels read in peripheral vision.
+- **The Install tab is a census rather than a place to install.** Its strip rows say which shapes this
+  build draws for, and whether anything of ours is in SimHub for them; its package rows lose their
+  Add, a screen not being a package, and a row that knows only the package could offer neither a name
+  nor a size. Installing happens where the screen or the bar is.
+- **The shape list opens on a wheel** rather than on "0/10/0", which is a bare run nobody owns: it was
+  sorted by id where the canvas's own row order opens on the wheels. The name box opens on a name of
+  ours in the same way, so the row it installs into SimHub's LED profile list reads as openDash's
+  rather than as a bare geometry among everybody else's profiles.
+
+### Fixed
+
+- **Every module page drew nothing.** `JsonTextReader.ReadAsInt32` throws on "3.5999999999999996"
+  rather than truncating it, and the throw unwinds `EditorModel.LoadFromFile`, so one
+  `BorderStyle.RadiusTopLeft` computed as 0.2 × 18 cost the whole file. In 0.3.0-rc.1 that file was
+  the module sub-dashboard, which is what zone B, zone C, both companions and every pit wall zone are
+  made of. The serialiser now rounds all eight of `BorderStyle`'s numbers, which are `int` in SimHub,
+  and `intFields.ts` is the backstop for the fields nothing rounds: the public integer properties of
+  every `GraphicalDash` class, read out of the decompiled 9.12.6 assembly, at which a document
+  holding a fraction is refused outright and every composed package is checked, so this cannot reach
+  a driver again.
+- **A tank was low before the sim knew what a lap costs.** SimHub publishes `Fuel_RemainingLaps` as
+  zero rather than null before a lap has been run, so "under the threshold" was true at every idle
+  screen, and one sentence feeds five drawings: the band's fuel telltale, the fuel pop-up, the flag
+  box's low-fuel warning, the strip's low-fuel state and the zone telltale, every one of them lit
+  while nothing was running. `tankIsLow` now asks for a per-lap consumption first, which is the gate
+  the fuel module already draws its own estimate behind.
+- **Band D estimated zero laps** beside a tank the sim had not measured, which is a reading with
+  nobody behind it stated with the confidence of a number. It says it has no estimate instead, behind
+  that same consumption gate.
+- **The class filter drew as a white disc** over most of zone B and zone C. SimHub's `SHToggleButton`
+  declares no size of its own and grows to whatever it is measured against, and this one was docked
+  to the bottom of a cell as tall as the face's body, where every other switch on the panel sits in a
+  row of automatic height. It is measured inside a vertical stack now, which asks the same question
+  the rows ask.
+- **Two screens could own one DashTemplates folder**, so removing one deleted the other's dashboard.
+- **The mirror was computed only when one setting asked for it**, so a second bar set to the car's own
+  pattern would have read a run that nothing filled. Anything on the rig asking for it is sufficient
+  now.
+- The line after adding a screen named the folder, whereas SimHub lists a dashboard under its title,
+  which is the name the driver has just chosen. The two remove links read "Remove", the longer words
+  having been cut off at the panel's edge once a group was indented inside its section.
+
 ## 0.3.0-rc.1 (2026-09-18)
 
 The candidate that finishes the zone face. The whole design canvas was measured against the build,
