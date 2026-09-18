@@ -168,7 +168,7 @@ export function fieldWidth(spec: FieldSpec, density: Density): number {
 export function fieldHeight(spec: FieldSpec, density: Density): number {
   const d = densityOf(density);
   const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
-  const labelPart = hasLabel ? d.label + (spec.labelBelow ? LABEL_BELOW_GAP : d.fieldGap) : 0;
+  const labelPart = hasLabel ? d.labelRow + (spec.labelBelow ? LABEL_BELOW_GAP : d.fieldGap) : 0;
   return labelPart + spec.value.fs + fieldTail(spec, density);
 }
 
@@ -210,11 +210,15 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   const items: Item[] = [];
   const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
   const below = hasLabel && spec.labelBelow === true;
-  const valueY = bottom - spec.value.fs - (below ? d.label + LABEL_BELOW_GAP : 0);
+  const valueY = bottom - spec.value.fs - (below ? d.labelRow + LABEL_BELOW_GAP : 0);
   const width = maxWidth ?? fieldWidth(spec, density);
   if (hasLabel) {
+    // The row is the sheets' 13 px and the run inside it is the ramp's 15, centred: `label` takes
+    // the run's own line box, so the row's top is offset by half the difference the way
+    // `bandPages.ts` offsets its own.
+    const rowTop = below ? bottom - d.labelRow : valueY - d.fieldGap - d.labelRow;
     items.push(
-      label(`${spec.name}.label`, spec.label, x, below ? bottom - d.label : valueY - d.fieldGap - d.label, width, {
+      label(`${spec.name}.label`, spec.label, x, rowTop + (d.labelRow - d.label) / 2, width, {
         size: d.label,
         bind: spec.labelBind,
         // `fieldWidth` already cuts the box from `labelWidest`; handing it on is what lets the fit
