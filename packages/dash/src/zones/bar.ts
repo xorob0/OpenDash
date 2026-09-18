@@ -21,31 +21,27 @@ import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Ch
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { rank, type RankMember } from '../second/rank.ts';
+import { TRACKED_VALUES } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
 import {
   CHARS,
-  absLevel,
   airTemperature,
   antiRollFront,
-  antiRollRear,
-  brakeBias,
   classOpponentCount,
   clock,
   currentLap,
-  fuelMixture,
   incidents,
   localClock,
   opponentCount,
   playerClass,
   sessionTimeLeft,
   simClock,
-  tcLevel,
   totalLaps,
   roadTemperature,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { fmt, isnull, num, str, iff, eq, game, concat, raw, driver, playerPosition } = ncalc;
+const { fmt, isnull, num, str, iff, eq, game, concat, driver, playerPosition } = ncalc;
 
 /**
  * What every artboard draws the same way, whatever the bar's height: twenty pixels of side
@@ -128,18 +124,14 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
 ];
 
 /**
- * One cell of the car settings strip: what it reads, what it is called, and what says the car has
- * the setting at all.
+ * One cell of the car settings strip: a tracked value, under the short name the strip calls it by.
  *
- * `present` exists because for two of the seven the two are not the same property. SimHub
- * normalises traction control and ABS into `TCLevel` and `ABSLevel` and reports **0** for a car
- * that has neither control, which is indistinguishable from a car whose driver has turned them
- * off. What says the car has the control is the raw iRacing field behind it, `dcTractionControl`
- * and `dcABS`, which is simply absent on a car without it. The same for the brake bias, whose
- * reading is already wrapped in an `isnull` default and so is never null itself.
+ * The cells are the watched settings and not a list of their own, so that the strip and the change
+ * notification cannot disagree about what a value is; `second/tracked.ts` holds the readings, the
+ * two names and the presence tests, and is where a setting is added or corrected.
  *
- * Getting this wrong is not a cell drawn wrongly: it is a cell drawn at all, and the cells beside
- * it sitting where they would have been.
+ * Getting the presence test wrong is not a cell drawn wrongly: it is a cell drawn at all, and the
+ * cells beside it sitting where they would have been.
  */
 interface StripCell {
   id: string;
@@ -151,30 +143,15 @@ interface StripCell {
   present?: string;
 }
 
-/**
- * The strip, in the order the canvas draws it. Cut is `dcTractionControl2`, the second traction
- * dial a GT3 car exposes beside TC level.
- *
- * Two of the seven read a property their label does not name, and both are left alone because
- * settling them is a drawing decision rather than a lookup. Diff reads `dcAntiRollRear`, which
- * `modules/carSettings.ts` already draws under the label ARB R, so the bar and page 09 publish one
- * number under two names. Slip reads `dcThrottleShape`, which is the throttle map. Neither a
- * differential nor a slip target is normalised by SimHub, and the iRacing variable set recorded in
- * `tools/irsdk-emulator/Catalog.cs` holds no such field, so a car that has either publishes it
- * under a name of its own and the binding cannot be looked up. `docs/design/zones.md` section 3
- * records the disagreement.
- *
- * TODO: bind Diff and Slip once the canvas says which in-car adjustment each shows, or rename them.
- */
-export const STRIP_CELLS: readonly StripCell[] = [
-  { id: 'slip', label: 'Slip', sample: '4', expr: raw('dcThrottleShape'), pattern: '0' },
-  { id: 'tc', label: 'TC', sample: '5', expr: tcLevel(), pattern: '0', present: raw('dcTractionControl') },
-  { id: 'cut', label: 'Cut', sample: '2', expr: raw('dcTractionControl2'), pattern: '0' },
-  { id: 'bias', label: 'Bias', sample: '50.5', expr: brakeBias(), pattern: '0.0', present: game('BrakeBias') },
-  { id: 'abs', label: 'ABS', sample: '4', expr: absLevel(), pattern: '0', present: raw('dcABS') },
-  { id: 'map', label: 'Map', sample: '1', expr: fuelMixture(), pattern: '0' },
-  { id: 'diff', label: 'Diff', sample: '4', expr: antiRollRear(), pattern: '0' },
-];
+/** The strip, in the order the canvas draws it, under the strip's own names. */
+export const STRIP_CELLS: readonly StripCell[] = TRACKED_VALUES.map((value) => ({
+  id: value.id,
+  label: value.strip,
+  sample: value.sample,
+  expr: value.read,
+  pattern: value.pattern,
+  ...(value.present === undefined ? {} : { present: value.present }),
+}));
 
 /**
  * Which cells a narrow strip keeps, most important first.
