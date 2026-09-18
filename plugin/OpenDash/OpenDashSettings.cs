@@ -1093,35 +1093,21 @@ namespace OpenDashPlugin
             return screen == null ? slot.Fallback : screen.ZonePage(key);
         }
 
-        /// <summary>Which of the three landscape pages one pit wall opens on.</summary>
-        public int ScreenPitWallStartPage(string ns)
-        {
-            var screen = ScreenByNamespace(ns);
-            return screen == null ? Contract.DefaultPitWallStartPage : Contract.NormalisePitWallStartPage(screen.PitWallStartPage);
-        }
-
         /// <summary>
-        /// The landscape page one pit wall is showing now.
+        /// The landscape page one pit wall shows.
         /// </summary>
         /// <remarks>
-        /// Live state rather than a setting, the way `CompanionPage` is: the package gates each of its
-        /// three screens on this, so it is what decides which one is up. It opens on the start page and
-        /// the cycle action moves it, which is why a pit wall can be told which page to come up on at all
-        /// -- nothing else about a screen can be made to follow a setting.
+        /// The package gates each of its three screens on this, so it is what decides which one is up.
+        /// One name and not a saved one beside a live one, because a pit wall's page is configuration:
+        /// it is set once with a mouse and then left, so there is nothing to move it at speed and
+        /// nothing to put back afterwards.
         /// </remarks>
         public int ScreenPitWallPage(string ns)
         {
             var screen = ScreenByNamespace(ns);
-            return screen == null ? Contract.DefaultPitWallStartPage : Contract.NormalisePitWallStartPage(screen.PitWallPage);
-        }
-
-        /// <summary>Moves one pit wall to the next of its three pages, and returns the one it landed on.</summary>
-        public int CycleScreenPitWallPage(string ns)
-        {
-            var screen = ScreenByNamespace(ns);
-            if (screen == null) return Contract.DefaultPitWallStartPage;
-            screen.PitWallPage = (Contract.NormalisePitWallStartPage(screen.PitWallPage) + 1) % Contract.PitWallPageNames.Length;
-            return screen.PitWallPage;
+            // A delegate outlives the screen it was attached for until SimHub restarts, so the reader
+            // has to answer something rather than throw on SimHub's data thread.
+            return screen == null ? Contract.DefaultPitWallPage : Contract.NormalisePitWallPage(screen.PitWallPage);
         }
 
         /// <summary>How one companion draws a flag: off, the strip at the foot, or over the module.</summary>

@@ -256,7 +256,6 @@ OpenDash.PitWallPortraitA
 OpenDash.PitWallPortraitB
 OpenDash.PitWallPortraitC
 OpenDash.PitWallPortraitD
-OpenDash.PitWallStartPage
 OpenDash.PitWallPage
 OpenDash.WebViewUrl
 OpenDash.PitWallClassOnly

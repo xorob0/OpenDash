@@ -94,13 +94,9 @@ namespace OpenDashPlugin
         /// <summary>The wide zone as it was written before a zone belonged to a page. Migration only.</summary>
         public int WideZone { get; set; }
 
-        /// <summary>Which of the three landscape pages this pit wall opens on.</summary>
-        public int PitWallStartPage { get; set; } = Contract.DefaultPitWallStartPage;
-
-        /// <summary>The page it is showing now. Live state, not saved: a pit wall opens on its start
-        /// page every time SimHub does, which is what "default" means.</summary>
-        [JsonIgnore]
-        public int PitWallPage { get; set; } = Contract.DefaultPitWallStartPage;
+        /// <summary>Which of the three landscape pages this pit wall shows. Saved, because it is how the
+        /// rig is arranged rather than something that moves during a session.</summary>
+        public int PitWallPage { get; set; } = Contract.DefaultPitWallPage;
 
         /// <summary>The address the Web view zone shows; empty for none.</summary>
         public string WebViewUrl { get; set; }
@@ -316,7 +312,7 @@ namespace OpenDashPlugin
                 PitWallZones = MigratedZones();
                 WebViewUrl = fresh ? Contract.DefaultWebViewUrl : Contract.NormaliseUrl(WebViewUrl);
                 PitWallQuickGlance = fresh ? Contract.DefaultPitWallQuickGlance : Contract.NormalisePitWallQuickGlance(PitWallQuickGlance);
-                PitWallStartPage = fresh ? Contract.DefaultPitWallStartPage : Contract.NormalisePitWallStartPage(PitWallStartPage);
+                PitWallPage = fresh ? Contract.DefaultPitWallPage : Contract.NormalisePitWallPage(PitWallPage);
                 // Consumed. Leaving them would make the next Normalise migrate over whatever the user
                 // has since chosen, which is a settings file that quietly reverts.
                 Zones = null;
@@ -329,7 +325,7 @@ namespace OpenDashPlugin
                 WideZone = 0;
                 WebViewUrl = null;
                 PitWallQuickGlance = 0;
-                PitWallStartPage = Contract.DefaultPitWallStartPage;
+                PitWallPage = Contract.DefaultPitWallPage;
                 PitWallClassOnly = false;
             }
 
@@ -463,7 +459,7 @@ namespace OpenDashPlugin
                 PitWallZones = PitWallZones == null ? null : new Dictionary<string, int>(PitWallZones, StringComparer.Ordinal),
                 Zones = Zones == null ? null : (int[])Zones.Clone(),
                 WideZone = WideZone,
-                PitWallStartPage = PitWallStartPage,
+                PitWallPage = PitWallPage,
                 CompanionFlagFormat = CompanionFlagFormat,
                 WebViewUrl = WebViewUrl,
                 PitWallQuickGlance = PitWallQuickGlance,

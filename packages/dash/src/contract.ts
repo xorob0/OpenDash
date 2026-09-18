@@ -236,7 +236,7 @@ export const ledMirrorRunName = (length: number): string => `LedMirror${length}`
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
-  const pitWall = [...allPitWallZoneSettingNames(), PIT_WALL_START_PAGE_SETTING, PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING];
+  const pitWall = [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING];
   return [...companionProperties(), ...pitWall].map(propertyName);
 }
 
@@ -730,7 +730,7 @@ export function screenProperties(prefix: string): string[] {
   const face = faceForPrefix(prefix);
   if (face) return facePropertyNames(face).map(propertyName);
   if (prefix === PIT_WALL_PREFIX) {
-    return [...allPitWallZoneSettingNames(), PIT_WALL_START_PAGE_SETTING, PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING].map(propertyName);
+    return [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING].map(propertyName);
   }
   if (prefix === COMPANION_PREFIX) return companionProperties().map(propertyName);
   throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
@@ -1057,19 +1057,21 @@ export const pitWallZoneSettingNames = (landscape: boolean): string[] =>
 export const allPitWallZoneSettingNames = (): string[] => PIT_WALL_PAGES.flatMap((page) => page.zones.map((z) => pitWallZoneSettingName(page.id, z.slot)));
 
 /**
- * `PitWallStartPage`: which of the three landscape pages the pit wall opens on.
+ * `PitWallPage`: which of the three landscape pages this pit wall shows.
  *
- * A pit wall is left running on a second monitor, and which page it comes up on is the one thing a
- * spotter cannot change without walking over to it. The pages stay navigable -- this chooses the one
- * that is live, and the binding below moves it -- so nothing is taken away by answering it.
+ * **Configuration, not a control.** A pit wall is a screen on a wall that somebody sets up once and
+ * then leaves; the page it shows is a property of how the rig is arranged, the way a screen's size
+ * is, and not something to move while a session is running. So there is one setting and no binding,
+ * no action and no live copy of it -- the three pages exist, the plugin picks which is up, and a
+ * spotter watching it never has to wonder which one they are looking at.
+ *
+ * That is the whole of why the page is gated at all. A dashboard opens on the first screen whose
+ * expression is true, and nothing else about a screen can be made to follow a setting.
  */
-export const PIT_WALL_START_PAGE_SETTING = 'PitWallStartPage';
-
-/** `PitWallPage`: the page the pit wall is showing now. Live state the plugin holds, not a setting. */
 export const PIT_WALL_PAGE_SETTING = 'PitWallPage';
 
-/** The race page, which is what it opened on before there was a choice. */
-export const DEFAULT_PIT_WALL_START_PAGE = 0;
+/** The race page, which is what a pit wall showed before there was a choice. */
+export const DEFAULT_PIT_WALL_PAGE = 0;
 
 /** The landscape pages, in the order the package draws them and the plugin numbers them. */
 export const PIT_WALL_LANDSCAPE_PAGES = PIT_WALL_PAGES.filter((page) => page.landscape);
@@ -1123,8 +1125,8 @@ export const secondScreen = {
   companionFlagFormat: (): Expr => isnull(prop(propertyName(COMPANION_FLAG_FORMAT_SETTING)), str(DEFAULT_COMPANION_FLAG_FORMAT)),
   /** `... = 'band'`: whether this companion is in the given flag format. */
   companionFlagFormatIs: (format: CompanionFlagFormat): Expr => eq(secondScreen.companionFlagFormat(), str(format)),
-  /** `isnull([OpenDash.PitWallPage], 0)`: the landscape page the pit wall is showing. */
-  pitWallPage: (): Expr => isnull(prop(propertyName(PIT_WALL_PAGE_SETTING)), num(DEFAULT_PIT_WALL_START_PAGE)),
+  /** `isnull([OpenDash.PitWallPage], 0)`: the landscape page this pit wall shows. */
+  pitWallPage: (): Expr => isnull(prop(propertyName(PIT_WALL_PAGE_SETTING)), num(DEFAULT_PIT_WALL_PAGE)),
   /** `isnull([OpenDash.PitWallPage], 0) = 1`: whether this page is the one that is live. */
   pitWallPageIs: (number: number): Expr => eq(secondScreen.pitWallPage(), num(number)),
   /** `isnull([OpenDash.WebViewUrl], '')`: the address of the web view page. */

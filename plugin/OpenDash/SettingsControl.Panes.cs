@@ -669,29 +669,25 @@ namespace OpenDashPlugin
                         BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true)))));
         }
 
-        /// <summary>Which of the three pages this pit wall comes up on, which is the one thing about it a
-        /// spotter cannot change without walking over to the screen.</summary>
-        private FrameworkElement BuildPitWallStartPageRow(ScreenInstance screen)
+        /// <summary>Which of the three pages this pit wall shows, which is set here and nowhere else.</summary>
+        private FrameworkElement BuildPitWallPageRow(ScreenInstance screen)
         {
             var select = new ComboBox
             {
                 Width = PanelPitWallPlan.SelectWidth,
                 VerticalContentAlignment = VerticalAlignment.Center,
-                ToolTip = "The page this pit wall opens on",
+                ToolTip = "The page this pit wall shows",
             };
             Ui.Field(select, PanelPitWallPlan.SelectHeight);
             foreach (var name in Contract.PitWallPageNames) select.Items.Add(name);
-            select.SelectedIndex = Contract.NormalisePitWallStartPage(screen.PitWallStartPage);
+            select.SelectedIndex = Contract.NormalisePitWallPage(screen.PitWallPage);
             select.SelectionChanged += (sender, args) =>
             {
                 if (select.SelectedIndex < 0) return;
-                screen.PitWallStartPage = Contract.NormalisePitWallStartPage(select.SelectedIndex);
-                // Live as well as saved, so the screen in front of you moves rather than waiting for the
-                // next start. Somebody choosing a default is looking at the thing they are choosing for.
-                screen.PitWallPage = screen.PitWallStartPage;
+                screen.PitWallPage = Contract.NormalisePitWallPage(select.SelectedIndex);
                 Save();
             };
-            return Ui.Row("Opens on", "The page this pit wall shows when SimHub starts. A binding moves it from there.", select);
+            return Ui.Row("Page", "Which of the three this pit wall shows. It is set here and does not change while you race.", select);
         }
 
         /// <summary>The one page the glance shows, zone and page together, as the face's own select is.</summary>
@@ -730,7 +726,7 @@ namespace OpenDashPlugin
         private UIElement[] BuildPitWallRows(ScreenInstance screen)
         {
             var rows = new List<UIElement>();
-            rows.Add(BuildPitWallStartPageRow(screen));
+            rows.Add(BuildPitWallPageRow(screen));
             foreach (var pageName in Contract.PitWallPageNames)
             {
                 var slots = new List<UIElement>();

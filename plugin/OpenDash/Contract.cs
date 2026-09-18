@@ -204,14 +204,20 @@ namespace OpenDashPlugin
         /// <summary>The landscape pages, in the order the package draws them and the plugin numbers them.</summary>
         public static readonly string[] PitWallPageNames = { "Race", "Tower", "Telemetry" };
 
-        /// <summary>`PitWallStartPage`: which of the three the pit wall opens on.</summary>
-        public const string PitWallStartPage = "PitWallStartPage";
-
-        /// <summary>`PitWallPage`: the page it is showing now. Live state, the way CompanionPage is.</summary>
+        /// <summary>
+        /// `PitWallPage`: which of the three landscape pages this pit wall shows.
+        /// </summary>
+        /// <remarks>
+        /// Configuration rather than a control, which is why there is one name here and not two. A pit
+        /// wall is a screen somebody sets up once and then leaves; the page it shows belongs with how
+        /// the rig is arranged, the way a screen's size does, and not with anything reached for while a
+        /// session is running. So no binding, no action, and no live copy to keep in step with a saved
+        /// one -- the setting is the state.
+        /// </remarks>
         public const string PitWallPage = "PitWallPage";
 
-        /// <summary>The race page, which is what a pit wall opened on before there was a choice.</summary>
-        public const int DefaultPitWallStartPage = 0;
+        /// <summary>The race page, which is what a pit wall showed before there was a choice.</summary>
+        public const int DefaultPitWallPage = 0;
 
         /// <summary>Default page of zones A to D: fuel, tyres, relative and opponents, which is what a spotter watches.</summary>
         public static readonly IReadOnlyList<int> PitWallDefaultZonePages = new[] { 0, 1, 4, 2 };
@@ -667,7 +673,6 @@ namespace OpenDashPlugin
             if (string.Equals(kind, KindPitWall, StringComparison.Ordinal))
             {
                 foreach (var slot in PitWallZoneSlots) yield return ZoneProperty(ns, slot);
-                yield return PitWallStartPageProperty(ns);
                 yield return PitWallPageProperty(ns);
                 yield return WebViewUrlProperty(ns);
                 // Last, after the web view: the six before it have shipped and both halves of the
@@ -708,7 +713,6 @@ namespace OpenDashPlugin
             if (string.Equals(prefix, PitWallPrefix, StringComparison.Ordinal))
             {
                 foreach (var slot in PitWallZoneSlots) yield return ZoneProperty(slot);
-                yield return PitWallStartPage;
                 yield return PitWallPage;
                 yield return WebViewUrl;
                 yield return PitWallClassOnly;
@@ -1280,12 +1284,6 @@ namespace OpenDashPlugin
             return null;
         }
 
-        /// <summary>`PitWallStartPage`, or `GarageStartPage` on a second pit wall.</summary>
-        public static string PitWallStartPageProperty(string ns)
-        {
-            return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? PitWallStartPage : ns + "StartPage";
-        }
-
         /// <summary>`PitWallPage`, or `GaragePage` on a second pit wall.</summary>
         public static string PitWallPageProperty(string ns)
         {
@@ -1602,10 +1600,10 @@ namespace OpenDashPlugin
             return ZonePages.IsValidWide(page) ? page : DefaultWideZonePage;
         }
 
-        /// <summary>Which of the three landscape pages a pit wall opens on; anything else is the race page.</summary>
-        public static int NormalisePitWallStartPage(int page)
+        /// <summary>Which of the three landscape pages a pit wall shows; anything else is the race page.</summary>
+        public static int NormalisePitWallPage(int page)
         {
-            return page >= 0 && page < PitWallPageNames.Length ? page : DefaultPitWallStartPage;
+            return page >= 0 && page < PitWallPageNames.Length ? page : DefaultPitWallPage;
         }
 
         /// <summary>

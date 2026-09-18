@@ -442,7 +442,6 @@ namespace OpenDashPlugin
                         var captured = slot;
                         this.AttachDelegate(Contract.ZoneProperty(s.Namespace, captured), () => Settings.ScreenZone(s.Namespace, captured.Key));
                     }
-                    this.AttachDelegate(Contract.PitWallStartPageProperty(s.Namespace), () => Settings.ScreenPitWallStartPage(s.Namespace));
                     this.AttachDelegate(Contract.PitWallPageProperty(s.Namespace), () => Settings.ScreenPitWallPage(s.Namespace));
                     this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
                     this.AttachDelegate(Contract.PitWallClassOnlyProperty(s.Namespace), () => Settings.ScreenPitWallClassOnly(s.Namespace));
