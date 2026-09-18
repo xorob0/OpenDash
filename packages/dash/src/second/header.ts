@@ -145,6 +145,15 @@ export interface PanelSpec {
    * two pixels are the difference between the plot the artboard draws and one two pixels shorter.
    */
   titleGap?: number;
+  /**
+   * A title the sim writes part of, with `title` as its design-time text.
+   *
+   * The speed trace is the case: the sheet titles it "Speed · km/h", and the value under it is the
+   * one the driver's own unit setting names, so a fixed title says kilometres to somebody reading
+   * miles. `titleWidest` is what the box is measured by, as it is for any bound run.
+   */
+  titleBind?: Expr;
+  titleWidest?: string;
 }
 
 /** Height a panel's title row takes, gap included. */
@@ -161,7 +170,12 @@ export function panel(name: string, spec: PanelSpec, density: Density = 'zone'):
     // the one label the sheet overrides to the brighter secondary: on the pit wall zones every
     // title carries `color: #8A9099` inline and the counter beside it does not, which is the whole
     // difference between the two chromes.
-    label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX, { size: d.labelSm, color: ds.color.text.label }),
+    label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX, {
+      size: d.labelSm,
+      color: ds.color.text.label,
+      ...(spec.titleBind ? { bind: spec.titleBind } : {}),
+      ...(spec.titleWidest ? { widest: spec.titleWidest } : {}),
+    }),
   ];
   const bodyTop = titleY + d.labelSm + (spec.titleGap ?? ds.space[2]);
   return {
