@@ -557,6 +557,14 @@ zone rather than one switch for the whole face, because the point of it is zone 
 while zone C lists the class a driver is actually racing in. It sits in the face's own group with
 every other zone setting, so a rig with a face on the wheel and one beside it filters them apart.
 
+**A pit wall asks it once for the whole screen**, which is the one place the rule differs, and the
+cause is a file rather than a preference. A face's four zones are four rectangles of one dashboard,
+so each may be asked separately. A pit wall's zones are widgets pointed at one zone dashboard per
+rectangle, so zones A and B of the race page are literally the same file, and a per-zone filter
+could not reach one without reaching the other. `OpenDash.PitWallClassOnly` is therefore one setting
+per pit wall screen, rather than one per zone and rather than one for the rig, since a rig may hold
+two pit walls and a board belongs to the screen it is drawn on.
+
 It is **not** `PositionMode`. That setting is which number a position column shows; this one is who
 is in the list at all, and one class counted by overall position is a legitimate thing to ask for.
 What `PositionMode: class` currently does to a list it did not reorder is XOR-161.
@@ -724,6 +732,14 @@ Two zones showing the same page is reported and allowed, which the canvas is exp
 comparison is by page **id** and not page number, because the four catalogues overlap: zone A's
 track page and module 13 are one drawing under two numbers, and a comparison by number would miss
 exactly the duplicate a driver would notice.
+
+**A pit wall holds its glance rather than storing a property.** A second-screen property has to be
+read by a package, which the suite enforces, and nothing reads a glance value: the glance works by
+moving the zone-page settings the dashboard already reads and putting them back on release. It is
+consequently plugin state on the screen rather than a declared property, exactly as the companion's
+own glance is, and the trigger is a hold bound through `<ns>HoldQuickGlance`, a hold rather than a
+click because a hold cannot be left on by accident, which matters most on a screen nobody is
+watching continuously. The four data zones are its targets; the wide zone is not one.
 
 The quick glance is a fifth participant in that comparison, and it reads "Zone C and the quick
 glance both show the track." It is compared against each zone's *start* page rather than against
