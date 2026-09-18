@@ -1,4 +1,4 @@
-// UpdateWordingTests.cs: the copy, as a table. The sentence a driver reads is the deliverable of XOR-31 as much
+// UpdateWordingTests.cs: the copy, as a table. The sentence a driver reads is the deliverable of #82 as much
 // as the request is, so it is pinned rather than left to drift.
 using Xunit;
 

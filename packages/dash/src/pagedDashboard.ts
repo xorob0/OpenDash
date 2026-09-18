@@ -14,7 +14,7 @@
  * with a thumb at speed and draws from the twenty-one modules. Those stay where they are; only the
  * shape of the file and the shape of the widget are one thing.
  *
- * Where this file finally lives is XOR-100's question, along with the rest of what `second/` holds.
+ * Where this file finally lives is #151's question, along with the rest of what `second/` holds.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from './generator.ts';
 import { withBindings, type Expr } from './bind.ts';

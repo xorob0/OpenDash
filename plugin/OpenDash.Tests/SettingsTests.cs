@@ -26,7 +26,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// XOR-138 and XOR-119. The mode arrived after rc.2 shipped, so a settings file may not carry
+        /// #189 and #170. The mode arrived after rc.2 shipped, so a settings file may not carry
         /// it, and the one thing that must not happen is a driver who turned the shift lights off
         /// finding them back on after an update.
         /// </summary>
@@ -1366,7 +1366,7 @@ namespace OpenDashPlugin.Tests
         public void A_new_install_has_an_empty_rig_and_an_upgrade_keeps_what_is_installed()
         {
             // A settings file that has never installed anything is a new install, and its empty rig is
-            // the state the panel teaches from (XOR-34). Nothing has to be dismissed.
+            // the state the panel teaches from (#85). Nothing has to be dismissed.
             var fresh = new OpenDashSettings();
             fresh.Normalise();
             Assert.Empty(fresh.RigScreens());

@@ -1,7 +1,7 @@
 # ADR 0008: A pull request carries a native SimHub capture, and we do not build a preview renderer
 
 **Date:** 2026-09-13
-**Status:** Accepted. Reverses the recommendation XOR-18 was opened with, and is the record the
+**Status:** Accepted. Reverses the recommendation #69 was opened with, and is the record the
 Visual verification project was blocked on; the rest of that project is a consequence of this
 record rather than work that follows it.
 
@@ -19,7 +19,7 @@ on a Windows machine, and a Linux runner has nothing to render with.
 [ADR 0005](0005-plugin-builds-on-linux.md) deliberately removed Windows from the build, so there
 is no runner to put SimHub on.
 
-XOR-18 was opened with two ways out and a recommendation for the first of them. It was amended,
+#69 was opened with two ways out and a recommendation for the first of them. It was amended,
 on the day it was opened, with a third. This record picks the third, which is not what the ticket
 recommended, and the reasons are below.
 
@@ -40,8 +40,8 @@ true when the ticket was written, because one of them has been built in the mean
 for a whole batch, installs every requested package in a single pass so that SimHub restarts once,
 restarts the emulator once per scenario rather than once per capture, and writes
 `build/shots/<nn>-<package>-<scenario>.png`. It captures with `PrintWindow`, so what lands in the
-file is the dash window at its own size rather than a crop of a desktop. That was XOR-112, closed
-on 2026-09-11, which the amendment to XOR-18 priced at two points and which therefore now costs
+file is the dash window at its own size rather than a crop of a desktop. That was #163, closed
+on 2026-09-11, which the amendment to #69 priced at two points and which therefore now costs
 nothing further. Moreover it is already the standard of review: `architecture.md` has described
 visual review as a human step in which the author attaches a capture from the VM since 2026-09-10,
 and `CONTRIBUTING.md` names `bun run shots` among the conditions a change must meet before it is
@@ -49,10 +49,10 @@ merged. Option C is not a proposal; it is a description.
 
 **Option A is thirteen points before it draws a frame and sixteen before that frame can be
 believed, and its largest piece is a second implementation of somebody else's expression
-language.** The preview renderer needs a trace to replay (XOR-19, three points), an NCalc evaluator
-in TypeScript (XOR-20, five points) and the renderer itself (XOR-21, five points); the fidelity
-check that polices the gap between the two renderers (XOR-24, three points) is what makes the
-output worth looking at, and is therefore not optional. Only then does the video job (XOR-22) have
+language.** The preview renderer needs a trace to replay (#70, three points), an NCalc evaluator
+in TypeScript (#71, five points) and the renderer itself (#72, five points); the fidelity
+check that polices the gap between the two renderers (#75, three points) is what makes the
+output worth looking at, and is therefore not optional. Only then does the video job (#73) have
 something to record.
 
 The evaluator is the part worth dwelling on, because nothing in the repository evaluates a binding
@@ -120,7 +120,7 @@ which is a social guarantee and not a mechanical one.
 
 **It is still images.** A rule that only misbehaves over time is invisible in a still: a blink
 phase, a chart trace filling, a zone advancing to its next page, a value that is correct in the
-frame captured and wrong a second later. XOR-22 asked for a video on every pull request, and this
+frame captured and wrong a second later. #73 asked for a video on every pull request, and this
 record does not deliver it.
 
 **It excludes a contributor who does not have the VM**, which is the sharpest of the four, because
@@ -137,7 +137,7 @@ next body of work is animation, and the answer then is more likely to be capturi
 VM than building a renderer.
 
 **The batch outgrowing a single claim.** The default set is eighteen faces today, against the ten
-XOR-112 was written for, because the zone faces joined the list, and nobody has timed the eighteen.
+#163 was written for, because the zone faces joined the list, and nobody has timed the eighteen.
 Growth of that kind is what would eventually make a parallel renderer pay for itself, and the
 figure to watch is how long one claim holds the VM rather than how many packages exist.
 
@@ -167,10 +167,10 @@ its frame; it does not prove that the result looks right, and after this record 
 
 ### The tickets this settles
 
-XOR-24 has no subject and should be cancelled: it exists to prove a preview renderer is not lying,
-and there is no preview renderer. XOR-21 and XOR-23 are not built. XOR-22 is not delivered as
-written and needs rewriting around capture from the VM if it is to survive at all. XOR-19 and
-XOR-20 lose the justification they were given here, though XOR-20 may still earn its place from
+#75 has no subject and should be cancelled: it exists to prove a preview renderer is not lying,
+and there is no preview renderer. #72 and #74 are not built. #73 is not delivered as
+written and needs rewriting around capture from the VM if it is to survive at all. #70 and
+#71 lose the justification they were given here, though #71 may still earn its place from
 binding tests, which is a separate argument and not this one.
 
 ### Unresolved

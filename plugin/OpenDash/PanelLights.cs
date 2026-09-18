@@ -15,8 +15,12 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.LedCentres"/> value, in its order.</summary>
         public static readonly string[] CentreLabels = { "RPM", "Brake", "Throttle and brake", "Fuel" };
 
-        /// <summary>One label per <see cref="Contract.LedRpmStyles"/> value, in its order.</summary>
-        public static readonly string[] RpmStyleLabels = { "Left to right", "Meet in middle", "F1" };
+        /// <summary>One label per <see cref="Contract.LedRpmStyles"/> value, in its order. The car's own
+        /// heads the list because the value does, and it is the one a driver is offered first.</summary>
+        public static readonly string[] RpmStyleLabels = { "The car's own", "Left to right", "Meet in middle", "F1" };
+
+        /// <summary>One label per <see cref="Contract.LedMirrorFits"/> value, in its order.</summary>
+        public static readonly string[] MirrorFitLabels = { "Fill the strip", "True size" };
 
         /// <summary>One label per <see cref="Contract.FlagBoxRests"/> value, in its order.</summary>
         public static readonly string[] RestLabels = { "Dark", "Gear" };

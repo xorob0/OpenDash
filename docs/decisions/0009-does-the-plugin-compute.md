@@ -81,7 +81,7 @@ engine and declared in `ncalcFunctions.ts`; the window is state, but it is SimHu
 aged by SimHub, and an expression that asks for it is reading a property exactly as
 `Fuel_RemainingLaps` is read. Thus an alert which must stand for a few seconds after a count moves,
 of which the incident notice is the first, is written with `changed()` rather than waiting on
-XOR-116, and the package remains complete on its own, since a dashboard installed without the
+#167, and the package remains complete on its own, since a dashboard installed without the
 plugin evaluates the same window.
 
 The allowance is for reading what the host already remembers and does not extend to `setvalue` and
@@ -99,7 +99,7 @@ stateful, and the first two will happen before the third.
   defending.
 - **When something genuinely needs memory between frames** — a value that shows for three seconds
   and then stops, a rolling figure over a window SimHub does not keep — the question is whether a
-  JavaScript binding can hold state between frames at all. That is XOR-116, and its answer is the
+  JavaScript binding can hold state between frames at all. That is #167, and its answer is the
   strongest argument this record could ever be reopened with. If a binding cannot, the plugin is
   the only place such a thing can live, and four alert tickets change shape with it.
 
@@ -124,5 +124,5 @@ family is honestly labelled rather than quietly empty.
 
 ### Unresolved
 
-Whether a JavaScript binding can hold state between frames (XOR-116). The answer decides nothing
+Whether a JavaScript binding can hold state between frames (#167). The answer decides nothing
 in this record but sets the terms on which it could be revisited.

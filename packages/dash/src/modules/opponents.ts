@@ -26,7 +26,7 @@
  *
  * The nationality flag and the licence badge with its safety rating are the canvas's other two
  * pieces of the identity row and are absent for want of their sources: a flag is an image asset
- * (XOR-115), and the badge is drawn now -- `elements/badge.ts` reads the licence ramp -- but
+ * (#166), and the badge is drawn now -- `elements/badge.ts` reads the licence ramp -- but
  * nothing publishes a class to put in it, which `second/values.ts` records. A badge added here
  * would also have to take its turn in the shedding order, since both blocks shed together.
  *
