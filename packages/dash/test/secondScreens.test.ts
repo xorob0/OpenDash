@@ -22,6 +22,7 @@ import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
 import { MODULES, pageBuilder } from '../src/modules/index.ts';
 import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry, zoneDashboardName } from '../src/screens/index.ts';
+import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox } from '../src/second/density.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type Follower } from '../src/second/field.ts';
@@ -29,7 +30,7 @@ import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Density } from '../src/second/density.ts';
-import type { Rect } from '../src/design/geometry.ts';
+import type { Rect, Size } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { cellOverruns, drawableGlyphs } from './monoGlyphs.ts';
 import { ds } from '../src/tokens.ts';
@@ -425,16 +426,22 @@ export function moduleBoxes(): { name: string; frame: Rect; density: Density }[]
   // One box per distinct zone rectangle the pit wall packages embed, taken from the widgets they
   // actually place and put through the same frame the zone screen draws.
   const seen = new Set<string>();
+  const addZone = (owner: string, size: Size, wide: boolean): void => {
+    const key = `${wide ? 'wide' : 'zone'}-${size.width}x${size.height}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
+    boxes.push({ name: `${owner} ${key}`, frame: body, density: wide ? 'wide' : 'zone' });
+  };
+  // The rectangles the canvas designs a zone on come first, so that they are in the list whether or
+  // not a page ever places one of them: a zone is a widget, so the rectangles below are only the
+  // ones a pit wall page happened to have room for, and a page proved against those alone is never
+  // asked for the height the sheet drew it at.
+  for (const kind of Object.keys(ZONE_REFERENCE) as ZoneKind[]) addZone('reference', ZONE_REFERENCE[kind], kind === 'wide');
   for (const { def, pkg } of PACKAGES) {
     if (def.kind !== 'pitwall') continue;
     for (const widget of itemsOf(pkg.dashboards[0]!).filter((i): i is WidgetItem => i.kind === 'widget')) {
-      const size = { width: widget.rect.width, height: widget.rect.height };
-      const wide = widget.fileName.startsWith('zones-wide');
-      const key = `${wide ? 'wide' : 'zone'}-${size.width}x${size.height}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
-      boxes.push({ name: `${def.folder} ${key}`, frame: body, density: wide ? 'wide' : 'zone' });
+      addZone(def.folder, { width: widget.rect.width, height: widget.rect.height }, widget.fileName.startsWith('zones-wide'));
     }
   }
   // And one box per distinct rectangle a *face* zone is drawn at, both arrangements of all eight
@@ -458,6 +465,22 @@ export function moduleBoxes(): { name: string; frame: Rect; density: Density }[]
   return boxes;
 }
 
+/**
+ * Whether a drawn item stays in the box it was given.
+ *
+ * A text box is a WPF line box and it is taller than its ink at both ends. `textBox` puts its top a
+ * tenth of the font size above the line it is given, so the baseline lands where the layout asked
+ * for it, and the box runs about a fifth of the size below that baseline. Both tails are
+ * transparent, so both are slack -- and granting it only at the bottom is why these boxes were once
+ * quietly written 16 px taller than the real ones instead of being derived.
+ */
+function insideBox(item: Exclude<Item, { kind: 'layer' }>, frame: Rect): boolean {
+  const r = item.rect;
+  const below = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 1;
+  const above = item.kind === 'text' ? Math.ceil(0.1 * item.fontSize) + 2 : 1;
+  return r.left >= frame.left - 1 && r.top >= frame.top - above && r.left + r.width <= frame.left + frame.width + 1 && r.top + r.height <= frame.top + frame.height + below;
+}
+
 describe('every module fits the box it is given', () => {
   const BOXES = moduleBoxes();
 
@@ -467,6 +490,9 @@ describe('every module fits the box it is given', () => {
     expect(BOXES.length).toBeGreaterThanOrEqual(6);
     expect(BOXES.map((b) => b.name)).toContain('face-269x194');
     expect(BOXES.map((b) => b.name)).toContain('face-600x150');
+    // And the canvas's own frames, which are the only ones in the list no package places.
+    expect(BOXES.map((b) => b.name)).toContain('reference zone-639x240');
+    expect(BOXES.map((b) => b.name)).toContain('reference wide-1279x240');
     for (const box of BOXES) {
       expect({ name: box.name, w: box.frame.width > 0, h: box.frame.height > 0 }).toMatchObject({ w: true, h: true });
     }
@@ -479,24 +505,38 @@ describe('every module fits the box it is given', () => {
         expect({ module: module.id, drew: items.length > 0 }).toMatchObject({ drew: true });
         for (const item of items.flatMap((i) => [...walkItems([i])])) {
           if (item.kind === 'layer') continue;
-          const r = item.rect;
-          // A text box is a WPF line box and it is taller than its ink at both ends. `textBox`
-          // puts its top a tenth of the font size above the line it is given, so the baseline
-          // lands where the layout asked for it, and the box runs about a fifth of the size below
-          // that baseline. Both tails are transparent, so both are slack -- and granting it only
-          // at the bottom is why these boxes were quietly written 16 px taller than the real ones
-          // instead of being derived.
-          const below = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 1;
-          const above = item.kind === 'text' ? Math.ceil(0.1 * item.fontSize) + 2 : 1;
-          const inside =
-            r.left >= box.frame.left - 1 &&
-            r.top >= box.frame.top - above &&
-            r.left + r.width <= box.frame.left + box.frame.width + 1 &&
-            r.top + r.height <= box.frame.top + box.frame.height + below;
-          expect({ module: module.id, item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+          expect({ module: module.id, item: item.name, rect: item.rect, inside: insideBox(item, box.frame) }).toMatchObject({ inside: true });
         }
       }
     });
+  }
+});
+
+/**
+ * The zone pages at the frame their kind was designed on.
+ *
+ * The check above builds the module catalogue, and two of the zone pages are not in it: `web` and
+ * `carTelemetry` exist only as pages. At the rectangles a package places, the built zone dashboards
+ * carry them and `keeps every item on its canvas` measures them there, so the reference frames are
+ * the one shape nothing else reaches. The wide reference is the one that matters: its body is 15 px
+ * shorter than the tower's, so a wide page that only works at the height the tower had room for
+ * fails here rather than passing for want of a rectangle.
+ */
+describe('every zone page fits the frame its kind is designed on', () => {
+  for (const kind of Object.keys(ZONE_REFERENCE) as ZoneKind[]) {
+    const size = ZONE_REFERENCE[kind];
+    const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'static', page: 1, pages: 9 } });
+    const density: Density = kind === 'wide' ? 'wide' : 'zone';
+    for (const page of pagesOf(kind)) {
+      test(`${page.id} on the ${kind} reference`, () => {
+        const items = pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.` }).flatMap((i) => [...walkItems([i])]);
+        expect({ page: page.id, drew: items.length > 0 }).toMatchObject({ drew: true });
+        for (const item of items) {
+          if (item.kind === 'layer') continue;
+          expect({ page: page.id, item: item.name, rect: item.rect, inside: insideBox(item, body) }).toMatchObject({ inside: true });
+        }
+      });
+    }
   }
 });
 
