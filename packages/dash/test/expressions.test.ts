@@ -1,6 +1,6 @@
 /** The NCalc that reaches the file: digit counts, h:mm:ss, the shift lights and the card rules. */
 import { describe, expect, test } from 'bun:test';
-import { ncalc } from '../src/generator.ts';
+import { leds, ncalc, stableGuid } from '../src/generator.ts';
 import { revBar, REDLINE_BLINK_MS } from '../src/components/revBar.ts';
 import { GEAR_COUNT_PROPERTY, SHIFT_RPM_PROPERTIES, lastGear, redlineRpm } from '../src/shift.ts';
 import { MODULES } from '../src/modules/index.ts';
@@ -10,6 +10,9 @@ import { flagVisible } from '../src/components/flagStrip.ts';
 import { bandRaised, conditionVisible, flagCondition, FLAG_CATALOGUE } from '../src/flags.ts';
 import { flagBox, setting } from '../src/contract.ts';
 import { flagBoxTree } from '../src/leds/profile.ts';
+import { ignitionIsOff, ignitionIsOn } from '../src/leds/gates.ts';
+import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
+import { shapeById } from '../src/leds/strip.ts';
 import { CARDS, cardByNumber } from '../src/cards/index.ts';
 import { rect } from '../src/design/geometry.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
@@ -223,11 +226,18 @@ describe('second-screen values', () => {
     expect(values.tankIsLow()).not.toContain(values.fuelLapsLeft());
   });
 
-  test('the flag box reads the shared ignition expression rather than a second copy of it', () => {
+  test('the box and the strip read one ignition gate, and an unpublished ignition means on', () => {
     expect(values.ignitionOn()).toBe('[DataCorePlugin.GameData.EngineIgnitionOn]');
     const tree = JSON.stringify(flagBoxTree());
-    expect(tree).toContain(`(${values.ignitionOn()}) = (0)`);
-    expect(tree).toContain(`(${values.ignitionOn()}) = (1)`);
+    expect(tree).toContain(ignitionIsOff());
+    expect(tree).toContain(ignitionIsOn());
+    // The strip had no gate of any kind, so a wheel lit the garage beside a box showing standby.
+    const strip = leds.serializeProfile(rpmStripProfile(shapeById('4-14-4')!, stableGuid('t/ignition')));
+    expect(strip).toContain(ignitionIsOn());
+    // Defaulted to on, which is the reverse of the convention: a sim that publishes no ignition
+    // must not have every light openDash drives blacked out for the whole of a session.
+    expect(ignitionIsOn()).toContain(`isnull(${values.ignitionOn()}, 1)`);
+    expect(ignitionIsOff()).toContain(`isnull(${values.ignitionOn()}, 1)`);
   });
 });
 

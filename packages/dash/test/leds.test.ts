@@ -27,6 +27,7 @@ import {
   flagEffects,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
+import { ignitionIsOn } from '../src/leds/gates.ts';
 import { fuelPercent } from '../src/second/values.ts';
 // The flag box's own states, so that "the strip and the box compare the same thing" is asserted
 // against the box rather than against a copy of what the box is believed to say.
@@ -557,11 +558,44 @@ describe('every generated profile', () => {
     }
   });
 
-  test('is gated on the sim running, because a CustomStatus that throws is ON rather than off', () => {
+  test('nests the four gates outside in, and nothing of the tree escapes above them', () => {
+    // The sim-running gate is a correctness fix rather than tidiness: a CustomStatus that throws is
+    // ON rather than off, so with the sim closed a bare one lights. The ignition gate is the second
+    // half of the same sentence, and the strip had been missing it while the box beside it had it.
     for (const shape of ALL_SHAPES) {
       const p = rpmStripProfile(shape, stableGuid(`t/${shape.id}`));
-      const outer = shape.positions ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
-      expect({ shape: shape.id, type: leds.containerTypeOf(outer) }).toMatchObject({ type: 'Groups.GameRunningGroup' });
+      // The remap is outermost and only on a shape the maker wired in an order of its own.
+      expect({ shape: shape.id, roots: p.containers.length }).toMatchObject({ roots: 1 });
+      const outermost = p.containers[0]!;
+      if (shape.positions) {
+        expect({ shape: shape.id, type: leds.containerTypeOf(outermost) }).toMatchObject({ type: 'Groups.RemapGroup' });
+      } else {
+        expect({ shape: shape.id, remapped: leds.containerTypeOf(outermost) === 'Groups.RemapGroup' }).toMatchObject({ remapped: false });
+      }
+      const running = shape.positions ? leds.childrenOf(outermost)[0]! : outermost;
+      // Each gate is the only child of the one above it, so a gate near the top answers for
+      // everything below it rather than for one branch of it.
+      const chain = [running];
+      while (leds.childrenOf(chain[chain.length - 1]!).length === 1) chain.push(leds.childrenOf(chain[chain.length - 1]!)[0]!);
+      expect({ shape: shape.id, gates: chain.slice(0, 3).map((c) => leds.containerTypeOf(c)) }).toMatchObject({
+        gates: ['Groups.GameRunningGroup', 'Groups.BrightnessFormulaGroup', 'Groups.CustomConditionalGroup'],
+      });
+      const ignition = chain[2]!;
+      expect({ shape: shape.id, gate: ignition.description }).toMatchObject({ gate: 'only while the car is switched on' });
+      expect({ shape: shape.id, when: (ignition as Extract<leds.LedContainer, { kind: 'conditionalGroup' }>).trigger.expression }).toMatchObject({
+        when: ignitionIsOn(),
+      });
+      // The fit rule accumulates offsets down the tree, so a gate carrying a startPosition would
+      // move every LED beneath it.
+      for (const gate of [outermost, ...chain.slice(0, 3)]) {
+        expect({ shape: shape.id, gate: gate.description, at: (gate as { startPosition?: number }).startPosition }).toMatchObject({ at: undefined });
+      }
+      // ...and nothing paints outside them: every customStatus in the profile is under all three.
+      const under = new Set(walk(leds.childrenOf(ignition)));
+      for (const c of walk(p.containers)) {
+        if (c.kind !== 'customStatus') continue;
+        expect({ shape: shape.id, led: c.description, inside: under.has(c) }).toMatchObject({ inside: true });
+      }
     }
   });
 

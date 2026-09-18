@@ -37,9 +37,10 @@ import type { Expr } from '../bind.ts';
 import { flagBox, flagBoxMatrix, FLAG_BOX_MATRICES, type FlagBoxMatrix } from '../contract.ts';
 import { conditionVisible, flagsShown, noFlagShown, type FlagCondition } from '../flags.ts';
 import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
-// The ignition read is telemetry and lives with the rest of it, so that the box's standby mark and
-// anything else that comes to answer the same condition cannot read it two different ways.
-import { ignitionOn } from '../second/values.ts';
+// The ignition read is telemetry and lives with the rest of it; the two *gates* composed from it
+// live in gates.ts, because the strip asks the same question above its own tree and the answer has
+// to be one expression rather than two spellings of one.
+import { ignitionIsOff, ignitionIsOn } from './gates.ts';
 import { gearGroup } from './gear.ts';
 import { noneRaised, pitStates, spotterStates, stateContainers, warningStates } from './states.ts';
 import { flagFrames, ignitionOffFrames } from './glyphs.ts';
@@ -180,7 +181,6 @@ export function flagBoxContainers(): MatrixContainer[] {
 
 /** The tree as declared, empty branches included. `flagBoxContainers` is what the build writes. */
 export function flagBoxTree(): MatrixContainer[] {
-  const { eq, num } = ncalc;
   return [
     {
       kind: 'brightnessFormula',
@@ -195,11 +195,11 @@ export function flagBoxTree(): MatrixContainer[] {
           kind: 'gameRunning',
           description: 'Racing',
           children: [
-            { kind: 'when', description: 'Ignition off', formula: eq(ignitionOn(), num(0)), children: [{ kind: 'animation', description: 'Standby', frames: ignitionOffFrames() }] },
+            { kind: 'when', description: 'Ignition off', formula: ignitionIsOff(), children: [{ kind: 'animation', description: 'Standby', frames: ignitionOffFrames() }] },
             {
               kind: 'when',
               description: 'Ignition on',
-              formula: eq(ignitionOn(), num(1)),
+              formula: ignitionIsOn(),
               children: FLAG_BOX_MATRICES.map(matrixGroup).filter((c): c is MatrixContainer => c !== undefined),
             },
           ],
