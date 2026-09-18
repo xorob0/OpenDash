@@ -51,6 +51,7 @@ import {
   NO_VALUE,
   carNumber,
   carPosition,
+  positionLabelled,
   completedLaps,
   deltaColour,
   fuel,
@@ -139,7 +140,7 @@ const lapNumber = (): Expr => concat(str('LAP '), fmt(completedLaps(), '0'));
  * `YOU` is written rather than bound to the driver's own name, which is what the artboard draws:
  * the panel is over your own gear and the one thing it cannot be about is somebody else.
  */
-const driverLine = (): Expr => concat(str('YOU · #'), carNumber(player()), str(' · P'), fmt(carPosition(player()), '0'));
+const driverLine = (): Expr => concat(str('YOU · #'), carNumber(player()), str(' · '), positionLabelled(player()));
 
 /** The widest the driver line can draw: `CHARS.carNumber`'s four digits and a two-digit place. */
 export const WIDEST_DRIVER_LINE = 'YOU · #9999 · P99';

@@ -533,6 +533,43 @@ describe('the gear, as the resting state', () => {
     }
   });
 
+  /**
+   * **No stroke is one LED wide**, across or down.
+   *
+   * The first cut of the font kept half of that: two-column uprights and one-row crossbars, so a 3
+   * was three hairlines between two solid stems. Reported from a rig as lines drawn a single LED
+   * wide. A maximal run of lit LEDs is a stroke's thickness in that direction, so the rule is simply
+   * that no run of one exists anywhere in the set -- which also rules out a stray pixel and a
+   * diagonal that steps one row at a time.
+   */
+  test('every stroke of every gear is at least two LEDs thick, across and down', () => {
+    const runs = (cells: readonly boolean[]): number[] => {
+      const lengths: number[] = [];
+      let run = 0;
+      for (const lit of [...cells, false]) {
+        if (lit) run += 1;
+        else {
+          if (run > 0) lengths.push(run);
+          run = 0;
+        }
+      }
+      return lengths;
+    };
+    for (const gear of GEARS) {
+      const grid = gearGrid(gear);
+      const lit = (x: number, y: number): boolean => grid[y]![x] !== '.';
+      for (let y = 0; y < 8; y += 1) {
+        const across = runs(Array.from({ length: 8 }, (_, x) => lit(x, y)));
+        expect({ gear, row: y, thinnest: Math.min(9, ...across) }).toEqual({ gear, row: y, thinnest: across.length === 0 ? 9 : Math.min(...across) });
+        for (const length of across) expect({ gear, row: y, length }).toEqual({ gear, row: y, length: Math.max(2, length) });
+      }
+      for (let x = 0; x < 8; x += 1) {
+        const down = runs(Array.from({ length: 8 }, (_, y) => lit(x, y)));
+        for (const length of down) expect({ gear, col: x, length }).toEqual({ gear, col: x, length: Math.max(2, length) });
+      }
+    }
+  });
+
   test('no two gears draw the same glyph, and 6 and 8 differ in more than one place', () => {
     const seen = new Map<string, string>();
     for (const gear of GEARS) {

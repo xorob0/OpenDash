@@ -14,6 +14,8 @@ import { ncalc } from '../generator.ts';
 import { secondScreen } from '../contract.ts';
 import { rect } from '../design/geometry.ts';
 import { rule } from '../elements/rule.ts';
+import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
+import { flagFull } from '../components/flagFull.ts';
 import { label } from '../elements/label.ts';
 import { densityOf } from '../second/density.ts';
 import { fieldRowFitted, fitFields, rowHeight, type FieldSpec } from '../second/field.ts';
@@ -24,11 +26,12 @@ import { rowsThatFit as boardRowsThatFit, table, type ColumnId } from '../second
 import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, type ModuleContext } from '../modules/module.ts';
-import { airTemperature, bestLap, brake, carPosition, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
+import { airTemperature, bestLap, brake, carPosition,
+  positionDigits, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
-import type { Expr } from '../bind.ts';
+import { withBindings, type Expr } from '../bind.ts';
 
 const { fmt, concat, str, iff, eq, gt, num, isnull, ucase, driver, game, signed, raw } = ncalc;
 
@@ -93,7 +96,7 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
       ),
       fld(ctxOf(body, `${name}.`), 'position', 'Position', {
         sample: '4',
-        bind: fmt(carPosition(player()), '0'),
+        bind: positionDigits(player()),
         chars: CHARS.position,
         fs: d.mid,
         // A denominator rather than a unit: the sheet scales "/ 24" with the value it follows -- 23
@@ -372,6 +375,46 @@ const ZONE_COLUMN_WIDTH = 639;
 
 const vRule = (name: string, x: number, top: number, height: number): Item => rule(name, x, top, 1, height);
 
+/**
+ * The height of the flag band, which is the header's own.
+ *
+ * One number for all four pages rather than a fraction of each, because a flag is read from across
+ * the room and not from a seat: the band has to be the same object on a 1920 x 1080 wall and on a
+ * 1080 x 1920 one, and a proportion would draw it half as tall on the page that is twice as wide.
+ * 64 px is what the header beside it takes and is the tallest band that still leaves the board's
+ * first rows visible on every page.
+ */
+const FLAG_BAND_HEIGHT = PIT_WALL_HEADER.height;
+
+/**
+ * The two flag formats, drawn over one page's body and gated on `PitWallFlagFormat`.
+ *
+ * Both are drawn and at most one shows, the way the companion and the face do it: a layer whose
+ * Visible is false leaves its children's bindings unevaluated, so the format that is not chosen
+ * costs nothing, and `off` is simply neither being true.
+ *
+ * Neither covers the header. It says which page is up, what the session is and how much of it is
+ * left, and those are the first things somebody asks *after* seeing a flag; the companion keeps its
+ * own header for the same reason. The band sits directly under it so that it reads as one strip
+ * with the page's identity, and the full flag takes the body and nothing above it.
+ */
+function flagLayers(name: string, body: Rect): Item[] {
+  return [
+    {
+      kind: 'layer',
+      name: `${name}.flag`,
+      children: flagStrip(rect(body.left, body.top, body.width, FLAG_BAND_HEIGHT), FLAG_STRIP_STYLES.standard, `${name}.flag`),
+      ...withBindings({ Visible: secondScreen.pitWallFlagFormatIs('band') }),
+    },
+    {
+      kind: 'layer',
+      name: `${name}.flagFull`,
+      children: flagFull(body, `${name}.flagFull`),
+      ...withBindings({ Visible: secondScreen.pitWallFlagFormatIs('full') }),
+    },
+  ];
+}
+
 /** The race page: the field on the left, the driver's own numbers and two zones on the right. */
 export function racePage(width: number, height: number): Screen {
   const header = rect(0, 0, width, PIT_WALL_HEADER.height);
@@ -410,6 +453,7 @@ export function racePage(width: number, height: number): Screen {
   items.push(zoneWidget('race.zoneA', rect(columnLeft, y, columnWidth, zoneHeight), 'standard', 'race', 'A'));
   items.push(rule('race.zoneRule', columnLeft, y + zoneHeight, columnWidth, 1));
   items.push(zoneWidget('race.zoneB', rect(columnLeft, y + zoneHeight + 1, columnWidth, zoneHeight), 'standard', 'race', 'B'));
+  items.push(...flagLayers('race', rect(0, bodyTop, width, bodyHeight)));
   return { name: 'race', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(0) };
 }
 
@@ -437,6 +481,7 @@ export function towerPage(width: number, height: number): Screen {
     vRule('tower.zoneRule', columnLeft + zoneWidth, zonesTop, zoneHeight),
     zoneWidget('tower.zoneB', rect(columnLeft + zoneWidth + 1, zonesTop, zoneWidth, zoneHeight), 'standard', 'tower', 'B'),
   ];
+  items.push(...flagLayers('tower', rect(0, bodyTop, width, bodyHeight)));
   return { name: 'tower', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(1) };
 }
 
@@ -480,6 +525,7 @@ export function telemetryPage(width: number, height: number): Screen {
     items.push(zoneWidget(`telemetry.zone${letter}`, rect(zoneLeft, top, zoneWidth, zoneHeight), 'standard', 'telemetry', letter));
     if (i < 2) items.push(rule(`telemetry.zone${letter}.rule`, zoneLeft, top + zoneHeight, zoneWidth, 1));
   });
+  items.push(...flagLayers('telemetry', rect(0, bodyTop, width, bodyHeight)));
   return { name: 'telemetry', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(2) };
 }
 
@@ -536,6 +582,7 @@ export function portraitPage(width: number, height: number): Screen {
     vRule('portrait.zoneRuleBottom', half, zonesTop + zoneHeight + 1, zoneHeight),
     zoneWidget('portrait.zoneD', rect(half + 1, zonesTop + zoneHeight + 1, rightWidth, zoneHeight), 'standard', 'portrait', 'D'),
   ];
+  items.push(...flagLayers('portrait', rect(0, bodyTop, width, height - bodyTop)));
   return { name: 'portrait', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
 }
 

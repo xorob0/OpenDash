@@ -20,6 +20,7 @@ import {
   average5,
   bestLap,
   carPosition,
+  positionDigits,
   currentLap,
   deltaColour,
   estimatedLap,
@@ -94,7 +95,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
           fld(ctx, 'average5', 'Average 5', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, fs: d.mid }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
-            bind: fmt(carPosition(player()), '0'),
+            bind: positionDigits(player()),
             chars: CHARS.position,
             fs: d.mid,
             // The field total is a proportion of the position beside it rather than a label size:

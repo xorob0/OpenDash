@@ -19,7 +19,7 @@ import {
   secondScreenProperties,
 } from '../src/contract.ts';
 import { ncalc, validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
-import { PIT_WALL_PAGES, type PitWallPageMeta } from '../src/contract.ts';
+import { COMPANION_OPEN_ON_SETTING, PIT_WALL_PAGES, type PitWallPageMeta } from '../src/contract.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
 import { MODULES, pageBuilder } from '../src/modules/index.ts';
@@ -204,22 +204,32 @@ describe('the companion', () => {
     expect(new Set(rows.map((top) => Math.min(...labels.filter((l) => l.rect.top === top).map((l) => l.rect.left)))).size).toBe(1);
   });
 
-  test('switches each screen on its own module and on the page the plugin is showing', () => {
-    // Both halves. The page is what a wheel button moves and is what decides which of the
-    // twenty-one is up, so exactly one screen is enabled at a time and SimHub shows that one; the
-    // rotation is still asked, so a driver with no plugin sees a module they have left on and so
-    // that the switches are read by the package that offers them.
+  /**
+   * Every screen on its own module switch, and on the module the plugin is forcing where it forces one.
+   *
+   * It used to be the switch and *the page the plugin was showing*, evaluated every frame, so exactly
+   * one of the twenty-one was ever enabled. That is what made a tap do nothing: SimHub's only touch
+   * gesture maps a tap to the previous or next screen, and `SelectNextScreen` walks the screens whose
+   * expression is true, so a list of one had nowhere to go.
+   *
+   * The forcing half is false on every ordinary frame, so the rotation alone decides what exists and
+   * SimHub decides which is up. It goes true for the few seconds after SimHub loads, and one screen
+   * left standing is one SimHub selects -- which is how a companion still opens on a chosen module.
+   */
+  test('switches each screen on its own module, and leaves the paging to SimHub', () => {
     main.screens.forEach((screen, i) => {
-      expect(screen.enabledExpression).toBe(secondScreen.moduleShown(i + 1));
+      expect(screen.enabledExpression).toBe(secondScreen.moduleLive(i + 1));
       expect(screen.enabledExpression).toContain(moduleSettingName(i + 1));
-      expect(screen.enabledExpression).toContain(`OpenDash.${COMPANION_PAGE_SETTING}`);
-      expect(screen.enabledExpression).toContain(`= (${i})`);
+      // The page the plugin used to drive it with is not in it, which is the whole of the change.
+      expect(screen.enabledExpression).not.toContain(`OpenDash.${COMPANION_PAGE_SETTING}`);
+      // And the force is, defaulting to -1 so that a package with no plugin forces nothing.
+      expect(screen.enabledExpression).toContain(`OpenDash.${COMPANION_OPEN_ON_SETTING}], -1)`);
     });
     // Energy, damage and track rivals default to off, which is a 0 in the expression.
     expect(main.screens[5]!.enabledExpression).toContain(', 0)');
     expect(main.screens[0]!.enabledExpression).toContain(', 1)');
-    // And the page defaults to the first module, so a package with no plugin opens on lap times.
-    expect(secondScreen.companionPage()).toBe(`isnull([OpenDash.${COMPANION_PAGE_SETTING}], 0)`);
+    // And the dashboard asks SimHub for the tap, rather than leaving it to the display's setting.
+    expect(main.metadata.touchMode).toBe('simple');
   });
 
   test('gives every screen the same roles, so the page shows in and out of a session', () => {
@@ -428,11 +438,12 @@ describe('the contract', () => {
       }
     }
     const text = [...used].join(' ');
-    // All but the one the plugin keeps to itself. `PitWallStartPage` is what a pit wall's live
-    // `PitWallPage` is set from when SimHub starts, and a package binding that read it instead would
-    // ignore the action that moves the page -- which is the same reason a face's own Start and glance
-    // settings are the plugin's and not a binding's.
-    const pluginOnly = new Set(['OpenDash.PitWallStartPage']);
+    // All but the ones no package reads. `CompanionPage` used to gate the companion's screens and no
+    // longer does: SimHub's own navigation owns the paging there, because its only touch gesture is
+    // "next screen" and that walks the screens whose expression is true -- with one of twenty-one
+    // enabled there was nothing to walk and tapping the phone did nothing. The property stays
+    // published under #170 rather than vanishing from an rc user's list.
+    const pluginOnly = new Set(['OpenDash.CompanionPage']);
     for (const p of secondScreenProperties().filter((n) => !pluginOnly.has(n))) expect({ p, read: text.includes(p) }).toEqual({ p, read: true });
     for (const p of pluginOnly) expect({ p, read: text.includes(p) }).toEqual({ p, read: false });
     // The dash settings are shared: the second screens read the modes too, but never a slot.

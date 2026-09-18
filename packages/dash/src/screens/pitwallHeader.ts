@@ -7,9 +7,17 @@
  * text on the strip whose width is known at build time and is therefore what gives way when the
  * two sides meet: the portrait header once drew "OFFLINE TESTING" over "PIT WALL · PORTRAIT".
  *
- * The seventh group is the track state, which SimHub publishes as `TrackGripStatus` and which band
- * D and the track module bind as well. The compact portrait header drops it along with the wind and
- * the sim clock, which is room the 1080 px strip does not have.
+ * The track state is one of them, which SimHub publishes as `TrackGripStatus` and which band D and
+ * the track module bind as well. The compact portrait header drops it along with the wind and the
+ * sim clock, which is room the 1080 px strip does not have.
+ *
+ * **There is no flag group and there should not be one.** The strip carried a colour block and a
+ * word for a while, built from the six normalised `Flag_*` properties, and it was reported from a
+ * rig as simply not working: those six are the only flags SimHub normalises, iRacing raises most of
+ * its session state outside them, and a 24 px block on a 64 px strip is not where a driver looks for
+ * a flag anyway. The flag belongs to the whole page, not to a corner of its header, and the pit wall
+ * now draws it the way the companion does -- a band across the top or the full screen, off by
+ * default, chosen in the plugin. `flagFormat` on the pit wall page is that setting.
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -20,7 +28,6 @@ import { canvasBaseline, canvasYForBaseline, textBox } from '../design/metrics.t
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
-import { FLAG_PRIORITY, flagVisible } from '../components/flagStrip.ts';
 import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
 import { CHARS, GRIP_WIDEST, clock, currentLap, incidentLimit, incidents, isTimedSession, localClock, sessionTimeLeft, sessionType, simClock, totalLaps, trackGrip, windKmh } from '../second/values.ts';
@@ -32,25 +39,6 @@ const { concat, str, fmt, iff, gt, num, isnull, isNull, not, ucase } = ncalc;
 export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
 /** The three page squares of the landscape dashboard. */
 export const PAGE_SQUARE = { size: 8, gap: 6 } as const;
-/** The flag block beside the flag's name. */
-export const FLAG_BLOCK = { width: 24, height: 12 } as const;
-
-/** Each flag's colour and name, in the priority order the strip uses. */
-const FLAG_LOOK: Record<string, { color: `#${string}`; name: string }> = {
-  Flag_Black: { color: ds.purpose.flag.black, name: 'Black' },
-  Flag_Checkered: { color: ds.purpose.flag.chequer, name: 'Chequered' },
-  Flag_Yellow: { color: ds.purpose.flag.yellow, name: 'Yellow' },
-  Flag_Blue: { color: ds.purpose.flag.blue, name: 'Blue' },
-  Flag_White: { color: ds.purpose.flag.white, name: 'White' },
-  Flag_Green: { color: ds.purpose.flag.green, name: 'Green' },
-};
-
-/**
- * The longest name the flag binding can draw. The header is measured before the binding exists,
- * so a box cut to "GREEN" loses the "G" of "NO FLAG" and half of "CHEQUERED".
- */
-const WIDEST_FLAG_NAME = 'CHEQUERED';
-
 /**
  * The longest session name SimHub reports for iRacing, uppercased. `SessionTypeName` passes
  * iRacing's own `SessionType` through, and "Offline Testing" is the longest of Practice, Lone
@@ -75,10 +63,6 @@ const WIDEST_LAP_DENOMINATOR = '/ 999';
  * far below it, but the box is measured before the binding exists and WPF clips what does not fit.
  */
 const WIDEST_WIND = '188 km/h';
-
-/** The flag colour and name as one expression each, in priority order, defaulting to no flag. */
-const flagColour = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => iff(flagVisible(flag), str(FLAG_LOOK[flag]?.color ?? ds.color.text.dim), fallback), str(ds.color.text.dim));
-const flagName = (): string => FLAG_PRIORITY.reduce<string>((fallback, flag) => iff(flagVisible(flag), str((FLAG_LOOK[flag]?.name ?? '').toUpperCase()), fallback), str('NO FLAG'));
 
 /** The wordmark, in the two weights the brand uses. Barlow Condensed Light and Bold are bundled. */
 export function wordmark(name: string, x: number, top: number, fs: number): { items: Item[]; width: number } {
@@ -171,9 +155,9 @@ export interface PitWallHeaderSpec {
 }
 
 /**
- * The header. Left: wordmark, page name, page squares. Right, from the right edge inwards: the two
- * clocks, the wind, the track state, the incident count, the flag, the time left and the session
- * and lap.
+ * The header. Left: wordmark, page name, page squares. Right, from the right edge inwards: the wall
+ * clock, the sim clock, the wind, the track state, the incident count, the time left and the
+ * session and lap.
  */
 export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'zone' = 'zone'): Item[] {
   const d = densityOf(density);
@@ -215,13 +199,6 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       ],
     },
     {
-      id: 'flag',
-      parts: [
-        { kind: 'block', width: FLAG_BLOCK.width, height: FLAG_BLOCK.height, color: ds.color.text.dim, colorBind: flagColour() },
-        { kind: 'label', text: 'GREEN', widest: WIDEST_FLAG_NAME, bind: flagName(), color: ds.color.text.primary },
-      ],
-    },
-    {
       id: 'incidents',
       parts: [
         { kind: 'label', text: 'INC' },
@@ -237,17 +214,29 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       id: 'wind',
       run: { sample: '12 km/h', widest: WIDEST_WIND, bind: concat(fmt(windKmh(), '0'), str(' km/h')) },
     },
-    {
-      id: 'clocks',
-      parts: [
-        { kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } },
-        ...(compact
-          ? []
-          : ([
-              { kind: 'label', text: 'LOCAL' },
-              { kind: 'value', sample: '15:07', bind: simClock(), chars: { digits: 5, specials: 1 } },
+    // Two groups and not one, each label in front of its own value.
+    //
+    // They were one run reading "14:32 LOCAL 15:07 SIM" -- the only group on the strip to put its
+    // label *after* its value, so the eye pairs 14:32 with LOCAL only if it already knows the rule,
+    // and the two pairs sat a word apart while every other group sat a group-gap apart. Reported
+    // from a rig as not being able to tell which clock was which and as the spacing looking wrong.
+    // Both come from the same thing, so both are fixed by the same thing.
+    ...(compact
+      ? []
+      : [
+          {
+            id: 'simClock',
+            parts: [
               { kind: 'label', text: 'SIM' },
-            ] as InlinePart[])),
+              { kind: 'value', sample: '15:07', bind: simClock(), chars: { digits: 5, specials: 1 } },
+            ] as InlinePart[],
+          },
+        ]),
+    {
+      id: 'localClock',
+      parts: [
+        { kind: 'label', text: 'LOCAL' },
+        { kind: 'value', sample: '14:32', bind: localClock(), chars: { digits: 5, specials: 1 } },
       ],
     },
   ];

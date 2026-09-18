@@ -127,7 +127,7 @@ describe('the families a package ships', () => {
     expect(weights).toContain('Bold');
   });
 
-  test('a face package ships four faces and a second screen four', () => {
+  test('a face package ships four faces and a second screen five', () => {
     // What the sheets' nine declared weights mean here. A package ships the faces it is drawn in
     // rather than the faces it might ask for, so nine files would be six that no item names and
     // whose advances nothing measures; build.ts holds the other side of the rule, refusing a
@@ -137,10 +137,10 @@ describe('the families a package ships', () => {
     // serves both screens.
     const faces = (files: string[]): string[] => files.map((f) => `${familyOfFile(f)} ${weightOfFile(f)}`).sort();
     const shared = [`${ds.font.label} Medium`, `${ds.font.data} SemiBold`, `${ds.font.data} Bold`];
-    // The face's fourth is the flag band's name; a second screen draws no flag band and takes the
-    // wordmark's Light instead.
+    // The fourth is the flag band's name, which the face and the pit wall both draw; the second
+    // screens carry a fifth, the wordmark's Light, which only the pit wall header draws.
     expect(faces(fontsForPackage())).toEqual([...shared, `${ds.font.label} Bold`].sort());
-    expect(faces(fontsForScreens())).toEqual([...shared, `${ds.font.data} Light`].sort());
+    expect(faces(fontsForScreens())).toEqual([...shared, `${ds.font.label} Bold`, `${ds.font.data} Light`].sort());
   });
 
   test('the vendored originals are left exactly as they were downloaded', () => {

@@ -196,31 +196,26 @@ namespace OpenDashPlugin
             return row;
         }
 
-        /// <summary>What SimHub holds for each of the shapes given. An unreachable driver is a state a
-        /// driver can do nothing about rather than an error, so it is reported as one.</summary>
+        /// <summary>
+        /// What any LED device on the rig holds for each of the shapes given.
+        /// </summary>
+        /// <remarks>
+        /// Any, and not one: SimHub keeps a profile list per LED device, these rows are a census of the
+        /// shapes this build carries rather than a statement about one strip, and a shape installed on
+        /// the wheel is installed. Which device a given strip goes to is the Lights tab's question,
+        /// asked per bar. An unreachable driver is a state a driver can do nothing about rather than an
+        /// error, so it is reported as one.
+        /// </remarks>
         private static IList<FlagBoxPlan> Plan(IList<string> embedded)
         {
             try
             {
-                return StripInstaller.Plan(embedded);
+                return StripInstaller.PlanAnywhere(embedded);
             }
             catch (Exception ex)
             {
                 Log.Warn("Reading SimHub's LED profiles failed: " + ex.Message);
                 return embedded.Select(x => new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).ToList();
-            }
-        }
-
-        private static IList<FlagBoxPlan> Install(IList<string> embedded)
-        {
-            try
-            {
-                return StripInstaller.Install(embedded);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Installing the strip profiles into SimHub failed", ex);
-                return embedded.Select(x => new FlagBoxPlan { State = FlagBoxInstallState.Failed }).ToList();
             }
         }
 

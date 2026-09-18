@@ -268,6 +268,14 @@ namespace OpenDashPlugin
 
         /// <summary>What one bar's middle shows, or the rig's own answer when the bar has gone. An
         /// attached delegate outlives the bar it was attached for until SimHub restarts.</summary>
+        /// <summary>Which LED device one bar's profile is installed into. The Arduino's when the bar is
+        /// unknown, which is what a bar written before openDash knew there was more than one is read as.</summary>
+        public string BarDevice(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            return LedBar.NormaliseDevice(bar == null ? null : bar.Device);
+        }
+
         public string BarCentre(string ns)
         {
             var bar = LedBarByNamespace(ns);
@@ -315,7 +323,7 @@ namespace OpenDashPlugin
         /// has already said what they like on the first and on the tab before bars existed. The namespace
         /// is frozen here and nowhere else moves it.
         /// </remarks>
-        public LedBar AddLedBar(string shape, string name)
+        public LedBar AddLedBar(string shape, string name, string device)
         {
             if (LedBars == null) LedBars = new List<LedBar>();
             var names = new List<string>();
@@ -335,6 +343,7 @@ namespace OpenDashPlugin
                 Centre = LedCentre,
                 RpmStyle = LedRpmStyle,
                 FlagAnimation = LedFlagAnimation,
+                Device = device,
             };
             added.Normalise();
             LedBars.Add(added);
@@ -1110,6 +1119,22 @@ namespace OpenDashPlugin
             return screen == null ? Contract.DefaultPitWallPage : Contract.NormalisePitWallPage(screen.PitWallPage);
         }
 
+        /// <summary>The module one companion is being forced onto, or -1 once the window has passed.</summary>
+        public int ScreenCompanionOpenOn(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionOpenOn : screen.CompanionOpenOn;
+        }
+
+        /// <summary>Hands every companion's paging back to SimHub, which Init does once the window passes.</summary>
+        public void ReleaseStartModules()
+        {
+            foreach (var screen in RigScreens())
+            {
+                if (screen.IsCompanion) screen.ReleaseStartModule();
+            }
+        }
+
         /// <summary>How one companion draws a flag: off, the strip at the foot, or over the module.</summary>
         public string ScreenCompanionFlagFormat(string ns)
         {
@@ -1122,6 +1147,13 @@ namespace OpenDashPlugin
         {
             var screen = ScreenByNamespace(ns);
             return screen == null ? Contract.DefaultPitWallClassOnly : screen.PitWallClassOnly;
+        }
+
+        /// <summary>How one pit wall draws a flag: off, a band under the header, or over the body.</summary>
+        public string ScreenPitWallFlagFormat(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultPitWallFlagFormat : Contract.NormalisePitWallFlagFormat(screen.PitWallFlagFormat);
         }
 
         /// <summary>The zone and page a held button shows on one pit wall.</summary>

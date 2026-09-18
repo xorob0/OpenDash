@@ -12,6 +12,7 @@
 // and the low-fuel threshold are one answer for the rig, and so is the car's own shift pattern, which is
 // the car's rather than the strip's. What a bar owns is what its LEDs do with all that.
 using System;
+using System.Globalization;
 
 namespace OpenDashPlugin
 {
@@ -48,6 +49,53 @@ namespace OpenDashPlugin
         /// Per bar, because a brow above a monitor has no ends to speak of and a rim does.</summary>
         public bool SpotterWhole { get; set; } = Contract.DefaultLedSpotterWhole;
 
+        /// <summary>
+        /// Which of SimHub's LED devices this bar's profile is installed into.
+        /// </summary>
+        /// <remarks>
+        /// **There is no such thing as "SimHub's LED profiles".** Every LED device holds its own list:
+        /// the Arduino RGB LEDs device has one, and each wheel, button plate or brow that SimHub knows
+        /// as a device has one of its own, in its own file. A profile added to one is invisible to all
+        /// the others, so a bar that did not say which device it was for was installed into whichever
+        /// one openDash happened to name -- the Arduino's -- and a driver whose LEDs are in their wheel
+        /// went looking for it in the wheel and found nothing. <see cref="LedTargets"/> is the list.
+        ///
+        /// <see cref="ArduinoDevice"/> is what a bar written before this existed is read as, because
+        /// that is where those bars were actually installed. It is a statement about the past rather
+        /// than a preference: a new bar takes whatever the panel offered.
+        /// </remarks>
+        public string Device { get; set; }
+
+        /// <summary>SimHub's Arduino RGB LEDs, the device openDash installed into when it only knew one.</summary>
+        public const string ArduinoDevice = "arduino";
+
+        /// <summary>One device of SimHub's Devices plugin, by the instance id SimHub persists for it.</summary>
+        public const string DevicePrefix = "device:";
+
+        /// <summary>The id a bar records for a device instance. Round-tripped by <see cref="DeviceInstanceOf"/>.</summary>
+        public static string DeviceId(Guid instanceId)
+        {
+            return DevicePrefix + instanceId.ToString("D", CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>The instance behind a device id, or null when the id names something else or nothing.</summary>
+        public static Guid? DeviceInstanceOf(string id)
+        {
+            if (id == null || !id.StartsWith(DevicePrefix, StringComparison.Ordinal)) return null;
+            Guid parsed;
+            return Guid.TryParseExact(id.Substring(DevicePrefix.Length), "D", out parsed) ? parsed : (Guid?)null;
+        }
+
+        /// <summary>A spellable device id: the Arduino's unless it is one openDash can recognise. An id
+        /// it cannot read is not kept, because a bar pointed at nothing would silently install nowhere.</summary>
+        public static string NormaliseDevice(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return ArduinoDevice;
+            var trimmed = id.Trim();
+            if (string.Equals(trimmed, ArduinoDevice, StringComparison.Ordinal)) return ArduinoDevice;
+            return DeviceInstanceOf(trimmed) == null ? ArduinoDevice : trimmed;
+        }
+
         /// <summary>Repairs the bar: a namespace that is spellable and three settings that are legal
         /// values, so a hand-edited file cannot reach a profile as itself.</summary>
         public void Normalise()
@@ -56,6 +104,7 @@ namespace OpenDashPlugin
             if (string.IsNullOrWhiteSpace(Namespace)) Namespace = "Led" + Contract.Slug(Name);
             Centre = Contract.NormaliseLedCentre(Centre);
             RpmStyle = Contract.NormaliseChoice(RpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+            Device = NormaliseDevice(Device);
         }
 
         public LedBar Copy()
@@ -69,6 +118,7 @@ namespace OpenDashPlugin
                 RpmStyle = RpmStyle,
                 FlagAnimation = FlagAnimation,
                 SpotterWhole = SpotterWhole,
+                Device = Device,
             };
         }
     }

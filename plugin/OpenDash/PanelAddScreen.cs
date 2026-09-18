@@ -170,6 +170,26 @@ namespace OpenDashPlugin
             return type.Entries.OrderByDescending(e => e.Width).ToList();
         }
 
+        /// <summary>
+        /// Which of the offered sizes the dialog opens on.
+        /// </summary>
+        /// <remarks>
+        /// The preferred face where this type offers it, and the first entry otherwise. A dialog that
+        /// opened on whatever happened to be first in the catalogue offered the 1920 x 480 to everybody,
+        /// and the size most of these screens actually are is the 850 x 480: it is what openDash is
+        /// tested on and what its users own. A driver whose screen is something else still has to say
+        /// so, which the caption already asks them to do.
+        /// </remarks>
+        public static int PreferredIndex(ScreenType type)
+        {
+            var offered = Offered(type);
+            for (var i = 0; i < offered.Count; i++)
+            {
+                if (offered[i].Width == Contract.PreferredFaceWidth && offered[i].Height == Contract.PreferredFaceHeight) return i;
+            }
+            return 0;
+        }
+
         /// <summary>How one package is written in the size control.</summary>
         public static string SizeLabel(ScreenType type, PackageEntry entry, int index)
         {

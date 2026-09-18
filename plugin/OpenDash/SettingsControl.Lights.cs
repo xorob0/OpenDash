@@ -255,6 +255,7 @@ namespace OpenDashPlugin
                         Save();
                     });
                 return Ui.VStack(4,
+                    BuildLedDeviceRow(LedTargets.All(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
                     Ui.Row("Strip centre", "What the middle of this strip shows. The LEDs at the ends are lamps and are not affected by it.", centre),
                     Ui.Row("Rev style", "The car's own mirrors the shift lights in the car you are driving: its LEDs, its colours, its order, its flash, in the gear you are in. The other three are openDash's own looks, and are what a car we have no measurements for shows.", style),
                     Ui.Row("Flag animation", "On, a flag moves, which is what the corner of your eye reads it by. Off holds every flag from the frame it would have settled on and never turns one off.",
@@ -274,6 +275,74 @@ namespace OpenDashPlugin
                         })),
                     BuildLedBarActions(ns));
             });
+        }
+
+        /// <summary>
+        /// The device picker: which of SimHub's LED devices a bar's profile goes to.
+        /// </summary>
+        /// <remarks>
+        /// Three shapes rather than always a drop-down. A rig with one LED device has nothing to choose
+        /// and is told where the profile went; a rig with none is told why there is nowhere for it to go,
+        /// which is a thing about the rig rather than a failure; and only a rig with two or more is asked.
+        ///
+        /// A bar pointed at a device SimHub no longer has keeps its own entry at the top of the list,
+        /// labelled as gone. Dropping it would silently re-point the bar at whatever sorted first, which
+        /// is the class of bug this whole picker exists to close.
+        /// </remarks>
+        private static FrameworkElement BuildLedDeviceRow(IList<LedTarget> targets, string current, Action<string> chosen)
+        {
+            if (targets.Count == 0)
+            {
+                return Ui.Row(PanelLights.BarDeviceTitle, PanelLights.NoDevices, new Border());
+            }
+
+            var ids = targets.Select(t => t.Id).ToList();
+            var labels = targets.Select(t => t.Connected ? t.Name : t.Name + PanelLights.DeviceOffline).ToList();
+            var known = ids.Contains(current, StringComparer.Ordinal);
+            if (!known)
+            {
+                ids.Insert(0, current);
+                labels.Insert(0, PanelLights.DeviceGone);
+            }
+
+            if (targets.Count == 1 && known)
+            {
+                return Ui.Row(PanelLights.BarDeviceTitle, PanelLights.OneDevice(labels[0]), new Border());
+            }
+
+            var row = Ui.Row(PanelLights.BarDeviceTitle, PanelLights.BarDeviceCaption,
+                BuildChoice(ids.ToArray(), labels.ToArray(), current, 260, chosen));
+            row.HorizontalAlignment = HorizontalAlignment.Stretch;
+            return row;
+        }
+
+        /// <summary>
+        /// Moves one bar's profile to another of SimHub's LED devices.
+        /// </summary>
+        /// <remarks>
+        /// Installing rather than recording: the profile is the whole point of the bar, and a setting
+        /// that said "the wheel" while the profile sat in the Arduino's list would be the reported bug
+        /// with a drop-down in front of it. The install takes the copy out of every device first.
+        /// </remarks>
+        private void MoveLedBar(string ns, string device)
+        {
+            var bar = Settings.LedBarByNamespace(ns);
+            if (bar == null) return;
+            bar.Device = LedBar.NormaliseDevice(device);
+            Save();
+            var found = EmbeddedShapes().FirstOrDefault(entry => string.Equals(entry.Id, bar.Shape, StringComparison.Ordinal));
+            if (found == null)
+            {
+                AnnounceLights(PanelLights.BarAddFailed(bar.Name), Theme.Caution);
+                return;
+            }
+            var plan = InstallBar(bar, found.Json);
+            var ok = plan.State == FlagBoxInstallState.UpToDate;
+            var target = LedTargets.Find(bar.Device);
+            var where = target == null ? "that device" : target.Name;
+            var line = ok ? "Moved " + bar.Name + "'s profile to " + where + "." : PanelLights.BarAddFailed(bar.Name);
+            if (ok && plan.Note != null) line += " " + plan.Note;
+            AnnounceLights(line, ok && plan.Note == null ? Theme.TextSecondary : Theme.Caution);
         }
 
         private FrameworkElement BuildLedBarActions(string ns)
@@ -355,6 +424,14 @@ namespace OpenDashPlugin
                 refresh();
             };
 
+            // Which device gets the profile. SimHub keeps one profile list per LED device, so this is
+            // not a detail: a bar installed into the wrong one is written, saved and verified correctly
+            // into a list the hardware does not read, which is exactly what a rig reported.
+            var targets = LedTargets.All();
+            var preferred = LedTargets.Preferred();
+            var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;
+            var deviceRow = BuildLedDeviceRow(targets, device, value => device = value);
+
             var endsRow = Ui.Row(PanelLights.BarEndsTitle, PanelLights.BarEndsCaption,
                 BuildSegmented(
                     sides.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToArray(),
@@ -374,11 +451,11 @@ namespace OpenDashPlugin
 
             var add = Ui.OutlineButton(PanelLights.AddBar, PanelMetrics.RowButtonHeight);
             add.MinWidth = ButtonMinWidth;
-            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre), name.Text, shapes);
+            add.Click += (sender, args) => AddLedBar(PanelLights.BarShapeId(side, centre), name.Text, device, shapes);
             var cancel = Ui.LinkButton("Cancel");
             cancel.Click += (sender, args) => Redraw();
 
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar, endsRow, centreRow, note, nameRow,
+            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddBar, endsRow, centreRow, note, nameRow, deviceRow,
                 Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
         }
 
@@ -445,9 +522,9 @@ namespace OpenDashPlugin
             return shapes;
         }
 
-        private void AddLedBar(string shape, string name, IList<EmbeddedShape> shapes)
+        private void AddLedBar(string shape, string name, string device, IList<EmbeddedShape> shapes)
         {
-            var bar = Settings.AddLedBar(shape, name);
+            var bar = Settings.AddLedBar(shape, name, device);
             Save();
             var found = shapes.FirstOrDefault(entry => string.Equals(entry.Id, shape, StringComparison.Ordinal));
             var embedded = found == null ? null : found.Json;
@@ -463,7 +540,8 @@ namespace OpenDashPlugin
             // A note is not a failure, so the line stays the ordinary one and gains a sentence. The one
             // note there is says the device is listing its maker's built-in profiles, which is the only
             // way an install can be correct and still leave nothing for the driver to select.
-            var line = ok ? PanelLights.BarAdded(bar.Name) : PanelLights.BarAddFailed(bar.Name);
+            var target = LedTargets.Find(bar.Device);
+            var line = ok ? PanelLights.BarAdded(bar.Name, target == null ? null : target.Name) : PanelLights.BarAddFailed(bar.Name);
             if (ok && note != null) line += " " + note;
             AnnounceLights(line, ok && note == null ? Theme.TextSecondary : Theme.Caution);
         }
@@ -472,7 +550,11 @@ namespace OpenDashPlugin
         {
             try
             {
-                return StripInstaller.Install(LedBarProfile.For(bar, embedded));
+                // Out of wherever it was first. A bar that has moved from the Arduino to a wheel must not
+                // leave a copy behind reading properties that now drive the wheel's, and the install only
+                // knows about the device it is going to.
+                StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(bar.Namespace));
+                return StripInstaller.Install(LedBarProfile.For(bar, embedded), bar.Device);
             }
             catch (Exception ex)
             {
@@ -488,7 +570,10 @@ namespace OpenDashPlugin
             var name = bar.Name;
             try
             {
-                StripInstaller.Uninstall(LedBarProfile.IdFor(ns));
+                // Everywhere, not just the device the bar names: the device it was installed into may
+                // have been removed from SimHub since, and a profile nothing attaches settings to any
+                // more is a row in somebody's list that lights nothing.
+                StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(ns));
             }
             catch (Exception ex)
             {

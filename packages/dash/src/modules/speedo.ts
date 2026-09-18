@@ -52,7 +52,7 @@ export const speedo = defineModule('speedo', (ctx) => {
             `${ctx.prefix}rev`,
           ),
         ];
-      }),
+      }, true),
     ],
     ctx.density,
   );

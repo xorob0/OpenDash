@@ -236,7 +236,7 @@ export const ledMirrorRunName = (length: number): string => `LedMirror${length}`
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
-  const pitWall = [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING];
+  const pitWall = [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING, PIT_WALL_FLAG_FORMAT_SETTING];
   return [...companionProperties(), ...pitWall].map(propertyName);
 }
 
@@ -730,7 +730,7 @@ export function screenProperties(prefix: string): string[] {
   const face = faceForPrefix(prefix);
   if (face) return facePropertyNames(face).map(propertyName);
   if (prefix === PIT_WALL_PREFIX) {
-    return [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING].map(propertyName);
+    return [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING, PIT_WALL_FLAG_FORMAT_SETTING].map(propertyName);
   }
   if (prefix === COMPANION_PREFIX) return companionProperties().map(propertyName);
   throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
@@ -870,6 +870,42 @@ export function moduleSettingName(number: number): string {
  */
 export const COMPANION_PAGE_SETTING = 'CompanionPage';
 
+/**
+ * **Nothing on a companion reads the page any more, and that is deliberate.**
+ *
+ * SimHub's only touch gesture on a dashboard maps a tap to the previous or next *screen*, and its
+ * navigation walks the screens whose expression is true. While openDash enabled exactly one of the
+ * twenty-one, that list had one member and a tap did nothing at all. So the rotation alone decides
+ * which screens exist and SimHub decides which of them is up.
+ *
+ * The property stays published. It has shipped, README names it, and #170 is the rule that an
+ * rc user's properties do not vanish without a release of warning; what it costs while it is unread
+ * is one name in a list. It comes back into use, with the start module and the held glance, if
+ * SimHub ever gives a plugin a way to choose the screen -- #362.
+ */
+export const COMPANION_PAGE_IS_UNREAD = true;
+
+/**
+ * `CompanionOpenOn`: the module to force, or -1 for none. The start module, recovered.
+ *
+ * **openDash can still choose a screen; it just cannot choose it twice.** SimHub re-evaluates every
+ * screen's expression each frame and moves off one that has stopped being enabled -- the mechanism
+ * the companion ran on before, and the reason the old gate worked at all. So leaving exactly one
+ * module enabled still forces SimHub onto it. The plugin holds this at the start module for a few
+ * seconds after SimHub loads and then clears it, and everything re-enables around a screen SimHub
+ * has already selected and has no reason to leave.
+ *
+ * What it does *not* recover is the held glance, and the difference is memory rather than control.
+ * Going to a module is one forced selection; coming back is a second one, to whichever module the
+ * driver had been on -- and now that SimHub owns the paging, openDash does not know what that is.
+ * SimHub publishes no property naming the selected screen. Its own navigation stack does know, and
+ * `Dashboard.GotoScreen` uses it, but that method is internal. #362.
+ */
+export const COMPANION_OPEN_ON_SETTING = 'CompanionOpenOn';
+
+/** -1: force nothing, which is what a package with no plugin reads and what every ordinary frame is. */
+export const DEFAULT_COMPANION_OPEN_ON = -1;
+
 /** Lap times, which is the first module in page order and what a companion opens on. */
 export const DEFAULT_COMPANION_PAGE = 0;
 
@@ -885,6 +921,9 @@ export const DEFAULT_COMPANION_PAGE = 0;
  * `off` is the third answer and the face has no equivalent, because a face's band costs nothing to
  * leave on. A companion's full-screen flag costs the whole module, and somebody using theirs as a
  * dedicated relative will want it left alone.
+ *
+ * The pit wall takes the same three answers through {@link PIT_WALL_FLAG_FORMAT_SETTING}, with
+ * `band` as its default; the type keeps the companion's name because it is the name that shipped.
  */
 export type CompanionFlagFormat = 'off' | 'band' | 'full';
 export const COMPANION_FLAG_FORMATS: readonly CompanionFlagFormat[] = ['off', 'band', 'full'];
@@ -898,7 +937,7 @@ export const COMPANION_FLAG_FORMAT_SETTING = 'CompanionFlagFormat';
  * the reason every other name is: both halves of the contract assert this group by index.
  */
 export function companionProperties(): string[] {
-  return [...MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)), COMPANION_PAGE_SETTING, COMPANION_FLAG_FORMAT_SETTING];
+  return [...MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)), COMPANION_PAGE_SETTING, COMPANION_FLAG_FORMAT_SETTING, COMPANION_OPEN_ON_SETTING];
 }
 
 /**
@@ -1094,6 +1133,25 @@ export const WEB_VIEW_SETTING = 'WebViewUrl';
 export const PIT_WALL_CLASS_ONLY_SETTING = 'PitWallClassOnly';
 export const DEFAULT_PIT_WALL_CLASS_ONLY = false;
 
+/**
+ * `PitWallFlagFormat`: how a pit wall draws a flag -- not at all, as a band under the header, or
+ * over the body.
+ *
+ * The companion's three-way question, asked of the other big screen, and it replaces what the
+ * header used to do. The header carried a colour block and a word built from the six flags SimHub
+ * normalises; it was reported from a rig as not working, and a 24 px block in a corner of a 1920 px
+ * strip would not have been the answer even when it lit. A flag is the one thing on a pit wall that
+ * has to be seen from across the room, so it is the page's and not a readout's.
+ *
+ * `band` is the default rather than the companion's `full`. A companion is a phone showing one
+ * module and a full-screen flag costs one list; a pit wall is a board, a track map and four zones
+ * that somebody is watching *because* of the flag -- covering them at the moment a yellow comes out
+ * hides the cars the yellow is about. `full` is still there for a second monitor used as a flag
+ * panel, and `off` for a wall that should never change.
+ */
+export const PIT_WALL_FLAG_FORMAT_SETTING = 'PitWallFlagFormat';
+export const DEFAULT_PIT_WALL_FLAG_FORMAT: CompanionFlagFormat = 'band';
+
 /** The URL the web view page shows until the user sets one. Empty means "nothing configured". */
 export const DEFAULT_WEB_VIEW_URL = '';
 
@@ -1118,6 +1176,18 @@ export const secondScreen = {
    * arrangements of a zone face are chosen by.
    */
   moduleShown: (number: number): Expr => and(secondScreen.moduleEnabled(number), eq(secondScreen.companionPage(), num(number - 1))),
+  /** `isnull([OpenDash.CompanionOpenOn], -1)`: the module the plugin is forcing, or -1. */
+  companionOpenOn: (): Expr => isnull(prop(propertyName(COMPANION_OPEN_ON_SETTING)), num(DEFAULT_COMPANION_OPEN_ON)),
+  /**
+   * A module's screen is enabled when the rotation leaves it on, and -- while the plugin is forcing
+   * one -- when it is the one being forced.
+   *
+   * The second half is false on every ordinary frame, so SimHub's own paging owns the screen and a
+   * tap works. It goes true for a few seconds after SimHub loads, which leaves one screen standing
+   * and makes SimHub select it: that is the start module.
+   */
+  moduleLive: (number: number): Expr =>
+    and(secondScreen.moduleEnabled(number), or(lt(secondScreen.companionOpenOn(), num(0)), eq(secondScreen.companionOpenOn(), num(number - 1)))),
   /** `isnull([OpenDash.PitWallRaceA], 0)`: which page one page's zone shows. */
   zonePage: (id: PitWallPageMeta['id'], slot: string): Expr =>
     isnull(prop(propertyName(pitWallZoneSettingName(id, slot))), num(pitWallZoneSlot(id, slot).fallback)),
@@ -1133,6 +1203,10 @@ export const secondScreen = {
   webViewUrl: (): Expr => isnull(prop(propertyName(WEB_VIEW_SETTING)), str(DEFAULT_WEB_VIEW_URL)),
   /** `isnull([OpenDash.PitWallClassOnly], false)`: whether this pit wall's lists show the player's class. */
   classOnly: (): Expr => isnull(prop(propertyName(PIT_WALL_CLASS_ONLY_SETTING)), String(DEFAULT_PIT_WALL_CLASS_ONLY)),
+  /** `isnull([OpenDash.PitWallFlagFormat], 'band')`: how this pit wall draws a flag. */
+  pitWallFlagFormat: (): Expr => isnull(prop(propertyName(PIT_WALL_FLAG_FORMAT_SETTING)), str(DEFAULT_PIT_WALL_FLAG_FORMAT)),
+  /** `... = 'band'`: whether this pit wall is in the given flag format. */
+  pitWallFlagFormatIs: (format: CompanionFlagFormat): Expr => eq(secondScreen.pitWallFlagFormat(), str(format)),
 };
 
 // --- The flag box ---------------------------------------------------------------------------

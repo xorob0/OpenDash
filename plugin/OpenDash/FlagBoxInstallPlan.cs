@@ -204,6 +204,23 @@ namespace OpenDashPlugin
             };
         }
 
+        /// <summary>
+        /// The better-off of two readings of the same profile, which is the opposite question to
+        /// <see cref="Combine"/>'s.
+        /// </summary>
+        /// <remarks>
+        /// Combine reduces the members of one group on one device and takes the worst, because a row
+        /// that installs five profiles must not read better than the one it is worst about. This
+        /// reduces one profile across several devices and takes the best, because those are alternatives
+        /// rather than parts: a shape installed on the wheel is installed, whatever the Arduino holds.
+        /// </remarks>
+        public static FlagBoxPlan Better(FlagBoxPlan a, FlagBoxPlan b)
+        {
+            if (a == null) return b;
+            if (b == null) return a;
+            return Severity(b.State) > Severity(a.State) ? b : a;
+        }
+
         /// <summary>How loudly a state has to be reported, lowest first. A failure the user can act on
         /// beats a state they cannot, and "one of these is missing" beats "the rest are current".</summary>
         private static int Severity(FlagBoxInstallState state)

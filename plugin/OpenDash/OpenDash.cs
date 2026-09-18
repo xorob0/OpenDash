@@ -93,6 +93,10 @@ namespace OpenDashPlugin
             LoadSettings();
             // Every zone starts on the page it is set to open on, which is what that setting means.
             Settings.OpenOnStartPages();
+            // And the moment the companions stop being held there. Measured from here rather than from
+            // the first frame, because a rig with no game running still loads its dashboards and a
+            // companion sitting in the menus should be on its start module too.
+            releaseStartModulesAt = DateTime.UtcNow + Contract.CompanionOpenOnWindow;
             try
             {
                 // Before installing, not after: a staging folder left by an interrupted update is a complete
@@ -268,10 +272,25 @@ namespace OpenDashPlugin
         /// and an exception here would be one per frame -- so the whole body is guarded and a failure
         /// leaves the strip on the published ladder.</para>
         /// </summary>
+        /// <summary>
+        /// When the companions stop being held on their start module, or null once they have been let go.
+        /// </summary>
+        /// <remarks>
+        /// Set by `Init`, read by `DataUpdate`, and the only clock involved. A companion opens on a chosen
+        /// module because the plugin leaves exactly one of its screens enabled and SimHub moves off the
+        /// rest; this is when that stops and the driver's own taps take over.
+        /// </remarks>
+        private DateTime? releaseStartModulesAt;
+
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
             try
             {
+                if (releaseStartModulesAt != null && DateTime.UtcNow >= releaseStartModulesAt.Value)
+                {
+                    releaseStartModulesAt = null;
+                    Settings.ReleaseStartModules();
+                }
                 var telemetry = data == null ? null : data.NewData;
                 // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no
                 // opinion falls back to: the mirror is one computation feeding every strip, so gating it
@@ -434,6 +453,7 @@ namespace OpenDashPlugin
                     // it puts every zone back on the page it opens on.
                     this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace), () => Settings.ScreenCompanionPage(s.Namespace));
                     this.AttachDelegate(Contract.CompanionFlagFormatProperty(s.Namespace), () => Settings.ScreenCompanionFlagFormat(s.Namespace));
+                    this.AttachDelegate(Contract.CompanionOpenOnProperty(s.Namespace), () => Settings.ScreenCompanionOpenOn(s.Namespace));
                 }
                 else if (s.IsPitWall)
                 {
@@ -445,6 +465,7 @@ namespace OpenDashPlugin
                     this.AttachDelegate(Contract.PitWallPageProperty(s.Namespace), () => Settings.ScreenPitWallPage(s.Namespace));
                     this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
                     this.AttachDelegate(Contract.PitWallClassOnlyProperty(s.Namespace), () => Settings.ScreenPitWallClassOnly(s.Namespace));
+                    this.AttachDelegate(Contract.PitWallFlagFormatProperty(s.Namespace), () => Settings.ScreenPitWallFlagFormat(s.Namespace));
                 }
             }
         }

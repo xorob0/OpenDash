@@ -57,6 +57,44 @@ namespace OpenDashPlugin
 
         public const string BarEndsCaption = "The group at each end of the strip, which carries the lamps: a car alongside, the flags, your car's own warnings and the aids. None means the whole strip is one run, which is what a brow above a monitor is.";
 
+        /// <summary>The device row of the add flow and of every bar.</summary>
+        public const string BarDeviceTitle = "Which device";
+
+        /// <summary>
+        /// The line under it, which has to carry a fact about SimHub rather than a preference.
+        /// </summary>
+        /// <remarks>
+        /// There is no shared list of LED profiles in SimHub. Every LED device keeps its own, in its own
+        /// file, and a profile in one is invisible in every other. openDash used to install into the
+        /// Arduino RGB LEDs device whatever the strip was, so a bar added for a wheel was written and
+        /// saved correctly into a list the wheel does not read, and the driver went looking in the wheel
+        /// and found nothing. Somebody reading this row has to understand that choosing is not optional.
+        /// </remarks>
+        public const string BarDeviceCaption =
+            "Where the profile goes. Each device in SimHub keeps its own LED profiles, so pick the one these LEDs are on -- "
+            + "a wheel, a button plate, or the Arduino if you wired the strip yourself.";
+
+        /// <summary>Said in place of the picker when SimHub has exactly one LED device: there is nothing
+        /// to choose, and a drop-down of one is a question with one answer.</summary>
+        public static string OneDevice(string name)
+        {
+            return "Its profile goes to " + name + ", which is the only device SimHub has LEDs for.";
+        }
+
+        /// <summary>Said when SimHub has none. The bar is still added and still configurable; what it
+        /// cannot have is a profile anywhere, which is a thing about the rig and not about openDash.</summary>
+        public const string NoDevices =
+            "SimHub has no device with RGB LEDs. Add your wheel or your Arduino under SimHub's own Devices or Arduino page first, "
+            + "then add the bar and its profile has somewhere to go.";
+
+        /// <summary>What a bar pointed at a device SimHub no longer has is shown as, so the row says what
+        /// happened rather than silently reading as the first device in the list.</summary>
+        public const string DeviceGone = "The device it was on (not on this rig now)";
+
+        /// <summary>Said beside a device that SimHub is not talking to. A profile installs into it all the
+        /// same -- the profile list is SimHub's, not the hardware's -- so this is a note and not a bar.</summary>
+        public const string DeviceOffline = " (not connected)";
+
         public const string BarCentreTitle = "LEDs in the middle";
 
         public const string BarCentreCaption = "The run between them, which carries the rev ladder. Count the LEDs on your strip and take the ends off; the line below says what that adds up to.";
@@ -77,11 +115,19 @@ namespace OpenDashPlugin
             return side + "-" + centre + "-" + side;
         }
 
-        /// <summary>What is said once a bar exists, which is the step SimHub does not take for you:
-        /// installing adds a profile, it does not select one on the device.</summary>
-        public static string BarAdded(string name)
+        /// <summary>
+        /// What is said once a bar exists, which is the step SimHub does not take for you: installing
+        /// adds a profile, it does not select one on the device.
+        /// </summary>
+        /// <remarks>
+        /// It names the device, because "your LED device" was the whole confusion: a profile goes into
+        /// one device's list and openDash used to always pick the Arduino's, so somebody reading this
+        /// line went to their wheel and found nothing. Now the line says where to look.
+        /// </remarks>
+        public static string BarAdded(string name, string device)
         {
-            return "Added " + name + " and installed its profile. Open your LED device in SimHub and select \"" + name + "\" on it.";
+            var where = string.IsNullOrWhiteSpace(device) ? "your LED device" : device;
+            return "Added " + name + " and installed its profile into " + where + ". Open it in SimHub and select \"" + name + "\" on it.";
         }
 
         public static string BarAddFailed(string name)

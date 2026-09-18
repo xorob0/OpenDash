@@ -331,7 +331,7 @@ export const pitView = defineModule('pitView', (ctx) => {
     rows.push(
       blockRow(BAR_HEIGHT, (bottom) => [
         levelGauge(`${ctx.prefix}gauge`, rect(box.left, bottom - BAR_HEIGHT, box.width, BAR_HEIGHT), pitServiceProgress(), { value: 62 }),
-      ]),
+      ], true),
     );
     return { rows, lead };
   };

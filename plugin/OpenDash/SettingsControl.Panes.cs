@@ -751,6 +751,7 @@ namespace OpenDashPlugin
             var classOnly = BuildToggle(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(); });
             classOnly.ToolTip = "Show the board, the leaderboard and the relative for your own class";
             rows.Add(Ui.Row("My class only", "The board and the list zones show the class you are racing in rather than the whole field.", classOnly));
+            rows.Add(BuildPitWallFlagRow(screen));
             return rows.ToArray();
         }
 
@@ -913,22 +914,22 @@ namespace OpenDashPlugin
                     + "none of their data; switch them on for a sim that does.",
                     BodyWidth),
                 grid,
-                BuildCompanionPages(screen),
-                BuildCompanionWheelButtons(screen));
+                BuildCompanionPaging(screen));
         }
 
         /// <summary>
-        /// The module a companion opens on, and the one a held button shows.
+        /// How a companion is paged, which is not openDash's to decide any more.
         /// </summary>
         /// <remarks>
-        /// Two selects over the same catalogue, laid out the way a face's glance row is: a label and a
-        /// caption on the left, the select on the right, and the glance's binder beside its own select
-        /// because the gesture and the page it shows are one decision.
-        ///
-        /// The glance may name a module the grid above has turned off, and that is deliberate and is the
-        /// same rule a face's glance page keeps: a glance is a thing the driver asked for by holding a
-        /// button, and the rotation is about what the button steps through.
+        /// There were two selects here -- the module a session opens on and the one a held button
+        /// shows -- and a binder for openDash's own next-module action. All three needed openDash to be
+        /// the thing choosing which screen was up, and that is exactly what stopped a tap working:
+        /// SimHub's only touch gesture maps a tap to the previous or next screen, and its navigation
+        /// walks the screens whose expression is true, so with one of twenty-one enabled there was
+        /// nothing to walk. A row that no longer does anything is worse than a row that is not there,
+        /// so they are replaced by the sentence saying where the controls went.
         /// </remarks>
+        /// <summary>One module of the catalogue, numbered as the panel numbers them.</summary>
         private ComboBox BuildModuleSelect(int selected, string tooltip, Action<int> chosen)
         {
             var select = new ComboBox
@@ -938,7 +939,7 @@ namespace OpenDashPlugin
                 ToolTip = tooltip,
             };
             Ui.Field(select, Theme.ControlHeightSm);
-            foreach (var module in Modules.All) select.Items.Add(module.Number.ToString("00") + " · " + module.Name);
+            foreach (var module in Modules.All) select.Items.Add(module.Number.ToString("00") + " \u00b7 " + module.Name);
             select.SelectedIndex = selected >= 0 && selected < Modules.Count ? selected : 0;
             select.SelectionChanged += (sender, args) =>
             {
@@ -949,25 +950,24 @@ namespace OpenDashPlugin
             return select;
         }
 
-        private FrameworkElement BuildCompanionPages(ScreenInstance screen)
+        private FrameworkElement BuildCompanionPaging(ScreenInstance screen)
         {
             var startText = Ui.VStack(4, Ui.Body("Opens on"),
-                Ui.Caption("Where a session starts, whatever the button was left on last time."));
+                Ui.Caption("The module a session starts on. openDash holds it there for a few seconds while SimHub loads, then hands the paging back."));
             startText.MaxWidth = 420;
-            var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
-                Ui.Caption("Hold to show one module, release to return. Usually the relative or the track."));
-            glanceText.MaxWidth = 420;
-
             return Ui.Section("Which module is up",
+                Ui.Caption(
+                    "Tap the left or right half of the screen to go back or forward through the modules you have left on. "
+                    + "To page it from a wheel button instead, bind SimHub's own \"Next screen\" for this dashboard under "
+                    + "Controls and events.",
+                    BodyWidth),
                 Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session opens on", value =>
                 {
                     screen.CompanionStart = value;
+                    // And force it now, so the screen in front of you moves rather than waiting for the
+                    // next SimHub start. Somebody choosing where it opens is looking at the thing.
                     screen.OpenOnStartModule();
-                })),
-                Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
-                    BuildModuleSelect(Settings.ScreenCompanionQuickGlance(screen.Namespace), "The module a held button shows", value => screen.CompanionQuickGlance = value),
-                    BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true))),
-                BuildCompanionFlagRow(screen));
+                })));
         }
 
         /// <summary>How this companion draws a flag. Full screen by default, which is what a phone on a
@@ -986,25 +986,21 @@ namespace OpenDashPlugin
             return Ui.Row(text, segmented);
         }
 
-        /// <summary>
-        /// The one button a companion has.
-        /// </summary>
-        /// <remarks>
-        /// One row rather than the wrap of four a face carries, because a companion shows one module at a
-        /// time and the only thing a wheel button does to it is advance it, past whatever the grid above
-        /// has turned off. The editor draws the row as unbound until somebody binds it, which is the state
-        /// this screen is in until then.
-        /// </remarks>
-        private FrameworkElement BuildCompanionWheelButtons(ScreenInstance screen)
+        /// <summary>How this pit wall draws a flag. The bar by default, not the companion's full screen:
+        /// a wall is watched *because* of the flag, and covering the board at the moment a yellow comes
+        /// out hides the cars the yellow is about.</summary>
+        private FrameworkElement BuildPitWallFlagRow(ScreenInstance screen)
         {
-            return Ui.Section("Wheel buttons on this screen",
-                Ui.Caption(
-                    "openDash pages this screen itself, so bind this button: SimHub's own Next and Previous cannot reach a "
-                    + "companion whose page the plugin decides.",
-                    BodyWidth),
-                Ui.Row(
-                    Ui.Label("Next module"),
-                    BuildBinder(Contract.NextModuleActionFor(screen.Namespace), screen.Name + " · next module")));
+            var text = Ui.VStack(4, Ui.Body("Flags"),
+                Ui.Caption("The bar is a strip under the header, which leaves the board and the zones readable. "
+                    + "Full screen takes everything below the header, for a monitor kept as a flag panel. Off draws none."));
+            text.MaxWidth = 420;
+            var segmented = BuildSegmented(
+                Contract.CompanionFlagFormats,
+                new[] { "Off", "Bar", "Full screen" },
+                Settings.ScreenPitWallFlagFormat(screen.Namespace),
+                value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value); Save(); });
+            return Ui.Row(text, segmented);
         }
 
         /// <summary>"Tyres" and its toggle. The number and the description are the tooltip: the grid reads

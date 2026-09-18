@@ -286,10 +286,11 @@ namespace OpenDashPlugin.Tests
         /// <summary>The one action the companion's own section binds, which the contract has to carry for
         /// the row to be bindable at all.</summary>
         [Fact]
-        public void A_companion_has_one_wheel_action_to_bind()
+        public void A_companion_has_no_wheel_action_to_bind()
         {
-            var actions = Contract.ScreenActionNames(Contract.KindCompanion, "Companion").ToArray();
-            Assert.Contains(Contract.NextModuleActionFor("Companion"), actions);
+            // SimHub's own per-dashboard "Next screen" is what pages a companion from a button now,
+            // and a tap on the screen is what pages it from the screen. See ContractTests.
+            Assert.Empty(Contract.ScreenActionNames(Contract.KindCompanion, "Companion"));
         }
     }
 }
