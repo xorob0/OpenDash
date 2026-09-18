@@ -81,7 +81,13 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
   if (withRevBar) {
     // The well the rev bar has sat in since the first token file named it, and which was never drawn.
     items.push(band('well', z.revBarWell, ds.purpose.block.well));
-    items.push(...revBar({ left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: layout.revBarGap }, 'revBar'));
+    items.push(
+      ...revBar(
+        { left: z.revBar.left, top: z.revBar.top, width: z.revBar.width, height: z.revBar.height, gap: layout.revBarGap },
+        'revBar',
+        zoneSetting.revBar(sizeOf(layout)),
+      ),
+    );
   }
 
   if (z.bar && layout.bar) {
@@ -265,7 +271,11 @@ function faceScreen(layout: ZoneLayout, withRevBar: boolean): Screen {
     pit: true,
     backgroundColor: layout.background,
     items: faceItems(layout, { revBar: withRevBar }),
-    enabledExpression: withRevBar ? not(setting.revBarIs('off')) : setting.revBarIs('off'),
+    // This face's own answer, not the rig's: a wheel that carries LEDs across its top and a display
+    // that does not are two screens on one rig, and the switch used to answer for both at once.
+    // `layout` is the arrangement, which for the rev-bar-off screen is the one with the room given
+    // back, so the size is read from the face this screen belongs to rather than from that.
+    enabledExpression: withRevBar ? not(zoneSetting.revBarIs(sizeOf(layout), 'off')) : zoneSetting.revBarIs(sizeOf(layout), 'off'),
   };
 }
 

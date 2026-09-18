@@ -201,6 +201,23 @@ namespace OpenDashPlugin
                 "RGB LED");
         }
 
+        /// <summary>
+        /// Takes one of our profiles out of SimHub, by the id the bar it belonged to derives.
+        /// </summary>
+        /// <remarks>
+        /// The removal half of an install and nothing else: a bar that has been taken off the rig has no
+        /// settings attached any more, so a profile left behind would be a row in SimHub's list reading
+        /// properties nothing fills. Only the id given goes -- anything else in either list is the
+        /// user's, which is the same promise the install makes.
+        /// </remarks>
+        public static bool Uninstall(Guid profileId)
+        {
+            var driver = Driver();
+            var settings = driver?.Settings;
+            if (settings == null) return false;
+            return ProfileInstall.Uninstall(settings.Profiles, settings.AvailableProfiles, profileId, driver.SaveSettings, "RGB LED");
+        }
+
         /// <summary>The embedded JSON as SimHub's own strip profile. The same bare Newtonsoft defaults
         /// the matrix uses, so RGBDriver's own LedContainerJsonConverter -- which is attached to
         /// LedsContainerBase by attribute rather than by serialiser settings -- resolves every
@@ -364,6 +381,18 @@ namespace OpenDashPlugin
                     + " installing adds a profile, it does not switch to one.");
             }
             return results;
+        }
+
+        /// <summary>Removes one profile id from both lists and saves once. False when nothing went,
+        /// which is also what a profile that was never there gives.</summary>
+        internal static bool Uninstall(IList profiles, IList available, Guid id, Action save, string what)
+        {
+            var gone = Remove(profiles, id);
+            if (!ReferenceEquals(available, profiles)) gone += Remove(available, id);
+            if (gone == 0) return false;
+            if (!Save(save, what)) return false;
+            Log.Info("Removed " + gone + " " + what + " profile(s) from SimHub.");
+            return true;
         }
 
         private static bool Save(Action save, string what)

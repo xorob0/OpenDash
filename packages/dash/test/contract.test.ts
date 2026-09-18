@@ -89,17 +89,17 @@ describe('settings', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
     // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
-    // page, mask, start and the class filter -- plus the bar's ends, the glance, the flag format and
-    // the lap review.
-    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 3;
+    // page, mask, start and the class filter -- plus the bar's ends, the glance, the flag format,
+    // the lap review and what this face carries at the top.
+    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 4;
     // The last two terms are the lights, which are not screens but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is six
-    // global and ten per matrix, the way every face carries its own group; the strips are the three
+    // global and eleven per matrix, the way every face carries its own group; the strips are the three
     // that decide what a strip shows, and then the mirror: its fit, the gate that says there is a
     // bar to draw, and one packed run per length a centre can be. It was nine and six until the
     // four settings a box owns -- critical flags only, the gear and the two temperatures -- moved
     // under the matrix that owns them.
-    expect(flagBoxProperties()).toHaveLength(6 + FLAG_BOX_MATRICES.length * 10);
+    expect(flagBoxProperties()).toHaveLength(6 + FLAG_BOX_MATRICES.length * 11);
     expect(ledProperties()).toEqual([
       'OpenDash.LedCentre',
       'OpenDash.LedRpmStyle',
@@ -119,9 +119,11 @@ describe('settings', () => {
     // 269 before the pit wall gained the class filter its board and its list zones read, 270 before
     // band D was allowed to name the car a blue flag is being waved for, 271 before each face was
     // given its own answer to when the lap review is shown, 279 before the companion's page
-    // became the plugin's to decide, and 280 before the mirror brought its fit, its gate and one
-    // packed run for each of the ten lengths a strip's centre can be.
-    expect(props).toHaveLength(292);
+    // became the plugin's to decide, 280 before the mirror brought its fit, its gate and one
+    // packed run for each of the ten lengths a strip's centre can be, 292 before each matrix was
+    // given its own answer to whether the digit flashes through the redline, and 296 before each
+    // face was given its own answer to what it carries at the top.
+    expect(props).toHaveLength(304);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');

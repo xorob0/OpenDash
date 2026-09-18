@@ -417,8 +417,16 @@ export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap(
  * missing figure would come on in every car that has no such reading. The threshold itself is
  * `LightsLowFuelLaps` with the box's deprecated name behind it, so one number answers "am I low"
  * for every light and every face.
+ *
+ * **A tank is only low once the sim knows what a lap costs.** SimHub derives `Fuel_RemainingLaps`
+ * from `Fuel_LitersPerLap`, and with no lap yet run it publishes zero rather than null -- so
+ * "0.0 laps remaining" is not an empty tank, it is a sim that has not been asked to compute one.
+ * Without the consumption gate the warning is on at every idle screen, on the band's telltale, in
+ * the fuel pop-up, on the flag box and on every strip at once, which is exactly what a driver
+ * sitting in the menus saw in 0.3.0-rc.1. The gate is the one the fuel module already draws its
+ * "est. laps" behind, so the number and the warning about it now agree about when there is one.
  */
-export const tankIsLow = (): Expr => lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps());
+export const tankIsLow = (): Expr => and(gt(fuelPerLap(), num(0)), lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps()));
 
 /**
  * Whether the car is switched on. SimHub normalises it from the sim, so this is one of the few

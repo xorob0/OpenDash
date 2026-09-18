@@ -3,6 +3,7 @@
 import { describe, expect, test } from 'bun:test';
 import { stableGuid } from '../src/ids.ts';
 import type { Item } from '../src/model.ts';
+import { assertWholeNumbers, fractionalIntFields } from '../src/intFields.ts';
 import {
   ITEM_TYPES,
   buildBindingObject,
@@ -427,5 +428,38 @@ describe('round trip', () => {
     const colours = text.match(/"#[0-9A-Fa-f]+"/g) ?? [];
     expect(colours.length).toBeGreaterThan(0);
     for (const c of colours) expect(c).toMatch(/^"#[0-9A-F]{8}"$/);
+  });
+});
+
+/**
+ * The guard that stands between a fraction and a dashboard that draws nothing.
+ *
+ * `JsonTextReader.ReadAsInt32` throws on "3.6" rather than truncating it, and the throw unwinds
+ * SimHub's whole `LoadFromFile`, so one bad corner radius costs the entire file. That is how
+ * 0.3.0-rc.1 shipped with every zone B, every zone C, every companion and every pit wall zone
+ * blank: the sub-dashboards holding the modules each carried one.
+ */
+describe('a field SimHub reads as an integer', () => {
+  test('is reported wherever it holds a fraction, with the path SimHub would name', () => {
+    const found = fractionalIntFields({ Screens: [{ Items: [{ BorderStyle: { RadiusTopLeft: 3.6, RadiusTopRight: 4 } }] }] });
+    expect(found).toEqual([{ path: 'Screens[0].Items[0].BorderStyle.RadiusTopLeft', value: 3.6 }]);
+  });
+
+  test('is not reported for a name that is floating point on another class', () => {
+    // Left, Top, Width and Height are double on DrawableItem and int elsewhere, so they cannot be
+    // judged by name and are deliberately outside the set.
+    expect(fractionalIntFields({ Left: 12.5, Top: 0.5, Width: 33.3, Height: 7.25 })).toEqual([]);
+  });
+
+  test('stops a document being written at all, rather than leaving SimHub to refuse the file', () => {
+    // serializeDashboard calls this on the built document, so a fraction that reached any integer
+    // field fails the build instead of reaching DashTemplates.
+    expect(() => assertWholeNumbers({ Screens: [{ RenderingSkip: 1.5 }] }, 'the dashboard test')).toThrow(/RenderingSkip/);
+    expect(() => assertWholeNumbers({ Screens: [{ RenderingSkip: 1 }] }, 'the dashboard test')).not.toThrow();
+  });
+
+  test('is rounded by the serialiser wherever a border carries it', () => {
+    const border = buildBorderObject({ radius: 3.5999999999999996, top: 1.4 });
+    expect(border).toEqual({ RadiusTopLeft: 4, RadiusTopRight: 4, RadiusBottomLeft: 4, RadiusBottomRight: 4, BorderTop: 1 });
   });
 });

@@ -206,18 +206,21 @@ namespace OpenDashPlugin
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 var m = matrix;
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Rest"), () => Settings.MatrixRest(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Flags"), () => Settings.MatrixFlags(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Pit"), () => Settings.MatrixPit(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixSpotter(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
+                // What the slot *shows*, not merely what it is set to: a slot nobody has added is dark
+                // whatever its settings still say, which is what lets a rig start with no panels at all.
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Rest"), () => Settings.MatrixShownRest(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Flags"), () => Settings.MatrixShowsFlags(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Pit"), () => Settings.MatrixShowsPit(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixShowsSpotter(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixShowsWarnings(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "CriticalOnly"), () => Settings.MatrixCriticalOnly(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Gear"), () => Settings.MatrixGear(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Gear"), () => Settings.MatrixShowsGear(m));
                 // Zero means "not set": the profile then applies its own default, which is per unit, so
                 // a driver in Fahrenheit who has never opened this page does not get a Celsius number.
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "OilTemp"), () => Settings.MatrixOilTemp(m) == 0 ? (int?)null : Settings.MatrixOilTemp(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "WaterTemp"), () => Settings.MatrixWaterTemp(m) == 0 ? (int?)null : Settings.MatrixWaterTemp(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "GearBlink"), () => Settings.MatrixGearBlink(m));
             }
             // The strips, last, in the order Contract.LightsPropertyNames() declares them. Every
             // generated .ledsprofile reads these, so a strip with none of them attached can only ever
@@ -236,6 +239,18 @@ namespace OpenDashPlugin
                 var run = length;
                 this.AttachDelegate(Contract.LedMirrorRun(run), () => CarLights.Run(run));
             }
+            // One group per bar the rig holds, under that bar's own namespace, which is what lets two
+            // strips be configured apart: the profile installed for a bar carries these names as
+            // literals, rewritten from the rig-wide ones above by LedBarProfile. The namespace is
+            // captured rather than the bar, because the panel replaces the settings object on every
+            // change and a delegate holding the old bar would report the old value for ever.
+            foreach (var bar in Settings.LedBarList())
+            {
+                var ns = bar.Namespace;
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedCentre), () => Settings.BarCentre(ns));
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedRpmStyle), () => Settings.BarRpmStyle(ns));
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedFlagAnimation), () => Settings.BarFlagAnimation(ns));
+            }
         }
 
         /// <summary>
@@ -253,7 +268,10 @@ namespace OpenDashPlugin
             try
             {
                 var telemetry = data == null ? null : data.NewData;
-                var on = data != null && data.GameRunning && telemetry != null && Settings.LedRpmStyle == Contract.LedRpmStyleCar;
+                // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no
+                // opinion falls back to: the mirror is one computation feeding every strip, so gating it
+                // on one setting would leave a second bar set to the car's own reading a run nothing fills.
+                var on = data != null && data.GameRunning && telemetry != null && Settings.AnyCarLadderWanted();
                 CarLights.Update(
                     on ? telemetry.CarId : null,
                     on ? telemetry.Gear : null,
@@ -397,6 +415,7 @@ namespace OpenDashPlugin
                     this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
                     this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
                     this.AttachDelegate(Contract.LapReviewProperty(s.Namespace), () => Settings.ScreenLapReview(s.Namespace));
+                    this.AttachDelegate(Contract.RevBarProperty(s.Namespace), () => Settings.ScreenRevBar(s.Namespace));
                 }
                 else if (s.IsCompanion)
                 {

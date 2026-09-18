@@ -203,13 +203,20 @@ namespace OpenDashPlugin
             var rename = Ui.LinkButton("Rename");
             rename.ToolTip = "Change what this screen is called here and in SimHub's dashboard list.";
             rename.Click += (sender, args) => ShowRename(screen);
+            // Beside Rename, because it is the same kind of correction: a driver who picked the wrong
+            // size once had to remove the screen and start again, which threw away the zones they had set
+            // and every wheel button bound to it.
+            var resize = Ui.LinkButton("Change the size");
+            resize.ToolTip = "Move this screen to another of the sizes openDash draws for, keeping its settings.";
+            resize.Click += (sender, args) => ShowResize(screen);
             // Text and not a button face, which is what the canvas draws. What keeps a quiet destructive
             // action from being an accident is the confirmation behind it rather than its own weight.
             var remove = Ui.LinkButton("Remove this screen", Theme.Danger);
             remove.ToolTip = "Remove this screen, its settings and its dashboard folder.";
             remove.Click += (sender, args) => ShowRemove(screen);
 
-            var rows = new List<UIElement> { Ui.Row(text, Ui.HStack(8, rename, remove)) };
+            var actions = Resizable(screen) ? Ui.HStack(12, rename, resize, remove) : Ui.HStack(12, rename, remove);
+            var rows = new List<UIElement> { Ui.Row(text, actions) };
             if (!Installed(screen)) rows.Add(BuildMissingFolder(screen));
             var stack = Ui.VStack(10, rows.ToArray());
             stack.Margin = new Thickness(0, 8, 0, PanelMetrics.SectionGap);
@@ -221,6 +228,23 @@ namespace OpenDashPlugin
                 BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),
                 Child = stack,
             };
+        }
+
+        /// <summary>Whether this build carries another size for this kind of screen, which is the only
+        /// case where offering to change it would lead anywhere.</summary>
+        private bool Resizable(ScreenInstance screen)
+        {
+            try
+            {
+                var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
+                var type = PanelAddScreen.Types(catalogue).FirstOrDefault(t => string.Equals(t.Kind, screen.Kind, StringComparison.Ordinal));
+                return type != null && PanelAddScreen.Question(type) != SizeQuestion.None;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not read the packages to see whether " + screen.Name + " has another size: " + ex.Message);
+                return false;
+            }
         }
 
         /// <summary>The two facts the canvas puts under a screen's name, in the order it puts them. Drawn
@@ -276,25 +300,21 @@ namespace OpenDashPlugin
         private void ShowAddScreen()
         {
             var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-            if (catalogue.Count == 0)
+            var types = PanelAddScreen.Types(catalogue);
+            if (types.Count == 0)
             {
-                bodyHost.Content = Ui.VStack(0, Ui.Section("Add a screen",
+                bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
                     Ui.Caption("This build of openDash carries no dashboard packages, so there is nothing to add. "
                         + "See plugin/OpenDash/Resources/README.md."),
                     BackRow()));
                 return;
             }
 
-            var sizes = new ComboBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-            };
-            foreach (var entry in catalogue) sizes.Items.Add(Describe(entry));
-            sizes.SelectedIndex = 0;
+            // The three answers, held here and read by whichever control last wrote one. The name is the
+            // only one the driver types, so it is the only one that has to remember whether they have.
+            var type = types[0];
+            PackageEntry entry = PanelAddScreen.Offered(type)[0];
+            var typed = false;
 
             var name = new TextBox
             {
@@ -304,35 +324,178 @@ namespace OpenDashPlugin
                 VerticalContentAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Left,
             };
-            var note = Ui.Caption("");
+            name.TextChanged += (sender, args) => typed = name.IsKeyboardFocusWithin;
 
-            Action refresh = () =>
+            var sizeHost = new ContentControl { HorizontalAlignment = HorizontalAlignment.Left };
+            var note = Ui.Caption(string.Empty);
+
+            Action fillName = () =>
             {
-                var entry = catalogue[Math.Max(0, sizes.SelectedIndex)];
-                name.Text = PackageCatalogue.UniqueName(entry.SizeLabel, Settings.RigScreens().Select(s => s.Name));
+                // Only while the driver has not typed one of their own: a default that overwrites what
+                // somebody has just written is worse than no default at all.
+                if (typed) return;
+                name.Text = PackageCatalogue.UniqueName(PanelAddScreen.DefaultName(entry), Settings.RigScreens().Select(s => s.Name));
+            };
+            Action refreshNote = () =>
+            {
                 var second = Settings.RigScreens().Any(s => string.Equals(s.Namespace, StockNamespaceOf(entry), StringComparison.Ordinal));
-                note.Text = second
-                    ? "This one is your second " + entry.SizeLabel + ", so it gets its own copy of the dashboard and its own "
-                        + "settings. The first keeps the one openDash ships."
-                    : "openDash installs " + entry.Folder + " into SimHub for this screen.";
+                note.Text = PanelAddScreen.Note(entry, second);
             };
-            sizes.SelectionChanged += (sender, args) => refresh();
-            refresh();
-
-            var add = BuildSecondaryButton("Add screen", "Create the screen and install its dashboard.");
-            add.Click += (sender, args) =>
+            Action<PackageEntry> choose = chosen =>
             {
-                var entry = catalogue[Math.Max(0, sizes.SelectedIndex)];
-                AddScreen(entry, name.Text);
+                entry = chosen;
+                fillName();
+                refreshNote();
             };
-            var cancel = BuildSecondaryButton("Cancel", "Go back to the rig without adding anything.");
+            Action showSize = () =>
+            {
+                var offered = PanelAddScreen.Offered(type);
+                entry = offered[0];
+                var question = PanelAddScreen.Question(type);
+                sizeHost.Content = question == SizeQuestion.None ? null : BuildSizeRow(type, offered, question, 0, choose);
+                fillName();
+                refreshNote();
+            };
+
+            // What the chosen kind is, under the control that chose it: two words on a button cannot say
+            // what a companion is, and a driver adding their first screen has nowhere else to find out.
+            var typeCaption = Ui.Caption(type.Caption);
+
+            var typeRow = Ui.Row(
+                PanelAddScreen.TypeTitle,
+                PanelAddScreen.TypeCaption,
+                BuildSegmented(
+                    types.Select(t => t.Kind).ToArray(),
+                    types.Select(t => t.Label).ToArray(),
+                    type.Kind,
+                    kind =>
+                    {
+                        type = types.First(t => string.Equals(t.Kind, kind, StringComparison.Ordinal));
+                        typeCaption.Text = type.Caption;
+                        showSize();
+                    }));
+            typeRow.Width = BodyWidth;
+
+            showSize();
+
+            var add = Ui.OutlineButton(PanelAddScreen.AddButton, PanelMetrics.RowButtonHeight);
+            add.MinWidth = ButtonMinWidth;
+            add.ToolTip = "Create the screen and install its dashboard.";
+            add.Click += (sender, args) => AddScreen(entry, name.Text);
+            var cancel = Ui.LinkButton("Cancel");
+            cancel.ToolTip = "Go back to the rig without adding anything.";
             cancel.Click += (sender, args) => Redraw();
 
-            bodyHost.Content = Ui.VStack(0, Ui.Section("Add a screen",
-                Ui.Row("Size", "The sizes openDash ships. Pick the one your screen actually is; SimHub scales nothing.", sizes),
-                Ui.Row("Name", "Yours. It names the card here and the dashboard in SimHub's own list.", name),
+            var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
+            nameRow.Width = BodyWidth;
+
+            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
+                typeRow,
+                typeCaption,
+                sizeHost,
+                nameRow,
                 note,
                 Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
+        }
+
+        /// <summary>The size or the orientation control, in the row the question calls for.</summary>
+        private FrameworkElement BuildSizeRow(ScreenType type, IReadOnlyList<PackageEntry> offered, SizeQuestion question, int selected, Action<PackageEntry> chose)
+        {
+            var values = offered.Select((e, i) => i.ToString(CultureInfo.InvariantCulture)).ToArray();
+            var labels = offered.Select((e, i) => PanelAddScreen.SizeLabel(type, e, i)).ToArray();
+            Action<string> changed = value =>
+            {
+                int index;
+                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out index)) return;
+                if (index < 0 || index >= offered.Count) return;
+                chose(offered[index]);
+            };
+            // Two answers are a pair of buttons; eight are a list. The orientation question is always the
+            // pair, which is what makes it read as "which way round" rather than as a resolution.
+            var opens = values[selected < 0 || selected >= values.Length ? 0 : selected];
+            var control = question == SizeQuestion.Orientation || offered.Count <= 3
+                ? (FrameworkElement)BuildSegmented(values, labels, opens, changed)
+                : BuildChoice(values, labels, opens, 280, changed);
+            var row = question == SizeQuestion.Orientation
+                ? Ui.Row(PanelAddScreen.OrientationTitle, PanelAddScreen.OrientationCaption, control)
+                : Ui.Row(PanelAddScreen.SizeTitle, PanelAddScreen.SizeCaption, control);
+            row.Width = BodyWidth;
+            return row;
+        }
+
+        /// <summary>
+        /// Changing the size of a screen that is already on the rig.
+        /// </summary>
+        /// <remarks>
+        /// A driver who picked the wrong size had to remove the screen and add another, which threw away
+        /// their zones and left every wheel button bound to it pointing at nothing. The namespace is
+        /// frozen at creation (ADR 0017) and this does not move it either, so the settings and the
+        /// bindings survive and only the folder in DashTemplates is rewritten.
+        /// </remarks>
+        private void ShowResize(ScreenInstance screen)
+        {
+            var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
+            var type = PanelAddScreen.Types(catalogue).FirstOrDefault(t => string.Equals(t.Kind, screen.Kind, StringComparison.Ordinal));
+            if (type == null || PanelAddScreen.Question(type) == SizeQuestion.None)
+            {
+                bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.ResizeTitle,
+                    Ui.Caption("openDash carries only one " + KindLabel(screen) + ", so there is no other size to move this screen to."),
+                    BackRow()));
+                return;
+            }
+
+            var offered = PanelAddScreen.Offered(type);
+            var current = offered.FirstOrDefault(e => e.Width == screen.Width && e.Height == screen.Height) ?? offered[0];
+            var chosen = current;
+            var question = PanelAddScreen.Question(type);
+            // Opened on the size the screen already is, so the control says what it is before it is used
+            // to say what it should be.
+            var opensOn = 0;
+            for (var i = 0; i < offered.Count; i++)
+            {
+                if (ReferenceEquals(offered[i], current)) opensOn = i;
+            }
+            var row = BuildSizeRow(type, offered, question, opensOn, e => chosen = e);
+
+            var apply = Ui.OutlineButton("Change it", PanelMetrics.RowButtonHeight);
+            apply.MinWidth = ButtonMinWidth;
+            apply.ToolTip = "Write this screen's dashboard again at the new size.";
+            apply.Click += (sender, args) => ResizeScreen(screen, chosen);
+            var cancel = Ui.LinkButton("Cancel");
+            cancel.ToolTip = "Leave this screen the size it is.";
+            cancel.Click += (sender, args) => Redraw();
+
+            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.ResizeTitle + " of " + screen.Name,
+                row,
+                Ui.Caption(PanelAddScreen.ResizeCaption),
+                Ui.Row(new Border(), Ui.HStack(8, cancel, apply))));
+        }
+
+        private void ResizeScreen(ScreenInstance screen, PackageEntry entry)
+        {
+            if (entry == null || (entry.Width == screen.Width && entry.Height == screen.Height))
+            {
+                Redraw();
+                return;
+            }
+            var log = new SimHubInstallLog();
+            // The old folder first: a screen that was the stock one at its old size owns that package's
+            // own folder, and leaving it behind would put a dashboard in SimHub's list that nothing on
+            // the rig answers for.
+            var old = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, log);
+            if (!old.Ok) Log.Warn("The old folder of " + screen.Name + " could not be removed: " + old.Error);
+
+            Settings.ResizeScreen(screen, entry);
+            Save();
+            var result = ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, log, force: true);
+            Save();
+            plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
+            plugin.Installer.Refresh();
+            selected = screen.Namespace;
+            Redraw();
+            Announce(
+                result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, result.Error),
+                result.Ok ? Theme.TextSecondary : Theme.Caution);
         }
 
         private static string StockNamespaceOf(PackageEntry entry)
@@ -364,10 +527,12 @@ namespace OpenDashPlugin
             // Said at the moment it becomes true rather than left to be found: SimHub reads its
             // template list once, at startup, and assigning a dashboard to a display is in another part
             // of SimHub entirely. Both are the steps a new user gives up on.
+            // The dashboard is listed in SimHub under its *title*, which the installer sets to the name
+            // the driver just chose -- not under the folder. Naming the folder here sent them looking
+            // through Dash Studio for a row that does not exist under that word.
             var line = result.Ok
-                ? "Added " + screen.Name + ". Restart SimHub to see " + screen.Folder
-                    + " in its dashboard list, then assign it to this display in Dash Studio."
-                : "Added " + screen.Name + ", but its dashboard could not be installed: " + result.Error;
+                ? PanelAddScreen.Added(screen.Name, screen.Name)
+                : PanelAddScreen.AddFailed(screen.Name, result.Error);
             Announce(line, result.Ok ? Theme.TextSecondary : Theme.Caution);
         }
 

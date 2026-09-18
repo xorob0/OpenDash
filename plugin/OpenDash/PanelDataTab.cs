@@ -26,9 +26,15 @@ namespace OpenDashPlugin
         /// </remarks>
         public const double RowGap = 22;
 
+        /// <summary>The rev bar's words, which now belong to a screen's own pane rather than to this
+        /// tab. They stay here because this file is where the panel's copy a test can hold lives, and
+        /// because the row read exactly the same when it was rig-wide -- what changed is who it answers
+        /// for, not what it says.</summary>
         public const string RevBarTitle = "The rev bar";
 
-        public const string RevBarCaption = "Shift lights, a plain RPM bar, or off entirely if your DDU has LEDs of its own. Off gives its room back to the zones.";
+        public const string RevBarCaption = "Shift lights, a plain RPM bar, or off entirely if this screen's wheel has LEDs of its own. Off gives its room back to the zones.";
+
+        public static readonly string[] RevBarLabels = { "Shift lights", "RPM bar", "Off" };
 
         public const string PositionTitle = "Position";
 

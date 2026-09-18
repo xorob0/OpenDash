@@ -151,6 +151,33 @@ namespace OpenDashPlugin
 
         public int? FlagBoxWaterTemp { get; set; }
 
+        /// <summary>
+        /// What each matrix panel is called, or null in the slots nobody has added.
+        /// </summary>
+        /// <remarks>
+        /// A panel is an instance now, the way a screen is: a rig has none until somebody adds one, and
+        /// what they add has a name they chose -- "top left", "by the wheel" -- because four numbered
+        /// groups of eleven settings for hardware most people own none of is a page nobody can read.
+        /// SimHub composes at most four matrix contents, so the four slots stay and this says which of
+        /// them exist.
+        ///
+        /// Null until Normalise() fills it, and deliberately not initialised here, for the reason Rig
+        /// gives: null means "this file has never named panels", which is the signal the migration reads.
+        /// </remarks>
+        public string[] FlagBoxMatrixName { get; set; }
+
+        /// <summary>
+        /// The RGB strips on the rig, each with the settings its own profile reads.
+        /// </summary>
+        /// <remarks>
+        /// Null until Normalise() fills it, the way Rig is: a strip used to be a shape the panel offered
+        /// to install and nothing more, so two strips on one rig could not be configured apart. Null
+        /// means "this file has never named bars", which is every file written before they existed and
+        /// every new install; both start with none, because a profile paints hardware somebody owns and
+        /// openDash does not guess at what that is (ADR 0013).
+        /// </remarks>
+        public List<LedBar> LedBars { get; set; }
+
         /// <summary>Per matrix, index 0 is matrix 1. Always four long after Normalise().</summary>
         public string[] FlagBoxRest { get; set; } = Contract.DefaultFlagBoxRests();
 
@@ -172,6 +199,11 @@ namespace OpenDashPlugin
         public bool[] FlagBoxMatrixCriticalOnly { get; set; } = Contract.DefaultFlagBoxCriticalOnlys();
 
         public bool[] FlagBoxMatrixGear { get; set; } = Contract.DefaultFlagBoxGears();
+
+        /// <summary>Whether this panel's digit flashes while the car is over-revving. Per panel, because
+        /// a box in the corner of a monitor stand strobing at the edge of vision is what a driver with a
+        /// rev bar in front of them turns off, and the box on the wheel is not.</summary>
+        public bool[] FlagBoxMatrixGearBlink { get; set; } = Contract.DefaultFlagBoxGearBlinks();
 
         /// <summary>Zero means "not set", so that the profile's own per-unit default applies. A driver in
         /// Fahrenheit who has never opened this page must not get a Celsius number.</summary>
@@ -198,6 +230,9 @@ namespace OpenDashPlugin
         public string LedMirrorFit { get; set; } = Contract.DefaultLedMirrorFit;
 
         /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
+        // These say what a slot is *set to*, which is what the panel's own controls draw. What it
+        // *shows* is that and whether a panel was added at all, and that is asked at the one place it
+        // matters: the delegates OpenDash.cs attaches, which are what the profile reads.
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
 
         public bool MatrixFlags(int matrix) => Pick(FlagBoxFlags, matrix, Contract.DefaultFlagBoxMatrixOn(matrix));
@@ -213,6 +248,245 @@ namespace OpenDashPlugin
         public bool MatrixCriticalOnly(int matrix) => Pick(FlagBoxMatrixCriticalOnly, matrix, Contract.DefaultFlagBoxCriticalOnly);
 
         public bool MatrixGear(int matrix) => Pick(FlagBoxMatrixGear, matrix, Contract.DefaultFlagBoxGear);
+
+        public bool MatrixGearBlink(int matrix) => Pick(FlagBoxMatrixGearBlink, matrix, Contract.DefaultFlagBoxGearBlink);
+
+        // --- The LED bars, which are the strips as instances ------------------------------------
+
+        /// <summary>The bars on the rig, never null after Normalise().</summary>
+        public IReadOnlyList<LedBar> LedBarList() { return LedBars ?? new List<LedBar>(); }
+
+        public LedBar LedBarByNamespace(string ns)
+        {
+            if (ns == null || LedBars == null) return null;
+            foreach (var bar in LedBars)
+            {
+                if (bar != null && string.Equals(bar.Namespace, ns, StringComparison.Ordinal)) return bar;
+            }
+            return null;
+        }
+
+        /// <summary>What one bar's middle shows, or the rig's own answer when the bar has gone. An
+        /// attached delegate outlives the bar it was attached for until SimHub restarts.</summary>
+        public string BarCentre(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar == null ? Contract.NormaliseLedCentre(LedCentre) : Contract.NormaliseLedCentre(bar.Centre);
+        }
+
+        public string BarRpmStyle(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            var value = bar == null ? LedRpmStyle : bar.RpmStyle;
+            return Contract.NormaliseChoice(value, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+        }
+
+        /// <summary>Whether anything on the rig is asking for the car's own shift pattern, which is what
+        /// decides whether the mirror is computed at all.</summary>
+        public bool AnyCarLadderWanted()
+        {
+            var bars = LedBarList();
+            if (bars.Count == 0) return LedRpmStyle == Contract.LedRpmStyleCar;
+            foreach (var bar in bars)
+            {
+                if (BarRpmStyle(bar.Namespace) == Contract.LedRpmStyleCar) return true;
+            }
+            // A rig with bars may still have a face or a box reading the rig-wide answer.
+            return LedRpmStyle == Contract.LedRpmStyleCar;
+        }
+
+        public bool BarFlagAnimation(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar == null ? LedFlagAnimation : bar.FlagAnimation;
+        }
+
+        /// <summary>
+        /// Adds a bar of a shape, with the rig's own settings as its starting point.
+        /// </summary>
+        /// <remarks>
+        /// The rig-wide values rather than the class defaults, because somebody adding their second bar
+        /// has already said what they like on the first and on the tab before bars existed. The namespace
+        /// is frozen here and nowhere else moves it.
+        /// </remarks>
+        public LedBar AddLedBar(string shape, string name)
+        {
+            if (LedBars == null) LedBars = new List<LedBar>();
+            var names = new List<string>();
+            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var bar in LedBars)
+            {
+                if (bar == null) continue;
+                names.Add(bar.Name);
+                taken.Add(bar.Namespace);
+            }
+            var wanted = PackageCatalogue.UniqueName(string.IsNullOrWhiteSpace(name) ? shape : name.Trim(), names);
+            var added = new LedBar
+            {
+                Name = wanted,
+                Shape = shape,
+                Namespace = FreeBarNamespace(wanted, taken),
+                Centre = LedCentre,
+                RpmStyle = LedRpmStyle,
+                FlagAnimation = LedFlagAnimation,
+            };
+            added.Normalise();
+            LedBars.Add(added);
+            return added;
+        }
+
+        public bool RemoveLedBar(string ns)
+        {
+            if (LedBars == null) return false;
+            for (var i = 0; i < LedBars.Count; i++)
+            {
+                if (LedBars[i] != null && string.Equals(LedBars[i].Namespace, ns, StringComparison.Ordinal))
+                {
+                    LedBars.RemoveAt(i);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public void RenameLedBar(string ns, string name)
+        {
+            var bar = LedBarByNamespace(ns);
+            if (bar == null || string.IsNullOrWhiteSpace(name)) return;
+            var others = new List<string>();
+            foreach (var other in LedBarList())
+            {
+                if (!ReferenceEquals(other, bar)) others.Add(other.Name);
+            }
+            bar.Name = PackageCatalogue.UniqueName(name.Trim(), others);
+        }
+
+        /// <summary>Whether this slot holds a panel somebody added, and what they called it.</summary>
+        public bool MatrixAdded(int matrix) => MatrixName(matrix) != null;
+
+        /// <summary>What a slot actually shows, which is what it is set to and whether it exists at all.
+        /// The delegates read these; the panel's controls read the plain setters above them.</summary>
+        public string MatrixShownRest(int matrix) => MatrixAdded(matrix) ? MatrixRest(matrix) : "dark";
+
+        public bool MatrixShowsFlags(int matrix) => MatrixAdded(matrix) && MatrixFlags(matrix);
+
+        public bool MatrixShowsPit(int matrix) => MatrixAdded(matrix) && MatrixPit(matrix);
+
+        public bool MatrixShowsSpotter(int matrix) => MatrixAdded(matrix) && MatrixSpotter(matrix);
+
+        public bool MatrixShowsWarnings(int matrix) => MatrixAdded(matrix) && MatrixWarnings(matrix);
+
+        public bool MatrixShowsGear(int matrix) => MatrixAdded(matrix) && MatrixGear(matrix);
+
+        public string MatrixName(int matrix)
+        {
+            if (FlagBoxMatrixName == null || matrix < 1 || matrix > FlagBoxMatrixName.Length) return null;
+            var name = FlagBoxMatrixName[matrix - 1];
+            return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
+
+        /// <summary>Every slot with a panel in it, in slot order.</summary>
+        public IEnumerable<int> MatrixPanels()
+        {
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                if (MatrixAdded(matrix)) yield return matrix;
+            }
+        }
+
+        /// <summary>The first slot with no panel in it, or 0 when all four are taken.</summary>
+        public int FreeMatrixSlot()
+        {
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                if (!MatrixAdded(matrix)) return matrix;
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// Adds a panel in the first free slot, with the settings a first box wants.
+        /// </summary>
+        /// <remarks>
+        /// Not the class defaults: those made matrix 1 do everything and the other three nothing, which
+        /// was the whole of the old model. A panel somebody has just added is one they mean to use, so it
+        /// arrives showing the catalogue, the pit family, the spotter, the warnings and the gear --
+        /// which is what matrix 1 used to be, now applied to whichever slot they added rather than to
+        /// the first one whether they wanted it or not.
+        /// </remarks>
+        public int AddMatrixPanel(string name)
+        {
+            var slot = FreeMatrixSlot();
+            if (slot == 0) return 0;
+            var i = slot - 1;
+            FlagBoxMatrixName[i] = string.IsNullOrWhiteSpace(name) ? "Matrix " + slot : name.Trim();
+            FlagBoxRest[i] = "gear";
+            FlagBoxFlags[i] = true;
+            FlagBoxPit[i] = true;
+            FlagBoxSpotter[i] = true;
+            FlagBoxWarnings[i] = true;
+            FlagBoxSide[i] = Contract.DefaultFlagBoxSide;
+            FlagBoxMatrixCriticalOnly[i] = Contract.DefaultFlagBoxCriticalOnly;
+            FlagBoxMatrixGear[i] = Contract.DefaultFlagBoxGear;
+            FlagBoxMatrixGearBlink[i] = Contract.DefaultFlagBoxGearBlink;
+            FlagBoxMatrixOilTemp[i] = 0;
+            FlagBoxMatrixWaterTemp[i] = 0;
+            return slot;
+        }
+
+        /// <summary>Takes a panel out of its slot and puts the slot back to dark, so the profile draws
+        /// nothing there rather than whatever the removed panel had been showing.</summary>
+        public void RemoveMatrixPanel(int matrix)
+        {
+            if (matrix < 1 || matrix > Contract.FlagBoxMatrices.Count) return;
+            var i = matrix - 1;
+            FlagBoxMatrixName[i] = null;
+            FlagBoxRest[i] = "dark";
+            FlagBoxFlags[i] = false;
+            FlagBoxPit[i] = false;
+            FlagBoxSpotter[i] = false;
+            FlagBoxWarnings[i] = false;
+        }
+
+        public void RenameMatrixPanel(int matrix, string name)
+        {
+            if (matrix < 1 || matrix > Contract.FlagBoxMatrices.Count) return;
+            if (string.IsNullOrWhiteSpace(name)) return;
+            FlagBoxMatrixName[matrix - 1] = name.Trim();
+        }
+
+        /// <summary>
+        /// Fills the panel names, and decides what a file written before panels were instances keeps.
+        /// </summary>
+        /// <remarks>
+        /// A new install starts with none, which is what was asked for and what the rig of screens
+        /// already does: nothing is configured for hardware nobody has said they own. A file that
+        /// predates this keeps every slot that was doing something, which on the old defaults is matrix 1
+        /// alone and on a rig with two boxes is both -- so nobody's box goes dark because the model
+        /// underneath it changed.
+        /// </remarks>
+        private void NormaliseMatrixPanels()
+        {
+            if (FlagBoxMatrixName == null)
+            {
+                FlagBoxMatrixName = new string[Contract.FlagBoxMatrices.Count];
+                // A settings object nobody has saved is a new install, and a new install owns nothing.
+                if (!WasSaved()) return;
+                foreach (var matrix in Contract.FlagBoxMatrices)
+                {
+                    var i = matrix - 1;
+                    var doing = !string.Equals(FlagBoxRest[i], "dark", StringComparison.Ordinal)
+                        || FlagBoxFlags[i] || FlagBoxPit[i] || FlagBoxSpotter[i] || FlagBoxWarnings[i];
+                    if (doing) FlagBoxMatrixName[i] = "Matrix " + matrix;
+                }
+                return;
+            }
+            FlagBoxMatrixName = Resize(FlagBoxMatrixName, new string[Contract.FlagBoxMatrices.Count], v => true);
+            for (var i = 0; i < FlagBoxMatrixName.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(FlagBoxMatrixName[i])) FlagBoxMatrixName[i] = null;
+            }
+        }
 
         public int MatrixOilTemp(int matrix) => Pick(FlagBoxMatrixOilTemp, matrix, 0);
 
@@ -239,10 +513,15 @@ namespace OpenDashPlugin
             FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxMatrixCriticalOnly = Resize(FlagBoxMatrixCriticalOnly, Contract.DefaultFlagBoxCriticalOnlys(), v => true);
             FlagBoxMatrixGear = Resize(FlagBoxMatrixGear, Contract.DefaultFlagBoxGears(), v => true);
+            FlagBoxMatrixGearBlink = Resize(FlagBoxMatrixGearBlink, Contract.DefaultFlagBoxGearBlinks(), v => true);
             FlagBoxMatrixOilTemp = Resize(FlagBoxMatrixOilTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
             FlagBoxMatrixWaterTemp = Resize(FlagBoxMatrixWaterTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
             // After the arrays are four long, so the migration has four slots to fill.
             MigrateFlagBoxToMatrices();
+            // After the arrays are four long and the old scalars have been emptied into them, because
+            // which panels a migrating rig keeps is read off what those panels were doing.
+            NormaliseMatrixPanels();
+            NormaliseLedBars();
             // No array to repair: the strips carry one value each for the whole rig. A profile reads
             // both through isnull() with its own default, so an unrecognised spelling has to become a
             // legal one here rather than reaching the strip as itself.
@@ -475,7 +754,7 @@ namespace OpenDashPlugin
         /// attaches exactly these, in this order, and ContractTests holds the two together.</summary>
         public IEnumerable<string> DeclaredProperties()
         {
-            return Contract.PropertyNames(RigScreens());
+            return Contract.PropertyNames(RigScreens(), LedBarList());
         }
 
         /// <summary>
@@ -711,6 +990,30 @@ namespace OpenDashPlugin
             return Contract.NormaliseChoice(screen.LapReview, Contract.LapReviewModes, Contract.DefaultLapReview);
         }
 
+        /// <summary>
+        /// What one face carries at the top, falling back to the rig's own answer.
+        /// </summary>
+        /// <remarks>
+        /// The fallback is the whole of the migration: a settings file written before this was per
+        /// screen holds null on every face and every one of them goes on reading the rig-wide value,
+        /// so nothing changes until a driver answers one of them individually. The package's own
+        /// expression falls back the same way, so a screen with no plugin behaves identically.
+        /// </remarks>
+        public string ScreenRevBar(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen == null || screen.RevBar == null) return RevBarMode();
+            return Contract.NormaliseChoice(screen.RevBar, Contract.RevBarModes, Contract.DefaultRevBar);
+        }
+
+        /// <summary>Sets one face's own answer, or clears it back to the rig's.</summary>
+        public void SetScreenRevBar(string ns, string mode)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen == null) return;
+            screen.RevBar = mode == null ? null : Contract.NormaliseChoice(mode, Contract.RevBarModes, Contract.DefaultRevBar);
+        }
+
         /// <summary>How one face draws a flag, or the default when the rig no longer has that screen.</summary>
         public string ScreenFlagFormat(string ns)
         {
@@ -834,9 +1137,118 @@ namespace OpenDashPlugin
                 names.Add(screen.Name);
             }
             var wanted = string.IsNullOrWhiteSpace(name) ? entry.SizeLabel : name.Trim();
-            var added = PackageCatalogue.NewScreen(entry, PackageCatalogue.UniqueName(wanted, names), taken);
+            // The folders too, and not only the namespaces: two screens sharing a DashTemplates folder
+            // means removing one deletes the other's dashboard, which is what "openDash rim" twice on one
+            // rig did.
+            var folders = new List<string>();
+            foreach (var screen in Rig)
+            {
+                if (screen != null && screen.Folder != null) folders.Add(screen.Folder);
+            }
+            var added = PackageCatalogue.NewScreen(entry, PackageCatalogue.UniqueName(wanted, names), taken, folders);
             Rig.Add(added);
             return added;
+        }
+
+        /// <summary>
+        /// Moves a screen to another size, keeping everything a driver has set on it.
+        /// </summary>
+        /// <remarks>
+        /// The namespace is frozen at creation and this does not move it either (ADR 0017), so the zone
+        /// settings, the bar and every wheel button bound to the screen survive a resize. What that costs
+        /// is the folder: a screen that held the stock folder of its old size no longer holds the stock
+        /// namespace of its new one, so it needs a folder of its own, and the caller deletes the old one
+        /// before calling this.
+        /// </remarks>
+        public void ResizeScreen(ScreenInstance screen, PackageEntry entry)
+        {
+            if (screen == null || entry == null) return;
+            screen.Width = entry.Width;
+            screen.Height = entry.Height;
+            screen.Package = entry.Package;
+            screen.Folder = screen.IsStock
+                ? entry.Folder
+                : PackageCatalogue.UniqueFolder(screen.Name, Taken(screen), entry.Folder);
+            screen.Normalise();
+        }
+
+        /// <summary>
+        /// Whether this object was read from a file somebody's SimHub has written, rather than being the
+        /// blank one a new install starts from.
+        /// </summary>
+        /// <remarks>
+        /// The per-slot arrays cannot answer it: they have class defaults, so a blank object and a saved
+        /// one carrying the defaults look the same from there. What does answer it is the state only a
+        /// save produces -- a rig, or the screen list that preceded it, or one of the legacy scalars a
+        /// migration has not yet emptied. It decides one thing: whether a matrix panel is kept for
+        /// somebody who had a box working before panels were instances, or whether the rig starts empty
+        /// as a new one should.
+        /// </remarks>
+        /// <summary>
+        /// A bar namespace nothing else on the rig holds.
+        /// </summary>
+        /// <remarks>
+        /// Prefixed with "Led" before it is deduplicated and not after, which is the difference between
+        /// checking the name that will be attached and checking a fragment of it: two bars both called
+        /// "Rim" would otherwise both be asked about "Rim", both be told it was free, and both be
+        /// attached as "LedRim" -- one profile silently reading the other's settings.
+        /// </remarks>
+        private static string FreeBarNamespace(string name, ICollection<string> taken)
+        {
+            var slug = Contract.Slug(name);
+            if (slug.Length == 0) slug = "Strip";
+            var candidate = "Led" + slug;
+            var n = 2;
+            while (taken.Contains(candidate) || Contract.IsReservedNamespace(candidate))
+            {
+                candidate = "Led" + slug + n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                n++;
+            }
+            return candidate;
+        }
+
+        /// <summary>Repairs the bars: every one spellable, legal and holding a namespace nothing else
+        /// on the rig holds, so two bars cannot install one profile over each other.</summary>
+        private void NormaliseLedBars()
+        {
+            if (LedBars == null)
+            {
+                LedBars = new List<LedBar>();
+                return;
+            }
+            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (var i = LedBars.Count - 1; i >= 0; i--)
+            {
+                if (LedBars[i] == null) LedBars.RemoveAt(i);
+            }
+            foreach (var bar in LedBars)
+            {
+                bar.Normalise();
+                if (taken.Contains(bar.Namespace)) bar.Namespace = FreeBarNamespace(bar.Name, taken);
+                taken.Add(bar.Namespace);
+            }
+        }
+
+        private bool WasSaved()
+        {
+            return Rig != null
+                || Screens != null
+                || (Faces != null && Faces.Count > 0)
+                || FlagBoxCriticalOnly.HasValue
+                || FlagBoxGear.HasValue
+                || FlagBoxOilTemp.HasValue
+                || FlagBoxWaterTemp.HasValue;
+        }
+
+        /// <summary>The folders every other screen on the rig owns, so a folder given out here is not one
+        /// of theirs.</summary>
+        private IEnumerable<string> Taken(ScreenInstance except)
+        {
+            foreach (var screen in RigScreens())
+            {
+                if (screen == null || ReferenceEquals(screen, except) || screen.Folder == null) continue;
+                yield return screen.Folder;
+            }
         }
 
         /// <summary>Removes a screen and its settings. The folder it owned is the installer's to delete.</summary>
@@ -1077,6 +1489,9 @@ namespace OpenDashPlugin
             FlagBoxWaterTemp = other.FlagBoxWaterTemp;
             FlagBoxMatrixCriticalOnly = other.FlagBoxMatrixCriticalOnly == null ? null : (bool[])other.FlagBoxMatrixCriticalOnly.Clone();
             FlagBoxMatrixGear = other.FlagBoxMatrixGear == null ? null : (bool[])other.FlagBoxMatrixGear.Clone();
+            FlagBoxMatrixGearBlink = other.FlagBoxMatrixGearBlink == null ? null : (bool[])other.FlagBoxMatrixGearBlink.Clone();
+            FlagBoxMatrixName = other.FlagBoxMatrixName == null ? null : (string[])other.FlagBoxMatrixName.Clone();
+            LedBars = other.LedBars == null ? null : other.LedBars.Select(bar => bar == null ? null : bar.Copy()).ToList();
             FlagBoxMatrixOilTemp = other.FlagBoxMatrixOilTemp == null ? null : (int[])other.FlagBoxMatrixOilTemp.Clone();
             FlagBoxMatrixWaterTemp = other.FlagBoxMatrixWaterTemp == null ? null : (int[])other.FlagBoxMatrixWaterTemp.Clone();
             FlagBoxRest = other.FlagBoxRest == null ? null : (string[])other.FlagBoxRest.Clone();
