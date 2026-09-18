@@ -32,6 +32,7 @@ import type {
   WidgetItem,
 } from './model.ts';
 import { normaliseHex, TRANSPARENT } from './color.ts';
+import { assertWholeNumbers } from './intFields.ts';
 import { dashboardPath, itemPath, resolveItemId, screenPath, stableGuid } from './ids.ts';
 
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
@@ -117,13 +118,24 @@ export const buildStartLineObject = (line: SeparatorStyle | undefined): JsonObje
 
 const BINDING_MODE = { formula: 2, gradient: 4 } as const;
 
-/** `BorderStyle`: zero widths and radii are omitted; an empty border is `{}`. */
+/**
+ * `BorderStyle`: zero widths and radii are omitted; an empty border is `{}`.
+ *
+ * Every one of its eight numbers is an `int` in SimHub, so each is rounded here rather than left
+ * as whatever arithmetic produced it. A drawing that scales -- the tyre glyph's corner, the car's
+ * nose -- computes a radius as a fraction of its box and lands on 3.5999999999999996 for a 18 px
+ * one, and `JsonTextReader.ReadAsInt32` refuses that string outright. It does not refuse the
+ * *property*: the exception unwinds the whole `LoadFromFile`, so the dashboard holding it draws
+ * nothing at all. {@link assertWholeNumbers} is the backstop for the fields written elsewhere.
+ */
 export const buildBorderObject = (border: Border | undefined): JsonObject => {
   const o: JsonObject = {};
   if (!border) return o;
   if (border.color !== undefined) o.BorderColor = normaliseHex(border.color);
   const put = (key: string, value: number | undefined): void => {
-    if (value !== undefined && value !== 0) o[key] = value;
+    if (value === undefined) return;
+    const whole = Math.round(value);
+    if (whole !== 0) o[key] = whole;
   };
   put('BorderTop', border.top);
   put('BorderBottom', border.bottom);
@@ -539,8 +551,11 @@ export const buildDashboardObject = (dashboard: Dashboard, ctx: SerializeContext
 });
 
 /** The `.djson` text: 2-space indented JSON in SimHub's key order. */
-export const serializeDashboard = (dashboard: Dashboard, ctx: SerializeContext): string =>
-  JSON.stringify(buildDashboardObject(dashboard, ctx), null, 2);
+export const serializeDashboard = (dashboard: Dashboard, ctx: SerializeContext): string => {
+  const document = buildDashboardObject(dashboard, ctx);
+  assertWholeNumbers(document, `the dashboard ${dashboard.name}`);
+  return JSON.stringify(document, null, 2);
+};
 
 /** The `.djson.metadata` sidecar text. */
 export const serializeMetadata = (dashboard: Dashboard): string => JSON.stringify(buildMetadataObject(dashboard), null, 2);
