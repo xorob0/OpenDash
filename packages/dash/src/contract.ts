@@ -60,6 +60,24 @@ export const REV_BAR_MODES: readonly RevBarMode[] = ['shift', 'rpm', 'off'];
 /** Appended to the group every screen shares rather than folded into the four fixed names, which have shipped. */
 export const REV_BAR_SETTING = 'RevBar';
 
+/**
+ * What a blue flag band says beyond its colour: nothing, the class of the car behind, or that
+ * car's position and class.
+ *
+ * Shared rather than a face's, and that is the difference from the flag *format*, which is per
+ * screen. The format decides how much of one screen a flag takes and so differs between a rim read
+ * at arm's length and a display in the corner of the eye; this decides what the band is allowed to
+ * *say*, which is the same answer wherever it is written. Every band that carries a name reads it,
+ * and a band that carries none -- the nano's twelve pixel strip and the companion's -- reads
+ * nothing and draws nothing extra.
+ *
+ * Appended after the rev bar for the reason the rev bar is appended after the slots: both halves of
+ * the contract assert the shared group by index and a new name goes on the end of it.
+ */
+export type BlueFlagDetail = 'none' | 'class' | 'positionClass';
+export const BLUE_FLAG_DETAILS: readonly BlueFlagDetail[] = ['none', 'class', 'positionClass'];
+export const BLUE_FLAG_DETAIL_SETTING = 'BlueFlagDetail';
+
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
@@ -78,6 +96,10 @@ export const DEFAULTS = {
   LedCentre: 'rpm' as LedCentre,
   LedRpmStyle: 'leftToRight' as LedRpmStyle,
   LedFlagAnimation: true,
+  // Nothing extra, because a blue flag is read by its colour and the band is the one place a
+  // driver already knows to look; the class of the car behind is a thing to ask for rather than a
+  // thing to be given while lifting.
+  BlueFlagDetail: 'none' as BlueFlagDetail,
 } as const;
 
 /** `Slot01` .. `Slot12` for a 1-based slot index. */
@@ -117,7 +139,7 @@ export const propertyName = (name: string): string => `${PROPERTY_PREFIX}.${name
 export function dashProperties(): string[] {
   const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
-  return [...[...fixed, ...slots, REV_BAR_SETTING].map(propertyName), ...zoneProperties()];
+  return [...[...fixed, ...slots, REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only a generated LED profile reads. ADR 0013. */
@@ -195,6 +217,10 @@ export const setting = {
   ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
   /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
   ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
+  /** `isnull([OpenDash.BlueFlagDetail], 'none')`: what a blue band says beyond its colour. */
+  blueFlagDetail: (): Expr => isnull(prop(propertyName(BLUE_FLAG_DETAIL_SETTING)), str(DEFAULTS.BlueFlagDetail)),
+  /** `isnull([OpenDash.BlueFlagDetail], 'none') = 'class'`: whether the band is in the given detail. */
+  blueFlagDetailIs: (detail: BlueFlagDetail): Expr => eq(setting.blueFlagDetail(), str(detail)),
 };
 
 
@@ -431,6 +457,33 @@ export const DEFAULT_FLAG_FORMAT: FlagFormat = 'band';
  */
 export const flagFormatSettingName = (face: FaceSize): string => `${facePrefix(face)}FlagFormat`;
 
+/**
+ * When this face shows the lap review: never, in a race, or in every session.
+ *
+ * Per screen for the reason the flag format is, and more strongly: the review is 1200 by 160 and
+ * takes the hero for four seconds at every crossing, so a rig with a display on the desk and a rim
+ * in the driver's hands wants it on the one and certainly not on the other.
+ *
+ * Three values and not the canvas's four. `off`, `race` and `all` are answerable from
+ * `SessionTypeName`, which iRacing publishes as `Race` for the one session type openDash can name
+ * with certainty; a `practice` value would have to match a set of spellings -- lone, open, offline
+ * testing, warmup -- that no committed trace carries, and a value that silently never matches is
+ * worse than a value that is not offered. The absent one is recorded in the report rather than
+ * guessed at here.
+ */
+export type LapReviewMode = 'off' | 'race' | 'all';
+export const LAP_REVIEW_MODES: readonly LapReviewMode[] = ['off', 'race', 'all'];
+
+/**
+ * Off, because the panel covers the gear for four seconds of every lap and the lap-time pop-up
+ * already gives a driver the two figures they wait for at the line in a third of the room. The
+ * flag format's default is `band` for the same reason: what takes the face has to be asked for.
+ */
+export const DEFAULT_LAP_REVIEW: LapReviewMode = 'off';
+
+/** `Face1920x480LapReview`. Appended after the flag format, which both halves assert by index. */
+export const lapReviewSettingName = (face: FaceSize): string => `${facePrefix(face)}LapReview`;
+
 export const quickGlanceValue = (zone: FaceZone, page: number): number => FACE_ZONE_LETTERS.indexOf(zone) * 100 + page;
 export const quickGlanceZone = (value: number): FaceZone => FACE_ZONE_LETTERS[Math.floor(value / 100)] ?? 'A';
 export const quickGlancePage = (value: number): number => value % 100;
@@ -453,13 +506,23 @@ export const zone = {
   flagFormat: (face: FaceSize): Expr => isnull(prop(propertyName(flagFormatSettingName(face))), str(DEFAULT_FLAG_FORMAT)),
   /** `isnull([OpenDash.Face1920x480FlagFormat], 'band') = 'full'`: whether this face is in the given format. */
   flagFormatIs: (face: FaceSize, format: FlagFormat): Expr => eq(zone.flagFormat(face), str(format)),
+  /**
+   * `isnull([OpenDash.Face1920x480LapReview], 'off')`: when this face shows the lap review.
+   *
+   * The reading is here and what it is compared against is not: the session's own name lives in
+   * `second/values.ts` with the rest of the telemetry, and this file cannot import it without a
+   * cycle. `components/lapReview.ts` joins the two, which is the same seam `flagStrip.ts` sits on.
+   */
+  lapReview: (face: FaceSize): Expr => isnull(prop(propertyName(lapReviewSettingName(face))), str(DEFAULT_LAP_REVIEW)),
+  /** `... = 'race'`: whether this face is in the given lap review mode. */
+  lapReviewIs: (face: FaceSize, mode: LapReviewMode): Expr => eq(zone.lapReview(face), str(mode)),
 };
 
 /** Every property one face reads, which is the group the plugin attaches for it. */
 export function facePropertyNames(face: FaceSize): string[] {
   const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
-  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face)];
+  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face), lapReviewSettingName(face)];
 }
 
 /** Every zone property of every face that ships. */
@@ -687,16 +750,29 @@ export function moduleSettingName(number: number): string {
 }
 
 /**
+ * `CompanionPage`: the module a companion is showing, as a 0-based page index.
+ *
+ * It is the companion's answer to a pit wall's `PitWallZoneA`: live state the plugin holds and the
+ * dashboard follows, moved by the `CompanionNextModule` action and by the held glance. The start
+ * module and the glance module are *not* properties beside it, and deliberately so -- a second-screen
+ * property has to be read by a package, which `secondScreens.test.ts` enforces, and nothing on the
+ * screen reads either of them: a start page is applied once by `Init` and a glance is a value the
+ * hold copies into this one and copies back on release. That is the idiom the pit wall's own glance
+ * landed on, and one idiom is enough.
+ */
+export const COMPANION_PAGE_SETTING = 'CompanionPage';
+
+/** Lap times, which is the first module in page order and what a companion opens on. */
+export const DEFAULT_COMPANION_PAGE = 0;
+
+/**
  * Every property the companion owns, in the order the plugin attaches them.
  *
- * The modules alone, for now. The plugin also decides which module the companion opens on and which
- * one a held button shows, and it holds both, but neither is a property yet: a second-screen
- * property has to be *read* by a package, which `secondScreens.test.ts` enforces, and the companion
- * cannot read a page setting while it is twenty-one top-level screens that SimHub itself pages. The
- * change that makes it one paged screen is the change that declares them.
+ * The twenty-one module switches, and then the page. The page is appended rather than inserted for
+ * the reason every other name is: both halves of the contract assert this group by index.
  */
 export function companionProperties(): string[] {
-  return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
+  return [...MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)), COMPANION_PAGE_SETTING];
 }
 
 /**
@@ -784,6 +860,20 @@ export const secondScreen = {
    * as a number and treats as enabled when it is above zero. A boolean property converts to 1.
    */
   moduleEnabled: (number: number): Expr => isnull(prop(propertyName(moduleSettingName(number))), num(moduleAt(number).enabled ? 1 : 0)),
+  /** `isnull([OpenDash.CompanionPage], 0)`: the module the companion is showing, 0-based. */
+  companionPage: (): Expr => isnull(prop(propertyName(COMPANION_PAGE_SETTING)), num(DEFAULT_COMPANION_PAGE)),
+  /**
+   * A module's screen is enabled when the rotation leaves it on *and* it is the page the plugin is
+   * showing, which is what makes the companion one screen at a time rather than a ring SimHub pages.
+   *
+   * Both halves earn their place. The page is what a wheel button moves, so it is what decides which
+   * of the twenty-one is up; the rotation is still asked, so that a driver with no plugin sees the
+   * first module they have left on rather than a screen they switched off, and so that the switches
+   * are read by the package that offers them. SimHub re-evaluates every screen's expression each
+   * frame and moves off a screen that has stopped being enabled, which is the same mechanism the two
+   * arrangements of a zone face are chosen by.
+   */
+  moduleShown: (number: number): Expr => and(secondScreen.moduleEnabled(number), eq(secondScreen.companionPage(), num(number - 1))),
   /** `isnull([OpenDash.PitWallZoneA], 0)`: which page a zone's widget shows. */
   zonePage: (letter: PitWallZoneLetter): Expr => isnull(prop(propertyName(pitWallZoneSettingName(letter))), num(PIT_WALL_DEFAULT_ZONE_PAGES[letter])),
   /** `isnull([OpenDash.PitWallWide], 5)`. */

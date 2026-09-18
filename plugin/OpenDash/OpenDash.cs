@@ -296,6 +296,9 @@ namespace OpenDashPlugin
             // speedo read it too, and attached last of the shared group because ShiftLights is one of
             // the names this list has always opened with. XOR-119, XOR-138.
             this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
+            // And after it, for the same reason: every band that writes a name reads this, on a face
+            // and on a card face alike, so it belongs to the rig rather than to a screen.
+            this.AttachDelegate(Contract.BlueFlagDetail, () => Settings.BlueFlagDetail);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
@@ -320,6 +323,7 @@ namespace OpenDashPlugin
                     }
                     this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
                     this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
+                    this.AttachDelegate(Contract.LapReviewProperty(s.Namespace), () => Settings.ScreenLapReview(s.Namespace));
                 }
                 else if (s.IsCompanion)
                 {
@@ -328,6 +332,10 @@ namespace OpenDashPlugin
                         var captured = module;
                         this.AttachDelegate(Contract.ModuleProperty(s.Namespace, captured), () => Settings.ScreenModule(s.Namespace, captured));
                     }
+                    // The page the companion is on, which its screens' enabled expressions follow. Live
+                    // state and not a saved setting: Init puts it back on the start module, exactly as
+                    // it puts every zone back on the page it opens on.
+                    this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace), () => Settings.ScreenCompanionPage(s.Namespace));
                 }
                 else if (s.IsPitWall)
                 {

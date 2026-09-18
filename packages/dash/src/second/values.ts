@@ -11,6 +11,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import { flagBox, setting } from '../contract.ts';
+import { CHIP_WIDEST, chipText } from './chip.ts';
 import { rpms } from '../shift.ts';
 import { ds as dsTokens } from '../tokens.ts';
 
@@ -314,6 +315,36 @@ export const carCompound = (idx: Expr): Expr => isnull(driver('fronttyrecompound
  */
 export const carRating = (idx: Expr): Expr => ratingK(driver('iracingirating', idx));
 
+/**
+ * The car immediately behind on track, which is the one a blue flag is about.
+ *
+ * On track and not on the leaderboard: a blue flag is thrown for the car that is about to arrive,
+ * and the car a place behind on the timing screen may be a lap away. {@link neighbour} is the same
+ * reading the relative table's rows are built from.
+ */
+export const carBehind = (): Expr => neighbour(1);
+
+/**
+ * The class of the car behind, cut to the four characters a chip holds, or the empty string when
+ * there is nothing behind.
+ *
+ * The cut is `chipText`'s and not a second one: the class names are the same names the leaderboard
+ * draws, and a band that wrote `Ferrari 296 GT3` where the chip writes `FERR` would be two
+ * spellings of one fact. Empty rather than a placeholder, because the caller drops the separator
+ * with it rather than writing a dot before nothing.
+ */
+export const carBehindClass = (): Expr => iff(carAvailable(carBehind()), chipText(carClass(carBehind())), str(''));
+
+/**
+ * `P4 LMP2`: the position of the car behind and its class, or the empty string when there is
+ * nothing behind. The position honours PositionMode, as every position openDash draws does.
+ */
+export const carBehindPositionClass = (): Expr =>
+  iff(carAvailable(carBehind()), concat(str('P'), fmt(carPosition(carBehind()), '0'), str(' '), chipText(carClass(carBehind()))), str(''));
+
+/** The widest `carBehindPositionClass` can draw: a two-digit place and the widest chip. */
+export const WIDEST_BEHIND_POSITION_CLASS = `P99 ${CHIP_WIDEST}`;
+
 // --- Session, car and environment -----------------------------------------------------------
 
 export const currentLap = (): Expr => isnull(game('CurrentLap'), num(0));
@@ -607,7 +638,18 @@ export const sectorDelta = (sector: number): Expr =>
 /** Absolute seconds, for a gain-or-loss bar that only knows how far it is from zero. */
 export const magnitude = (expr: Expr): Expr => abs(expr);
 
-/** Deltas this close to zero are drawn as neither faster nor slower, as on the dash's delta card. */
+/**
+ * Deltas this close to zero are drawn as neither faster nor slower, as on the dash's delta card.
+ *
+ * The canvas states a two-colour rule for the lap review's own deltas -- red when slower, green when
+ * faster -- and the code has three states here, the third being `purpose.delta.zero` inside this
+ * band. The three are kept, and for a finished lap as well as for a live one. A lap that came in
+ * five thousandths off the session best is not a lap that was faster, and colouring it as though it
+ * were is a claim the number does not carry; besides, one comparison drawn two ways is how the delta
+ * card and the delta module would come to disagree, since every surface that draws a delta goes
+ * through {@link deltaColour}. The difference from the canvas is recorded here rather than resolved
+ * by a second rule.
+ */
 export const DELTA_DEADBAND = 0.005;
 
 /** Green when faster, red when slower, white within the deadband. */

@@ -3771,8 +3771,92 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Visible": true,
         "BackgroundColor": "#00FFFFFF",
         "BorderStyle": {},
+        "Bindings": {
+          "Visible": {
+            "Formula": {
+              "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('none')"
+            },
+            "Mode": 2
+          }
+        },
         "Id": "0944a7ed-6cc2-504d-a738-6bb66dd166ff",
         "Name": "flag.blue.label",
+        "RenderingSkip": 0,
+        "MinimumRefreshIntervalMS": 0
+      },
+      {
+        "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+        "IsTextItem": true,
+        "Font": "Barlow",
+        "FontWeight": "Bold",
+        "FontStyle": "Normal",
+        "FontSize": 15,
+        "Text": "BLUE FLAG · GT3",
+        "TextColor": "#FF0A0B0D",
+        "HorizontalAlignment": 1,
+        "VerticalAlignment": 0,
+        "TextWrapping": "NoWrap",
+        "Left": 0,
+        "Top": 451,
+        "Width": 1920,
+        "Height": 19,
+        "Visible": true,
+        "BackgroundColor": "#00FFFFFF",
+        "BorderStyle": {},
+        "Bindings": {
+          "Text": {
+            "Formula": {
+              "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+            },
+            "Mode": 2
+          },
+          "Visible": {
+            "Formula": {
+              "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('class')"
+            },
+            "Mode": 2
+          }
+        },
+        "Id": "be527d77-2db3-554c-8b85-6218bbe13073",
+        "Name": "flag.blue.label.class",
+        "RenderingSkip": 0,
+        "MinimumRefreshIntervalMS": 0
+      },
+      {
+        "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+        "IsTextItem": true,
+        "Font": "Barlow",
+        "FontWeight": "Bold",
+        "FontStyle": "Normal",
+        "FontSize": 15,
+        "Text": "BLUE FLAG · P4 GT3",
+        "TextColor": "#FF0A0B0D",
+        "HorizontalAlignment": 1,
+        "VerticalAlignment": 0,
+        "TextWrapping": "NoWrap",
+        "Left": 0,
+        "Top": 451,
+        "Width": 1920,
+        "Height": 19,
+        "Visible": true,
+        "BackgroundColor": "#00FFFFFF",
+        "BorderStyle": {},
+        "Bindings": {
+          "Text": {
+            "Formula": {
+              "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+            },
+            "Mode": 2
+          },
+          "Visible": {
+            "Formula": {
+              "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('positionClass')"
+            },
+            "Mode": 2
+          }
+        },
+        "Id": "f47b866d-7bc6-5c4f-a1b7-2f95c5229cc1",
+        "Name": "flag.blue.label.positionClass",
         "RenderingSkip": 0,
         "MinimumRefreshIntervalMS": 0
       }
@@ -7823,8 +7907,92 @@ exports[`dashboard snapshots openDash.djson 1`] = `
               "Visible": true,
               "BackgroundColor": "#00FFFFFF",
               "BorderStyle": {},
+              "Bindings": {
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('none')"
+                  },
+                  "Mode": 2
+                }
+              },
               "Id": "0944a7ed-6cc2-504d-a738-6bb66dd166ff",
               "Name": "flag.blue.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 451,
+              "Width": 1920,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('class')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "be527d77-2db3-554c-8b85-6218bbe13073",
+              "Name": "flag.blue.label.class",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · P4 GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 451,
+              "Width": 1920,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('positionClass')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "f47b866d-7bc6-5c4f-a1b7-2f95c5229cc1",
+              "Name": "flag.blue.label.positionClass",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -14315,8 +14483,92 @@ exports[`package snapshots openDash slots 1280x480/openDash slots 1280x480.djson
               "Visible": true,
               "BackgroundColor": "#00FFFFFF",
               "BorderStyle": {},
+              "Bindings": {
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('none')"
+                  },
+                  "Mode": 2
+                }
+              },
               "Id": "759b5881-0850-5d1a-a499-a9b26408f0ba",
               "Name": "flag.blue.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 451,
+              "Width": 1280,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('class')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "ee58447f-303e-5092-a4b9-6a03dfedb1f4",
+              "Name": "flag.blue.label.class",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · P4 GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 451,
+              "Width": 1280,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('positionClass')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "224bc75f-7f70-5b5f-a5bc-9b1e1742bbb1",
+              "Name": "flag.blue.label.positionClass",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -19915,8 +20167,92 @@ exports[`package snapshots openDash slots 1280x400/openDash slots 1280x400.djson
               "Visible": true,
               "BackgroundColor": "#00FFFFFF",
               "BorderStyle": {},
+              "Bindings": {
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('none')"
+                  },
+                  "Mode": 2
+                }
+              },
               "Id": "cf5f9029-28da-52ac-b7bd-dc59079678be",
               "Name": "flag.blue.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 375,
+              "Width": 1280,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('class')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "7d8e5503-a7ed-57ba-8816-fef3c3838eb0",
+              "Name": "flag.blue.label.class",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · P4 GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 375,
+              "Width": 1280,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('positionClass')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "87bf063e-6795-5273-b048-b33bba9a8557",
+              "Name": "flag.blue.label.positionClass",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -25755,8 +26091,92 @@ exports[`package snapshots openDash slots 850x480/openDash slots 850x480.djson 1
               "Visible": true,
               "BackgroundColor": "#00FFFFFF",
               "BorderStyle": {},
+              "Bindings": {
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('none')"
+                  },
+                  "Mode": 2
+                }
+              },
               "Id": "dec5b456-14bd-53d7-9018-34642c4da2ed",
               "Name": "flag.blue.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 451,
+              "Width": 850,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('class')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "9e8aa836-686c-5f44-b465-c20be40c849f",
+              "Name": "flag.blue.label.class",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · P4 GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 451,
+              "Width": 850,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('positionClass')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "b04de929-c1ce-502d-ab5d-8cdeb3c29673",
+              "Name": "flag.blue.label.positionClass",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -30982,8 +31402,92 @@ exports[`package snapshots openDash slots 800x480/openDash slots 800x480.djson 1
               "Visible": true,
               "BackgroundColor": "#00FFFFFF",
               "BorderStyle": {},
+              "Bindings": {
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('none')"
+                  },
+                  "Mode": 2
+                }
+              },
               "Id": "206422cb-123a-5a22-bf5a-511a19a88bd9",
               "Name": "flag.blue.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 451,
+              "Width": 800,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('class')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "e7f3fa5a-53f5-58f3-b7f1-27be123a241f",
+              "Name": "flag.blue.label.class",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · P4 GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 451,
+              "Width": 800,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('positionClass')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "5e2ed299-22b2-5213-a530-702257e4460d",
+              "Name": "flag.blue.label.positionClass",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -36194,8 +36698,92 @@ exports[`package snapshots openDash slots 1280x720/openDash slots 1280x720.djson
               "Visible": true,
               "BackgroundColor": "#00FFFFFF",
               "BorderStyle": {},
+              "Bindings": {
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('none')"
+                  },
+                  "Mode": 2
+                }
+              },
               "Id": "7227179a-317a-548c-8ca9-5c0245750db3",
               "Name": "flag.blue.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 691,
+              "Width": 1280,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('class')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "cf30b428-7338-5234-96b0-d59c129c59cc",
+              "Name": "flag.blue.label.class",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · P4 GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 691,
+              "Width": 1280,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('positionClass')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "db4598ed-739d-5c7a-80a3-eb087e092be5",
+              "Name": "flag.blue.label.positionClass",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }
@@ -48048,8 +48636,92 @@ exports[`package snapshots openDash slots 600x686/openDash slots 600x686.djson 1
               "Visible": true,
               "BackgroundColor": "#00FFFFFF",
               "BorderStyle": {},
+              "Bindings": {
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('none')"
+                  },
+                  "Mode": 2
+                }
+              },
               "Id": "287cb008-8143-56a5-92c2-986f85e10ee5",
               "Name": "flag.blue.label",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 657,
+              "Width": 600,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4)), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('class')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "ac3fb117-c603-5f8b-b443-f13562c9d429",
+              "Name": "flag.blue.label.class",
+              "RenderingSkip": 0,
+              "MinimumRefreshIntervalMS": 0
+            },
+            {
+              "$type": "SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins",
+              "IsTextItem": true,
+              "Font": "Barlow",
+              "FontWeight": "Bold",
+              "FontStyle": "Normal",
+              "FontSize": 15,
+              "Text": "BLUE FLAG · P4 GT3",
+              "TextColor": "#FF0A0B0D",
+              "HorizontalAlignment": 1,
+              "VerticalAlignment": 0,
+              "TextWrapping": "NoWrap",
+              "Left": 0,
+              "Top": 657,
+              "Width": 600,
+              "Height": 19,
+              "Visible": true,
+              "BackgroundColor": "#00FFFFFF",
+              "BorderStyle": {},
+              "Bindings": {
+                "Text": {
+                  "Formula": {
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE FLAG', ('BLUE FLAG · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'overall')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                  },
+                  "Mode": 2
+                },
+                "Visible": {
+                  "Formula": {
+                    "Expression": "(isnull([OpenDash.BlueFlagDetail], 'none')) = ('positionClass')"
+                  },
+                  "Mode": 2
+                }
+              },
+              "Id": "ccb05d04-e1e5-5871-9b53-fab4b669e731",
+              "Name": "flag.blue.label.positionClass",
               "RenderingSkip": 0,
               "MinimumRefreshIntervalMS": 0
             }

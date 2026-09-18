@@ -16,7 +16,8 @@
  * than leaving the ground transparent, and a flashing band alternates two opaque things rather than
  * blinking itself away.
  */
-import type { FontWeight, Hex, Item, Rect, RectangleItem } from '../generator.ts';
+import type { FontWeight, Hex, Item, Rect, RectangleItem, TextItem } from '../generator.ts';
+import type { Expr } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
@@ -53,12 +54,23 @@ export const ALERT_BAND_STYLES = {
 const labelY = (frame: Rect): number => frame.top + (frame.height - ds.size.label) / 2;
 
 /**
- * The centred name, when the style draws one. It is the one label on a face drawn in Bold rather
- * than Medium, which is what every FaceVariants sheet sets it in: the band is read at a glance and
- * from further away than a field label is.
+ * The centred name a band carries, whether it is the alert's own or a longer run standing in for
+ * it.
+ *
+ * Exported because one band writes more than its name: the blue flag can name the car behind, and
+ * `flagStrip.ts` draws that as further runs over this same line box rather than as a second box
+ * somewhere else on the strip. Keeping the geometry here is what stops the two drifting apart, and
+ * this file still knows nothing about which alert asks for it.
+ *
+ * It is the one label on a face drawn in Bold rather than Medium, which is what every FaceVariants
+ * sheet sets it in: the band is read at a glance and from further away than a field label is.
  */
+export const alertBandName = (name: string, frame: Rect, text: string, color: Hex, opts: { bind?: Expr; widest?: string; visibleBind?: Expr } = {}): TextItem =>
+  label(name, text, frame.left, labelY(frame), frame.width, { color, hAlign: 'center', weight: ALERT_NAME_WEIGHT, ...opts });
+
+/** The centred name, when the style draws one. */
 const alertName = (frame: Rect, style: AlertBandStyle, name: string, text: string, color: Hex): Item[] =>
-  style.labels ? [label(name, text, frame.left, labelY(frame), frame.width, { color, hAlign: 'center', weight: ALERT_NAME_WEIGHT })] : [];
+  style.labels ? [alertBandName(name, frame, text, color)] : [];
 
 /**
  * The off phase of a flashing band: the face's own ground, opaque, laid inside the border so that
