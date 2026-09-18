@@ -57,6 +57,13 @@ export interface LedEffect {
   /** When it lights. */
   when: Expr;
   color: string;
+  /**
+   * Whether the property behind it is one iRacing leaves at a hard zero: the light is real, exposed
+   * and filled by some readers, and dark on iRacing whatever happens. {@link BEST_EFFORT} says which
+   * and why; this is the same fact where the code can act on it, which is when two conditions share
+   * one lamp and one of them can never come on.
+   */
+  bestEffort?: boolean;
   /** When it blinks, if it does. */
   blinkWhen?: Expr;
   /**
@@ -316,6 +323,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     id: 'tc',
     label: 'Traction control',
     role: 'aid',
+    bestEffort: true,
     // The intervention, and nothing else. It used to light on TCLevel as well, so that some light
     // was on wherever the dial sat, and since iRacing fills the dial and not the intervention the
     // result there was a lamp lit from the green flag to the flag: a lamp that is always on carries
@@ -434,6 +442,7 @@ export const TURN_EFFECTS: readonly LedEffect[] = [
     id: 'turn.left',
     label: 'Indicating left',
     role: 'side',
+    bestEffort: true,
     side: 'left',
     when: gt(g('TurnIndicatorLeft'), num(0)),
     color: ds.color.good.primary,
@@ -445,6 +454,7 @@ export const TURN_EFFECTS: readonly LedEffect[] = [
     id: 'turn.right',
     label: 'Indicating right',
     role: 'side',
+    bestEffort: true,
     side: 'right',
     when: gt(g('TurnIndicatorRight'), num(0)),
     color: ds.color.good.primary,
@@ -583,12 +593,31 @@ export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...TURN_EFFECTS,
  * the order the lamp carries them, which is what puts every car warning ahead of every aid at three
  * lamps a side and ahead of every flag at two.
  */
-export const lampConditions = (lamp: Lamp, side: 'left' | 'right'): LedEffect[] =>
-  lamp.carries.flatMap((role) =>
+export const lampConditions = (lamp: Lamp, side: 'left' | 'right'): LedEffect[] => {
+  const carried = lamp.carries.flatMap((role) =>
     ALL_EFFECTS()
       .filter((e) => e.role === role && (e.side === undefined || e.side === side) && (lamp.only === undefined || lamp.only.includes(e.id)))
       .reverse(),
   );
+  // An effect drawn exactly as something already on this lamp is dropped, highest rank keeping the
+  // appearance. One LED drawn the same way by two conditions is one light with two meanings, and the
+  // driver reads whichever of them they learned first; the rule used to be a test over the shapes
+  // that shipped, and the grid found the pair it could not have -- a side of one carries both the
+  // flags and what is beside the car, and the green flag and the left turn indicator are the same
+  // green at the same rate. Dropping rather than recolouring, because the colours are the author's
+  // (design/tokens.json) and a lamp that cannot say two things apart should say the more important
+  // of them.
+  // A light that can never come on loses to one that can, whatever their ranks: the green flag and
+  // the left turn indicator are the same green at the same rate, and on iRacing the indicator is a
+  // hard zero. Rank decides everything else, `carries` being highest first.
+  const appearanceOf = (e: LedEffect): string => `${e.color} ${e.blinkWhen ? String(e.blinkDelayMs) : 'steady'}`;
+  const ordered = [...carried.filter((e) => !e.bestEffort), ...carried.filter((e) => e.bestEffort)];
+  const won = new Map<string, LedEffect>();
+  for (const effect of ordered) {
+    if (!won.has(appearanceOf(effect))) won.set(appearanceOf(effect), effect);
+  }
+  return carried.filter((effect) => won.get(appearanceOf(effect)) === effect);
+};
 
 /**
  * One effect as a container, over the run of LEDs its role gives it.

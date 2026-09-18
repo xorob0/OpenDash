@@ -121,9 +121,10 @@ describe('settings', () => {
     // given its own answer to when the lap review is shown, 279 before the companion's page
     // became the plugin's to decide, 280 before the mirror brought its fit, its gate and one
     // packed run for each of the ten lengths a strip's centre can be, 292 before each matrix was
-    // given its own answer to whether the digit flashes through the redline, and 296 before each
-    // face was given its own answer to what it carries at the top.
-    expect(props).toHaveLength(304);
+    // given its own answer to whether the digit flashes through the redline, 296 before each face was
+    // given its own answer to what it carries at the top, and 304 before the strip shapes became a
+    // grid and the mirror had to publish a run for every centre the grid reaches.
+    expect(props).toHaveLength(316);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');

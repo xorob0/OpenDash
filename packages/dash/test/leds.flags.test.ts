@@ -12,7 +12,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
-import { ALL_SHAPES, BROW_SHAPES, stripLength, type StripShape } from '../src/leds/strip.ts';
+import { ALL_SHAPES, BARE_RUN_LENGTHS, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
 import { BLINK_OFF, FAST_BLINK_MS, FLAG_ROWS, SLOW_BLINK_MS, SPOTTER_EFFECTS, flagEffects } from '../src/leds/effects.ts';
 import { FLAG_CATALOGUE, flagBit, type FlagCondition, type SessionFlagBit } from '../src/flags.ts';
@@ -171,9 +171,12 @@ describe('which flag is out', () => {
 describe('where a flag is drawn', () => {
   const sided = ALL_SHAPES.filter((s) => lampsOf(s).length > 0);
   const bare = ALL_SHAPES.filter((s) => s.left === 0 && s.right === 0);
+  /** Two or more lamps a side: enough room for the flags to have an LED nothing else wants. */
+  const roomy = sided.filter((s) => s.left >= 2);
+  const oneLamp = sided.filter((s) => s.left === 1);
 
   test('on a shape with sides a flag is one LED, second in from each end', () => {
-    for (const shape of sided) {
+    for (const shape of roomy) {
       const placed = placedOf(profileFor(shape).containers);
       for (const flag of flagEffects()) {
         const drawn = placed.filter((p) => p.description === flag.label);
@@ -183,8 +186,24 @@ describe('where a flag is drawn', () => {
     }
   });
 
+  test('a side of one carries the flags on its one lamp rather than losing them', () => {
+    // A strip with no sides gives the flags the whole run, so a side of one that kept only the
+    // outermost role would have *lost* the flags by gaining an LED at each end: the driver who
+    // bought a one-lamp wheel would see a car alongside and never a yellow.
+    expect(oneLamp.length).toBeGreaterThan(0);
+    for (const shape of oneLamp) {
+      const placed = placedOf(profileFor(shape).containers);
+      for (const flag of flagEffects()) {
+        const drawn = placed.filter((p) => p.description === flag.label);
+        expect({ shape: shape.id, flag: flag.id, at: drawn.map((p) => p.start).sort((a, b) => a - b) }).toMatchObject({ at: [1, stripLength(shape)] });
+      }
+    }
+  });
+
   test('the spotter and the flag are never the same LED, so a yellow cannot paint out a car alongside', () => {
-    for (const shape of sided) {
+    // Except where there is only one lamp a side, which is the one shape that has no second LED to
+    // put a flag on; there the ranking on that lamp decides, and the test above is what holds it.
+    for (const shape of roomy) {
       const placed = placedOf(profileFor(shape).containers);
       const covers = (labels: readonly string[]): Set<number> => {
         const lit = new Set<number>();
@@ -202,11 +221,11 @@ describe('where a flag is drawn', () => {
 
   test('on a shape with no sides a flag keeps the whole run, as it did before the lamps arrived', () => {
     // The carve-out was a coincidence of `placement: 'all'` rather than a rule anything pinned, so
-    // the extent would have changed silently the day the flag placement was reworked. A brow above a
-    // monitor is a marshal panel rather than a shift cluster, which is why it keeps the whole run.
-    // Every brow, and the five bare runs that are not mounted on a monitor, are the same case.
-    for (const brow of BROW_SHAPES) expect(bare.map((s) => s.id)).toContain(brow.id);
-    expect(bare.filter((s) => s.placement !== 'brow').map((s) => s.id)).toEqual(['0-8-0', '0-9-0', '0-10-0', '0-12-0', '0-16-0']);
+    // the extent would have changed silently the day the flag placement was reworked. A bare run is a
+    // marshal panel rather than a shift cluster, which is why it keeps the whole run — and a brow is
+    // a bare run, which is the whole of why the grid needs no idea of a brow.
+    for (const centre of BARE_RUN_LENGTHS) expect(bare.map((s) => s.id)).toContain(`0-${centre}-0`);
+    expect(bare.every((s) => s.left === 0 && s.right === 0)).toBe(true);
     for (const shape of bare) {
       const placed = placedOf(profileFor(shape).containers);
       for (const flag of flagEffects()) {

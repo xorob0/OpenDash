@@ -282,7 +282,7 @@ namespace OpenDashPlugin.Tests
                 return;
             }
 
-            var json = File.ReadAllText(profile);
+            var json = FlagBoxProfile.ReadFile(profile);
             Assert.Equal(FlagBoxProfile.ProfileName, FlagBoxProfile.ProfileNameOf(json));
             var description = FlagBoxProfile.DescriptionOf(json);
             Assert.NotNull(description);

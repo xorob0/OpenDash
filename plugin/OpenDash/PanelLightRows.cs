@@ -79,7 +79,7 @@ namespace OpenDashPlugin
         /// The id as geometry, or null when it is not one of the two shapes the generator writes.
         /// </summary>
         /// <remarks>
-        /// The other half of `wheel()`, `fanalab()` and BROW_SHAPES in packages/dash/src/leds/strip.ts, which
+        /// The other half of `wheel()` and `fanalab()` in packages/dash/src/leds/strip.ts, which
         /// spell the id `${left}-${centre}-${right}` with a wiring suffix appended and `brow-${n}`. Reading it
         /// back rather than carrying a table is what lets a shape added there be grouped here without an
         /// edit; an id this cannot read is not guessed at, it gets a row of its own.
@@ -187,7 +187,6 @@ namespace OpenDashPlugin
             {
                 new KeyValuePair<string, string>("4-14-4", "strip" + Join + "SimRep MLD, Ascher"),
                 new KeyValuePair<string, string>("4-14-4-reversed", "strip" + Join + "SimRep MLD, wired from the far end"),
-                new KeyValuePair<string, string>("3-9-3", "strip" + Join + "Fanatec, Simucube, Moza"),
                 new KeyValuePair<string, string>("3-9-3-fanalab", "strip" + Join + "Fanatec through Fanalab"),
                 new KeyValuePair<string, string>("3-10-3", "strip" + Join + "GridSim Lab GTSL Pro"),
             };
@@ -237,19 +236,16 @@ namespace OpenDashPlugin
                 .Select(p => new KeyValuePair<LightProfile, LightShape>(p, LightShape.Parse(p.ShapeId)))
                 .ToList();
 
-            var sided = Sorted(rest.Where(e => e.Value != null && e.Value.Placement == Wheel && !e.Value.Bare));
-            var bare = Sorted(rest.Where(e => e.Value != null && e.Value.Placement == Wheel && e.Value.Bare));
-            var brows = Sorted(rest.Where(e => e.Value != null && e.Value.Placement == Brow));
-
-            if (sided.Count > 0)
+            // One row per side length, each a range over that side's centres. The grid is sixty-odd
+            // shapes and joining them into one row with middle dots produced a line nobody could read;
+            // what a driver picks between is how many LEDs are at the ends, and the centres under it are
+            // a range rather than a list.
+            var grid = rest.Where(e => e.Value != null).ToList();
+            foreach (var side in grid.Select(e => e.Value.Left).Distinct().OrderBy(n => n))
             {
-                rows.Add(new LightRowPlan(
-                    Prefixed(string.Join(Join, sided.Select(Label).ToArray())),
-                    sided.Count == 1 ? "strip" : "strips",
-                    Ids(sided)));
+                var group = Sorted(grid.Where(e => e.Value.Left == side));
+                rows.Add(Range(group, SideNoun(side, 1), SideNoun(side, group.Count)));
             }
-            if (bare.Count > 0) rows.Add(Range(bare, "bare run", "bare runs"));
-            if (brows.Count > 0) rows.Add(Range(brows, "brow", "brows"));
 
             // Anything whose id this cannot read: its own row, under whatever the build called it. It is
             // still a profile of SimHub's LED driver, which is what the caption says and all it can say.
@@ -258,6 +254,15 @@ namespace OpenDashPlugin
                 rows.Add(new LightRowPlan(Prefixed(Label(entry.Key)), "strip", new[] { entry.Key.ShapeId }));
             }
             return rows;
+        }
+
+        /// <summary>What a row of one side length is called: a side of none is a bare run, which is what a
+        /// brow is, and anything else is named by how many LEDs sit at each end.</summary>
+        public static string SideNoun(int side, int count)
+        {
+            if (side == 0) return count == 1 ? "bare run" : "bare runs and brows";
+            var each = side == 1 ? "one LED at each end" : Word(side) + " LEDs at each end";
+            return count == 1 ? "strip, " + each : "strips, " + each;
         }
 
         /// <summary>A group of lengths, named by its two ends: "openDash brow 9 … 25".</summary>

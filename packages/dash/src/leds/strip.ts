@@ -6,13 +6,14 @@
  * strip whose wiring presents that shape in another order is a `Groups.RemapGroup` rather than a
  * second profile — which is what makes a new device a row of numbers instead of a rebuild.
  *
- * Adding a device is adding a row to {@link STRIP_SHAPES}. That is the whole of it: the effects,
- * the colours and the thresholds are the same for every shape, which is the "one language of
- * light" the wave is for.
+ * The shapes are a **grid** rather than a catalogue of devices: sides of nought to four around a
+ * centre of four to twelve, every combination generated. What a driver knows about their strip is
+ * how many LEDs it has and how they are grouped, and those two numbers are the whole of what a
+ * profile needs; a table of product names asked them to find themselves in somebody else's list and
+ * left anyone whose wheel was not in it with nothing. The effects, the colours and the thresholds
+ * are the same for every shape, which is the "one language of light" the wave is for.
  */
 
-/** What a strip is fitted to: a wheel rim or base, a brow above a monitor, or a button box. */
-export type StripPlacement = 'wheel' | 'brow' | 'buttons';
 
 export interface StripShape {
   /** Stable id, used in the file name and as the settings value. Never reordered or reused. */
@@ -21,7 +22,6 @@ export interface StripShape {
   label: string;
   /** The hardware this matches, for the panel and the guide. Not read by the build. */
   devices?: readonly string[];
-  placement: StripPlacement;
   left: number;
   centre: number;
   right: number;
@@ -100,7 +100,6 @@ const wheel = (left: number, centre: number, right: number, { reversed, ...extra
   const shape: StripShape = {
     id: `${left}-${centre}-${right}${reversed ? '-reversed' : ''}`,
     label: `${left}/${centre}/${right}${reversed ? ' reversed' : ''}`,
-    placement: 'wheel',
     left,
     centre,
     right,
@@ -123,48 +122,74 @@ const fanalab = (left: number, centre: number, right: number, extra: WheelOption
 };
 
 /**
- * The shapes openDash generates for.
+ * How wide the grid is: every side length a shape may have, and every centre.
  *
- * The named ones are real device families. The rest are the side/centre/side configurations that
- * make sense on hardware people actually buy: sides of none, two, three, four or five, around a
- * centre of eight to sixteen. A shape not here is one row away.
+ * The table used to be a list of devices, one row per product somebody had asked for, and adding a
+ * wheel meant adding a row. It is a range now, and the shapes are its product: **A / B / A**, sides
+ * of nought to four around a centre of four to twelve. That covers the wheels people own without
+ * naming any of them, and it covers the brows for free, because a brow is a strip with no sides.
  *
- * `0/n/0` is a bare run with nothing at the ends, which is also what a brow is — see
- * {@link BROW_SHAPES}.
+ * Both sides are the same length on purpose. A strip with three LEDs at one end and four at the
+ * other is a strip whose lamps do not line up with each other, and no maker sells one; a device
+ * whose *wiring* presents the runs in another order is {@link StripShape.positions} and not a second
+ * geometry.
  */
-export const STRIP_SHAPES: readonly StripShape[] = [
-  wheel(3, 9, 3, { devices: ['Fanatec ClubSport / Podium wheels', 'Simucube wireless wheels', 'Cammus', 'Moza'] }),
-  fanalab(3, 9, 3, { devices: ['Fanatec ClubSport / Podium wheels driven through Fanalab'] }),
-  wheel(3, 10, 3, { devices: ['GridSim Lab GTSL Pro'], extraRuns: { count: 2, length: 9 } }),
-  wheel(4, 14, 4, { devices: ['SimRep Engineering MLD', 'Ascher Racing'] }),
-  wheel(4, 14, 4, { reversed: true, devices: ['SimRep Engineering MLD, wired from the far end'] }),
-  wheel(2, 10, 2, { devices: ['generic WS2812b runs'] }),
-  wheel(4, 8, 4, { devices: ['generic WS2812b runs'] }),
-  wheel(4, 9, 4, { devices: ['generic WS2812b runs'] }),
-  wheel(5, 10, 5, { devices: ['generic WS2812b runs'] }),
-  wheel(0, 8, 0, { devices: ['generic WS2812b runs'] }),
-  wheel(0, 9, 0, { devices: ['generic WS2812b runs'] }),
-  wheel(0, 10, 0, { devices: ['generic WS2812b runs'] }),
-  wheel(0, 12, 0, { devices: ['generic WS2812b runs'] }),
-  wheel(0, 16, 0, { devices: ['generic WS2812b runs'] }),
+export const SIDE_LENGTHS: readonly number[] = [0, 1, 2, 3, 4];
+
+export const CENTRE_LENGTHS: readonly number[] = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+/**
+ * Bare runs longer than the grid's centre, which is what the long brows are.
+ *
+ * A brow of twenty-five is one run of twenty-five and nothing at its ends, so it is 0/25/0 and needs
+ * no idea of its own; the only reason these are a second range rather than a wider centre is that a
+ * *wheel* with twenty-five LEDs in the middle and four at each end does not exist, and generating
+ * the fifty-two shapes that would cover costs a release fifteen megabytes of files nobody can use.
+ */
+export const BARE_RUN_LENGTHS: readonly number[] = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
+
+/**
+ * The shapes the grid generates: every side against every centre, and the long bare runs after them.
+ *
+ * Ordered widest centre first within each side, and sides outward from none, so the list reads as a
+ * grid rather than as a sort. Nothing here names a device: what a driver knows about their strip is
+ * how many LEDs it has and how they are grouped, which is exactly what the two numbers are.
+ */
+export const GRID_SHAPES: readonly StripShape[] = [
+  ...SIDE_LENGTHS.flatMap((side) => CENTRE_LENGTHS.map((centre) => wheel(side, centre, side))),
+  ...BARE_RUN_LENGTHS.map((centre) => wheel(0, centre, 0)),
 ];
 
 /**
- * Brows: a bare run mounted above a monitor rather than on a wheel. Nine to twenty-five LEDs is
- * what the makers sell, and the effect tree is the same one — a brow is a strip with no sides.
- * #292.
+ * The shapes that shipped before the grid and fall outside it.
+ *
+ * Kept, not carried forward as a principle. Each one is a device somebody already has a profile for,
+ * and a shape that disappears is a driver whose wheel goes dark on an update; the grid is the rule
+ * from here and this list only ever shrinks. Three of them are geometries the ranges do not reach --
+ * a centre of fourteen, a side of five -- and two are wirings rather than geometries, which is why
+ * they sit beside their plain siblings rather than replacing them.
  */
-export const BROW_SHAPES: readonly StripShape[] = [9, 12, 15, 16, 18, 20, 25].map((n) => ({
-  id: `brow-${n}`,
-  label: `brow ${n}`,
-  devices: ['LED Brows', 'generic WS2812b brow strips'],
-  placement: 'brow' as const,
-  left: 0,
-  centre: n,
-  right: 0,
-}));
+export const LEGACY_SHAPES: readonly StripShape[] = [
+  wheel(4, 14, 4, { devices: ['SimRep Engineering MLD', 'Ascher Racing'] }),
+  wheel(4, 14, 4, { reversed: true, devices: ['SimRep Engineering MLD, wired from the far end'] }),
+  wheel(3, 10, 3, { devices: ['GridSim Lab GTSL Pro'], extraRuns: { count: 2, length: 9 } }),
+  fanalab(3, 9, 3, { devices: ['Fanatec ClubSport / Podium wheels driven through Fanalab'] }),
+  wheel(5, 10, 5, { devices: ['generic WS2812b runs'] }),
+];
 
-/** Every shape the build emits a profile for. */
-export const ALL_SHAPES: readonly StripShape[] = [...STRIP_SHAPES, ...BROW_SHAPES];
+/**
+ * Every shape the build emits a profile for: the grid, less anything a legacy shape already spells.
+ *
+ * The one collision today is 3/10/3. The grid would generate a plain one and the GridSim device is
+ * the same geometry with two further runs of nine wired after it, and both want the id `3-10-3`. The
+ * legacy row wins, because it is the file people already have installed and the id is what the
+ * installer recognises its own by; a plain 3/10/3 then gets a profile carrying two runs its device
+ * does not have, which is exactly what it got before the grid, since that was the only 3/10/3 there
+ * was. Renaming it instead would orphan every profile already in somebody's SimHub.
+ */
+export const ALL_SHAPES: readonly StripShape[] = (() => {
+  const spelled = new Set(LEGACY_SHAPES.map((shape) => shape.id));
+  return [...GRID_SHAPES.filter((shape) => !spelled.has(shape.id)), ...LEGACY_SHAPES];
+})();
 
 export const shapeById = (id: string): StripShape | undefined => ALL_SHAPES.find((s) => s.id === id);
