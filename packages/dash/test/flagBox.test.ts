@@ -14,6 +14,7 @@ import {
   declaredProperties,
   DEFAULT_OIL_TEMP,
   DEFAULT_WATER_TEMP,
+  flagBoxMatrix,
   flagBoxMatrixProperties,
   flagBoxProperties,
   FLAG_BOX_MATRICES,
@@ -603,9 +604,12 @@ describe('the gear, as the resting state', () => {
     expect(overRev?.kind).toBe('when');
     expect(steady?.kind).toBe('when');
     const flash = overRev?.kind === 'when' ? String(overRev.formula) : '';
-    expect(flash).toBe(bar);
+    // The panel's own flash switch is the only thing in front of the bar's expression, and the bar's
+    // is carried character for character behind it.
+    const switchOn = `(${flagBoxMatrix(1).gearBlink()}) = (true)`;
+    expect(flash).toBe(`(${switchOn}) and (${bar})`);
     // And the two halves partition the band, so there is no RPM at which the digit is neither.
-    expect(steady?.kind === 'when' ? String(steady.formula) : '').toBe(`!(${bar})`);
+    expect(steady?.kind === 'when' ? String(steady.formula) : '').toBe(`!(${flash})`);
 
     // The two properties whose absence was the bug: the over-rev RPM, and the gear count the last
     // gear is found from. Neither appeared anywhere in this profile before.
@@ -624,7 +628,13 @@ describe('the gear, as the resting state', () => {
     // construction -- `mirrorAvailable` asks for a first light above zero. So this asks the
     // expression what it answers, frame by frame, rather than what it is spelled like.
     const overRev = all.find((c) => c.description === 'Gear redline over-rev');
-    const flash = overRev?.kind === 'when' ? String(overRev.formula) : '';
+    const emitted = overRev?.kind === 'when' ? String(overRev.formula) : '';
+    // The panel's flash switch is peeled off first. It is a setting rather than telemetry, so the
+    // evaluator below has no reading for it, and what this test is about is the ladder underneath:
+    // the pin in the test above is what holds the switch in front of it.
+    const guard = `((${flagBoxMatrix(1).gearBlink()}) = (true)) and (`;
+    expect(emitted.startsWith(guard)).toBe(true);
+    const flash = emitted.slice(guard.length, -1);
 
     const zeros = Object.fromEntries(Object.values(SHIFT_RPM_PROPERTIES).map((p) => [p, 0]));
     const frame = (props: Record<string, number>): Record<string, number> => ({ ...zeros, [GEAR_COUNT_PROPERTY]: 6, ...props });

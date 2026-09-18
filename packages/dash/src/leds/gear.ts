@@ -7,8 +7,10 @@
  *
  * **These are glyphs in source, not text rendered small.** The bundled Barlow Condensed does not
  * exist at eight pixels, and a thin face leaves one or two pixels between a 6 and an 8 on a box
- * read at a glance in peripheral vision. The font below is 5 by 7, centred in the panel, with
- * every stroke a full pixel wide.
+ * read at a glance in peripheral vision. The font below is drawn on the whole 8 by 8 panel, with
+ * two-pixel strokes: it was 5 by 7 dropped into the corner of the grid, which left the last column
+ * and the last row permanently dark and made a digit read as small and off-centre beside a flag
+ * that filled the panel. Sixty-four pixels is not enough to spend eight of them on a margin.
  *
  * **The colour is the shift model**, the same three bands the rev bar climbs: `shiftBands()` in
  * components/revSegments.ts is where the thresholds live, and the gear reads that rather than
@@ -40,35 +42,31 @@ const INK = 'G';
 const DARK_PANEL: Grid = Array.from({ length: 8 }, () => '........');
 
 /**
- * 5 by 7, one pixel per stroke. `1` carries a foot and a flag so that it is not a bare bar, and
- * `6` and `8` differ in two places rather than one, which is the pair the community warns about.
+ * The eleven gears, each drawn on the whole 8 by 8 grid with two-pixel strokes.
+ *
+ * Two pixels rather than one because a single-pixel stroke on a diffused panel read at the edge of
+ * vision is a smudge. 6, 8 and 9 are deliberately one family: the same bowl with the same waist,
+ * differing in exactly one stem -- 6 has no upper right, 9 has no lower left, 8 has both -- because
+ * on sixty-four pixels the reliable way to tell a pair apart is one whole missing stroke and not a
+ * curve. Every glyph uses all eight rows, and the round ones are symmetric about the panel's
+ * centre; the columns a glyph leaves dark are its own counters, not a margin it was dropped into.
  */
 export const GEAR_FONT: Readonly<Record<string, Grid>> = {
-  R: ['GGGG.', 'G...G', 'G...G', 'GGGG.', 'G.G..', 'G..G.', 'G...G'],
-  N: ['G...G', 'GG..G', 'GG..G', 'G.G.G', 'G.GGG', 'G..GG', 'G...G'],
-  '1': ['..G..', '.GG..', 'G.G..', '..G..', '..G..', '..G..', 'GGGGG'],
-  '2': ['.GGG.', 'G...G', '....G', '...G.', '..G..', '.G...', 'GGGGG'],
-  '3': ['GGGGG', '...G.', '..G..', '...G.', '....G', 'G...G', '.GGG.'],
-  '4': ['...G.', '..GG.', '.G.G.', 'G..G.', 'GGGGG', '...G.', '...G.'],
-  '5': ['GGGGG', 'G....', 'GGGG.', '....G', '....G', 'G...G', '.GGG.'],
-  '6': ['..GG.', '.G...', 'G....', 'GGGG.', 'G...G', 'G...G', '.GGG.'],
-  '7': ['GGGGG', '....G', '...G.', '..G..', '.G...', '.G...', '.G...'],
-  '8': ['.GGG.', 'G...G', 'G...G', '.GGG.', 'G...G', 'G...G', '.GGG.'],
-  '9': ['.GGG.', 'G...G', 'G...G', '.GGGG', '....G', '...G.', '.GG..'],
+  R: ['GGGGGG..', 'GG...GG.', 'GG...GG.', 'GG...GG.', 'GGGGGG..', 'GG.GG...', 'GG..GG..', 'GG...GG.'],
+  N: ['GG....GG', 'GGG...GG', 'GGGG..GG', 'GG.GG.GG', 'GG.GG.GG', 'GG..GGGG', 'GG...GGG', 'GG....GG'],
+  '1': ['...GG...', '..GGG...', '.GGGG...', '...GG...', '...GG...', '...GG...', '...GG...', '.GGGGGG.'],
+  '2': ['.GGGGGG.', 'GG....GG', '......GG', '.....GG.', '...GGG..', '..GG....', '.GG.....', 'GGGGGGGG'],
+  '3': ['GGGGGGGG', '.....GG.', '....GG..', '..GGGGG.', '......GG', '......GG', 'GG....GG', '.GGGGGG.'],
+  '4': ['......GG', '.....GGG', '....GGGG', '...GG.GG', '..GG..GG', 'GGGGGGGG', '......GG', '......GG'],
+  '5': ['GGGGGGGG', 'GG......', 'GG......', '.GGGGGG.', '......GG', '......GG', 'GG....GG', '.GGGGGG.'],
+  '6': ['.GGGGGG.', 'GG......', 'GG......', '.GGGGGG.', 'GG....GG', 'GG....GG', 'GG....GG', '.GGGGGG.'],
+  '7': ['GGGGGGGG', '......GG', '.....GG.', '....GG..', '...GG...', '..GG....', '..GG....', '..GG....'],
+  '8': ['.GGGGGG.', 'GG....GG', 'GG....GG', '.GGGGGG.', 'GG....GG', 'GG....GG', 'GG....GG', '.GGGGGG.'],
+  '9': ['.GGGGGG.', 'GG....GG', 'GG....GG', '.GGGGGG.', '......GG', '......GG', '......GG', '.GGGGGG.'],
 };
 
 /** The gears iRacing reports, as SimHub's `Gear` string gives them. */
 export const GEARS: readonly string[] = ['R', 'N', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-
-/**
- * A 5 by 7 glyph centred in the 8 by 8 panel: one column of margin on the left, two on the right,
- * and the bottom row left dark. Off-centre by half a pixel in both directions, which a grid of
- * even width and odd glyph cannot avoid; the choice is recorded here rather than rediscovered.
- */
-export function centred(glyph: Grid): Grid {
-  const rows = glyph.map((row) => `.${row}..`);
-  return [...rows, '........'];
-}
 
 /** The palette a gear is drawn in at one shift band. */
 const paletteFor = (colour: Hex): Palette => ({ [INK]: colour });
@@ -77,7 +75,7 @@ const paletteFor = (colour: Hex): Palette => ({ [INK]: colour });
 export function gearGrid(gear: string): Grid {
   const glyph = GEAR_FONT[gear];
   if (glyph === undefined) throw new RangeError(`no gear glyph for ${JSON.stringify(gear)}`);
-  return centred(glyph);
+  return glyph;
 }
 
 /** Proves a glyph is 8 by 8 and every lit pixel is in the palette. */
@@ -126,11 +124,15 @@ function gearsAtBand(band: ShiftBand, flashing: boolean): MatrixContainer[] {
  * strobing in top gear where the bar deliberately does not. Two conditional groups, over-rev first,
  * is the matrix's way of saying what `blinkBind` says on a screen segment.
  */
-function bandChildren(band: ShiftBand): MatrixContainer[] {
+function bandChildren(band: ShiftBand, matrix: FlagBoxMatrix): MatrixContainer[] {
   if (band.blink === null) return gearsAtBand(band, false);
+  // The panel's own switch is folded into the condition rather than made a group above it: the two
+  // branches have to stay exhaustive, or a driver who turns the flash off gets a dark panel at the
+  // moment the engine is screaming, which is worse than either answer.
+  const flashing = and(eq(flagBoxMatrix(matrix).gearBlink(), 'true'), band.blink);
   return [
-    { kind: 'when', description: `Gear ${band.id} over-rev`, formula: band.blink, children: gearsAtBand(band, true) },
-    { kind: 'when', description: `Gear ${band.id} steady`, formula: not(band.blink), children: gearsAtBand(band, false) },
+    { kind: 'when', description: `Gear ${band.id} over-rev`, formula: flashing, children: gearsAtBand(band, true) },
+    { kind: 'when', description: `Gear ${band.id} steady`, formula: not(flashing), children: gearsAtBand(band, false) },
   ];
 }
 
@@ -147,7 +149,7 @@ export function gearGroup(matrix: FlagBoxMatrix): MatrixContainer {
       kind: 'when' as const,
       description: `Gear ${band.id}`,
       formula: and(...bands.slice(0, i).map((higher) => not(higher.raised)), band.raised),
-      children: bandChildren(band),
+      children: bandChildren(band, matrix),
     })),
   };
 }

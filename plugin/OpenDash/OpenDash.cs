@@ -218,6 +218,7 @@ namespace OpenDashPlugin
                 // a driver in Fahrenheit who has never opened this page does not get a Celsius number.
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "OilTemp"), () => Settings.MatrixOilTemp(m) == 0 ? (int?)null : Settings.MatrixOilTemp(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "WaterTemp"), () => Settings.MatrixWaterTemp(m) == 0 ? (int?)null : Settings.MatrixWaterTemp(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "GearBlink"), () => Settings.MatrixGearBlink(m));
             }
             // The strips, last, in the order Contract.LightsPropertyNames() declares them. Every
             // generated .ledsprofile reads these, so a strip with none of them attached can only ever

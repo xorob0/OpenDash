@@ -156,6 +156,11 @@ namespace OpenDashPlugin
         /// <summary>On: the gear is what the box shows when nothing is happening.</summary>
         public const bool DefaultFlagBoxGear = true;
 
+        /// <summary>On. The digit flashing while the car is over-revving is the box's half of the shift
+        /// message the rev bar and the strip also carry, and a driver who owns only the box would lose
+        /// the loudest part of it if this defaulted off.</summary>
+        public const bool DefaultFlagBoxGearBlink = true;
+
         public const int DefaultFlagBoxLowFuelLaps = 2;
 
         /// <summary>120 C and 110 C, and their equivalents, so a default is right in whatever unit is set.
@@ -188,9 +193,9 @@ namespace OpenDashPlugin
             return "FlagBoxMatrix" + matrix + name;
         }
 
-        /// <summary>The ten names of one matrix, in attachment order. The last four moved here from the
-        /// tab, and are appended rather than interleaved because both halves of the contract pin this
-        /// list in order.</summary>
+        /// <summary>The eleven names of one matrix, in attachment order. The four that moved here from
+        /// the tab, and the flash switch after them, are appended rather than interleaved because both
+        /// halves of the contract pin this list in order.</summary>
         public static IEnumerable<string> FlagBoxMatrixProperties(int matrix)
         {
             yield return FlagBoxMatrixProperty(matrix, "Rest");
@@ -203,6 +208,7 @@ namespace OpenDashPlugin
             yield return FlagBoxMatrixProperty(matrix, "Gear");
             yield return FlagBoxMatrixProperty(matrix, "OilTemp");
             yield return FlagBoxMatrixProperty(matrix, "WaterTemp");
+            yield return FlagBoxMatrixProperty(matrix, "GearBlink");
         }
 
         /// <summary>Critical-flags-only off on every panel, and the gear on on every panel: the defaults
@@ -218,6 +224,13 @@ namespace OpenDashPlugin
         {
             var values = new bool[FlagBoxMatrices.Count];
             for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxGear;
+            return values;
+        }
+
+        public static bool[] DefaultFlagBoxGearBlinks()
+        {
+            var values = new bool[FlagBoxMatrices.Count];
+            for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxGearBlink;
             return values;
         }
 
