@@ -117,6 +117,13 @@ namespace OpenDashPlugin
         /// <summary>The web view page shows nothing until the user sets an address.</summary>
         public const string DefaultWebViewUrl = "";
 
+        /// <summary>The zone and page a held button shows on a pit wall: zone D, the leaderboard.
+        ///
+        /// Zone D because it is the one a glance can borrow without hiding what the glance is for: A
+        /// and B carry the fuel and the tyres a stop is planned on, C the relative a spotter calls
+        /// from, and D the two cars either side, which the leaderboard says more about anyway.</summary>
+        public const int DefaultPitWallQuickGlance = 3 * 100 + 5;
+
         /// <summary>Percent. SimHub's own global brightness for the device applies on top of this.</summary>
         public const int DefaultLightsBrightness = 100;
 
@@ -501,8 +508,9 @@ namespace OpenDashPlugin
         {
             if (string.Equals(kind, KindFace, StringComparison.Ordinal)) return FaceActionNames(ns);
             if (string.Equals(kind, KindCompanion, StringComparison.Ordinal)) return CompanionActionNames(ns);
-            // A pit wall has none, and a slots face has none: neither cycles anything a thumb reaches
-            // for. Both are read by somebody who is not driving, or are arranged once with a mouse.
+            if (string.Equals(kind, KindPitWall, StringComparison.Ordinal)) return PitWallActionNames(ns);
+            // A slots face has none: it cycles nothing, its twelve cards being arranged once with a
+            // mouse and then left alone.
             return new string[0];
         }
 
@@ -943,6 +951,21 @@ namespace OpenDashPlugin
             yield return HoldQuickGlanceActionFor(ns);
         }
 
+        /// <summary>
+        /// Every action one pit wall registers, in registration order: the glance and nothing else.
+        /// </summary>
+        /// <remarks>
+        /// A pit wall cycles no zone, because nobody sitting in front of a 1920 by 1080 needs to page
+        /// a panel that is already on screen beside five others. The glance is the one exception: the
+        /// canvas asks for a page called up on demand over a zone's assigned one, and "on demand" on
+        /// a screen nobody is driving is whatever SimHub will bind, a keyboard key as readily as a
+        /// wheel button. Held and not toggled, so that a hand leaving the key puts the zone back.
+        /// </remarks>
+        public static IEnumerable<string> PitWallActionNames(string ns)
+        {
+            yield return HoldQuickGlanceActionFor(ns);
+        }
+
         /// <summary>Property name of a pit wall zone: PitWallZoneA .. PitWallZoneD.</summary>
         public static string ZoneProperty(string ns, string letter)
         {
@@ -1190,6 +1213,24 @@ namespace OpenDashPlugin
             if (zoneIndex >= FaceZoneLetters.Length) return DefaultQuickGlance;
             var page = QuickGlancePage(value);
             return page < FaceZonePageCounts[zoneIndex] ? value : DefaultQuickGlance;
+        }
+
+        /// <summary>A pit wall zone and a standard page packed the way a face's glance is packed.</summary>
+        public static int PitWallQuickGlanceValue(int zoneIndex, int page)
+        {
+            if (zoneIndex < 0 || zoneIndex >= PitWallZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
+            return zoneIndex * 100 + page;
+        }
+
+        /// <summary>Returns the pit wall glance when both halves are in range, else the default. The
+        /// page is a standard one because the four data zones are standard; the wide zone spans a
+        /// column of the tower page and is not among them.</summary>
+        public static int NormalisePitWallQuickGlance(int value)
+        {
+            if (value < 0) return DefaultPitWallQuickGlance;
+            var zoneIndex = QuickGlanceZone(value);
+            if (zoneIndex >= PitWallZoneLetters.Length) return DefaultPitWallQuickGlance;
+            return ZonePages.IsValidStandard(QuickGlancePage(value)) ? value : DefaultPitWallQuickGlance;
         }
 
         /// <summary>Clamps a card number into the catalogue, or returns fallback when it is outside.</summary>

@@ -580,11 +580,45 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildPitWallPane(ScreenInstance screen)
         {
+            var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
+                Ui.Caption("Hold to show one page over the zone it belongs to, release to put the zone back."));
+            glanceText.MaxWidth = 420;
+
             return Ui.VStack(0,
                 Ui.Section("Where the zones are",
                     Ui.Caption("Three pages share four data zones and one wide zone, so the letters need a picture.", BodyWidth),
                     BuildPitWallPicture()),
-                Ui.Section("What each zone shows", Ui.VStack(PanelPitWallPlan.RowGap, BuildPitWallRows(screen))));
+                Ui.Section("What each zone shows", Ui.VStack(PanelPitWallPlan.RowGap, BuildPitWallRows(screen))),
+                // A binding and not a wheel button: nobody drives a pit wall, so the gesture is whatever
+                // SimHub will bind, and a keyboard key beside the monitor is the likelier one.
+                Ui.Section("A page on demand",
+                    Ui.Caption("Bound per screen. A keyboard key serves as well as a wheel button here.", BodyWidth),
+                    Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
+                        BuildPitWallGlanceSelect(screen),
+                        BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true)))));
+        }
+
+        /// <summary>The one page the glance shows, zone and page together, as the face's own select is.</summary>
+        private ComboBox BuildPitWallGlanceSelect(ScreenInstance screen)
+        {
+            var options = PanelPitWallPlan.GlanceOptions();
+            var select = new ComboBox
+            {
+                Width = PanelPitWallPlan.SelectWidth,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                ToolTip = "The page a held binding shows",
+            };
+            Ui.Field(select, PanelPitWallPlan.SelectHeight);
+            foreach (var option in options) select.Items.Add(PanelPitWallPlan.GlanceLabel(option));
+            var index = Array.IndexOf(options, Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance));
+            select.SelectedIndex = index >= 0 ? index : 0;
+            select.SelectionChanged += (sender, args) =>
+            {
+                if (select.SelectedIndex < 0 || select.SelectedIndex >= options.Length) return;
+                screen.PitWallQuickGlance = options[select.SelectedIndex];
+                Save();
+            };
+            return select;
         }
 
         /// <summary>The four zones, the wide zone and the address, in that order.</summary>

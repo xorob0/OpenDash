@@ -600,12 +600,34 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("RimNextModule", Contract.NextModuleActionFor("Rim"));
             // Per instance like a face's, so a second companion on the rig moves on its own button.
             Assert.Equal(new[] { "RimNextModule", "RimHoldQuickGlance" }, Contract.CompanionActionNames("Rim").ToArray());
-            // A pit wall has none: it is read by somebody who is not driving.
-            Assert.Empty(Contract.ScreenActionNames(Contract.KindPitWall, Contract.PitWallPrefix));
+            // A pit wall has the glance alone: it cycles nothing, every panel being on screen at once,
+            // but the canvas asks for a page called up on demand over a zone's assigned one.
+            Assert.Equal(new[] { "PitWallHoldQuickGlance" }, Contract.ScreenActionNames(Contract.KindPitWall, Contract.PitWallPrefix).ToArray());
+            Assert.Equal(new[] { "GarageHoldQuickGlance" }, Contract.PitWallActionNames("Garage").ToArray());
             Assert.Empty(Contract.ScreenActionNames(Contract.KindSlots, "Slots480"));
             // Lap times and the track map, counted from zero, so the track map is module 13 at page 12.
             Assert.Equal("lapTimes", Modules.ByNumber(Contract.DefaultCompanionStart + 1).Id);
             Assert.Equal("track", Modules.ByNumber(Contract.DefaultCompanionQuickGlance + 1).Id);
+        }
+
+        [Fact]
+        public void A_pit_wall_glance_packs_a_zone_and_a_standard_page()
+        {
+            // Zone D and the leaderboard: the zone a glance can borrow without hiding what it is for.
+            Assert.Equal(305, Contract.DefaultPitWallQuickGlance);
+            Assert.Equal(3, Contract.QuickGlanceZone(Contract.DefaultPitWallQuickGlance));
+            Assert.Equal("Leaderboard", ZonePages.StandardName(Contract.QuickGlancePage(Contract.DefaultPitWallQuickGlance)));
+            Assert.Equal(210, Contract.PitWallQuickGlanceValue(2, 10));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Contract.PitWallQuickGlanceValue(4, 0));
+            // Half a glance is not a glance: a page outside the standard catalogue takes the zone with it.
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, Contract.NormalisePitWallQuickGlance(211));
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, Contract.NormalisePitWallQuickGlance(400));
+            Assert.Equal(Contract.DefaultPitWallQuickGlance, Contract.NormalisePitWallQuickGlance(-1));
+            Assert.Equal(210, Contract.NormalisePitWallQuickGlance(210));
+            // Every option the pane offers survives its own normaliser, and reads as a zone and a page.
+            foreach (var option in PanelPitWallPlan.GlanceOptions()) Assert.Equal(option, Contract.NormalisePitWallQuickGlance(option));
+            Assert.Equal(Contract.PitWallZoneLetters.Length * ZonePages.Standard.Count, PanelPitWallPlan.GlanceOptions().Length);
+            Assert.Equal("Zone D \u00b7 Leaderboard", PanelPitWallPlan.GlanceLabel(Contract.DefaultPitWallQuickGlance));
         }
 
         /// <summary>The `id` fields of the page list that follows the given declaration.</summary>

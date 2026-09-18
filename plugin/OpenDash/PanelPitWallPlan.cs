@@ -192,6 +192,27 @@ namespace OpenDashPlugin
             return text.ToString();
         }
 
+        /// <summary>Every zone and page the quick glance can be set to, packed the way
+        /// Contract.PitWallQuickGlanceValue packs them, in Contract.PitWallZoneLetters order.</summary>
+        public static int[] GlanceOptions()
+        {
+            var values = new List<int>();
+            for (var zone = 0; zone < Contract.PitWallZoneLetters.Length; zone++)
+            {
+                for (var page = 0; page < ZonePages.Standard.Count; page++) values.Add(Contract.PitWallQuickGlanceValue(zone, page));
+            }
+            return values.ToArray();
+        }
+
+        /// <summary>"Zone C · Relative": one control names the zone and the page together, because a
+        /// glance is one choice and the two halves of it mean nothing apart.</summary>
+        public static string GlanceLabel(int value)
+        {
+            var glance = Contract.NormalisePitWallQuickGlance(value);
+            var letter = Contract.PitWallZoneLetters[Contract.QuickGlanceZone(glance)];
+            return "Zone " + letter + " · " + ZonePages.StandardName(Contract.QuickGlancePage(glance));
+        }
+
         /// <summary>The page of that title, or null. Used by the tests to hold a sentence against the
         /// rectangles of the page it names.</summary>
         public static Page PageNamed(string title)
