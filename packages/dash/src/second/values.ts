@@ -569,7 +569,10 @@ export const AVERAGE_LAPS = 5;
  * is shown.
  */
 export const average5 = (): Expr => {
-  const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => previousLap(num(i + 1)));
+  // From slot zero, which is the lap just completed. Starting at one averaged laps two to six and
+  // left the newest out, so the number moved a lap late; `modules/lapHistory.ts` reads the same
+  // slots and says so where it draws row one.
+  const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => previousLap(num(i)));
   const seconds = slots.map((slot) => timespanToSeconds(slot));
   return iff(
     and(...slots.map((slot) => hasTime(slot))),

@@ -627,7 +627,16 @@ const cornerLamps = (): { id: string; text: string; on: string; colour: `#${stri
   { id: 'p2p', text: 'P2P', on: eq(isnull(raw('PushToPass'), num(0)), num(1)), colour: ds.purpose.flag.blue },
   // The spotter is caution amber and not the flag's yellow, which every sheet that lights it draws:
   // a car beside you is a thing to be careful of rather than a yellow flag.
-  { id: 'spt', text: 'SPT', on: ncalc.ne(isnull(game('CarLeftRight'), num(0)), num(1)), colour: ds.color.caution.primary },
+  // The two properties SimHub actually publishes, rather than iRacing's own enum: every recorded
+  // trace has `CarLeftRight` at null, so the old read defaulted to 0, and 0 is not 1, which lit the
+  // lamp on every face at all times. The strip reads the same pair, so the band and the lights say
+  // one thing about a car alongside.
+  {
+    id: 'spt',
+    text: 'SPT',
+    on: ncalc.or(gt(isnull(game('SpotterCarLeft'), num(0)), num(0)), gt(isnull(game('SpotterCarRight'), num(0)), num(0))),
+    colour: ds.color.caution.primary,
+  },
 ];
 
 /** The two clocks in the right corner. */

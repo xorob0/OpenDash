@@ -193,8 +193,10 @@ describe('second-screen values', () => {
 
   test('the five-lap average reads the five history slots and waits for all five', () => {
     const average = values.average5();
-    for (const slot of [1, 2, 3, 4, 5]) expect(average).toContain(`('PersistantTrackerPlugin.PreviousLap_') + (format(${slot}, '00'))`);
-    expect(average).not.toContain("format(6, '00')");
+    // From slot zero, which is the lap just completed: `lapHistory` draws that slot as row one, so
+    // an average starting at one was the mean of laps two to six and moved a lap late.
+    for (const slot of [0, 1, 2, 3, 4]) expect(average).toContain(`('PersistantTrackerPlugin.PreviousLap_') + (format(${slot}, '00'))`);
+    expect(average).not.toContain("format(5, '00')");
     expect(average).toContain('/ (5)');
     expect(average).toContain(`'${values.NO_TIME}'`);
   });

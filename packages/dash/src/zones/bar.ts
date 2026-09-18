@@ -45,7 +45,7 @@ import {
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { fmt, isnull, num, str, iff, eq, game, concat, raw } = ncalc;
+const { fmt, isnull, num, str, iff, eq, game, concat, raw, driver, playerPosition } = ncalc;
 
 /**
  * What every artboard draws the same way, whatever the bar's height: twenty pixels of side
@@ -110,7 +110,17 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     chars: CHARS.position,
     denominator: { sample: '/ 22', bind: concat(str('/ '), fmt(opponentCount(), '0')), chars: { digits: 4, specials: 1 } },
   },
-  { id: 'classPosition', label: 'Class', sample: 'GT3 · P4', bind: concat(playerClass(), str(' · P'), fmt(isnull(game('PlayerClassPosition'), classOpponentCount()), '0')), chars: CHARS.classPosition, widest: WIDEST_CLASS },
+  // The position through the leaderboard function every other class reading uses, not a GameData
+  // property of that name: SimHub publishes none, so the old read fell through to its own default,
+  // which was the number of cars in the class. A driver fourth of twelve read "GT3 · P12".
+  {
+    id: 'classPosition',
+    label: 'Class',
+    sample: 'GT3 · P4',
+    bind: concat(playerClass(), str(' · P'), fmt(isnull(driver('classposition', playerPosition()), num(0)), '0')),
+    chars: CHARS.classPosition,
+    widest: WIDEST_CLASS,
+  },
   // Four cells rather than the count's three: the x the artboard draws after the number takes one.
   { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 } },
   { id: 'airTemp', label: 'Air', sample: '21.5', bind: fmt(airTemperature(), '0.0'), chars: CHARS.pressure, denominator: { sample: '°', bind: str('°'), chars: { digits: 1, specials: 1 } } },
