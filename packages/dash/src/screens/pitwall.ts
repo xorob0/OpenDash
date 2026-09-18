@@ -24,7 +24,8 @@ import { rowsThatFit as boardRowsThatFit, table, type ColumnId } from '../second
 import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, type ModuleContext } from '../modules/module.ts';
-import { airTemperature, bestLap, brake, carPosition, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
+import { airTemperature, bestLap, brake, carPosition,
+  positionDigits, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
@@ -93,7 +94,7 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
       ),
       fld(ctxOf(body, `${name}.`), 'position', 'Position', {
         sample: '4',
-        bind: fmt(carPosition(player()), '0'),
+        bind: positionDigits(player()),
         chars: CHARS.position,
         fs: d.mid,
         // A denominator rather than a unit: the sheet scales "/ 24" with the value it follows -- 23
