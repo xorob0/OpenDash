@@ -80,6 +80,12 @@ bound, so a setting change moves a zone to another page without touching a file.
 who moves it, and it is the reason the two catalogues have stayed apart: a pit wall zone is chosen
 with a mouse by somebody who is not driving, and a face zone is cycled with a thumb mid-lap.
 
+**A wide zone names what the extra width buys.** Three of its six pages draw more than the standard
+zone's rather than the same thing larger, so the catalogue calls them "Lap history · delta to best",
+"Opponents · best and last" and "Tyres · psi and kPa", where the standard zone keeps the bare module
+name. A page that gains nothing from the width, the inputs trace and the web view, keeps its own
+name in both catalogues.
+
 One zone dashboard exists per distinct zone rectangle a package uses, because a widget scaled to a
 box it was not drawn for would scale its type with it. The zone dashboards are derived from the
 widgets the pages actually placed, so a page that moves a zone cannot leave a dangling file.
