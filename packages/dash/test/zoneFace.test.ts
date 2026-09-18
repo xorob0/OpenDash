@@ -443,11 +443,22 @@ describe('the parts the face draws itself', () => {
     }
   });
 
-  test('the pit limiter covers zone A rather than taking room of its own', () => {
+  test('the pit alerts cover zone A rather than taking room of its own', () => {
     const z = zoneFace1920x480.zones;
     expect(z.pitLimiter.left).toBeGreaterThanOrEqual(z.zoneA.left);
     expect(z.pitLimiter.left + z.pitLimiter.width).toBeLessThanOrEqual(z.zoneA.left + z.zoneA.width);
-    expect(names).toContain('pitLimiter');
+    // Five states over the one rectangle, so the family costs the face no room the limiter did not
+    // already take and only the winning one is ever drawn.
+    const drawn = all.filter((i) => i.name.startsWith('pitAlert.'));
+    expect(drawn.length).toBeGreaterThan(0);
+    const banner = z.pitLimiter;
+    for (const item of drawn) {
+      if (item.kind === 'layer') continue;
+      const r = item.rect;
+      const inside =
+        r.left >= banner.left && r.left + r.width <= banner.left + banner.width && r.top >= banner.top && r.top + r.height <= banner.top + banner.height;
+      expect({ item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+    }
   });
 
   test('the bar is drawn and is not a zone', () => {

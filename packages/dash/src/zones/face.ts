@@ -21,7 +21,7 @@ import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
 import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { flagFull } from '../components/flagFull.ts';
-import { pitLimiter } from '../components/pitLimiter.ts';
+import { pitAlerts } from '../components/pitAlerts.ts';
 import { popUps } from '../components/popUp.ts';
 import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
@@ -150,9 +150,11 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
     ...withBindings({ Visible: zoneSetting.flagFormatIs(face, 'full') }),
   });
 
-  // The limiter covers zone A rather than taking room of its own: it is true for seconds at a time
-  // and it is the one thing that matters while it is. Drawn last, so it is over the zone.
-  items.push(...pitLimiter(z.pitLimiter, 'pitLimiter'));
+  // The pit family covers zone A rather than taking room of its own: one of them is true for
+  // seconds at a time and it is the one thing that matters while it is. Drawn last, so it is over
+  // the zone -- and over the full-screen flag, which covers this rectangle too: a driver serving a
+  // stop under a red flag still has to know whether the limiter is on.
+  items.push(...pitAlerts(z.pitLimiter, 'pitAlert'));
 
   // A pop-up covers the hero, which on this face is zone A: the gear and the speed are what a
   // driver can give up for the three seconds a lap time is worth more than either. The box is
