@@ -173,6 +173,47 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(Theme.Accent, style, StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// No icon is typed: a text factory is never handed a glyph to stand in for a drawn path.
+        /// </summary>
+        /// <remarks>
+        /// The add card carried <c>Text("+", 20, FontWeights.Light, Theme.Accent)</c> for as long as it
+        /// existed, and nothing said so, because the panel is WPF and neither check command compiles a
+        /// line of it. A typed icon is not merely the wrong shape: it is scaled by the font's metrics
+        /// rather than by the box, it carries the face's own stroke instead of the 1.5 every drawn icon
+        /// shares, and it moves off the row's centre whenever the face changes. That is why this reads
+        /// the sources as text, which is the only hold available on a file no test can compile; it is
+        /// the same reason RepoPaths already reads Theme.cs rather than referencing it.
+        ///
+        /// A glyph is recognised as a literal with neither a letter nor a digit in it, so the emoji the
+        /// requirement also forbids fail here as well. The empty string is allowed, since several labels
+        /// are built empty and filled once telemetry arrives.
+        /// </remarks>
+        [Fact]
+        public void The_panel_never_builds_an_icon_out_of_text()
+        {
+            var sources = Directory.GetFiles(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), "*.cs");
+            Assert.NotEmpty(sources);
+
+            var typed = new List<string>();
+            foreach (var source in sources)
+            {
+                foreach (Match call in Regex.Matches(File.ReadAllText(source),
+                    @"\b(?:Ui\.)?(?:Text|Label|Numeral)\s*\(\s*""(?<literal>[^""\\]*)"""))
+                {
+                    var literal = call.Groups["literal"].Value;
+                    if (literal.Length > 0 && !literal.Any(char.IsLetterOrDigit))
+                    {
+                        typed.Add(Path.GetFileName(source) + ": " + call.Value);
+                    }
+                }
+            }
+
+            Assert.True(typed.Count == 0,
+                "an icon is drawn and never typed, but a glyph is handed to a text factory in:" +
+                Environment.NewLine + string.Join(Environment.NewLine, typed));
+        }
+
         /// <summary>The four names the cards ask PanelMetrics for are these paths and not a second copy
         /// of them.</summary>
         [Fact]
