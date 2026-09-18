@@ -18,6 +18,20 @@ import type { Size } from '../design/geometry.ts';
 
 export type ZoneKind = 'standard' | 'wide';
 
+/**
+ * The rectangle the canvas designs a zone of each kind on, which no page places.
+ *
+ * A zone is a widget, so the boxes a page is ever proved against are the ones the pit wall pages
+ * happen to have room for, and 240 is not among them: a wide page that only works at the 255 px
+ * the tower gives it would pass quietly. The fit suite builds every module into these as well as
+ * into the placed rectangles, so the frame a page was drawn on is one a test can fail on, and a
+ * kind added here is covered the day it is added rather than the day somebody lists it.
+ */
+export const ZONE_REFERENCE: Record<ZoneKind, Size> = {
+  standard: { width: 639, height: 240 },
+  wide: { width: 1279, height: 240 },
+};
+
 /** The pages a zone of this kind can show. */
 export const pagesOf = (kind: ZoneKind): readonly PitWallZonePageMeta[] => (kind === 'wide' ? PIT_WALL_WIDE_ZONE_PAGES : PIT_WALL_ZONE_PAGES);
 
