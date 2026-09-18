@@ -123,6 +123,7 @@ describe('the packages are built and valid', () => {
 describe('the companion', () => {
   const companion = PACKAGES.find((p) => p.def.folder === 'openDash Companion')!;
   const main = companion.pkg.dashboards[0]!;
+  const bothSizes = PACKAGES.filter((p) => p.def.folder.startsWith('openDash Companion'));
 
   test('has one screen per module, in catalogue order', () => {
     expect(main.screens).toHaveLength(MODULE_COUNT);
@@ -138,11 +139,10 @@ describe('the companion', () => {
     const screen = main.screens.find((s) => s.name === 'lapTimes')!;
     const labels = [...walkItems(screen.items)].filter((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.label') && !i.name.includes('.header.'));
     const rows = [...new Set(labels.map((l) => l.rect.top))].sort((a, b) => a - b);
-    // Three ranks, where the artboard draws four: the sector rank needs 348 px of content and the
-    // page has 336, because the flag band below it is the token's 32 rather than the artboard's 12.
-    // docs/research/design-audit.md carries that disagreement; design/tokens.json is not edited
-    // from code.
-    expect(rows).toHaveLength(3);
+    // Four ranks, as the artboard draws. The sector rank needs 348 px of content and used to be
+    // shed, because the flag band above took the token's 32 px rather than the artboard's 12 and
+    // left the page 336 tall; at the artboard's 356 it fits.
+    expect(rows).toHaveLength(4);
     const pitches = new Set<number>();
     for (const top of rows) {
       const lefts = labels
@@ -176,12 +176,38 @@ describe('the companion', () => {
     expect([...roles]).toEqual(['true;true;false']);
   });
 
+  test('stacks the four bands the artboard draws, which fill the screen exactly', () => {
+    // The flag band is the artboard's 12 px strip, as on the nano face, rather than the 32 px
+    // heightSm token it used to read, which took twenty pixels off the body of all forty-two
+    // screens. Pinned on both sizes so the bands cannot drift again.
+    const bandsOf = (folder: string): number[] => {
+      const g = companionGeometry(COMPANION_SIZES.find((s) => s.folder === folder)!);
+      return [g.header.height, g.module.height, g.dots.height, g.flags.height];
+    };
+    expect(bandsOf('openDash Companion')).toEqual([56, 388, 24, 12]);
+    expect(bandsOf('openDash Companion portrait')).toEqual([56, 758, 24, 12]);
+    for (const size of COMPANION_SIZES) {
+      expect(bandsOf(size.folder).reduce((a, b) => a + b, 0)).toBe(size.height);
+      // What the band arithmetic is for: the box the module is actually handed.
+      const box = contentRect(companionGeometry(size).module, 'companion');
+      expect([box.width, box.height]).toEqual(size.width === 850 ? [802, 356] : [432, 726]);
+    }
+  });
+
   test('draws the header, the dots and the flag band on every screen', () => {
-    for (const screen of main.screens) {
-      const names = itemsOf({ ...main, screens: [screen] }).map((i) => i.name);
-      expect(names.some((n) => n.includes('header.module'))).toBe(true);
-      expect(names.filter((n) => n.includes('.dots.dot'))).toHaveLength(MODULE_COUNT);
-      expect(names.some((n) => n.includes('flag.yellow'))).toBe(true);
+    for (const { pkg } of bothSizes) {
+      const dashboard = pkg.dashboards[0]!;
+      for (const screen of dashboard.screens) {
+        const items = itemsOf({ ...dashboard, screens: [screen] });
+        const names = items.map((i) => i.name);
+        expect(names.some((n) => n.includes('header.module'))).toBe(true);
+        expect(names.filter((n) => n.includes('.dots.dot'))).toHaveLength(MODULE_COUNT);
+        // The rectangle rather than the presence: the body is measured against what is left under
+        // it, so a band that grew back would be a silently shorter page rather than a failure.
+        const band = items.find((i) => i.name.endsWith('.flag.yellow.band')) as RectangleItem;
+        expect(band.rect).toEqual({ left: 0, top: dashboard.height - 12, width: dashboard.width, height: 12 });
+        expect(band.backgroundColor).toBe(ds.purpose.flag.yellow);
+      }
     }
   });
 
@@ -386,6 +412,10 @@ describe('a monospaced value only draws glyphs that fit its cell', () => {
  * real box, so the guarantee read stronger than it was — a module could pass and still overflow
  * what the build hands it. Nothing overflowed, which is why nobody noticed, and the shape model is
  * about to ask modules to fill their height.
+ *
+ * The companion's 356 has since become the built height too, the flag band having come down from
+ * the 32 px token to the artboard's 12, but that is a coincidence rather than a reason to write
+ * any of these down again.
  */
 export function moduleBoxes(): { name: string; frame: Rect; density: Density }[] {
   const boxes: { name: string; frame: Rect; density: Density }[] = [];
@@ -706,8 +736,12 @@ describe('the radar is cut from its box', () => {
     // The two boxes readability-pass.md §16 puts side by side: a nano zone and a tall face zone
     // were drawing the same twenty metres of track at the same scale.
     expect(radarIn(build(249, 158)).scale).toBeLessThan(radarIn(build(437, 510)).scale!);
-    // And the companion page keeps the 1.25 the canvas was measured at.
+    // 802 by 336 is a fixture, not the companion page any more: the page is 356 tall since the
+    // flag band came down to the artboard's 12, and `radarScaleFor`'s 260 divisor was fitted to
+    // the shorter box, so the real page now draws 1.37 against the canvas's 1.25. Which of the two
+    // moves is the author's, and it belongs to radar.ts rather than here.
     expect(radarIn(build(802, 336, 'companion')).scale!).toBeCloseTo(1.25, 1);
+    expect(radarIn(build(802, 356, 'companion')).scale!).toBeCloseTo(1.37, 2);
   });
 
   test('the grid the canvas draws under the cars is four rects behind the plot', () => {
