@@ -18,12 +18,21 @@
 # worktree gets the same one. Adopt it with: git config core.hooksPath .githooks
 set -euo pipefail
 
-# A merge is the one case where these change without anybody having staged a stray edit: both
-# branches touched the file, and git cannot record the merge while the path is still unmerged.
-# The resolution is read in the pull request rather than here.
-if [ -e "$(git rev-parse --git-path MERGE_HEAD)" ]; then
-  exit 0
-fi
+# Replaying somebody else's commit is the case where these change without anybody having staged a
+# stray edit: both sides touched the file, and git cannot record the result while the path is still
+# unmerged. The resolution is read in the pull request rather than here. A rebase, a cherry-pick and
+# a revert are the same situation as a merge and were refused by the rule this replaces, which left
+# no way out of a conflicted rebase at all.
+for head in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD REBASE_HEAD; do
+  if [ -e "$(git rev-parse --git-path "$head")" ]; then
+    exit 0
+  fi
+done
+for dir in rebase-merge rebase-apply; do
+  if [ -d "$(git rev-parse --git-path "$dir")" ]; then
+    exit 0
+  fi
+done
 
 staged=$(git diff --cached --name-only)
 [ -n "$staged" ] || exit 0
