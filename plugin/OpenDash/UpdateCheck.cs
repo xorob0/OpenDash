@@ -108,21 +108,27 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The version a release is compared against: what is installed, falling back to what the plugin carries.
+        /// The version a release is compared against: the older of what is installed and what the plugin is.
         /// </summary>
         /// <remarks>
+        /// **The older of the two, not the dashboards' alone.** An openDash install is two halves that move
+        /// together, and either can be behind. Reading only the dashboards' version told a rig whose packages
+        /// were current and whose plugin was a release behind that it had "the newest release" -- which is
+        /// exactly the state a machine is in between staging the new assembly and restarting SimHub, and the
+        /// state it stays in for good if that swap never lands. The offer has to survive until both halves have
+        /// actually moved, or the only way out is a manual download.
+        ///
         /// A dashboard whose sidecar cannot be read reports Versioning.UnknownVersion, which parses as 0.0.0 with
         /// no pre-release part and therefore looks like a stable release. Left alone, such a user is never offered
         /// a candidate, which is the opposite of what their situation deserves, so the plugin's own version stands
         /// in instead.
         /// </remarks>
-        public static string ComparableInstalled(string installedVersion, string fallbackVersion)
+        public static string ComparableInstalled(string installedVersion, string pluginVersion)
         {
-            if (string.IsNullOrWhiteSpace(installedVersion) || installedVersion == Versioning.UnknownVersion)
-            {
-                return string.IsNullOrWhiteSpace(fallbackVersion) ? null : fallbackVersion;
-            }
-            return installedVersion;
+            var readable = !string.IsNullOrWhiteSpace(installedVersion) && installedVersion != Versioning.UnknownVersion;
+            if (!readable) return string.IsNullOrWhiteSpace(pluginVersion) ? null : pluginVersion;
+            if (string.IsNullOrWhiteSpace(pluginVersion)) return installedVersion;
+            return Versioning.VersionCompare(pluginVersion, installedVersion) < 0 ? pluginVersion : installedVersion;
         }
 
         /// <summary>

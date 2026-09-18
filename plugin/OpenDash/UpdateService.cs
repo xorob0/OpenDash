@@ -202,6 +202,10 @@ namespace OpenDashPlugin
             // in use and changes nothing until SimHub exits; the swap itself is PluginUpdate's, out of
             // this process entirely.
             var staged = pluginBytes == null ? null : PluginUpdate.Stage(pluginBytes, installer.SimHubRoot, log);
+            // Armed here rather than at shutdown, for the reason PluginUpdate spells out: End is not
+            // reached on a shutdown that times out or a process that is killed, and the waiter has to
+            // outlive both.
+            if (staged != null && staged.Ok) PluginUpdate.Launch(installer.SimHubRoot, log);
 
             // Everything is in hand before anything on disk is touched, so a download that fails half way through
             // leaves the machine as it was rather than half updated.
