@@ -14,7 +14,7 @@ import { READOUT_GAP } from '../src/components/readout.ts';
 
 describe('the gaps the canvas draws', () => {
   test('a label row is five pixels above its value row, at every density', () => {
-    for (const density of ['companion', 'zone', 'compact', 'wide'] as const) {
+    for (const density of ['companion', 'zone', 'compact', 'wide', 'panel'] as const) {
       expect({ density, fieldGap: densityOf(density).fieldGap }).toEqual({ density, fieldGap: 5 });
     }
     expect(READOUT_GAP).toBe(5);
@@ -70,6 +70,15 @@ describe('the label ramp', () => {
       expect({ density, labelRow: densityOf(density).labelRow }).toEqual({ density, labelRow: 13 });
     }
     expect(densityOf('compact').labelRow).toBe(12);
+  });
+
+  test('and drops back to 13 on the pit wall, which is the one ramp its sheets write as `.lblt`', () => {
+    // The six pit wall sheets and Panels.dc.html label every field at 13 and never use the 15 that
+    // ZoneCatalogue.dc.html draws; only the label moves, so the row and everything measured off it
+    // stay where the zone ramp puts them.
+    const panel = densityOf('panel');
+    expect({ label: panel.label, labelRow: panel.labelRow, labelSm: panel.labelSm }).toEqual({ label: 13, labelRow: 13, labelSm: 13 });
+    expect(panel).toEqual({ ...densityOf('zone'), label: 13 });
   });
 });
 

@@ -98,7 +98,7 @@ export const CORNER_SAMPLES: Record<Corner, { temperature: string; pressure: str
  * Taken from the ramp and not from the cell's height, which is what used to make the same corner
  * 46 px in a tall zone and 34 in a short one with no decision behind either.
  */
-const temperatureSize = (d: DensitySpec, density: Density): number => (density === 'zone' || density === 'wide' ? d.mid : d.big);
+const temperatureSize = (d: DensitySpec, density: Density): number => (density === 'zone' || density === 'wide' || density === 'panel' ? d.mid : d.big);
 
 /** One reading of a corner: a value, and the small unit that follows it on its baseline. */
 interface Quantity {
