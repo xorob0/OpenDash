@@ -1012,10 +1012,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Property name of a pit wall's class filter: PitWallClassOnly, or GarageClassOnly
-        /// on a second one.</summary>
+        /// on a second one. No special case for the stock prefix, unlike the web view address: this
+        /// name was coined with the idiom, so the stock spelling is what the idiom already produces.</summary>
         public static string PitWallClassOnlyProperty(string ns)
         {
-            return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? PitWallClassOnly : ns + "ClassOnly";
+            return ns + "ClassOnly";
         }
 
         /// <summary>Default page of a zone, by its letter.</summary>
