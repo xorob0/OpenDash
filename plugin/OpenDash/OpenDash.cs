@@ -165,17 +165,11 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.LightsBrightness, () => Settings.LightsBrightness);
             this.AttachDelegate(Contract.LightsNightBrightness, () => Settings.LightsNightBrightness);
             this.AttachDelegate(Contract.LightsNightMode, () => Settings.LightsNightMode);
-            this.AttachDelegate(Contract.FlagBoxCriticalOnly, () => Settings.FlagBoxCriticalOnly);
-            this.AttachDelegate(Contract.FlagBoxGear, () => Settings.FlagBoxGear);
             // One number under two names. LightsLowFuelLaps is what the contract reads first and
             // FlagBoxLowFuelLaps is the name that shipped, so both carry the threshold the driver set
             // and a profile of either vintage finds it. The field keeps the old spelling because that
             // is what a settings file on disk is keyed by.
             this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
-            // Zero means "not set": the profile then applies its own default, which is per unit, so a
-            // driver in Fahrenheit who has never opened this page does not get a Celsius number.
-            this.AttachDelegate(Contract.FlagBoxOilTemp, () => Settings.FlagBoxOilTemp == 0 ? (int?)null : Settings.FlagBoxOilTemp);
-            this.AttachDelegate(Contract.FlagBoxWaterTemp, () => Settings.FlagBoxWaterTemp == 0 ? (int?)null : Settings.FlagBoxWaterTemp);
             this.AttachDelegate(Contract.LightsLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
@@ -186,6 +180,12 @@ namespace OpenDashPlugin
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixSpotter(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "CriticalOnly"), () => Settings.MatrixCriticalOnly(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Gear"), () => Settings.MatrixGear(m));
+                // Zero means "not set": the profile then applies its own default, which is per unit, so
+                // a driver in Fahrenheit who has never opened this page does not get a Celsius number.
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "OilTemp"), () => Settings.MatrixOilTemp(m) == 0 ? (int?)null : Settings.MatrixOilTemp(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "WaterTemp"), () => Settings.MatrixWaterTemp(m) == 0 ? (int?)null : Settings.MatrixWaterTemp(m));
             }
             // The strips, last, in the order Contract.LightsPropertyNames() declares them. Every
             // generated .ledsprofile reads exactly these two, so a strip with neither attached can only

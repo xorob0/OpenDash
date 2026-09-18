@@ -38,22 +38,19 @@ namespace OpenDashPlugin
         /// an rc.2 user's settings do not vanish without a release of warning (XOR-119).</summary>
         public const string LightsLowFuelLaps = "LightsLowFuelLaps";
 
-        /// <summary>Quiet until something matters: the box shows only the flags that mean slow down or
-        /// are addressed to this car. Flag-box-specific, because it is about flags rather than lights.</summary>
-        public const string FlagBoxCriticalOnly = "FlagBoxCriticalOnly";
-
-        /// <summary>The gear as the box's resting state. Off leaves the panel dark rather than showing
-        /// something else.</summary>
-        public const string FlagBoxGear = "FlagBoxGear";
-
         /// <summary>Laps, not litres: a litre threshold means nothing without knowing the car. The name
         /// that shipped, now the deprecated alias of LightsLowFuelLaps and attached beside it.</summary>
         public const string FlagBoxLowFuelLaps = "FlagBoxLowFuelLaps";
 
-        /// <summary>Degrees in SimHub's own unit. A driver in Fahrenheit who sets 120 and gets a Celsius
-        /// threshold has been given a broken feature.</summary>
-        public const string FlagBoxOilTemp = "FlagBoxOilTemp";
-        public const string FlagBoxWaterTemp = "FlagBoxWaterTemp";
+        /// <summary>The four names a box used to share with every other box: quiet until something
+        /// matters, the gear at rest, and the two temperature thresholds. They are now
+        /// FlagBoxMatrix&lt;N&gt;CriticalOnly and its siblings, since a rig with a box in each corner
+        /// could otherwise not show the whole catalogue on one and the gear alone on the other. These
+        /// constants remain only so the migration in OpenDashSettings can name what it is reading.</summary>
+        public const string LegacyFlagBoxCriticalOnly = "FlagBoxCriticalOnly";
+        public const string LegacyFlagBoxGear = "FlagBoxGear";
+        public const string LegacyFlagBoxOilTemp = "FlagBoxOilTemp";
+        public const string LegacyFlagBoxWaterTemp = "FlagBoxWaterTemp";
 
         /// <summary>The RGB strips. Every generated .ledsprofile reads these two and nothing else of its
         /// own, so they are the whole of what a driver can say about a strip: what its middle shows, and
@@ -159,7 +156,9 @@ namespace OpenDashPlugin
             return "FlagBoxMatrix" + matrix + name;
         }
 
-        /// <summary>The five names of one matrix, in attachment order.</summary>
+        /// <summary>The ten names of one matrix, in attachment order. The last four moved here from the
+        /// tab, and are appended rather than interleaved because both halves of the contract pin this
+        /// list in order.</summary>
         public static IEnumerable<string> FlagBoxMatrixProperties(int matrix)
         {
             yield return FlagBoxMatrixProperty(matrix, "Rest");
@@ -168,6 +167,33 @@ namespace OpenDashPlugin
             yield return FlagBoxMatrixProperty(matrix, "Spotter");
             yield return FlagBoxMatrixProperty(matrix, "Warnings");
             yield return FlagBoxMatrixProperty(matrix, "Side");
+            yield return FlagBoxMatrixProperty(matrix, "CriticalOnly");
+            yield return FlagBoxMatrixProperty(matrix, "Gear");
+            yield return FlagBoxMatrixProperty(matrix, "OilTemp");
+            yield return FlagBoxMatrixProperty(matrix, "WaterTemp");
+        }
+
+        /// <summary>Critical-flags-only off on every panel, and the gear on on every panel: the defaults
+        /// do not move with the names.</summary>
+        public static bool[] DefaultFlagBoxCriticalOnlys()
+        {
+            var values = new bool[FlagBoxMatrices.Count];
+            for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxCriticalOnly;
+            return values;
+        }
+
+        public static bool[] DefaultFlagBoxGears()
+        {
+            var values = new bool[FlagBoxMatrices.Count];
+            for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxGear;
+            return values;
+        }
+
+        /// <summary>Zero, which the attach turns into null so the profile falls back to the default for
+        /// the driver's own temperature unit rather than to a Celsius number in Fahrenheit.</summary>
+        public static int[] DefaultFlagBoxTemps()
+        {
+            return new int[FlagBoxMatrices.Count];
         }
 
         /// <summary>Matrix 1 does everything, 2 to 4 are off: one box works out of the box.</summary>
@@ -1029,19 +1055,15 @@ namespace OpenDashPlugin
         ///
         /// A rig with no matrix and no strip still declares all of them, unlike a screen it does not
         /// have: openDash installs neither profile by itself (ADR 0013), so there is nothing to detect,
-        /// and thirty-four names is not the hundred and thirty-six that made the screens worth
-        /// narrowing. (Thirteen, this said before the matrices had a group each; it is counted here
-        /// rather than guessed at.)</summary>
+        /// and forty-eight names is not the hundred and thirty-six that made the screens worth
+        /// narrowing. (Thirteen, this said before the matrices had a group each, and thirty-four before
+        /// the four settings a box owns moved under it; it is counted here rather than guessed at.)</summary>
         public static IEnumerable<string> LightsPropertyNames()
         {
             yield return LightsBrightness;
             yield return LightsNightBrightness;
             yield return LightsNightMode;
-            yield return FlagBoxCriticalOnly;
-            yield return FlagBoxGear;
             yield return FlagBoxLowFuelLaps;
-            yield return FlagBoxOilTemp;
-            yield return FlagBoxWaterTemp;
             // Appended rather than placed beside the other Lights* names: this list is pinned in order
             // and both halves of the contract assert its head by index, so a new name joins the end of
             // the group and is never inserted into it.

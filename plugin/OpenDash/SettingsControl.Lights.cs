@@ -29,15 +29,16 @@ namespace OpenDashPlugin
                     "An 8x8 LED matrix beside the screen. Install its profile from the Install tab, then select it on "
                         + "your matrix device; everything on this page then reaches it while you drive. openDash adds "
                         + "the profile through SimHub's own settings and never touches a profile you made yourself."),
-                Ui.Row("Critical flags only", "Quiet until something matters: drops the chequer, the white, the green and the start gantry.", BuildToggle(Settings.FlagBoxCriticalOnly, on => { Settings.FlagBoxCriticalOnly = on; Save(); })),
-                Ui.Row("Show the gear", "What the box shows when nothing else is on it. Off leaves it dark.", BuildToggle(Settings.FlagBoxGear, on => { Settings.FlagBoxGear = on; Save(); })),
+                // Critical flags only, the gear and the two temperature thresholds used to sit here, one
+                // value for every panel. They belong to a panel: a rig with a box in each corner wants the
+                // catalogue on one and the gear alone on the other, which is what the group below is for.
                 // One number under two names. The contract reads LightsLowFuelLaps first and falls back to
                 // FlagBoxLowFuelLaps, which is the name that shipped; the field below therefore keeps the
                 // old name, because ADR 0003 makes a published property a public interface and a rig set up
-                // against rc.2 has to keep the number its driver chose.
-                Ui.Row("Low fuel, laps", "One answer for every light: the box, the screens' fuel telltale and the pop-up all light when the laps left in the tank fall under this. Laps, not litres: litres mean nothing without the car.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })),
-                Ui.Row("Oil temperature", "In your own unit; 0 uses the default for it (120 C, 248 F).", BuildNumberBox(Settings.FlagBoxOilTemp, 0, 999, v => { Settings.FlagBoxOilTemp = v; Save(); })),
-                Ui.Row("Water temperature", "In your own unit; 0 uses the default for it (110 C, 230 F).", BuildNumberBox(Settings.FlagBoxWaterTemp, 0, 999, v => { Settings.FlagBoxWaterTemp = v; Save(); })));
+                // against rc.2 has to keep the number its driver chose. It stays on the tab rather than
+                // moving with the other four: it is the rig's one answer to "am I low", read by the strip
+                // and the faces as well, and a per-box copy would be four more places to disagree.
+                Ui.Row("Low fuel, laps", "One answer for every light: the box, the screens' fuel telltale and the pop-up all light when the laps left in the tank fall under this. Laps, not litres: litres mean nothing without the car.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })));
 
             var panels = Ui.Section("What each panel does",
                 Ui.Caption(
@@ -75,7 +76,7 @@ namespace OpenDashPlugin
         /// One matrix: what it shows at rest, what may take it over, and which side it is on.
         /// </summary>
         /// <remarks>
-        /// Matrix 1 is open and 2 to 4 are shut, because four groups of six rows is twenty-four rows of
+        /// Matrix 1 is open and 2 to 4 are shut, because four groups of ten rows is forty rows of
         /// settings for hardware almost nobody owns. They are kept rather than dropped: somebody does own
         /// two boxes, one in each corner of a monitor stand, and that rig has to be configurable. This is
         /// the "less often used, but kept" rule applied where it costs the most scroll.
@@ -104,7 +105,13 @@ namespace OpenDashPlugin
                     Ui.Row("Warnings", "Let low fuel, oil and water take this panel.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; Save(); })),
                     // Which side the box is physically on. One to the left of the wheel lighting for a car
                     // on the right is worse than no box at all, so it is asked rather than guessed.
-                    Ui.Row("Mounted", "Which side of the rig this box is on. A left box must not light for a car on your right.", side));
+                    Ui.Row("Mounted", "Which side of the rig this box is on. A left box must not light for a car on your right.", side),
+                    // The four that moved off the tab header. They read as this panel's own rather than as
+                    // the rig's, which is what they had become by sitting above every panel at once.
+                    Ui.Row("Critical flags only", "Quiet until something matters: drops the chequer, the white, the green and the start gantry.", BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[m - 1] = on; Save(); })),
+                    Ui.Row("Show the gear", "What this panel shows when nothing else is on it. Off leaves it dark.", BuildToggle(Settings.MatrixGear(m), on => { Settings.FlagBoxMatrixGear[m - 1] = on; Save(); })),
+                    Ui.Row("Oil temperature", "In your own unit; 0 uses the default for it (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
+                    Ui.Row("Water temperature", "In your own unit; 0 uses the default for it (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
             });
         }
     }

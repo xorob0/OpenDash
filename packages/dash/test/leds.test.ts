@@ -337,7 +337,7 @@ describe('the effect catalogue', () => {
 
   test('the strip and the box read one low-fuel threshold, so a rig has one answer to "am I low"', () => {
     const strip = ALL_EFFECTS().find((e) => e.id === 'lowFuel')!;
-    const box = warningStates().find((s) => s.id === 'lowFuel')!;
+    const box = warningStates(1).find((s) => s.id === 'lowFuel')!;
     expect(strip.when).toBe(box.raised);
     expect(strip.when).toContain('[OpenDash.LightsLowFuelLaps]');
     // It read CarSettings_FuelAlertActive, which is SimHub's own alert and what the native container
@@ -722,7 +722,7 @@ describe('every generated profile', () => {
   test('the fuel centre raises itself on the one low-fuel threshold, at the flag band rate', () => {
     // Five percent of the tank was a third answer to "am I low" beside the box's and the lamp's, and
     // it is not one a driver can act on: it is two laps in one car and half a lap in another.
-    const box = warningStates().find((s) => s.id === 'lowFuel')!;
+    const box = warningStates(1).find((s) => s.id === 'lowFuel')!;
     for (const shape of ALL_SHAPES) {
       const kids = centreChildren(shape, 'fuel') as Extract<leds.LedContainer, { kind: 'customStatus' }>[];
       expect({ shape: shape.id, leds: kids.length }).toMatchObject({ leds: shape.centre });
