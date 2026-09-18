@@ -580,15 +580,19 @@ export function fitFields(specs: readonly FieldSpec[], box: Rect, density: Densi
 /**
  * The longest prefix of `specs` that fits `width` on one line. Fields are listed in importance
  * order, so a row that cannot hold everything drops its tail rather than running off the edge.
+ *
+ * The row is measured at the gap it will be drawn at, which is the caller's where it passes one and
+ * the density's otherwise. It used to be measured at `space[2]` whatever the caller asked for, so a
+ * companion row, whose gap is three times that, was told it fitted when it did not; no page reached
+ * it, since nothing calls this today, and the arithmetic is wrong rather than merely unused.
  */
 export function fieldsThatFit(specs: readonly FieldSpec[], width: number, density: Density, gap?: number): FieldSpec[] {
+  const step = gap ?? densityOf(density).gapX;
   const kept = [...specs];
   while (kept.length > 1) {
-    const step = gap ?? densityOf(density).gapX;
-    const total = kept.reduce((sum, spec) => sum + fieldWidth(spec, density), 0) + ds.space[2] * (kept.length - 1);
+    const total = kept.reduce((sum, spec) => sum + fieldWidth(spec, density), 0) + step * (kept.length - 1);
     if (total <= width) break;
     kept.pop();
-    void step;
   }
   return kept;
 }
