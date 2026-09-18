@@ -416,6 +416,67 @@ to let a tight box take that padding back before it gives up the tyre.
 - **Six packages are named and eight keep their folder.** A list that names most of its members
   invites the reader to think the rest are second class.
 
+### What the eighth round left for you
+
+- **The label row is thirteen and the label is fifteen, on every sheet in `design/`.** Two hundred
+  and sixteen rows in the zone catalogue alone draw a fifteen-pixel run centred in a thirteen-pixel
+  row, so the ramp's step from thirteen to fifteen is bought in width only. The naive reading, in
+  which the row grows with the type, breaks four boxes. This is recorded because it is the fact the
+  next person to move a size will need.
+- **The pit wall draws its panel labels at thirteen and its zone pages at fifteen**, and one density
+  serves both, so twenty-five panel labels now stand two pixels taller than their own sheet. Either
+  the pit wall gains a density of its own, which is the recommendation, or the sheet is redrawn.
+- **The four compact faces draw thirteen over twelve where their sheets draw fifteen over thirteen.**
+  Now that the row no longer grows with the glyph, raising them would cost height nowhere and width
+  only, and what stands against it is the eight-pixel row gap a fifteen-pixel glyph would encroach
+  on. The recommendation is to redraw the four sheets at the compact ramp, which is the cheaper
+  answer and the one the code already argues.
+- **The companion drew its flag band at thirty-two where all three of its sheets draw twelve.** The
+  correction gave the landscape lap times page back its three sector readings, and it exposed that
+  the radar's scale divisor had been fitted against the shorter page. Twelve is now a literal in two
+  faces and wants a token of its own.
+- **The companion sheet draws every value bar at six and the zone catalogue mixes four and six.**
+  Four is kept, on the ground that the zone is the tighter box, but the comment in the fuel module
+  claiming the companion agrees has been corrected.
+- **The chequer of a round face is a Cartesian board clipped to a ring, not a polar one.** Its
+  alternation along the rim is therefore uneven, with near-monochrome stretches at the diagonals,
+  which no polar ring can reproduce and arguably should not. The sixteen-pixel square was taken as
+  the designed unit, giving forty-six checks at 480 and seventy-eight at 800.
+- **The gear cluster's gap is drawn between glyph boxes and placed between letter-wide cells.**
+  Reproducing the artboards' eleven pixels at 1920 would put an N within three pixels of an R, which
+  is the collision the letter-wide cell exists to prevent. The recommendation is to make the gap a
+  share of the gear, about six hundredths of it, which moves every face toward the drawn proportion
+  without letting a letter gear touch its neighbour.
+- **The tower's opponents zone and the catalogue disagree about what a `grid` box draws.** The tower
+  sheet draws the last lap with its prefix, a bar and the rating; the catalogue draws the time alone.
+  The catalogue is kept, because the shedding table is its transcription, and there is room for the
+  fuller form should the tower sheet win instead.
+- **Two glyphs on the flag box were a disc and a tank outline**, which are the meatball's own shape
+  and the limiter frame's own vocabulary. Both are now the telltale ISO 2575 registers, an oil can
+  and a fuel pump, on the ground that a picture a driver knows from the road car is worth more than
+  one that fits the grid comfortably.
+- **Nothing below the flags blinks any more.** Blinking is the flag layer's vocabulary for a waved
+  yellow, so a warning that blinked was making the flags' distinction about something that is not a
+  flag. The consequence is that one branch of the frame builder is unreachable and is kept only
+  because `blink` is the field the rule is written in.
+- **The Fanalab wiring order is taken from a profile rather than from hardware.** It ships as an
+  additional row so that being wrong costs a driver nothing they had before, and the direction of
+  the remap is read from the generator's own contract, which no existing profile can test because a
+  reversal is its own inverse. A Fanatec owner settles it.
+- **The block names for the full-screen flag are nine words that appear on no sheet.** The block is
+  measured on the longest of them, MEATBALL, which costs the portrait face forty pixels of type;
+  writing the band's own labels instead would have cost it a hundred and fourteen.
+- **The panel's own enumeration of where the brand cyan is allowed is narrower than what the canvas
+  draws.** Three further uses are drawn, two of them by the canvas itself, and the primary button
+  takes SimHub's fill rather than the accent. Which of the two is wrong is not something the code
+  can answer.
+- **The button copy on the components sheet names three buttons that were never written.** There is
+  no Reset layout button anywhere. The shipped copy is recorded in the panel document so that the
+  two stop disagreeing about strings.
+- **Eight tokens and two spacings are owed to the panel**, now that the focus ring has landed and
+  taken one name off the list. Two of them are surfaces the panel currently reaches into the colour
+  ramp for.
+
 ## 3b. What the branch was reviewed against itself for
 
 After a hundred and four packages had merged, the branch was read back by a fan of seven independent
