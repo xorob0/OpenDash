@@ -130,39 +130,38 @@ namespace OpenDashPlugin
     /// </summary>
     public static class StripInstaller
     {
-        /// <summary>SimHub's RGB LED driver, or null when it cannot be reached. Null is a state the
+        /// <summary>
+        /// The profiles one LED device currently holds, or null when it cannot be reached.
+        /// </summary>
+        /// <remarks>
+        /// Per device, because SimHub keeps one list per device and not one list. Null is a state a
         /// driver can do nothing about rather than an error: the panel says the settings are
-        /// unavailable and offers the file to import by hand, exactly as it does for the matrix.</summary>
-        public static LedsDriver Driver()
+        /// unavailable, exactly as it does for the matrix.
+        /// </remarks>
+        public static List<InstalledProfile> Installed(string device)
         {
-            return ProfileInstall.Driver(s => s.RGBLedsDriver, "RGB LED");
+            var target = LedTargets.Find(device);
+            return target == null ? null : ProfileInstall.Census(target.Settings.Profiles, "RGB LED");
         }
 
-        /// <summary>The strip profiles SimHub currently holds, or null when the driver is unreachable.</summary>
-        public static List<InstalledProfile> Installed()
+        /// <summary>One shape's row on one device: the embedded profile compared with what it holds.</summary>
+        public static FlagBoxPlan Plan(string embeddedJson, string device)
         {
-            var settings = Driver()?.Settings;
-            return settings == null ? null : ProfileInstall.Census(settings.Profiles, "RGB LED");
-        }
-
-        /// <summary>One shape's row: the embedded profile compared with what SimHub holds.</summary>
-        public static FlagBoxPlan Plan(string embeddedJson)
-        {
-            return Plan(new[] { embeddedJson })[0];
+            return Plan(new[] { embeddedJson }, device)[0];
         }
 
         /// <summary>
-        /// A plan per member, in the order given, off ONE read of SimHub's profile list.
+        /// A plan per member, in the order given, off ONE read of one device's profile list.
         ///
         /// The panel redraws its rows whenever the tab is opened, and there are nineteen of them, so
         /// asking the driver once and deciding nineteen times is the difference between one traversal
         /// of the user's profiles and nineteen. <see cref="FlagBoxInstallPlan.Combine"/> turns these
         /// into the grouped row's own state.
         /// </summary>
-        public static IList<FlagBoxPlan> Plan(IEnumerable<string> embeddedJsons)
+        public static IList<FlagBoxPlan> Plan(IEnumerable<string> embeddedJsons, string device)
         {
             var parsed = (embeddedJsons ?? Enumerable.Empty<string>()).Select(Parse).ToList();
-            var installed = Installed();
+            var installed = Installed(device);
             return parsed
                 .Select(p => p == null
                     ? new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }
@@ -170,10 +169,36 @@ namespace OpenDashPlugin
                 .ToList();
         }
 
-        /// <summary>One shape, installed. The list form with a single member.</summary>
-        public static FlagBoxPlan Install(string embeddedJson)
+        /// <summary>
+        /// A plan per member across every LED device on the rig, worst state last to win.
+        /// </summary>
+        /// <remarks>
+        /// What the Install tab's census rows ask, and the only question they can ask: those rows are
+        /// about which shapes this build carries, not about one strip, and a shape installed on the
+        /// wheel is installed whatever the Arduino holds. A rig with no LED device at all reports
+        /// Unavailable, which is what it was before there was more than one device to ask.
+        /// </remarks>
+        public static IList<FlagBoxPlan> PlanAnywhere(IEnumerable<string> embeddedJsons)
         {
-            return Install(new[] { embeddedJson })[0];
+            var jsons = (embeddedJsons ?? Enumerable.Empty<string>()).ToList();
+            var targets = LedTargets.All();
+            if (targets.Count == 0) return jsons.Select(j => new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).ToList();
+            var best = new FlagBoxPlan[jsons.Count];
+            foreach (var target in targets)
+            {
+                var plans = Plan(jsons, target.Id);
+                for (var i = 0; i < best.Length && i < plans.Count; i++)
+                {
+                    best[i] = best[i] == null ? plans[i] : FlagBoxInstallPlan.Better(best[i], plans[i]);
+                }
+            }
+            return best.Select(p => p ?? new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).ToList();
+        }
+
+        /// <summary>One shape, installed on one device. The list form with a single member.</summary>
+        public static FlagBoxPlan Install(string embeddedJson, string device)
+        {
+            return Install(new[] { embeddedJson }, device)[0];
         }
 
         /// <summary>
@@ -187,12 +212,12 @@ namespace OpenDashPlugin
         ///
         /// Runs on the UI thread for the same reason the matrix install does.
         /// </summary>
-        public static IList<FlagBoxPlan> Install(IEnumerable<string> embeddedJsons)
+        public static IList<FlagBoxPlan> Install(IEnumerable<string> embeddedJsons, string device)
         {
             var parsed = (embeddedJsons ?? Enumerable.Empty<string>()).Select(Parse).ToList();
 
-            var driver = Driver();
-            var settings = driver?.Settings;
+            var target = LedTargets.Find(device);
+            var settings = target?.Settings;
             if (settings == null)
             {
                 return parsed
@@ -208,9 +233,10 @@ namespace OpenDashPlugin
                 settings.AvailableProfiles,
                 parsed.Cast<object>().ToList(),
                 index => AddToSaved(settings, parsed[index]),
-                driver.SaveSettings,
+                target.Save,
                 "RGB LED",
-                FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles));
+                FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles),
+                target.Name);
         }
 
         /// <summary>Adds to the list SimHub saves. See <see cref="ProfileInstall.WhyNotAddProfile"/>.</summary>
@@ -231,12 +257,30 @@ namespace OpenDashPlugin
         /// properties nothing fills. Only the id given goes -- anything else in either list is the
         /// user's, which is the same promise the install makes.
         /// </remarks>
-        public static bool Uninstall(Guid profileId)
+        public static bool Uninstall(Guid profileId, string device)
         {
-            var driver = Driver();
-            var settings = driver?.Settings;
+            var target = LedTargets.Find(device);
+            var settings = target?.Settings;
             if (settings == null) return false;
-            return ProfileInstall.Uninstall(settings.Profiles, settings.AvailableProfiles, profileId, driver.SaveSettings, "RGB LED");
+            return ProfileInstall.Uninstall(settings.Profiles, settings.AvailableProfiles, profileId, target.Save, "RGB LED");
+        }
+
+        /// <summary>
+        /// Takes one profile out of every LED device that holds it.
+        /// </summary>
+        /// <remarks>
+        /// What a bar that is moving from one device to another asks, and what removing a bar asks when
+        /// the device it names is gone. Nothing is left behind on the device it used to be on: a profile
+        /// whose settings nothing attaches any more is a row in somebody's list that lights nothing.
+        /// </remarks>
+        public static bool UninstallEverywhere(Guid profileId)
+        {
+            var gone = false;
+            foreach (var target in LedTargets.All())
+            {
+                if (ProfileInstall.Uninstall(target.Settings.Profiles, target.Settings.AvailableProfiles, profileId, target.Save, "RGB LED")) gone = true;
+            }
+            return gone;
         }
 
         /// <summary>The embedded JSON as SimHub's own strip profile. The same bare Newtonsoft defaults
@@ -309,16 +353,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Why neither installer calls SimHub's own `AddProfile`, which is the whole of the
-        /// "my profile never appeared" bug.
+        /// Why neither installer calls SimHub's own `AddProfile`.
         /// </summary>
         /// <remarks>
         /// `settings.AddProfile(p)` adds to `AvailableProfiles`, and that is a *computed* property:
         /// `Profiles` normally, but `BuiltInProfiles` whenever the device ships built-in profiles and the
-        /// user has them switched on (ProfileSettingsBase.cs:422-438). A Fanatec wheel ships them. So on
-        /// such a rig the profile was appended to the device maker's list, `SaveSettings` serialised
-        /// `Profiles` without it, and it was gone at the next start -- while the verification below, which
-        /// reads `Profiles`, reported the install as failed. Two symptoms, one line.
+        /// user has them switched on (ProfileSettingsBase.cs:422-438). A profile appended there is not
+        /// what `SaveSettings` serialises, so it is gone at the next start -- while the verification
+        /// below, which reads `Profiles`, reports the install as failed. Two symptoms, one line.
+        ///
+        /// A wheel that ships its own profiles is exactly such a device, which is why this matters more
+        /// now than when it was written: until <see cref="LedTargets"/> existed, the only settings object
+        /// either installer ever touched was the Arduino RGB LEDs device's, which ships none. The
+        /// separate bug that a profile installed into the Arduino's list is invisible on a wheel is that
+        /// file's, and is not this.
         ///
         /// Each installer therefore does by hand what the protected `AddProfile(target, p)` does
         /// (ProfileSettingsBase.cs:842-858), against `Profiles`: the back-reference, SimHub's own
@@ -343,7 +391,7 @@ namespace OpenDashPlugin
         /// NotEmbedded and nothing is touched on its behalf.
         /// </summary>
         internal static IList<FlagBoxPlan> Install(
-            IList profiles, IList available, IReadOnlyList<object> embedded, Action<int> add, Action save, string what, bool builtInMode = false)
+            IList profiles, IList available, IReadOnlyList<object> embedded, Action<int> add, Action save, string what, bool builtInMode = false, string where = null)
         {
             var results = new FlagBoxPlan[embedded.Count];
             var replaced = 0;
@@ -437,7 +485,9 @@ namespace OpenDashPlugin
 
             if (added > 0)
             {
-                Log.Info("Installed " + added + " " + what + " profile(s) into SimHub, " + replaced
+                // Named, because "into SimHub" is what the reported bug sounded like from the log: there
+                // is no one list, and which device took the profile is the only thing worth saying.
+                Log.Info("Installed " + added + " " + what + " profile(s) into " + (string.IsNullOrEmpty(where) ? "SimHub" : where) + ", " + replaced
                     + " of them replacing a copy already there. Select one on the device to use it:"
                     + " installing adds a profile, it does not switch to one.");
             }

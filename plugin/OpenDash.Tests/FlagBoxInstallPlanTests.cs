@@ -226,6 +226,36 @@ namespace OpenDashPlugin.Tests
             Assert.False(FlagBoxInstallPlan.Combine(new[] { here, here }).WouldChange);
         }
 
+        /// <summary>
+        /// One profile read on several devices takes the best, which is the opposite of Combine.
+        /// </summary>
+        /// <remarks>
+        /// SimHub keeps a profile list per LED device, so the Install tab's census rows have to ask every
+        /// one of them: those rows say which shapes this build carries, and a shape installed on the wheel
+        /// is installed whatever the Arduino holds. Combine is for the other reduction -- the members of
+        /// one group on one device -- and takes the worst, so a row cannot read better than the profile it
+        /// is worst about. Getting the two the wrong way round is a census that reports every shape
+        /// missing because one device does not have it.
+        /// </remarks>
+        [Fact]
+        public void One_profile_across_devices_takes_the_best_reading()
+        {
+            var here = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
+            var missing = FlagBoxInstallPlan.Decide(Ours, V1, new List<InstalledProfile>());
+            var unreachable = new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
+
+            Assert.Equal(FlagBoxInstallState.UpToDate, FlagBoxInstallPlan.Better(missing, here).State);
+            Assert.Equal(FlagBoxInstallState.UpToDate, FlagBoxInstallPlan.Better(here, missing).State);
+            Assert.Equal(FlagBoxInstallState.UpToDate, FlagBoxInstallPlan.Better(unreachable, here).State);
+            Assert.Equal(FlagBoxInstallState.NotInstalled, FlagBoxInstallPlan.Better(unreachable, missing).State);
+            // And it is the other way round from Combine over the same pair, which is the whole point.
+            Assert.Equal(FlagBoxInstallState.NotInstalled, FlagBoxInstallPlan.Combine(new[] { here, missing }).State);
+
+            Assert.Same(here, FlagBoxInstallPlan.Better(null, here));
+            Assert.Same(here, FlagBoxInstallPlan.Better(here, null));
+            Assert.Null(FlagBoxInstallPlan.Better(null, null));
+        }
+
         [Fact]
         public void The_summary_says_that_installing_is_not_selecting()
         {
