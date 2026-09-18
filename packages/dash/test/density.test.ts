@@ -7,7 +7,8 @@
  * change that should be deliberate.
  */
 import { describe, expect, test } from 'bun:test';
-import { densityOf } from '../src/second/density.ts';
+import { densityOf, rampOf } from '../src/second/density.ts';
+import { resolveToken } from '../src/tokens.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, denominatorSize } from '../src/second/field.ts';
 import { READOUT_GAP } from '../src/components/readout.ts';
 
@@ -25,6 +26,27 @@ describe('the gaps the canvas draws', () => {
 
   test('a denominator is 32 beside a 46 px value and 44 beside a 64 px one', () => {
     expect([denominatorSize(34), denominatorSize(46), denominatorSize(64), denominatorSize(76)]).toEqual([23, 32, 44, 53]);
+  });
+});
+
+describe('the type ramp', () => {
+  /**
+   * The sizes design/tokens.json carries that a second screen may draw at. The card ramp covers the
+   * three large steps and the ui scale, whose own scope line names the pit wall tables, the two
+   * small ones; a ramp step that is not one of these is a number the token file cannot move.
+   */
+  const RAMP_TOKENS = ['font.size.hero', 'font.size.lapTime', 'font.size.value', 'font.size.valueSm', 'font.size.ui.numeralLg', 'font.size.ui.numeral'];
+
+  test('every step of the companion and zone ramps is a token value', () => {
+    const sizes = new Set(RAMP_TOKENS.map((path) => resolveToken(path)));
+    for (const density of ['companion', 'zone', 'wide'] as const) {
+      for (const size of rampOf(density)) expect({ density, size, fromToken: sizes.has(size) }).toEqual({ density, size, fromToken: true });
+    }
+  });
+
+  test('and the compact ramp is the zone ramp stepped down, but for its last two rungs', () => {
+    // 18 and 14 are the two numbers in this file that no token carries; see the TODO beside them.
+    expect(rampOf('compact')).toEqual([14, 18, ...rampOf('zone').slice(1, 4)]);
   });
 });
 
