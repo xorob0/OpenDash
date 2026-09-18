@@ -109,11 +109,14 @@ a colour.
 
 ## Below the flags
 
-In order: the pit family, the spotter, the three warnings, then the gear. Each layer's condition
-excludes the layers above it, and the whole stack sits under "no flag is being shown".
+In order: the pit family, the three warnings, then the gear. Each layer's condition excludes the
+layers above it, and the whole stack sits under "no flag is being shown".
 
-**That ordering is the point.** A spotter warning that hides a yellow, or a low fuel light that
-hides one for the rest of a stint, is the failure this ranking exists to prevent.
+**That ordering is the point.** A low fuel light that hides a limiter warning for the rest of a
+stint is the failure this ranking exists to prevent.
+
+The spotter is deliberately not in that list any more. It is an overlay painted after everything
+else on the panel, and it is described under [The spotter](#the-spotter) below.
 
 ### The pit family
 
@@ -132,8 +135,8 @@ Speeding compares the car's speed with the lane limit **in metres per second**, 
 than it looks: `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit`, so for a driver whose
 SimHub speed unit is MPH a 60 km/h limit arrives as 37 — and against `SpeedKmh`, which is always
 km/h, that reads as speeding from a standstill. Because speeding heads the exclusion chain, it
-would have blacked out the spotter, the warnings and the gear for every imperial user rather than
-merely lighting the wrong picture. `PitLimiterSpeedMs` is metres per second whatever the user has
+would have blacked out the warnings and the gear for every imperial user rather than merely
+lighting the wrong picture. `PitLimiterSpeedMs` is metres per second whatever the user has
 set, and it is `isnull()`-wrapped with a speed nothing reaches, so a track that publishes no limit
 means "not speeding" rather than "always speeding".
 
@@ -151,6 +154,27 @@ carry the difference. A test now refuses any two identical pictures anywhere in 
 
 A bar two pixels wide down the edge the car is on: left, right, or both edges at once.
 
+**It is an overlay rather than a rank**, and that is a correction rather than a refinement. It used
+to be the second layer below the flags, so any flag at all hid a car alongside, and a car alongside
+blanked the warnings and the gear beneath it. It is now the last container of the panel, gated on
+that panel's own Spotter switch and on nothing else: no flag bit, no pit condition, and nothing
+below it excludes it in turn. Its frames light two columns of an edge and leave the rest of the
+panel absent, and SimHub drops an absent pixel when it merges rather than clearing what is under
+it, so a standing yellow keeps columns three to six while the bar says which side. The consequence
+worth stating is that on a rig with one box the gear now shows through the middle of the panel
+while a car is alongside, which is the behaviour this is for.
+
+The composition itself has not been watched on hardware. No 8x8 panel is plugged into the test rig,
+so "a transparent pixel does not clear what is beneath it" rests on the format notes rather than on
+something anybody has seen.
+
+**The bar holds by default and grows only if asked.** `OpenDash.FlagBoxSpotterAnimation` is off
+unless the driver turns it on, which is the reverse of the flags' own switch and is the box's one
+rule applied: movement means act, and a car alongside informs. On, the bar grows inwards over three
+steps of one, two and three columns at the flag band's own rate, the middle step being the held
+picture. The bars are white. The canvas draws them purple, `#C86BFF`, which `design/tokens.json`
+does not hold; the colour is the author's to add there rather than this file's to type in.
+
 Which side a box is *mounted* on is a per-matrix setting, not a guess. A box to the left of the
 wheel lighting for a car on the right is worse than no box. `Both` is the single-box setup and
 shows both edges.
@@ -165,9 +189,14 @@ verified, and a spotter that is wrong is worse than one that says less.
 
 | Condition | Threshold | Picture |
 |---|---|---|
-| Oil too hot | `OpenDash.FlagBoxOilTemp`, default 120 °C | An oil can, orange, steady |
-| Water too hot | `OpenDash.FlagBoxWaterTemp`, default 110 °C | Waves, orange, steady |
+| Oil too hot | `OpenDash.FlagBoxMatrix<N>OilTemp`, default 120 °C | An oil can, orange, steady |
+| Water too hot | `OpenDash.FlagBoxMatrix<N>WaterTemp`, default 110 °C | Waves, orange, steady |
 | Low fuel | `OpenDash.FlagBoxLowFuelLaps`, default 2 | A fuel pump, yellow, steady |
+
+The two temperatures are a panel's own and the fuel threshold is the rig's, which is why only the
+first two carry a matrix in their names: one number answers "am I low" for the strip, the rev bar
+and the faces as well as for every box, whereas a panel mounted where the driver cannot see it may
+reasonably want a different temperature from the one in front of them.
 
 Two of the three pictures are **the telltale ISO 2575 registers** rather than a shape invented for
 the grid, because the one a driver already knows from the road car is worth more than the one that
@@ -204,7 +233,7 @@ first thing to build with it.
 
 ### The gear, underneath everything
 
-`OpenDash.FlagBoxGear` (on by default) draws the gear filling the panel when nothing else is on
+`OpenDash.FlagBoxMatrix<N>Gear` (on by default) draws the gear filling the panel when nothing else is on
 it. It is the resting state rather than a feature: every flag outranks it, and when they let go
 it comes back. Off leaves the panel dark rather than showing something else.
 
@@ -272,7 +301,7 @@ one thing this ticket asked for that the VM cannot give; 25 is a starting point.
 
 ### Critical flags only
 
-`OpenDash.FlagBoxCriticalOnly` is off by default: the box shows the whole catalogue until the
+`OpenDash.FlagBoxMatrix<N>CriticalOnly` is off by default: the box shows the whole catalogue until the
 driver asks for quiet. A box that stays dark through a chequered flag is a surprise, and a
 surprise is a worse default than a busy one.
 

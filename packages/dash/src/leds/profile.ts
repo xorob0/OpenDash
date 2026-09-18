@@ -11,7 +11,15 @@
  *         when the ignition is on
  *           matrix 1..4                each offset onto its own panel
  *             flags                    the alert catalogue, in priority order
- *             below the flags          the pit family, the spotter, the warnings, then the gear
+ *             below the flags          the pit family, the warnings, then the gear
+ *             the spotter              an overlay on the edge, painted over all of it
+ *
+ * **The spotter is the one thing that is not a rank.** It was the second rank below the flags, so
+ * any flag at all hid a car alongside and a car alongside blanked the warnings and the gear beneath
+ * it. It is now the last container of the matrix, and it lights the edge columns and leaves the
+ * rest of the panel absent; SimHub composes containers in order and drops an absent pixel rather
+ * than clearing what is under it, so a standing yellow keeps columns three to six and the bar says
+ * which side. Nothing suppresses it and it suppresses nothing, which is what an overlay is.
  *
  * **Not racing is dark**, and that is the decision rather than a gap. Idle screens are a refusal
  * in scope.md, and a glowing logo on somebody's desk when nothing is running is the hardest
@@ -37,9 +45,10 @@ import type { Expr } from '../bind.ts';
 import { flagBox, flagBoxMatrix, FLAG_BOX_MATRICES, type FlagBoxMatrix } from '../contract.ts';
 import { conditionVisible, flagsShown, noFlagShown, type FlagCondition } from '../flags.ts';
 import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
-// The ignition read is telemetry and lives with the rest of it, so that the box's standby mark and
-// anything else that comes to answer the same condition cannot read it two different ways.
-import { ignitionOn } from '../second/values.ts';
+// The ignition read is telemetry and lives with the rest of it; the two *gates* composed from it
+// live in gates.ts, because the strip asks the same question above its own tree and the answer has
+// to be one expression rather than two spellings of one.
+import { ignitionIsOff, ignitionIsOn } from './gates.ts';
 import { gearGroup } from './gear.ts';
 import { noneRaised, pitStates, spotterStates, stateContainers, warningStates } from './states.ts';
 import { flagFrames, ignitionOffFrames } from './glyphs.ts';
@@ -58,26 +67,32 @@ export const COLUMNS = 8;
  */
 export const drawnFlags = (criticalOnly: boolean): FlagCondition[] => flagsShown(criticalOnly).filter((c) => flagFrames(c.id) !== undefined);
 
-/** `OpenDash.FlagBoxCriticalOnly` as a condition. */
-export const criticalOnly = (): Expr => ncalc.eq(flagBox.criticalOnly(), 'true');
+/**
+ * `OpenDash.FlagBoxMatrix<N>CriticalOnly` as a condition.
+ *
+ * Per matrix rather than per tab since the settings a box owns moved under it: a rig with a box in
+ * each corner can now show the whole catalogue on one and the critical flags alone on the other,
+ * which is the setup the per-matrix group exists for.
+ */
+export const criticalOnly = (matrix: FlagBoxMatrix): Expr => ncalc.eq(flagBoxMatrix(matrix).criticalOnly(), 'true');
 
 /**
  * The flag effects, highest priority first, each shown only when no higher flag is out *and* the
  * switch has not silenced it.
  */
-export function flagContainers(): MatrixContainer[] {
+export function flagContainers(matrix: FlagBoxMatrix): MatrixContainer[] {
   const shown = drawnFlags(false);
   return shown.map((condition) => ({
     kind: 'when' as const,
     description: condition.id,
-    formula: conditionVisible(condition, criticalOnly(), shown),
+    formula: conditionVisible(condition, criticalOnly(matrix), shown),
     children: [{ kind: 'animation' as const, description: `${condition.id} glyph`, frames: flagFrames(condition.id) ?? [] }],
   }));
 }
 
 /** The catalogue, in order. */
-export function flagsGroup(): MatrixContainer {
-  return { kind: 'group', description: 'Flags', children: flagContainers() };
+export function flagsGroup(matrix: FlagBoxMatrix): MatrixContainer {
+  return { kind: 'group', description: 'Flags', children: flagContainers(matrix) };
 }
 
 /**
@@ -85,22 +100,25 @@ export function flagsGroup(): MatrixContainer {
  * switch has silenced does not hold the panel: with critical-flags-only on, a chequered flag shows
  * the gear rather than nothing.
  */
-export const noFlagShowing = (): Expr => noFlagShown(criticalOnly(), drawnFlags(false));
+export const noFlagShowing = (matrix: FlagBoxMatrix): Expr => noFlagShown(criticalOnly(matrix), drawnFlags(false));
 
 /**
- * Everything below the flags, for one matrix, in order: the pit family, the spotter, the three
- * warnings, then the gear.
+ * Everything below the flags, for one matrix, in order: the pit family, the three warnings, then
+ * the gear.
  *
- * The order is the point. A spotter warning that hides a yellow, or a low fuel light that hides
- * one for the rest of a stint, is the failure this ranking exists to prevent — so all of it sits
- * under `noFlagShowing()`, and each layer's condition excludes the layers above it.
+ * The order is the point. A low fuel light that hides a limiter warning for the rest of a stint is
+ * the failure this ranking exists to prevent — so all of it sits under `noFlagShowing()`, and each
+ * layer's condition excludes the layers above it.
+ *
+ * The spotter is deliberately absent: it is {@link spotterOverlay} now, painted after all of this
+ * rather than ranked within it, so the gear shows through the middle of the panel while a car is
+ * alongside instead of being blanked by it.
  */
 export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
-  const { and, eq, not } = ncalc;
+  const { and, eq } = ncalc;
   const m = flagBoxMatrix(matrix);
   const pit = pitStates();
-  const spotter = spotterStates(matrix);
-  const warnings = warningStates();
+  const warnings = warningStates(matrix);
   const on = (setting: Expr): Expr => eq(setting, 'true');
   return [
     // Its own switch, not the flags'. A driver who turns flags off on a panel has not asked to lose
@@ -108,23 +126,39 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
     { kind: 'when', description: 'Pit', formula: on(m.pit()), children: stateContainers(pit, 'Pit') },
     {
       kind: 'when',
-      description: 'Spotter',
-      formula: and(on(m.spotter()), noneRaised(pit)),
-      children: stateContainers(spotter, 'Spotter'),
-    },
-    {
-      kind: 'when',
       description: 'Warnings',
-      formula: and(on(m.warnings()), noneRaised(pit), noneRaised(spotter)),
+      formula: and(on(m.warnings()), noneRaised(pit)),
       children: stateContainers(warnings, 'Warning'),
     },
     {
       kind: 'when',
       description: 'Resting',
-      formula: and(eq(m.rest(), "'gear'"), noneRaised(pit), noneRaised(spotter), noneRaised(warnings)),
-      children: [gearGroup()],
+      formula: and(eq(m.rest(), "'gear'"), noneRaised(pit), noneRaised(warnings)),
+      children: [gearGroup(matrix)],
     },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
+}
+
+/**
+ * The spotter, as the last thing painted on a panel.
+ *
+ * Gated on the panel's own Spotter switch and on nothing else: no flag bit, no pit condition, no
+ * exclusion of anything above it. That is the machine-checkable form of "a car alongside is never
+ * hidden by a yellow", and it is what the frames make safe — they light two edge columns and leave
+ * the other six absent, so what was drawn underneath keeps them.
+ *
+ * Two branches on the animation switch, the way {@link gearGroup} splits the redline band into
+ * flashing and steady: an `AnimationContainer` has no condition on its own frames, so "grows only
+ * when the driver asked it to" is two sets of frames under two conditions. Off is the default,
+ * because movement on this box means act and a car alongside informs.
+ */
+export function spotterOverlay(matrix: FlagBoxMatrix): MatrixContainer[] {
+  const { eq, not } = ncalc;
+  const moves = eq(flagBox.spotterAnimation(), 'true');
+  return [
+    { kind: 'when', description: 'Spotter growing', formula: moves, children: stateContainers(spotterStates(matrix, true), 'Spotter') },
+    { kind: 'when', description: 'Spotter held', formula: not(moves), children: stateContainers(spotterStates(matrix, false), 'Spotter') },
+  ];
 }
 
 /**
@@ -144,10 +178,13 @@ export function matrixGroup(matrix: FlagBoxMatrix): MatrixContainer | undefined 
   // "No flag is holding THIS panel": a flag only suppresses what is under it on a panel that is
   // actually showing flags. Gating on noFlagShowing() alone blacked out the spotter, the warnings
   // and the gear on a panel with Flags switched off, for the whole time a flag was out.
-  const flagsFree = or(not(eq(m.flags(), 'true')), noFlagShowing());
-  const children: MatrixContainer[] = [
-    { kind: 'when', description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup()] },
-    { kind: 'when', description: 'Below the flags', formula: flagsFree, children: belowFlags(matrix) },
+  const flagsFree = or(not(eq(m.flags(), 'true')), noFlagShowing(matrix));
+  const children = [
+    { kind: 'when' as const, description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup(matrix)] },
+    { kind: 'when' as const, description: 'Below the flags', formula: flagsFree, children: belowFlags(matrix) },
+    // Last, and outside `flagsFree`: an overlay is painted over whatever the two above it drew. It
+    // needs no StartPositionMatrix of its own, since it sits inside the group that carries one.
+    { kind: 'when' as const, description: 'Spotter', formula: eq(m.spotter(), 'true'), children: spotterOverlay(matrix) },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
   if (children.length === 0) return undefined;
   return { kind: 'when', description: `Matrix ${matrix}`, matrix, formula: doesSomething, children };
@@ -180,7 +217,6 @@ export function flagBoxContainers(): MatrixContainer[] {
 
 /** The tree as declared, empty branches included. `flagBoxContainers` is what the build writes. */
 export function flagBoxTree(): MatrixContainer[] {
-  const { eq, num } = ncalc;
   return [
     {
       kind: 'brightnessFormula',
@@ -195,11 +231,11 @@ export function flagBoxTree(): MatrixContainer[] {
           kind: 'gameRunning',
           description: 'Racing',
           children: [
-            { kind: 'when', description: 'Ignition off', formula: eq(ignitionOn(), num(0)), children: [{ kind: 'animation', description: 'Standby', frames: ignitionOffFrames() }] },
+            { kind: 'when', description: 'Ignition off', formula: ignitionIsOff(), children: [{ kind: 'animation', description: 'Standby', frames: ignitionOffFrames() }] },
             {
               kind: 'when',
               description: 'Ignition on',
-              formula: eq(ignitionOn(), num(1)),
+              formula: ignitionIsOn(),
               children: FLAG_BOX_MATRICES.map(matrixGroup).filter((c): c is MatrixContainer => c !== undefined),
             },
           ],

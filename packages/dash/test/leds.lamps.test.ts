@@ -19,14 +19,24 @@ const profileFor = (shape: StripShape): leds.LedProfile => rpmStripProfile(shape
 
 /**
  * The wrappers a strip profile puts over its tree, none of which decides where anything lands: the
- * remap on a strip wired from the far end, the gate on the sim running, and the rig brightness.
+ * remap on a strip wired from the far end, the gate on the sim running, the rig brightness, and the
+ * gate on the car being switched on.
  */
 const WRAPPERS: ReadonlySet<string> = new Set(['Groups.RemapGroup', 'Groups.GameRunningGroup', 'Groups.BrightnessFormulaGroup']);
+
+/**
+ * The ignition gate is a plain conditional group, which is also what a lamp and the over-rev layer
+ * are, so it is recognised by what it says rather than by its type: matching the type would unwrap
+ * the first real painting group of a shape that happened to have only one.
+ */
+const IGNITION_GATE = 'only while the car is switched on';
+
+const isWrapper = (c: leds.LedContainer): boolean => WRAPPERS.has(leds.containerTypeOf(c)) || c.description === IGNITION_GATE;
 
 /** The containers that actually paint: what is under those wrappers, whichever of them a shape has. */
 const drawnTreeOf = (profile: leds.LedProfile): readonly leds.LedContainer[] => {
   let level: readonly leds.LedContainer[] = profile.containers;
-  while (level.length === 1 && WRAPPERS.has(leds.containerTypeOf(level[0]!))) level = leds.childrenOf(level[0]!);
+  while (level.length === 1 && isWrapper(level[0]!)) level = leds.childrenOf(level[0]!);
   return level;
 };
 

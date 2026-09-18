@@ -20,8 +20,13 @@ export type PositionMode = 'overall' | 'class';
 export type DeltaReference = 'session' | 'alltime';
 export type SessionProgress = 'auto' | 'laps' | 'time';
 /**
- * What the middle of an RGB strip shows. The sides carry brake in the default, which is what the
- * hardware makers put there and what DNR puts on the same LEDs.
+ * What the middle of an RGB strip shows. It decides the middle alone: the sides of a strip are
+ * lamps, and nothing a driver chooses here reaches them.
+ *
+ * The sides carried a brake gradient under this setting's default, which is what the hardware
+ * makers put there and what DNR puts on the same LEDs. It is gone, because a group filled red by
+ * the pedal is a group on which an oil warning cannot come on, and the warning is the thing a side
+ * exists for. Brake is still available where it can be read, as a centre function.
  *
  * Four, not five. `rpmOnly` lit the same centre as `rpm` and differed only in leaving the sides
  * dark, which is a decision about the sides rather than about the centre, so it is retired into
@@ -834,7 +839,20 @@ export const FLAG_BOX_MATRIX_DEFAULTS: Record<FlagBoxMatrix, FlagBoxMatrixDefaul
   4: { rest: 'dark', flags: false, pit: false, spotter: false, warnings: false, side: 'both' },
 };
 
-/** Reads of one matrix's settings. */
+/**
+ * Reads of one matrix's settings.
+ *
+ * Four of these were global: whether the catalogue was silenced to the critical flags, whether the
+ * gear was the resting state, and the two temperature thresholds. A rig with a box in each corner
+ * of a monitor stand could therefore not have one showing the whole catalogue and the other showing
+ * the gear alone, which is precisely the setup the per-matrix group exists for, so they belong to a
+ * box rather than to the tab. The old names are migrated by the plugin, since ADR 0003 makes a
+ * property name a public interface.
+ *
+ * `lowFuelLaps` is deliberately *not* among them and stays on {@link flagBox}: it is the rig's one
+ * answer to "am I low", read by the strip and the faces as well as by every box, and a per-box copy
+ * of it would be four more places to disagree.
+ */
 export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
   const d = FLAG_BOX_MATRIX_DEFAULTS[matrix];
   const read = (name: string, fallback: Expr): Expr => isnull(prop(propertyName(flagBoxMatrixSetting(matrix, name))), fallback);
@@ -845,12 +863,21 @@ export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
     spotter: (): Expr => read('Spotter', String(d.spotter)),
     warnings: (): Expr => read('Warnings', String(d.warnings)),
     side: (): Expr => read('Side', str(d.side)),
+    /** Quiet until something matters, for this panel. */
+    criticalOnly: (): Expr => read('CriticalOnly', String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
+    /** The gear as this panel's resting state. */
+    gear: (): Expr => read('Gear', String(DEFAULT_FLAG_BOX_GEAR)),
+    /** Defaulted **per unit** from SimHub's own `TemperatureUnit`, as the global one was. */
+    oilTemp: (): Expr => read('OilTemp', defaultByUnit(DEFAULT_OIL_TEMP)),
+    waterTemp: (): Expr => read('WaterTemp', defaultByUnit(DEFAULT_WATER_TEMP)),
   };
 };
 
-/** The five property names of one matrix, in the order the plugin attaches them. */
+/** The ten property names of one matrix, in the order the plugin attaches them. */
 export const flagBoxMatrixProperties = (matrix: FlagBoxMatrix): string[] =>
-  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side'].map((n) => flagBoxMatrixSetting(matrix, n));
+  // The four that moved here from the tab are appended rather than interleaved, for the reason
+  // every other list in this file is: both halves of the contract are pinned in order.
+  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side', 'CriticalOnly', 'Gear', 'OilTemp', 'WaterTemp'].map((n) => flagBoxMatrixSetting(matrix, n));
 
 /**
  * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a
@@ -876,9 +903,6 @@ export const LIGHTS_NIGHT_MODE_SETTING = 'LightsNightMode';
  */
 export const LIGHTS_LOW_FUEL_LAPS_SETTING = 'LightsLowFuelLaps';
 
-/** Flag-box-specific, because they are about this box rather than about lights in general. */
-export const FLAG_BOX_CRITICAL_ONLY_SETTING = 'FlagBoxCriticalOnly';
-export const FLAG_BOX_GEAR_SETTING = 'FlagBoxGear';
 
 /** Percent. SimHub's own global brightness for the device applies on top of this. */
 export const DEFAULT_LIGHTS_BRIGHTNESS = 100;
@@ -909,9 +933,6 @@ export const DEFAULT_FLAG_BOX_LOW_FUEL_LAPS = 2;
  * refuses — so the comparison is done in whatever unit `WaterTemperature` and `OilTemperature` are
  * already reported in, which is the user's, and the default is stated per unit below.
  */
-export const FLAG_BOX_OIL_TEMP_SETTING = 'FlagBoxOilTemp';
-export const FLAG_BOX_WATER_TEMP_SETTING = 'FlagBoxWaterTemp';
-
 /** 120 °C and 110 °C, and their equivalents, so a default is right in whatever unit is set. */
 export const DEFAULT_OIL_TEMP: Record<string, number> = { Celcius: 120, Fahrenheit: 248, Kelvin: 393 };
 export const DEFAULT_WATER_TEMP: Record<string, number> = { Celcius: 110, Fahrenheit: 230, Kelvin: 383 };
@@ -923,6 +944,20 @@ export const DEFAULT_WATER_TEMP: Record<string, number> = { Celcius: 110, Fahren
  */
 export const DEFAULT_FLAG_BOX_CRITICAL_ONLY = false;
 
+/**
+ * Whether the spotter bar grows inwards or is simply there.
+ *
+ * The rig's rather than a box's, for the reason the brightness trio is: a driver who finds a moving
+ * bar distracting finds it distracting on every panel they own.
+ *
+ * Off, unlike the flags' own switch, and the difference is the whole of what the box's vocabulary
+ * says. Movement means act: a flag that ends or interrupts the race moves, and everything that
+ * merely informs is held. A car alongside informs, so the bar that says so holds by default and
+ * moves only for a driver who has asked it to.
+ */
+export const FLAG_BOX_SPOTTER_ANIMATION_SETTING = 'FlagBoxSpotterAnimation';
+export const DEFAULT_FLAG_BOX_SPOTTER_ANIMATION = false;
+
 /** Reads of the lights settings, each defaulted so the profile works without the plugin. */
 export const flagBox = {
   /** `isnull([OpenDash.LightsBrightness], 100)`: the day brightness. */
@@ -933,10 +968,6 @@ export const flagBox = {
   nightMode: (): Expr => isnull(prop(propertyName(LIGHTS_NIGHT_MODE_SETTING)), String(DEFAULT_LIGHTS_NIGHT_MODE)),
   /** The brightness in force: the night value when night mode is on, else the day value. */
   brightness: (): Expr => iff(eq(flagBox.nightMode(), 'true'), flagBox.nightBrightness(), flagBox.dayBrightness()),
-  /** `isnull([OpenDash.FlagBoxCriticalOnly], false)`: quiet until something matters. */
-  criticalOnly: (): Expr => isnull(prop(propertyName(FLAG_BOX_CRITICAL_ONLY_SETTING)), String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
-  /** `isnull([OpenDash.FlagBoxGear], true)`: the gear as the resting state. */
-  gear: (): Expr => isnull(prop(propertyName(FLAG_BOX_GEAR_SETTING)), String(DEFAULT_FLAG_BOX_GEAR)),
   /**
    * `isnull([OpenDash.LightsLowFuelLaps], isnull([OpenDash.FlagBoxLowFuelLaps], 2))`: how few laps
    * of fuel is low, for every light rather than for the box alone.
@@ -948,14 +979,8 @@ export const flagBox = {
    */
   lowFuelLaps: (): Expr =>
     isnull(prop(propertyName(LIGHTS_LOW_FUEL_LAPS_SETTING)), isnull(prop(propertyName(FLAG_BOX_LOW_FUEL_LAPS_SETTING)), num(DEFAULT_FLAG_BOX_LOW_FUEL_LAPS))),
-  /**
-   * The oil threshold, defaulted **per unit**: the default is looked up from SimHub's own
-   * `TemperatureUnit` inside the expression, so a driver in Fahrenheit gets 248 rather than 120.
-   * Once they set a number it is theirs, in the unit they are reading.
-   */
-  oilTemp: (): Expr => isnull(prop(propertyName(FLAG_BOX_OIL_TEMP_SETTING)), defaultByUnit(DEFAULT_OIL_TEMP)),
-  /** As {@link oilTemp}, 110 °C. */
-  waterTemp: (): Expr => isnull(prop(propertyName(FLAG_BOX_WATER_TEMP_SETTING)), defaultByUnit(DEFAULT_WATER_TEMP)),
+  /** `isnull([OpenDash.FlagBoxSpotterAnimation], false)`: whether the spotter bar grows. */
+  spotterAnimation: (): Expr => isnull(prop(propertyName(FLAG_BOX_SPOTTER_ANIMATION_SETTING)), String(DEFAULT_FLAG_BOX_SPOTTER_ANIMATION)),
 };
 
 /** `if(unit = 'Fahrenheit', 248, if(unit = 'Kelvin', 393, 120))`, so no default is wrong in a unit. */
@@ -967,19 +992,19 @@ function defaultByUnit(byUnit: Record<string, number>): Expr {
 
 /** Every property the flag box profile reads. */
 export function flagBoxProperties(): string[] {
+  // Five, not nine. Critical flags only, the gear and the two temperature thresholds moved under
+  // the matrix that owns them; what is left is the rig's brightness trio and the one low-fuel
+  // threshold every light and every face reads.
   const global = [
     LIGHTS_BRIGHTNESS_SETTING,
     LIGHTS_NIGHT_BRIGHTNESS_SETTING,
     LIGHTS_NIGHT_MODE_SETTING,
-    FLAG_BOX_CRITICAL_ONLY_SETTING,
-    FLAG_BOX_GEAR_SETTING,
     FLAG_BOX_LOW_FUEL_LAPS_SETTING,
-    FLAG_BOX_OIL_TEMP_SETTING,
-    FLAG_BOX_WATER_TEMP_SETTING,
     // Appended rather than placed beside the other Lights* names: this list is pinned in order by
     // packages/dash/test/declared-properties.txt, and both halves of the contract assert its head
     // by index, so a new name joins the end of the group and is never inserted into it.
     LIGHTS_LOW_FUEL_LAPS_SETTING,
+    FLAG_BOX_SPOTTER_ANIMATION_SETTING,
   ];
   const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
   return [...global, ...perMatrix].map(propertyName);

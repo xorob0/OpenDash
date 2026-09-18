@@ -31,14 +31,15 @@ import { DEFAULTS, flagBox, LED_CENTRES, LED_RPM_STYLES, setting } from '../cont
 import type { LedCentre, LedRpmStyle } from '../contract.ts';
 import { mirrorAvailable } from '../shift.ts';
 import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
-import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
+import { brake as brakeInput, fuelPercent, tankIsLow, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
+import { ignitionIsOn } from './gates.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
-import { centreStart, deviceLength, rightStart, stripLength, type StripShape } from './strip.ts';
+import { centreStart, deviceLength, stripLength, type StripShape } from './strip.ts';
 
-const { and, eq, gt, not, num, str } = ncalc;
+const { and, eq, not, str } = ncalc;
 
 /** `isnull([OpenDash.LedCentre], 'rpm') = '<which>'`, the gate on each centre function. */
 const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which));
@@ -195,35 +196,58 @@ const pedalBar = (count: number, value: Expr, color: string, label: string): led
 
 /**
  * Throttle and brake filling outwards from the middle: brake takes the left half, running out from
- * the centre, throttle the right. An odd centre gives brake the extra LED, since a driver watching
- * this is watching the brake.
+ * the centre, throttle the right.
+ *
+ * An odd centre keeps the two halves equal and spends the spare LED on the middle, lit white and
+ * lit always. Giving it to brake instead — which is what this did — made the two pedals read at
+ * different scales on half the shapes, so a foot flat on each filled one side one LED further than
+ * the other and the bar was never symmetrical about anything. A standing mark is also the only way
+ * a driver can see where the middle *is* when neither pedal is down.
  */
 const throttleBrakeBar = (count: number): leds.LedContainer[] => {
-  const brakeCount = Math.ceil(count / 2);
-  const throttleCount = count - brakeCount;
-  const brake = Array.from({ length: brakeCount }, (_, k) => ({
+  const middle = count % 2 === 1 ? 1 : 0;
+  const half = (count - middle) / 2;
+  const brake = Array.from({ length: half }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `brake ${String(k + 1).padStart(2, '0')}`,
     // Fills outwards: the LED nearest the middle is the first to light.
-    startPosition: brakeCount - k,
+    startPosition: half - k,
     ledCount: 1,
     color: ds.color.danger.primary,
-    enabledFormula: { expression: stepLit(brakeInput(), k, brakeCount) },
+    enabledFormula: { expression: stepLit(brakeInput(), k, half) },
   }));
-  const throttle = Array.from({ length: throttleCount }, (_, k) => ({
+  const centre: leds.LedContainer[] =
+    middle === 1
+      ? [
+          {
+            kind: 'customStatus' as const,
+            description: 'centre mark',
+            startPosition: half + 1,
+            ledCount: 1,
+            color: ds.color.text.primary,
+            enabledFormula: { expression: TRUE },
+          },
+        ]
+      : [];
+  const throttle = Array.from({ length: half }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `throttle ${String(k + 1).padStart(2, '0')}`,
-    startPosition: brakeCount + 1 + k,
+    startPosition: half + middle + 1 + k,
     ledCount: 1,
     color: ds.color.good.primary,
-    enabledFormula: { expression: stepLit(throttleInput(), k, throttleCount) },
+    enabledFormula: { expression: stepLit(throttleInput(), k, half) },
   }));
-  return [...brake, ...throttle];
+  return [...brake, ...centre, ...throttle];
 };
 
 /**
- * The fuel gauge: a bar that empties, and blinks below five percent. `FuelPercent` is SimHub's own,
- * so there is nothing computed here.
+ * The fuel gauge: a bar that empties, and blinks once the tank is low. The *height* is
+ * `FuelPercent`, which is SimHub's own; the *threshold* is {@link tankIsLow}, the laps remaining
+ * against the one number in laps the driver set.
+ *
+ * The bar used to raise itself at five percent of the tank, which was a third answer to "am I low"
+ * beside the box's and the lamp's. Five percent is also not a threshold a driver can act on: it is
+ * two laps in one car and half a lap in another, which is the whole reason the setting is in laps.
  *
  * Slow, which is what the catalogue's own low-fuel lamp blinks at: one condition cannot be urgent on
  * the centre and merely true on a lamp of the same strip. Its off phase is the low-fuel colour rather
@@ -231,7 +255,7 @@ const throttleBrakeBar = (count: number): leds.LedContainer[] => {
  */
 const fuelBar = (count: number): leds.LedContainer[] => {
   const percent = fuelPercent();
-  const low = gt(num(5), percent);
+  const low = tankIsLow();
   return Array.from({ length: count }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `fuel ${String(k + 1).padStart(2, '0')}`,
@@ -261,39 +285,6 @@ const centreFunctions = (count: number): leds.LedContainer[] => [
       which === 'brake' ? pedalBar(count, brakeInput(), ds.color.danger.primary, 'brake') : which === 'throttleBrake' ? throttleBrakeBar(count) : fuelBar(count),
   })),
 ];
-
-/**
- * The sides: brake, and only under the default centre. Under any other centre they stay dark rather
- * than being filled with something the driver did not ask for.
- */
-const sides = (shape: StripShape): leds.LedContainer[] => {
-  if (shape.left === 0 && shape.right === 0) return [];
-  const brake = brakeInput();
-  const side = (start: number, count: number, label: string): leds.LedContainer => ({
-    kind: 'group',
-    description: `${label} side`,
-    startPosition: start,
-    children: Array.from({ length: count }, (_, k) => ({
-      kind: 'customStatus' as const,
-      description: `${label} brake ${String(k + 1).padStart(2, '0')}`,
-      startPosition: k + 1,
-      ledCount: 1,
-      color: ds.color.danger.primary,
-      enabledFormula: { expression: stepLit(brake, k, count) },
-    })),
-  });
-  return [
-    {
-      kind: 'conditionalGroup',
-      description: 'sides: brake, under the default centre only',
-      trigger: { expression: centreIs('rpm') },
-      children: [
-        ...(shape.left > 0 ? [side(1, shape.left, 'left')] : []),
-        ...(shape.right > 0 ? [side(rightStart(shape), shape.right, 'right')] : []),
-      ],
-    },
-  ];
-};
 
 /**
  * The effect catalogue placed on a shape.
@@ -359,8 +350,10 @@ export const rpmStripFileName = (shape: StripShape): string => `openDash ${shape
 /** The whole tree for one shape, before any reversal is applied. */
 const treeFor = (shape: StripShape): leds.LedContainer[] => [
   { kind: 'group', description: 'centre', startPosition: centreStart(shape), children: centreFunctions(shape.centre) },
-  ...sides(shape),
-  // After the rev ladder and the brake sides, so that it composes over them.
+  // After the rev ladder, so that it composes over it. The sides carry nothing but lamps: a brake
+  // gradient used to fill them under the default centre, and a group filled red by the pedal is a
+  // group on which an oil warning cannot come on. A driver who wants a pedal trace asks for one,
+  // through the brake and throttleBrake centres, and gets it where it can be read.
   ...effects(shape),
   // The 3/10/3's two further runs of nine repeat the centre, so a device with three strips says the
   // same thing on all three rather than leaving two of them dark.
@@ -400,6 +393,24 @@ const brightnessGroup = (children: readonly leds.LedContainer[]): leds.LedContai
 });
 
 /**
+ * The car switched on, over everything a strip draws.
+ *
+ * The box has asked this since it shipped and the strip never did, so a driver sitting in the
+ * garage with the car off had a dark flag box beside a wheel drawing a pit-lane state, a brake
+ * gradient and whatever else had a non-zero property. {@link ignitionIsOn} is the box's own gate,
+ * read from one place by both.
+ *
+ * Unlike the box the strip goes fully dark rather than showing a standby mark: a mark on a strip is
+ * a lit LED, and an LED lit to mean "off" is the confusion this gate exists to remove.
+ */
+const ignitionGroup = (children: readonly leds.LedContainer[]): leds.LedContainer => ({
+  kind: 'conditionalGroup',
+  description: 'only while the car is switched on',
+  trigger: { expression: ignitionIsOn() },
+  children,
+});
+
+/**
  * The profile for one strip shape. A strip the maker wired in some other order is the same tree
  * inside a `Groups.RemapGroup` that turns logical positions into physical ones, which is the whole
  * reason a new device is a row of numbers rather than a second profile.
@@ -414,11 +425,15 @@ export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedP
   // Brightness sits under the running gate rather than over it: nothing outside that gate paints,
   // so a brightness group above it would scale nothing and would only cost an evaluation with the
   // sim closed.
+  // The ignition gate is the innermost of the three, because it is the only one of them a driver
+  // turns on and off within a session. None of the three carries a startPosition: the fit rule in
+  // the generator accumulates offsets down the tree, so a group that carried one would move every
+  // LED beneath it.
   const running: leds.LedContainer = {
     kind: 'raw',
     containerType: 'Groups.GameRunningGroup',
     description: 'only while the sim is running',
-    children: [brightnessGroup(treeFor(shape))],
+    children: [brightnessGroup([ignitionGroup(treeFor(shape))])],
   };
   const tree = [running];
   return {
