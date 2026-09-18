@@ -69,6 +69,12 @@ export const reversedPositions = (length: number): readonly number[] => Array.fr
  * Read off DNR's own `RemapGroup` rather than measured here: nobody on this project owns the wheel,
  * so the order is the best evidence available and not a confirmed fact, which is why it ships as a
  * shape of its own and not as a correction to one people have installed.
+ *
+ * Two things a rig would settle and this cannot. The direction is the one `LedRemapGroup` states,
+ * `positions[i]` being the physical LED that logical `i` paints; were SimHub to mean the inverse,
+ * every lamp would land on the far side of the wheel and the correction would be to invert this one
+ * function. And the left group is read as running outside in, as the right one does, which is what
+ * the review's wording carries rather than something measured.
  */
 export const fanalabPositions = (s: StripShape): readonly number[] => [
   ...Array.from({ length: s.left }, (_, i) => s.centre + s.right + 1 + i),
