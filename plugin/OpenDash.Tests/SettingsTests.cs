@@ -1188,7 +1188,7 @@ namespace OpenDashPlugin.Tests
             // Eight face sizes times twenty-two properties is what the plugin used to attach whatever
             // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar and
             // the blue flag detail, which every screen shares, and one group per screen the rig holds.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1;
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1;
             var shared = Contract.SharedPropertyNames().Count();
             Assert.Equal(18, shared);
             // The lights are declared whatever the rig is: openDash does not install the flag box
@@ -1445,7 +1445,43 @@ namespace OpenDashPlugin.Tests
             Assert.Null(confused.Face);
             Assert.Null(confused.Modules);
             Assert.Null(confused.FlagFormat);
+            Assert.Null(confused.LapReview);
             Assert.NotNull(confused.Zones);
+        }
+
+        [Fact]
+        public void The_lap_review_is_off_by_default_and_is_set_per_screen()
+        {
+            // Per screen for a stronger version of the flag format's reason: the panel takes the hero
+            // for four seconds at every crossing, so a display on the desk and a rim in the driver's
+            // hands do not want the same answer. Off on both until somebody asks.
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Rig.Add(Screen(Contract.KindFace, Face.Width, Face.Height));
+            settings.Rig.Add(Screen(Contract.KindFace, Contract.FaceSizes[3].Width, Contract.FaceSizes[3].Height));
+            settings.Normalise();
+            Assert.Equal("off", settings.ScreenLapReview("Face1920x480"));
+            Assert.Equal("off", settings.ScreenLapReview("Face850x480"));
+
+            settings.ScreenOf("Face1920x480").LapReview = "race";
+            settings.Normalise();
+            Assert.Equal("race", settings.ScreenLapReview("Face1920x480"));
+            Assert.Equal("off", settings.ScreenLapReview("Face850x480"));
+
+            // A spelling the panel never wrote falls back, and a screen the rig no longer holds reads
+            // the default rather than throwing on SimHub's data thread.
+            settings.ScreenOf("Face1920x480").LapReview = "sometimes";
+            settings.Normalise();
+            Assert.Equal("off", settings.ScreenLapReview("Face1920x480"));
+            Assert.Equal("off", settings.ScreenLapReview("Face1280x720"));
+
+            settings.ScreenOf("Face1920x480").LapReview = "all";
+            settings.Normalise();
+            var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
+            read.Normalise();
+            Assert.Equal("all", read.ScreenLapReview("Face1920x480"));
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.Equal("all", copy.ScreenLapReview("Face1920x480"));
         }
 
         [Fact]

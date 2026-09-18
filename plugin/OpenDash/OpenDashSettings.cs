@@ -697,6 +697,14 @@ namespace OpenDashPlugin
             return face;
         }
 
+        /// <summary>When one face shows the lap review, or the default when the rig no longer has that screen.</summary>
+        public string ScreenLapReview(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            if (screen == null) return Contract.DefaultLapReview;
+            return Contract.NormaliseChoice(screen.LapReview, Contract.LapReviewModes, Contract.DefaultLapReview);
+        }
+
         /// <summary>How one face draws a flag, or the default when the rig no longer has that screen.</summary>
         public string ScreenFlagFormat(string ns)
         {

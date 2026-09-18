@@ -457,6 +457,33 @@ export const DEFAULT_FLAG_FORMAT: FlagFormat = 'band';
  */
 export const flagFormatSettingName = (face: FaceSize): string => `${facePrefix(face)}FlagFormat`;
 
+/**
+ * When this face shows the lap review: never, in a race, or in every session.
+ *
+ * Per screen for the reason the flag format is, and more strongly: the review is 1200 by 160 and
+ * takes the hero for four seconds at every crossing, so a rig with a display on the desk and a rim
+ * in the driver's hands wants it on the one and certainly not on the other.
+ *
+ * Three values and not the canvas's four. `off`, `race` and `all` are answerable from
+ * `SessionTypeName`, which iRacing publishes as `Race` for the one session type openDash can name
+ * with certainty; a `practice` value would have to match a set of spellings -- lone, open, offline
+ * testing, warmup -- that no committed trace carries, and a value that silently never matches is
+ * worse than a value that is not offered. The absent one is recorded in the report rather than
+ * guessed at here.
+ */
+export type LapReviewMode = 'off' | 'race' | 'all';
+export const LAP_REVIEW_MODES: readonly LapReviewMode[] = ['off', 'race', 'all'];
+
+/**
+ * Off, because the panel covers the gear for four seconds of every lap and the lap-time pop-up
+ * already gives a driver the two figures they wait for at the line in a third of the room. The
+ * flag format's default is `band` for the same reason: what takes the face has to be asked for.
+ */
+export const DEFAULT_LAP_REVIEW: LapReviewMode = 'off';
+
+/** `Face1920x480LapReview`. Appended after the flag format, which both halves assert by index. */
+export const lapReviewSettingName = (face: FaceSize): string => `${facePrefix(face)}LapReview`;
+
 export const quickGlanceValue = (zone: FaceZone, page: number): number => FACE_ZONE_LETTERS.indexOf(zone) * 100 + page;
 export const quickGlanceZone = (value: number): FaceZone => FACE_ZONE_LETTERS[Math.floor(value / 100)] ?? 'A';
 export const quickGlancePage = (value: number): number => value % 100;
@@ -479,13 +506,23 @@ export const zone = {
   flagFormat: (face: FaceSize): Expr => isnull(prop(propertyName(flagFormatSettingName(face))), str(DEFAULT_FLAG_FORMAT)),
   /** `isnull([OpenDash.Face1920x480FlagFormat], 'band') = 'full'`: whether this face is in the given format. */
   flagFormatIs: (face: FaceSize, format: FlagFormat): Expr => eq(zone.flagFormat(face), str(format)),
+  /**
+   * `isnull([OpenDash.Face1920x480LapReview], 'off')`: when this face shows the lap review.
+   *
+   * The reading is here and what it is compared against is not: the session's own name lives in
+   * `second/values.ts` with the rest of the telemetry, and this file cannot import it without a
+   * cycle. `components/lapReview.ts` joins the two, which is the same seam `flagStrip.ts` sits on.
+   */
+  lapReview: (face: FaceSize): Expr => isnull(prop(propertyName(lapReviewSettingName(face))), str(DEFAULT_LAP_REVIEW)),
+  /** `... = 'race'`: whether this face is in the given lap review mode. */
+  lapReviewIs: (face: FaceSize, mode: LapReviewMode): Expr => eq(zone.lapReview(face), str(mode)),
 };
 
 /** Every property one face reads, which is the group the plugin attaches for it. */
 export function facePropertyNames(face: FaceSize): string[] {
   const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
-  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face)];
+  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face), lapReviewSettingName(face)];
 }
 
 /** Every zone property of every face that ships. */
