@@ -283,6 +283,12 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     // inside 6 px of padding gives it 445 by 220 where the pit wall's 28 over 16 gave 437 by 214,
     // and the fourth time fits in the six pixels.
     '800x286 269x194 lapTimes': ['delta'],
+    // The delta page's own furniture against its sector deltas. The catalogue draws both in its
+    // `tall narrow · 274 by 300`, and the nano's zone is 269 by 194: a hundred and six pixels
+    // shorter, which is the bar, its scale, the rule and the three deltas over again. The bar is
+    // what the page is named for, so what goes is the sectors and the rule that separates them.
+    '800x286 269x194 delta': ['s1', 's2', 's3', 'rule'],
+    '800x286 269x226 delta': ['s1', 's2', 's3', 'rule'],
     // The refuel figure and the five-lap average are the last two fields of a rank the 600 x 686
     // face's 114 px zones have no room for: two ranks plus the level bar need about 124 px at the
     // compact ramp, so the two lead readings are what survive. The nano keeps its rank whole now
