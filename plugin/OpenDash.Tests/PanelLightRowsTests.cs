@@ -1,7 +1,7 @@
 // PanelLightRowsTests.cs: the rows the Install tab's Lights section draws, and the one thing about them
 // that is mirrored out of the dash build rather than read back from it.
 //
-// Two different jobs here. The first is the shape of the section: seven rows over a full build, in the
+// Two different jobs here. The first is the shape of the section: eight rows over a full build, in the
 // canvas's order, with the grouped ones counting their own members so that a length added to
 // packages/dash/src/leds/strip.ts cannot leave a caption saying "five" over six profiles. The second is
 // the device captions, which are the only thing PanelLightRows carries that no embedded artefact does --
@@ -33,14 +33,14 @@ namespace OpenDashPlugin.Tests
             var ids = new[]
             {
                 "0-10-0", "0-12-0", "0-16-0", "0-8-0", "0-9-0", "2-10-2", "3-10-3", "3-9-3",
-                "4-14-4", "4-14-4-reversed", "4-9-4", "5-10-5",
+                "3-9-3-fanalab", "4-14-4", "4-14-4-reversed", "4-9-4", "5-10-5",
                 "brow-12", "brow-15", "brow-16", "brow-18", "brow-20", "brow-25", "brow-9",
             };
             return ids.Select(id => new LightProfile(id, "openDash " + PanelLightRows.Label(new LightProfile(id, null)))).ToList();
         }
 
         [Fact]
-        public void A_full_build_draws_the_seven_rows_the_canvas_draws()
+        public void A_full_build_draws_the_eight_rows_the_canvas_draws()
         {
             var rows = PanelLightRows.Rows(FullBuild());
             Assert.Equal(
@@ -49,6 +49,7 @@ namespace OpenDashPlugin.Tests
                     "openDash 4/14/4",
                     "openDash 4/14/4 reversed",
                     "openDash 3/9/3",
+                    "openDash 3/9/3 Fanalab",
                     "openDash 3/10/3",
                     "openDash 2/10/2 · 4/9/4 · 5/10/5",
                     "openDash 0/8/0 … 0/16/0",
@@ -61,6 +62,7 @@ namespace OpenDashPlugin.Tests
                     "strip · SimRep MLD, Ascher",
                     "strip · SimRep MLD, wired from the far end",
                     "strip · Fanatec, Simucube, Moza",
+                    "strip · Fanatec through Fanalab",
                     "strip · GridSim Lab GTSL Pro",
                     "strips",
                     "bare runs, five lengths",
@@ -71,10 +73,10 @@ namespace OpenDashPlugin.Tests
             // Every profile the build carries is behind exactly one row, or a press somewhere installs a
             // profile no row named and a shape is offered twice.
             var members = rows.SelectMany(r => r.ShapeIds).ToList();
-            Assert.Equal(19, members.Count);
-            Assert.Equal(19, members.Distinct(StringComparer.Ordinal).Count());
+            Assert.Equal(20, members.Count);
+            Assert.Equal(20, members.Distinct(StringComparer.Ordinal).Count());
             Assert.Equal(FullBuild().Select(p => p.ShapeId).OrderBy(x => x, StringComparer.Ordinal), members.OrderBy(x => x, StringComparer.Ordinal));
-            Assert.Equal(new[] { 1, 1, 1, 1, 3, 5, 7 }, rows.Select(r => r.ShapeIds.Count));
+            Assert.Equal(new[] { 1, 1, 1, 1, 1, 3, 5, 7 }, rows.Select(r => r.ShapeIds.Count));
         }
 
         [Fact]
@@ -237,19 +239,27 @@ namespace OpenDashPlugin.Tests
             return Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "leds", "strip.ts");
         }
 
-        /// <summary>STRIP_SHAPES, read off the `wheel(...)` rows the generator is a list of. The brows are
-        /// not here: they carry one device list for all seven and the panel groups them all the same.</summary>
+        /// <summary>STRIP_SHAPES, read off the `wheel(...)` and `fanalab(...)` rows the generator is a list
+        /// of. The brows are not here: they carry one device list for all seven and the panel groups them
+        /// all the same.</summary>
+        /// <remarks>
+        /// A row's id is its geometry plus whatever suffix its spelling adds, which is the one thing about
+        /// strip.ts this has to know twice. `wheel(..., { reversed: true })` and `fanalab(...)` are the two
+        /// wirings that make a second profile of one geometry, so both are read here or the caption mirror
+        /// below would see two shapes claiming the same id.
+        /// </remarks>
         private static IList<GeneratedShape> GeneratedWheels()
         {
             var text = File.ReadAllText(StripTs());
             var shapes = new List<GeneratedShape>();
-            foreach (Match row in Regex.Matches(text, @"^\s*wheel\((\d+), (\d+), (\d+)(?:, \{(.*)\})?\),\s*$", RegexOptions.Multiline))
+            foreach (Match row in Regex.Matches(text, @"^\s*(wheel|fanalab)\((\d+), (\d+), (\d+)(?:, \{(.*)\})?\),\s*$", RegexOptions.Multiline))
             {
-                var options = row.Groups[4].Value;
+                var options = row.Groups[5].Value;
                 shapes.Add(new GeneratedShape
                 {
-                    Id = row.Groups[1].Value + "-" + row.Groups[2].Value + "-" + row.Groups[3].Value
-                        + (options.Contains("reversed: true") ? "-reversed" : string.Empty),
+                    Id = row.Groups[2].Value + "-" + row.Groups[3].Value + "-" + row.Groups[4].Value
+                        + (options.Contains("reversed: true") ? "-reversed" : string.Empty)
+                        + (row.Groups[1].Value == "fanalab" ? "-fanalab" : string.Empty),
                     Devices = Devices(options),
                 });
             }
@@ -348,13 +358,14 @@ namespace OpenDashPlugin.Tests
                     "openDash 4/14/4",
                     "openDash 4/14/4 reversed",
                     "openDash 3/9/3",
+                    "openDash 3/9/3 Fanalab",
                     "openDash 3/10/3",
                     "openDash 2/10/2 · 4/9/4 · 5/10/5",
                     "openDash 0/8/0 … 0/16/0",
                     "openDash brow 9 … 25",
                 },
                 rows.Select(r => r.Name));
-            Assert.Equal(19, rows.SelectMany(r => r.ShapeIds).Count());
+            Assert.Equal(20, rows.SelectMany(r => r.ShapeIds).Count());
             // The flag box is not one of them: it is its own row and its own driver, and handing a strip
             // to the matrix driver is the hazard FlagBoxProfile exists to prevent.
             Assert.DoesNotContain(rows, r => r.Name == FlagBoxProfile.ProfileName);

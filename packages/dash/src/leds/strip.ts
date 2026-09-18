@@ -3,8 +3,8 @@
  *
  * A strip is a run of addressable LEDs with a group at each end that the maker intends for
  * something other than revs. openDash describes one effect tree and fits it to each shape, and a
- * strip whose wiring runs the other way is a `Groups.RemapGroup` rather than a second profile —
- * which is what makes a new device a row of numbers instead of a rebuild.
+ * strip whose wiring presents that shape in another order is a `Groups.RemapGroup` rather than a
+ * second profile — which is what makes a new device a row of numbers instead of a rebuild.
  *
  * Adding a device is adding a row to {@link STRIP_SHAPES}. That is the whole of it: the effects,
  * the colours and the thresholds are the same for every shape, which is the "one language of
@@ -26,10 +26,16 @@ export interface StripShape {
   centre: number;
   right: number;
   /**
-   * The data line enters at the far end, so physical LED 1 is the logical last one. Emitted as a
-   * `Groups.RemapGroup` around the whole tree rather than by reversing every effect.
+   * Where each logical LED physically sits: `positions[i]` is the physical LED that logical LED `i`
+   * paints. Emitted as a `Groups.RemapGroup` around the whole tree rather than by reversing every
+   * effect, and absent on a shape wired in the order the effects are written in, which is most of
+   * them.
+   *
+   * A list rather than a "reversed" flag because the far end is not the only way a device differs:
+   * a Fanatec wheel read through Fanalab presents its runs in an order that is no reversal of
+   * anything, and a boolean cannot say it.
    */
-  reversed?: boolean;
+  positions?: readonly number[];
   /**
    * Further independent runs of the same length, wired after the main one. The 3/10/3 device
    * carries two more runs of nine, which the profile fills with the same centre content.
@@ -49,16 +55,72 @@ export const centreStart = (s: StripShape): number => s.left + 1;
 /** 1-based position of the first right-hand side LED. */
 export const rightStart = (s: StripShape): number => s.left + s.centre + 1;
 
-/** A side/centre/side shape, spelled once so a row is a row rather than an object literal. */
-const wheel = (left: number, centre: number, right: number, extra: Partial<StripShape> = {}): StripShape => ({
-  id: `${left}-${centre}-${right}${extra.reversed ? '-reversed' : ''}`,
-  label: `${left}/${centre}/${right}${extra.reversed ? ' reversed' : ''}`,
-  placement: 'wheel',
-  left,
-  centre,
-  right,
-  ...extra,
-});
+/**
+ * Logical-to-physical positions for a shape whose wiring runs backwards: `n, n-1, ... 1`.
+ * `Groups.RemapGroup` stores these as `LedPosition` objects and reads them as "logical 1 is
+ * physical n".
+ */
+export const reversedPositions = (length: number): readonly number[] => Array.from({ length }, (_, i) => length - i);
+
+/**
+ * Logical-to-physical positions for a wheel read through Fanalab, which presents the centre's rev
+ * LEDs first, then the right-hand flag LEDs from the outside in, then the left-hand ones.
+ *
+ * Read off DNR's own `RemapGroup` rather than measured here: nobody on this project owns the wheel,
+ * so the order is the best evidence available and not a confirmed fact, which is why it ships as a
+ * shape of its own and not as a correction to one people have installed.
+ *
+ * Two things a rig would settle and this cannot. The direction is the one `LedRemapGroup` states,
+ * `positions[i]` being the physical LED that logical `i` paints; were SimHub to mean the inverse,
+ * every lamp would land on the far side of the wheel and the correction would be to invert this one
+ * function. And the left group is read as running outside in, as the right one does, which is what
+ * the review's wording carries rather than something measured.
+ */
+export const fanalabPositions = (s: StripShape): readonly number[] => [
+  ...Array.from({ length: s.left }, (_, i) => s.centre + s.right + 1 + i),
+  ...Array.from({ length: s.centre }, (_, i) => i + 1),
+  // Counted from the innermost, because logical position climbs inwards to outwards on the right.
+  ...Array.from({ length: s.right }, (_, i) => s.centre + s.right - i),
+];
+
+/** How a row spells a wiring that is not the plain one, before it becomes {@link StripShape.positions}. */
+interface WheelOptions extends Omit<Partial<StripShape>, 'positions'> {
+  /** The data line enters at the far end, so physical LED 1 is the logical last one. */
+  reversed?: boolean;
+}
+
+/**
+ * A side/centre/side shape, spelled once so a row is a row rather than an object literal.
+ *
+ * The far-end case stays the word `reversed: true` on the row rather than a call producing a list,
+ * because the plugin's Install tab reads these rows back out of this file to caption them and
+ * matches on that spelling (plugin/OpenDash.Tests/PanelLightRowsTests.cs).
+ */
+const wheel = (left: number, centre: number, right: number, { reversed, ...extra }: WheelOptions = {}): StripShape => {
+  const shape: StripShape = {
+    id: `${left}-${centre}-${right}${reversed ? '-reversed' : ''}`,
+    label: `${left}/${centre}/${right}${reversed ? ' reversed' : ''}`,
+    placement: 'wheel',
+    left,
+    centre,
+    right,
+    ...extra,
+  };
+  return reversed ? { ...shape, positions: reversedPositions(deviceLength(shape)) } : shape;
+};
+
+/**
+ * The same geometry as its plain sibling, wired the way Fanalab presents it.
+ *
+ * A second row rather than a correction to the first. A profile's identity reaches the panel through
+ * its file name, so changing the existing 3/9/3's physical order would silently relight every wheel
+ * that has it installed — including the Simucube, Cammus and Moza wheels of that shape, which are
+ * wired in order and would break. The reversed 4/14/4 beside the plain one is the precedent.
+ */
+const fanalab = (left: number, centre: number, right: number, extra: WheelOptions = {}): StripShape => {
+  const base = wheel(left, centre, right, extra);
+  return { ...base, id: `${base.id}-fanalab`, label: `${base.label} Fanalab`, positions: fanalabPositions(base) };
+};
 
 /**
  * The shapes openDash generates for.
@@ -72,6 +134,7 @@ const wheel = (left: number, centre: number, right: number, extra: Partial<Strip
  */
 export const STRIP_SHAPES: readonly StripShape[] = [
   wheel(3, 9, 3, { devices: ['Fanatec ClubSport / Podium wheels', 'Simucube wireless wheels', 'Cammus', 'Moza'] }),
+  fanalab(3, 9, 3, { devices: ['Fanatec ClubSport / Podium wheels driven through Fanalab'] }),
   wheel(3, 10, 3, { devices: ['GridSim Lab GTSL Pro'], extraRuns: { count: 2, length: 9 } }),
   wheel(4, 14, 4, { devices: ['SimRep Engineering MLD', 'Ascher Racing'] }),
   wheel(4, 14, 4, { reversed: true, devices: ['SimRep Engineering MLD, wired from the far end'] }),
@@ -104,10 +167,3 @@ export const BROW_SHAPES: readonly StripShape[] = [9, 12, 15, 16, 18, 20, 25].ma
 export const ALL_SHAPES: readonly StripShape[] = [...STRIP_SHAPES, ...BROW_SHAPES];
 
 export const shapeById = (id: string): StripShape | undefined => ALL_SHAPES.find((s) => s.id === id);
-
-/**
- * Logical-to-physical positions for a shape whose wiring runs backwards: `n, n-1, ... 1`.
- * `Groups.RemapGroup` stores these as `LedPosition` objects and reads them as "logical 1 is
- * physical n".
- */
-export const reversedPositions = (length: number): readonly number[] => Array.from({ length }, (_, i) => length - i);

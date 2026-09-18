@@ -12,7 +12,7 @@
 // The geometry a row groups on is read back out of the id, which is the generator's own
 // `${left}-${centre}-${right}` and `brow-${n}`.
 //
-// The one thing that IS mirrored is <see cref="NamedShapes"/>, the four shapes the canvas captions by
+// The one thing that IS mirrored is <see cref="NamedShapes"/>, the shapes the canvas captions by
 // device family, because the device names are in strip.ts and in no artefact the plugin embeds.
 // PanelLightRowsTests holds that mirror against strip.ts in both directions: a caption naming a device the
 // generator does not, or a generator row naming a device no caption does, fails there rather than shipping
@@ -44,14 +44,14 @@ namespace OpenDashPlugin
     /// <summary>A shape id read back as the geometry the generator wrote it from.</summary>
     public sealed class LightShape
     {
-        private LightShape(string id, string placement, int left, int centre, int right, bool reversed)
+        private LightShape(string id, string placement, int left, int centre, int right, string wiring)
         {
             Id = id;
             Placement = placement;
             Left = left;
             Centre = centre;
             Right = right;
-            Reversed = reversed;
+            Wiring = wiring;
         }
 
         public string Id { get; private set; }
@@ -59,7 +59,15 @@ namespace OpenDashPlugin
         public int Left { get; private set; }
         public int Centre { get; private set; }
         public int Right { get; private set; }
-        public bool Reversed { get; private set; }
+        /// <summary>The suffix the id carries where the geometry alone does not name the profile: the
+        /// generator spells one shape twice when a maker wires it in an order of its own. Null for the
+        /// plain wiring.</summary>
+        public string Wiring { get; private set; }
+
+        public bool Reversed
+        {
+            get { return Wiring == PanelLightRows.ReversedSuffix; }
+        }
 
         /// <summary>A bare run: nothing at either end, which is what a brow is as well.</summary>
         public bool Bare
@@ -71,10 +79,10 @@ namespace OpenDashPlugin
         /// The id as geometry, or null when it is not one of the two shapes the generator writes.
         /// </summary>
         /// <remarks>
-        /// The other half of `wheel()` and BROW_SHAPES in packages/dash/src/leds/strip.ts, which spell the
-        /// id `${left}-${centre}-${right}` with "-reversed" appended and `brow-${n}`. Reading it back rather
-        /// than carrying a table is what lets a shape added there be grouped here without an edit; an id
-        /// this cannot read is not guessed at, it gets a row of its own.
+        /// The other half of `wheel()`, `fanalab()` and BROW_SHAPES in packages/dash/src/leds/strip.ts, which
+        /// spell the id `${left}-${centre}-${right}` with a wiring suffix appended and `brow-${n}`. Reading it
+        /// back rather than carrying a table is what lets a shape added there be grouped here without an
+        /// edit; an id this cannot read is not guessed at, it gets a row of its own.
         /// </remarks>
         public static LightShape Parse(string id)
         {
@@ -83,15 +91,15 @@ namespace OpenDashPlugin
             {
                 int length;
                 if (!Number(id.Substring(PanelLightRows.BrowPrefix.Length), out length)) return null;
-                return new LightShape(id, PanelLightRows.Brow, 0, length, 0, false);
+                return new LightShape(id, PanelLightRows.Brow, 0, length, 0, null);
             }
 
             var parts = id.Split('-');
-            var reversed = parts.Length == 4 && string.Equals(parts[3], "reversed", StringComparison.Ordinal);
-            if (parts.Length != 3 && !reversed) return null;
+            var wiring = parts.Length == 4 && PanelLightRows.WiringSuffixes.Contains(parts[3]) ? parts[3] : null;
+            if (parts.Length != 3 && wiring == null) return null;
             int left, centre, right;
             if (!Number(parts[0], out left) || !Number(parts[1], out centre) || !Number(parts[2], out right)) return null;
-            return new LightShape(id, PanelLightRows.Wheel, left, centre, right, reversed);
+            return new LightShape(id, PanelLightRows.Wheel, left, centre, right, wiring);
         }
 
         private static bool Number(string text, out int value)
@@ -144,6 +152,15 @@ namespace OpenDashPlugin
         public const string Unavailable =
             "SimHub's LED settings are not available, so openDash cannot install a strip profile.";
 
+        /// <summary>The id suffixes a wiring adds, which `wheel(..., { reversed: true })` and `fanalab(...)`
+        /// in packages/dash/src/leds/strip.ts spell. A suffix this does not know is not guessed at: the shape
+        /// falls through to a row of its own.</summary>
+        public const string ReversedSuffix = "reversed";
+
+        public const string FanalabSuffix = "fanalab";
+
+        internal static readonly IList<string> WiringSuffixes = new[] { ReversedSuffix, FanalabSuffix };
+
         public const string Wheel = "wheel";
         public const string Brow = "brow";
         internal const string BrowPrefix = Brow + "-";
@@ -171,6 +188,7 @@ namespace OpenDashPlugin
                 new KeyValuePair<string, string>("4-14-4", "strip" + Join + "SimRep MLD, Ascher"),
                 new KeyValuePair<string, string>("4-14-4-reversed", "strip" + Join + "SimRep MLD, wired from the far end"),
                 new KeyValuePair<string, string>("3-9-3", "strip" + Join + "Fanatec, Simucube, Moza"),
+                new KeyValuePair<string, string>("3-9-3-fanalab", "strip" + Join + "Fanatec through Fanalab"),
                 new KeyValuePair<string, string>("3-10-3", "strip" + Join + "GridSim Lab GTSL Pro"),
             };
 
@@ -193,7 +211,7 @@ namespace OpenDashPlugin
         /// The rows for one build's profiles, in the order the canvas draws them.
         /// </summary>
         /// <remarks>
-        /// Four named shapes with a row each, then the generic runs with sides, the bare runs and the brows
+        /// The named shapes with a row each, then the generic runs with sides, the bare runs and the brows
         /// as one row apiece. A shape the build did not embed has no row at all, which is the honest answer:
         /// a row for a profile that is not there could only offer a press that does nothing.
         /// </remarks>
@@ -315,8 +333,10 @@ namespace OpenDashPlugin
             var shape = LightShape.Parse(profile.ShapeId);
             if (shape == null) return profile.ShapeId;
             if (shape.Placement == Brow) return Brow + " " + Digits(shape.Centre);
-            return Digits(shape.Left) + "/" + Digits(shape.Centre) + "/" + Digits(shape.Right)
-                + (shape.Reversed ? " reversed" : string.Empty);
+            // rpmStripProfileName() writes the reversed suffix in lower case and the Fanalab one as the
+            // product's own name, so the fallback cannot simply append the suffix it read.
+            var wiring = shape.Wiring == FanalabSuffix ? " Fanalab" : shape.Wiring == ReversedSuffix ? " reversed" : string.Empty;
+            return Digits(shape.Left) + "/" + Digits(shape.Centre) + "/" + Digits(shape.Right) + wiring;
         }
 
         private static string Prefixed(string label)
