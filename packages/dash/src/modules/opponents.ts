@@ -30,6 +30,14 @@
  * nothing publishes a class to put in it, which `second/values.ts` records. A badge added here
  * would also have to take its turn in the shedding order, since both blocks shed together.
  *
+ * The 12 by 12 direction triangle the canvas heads each row with waits on artwork rather than on
+ * data. An image item carries no colour and no rotation, so up and down in `text.label` are two
+ * files, and the two the repository ships -- `RANK_UP` and `RANK_DOWN` in `design/assets.ts` -- are
+ * rendered in the delta's green and red for a table's rank column. Drawing the triangle as a
+ * rectangle instead is the one thing it must not be, a square being the mark that says nothing
+ * about direction. Whether it is worth two more files is the author's, and worth asking: this row
+ * is headed "AHEAD · P3" and "BEHIND · P5" in words, which the canvas's compact rank is not.
+ *
  * The rating the gap row carries is the iRating, and it is written as a label on the gap's own
  * baseline because that is what the canvas writes there; the 15 px rating the type sheet names is
  * the safety rating that sits beside the badge, and it waits on the same missing source.
