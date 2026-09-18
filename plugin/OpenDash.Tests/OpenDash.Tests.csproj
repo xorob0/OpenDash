@@ -40,6 +40,7 @@
     <Compile Include="../OpenDash/FolderFingerprint.cs" Link="Plugin/FolderFingerprint.cs" />
     <Compile Include="../OpenDash/UpdatePlan.cs" Link="Plugin/UpdatePlan.cs" />
     <Compile Include="../OpenDash/UpdateService.cs" Link="Plugin/UpdateService.cs" />
+    <Compile Include="../OpenDash/PluginUpdate.cs" Link="Plugin/PluginUpdate.cs" />
     <Compile Include="../OpenDash/FlagBoxProfile.cs" Link="Plugin/FlagBoxProfile.cs" />
     <Compile Include="../OpenDash/FlagBoxInstallPlan.cs" Link="Plugin/FlagBoxInstallPlan.cs" />
     <Compile Include="../OpenDash/CarLightTable.cs" Link="Plugin/CarLightTable.cs" />

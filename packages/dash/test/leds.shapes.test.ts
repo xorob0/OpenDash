@@ -12,7 +12,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { leds } from '../src/generator.ts';
-import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES } from '../src/leds/strip.ts';
+import { ALL_SHAPES, BARE_RUN_LENGTHS, CENTRE_LENGTHS, GRID_SHAPES, LEGACY_SHAPES, SIDE_LENGTHS } from '../src/leds/strip.ts';
 import { rpmStripFileName } from '../src/leds/rpmStrip.ts';
 import { FLAG_BOX_FILE } from '../src/build.ts';
 
@@ -20,13 +20,27 @@ import { FLAG_BOX_FILE } from '../src/build.ts';
 const fileOf = (shape: (typeof ALL_SHAPES)[number]): string => `${rpmStripFileName(shape)}${leds.LEDS_PROFILE_EXTENSION}`;
 
 describe('the profile file names', () => {
-  test('are fourteen strips and seven brows, which with the flag box is the twenty-two a release carries', () => {
-    // The plugin's Lights section offers a row per embedded profile, so this count is the number of
-    // rows a driver sees. It is pinned because it is easy to lose one: a shape dropped from the
-    // declarations is a device that silently stops being installable.
-    expect(STRIP_SHAPES.length).toBe(14);
-    expect(BROW_SHAPES.length).toBe(7);
-    expect(ALL_SHAPES.length).toBe(21);
+  test('are the grid, less what a legacy shape already spells, plus the legacy shapes', () => {
+    // The count is the product of the two ranges rather than a number typed here, so widening a range
+    // moves it and dropping a shape from the legacy list moves it the other way. What is pinned is
+    // the arithmetic: every side against every centre, the long bare runs after them, and the shapes
+    // that shipped before the grid and fall outside it.
+    expect(GRID_SHAPES.length).toBe(SIDE_LENGTHS.length * CENTRE_LENGTHS.length + BARE_RUN_LENGTHS.length);
+    const spelled = new Set(LEGACY_SHAPES.map((shape) => shape.id));
+    expect(ALL_SHAPES.length).toBe(GRID_SHAPES.filter((shape) => !spelled.has(shape.id)).length + LEGACY_SHAPES.length);
+    // And the ranges themselves, which are the whole of what a driver picks between.
+    expect(SIDE_LENGTHS).toEqual([0, 1, 2, 3, 4]);
+    expect(CENTRE_LENGTHS[0]).toBe(4);
+    expect(CENTRE_LENGTHS[CENTRE_LENGTHS.length - 1]).toBe(12);
+    expect(BARE_RUN_LENGTHS[BARE_RUN_LENGTHS.length - 1]).toBe(25);
+  });
+
+  test('cover every A/B/A a driver can describe, so no wheel is missing from the list', () => {
+    const ids = new Set(ALL_SHAPES.map((shape) => shape.id));
+    for (const side of SIDE_LENGTHS) {
+      for (const centre of CENTRE_LENGTHS) expect({ id: `${side}-${centre}-${side}`, has: ids.has(`${side}-${centre}-${side}`) }).toMatchObject({ has: true });
+    }
+    for (const centre of BARE_RUN_LENGTHS) expect({ id: `0-${centre}-0`, has: ids.has(`0-${centre}-0`) }).toMatchObject({ has: true });
   });
 
   test('never collide with each other', () => {

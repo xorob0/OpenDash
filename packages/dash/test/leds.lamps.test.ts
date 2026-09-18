@@ -11,7 +11,7 @@ import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
 import { ALL_SHAPES, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
-import { FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
+import { FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
 import { lampsForSide, lampsOf } from '../src/leds/lamps.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -211,13 +211,22 @@ describe('what a driver can tell one condition from another by', () => {
 });
 
 describe('what a lamp is never yielded to', () => {
-  test('nothing but the pit family blanks the outermost LED of a side', () => {
+  test('nothing but the pit family, and a car alongside when asked for, blanks the outermost LED of a side', () => {
+    // The spotter's whole-strip groups are the driver's own switch and are off unless they ask: the
+    // group carries the setting in its trigger, so with it off it never fires and the lamp below is
+    // what shows. It is named here rather than the rule being loosened, so that anything else
+    // reaching the outermost LED still fails.
+    const asked = SPOTTER_EFFECTS.map((e) => `${e.label}, whole strip`);
     for (const shape of lampsWithSides) {
       const ends = [1, stripLength(shape)];
       const blanking = placedOf(profileFor(shape).containers)
         .filter((p) => clears(p.container))
         .filter((p) => placedOf(leds.childrenOf(p.container), p.start - 1).some(({ start, count }) => count !== undefined && ends.some((e) => e >= start && e <= start + count - 1)));
-      expect({ shape: shape.id, blanking: blanking.map((p) => p.description) }).toMatchObject({ blanking: PIT_EFFECTS.map((e) => e.label) });
+      expect({ shape: shape.id, blanking: blanking.map((p) => p.description) }).toMatchObject({ blanking: [...asked, ...PIT_EFFECTS.map((e) => e.label)] });
+      for (const p of blanking.filter((q) => asked.includes(String(q.description)))) {
+        const trigger = p.container.kind === 'conditionalGroup' ? p.container.trigger.expression : '';
+        expect({ shape: shape.id, gated: trigger.includes('LedSpotterWhole') }).toMatchObject({ gated: true });
+      }
     }
   });
 
@@ -247,13 +256,21 @@ describe('what a lamp is never yielded to', () => {
       // The 3/10/3's two further runs of nine are a different strip on the same device, so they sit
       // outside the main run and outside this ranking.
       const main = tree.filter((c) => (c.startPosition ?? 1) <= stripLength(shape));
+      // Still last: the spotter's whole-strip groups sit under the pit family, which is the one thing
+      // nothing paints over.
       expect({ shape: shape.id, last: main.slice(-PIT_EFFECTS.length).map((c) => c.description) }).toMatchObject({ last: PIT_EFFECTS.map((e) => e.label) });
       const whole = placedOf(profileFor(shape).containers).filter(
         (p) => clears(p.container) && placedOf(leds.childrenOf(p.container), p.start - 1).some((c) => c.count === stripLength(shape)),
       );
-      // A brow has no lamps, so its flags keep the whole run as well; every shape with lamps is the
-      // pit family alone.
-      const expected = lampsOf(shape).length > 0 ? PIT_EFFECTS.map((e) => e.label) : [...flagEffects().map((e) => e.label), ...PIT_EFFECTS.map((e) => e.label)];
+      // A bare run has no lamps, so everything a lamp would have carried keeps the whole run: the
+      // flags, then what is happening beside the car over them, then the pit family over everything.
+      // A shape with lamps has the pit family and the spotter's own switch, which is off unless the
+      // driver asks for it.
+      const asked = SPOTTER_EFFECTS.map((e) => `${e.label}, whole strip`);
+      const beside = [...TURN_EFFECTS, ...SPOTTER_EFFECTS].map((e) => e.label);
+      const expected = lampsOf(shape).length > 0
+        ? [...asked, ...PIT_EFFECTS.map((e) => e.label)]
+        : [...flagEffects().map((e) => e.label), ...beside, ...PIT_EFFECTS.map((e) => e.label)];
       expect({ shape: shape.id, whole: whole.map((p) => p.description) }).toMatchObject({ whole: expected });
     }
   });

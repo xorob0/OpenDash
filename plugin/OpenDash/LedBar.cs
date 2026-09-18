@@ -44,6 +44,10 @@ namespace OpenDashPlugin
         /// <summary>Whether a flag animates on this bar or simply holds.</summary>
         public bool FlagAnimation { get; set; } = Contract.DefaultLedFlagAnimation;
 
+        /// <summary>Whether a car alongside lights this whole bar rather than the lamp at that end.
+        /// Per bar, because a brow above a monitor has no ends to speak of and a rim does.</summary>
+        public bool SpotterWhole { get; set; } = Contract.DefaultLedSpotterWhole;
+
         /// <summary>Repairs the bar: a namespace that is spellable and three settings that are legal
         /// values, so a hand-edited file cannot reach a profile as itself.</summary>
         public void Normalise()
@@ -64,6 +68,7 @@ namespace OpenDashPlugin
                 Centre = Centre,
                 RpmStyle = RpmStyle,
                 FlagAnimation = FlagAnimation,
+                SpotterWhole = SpotterWhole,
             };
         }
     }

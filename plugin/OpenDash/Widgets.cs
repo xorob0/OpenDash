@@ -75,7 +75,8 @@ namespace OpenDashPlugin
 
         /// <summary>.cap on the canvas: Barlow 13, text.secondary, line height 1.45, wrapping at the 620 px
         /// a section's own caption is given. A caption inside a settings row is narrower and says so, the
-        /// row capping its whole text column.</summary>
+        /// row capping its whole text column. The cap is what keeps the page readable once it fills a
+        /// window wider than the canvas: prose that runs the width of a desk is a line nobody finishes.</summary>
         public static TextBlock Caption(string text, double maxWidth = 620)
         {
             var block = Text(text, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary);
@@ -154,7 +155,9 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>A settings row: title and caption on the left, the control on the right, 32 px apart.</summary>
+        /// <summary>A settings row: title and caption on the left, the control on the right, 32 px apart.
+        /// The text column caps at the canvas's 460 and the room between the two grows with the page, so
+        /// a wider window moves the control right rather than stretching the prose after it.</summary>
         public static Grid Row(string title, string caption, FrameworkElement control)
         {
             var text = VStack(4, Body(title), Caption(caption));

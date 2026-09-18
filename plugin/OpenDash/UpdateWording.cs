@@ -22,6 +22,19 @@ namespace OpenDashPlugin
         public const string Reopen = "Close the dashboard and start it again to see it. SimHub does not need restarting.";
 
         /// <summary>
+        /// What to say when the plugin itself was replaced as well.
+        /// </summary>
+        /// <remarks>
+        /// The opposite of <see cref="Reopen"/> on the one point that matters, and it replaces it rather
+        /// than following it: a loaded assembly cannot be swapped under a running process, so the new
+        /// plugin is put in place after SimHub exits (PluginUpdate) and a restart is the whole of what
+        /// makes it take effect. Saying "SimHub does not need restarting" here would leave a driver with
+        /// new dashboards reading properties the old plugin does not attach.
+        /// </remarks>
+        public const string Restart =
+            "openDash itself was updated too; it takes effect the next time you start SimHub.";
+
+        /// <summary>
         /// What the update-check setting says about itself, which is the user-facing form of ADR 0012's promise.
         /// </summary>
         /// <remarks>

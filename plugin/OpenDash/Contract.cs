@@ -316,13 +316,28 @@ namespace OpenDashPlugin
 
         public const string LedMirrorFit = "LedMirrorFit";
 
+        /// <summary>Whether a car alongside takes the whole strip rather than the lamp at that end. Off:
+        /// the lamps are what a side is for, and the outermost LED is the one peripheral vision reaches
+        /// while the ladder stays readable. On is for the driver who wants to be unable to miss it, and
+        /// for the strips where a lamp is not enough -- a bare run has no ends to speak of.</summary>
+        public const string LedSpotterWhole = "LedSpotterWhole";
+
+        public const bool DefaultLedSpotterWhole = false;
+
         /// <summary>
-        /// The run lengths a mirrored bar is published for: every centre length the generated strip
-        /// shapes use, the brows included. Mirrors MIRROR_RUN_LENGTHS in contract.ts, and the two are
-        /// checked against each other, because a length missing here is a strip shape with no mirror
-        /// and nothing that would say so.
+        /// The run lengths a mirrored bar is published for: every centre length a strip shape uses.
         /// </summary>
-        public static readonly int[] MirrorRunLengths = { 8, 9, 10, 12, 14, 15, 16, 18, 20, 25 };
+        /// <remarks>
+        /// Mirrors MIRROR_RUN_LENGTHS in contract.ts, which derives it from the shapes themselves, and
+        /// the two are checked against each other -- a length missing here is a strip shape with no
+        /// mirror and nothing that would say so. Four to twenty-five is the grid: sides of nought to
+        /// four around a centre of four to twelve, and the long bare runs after it. Fourteen is the one
+        /// entry outside the grid, for the 4/14/4 that shipped before it.
+        /// </remarks>
+        public static readonly int[] MirrorRunLengths =
+        {
+            4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+        };
 
         /// <summary>How many characters one colour takes in a packed run: #AARRGGBB.</summary>
         public const int MirrorColorWidth = 9;
@@ -1290,6 +1305,7 @@ namespace OpenDashPlugin
             yield return LedMirrorFit;
             yield return LedMirrorReady;
             foreach (var length in MirrorRunLengths) yield return LedMirrorRun(length);
+            yield return LedSpotterWhole;
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a
