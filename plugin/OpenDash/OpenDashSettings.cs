@@ -1082,19 +1082,39 @@ namespace OpenDashPlugin
             if (screen != null) screen.EndQuickGlance();
         }
 
-        public int ScreenZone(string ns, string letter)
+        /// <summary>The page one zone of one pit wall shows, by the key naming its page and slot.</summary>
+        public int ScreenZone(string ns, string key)
         {
-            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
+            var slot = Contract.PitWallZoneSlotByKey(key);
+            if (slot == null) throw new ArgumentOutOfRangeException("key");
             var screen = ScreenByNamespace(ns);
-            if (screen == null || screen.Zones == null || index >= screen.Zones.Length) return Contract.PitWallDefaultZonePages[index];
-            return Contract.NormaliseZonePage(screen.Zones[index], Contract.PitWallDefaultZonePages[index]);
+            // A delegate outlives the screen it was attached for until SimHub restarts, so the reader has
+            // to answer something rather than throw on SimHub's data thread.
+            return screen == null ? slot.Fallback : screen.ZonePage(key);
         }
 
-        public int ScreenWideZone(string ns)
+        /// <summary>
+        /// The landscape page one pit wall shows.
+        /// </summary>
+        /// <remarks>
+        /// The package gates each of its three screens on this, so it is what decides which one is up.
+        /// One name and not a saved one beside a live one, because a pit wall's page is configuration:
+        /// it is set once with a mouse and then left, so there is nothing to move it at speed and
+        /// nothing to put back afterwards.
+        /// </remarks>
+        public int ScreenPitWallPage(string ns)
         {
             var screen = ScreenByNamespace(ns);
-            return screen == null ? Contract.DefaultWideZonePage : Contract.NormaliseWideZonePage(screen.WideZone);
+            // A delegate outlives the screen it was attached for until SimHub restarts, so the reader
+            // has to answer something rather than throw on SimHub's data thread.
+            return screen == null ? Contract.DefaultPitWallPage : Contract.NormalisePitWallPage(screen.PitWallPage);
+        }
+
+        /// <summary>How one companion draws a flag: off, the strip at the foot, or over the module.</summary>
+        public string ScreenCompanionFlagFormat(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionFlagFormat : Contract.NormaliseCompanionFlagFormat(screen.CompanionFlagFormat);
         }
 
         /// <summary>Whether one pit wall lists the player's own class rather than the whole field.</summary>
@@ -1336,7 +1356,7 @@ namespace OpenDashPlugin
         /// ShiftLights should see the switch the driver just moved.</summary>
         public void SetRevBar(string mode)
         {
-            RevBar = Contract.NormaliseChoice(mode, Contract.RevBarModes, Contract.DefaultRevBar);
+            RevBar = Contract.MigrateRevBar(mode);
             ShiftLights = RevBar == Contract.RevBarShift;
         }
 

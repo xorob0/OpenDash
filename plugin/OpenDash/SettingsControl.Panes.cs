@@ -68,7 +68,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildRevBarRow(ScreenInstance screen)
         {
-            var control = BuildSegmented(Contract.RevBarModes, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(screen.Namespace), value =>
+            var control = BuildSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(screen.Namespace), value =>
             {
                 Settings.SetScreenRevBar(screen.Namespace, value);
                 Save();
@@ -669,6 +669,27 @@ namespace OpenDashPlugin
                         BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true)))));
         }
 
+        /// <summary>Which of the three pages this pit wall shows, which is set here and nowhere else.</summary>
+        private FrameworkElement BuildPitWallPageRow(ScreenInstance screen)
+        {
+            var select = new ComboBox
+            {
+                Width = PanelPitWallPlan.SelectWidth,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                ToolTip = "The page this pit wall shows",
+            };
+            Ui.Field(select, PanelPitWallPlan.SelectHeight);
+            foreach (var name in Contract.PitWallPageNames) select.Items.Add(name);
+            select.SelectedIndex = Contract.NormalisePitWallPage(screen.PitWallPage);
+            select.SelectionChanged += (sender, args) =>
+            {
+                if (select.SelectedIndex < 0) return;
+                screen.PitWallPage = Contract.NormalisePitWallPage(select.SelectedIndex);
+                Save();
+            };
+            return Ui.Row("Page", "Which of the three this pit wall shows. It is set here and does not change while you race.", select);
+        }
+
         /// <summary>The one page the glance shows, zone and page together, as the face's own select is.</summary>
         private ComboBox BuildPitWallGlanceSelect(ScreenInstance screen)
         {
@@ -692,27 +713,38 @@ namespace OpenDashPlugin
             return select;
         }
 
-        /// <summary>The four zones, the wide zone and the address, in that order.</summary>
+        /// <summary>
+        /// One group per page, then the address and the filter.
+        /// </summary>
+        /// <remarks>
+        /// Grouped by page because a zone belongs to one. Four rows under a single heading, beside a
+        /// picture of three pages, was a panel that could not say which page it was talking about -- and
+        /// underneath it the race page's zone A and the telemetry page's were the same setting, so
+        /// pointing one somewhere moved the other. Each page's zones now sit under that page's name and
+        /// answer only for it.
+        /// </remarks>
         private UIElement[] BuildPitWallRows(ScreenInstance screen)
         {
             var rows = new List<UIElement>();
-            foreach (var letter in Contract.PitWallZoneLetters)
+            rows.Add(BuildPitWallPageRow(screen));
+            foreach (var pageName in Contract.PitWallPageNames)
             {
-                var captured = letter;
-                var index = Array.IndexOf(Contract.PitWallZoneLetters, captured);
-                var select = BuildZoneSelect(ZonePages.Standard, screen.Zones[index], page =>
+                var slots = new List<UIElement>();
+                foreach (var slot in Contract.PitWallZoneSlots)
                 {
-                    screen.Zones[index] = Contract.NormaliseZonePage(page, Contract.PitWallDefaultZonePages[index]);
-                    Save();
-                });
-                rows.Add(Ui.Row("Zone " + captured, PanelPitWallPlan.ZoneDescription(captured), select));
+                    if (!slot.Landscape || !string.Equals(slot.Page, pageName, StringComparison.Ordinal)) continue;
+                    var captured = slot;
+                    var select = BuildZoneSelect(
+                        captured.Wide ? ZonePages.Wide : ZonePages.Standard,
+                        screen.ZonePage(captured.Key),
+                        page => { screen.SetZonePage(captured.Key, page); Save(); });
+                    slots.Add(Ui.Row(
+                        captured.Wide ? "Wide zone" : "Zone " + captured.Slot,
+                        PanelPitWallPlan.ZoneDescription(captured),
+                        select));
+                }
+                rows.Add(Ui.Section(pageName + " page", slots.ToArray()));
             }
-            var wide = BuildZoneSelect(ZonePages.Wide, screen.WideZone, page =>
-            {
-                screen.WideZone = Contract.NormaliseWideZonePage(page);
-                Save();
-            });
-            rows.Add(Ui.Row("Wide zone", "The full-width zone on the tower page.", wide));
             rows.Add(Ui.Row("Web view address", "The page the Web view zone shows. http or https only; leave empty for none.", BuildWebViewBox(screen)));
             // One answer for the screen and not one per zone, as a face has: the four zones are widgets
             // pointed at one dashboard file per rectangle, so two zones of one column are the same file.
@@ -934,7 +966,24 @@ namespace OpenDashPlugin
                 })),
                 Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                     BuildModuleSelect(Settings.ScreenCompanionQuickGlance(screen.Namespace), "The module a held button shows", value => screen.CompanionQuickGlance = value),
-                    BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true))));
+                    BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true))),
+                BuildCompanionFlagRow(screen));
+        }
+
+        /// <summary>How this companion draws a flag. Full screen by default, which is what a phone on a
+        /// stand beside the wheel is for: a 12 px strip at that distance says nothing.</summary>
+        private FrameworkElement BuildCompanionFlagRow(ScreenInstance screen)
+        {
+            var text = Ui.VStack(4, Ui.Body("Flags"),
+                Ui.Caption("Full screen takes the module for as long as the flag is out, which is what a screen out of your eyeline is good for. "
+                    + "The bar is the thin strip at the foot. Off leaves the module alone."));
+            text.MaxWidth = 420;
+            var segmented = BuildSegmented(
+                Contract.CompanionFlagFormats,
+                new[] { "Off", "Bar", "Full screen" },
+                Settings.ScreenCompanionFlagFormat(screen.Namespace),
+                value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(); });
+            return Ui.Row(text, segmented);
         }
 
         /// <summary>
@@ -1024,7 +1073,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildSlotsRevBarRow()
         {
-            var control = BuildSegmented(Contract.RevBarModes, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value =>
+            var control = BuildSegmented(PanelDataTab.RevBarValues, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value =>
             {
                 Settings.SetRevBar(value);
                 Save();

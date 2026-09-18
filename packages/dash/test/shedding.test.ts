@@ -149,8 +149,11 @@ describe('two pages take a drawing the bands cannot ask for', () => {
   test('so the 1280 x 400 zone draws four car settings cells and a lap history with no header', () => {
     const box = { width: 437, height: 214 };
     const settings = namesIn('carSettings', box);
-    expect(['car', 'tc', 'abs', 'bb'].every((id) => drewId(settings, id))).toBe(true);
-    expect(['mix', 'arbFront', 'arbRear'].some((id) => drewId(settings, id))).toBe(false);
+    // The four the sim publishes for most cars, and not the two anti-roll bars. It was three plus
+    // the car's own model and number, until the page stopped spending a row on the one fact about
+    // the car that does not change while you drive.
+    expect(['tc', 'abs', 'bb', 'mix'].every((id) => drewId(settings, id))).toBe(true);
+    expect(['arbFront', 'arbRear'].some((id) => drewId(settings, id))).toBe(false);
     expect(drewId(namesIn('lapHistory', box), 'head')).toBe(false);
     expect(drewId(namesIn('lapHistory', { width: 437, height: 276 }), 'head')).toBe(true);
   });
@@ -306,13 +309,10 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     // The 220 px body holds the identity row or the class chip and the last lap, not both, so the
     // pair that goes is the one the catalogue's own `tall` drawing drops first.
     '1280x400 469x258 opponents': ['ahead.class', 'behind.class', 'ahead.lastLap', 'behind.lastLap'],
-    // The mixture goes with the two anti-roll bars, which the 122 px band could not hold either.
-    // The cells are an equal-column grid now, so a line is three of them whatever their width:
-    // six cells are two lines and so are four, and the band has room for one. Shedding the pair
-    // the catalogue drops last no longer buys the line back, so the rank goes on to the cell above
-    // them in the table. readability-pass.md §7 owns the redraw of this page at a band this short.
-    '600x686 600x160 carSettings': ['mix', 'arbFront', 'arbRear'],
-    '600x686 600x150 carSettings': ['mix', 'arbFront', 'arbRear'],
+    // The two 600 x 686 zones used to shed the mixture and the anti-roll bars here and no longer do:
+    // the page dropped its car model and number, which were a whole row spent on the one fact about
+    // the car that cannot change while you drive, and the six cells fit in the row that freed.
+    //
     // Zone C of the 600 x 686 face is where a second row stops fitting at all, and zone B joins it
     // now that the frame takes the artboards' 6 by 12 padding rather than the 16 it had, which is
     // six pixels of body height and eight of width. The delta loses its three sector deltas, the
@@ -330,7 +330,19 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     '600x686 600x150 lapTimes': ['delta'],
     '600x686 600x150 sectors': ['yourBest', 'last', 'sessionBest'],
     '600x686 600x150 session': ['lap', 'timeLeft'],
-    '600x686 600x150 stint': ['stops', 'lastStop'],
+    // The gear keeps its two readings at every shape the table names, and drops them in the three
+    // boxes too short to draw the glyph beside them: the module hands the whole box back to the gear
+    // there rather than showing three things nobody can read. Declared as a shed the table did not
+    // make, because that is what it is -- the decision is the module's own and lives in its floor.
+    '600x686 600x150 gear': ['speed', 'rpm'],
+    '600x686 600x160 gear': ['speed', 'rpm'],
+    '800x286 269x194 gear': ['speed', 'rpm'],
+    // The stint's lead rank is now three clocks rather than three counts, so the two narrow zones
+    // that could hold its tail no longer can: the page keeps the lap and the fuel time, which is
+    // what it exists to say, and sheds the stint laps and the stops behind them. Same subject as
+    // the rest of this block -- readability-pass.md §13 -- and a wider zone still draws all eight.
+    '600x686 600x150 stint': ['stintLaps', 'stops'],
+    '800x286 269x194 stint': ['stintLaps', 'stops'],
     // The compound chip is centred over the tyre grid, which is the axle line between the two rows
     // of the car. These two zones are wide and short, so the page takes its four corners as one row
     // of four -- two rows of cells in 112 px leaves a corner one reading -- and a single row has no

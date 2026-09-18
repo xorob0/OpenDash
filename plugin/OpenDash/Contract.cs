@@ -91,11 +91,29 @@ namespace OpenDashPlugin
         /// one. The other half of this comment is REV_BAR_MODES in packages/dash/src/contract.ts,
         /// and the two are kept saying the same thing.</para>
         /// </summary>
+        /// <summary>
+        /// What a face carries at the top. `rpm` is retired and still accepted.
+        /// </summary>
+        /// <remarks>
+        /// Retired rather than removed, because it has shipped and a settings file naming it must keep
+        /// loading (#170). What changed is that it is no longer offered: the bar has one right behaviour
+        /// -- the car's own lights where openDash has a table, SimHub's bands where it has none, which
+        /// is an RPM bar ending in shift lights -- and offering the plain bar beside it asked a driver
+        /// to choose between a right answer and a worse one. <see cref="MigrateRevBar"/> moves a stored
+        /// `rpm` onto `shift`; until it runs, this list is what keeps the value legal.
+        /// </remarks>
         public static readonly string[] RevBarModes = { "shift", "rpm", "off" };
         public const string RevBarShift = "shift";
         public const string RevBarRpm = "rpm";
         public const string RevBarOff = "off";
         public const string DefaultRevBar = RevBarShift;
+
+        /// <summary>A stored rev bar mode, with the retired plain bar moved onto the one behaviour.</summary>
+        public static string MigrateRevBar(string mode)
+        {
+            var normalised = NormaliseChoice(mode, RevBarModes, DefaultRevBar);
+            return string.Equals(normalised, RevBarRpm, StringComparison.Ordinal) ? RevBarShift : normalised;
+        }
 
         public static readonly string[] PositionModes = { "overall", "class" };
         public const string DefaultPositionMode = "overall";
@@ -127,6 +145,80 @@ namespace OpenDashPlugin
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
         public static readonly string[] PitWallZoneLetters = { "A", "B", "C", "D" };
 
+        /// <summary>One zone of one pit wall page: where it is, what it can show, and what it opens on.</summary>
+        public sealed class PitWallZoneSlot
+        {
+            public PitWallZoneSlot(string page, string slot, bool wide, int fallback, bool landscape)
+            {
+                Page = page;
+                Slot = slot;
+                Wide = wide;
+                Fallback = fallback;
+                Landscape = landscape;
+            }
+
+            /// <summary>The page's name, which is also the middle of the setting's name: Race, Tower.</summary>
+            public string Page { get; private set; }
+
+            /// <summary>What the page calls it: a letter, or "Wide" for the one that spans a column.</summary>
+            public string Slot { get; private set; }
+
+            public bool Wide { get; private set; }
+
+            /// <summary>The page it opens on, an index into the catalogue for its kind.</summary>
+            public int Fallback { get; private set; }
+
+            /// <summary>False for the portrait package's zones, which are a different package's.</summary>
+            public bool Landscape { get; private set; }
+
+            /// <summary>`RaceA`, `TowerWide`: the setting's name without the screen's namespace.</summary>
+            public string Key { get { return Page + Slot; } }
+        }
+
+        /// <summary>
+        /// Every zone of every pit wall page, in the order the panel draws them.
+        /// </summary>
+        /// <remarks>
+        /// **A zone belongs to a page**, which is the mirror of PIT_WALL_PAGES in
+        /// packages/dash/src/contract.ts and the fix for a zone that could not be changed on its own.
+        /// The four letters used to be the pit wall's zones full stop, so the race page's A and the
+        /// telemetry page's A were one setting and moving either moved both -- while the panel listed
+        /// four zones under one heading and drew a picture of three pages around them.
+        /// </remarks>
+        public static readonly IReadOnlyList<PitWallZoneSlot> PitWallZoneSlots = new[]
+        {
+            new PitWallZoneSlot("Race", "A", false, 0, true),
+            new PitWallZoneSlot("Race", "B", false, 1, true),
+            new PitWallZoneSlot("Tower", "Wide", true, 5, true),
+            new PitWallZoneSlot("Tower", "A", false, 4, true),
+            new PitWallZoneSlot("Tower", "B", false, 2, true),
+            new PitWallZoneSlot("Telemetry", "A", false, 8, true),
+            new PitWallZoneSlot("Telemetry", "B", false, 0, true),
+            new PitWallZoneSlot("Telemetry", "C", false, 1, true),
+            new PitWallZoneSlot("Portrait", "A", false, 0, false),
+            new PitWallZoneSlot("Portrait", "B", false, 1, false),
+            new PitWallZoneSlot("Portrait", "C", false, 4, false),
+            new PitWallZoneSlot("Portrait", "D", false, 2, false),
+        };
+
+        /// <summary>The landscape pages, in the order the package draws them and the plugin numbers them.</summary>
+        public static readonly string[] PitWallPageNames = { "Race", "Tower", "Telemetry" };
+
+        /// <summary>
+        /// `PitWallPage`: which of the three landscape pages this pit wall shows.
+        /// </summary>
+        /// <remarks>
+        /// Configuration rather than a control, which is why there is one name here and not two. A pit
+        /// wall is a screen somebody sets up once and then leaves; the page it shows belongs with how
+        /// the rig is arranged, the way a screen's size does, and not with anything reached for while a
+        /// session is running. So no binding, no action, and no live copy to keep in step with a saved
+        /// one -- the setting is the state.
+        /// </remarks>
+        public const string PitWallPage = "PitWallPage";
+
+        /// <summary>The race page, which is what a pit wall showed before there was a choice.</summary>
+        public const int DefaultPitWallPage = 0;
+
         /// <summary>Default page of zones A to D: fuel, tyres, relative and opponents, which is what a spotter watches.</summary>
         public static readonly IReadOnlyList<int> PitWallDefaultZonePages = new[] { 0, 1, 4, 2 };
 
@@ -136,11 +228,14 @@ namespace OpenDashPlugin
         /// <summary>The web view page shows nothing until the user sets an address.</summary>
         public const string DefaultWebViewUrl = "";
 
-        /// <summary>The zone and page a held button shows on a pit wall: zone D, the leaderboard.
+        /// <summary>The zone and page a held button shows on a pit wall: the tower page's B, the
+        /// leaderboard.
         ///
-        /// Zone D because it is the one a glance can borrow without hiding what the glance is for: A
-        /// and B carry the fuel and the tyres a stop is planned on, C the relative a spotter calls
-        /// from, and D the two cars either side, which the leaderboard says more about anyway.</summary>
+        /// That one because it is the one a glance can borrow without hiding what the glance is for:
+        /// the race page's pair carry the fuel and the tyres a stop is planned on, the tower page's A
+        /// the relative a spotter calls from, and its B the two cars either side, which the
+        /// leaderboard says more about anyway. Index four of the glance list: race A, race B, tower A,
+        /// tower B.</summary>
         public const int DefaultPitWallQuickGlance = 3 * 100 + 5;
 
         /// <summary>Percent. SimHub's own global brightness for the device applies on top of this.</summary>
@@ -577,8 +672,8 @@ namespace OpenDashPlugin
             }
             if (string.Equals(kind, KindPitWall, StringComparison.Ordinal))
             {
-                foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(ns, letter);
-                yield return PitWallWideProperty(ns);
+                foreach (var slot in PitWallZoneSlots) yield return ZoneProperty(ns, slot);
+                yield return PitWallPageProperty(ns);
                 yield return WebViewUrlProperty(ns);
                 // Last, after the web view: the six before it have shipped and both halves of the
                 // contract assert the group by index, so a new one joins the end of it.
@@ -617,8 +712,8 @@ namespace OpenDashPlugin
             }
             if (string.Equals(prefix, PitWallPrefix, StringComparison.Ordinal))
             {
-                foreach (var letter in PitWallZoneLetters) yield return ZoneProperty(letter);
-                yield return PitWallWide;
+                foreach (var slot in PitWallZoneSlots) yield return ZoneProperty(slot);
+                yield return PitWallPage;
                 yield return WebViewUrl;
                 yield return PitWallClassOnly;
                 yield break;
@@ -1100,6 +1195,36 @@ namespace OpenDashPlugin
         {
             for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
             yield return CompanionPageProperty(ns);
+            // Last, after the page: both halves of the contract assert this group by index, so a new
+            // name joins the end of it.
+            yield return CompanionFlagFormatProperty(ns);
+        }
+
+        /// <summary>Property name of a companion's flag format: CompanionFlagFormat.</summary>
+        public static string CompanionFlagFormatProperty(string ns)
+        {
+            return ns + "FlagFormat";
+        }
+
+        /// <summary>
+        /// How a companion draws a flag: not at all, as the strip at the foot, or over the module.
+        /// </summary>
+        /// <remarks>
+        /// The face's own question with a third answer and a different default, and both differences
+        /// are about where the screen is. A face is in the driver's eyeline and has a gear to protect,
+        /// so its 12 px band is right; a companion is a phone on a stand beside them, where a strip
+        /// that thin says nothing and the list under it is something they can look away from. `off` is
+        /// the answer a face does not need, because leaving its band on costs nothing and leaving a
+        /// companion's full-screen flag on costs the whole module.
+        /// </remarks>
+        public static readonly string[] CompanionFlagFormats = { "off", "band", "full" };
+
+        public const string DefaultCompanionFlagFormat = "full";
+
+        /// <summary>One of <see cref="CompanionFlagFormats"/>, or the default when it is anything else.</summary>
+        public static string NormaliseCompanionFlagFormat(string format)
+        {
+            return NormaliseChoice(format, CompanionFlagFormats, DefaultCompanionFlagFormat);
         }
 
         /// <summary>Every action one companion registers, in registration order.</summary>
@@ -1124,17 +1249,45 @@ namespace OpenDashPlugin
             yield return HoldQuickGlanceActionFor(ns);
         }
 
-        /// <summary>Property name of a pit wall zone: PitWallZoneA .. PitWallZoneD.</summary>
-        public static string ZoneProperty(string ns, string letter)
+        /// <summary>Property name of a pit wall zone: `PitWallRaceA`, or `GarageRaceA` on a second one.</summary>
+        public static string ZoneProperty(string ns, PitWallZoneSlot slot)
         {
-            var index = Array.IndexOf(PitWallZoneLetters, letter);
-            if (index < 0) throw new ArgumentOutOfRangeException(nameof(letter));
-            return ns + "Zone" + letter;
+            if (slot == null) throw new ArgumentNullException("slot");
+            return ns + slot.Key;
         }
 
-        public static string ZoneProperty(string letter)
+        public static string ZoneProperty(PitWallZoneSlot slot)
         {
-            return ZoneProperty(PitWallPrefix, letter);
+            return ZoneProperty(PitWallPrefix, slot);
+        }
+
+        /// <summary>The landscape zones a quick glance can borrow, in the order it numbers them. The
+        /// wide zone is left out: a glance swaps one page for another of the same kind, and the wide
+        /// catalogue is not the standard one.</summary>
+        public static IReadOnlyList<PitWallZoneSlot> GlanceZoneSlots()
+        {
+            var slots = new List<PitWallZoneSlot>();
+            foreach (var slot in PitWallZoneSlots)
+            {
+                if (slot.Landscape && !slot.Wide) slots.Add(slot);
+            }
+            return slots;
+        }
+
+        /// <summary>The slot one key names, or null when nothing does.</summary>
+        public static PitWallZoneSlot PitWallZoneSlotByKey(string key)
+        {
+            foreach (var slot in PitWallZoneSlots)
+            {
+                if (string.Equals(slot.Key, key, StringComparison.Ordinal)) return slot;
+            }
+            return null;
+        }
+
+        /// <summary>`PitWallPage`, or `GaragePage` on a second pit wall.</summary>
+        public static string PitWallPageProperty(string ns)
+        {
+            return string.Equals(ns, PitWallPrefix, StringComparison.Ordinal) ? PitWallPage : ns + "Page";
         }
 
         /// <summary>Property name of a pit wall's wide zone: PitWallWide, or GarageWide on a second one.</summary>
@@ -1318,16 +1471,22 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The rev bar mode a settings file means.
-        ///
-        /// `null` is the shape an rc.2 file has -- it was written before the mode existed -- and it
-        /// resolves through the deprecated alias, so that a user who had turned the shift lights off
-        /// finds the plain RPM bar rather than the shift lights back on. Anything unrecognised
-        /// resolves the same way. #170 is the rule this keeps.
         /// </summary>
+        /// <remarks>
+        /// `null` is the shape an rc.2 file has -- it was written before the mode existed -- and it
+        /// resolves through the deprecated alias. Anything unrecognised resolves the same way. #170 is
+        /// the rule this keeps.
+        ///
+        /// **Both halves of the alias now mean a bar.** `ShiftLights` false used to mean the plain RPM
+        /// bar, and that bar is retired: the choice it belonged to asked a driver to pick between the
+        /// car's own lights and something worse. So a file that had the shift lights switched off still
+        /// gets a bar, drawn the one way there is. The setting that still turns it off is `off`, which
+        /// no alias ever meant and which nobody's file carries by accident.
+        /// </remarks>
         public static string NormaliseRevBar(string value, bool shiftLights)
         {
             var alias = shiftLights ? RevBarShift : RevBarRpm;
-            return string.IsNullOrWhiteSpace(value) ? alias : NormaliseChoice(value, RevBarModes, alias);
+            return MigrateRevBar(string.IsNullOrWhiteSpace(value) ? alias : NormaliseChoice(value, RevBarModes, alias));
         }
 
         /// <summary>
@@ -1408,18 +1567,18 @@ namespace OpenDashPlugin
         /// <summary>A pit wall zone and a standard page packed the way a face's glance is packed.</summary>
         public static int PitWallQuickGlanceValue(int zoneIndex, int page)
         {
-            if (zoneIndex < 0 || zoneIndex >= PitWallZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
+            if (zoneIndex < 0 || zoneIndex >= GlanceZoneSlots().Count) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
             return zoneIndex * 100 + page;
         }
 
         /// <summary>Returns the pit wall glance when both halves are in range, else the default. The
-        /// page is a standard one because the four data zones are standard; the wide zone spans a
-        /// column of the tower page and is not among them.</summary>
+        /// page is a standard one because the zones a glance can borrow are the standard ones; the wide
+        /// zone spans a column of the tower page and is not among them.</summary>
         public static int NormalisePitWallQuickGlance(int value)
         {
             if (value < 0) return DefaultPitWallQuickGlance;
             var zoneIndex = QuickGlanceZone(value);
-            if (zoneIndex >= PitWallZoneLetters.Length) return DefaultPitWallQuickGlance;
+            if (zoneIndex >= GlanceZoneSlots().Count) return DefaultPitWallQuickGlance;
             return ZonePages.IsValidStandard(QuickGlancePage(value)) ? value : DefaultPitWallQuickGlance;
         }
 
@@ -1439,6 +1598,12 @@ namespace OpenDashPlugin
         public static int NormaliseWideZonePage(int page)
         {
             return ZonePages.IsValidWide(page) ? page : DefaultWideZonePage;
+        }
+
+        /// <summary>Which of the three landscape pages a pit wall shows; anything else is the race page.</summary>
+        public static int NormalisePitWallPage(int page)
+        {
+            return page >= 0 && page < PitWallPageNames.Length ? page : DefaultPitWallPage;
         }
 
         /// <summary>

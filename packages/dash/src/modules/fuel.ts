@@ -23,6 +23,7 @@ import {
   fuelLapsLeft,
   fuelLastLap,
   fuelPercent,
+  fuelIsSettled,
   fuelPerLap,
   fuelThisLap,
   fuelTimeLeft,
@@ -74,7 +75,7 @@ export const fuel = defineModule('fuel', (ctx) => {
           fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(fuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
           fld(ctx, 'lapsLeft', 'Est. laps', {
             sample: '11.2',
-            bind: iff(gt(fuelPerLap(), num(0)), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),
+            bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),
             chars: CHARS.consumption,
             fs: d.big,
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
@@ -86,12 +87,12 @@ export const fuel = defineModule('fuel', (ctx) => {
         [
           fld(ctx, 'toAdd', 'Refuel', {
             sample: '12.6',
-            bind: iff(gt(fuelPerLap(), num(0)), fmt(fuelToAdd(), '0.0'), str(NO_VALUE)),
+            bind: iff(fuelIsSettled(), fmt(fuelToAdd(), '0.0'), str(NO_VALUE)),
             chars: CHARS.fuel,
             fs: d.mid,
             color: ds.color.caution.primary,
           }),
-          fld(ctx, 'average', 'Per lap', { ...consumption(fuelPerLap(), gt(fuelPerLap(), num(0))), fs: d.mid }),
+          fld(ctx, 'average', 'Per lap', { ...consumption(fuelPerLap(), fuelIsSettled()), fs: d.mid }),
           fld(ctx, 'lastLap', 'Last lap', { ...consumption(fuelLastLap(), gt(fuelLastLap(), num(0))), fs: d.mid }),
           fld(ctx, 'thisLap', 'This lap', { ...consumption(fuelThisLap(), gt(fuelThisLap(), num(0))), fs: d.mid }),
         ],

@@ -433,15 +433,16 @@ namespace OpenDashPlugin
                     // state and not a saved setting: Init puts it back on the start module, exactly as
                     // it puts every zone back on the page it opens on.
                     this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace), () => Settings.ScreenCompanionPage(s.Namespace));
+                    this.AttachDelegate(Contract.CompanionFlagFormatProperty(s.Namespace), () => Settings.ScreenCompanionFlagFormat(s.Namespace));
                 }
                 else if (s.IsPitWall)
                 {
-                    foreach (var letter in Contract.PitWallZoneLetters)
+                    foreach (var slot in Contract.PitWallZoneSlots)
                     {
-                        var captured = letter;
-                        this.AttachDelegate(Contract.ZoneProperty(s.Namespace, captured), () => Settings.ScreenZone(s.Namespace, captured));
+                        var captured = slot;
+                        this.AttachDelegate(Contract.ZoneProperty(s.Namespace, captured), () => Settings.ScreenZone(s.Namespace, captured.Key));
                     }
-                    this.AttachDelegate(Contract.PitWallWideProperty(s.Namespace), () => Settings.ScreenWideZone(s.Namespace));
+                    this.AttachDelegate(Contract.PitWallPageProperty(s.Namespace), () => Settings.ScreenPitWallPage(s.Namespace));
                     this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
                     this.AttachDelegate(Contract.PitWallClassOnlyProperty(s.Namespace), () => Settings.ScreenPitWallClassOnly(s.Namespace));
                 }

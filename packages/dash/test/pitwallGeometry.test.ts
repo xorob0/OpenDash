@@ -108,8 +108,8 @@ describe('the zone rectangles', () => {
   test('the tower page draws a wide zone over two of 519', () => {
     expect(zonesOf(TOWER)).toEqual([
       { name: 'tower.wide', rect: rect(881, 465, 1039, 255), file: 'zones-wide-1039x255.djson' },
-      { name: 'tower.zoneC', rect: rect(881, 721, 519, 359), file: 'zones-519x359.djson' },
-      { name: 'tower.zoneD', rect: rect(1401, 721, 519, 359), file: 'zones-519x359.djson' },
+      { name: 'tower.zoneA', rect: rect(881, 721, 519, 359), file: 'zones-519x359.djson' },
+      { name: 'tower.zoneB', rect: rect(1401, 721, 519, 359), file: 'zones-519x359.djson' },
     ]);
   });
 

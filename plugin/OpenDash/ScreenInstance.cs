@@ -11,6 +11,7 @@
 // been bound to it with no diagnostic.
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace OpenDashPlugin
 {
@@ -75,11 +76,27 @@ namespace OpenDashPlugin
         /// </remarks>
         public string RevBar { get; set; }
 
-        /// <summary>Page each pit wall data zone shows. Null on a screen that is not a pit wall.</summary>
+        /// <summary>
+        /// Page each pit wall data zone shows, keyed by the page and slot it belongs to: `RaceA`,
+        /// `TowerWide`. Null on a screen that is not a pit wall.
+        /// </summary>
+        /// <remarks>
+        /// A dictionary and not the old four-element array, because a zone belongs to a page now. The
+        /// array said "the pit wall's zone A", which is why the race page's and the telemetry page's
+        /// were the same one and moving either moved both.
+        /// </remarks>
+        public Dictionary<string, int> PitWallZones { get; set; }
+
+        /// <summary>The four zones as they were written before a zone belonged to a page, kept only so
+        /// that <see cref="Normalise"/> can carry an old settings file forward. Never written.</summary>
         public int[] Zones { get; set; }
 
-        /// <summary>Page the full-width zone of the tower page shows.</summary>
+        /// <summary>The wide zone as it was written before a zone belonged to a page. Migration only.</summary>
         public int WideZone { get; set; }
+
+        /// <summary>Which of the three landscape pages this pit wall shows. Saved, because it is how the
+        /// rig is arranged rather than something that moves during a session.</summary>
+        public int PitWallPage { get; set; } = Contract.DefaultPitWallPage;
 
         /// <summary>The address the Web view zone shows; empty for none.</summary>
         public string WebViewUrl { get; set; }
@@ -90,6 +107,77 @@ namespace OpenDashPlugin
         /// <summary>Zone and page a held button shows on this pit wall, released back to where it was,
         /// packed as zone index times a hundred plus the page the way a face's glance is.</summary>
         public int PitWallQuickGlance { get; set; } = Contract.DefaultPitWallQuickGlance;
+
+        /// <summary>
+        /// The zones as they stand, carrying an old settings file forward where one is all there is.
+        /// </summary>
+        /// <remarks>
+        /// **What the four old letters become.** They were the pit wall's zones rather than a page's, and
+        /// the pages drew them as: race A and B; tower wide, C and D; telemetry A, B and C. So an
+        /// upgraded pit wall keeps showing exactly what it showed -- the race page's pair from A and B,
+        /// the tower page's from C and D, the telemetry page's from A, B and C, and the wide zone from
+        /// WideZone -- and the settings that used to be shared are simply written down twice, once per
+        /// page, which is the first moment they can be told apart.
+        ///
+        /// The portrait package drew A to D as well and gets them the same way. It is a separate package
+        /// and could have been left on defaults, but somebody with both installed chose those four for a
+        /// reason and the reason applies to both screens.
+        /// </remarks>
+        private Dictionary<string, int> MigratedZones()
+        {
+            var zones = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var slot in Contract.PitWallZoneSlots)
+            {
+                int page;
+                if (PitWallZones != null && PitWallZones.TryGetValue(slot.Key, out page))
+                {
+                    zones[slot.Key] = Normalised(slot, page);
+                    continue;
+                }
+                zones[slot.Key] = Normalised(slot, Legacy(slot, slot.Fallback));
+            }
+            return zones;
+        }
+
+        /// <summary>What one slot was showing under the old four-zone model, or the fallback.</summary>
+        private int Legacy(Contract.PitWallZoneSlot slot, int fallback)
+        {
+            if (slot.Wide) return Zones == null ? fallback : WideZone;
+            if (Zones == null) return fallback;
+            // Which of the old letters drew this rectangle. The tower page's pair were C and D; every
+            // other page's were its own letters.
+            var letter = string.Equals(slot.Page, "Tower", StringComparison.Ordinal)
+                ? (string.Equals(slot.Slot, "A", StringComparison.Ordinal) ? "C" : "D")
+                : slot.Slot;
+            var index = Array.IndexOf(Contract.PitWallZoneLetters, letter);
+            return index >= 0 && index < Zones.Length ? Zones[index] : fallback;
+        }
+
+        private static int Normalised(Contract.PitWallZoneSlot slot, int page)
+        {
+            return slot.Wide ? Contract.NormaliseWideZonePage(page) : Contract.NormaliseZonePage(page, slot.Fallback);
+        }
+
+        /// <summary>The page one zone shows, or its fallback when nothing has been chosen.</summary>
+        public int ZonePage(string key)
+        {
+            int page;
+            if (PitWallZones != null && PitWallZones.TryGetValue(key, out page)) return page;
+            var slot = Contract.PitWallZoneSlotByKey(key);
+            return slot == null ? 0 : slot.Fallback;
+        }
+
+        /// <summary>Points one zone at a page, normalised to what its kind can show.</summary>
+        public void SetZonePage(string key, int page)
+        {
+            var slot = Contract.PitWallZoneSlotByKey(key);
+            if (slot == null) return;
+            if (PitWallZones == null) PitWallZones = new Dictionary<string, int>(StringComparer.Ordinal);
+            PitWallZones[key] = Normalised(slot, page);
+        }
+
+        /// <summary>How this companion draws a flag: off, the strip at the foot, or over the module.</summary>
+        public string CompanionFlagFormat { get; set; }
 
         /// <summary>Which modules are in the rotation. Null on a screen that is not a companion.</summary>
         public bool[] Modules { get; set; }
@@ -109,7 +197,7 @@ namespace OpenDashPlugin
 
         /// <summary>Which zone a pit wall glance borrowed, so that the release gives back the one it
         /// took. A companion has one page and needs no such thing.</summary>
-        private int glanceZone = -1;
+        private string glanceZone;
 
         /// <summary>Whether a glance is being held here; a second press while one is does nothing.</summary>
         public bool GlanceHeld { get { return glanceRestore >= 0; } }
@@ -204,7 +292,7 @@ namespace OpenDashPlugin
                 LapReview = Contract.NormaliseChoice(LapReview, Contract.LapReviewModes, Contract.DefaultLapReview);
                 // Null is kept rather than defaulted: it is what "this face has not been answered
                 // individually" means, and the rig's own answer is what it resolves to.
-                if (RevBar != null) RevBar = Contract.NormaliseChoice(RevBar, Contract.RevBarModes, Contract.DefaultRevBar);
+                if (RevBar != null) RevBar = Contract.MigrateRevBar(RevBar);
             }
             else
             {
@@ -216,30 +304,28 @@ namespace OpenDashPlugin
 
             if (IsPitWall)
             {
-                // A null Zones array is a pit wall nothing has configured yet -- one just added, or one
-                // a settings file names without a state -- so the whole group takes its defaults. Zero
-                // is a legal wide page, so WideZone cannot tell "unset" from "the first page" on its
-                // own, and a screen added from the panel used to open on the wrong one because of it.
-                var fresh = Zones == null;
-                var zones = Contract.PitWallDefaultZones();
-                if (!fresh)
-                {
-                    for (var i = 0; i < zones.Length && i < Zones.Length; i++)
-                    {
-                        zones[i] = Contract.NormaliseZonePage(Zones[i], Contract.PitWallDefaultZonePages[i]);
-                    }
-                }
-                Zones = zones;
-                WideZone = fresh ? Contract.DefaultWideZonePage : Contract.NormaliseWideZonePage(WideZone);
+                // A pit wall with neither shape of zone state is one nothing has configured yet -- just
+                // added, or named by a settings file without a state -- so the whole group takes its
+                // defaults. Zero is a legal page, so no single value can tell "unset" from "the first
+                // page" on its own, and a screen added from the panel used to open on the wrong one.
+                var fresh = PitWallZones == null && Zones == null;
+                PitWallZones = MigratedZones();
                 WebViewUrl = fresh ? Contract.DefaultWebViewUrl : Contract.NormaliseUrl(WebViewUrl);
                 PitWallQuickGlance = fresh ? Contract.DefaultPitWallQuickGlance : Contract.NormalisePitWallQuickGlance(PitWallQuickGlance);
+                PitWallPage = fresh ? Contract.DefaultPitWallPage : Contract.NormalisePitWallPage(PitWallPage);
+                // Consumed. Leaving them would make the next Normalise migrate over whatever the user
+                // has since chosen, which is a settings file that quietly reverts.
+                Zones = null;
+                WideZone = 0;
             }
             else
             {
+                PitWallZones = null;
                 Zones = null;
                 WideZone = 0;
                 WebViewUrl = null;
                 PitWallQuickGlance = 0;
+                PitWallPage = Contract.DefaultPitWallPage;
                 PitWallClassOnly = false;
             }
 
@@ -264,6 +350,7 @@ namespace OpenDashPlugin
                     : Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
                 CompanionPage = fresh ? CompanionStart : Contract.NormalisePage(CompanionPage, OpenDashPlugin.Modules.Count, CompanionStart);
                 CompanionPage = Contract.FirstEnabledFrom(CompanionPage, ModuleMask(), OpenDashPlugin.Modules.Count);
+                CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(CompanionFlagFormat);
             }
             else
             {
@@ -271,6 +358,7 @@ namespace OpenDashPlugin
                 CompanionPage = 0;
                 CompanionStart = 0;
                 CompanionQuickGlance = 0;
+                CompanionFlagFormat = null;
             }
         }
 
@@ -329,13 +417,17 @@ namespace OpenDashPlugin
                 CompanionPage = Contract.NormalisePage(CompanionQuickGlance, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionQuickGlance);
                 return;
             }
-            if (!IsPitWall || Zones == null) return;
+            if (!IsPitWall || PitWallZones == null) return;
             var glance = Contract.NormalisePitWallQuickGlance(PitWallQuickGlance);
-            var zone = Contract.QuickGlanceZone(glance);
-            if (zone >= Zones.Length) return;
-            glanceZone = zone;
-            glanceRestore = Zones[zone];
-            Zones[zone] = Contract.QuickGlancePage(glance);
+            // The glance numbers the landscape zones that draw the standard catalogue, which is the list
+            // the panel's own select is built from; the wide zone is not among them, because a glance
+            // swaps one page for another of its own kind.
+            var zones = Contract.GlanceZoneSlots();
+            var index = Contract.QuickGlanceZone(glance);
+            if (index < 0 || index >= zones.Count) return;
+            glanceZone = zones[index].Key;
+            glanceRestore = ZonePage(glanceZone);
+            SetZonePage(glanceZone, Contract.QuickGlancePage(glance));
         }
 
         /// <summary>Puts the screen back where it was. A release with no press does nothing.</summary>
@@ -343,8 +435,8 @@ namespace OpenDashPlugin
         {
             if (!GlanceHeld) return;
             if (IsCompanion) CompanionPage = glanceRestore;
-            else if (Zones != null && glanceZone >= 0 && glanceZone < Zones.Length) Zones[glanceZone] = glanceRestore;
-            glanceZone = -1;
+            else if (glanceZone != null) SetZonePage(glanceZone, glanceRestore);
+            glanceZone = null;
             glanceRestore = -1;
         }
 
@@ -364,8 +456,11 @@ namespace OpenDashPlugin
                 FlagFormat = FlagFormat,
                 LapReview = LapReview,
                 RevBar = RevBar,
+                PitWallZones = PitWallZones == null ? null : new Dictionary<string, int>(PitWallZones, StringComparer.Ordinal),
                 Zones = Zones == null ? null : (int[])Zones.Clone(),
                 WideZone = WideZone,
+                PitWallPage = PitWallPage,
+                CompanionFlagFormat = CompanionFlagFormat,
                 WebViewUrl = WebViewUrl,
                 PitWallQuickGlance = PitWallQuickGlance,
                 PitWallClassOnly = PitWallClassOnly,

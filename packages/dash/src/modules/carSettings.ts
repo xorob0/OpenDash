@@ -2,17 +2,25 @@
  * Module 9, Car settings: the driver-adjustable values. A field whose property the sim does not
  * publish is hidden rather than shown as `--`: the grid should say what this car has, not list
  * what this sim lacks.
+ *
+ * **The car's model and number are not among them.** They used to lead the page, as a label reading
+ * "CAR · PORSCHE 992 CUP" over the number in digit cells, and they are the one thing on it that
+ * cannot change while you drive and that you already know: you chose the car. The row they took is
+ * a row the settings grid now has, which is the page's whole point. The model and the number keep
+ * the places where they identify somebody else -- a leaderboard row, the relative, the opponents
+ * page -- which is where a number is worth a cell.
  */
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
-import { CHARS, absLevel, antiRollFront, antiRollRear, brakeBias, carModel, carNumber, fuelMixture, player, tcLevel } from '../second/values.ts';
+import { CHARS, absLevel, antiRollFront, antiRollRear, brakeBias, fuelMixture, tcLevel } from '../second/values.ts';
 import { defineModule, drawnAt, fieldsRow, fld } from './module.ts';
+import type { Expr } from '../bind.ts';
 import type { FieldSpec } from '../second/field.ts';
 import type { ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
 
-const { fmt, isNull, not, concat, str, ucase, raw, game } = ncalc;
+const { fmt, isNull, not, or, gt, num, isnull, raw, game } = ncalc;
 
 /**
  * A setting field that disappears when the sim does not publish the property behind it, and whose
@@ -25,6 +33,33 @@ const { fmt, isNull, not, concat, str, ucase, raw, game } = ncalc;
  */
 const settingField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, present = expr): FieldSpec =>
   fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: not(isNull(present)) });
+
+/**
+ * The same field, but told directly when it is there rather than handed a property to test.
+ *
+ * Apart from {@link settingField} because the two take different things: that one takes a property
+ * and asks whether the sim published it, this one takes the answer. Passing a condition to the first
+ * produces `!(isnull(<a boolean>))`, which is true whatever the boolean was -- a field that can no
+ * longer hide, silently, which is worse than the gap it was meant to close.
+ */
+const presentField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, visible: Expr): FieldSpec =>
+  fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: visible });
+
+/**
+ * Present when iRacing publishes the driver-adjustable control, or when SimHub has a level for it
+ * anyway.
+ *
+ * Two questions, because `dcTractionControl` and `dcABS` answer "can the driver turn this knob",
+ * which is narrower than "does this car have the system". A car with fixed traction control
+ * publishes no knob, and the grid then drew no TC cell at all -- which reads as a car without
+ * traction control rather than one whose TC is not adjustable. Reported from a rig as the settings
+ * page maybe missing TC and ABS.
+ *
+ * SimHub's normalised `TCLevel` and `ABSLevel` are the second answer: zero for a car with neither,
+ * so a level above zero is a system that exists whether or not its knob does. Either signal shows
+ * the cell; neither still hides it, which is the rule this module is built on.
+ */
+const assistPresent = (knob: Expr, level: Expr): Expr => or(not(isNull(knob)), gt(isnull(level, num(0)), num(0)));
 
 /** The canvas sets a readout group's pairs 20 px apart, which is closer than a row of fields. */
 const SETTING_GAP = 20;
@@ -55,12 +90,12 @@ const COLUMNS: Record<Archetype, number> = { wide: 3, grid: 3, tallNarrow: 2, ta
  * DIFF cell to the rear anti-roll bar, which is exactly that mistake.
  */
 export const settingCells = (ctx: ModuleContext, fs: number): FieldSpec[] => [
-  settingField(ctx, 'tc', 'TC', tcLevel(), '0', fs, raw('dcTractionControl')),
+  presentField(ctx, 'tc', 'TC', tcLevel(), '0', fs, assistPresent(raw('dcTractionControl'), tcLevel())),
   settingField(ctx, 'bb', 'BB', brakeBias(), '0.0', fs, game('BrakeBias')),
   // `Map` is what the catalogue and the bar's own strip call this cell; iRacing publishes the
   // engine map as the mixture.
   settingField(ctx, 'mix', 'Map', fuelMixture(), '0', fs),
-  settingField(ctx, 'abs', 'ABS', absLevel(), '0', fs, raw('dcABS')),
+  presentField(ctx, 'abs', 'ABS', absLevel(), '0', fs, assistPresent(raw('dcABS'), absLevel())),
 ];
 
 export const carSettings = defineModule('carSettings', (ctx) => {
@@ -68,21 +103,6 @@ export const carSettings = defineModule('carSettings', (ctx) => {
   return stack(
     ctx.frame,
     [
-      fieldsRow(
-        [
-          // The model is a proportional label and the number a monospaced value. As one string it
-          // was `GT3 · #12` in cells cut for digits, where the hash clipped and an M or a W in a
-          // car's name would have done the same.
-          fld(
-            ctx,
-            'car',
-            'Car · GT3',
-            { sample: '12', bind: carNumber(player()), chars: CHARS.carNumber, fs: d.mid },
-            { labelBind: concat(str('CAR · '), ucase(carModel())), labelWidest: 'CAR · WWWWWWWWWW' },
-          ),
-        ],
-        ctx,
-      ),
       // One rank rather than two, in the order the catalogue draws them, so that the grid is one
       // block of equal cells: two ranks broke at whatever the first one had room for. The order is
       // the drawing's and not the shedding table's, which is where importance is written.

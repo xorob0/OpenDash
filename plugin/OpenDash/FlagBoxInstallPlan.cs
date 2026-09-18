@@ -50,6 +50,17 @@ namespace OpenDashPlugin
         /// <summary>Version of the installed profile, null when it carries none or there is none.</summary>
         public string InstalledVersion { get; set; }
 
+        /// <summary>
+        /// Something true about this install that is not its state, or null when there is nothing to add.
+        /// </summary>
+        /// <remarks>
+        /// Today there is exactly one: the profile went in correctly and the device is listing its
+        /// maker's built-in profiles instead, so it will not be in the dropdown until the user turns that
+        /// off. Not a failure -- nothing went wrong and nothing needs repeating -- but a driver told only
+        /// "installed" would go looking for a profile they cannot see.
+        /// </remarks>
+        public string Note { get; set; }
+
         /// <summary>True when clicking the button would change SimHub's settings.</summary>
         public bool WouldChange
         {
@@ -59,6 +70,27 @@ namespace OpenDashPlugin
 
     public static class FlagBoxInstallPlan
     {
+        /// <summary>
+        /// Whether SimHub is showing the device's built-in profiles instead of the saved ones.
+        /// </summary>
+        /// <remarks>
+        /// A state, not a failure. The install is correct either way -- the profile goes where SimHub
+        /// saves it -- but while this is on, the device's own dropdown lists `BuiltInProfiles` and ours
+        /// is not among them, so a driver is told they have installed something they cannot find. The
+        /// switch is the user's and openDash does not touch it (`UseBuiltInProfiles` has a private
+        /// setter in any case); what it can do is say which switch it is.
+        /// </remarks>
+        public static bool BuiltInModeOf(bool hasBuiltIn, bool useBuiltIn)
+        {
+            return hasBuiltIn && useBuiltIn;
+        }
+
+        /// <summary>The sentence a row shows when the profile is installed but the device is listing the
+        /// maker's built-in profiles instead.</summary>
+        public const string BuiltInModeNote =
+            "SimHub is showing your device's built-in profiles, so openDash's will not be in its list. "
+            + "Turn built-in profiles off on the device to see it.";
+
         /// <summary>Stamped into the profile's Author by the build; how we tell ours from the user's.</summary>
         public const string Author = "openDash";
 
