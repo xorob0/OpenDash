@@ -12,6 +12,107 @@ including any that the plugin does not install.
 From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
 strips, the brows and the flag box, together with a `manifest.json` listing everything published.
 
+## 0.3.0-rc.3 (2026-09-18)
+
+The candidate that was tested on a real rig rather than on the VM, which is why most of what follows
+is a correction. Three of them are the same mistake in different places: a reading that was right
+about the property it read and wrong about the question it was answering.
+
+**A light profile you add now appears in SimHub.** SimHub's `AddProfile` writes to
+`AvailableProfiles`, which is not a collection but a computed property: it is the saved list
+normally, and the *device maker's built-in list* whenever the device ships built-in profiles and you
+have them switched on. A Fanatec wheel ships them. So on such a rig the profile was appended to the
+maker's list, never written to disk, and gone at the next start -- while openDash's own check, which
+reads the saved list, could not find it either and told you the install had failed. If you have a
+Fanatec wheel this is the release to have.
+
+**The Fanatec wiring order was right and its name was wrong.** It shipped as "3/9/3 Fanalab", which
+is what it was read off, and it is nothing to do with Fanalab: it is the order SimHub's own Fanatec
+device presents, nine RevLEDs and then six FlagLEDs. Anyone driving a Fanatec wheel through SimHub
+read that caption, decided it was not for them, installed the plain 3/9/3 and got their revs across
+the middle of the wheel with half the flag LEDs lit. It is `3/9/3 Fanatec` now, and the order is
+confirmed against a working profile from a rig with the wheel rather than inferred.
+
+**The Update button updates openDash itself.** It replaced the dashboards and left the plugin alone,
+so pressing it gave you packages from the new release and a plugin from the old one -- and because a
+package's bindings are literals and the plugin is what attaches the properties behind them, the half
+that moved read names the half that did not had never heard of. That fails silently, as a field
+drawing its fallback for ever with nothing in any log.
+
+**The strip shapes are a grid.** Sides of nought to four around a centre of four to twelve, every
+combination, plus bare runs to twenty-five. Sixty-two profiles from two ranges, instead of a table of
+product names that asked you to find your wheel in somebody else's list.
+
+### Added
+
+- **Every strip shape, generated.** `A / B / A` for every side of 0-4 and every centre of 4-12, and
+  the bare runs of 13-25 that cover the brows. What you know about your strip is how many LEDs it has
+  and how they are grouped, and those two numbers are now the whole of what you are asked. The
+  device-named shapes that fall outside the grid are kept, so nothing installed disappears.
+- **A car alongside can light the whole bar**, per bar rather than per rig: a brow above a monitor
+  has no ends to speak of and a rim does.
+- **openDash updates itself.** The Update button now fetches the plugin as well as the dashboards.
+  A loaded assembly cannot overwrite itself, so the new one is staged beside it and a detached
+  process puts it in place once SimHub has closed, keeping the one it replaced. It is armed the
+  moment the file is staged, so it survives a crash or a kill and not only a tidy shutdown.
+- **A pit wall zone belongs to a page**, and each page has its own. Twelve settings where there were
+  five, grouped in the panel under the page they belong to, and one setting chooses which of the
+  three pages the wall shows.
+- **A companion chooses how it shows a flag**: off, the bar at the foot, or over the module, which is
+  the new default. A phone on a stand beside the wheel is not in your eyeline, so a twelve-pixel
+  strip on it says nothing.
+- **The gear module carries the speed and the revs.** On a face's zones, the companion and the pit
+  wall alike. The gear is still sized first and still has the box to itself where there is no room
+  for anything beside it.
+- **The stint says where you are in the race**: the lap out of the estimated total as `12 / 43`, how
+  long the fuel lasts, and how long you have been out.
+
+### Changed
+
+- **The rev bar is on or off.** "Shift lights" and "RPM bar" were offered as if they were tastes,
+  and they are not: where openDash has a table for the car it draws that car's own lights, and where
+  it has none it draws an RPM bar that ends in shift lights, which is what almost every car does.
+  A stored "RPM bar" loads as the one behaviour; "off" still gives the strip's room back to the
+  zones, which is what a wheel with LEDs of its own wants.
+- **The settings panel fills the window it is given**, between 640 and 1200 pixels wide, rather than
+  drawing one fixed column.
+- **The car settings page dropped the car's model and number**, and the stint page dropped the
+  driver's name and number. They are the one thing on those pages that cannot change while you drive
+  and that you already know. The row they took is a row the settings grid now has: the two narrowest
+  zones draw all six setting cells where they used to shed three.
+- **A pit wall's page is set in the plugin and stays there.** The three pages are configuration
+  rather than something to page through mid-session.
+
+### Fixed
+
+- **A light profile you add is saved and appears on your device.** The install wrote to the wrong
+  list on any device with built-in profiles switched on. Where that switch is on, the panel now says
+  so rather than leaving you hunting for a profile SimHub will not list.
+- **The Fanatec 3/9/3 is named for what it is.** The profile for a Fanatec wheel driven through
+  SimHub was captioned for Fanalab, so the one arrangement that works was the one a Fanatec owner
+  skipped.
+- **Changing one pit wall zone no longer changes another.** The race page's zones and the telemetry
+  page's were the same settings, so pointing one somewhere moved the other with it, and the panel
+  gave no sign.
+- **Fuel figures wait for a completed lap.** Before the first crossing SimHub extrapolates the
+  partial lap, so the per-lap average, the estimated laps, the refuel and the fuel time all moved
+  every frame. They read nothing until there is a lap to average.
+- **TC and ABS appear for a car whose systems are not adjustable.** The page tested the
+  driver-adjustable control, which is a narrower question than whether the car has the system, so a
+  car with fixed traction control showed no TC cell at all.
+- **The plugin's own status no longer reads "not installed" on a healthy rig.** It was the worst of
+  every package openDash embeds, and since a screen is something you add, the sizes nobody added are
+  never written. It reads your rig now.
+- **An update is offered again when the plugin is behind its dashboards.** The check read only the
+  dashboards' version, so the state every machine is in between staging a new plugin and restarting
+  reported itself as up to date.
+- **A one-LED side, a bare run and a short side each light correctly.** The grid exposed three gaps:
+  three lamps competed for a single LED, a bare run had no spotter at all because the spotter lived
+  on the sides, and effects that look identical on a short side were drawn one over another.
+- **The build no longer ships what it has stopped making.** A renamed or removed profile stayed in
+  the output directory and was packed into the release; 0.3.0-rc.2 carries a Fanalab profile no
+  source builds.
+
 ## 0.3.0-rc.2 (2026-09-18)
 
 The candidate that puts the zones back on the screen. In 0.3.0-rc.1 a single corner radius was
