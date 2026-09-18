@@ -316,6 +316,14 @@ namespace OpenDashPlugin
 
         public const string LedMirrorFit = "LedMirrorFit";
 
+        /// <summary>Whether a car alongside takes the whole strip rather than the lamp at that end. Off:
+        /// the lamps are what a side is for, and the outermost LED is the one peripheral vision reaches
+        /// while the ladder stays readable. On is for the driver who wants to be unable to miss it, and
+        /// for the strips where a lamp is not enough -- a bare run has no ends to speak of.</summary>
+        public const string LedSpotterWhole = "LedSpotterWhole";
+
+        public const bool DefaultLedSpotterWhole = false;
+
         /// <summary>
         /// The run lengths a mirrored bar is published for: every centre length a strip shape uses.
         /// </summary>
@@ -1297,6 +1305,7 @@ namespace OpenDashPlugin
             yield return LedMirrorFit;
             yield return LedMirrorReady;
             foreach (var length in MirrorRunLengths) yield return LedMirrorRun(length);
+            yield return LedSpotterWhole;
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a

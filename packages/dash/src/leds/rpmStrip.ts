@@ -33,7 +33,7 @@ import { mirrorAvailable } from '../shift.ts';
 import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, tankIsLow, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
+import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, SPOTTER_EFFECTS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
 import { ignitionIsOn } from './gates.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
@@ -342,8 +342,21 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
     children: effectContainers(effect, 1, stripLength(shape)),
   });
   const lamps = [...placed].sort((a, b) => b.index - a.index).flatMap(lampGroup);
+  // A car alongside over the whole run, when the driver has asked for that. The lamp version below
+  // it is left exactly as it is: the group blanks its background when it triggers, so it paints over
+  // the lamp rather than needing the lamp to know about it, and with the switch off it never
+  // triggers at all. Under the pit family, which is the one thing nothing paints over.
+  const spotterWhole = placed.length === 0
+    ? []
+    : SPOTTER_EFFECTS.map((effect) => ({
+        kind: 'conditionalGroup' as const,
+        description: `${effect.label}, whole strip`,
+        trigger: { expression: and(eq(setting.ledSpotterWhole(), 'true'), effect.when) },
+        clearBackgroundWhenActive: true,
+        children: effectContainers(effect, 1, stripLength(shape)),
+      }));
   const whole = ALL_EFFECTS().filter((e) => e.role === 'strip' || (placed.length === 0 && e.role === 'race'));
-  return [...lamps, ...whole.map(wholeRun)];
+  return [...lamps, ...spotterWhole, ...whole.map(wholeRun)];
 };
 
 /** What a strip profile is called, in SimHub's profile list. Keeps the slashes: `openDash 4/14/4`. */
