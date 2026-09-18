@@ -25,6 +25,12 @@ namespace OpenDashPlugin.Tests
 
         public static string ThemeCs() => Path.Combine(Root(), "plugin", "OpenDash", "Theme.cs");
 
+        /// <summary>The panel's own sources, read as text because the csproj excludes every WPF file
+        /// from the test project: nothing here compiles them, so a guard over them is a guard over
+        /// what they say.</summary>
+        public static string[] SettingsControlSources() =>
+            Directory.GetFiles(Path.Combine(Root(), "plugin", "OpenDash"), "SettingsControl*.cs");
+
         public static string ContractTs() => Path.Combine(Root(), "packages", "dash", "src", "contract.ts");
 
         /// <summary>The pinned list of every declared property, which both halves of the contract are
