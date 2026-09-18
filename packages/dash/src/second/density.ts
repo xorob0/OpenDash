@@ -4,8 +4,10 @@
  * uses comes from this table rather than from a literal.
  *
  * The numbers are the design canvas's two ramps: the companion's 116 / 64 / 46 / 34 / 24 and the
- * pit wall zone's 64 / 46 / 34 / 24 / 16, with 15 px labels on the companion and 13 px on the pit
- * wall. `wide` is a zone that spans a column: the same type, more room across.
+ * pit wall zone's 64 / 46 / 34 / 24 / 16. Both ramps label at 15 over a 13 px small label, which is
+ * the pair every artboard draws and the one distinction a page cannot lose: a label and a unit that
+ * are the same size read as one run of text. `wide` is a zone that spans a column: the same type,
+ * more room across.
  *
  * It is the zone ramp itself, and stays a density of its own because a caller says which kind of
  * zone it is drawing rather than how wide it is. The one number it used to change, a trace's
@@ -31,6 +33,14 @@ export interface DensitySpec {
   tiny: number;
   /** Field labels and zone titles. */
   label: number;
+  /**
+   * The row a label is centred in, which is not the size it is set in. Every sheet in `design/`
+   * draws a label as a 15 px run inside a `height: 13px` row and then leaves `fieldGap` before the
+   * value, so the ramp's step from 13 to 15 is bought in width and not in height: a field grows no
+   * taller and the panels whose height the sheets fix to the pixel keep fitting. `bandPages.ts`
+   * writes the same number as `LABEL_ROW`.
+   */
+  labelRow: number;
   /** Units, denominators and compound letters. */
   labelSm: number;
   /** Driver names, which are Barlow Medium and never monospaced. */
@@ -63,6 +73,7 @@ const COMPANION: DensitySpec = {
   small: 34,
   tiny: 24,
   label: ds.size.label,
+  labelRow: ds.size.labelSm,
   labelSm: ds.size.labelSm,
   name: 15,
   gapX: ds.space[5],
@@ -84,7 +95,8 @@ const ZONE: DensitySpec = {
   mid: 34,
   small: 24,
   tiny: 16,
-  label: ds.size.labelSm,
+  label: ds.size.label,
+  labelRow: ds.size.labelSm,
   labelSm: ds.size.labelSm,
   name: 13,
   gapX: ds.space[5],
@@ -109,7 +121,10 @@ const ZONE: DensitySpec = {
  *
  * The labels stop at 12 px rather than scaling with the rest: below that a label stops being
  * readable at arm's length on a DDU, and a page whose label cannot be read is a page of unlabelled
- * numbers. That is the floor the ramp is allowed to reach.
+ * numbers. That is the floor the ramp is allowed to reach, and it is where the small label sits.
+ * The label itself keeps one step above it, because a label and the unit after it being the same
+ * size is the distinction the artboards draw and the reason this ramp has two numbers at all; 13
+ * over 12 is the narrowest that separation can be written in.
  */
 const COMPACT: DensitySpec = {
   ...ZONE,
@@ -118,7 +133,8 @@ const COMPACT: DensitySpec = {
   mid: 24,
   small: 18,
   tiny: 14,
-  label: 12,
+  label: 13,
+  labelRow: 12,
   labelSm: 12,
   name: 12,
   gapX: ds.space[4],
