@@ -594,16 +594,18 @@ describe('the effect catalogue', () => {
     for (const dead of ['WaterPressure', 'KERS', 'GameData.Headlight']) expect({ dead, inProfile: text.includes(dead) }).toMatchObject({ inProfile: false });
   });
 
-  test('a shape with no sides has no lamps, so what needs one is dropped rather than moved onto the rev LEDs', () => {
+  test('a shape with no sides keeps what needs no lamp on the whole run, and drops the aids', () => {
     expect(lampsOf(shapeById('0-25-0')!)).toEqual([]);
     const brow = textOf(profileFor('0-25-0'));
-    // The spotters and the assists have nowhere to go on a brow...
-    expect(brow).not.toContain('Car alongside, left');
+    // The aids have nowhere to go on a bare run and are dropped rather than moved onto the ladder:
+    // an ABS light over the revs is a light in the one place the driver is reading a number.
     expect(brow).not.toContain('ABS active');
     expect(brow).not.toContain('lamp');
-    // ...but the flags keep the whole run there, which is what every shape did before the lamps
-    // arrived and is what a brow keeps until whether a bare run derives lamps of its own is decided.
+    // The flags keep the whole run, which is what every shape did before the lamps arrived, and so
+    // does a car alongside — a bare run has no end to put a lamp on, so it drew flags and never a
+    // spotter at all, which is a brow that cannot tell you somebody is there.
     expect(brow).toContain('Yellow flag');
+    expect(brow).toContain('Car alongside, left');
     expect(brow).toContain('Pit limiter on');
   });
 });
