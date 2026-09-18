@@ -19,7 +19,7 @@
 import { describe, expect, test } from 'bun:test';
 import tokensJson from '../../../design/tokens.json';
 import { composePackages } from '../src/build.ts';
-import { buildDashboardObject, TRANSPARENT, type JsonValue } from '../src/generator.ts';
+import { buildDashboardObject, fractionalIntFields, TRANSPARENT, type JsonValue } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { itemsOf } from '../src/walk.ts';
 
@@ -152,6 +152,22 @@ describe('every package the build composes', () => {
       return rule === undefined || (rule.radius !== undefined && r.radius !== rule.radius);
     });
     expect([...new Set(strays.map((r) => `${r.key} ${r.radius} of ${describeSite(r)}`))].sort()).toEqual([]);
+  });
+
+  test('holds a whole number in every field SimHub reads as an integer', () => {
+    // Not a style rule. Json.NET reads an int with ReadAsInt32, which throws on "3.6" rather than
+    // truncating, and the throw unwinds SimHub's whole LoadFromFile -- so one fraction anywhere in
+    // a file costs every item in it. 0.3.0-rc.1 shipped with a corner radius of 0.2 x 18 in the
+    // module sub-dashboards, and zone B, zone C, both companions and every pit wall zone drew
+    // nothing at all, in every package, with nothing in the log.
+    const fractions: string[] = [];
+    for (const { pkg } of PACKAGES) {
+      for (const dashboard of pkg.dashboards) {
+        const doc = buildDashboardObject(dashboard, { packageName: pkg.folderName }) as unknown as JsonValue;
+        for (const f of fractionalIntFields(doc)) fractions.push(`${f.path} = ${f.value} in ${pkg.folderName}/${dashboard.name}`);
+      }
+    }
+    expect(fractions.sort()).toEqual([]);
   });
 
   test('rounds its shift and rev segments, and rounds them to radius.seg', () => {
