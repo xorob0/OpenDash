@@ -103,5 +103,20 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("\"version\": \"8.0", text, StringComparison.Ordinal);
             Assert.Contains("latestFeature", text, StringComparison.Ordinal);
         }
+
+        [Fact]
+        public void The_language_version_is_a_version_and_not_latest()
+        {
+            // The deeper of the two halves. An SDK pin stops the compiler moving; this stops the
+            // language moving if somebody raises that pin, which is an ordinary maintenance action
+            // nobody would read as a language change. `latest` is what let the semantics float.
+            var props = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "Directory.Build.props"));
+            var declared = Regex.Match(props, @"<LangVersion>([^<]+)</LangVersion>");
+            Assert.True(declared.Success, "plugin/Directory.Build.props must state a LangVersion");
+            var value = declared.Groups[1].Value.Trim();
+            Assert.DoesNotContain("latest", value, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("preview", value, StringComparison.OrdinalIgnoreCase);
+            Assert.Matches(new Regex(@"^\d+(\.\d+)?$"), value);
+        }
     }
 }
