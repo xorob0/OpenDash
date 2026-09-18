@@ -119,9 +119,14 @@ hides one for the rest of a stint, is the failure this ranking exists to prevent
 
 | Condition | Picture |
 |---|---|
-| Speeding in the lane | A double chevron in danger red, blinking. Outranks both limiter states: it is the one costing a penalty right now. |
-| Limiter on, out of the lane | An exclamation mark, blinking. A mistake costing a second a corner. |
+| Speeding in the lane | A double chevron in danger red, steady. Outranks both limiter states: it is the one costing a penalty right now. |
+| Limiter on, out of the lane | An exclamation mark, steady. A mistake costing a second a corner. |
 | Limiter on, in the lane | A two-pixel frame, steady. Quiet confirmation; the driver is doing the right thing. |
+
+**Nothing below the flags moves.** Blinking is the flag layer's own vocabulary, where it says that a
+yellow is being waved rather than shown, so a pit picture or a warning that blinked would be making
+the flags' distinction about something that is not a flag. The three pit states and the three
+warnings are consequently steady, and `flagBox.test.ts` holds all nine states below the flags to it.
 
 Speeding compares the car's speed with the lane limit **in metres per second**, which matters more
 than it looks: `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit`, so for a driver whose
@@ -160,9 +165,17 @@ verified, and a spotter that is wrong is worse than one that says less.
 
 | Condition | Threshold | Picture |
 |---|---|---|
-| Oil too hot | `OpenDash.FlagBoxOilTemp`, default 120 °C | A disc, orange, blinking |
-| Water too hot | `OpenDash.FlagBoxWaterTemp`, default 110 °C | Waves, orange, blinking |
-| Low fuel | `OpenDash.FlagBoxLowFuelLaps`, default 2 | A tank emptying, yellow, blinking |
+| Oil too hot | `OpenDash.FlagBoxOilTemp`, default 120 °C | An oil can, orange, steady |
+| Water too hot | `OpenDash.FlagBoxWaterTemp`, default 110 °C | Waves, orange, steady |
+| Low fuel | `OpenDash.FlagBoxLowFuelLaps`, default 2 | A fuel pump, yellow, steady |
+
+Two of the three pictures are **the telltale ISO 2575 registers** rather than a shape invented for
+the grid, because the one a driver already knows from the road car is worth more than the one that
+sits more comfortably in eight by eight. The oil lamp was a disc until it was noticed that a disc is
+the meatball's own shape in a second orange, which is the confusion costing most of all, the
+meatball being an instruction to come in and the oil lamp not; the fuel lamp was a tank outline,
+which is a rectangle inside a rectangle and therefore the limiter frame's vocabulary. The water
+lamp keeps its waves, which is what the artboard draws.
 
 **Low fuel is measured in laps.** A litre threshold means nothing without knowing the car; laps
 remaining means something in every car, and SimHub publishes `Fuel_RemainingLaps`.
