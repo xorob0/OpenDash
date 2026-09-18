@@ -34,6 +34,8 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
 
       # Before anything is built, because a tag with no notes is a mistake to catch while it is
       # still only a tag. The release body is this section; see scripts/changelog.ts.
@@ -123,6 +125,8 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
 
       # The dash artifact is rooted at build/ (its paths share that ancestor), so it lands as
       # build/openDash.simhubdash. The plugin artifact is rooted at the repository, so downloading
