@@ -5,6 +5,15 @@
  * Everything here reads a property SimHub already publishes. Nothing is computed between frames,
  * which is the line scope.md draws and ADR 0009 owns; where that meant a feature could not be
  * built, it is written down in docs/design/flag-box.md rather than approximated.
+ *
+ * Nothing below the flags moves. The box's one rule is that movement means act: a flag that ends
+ * or interrupts the race moves, and everything that merely informs is held. A limiter left on and
+ * an oil temperature climbing are both conditions the driver lives with for minutes at a time, so
+ * a picture that strobed for those minutes would spend the box's only attention signal on the
+ * states least able to give it back. The shape carries the urgency instead.
+ *
+ * "Held briefly so it cannot strobe" on the face sheet is read here as a plain still frame. A
+ * minimum on-time is memory between frames, which ADR 0009 does not admit, so it is not built.
  */
 import { flagBox, flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type MatrixContainer, type MatrixFrame } from '../generator.ts';
@@ -50,8 +59,7 @@ export const LIMITER_IN_LANE: Grid = [
 ];
 
 /**
- * Limiter still on out of the lane: a mistake costing a second a corner, so it shouts. An
- * exclamation mark, blinking.
+ * Limiter still on out of the lane: a mistake costing a second a corner. An exclamation mark, held.
  *
  * It is deliberately not a filled panel. `purpose.pitLimiter` is pure white, the same value as
  * `purpose.flag.white`, so a filled panel here would be the white flag with a blink — and telling
@@ -167,8 +175,8 @@ export interface BoxState {
  * is costing a penalty right now.
  */
 export const pitStates = (): BoxState[] => [
-  { id: 'speeding', raised: speeding(), grid: SPEEDING, blink: true },
-  { id: 'limiterOutOfLane', raised: and(limiterOn(), not(inLane())), grid: LIMITER_OUT_OF_LANE, blink: true },
+  { id: 'speeding', raised: speeding(), grid: SPEEDING, blink: false },
+  { id: 'limiterOutOfLane', raised: and(limiterOn(), not(inLane())), grid: LIMITER_OUT_OF_LANE, blink: false },
   { id: 'limiterInLane', raised: and(limiterOn(), inLane()), grid: LIMITER_IN_LANE, blink: false },
 ];
 
@@ -201,9 +209,9 @@ export function spotterStates(matrix: FlagBoxMatrix): BoxState[] {
  * Fahrenheit number and gets a Fahrenheit comparison.
  */
 export const warningStates = (): BoxState[] => [
-  { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBox.oilTemp()), grid: OIL_HOT, blink: true },
-  { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBox.waterTemp()), grid: WATER_HOT, blink: true },
-  { id: 'lowFuel', raised: tankIsLow(), grid: LOW_FUEL, blink: true },
+  { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBox.oilTemp()), grid: OIL_HOT, blink: false },
+  { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBox.waterTemp()), grid: WATER_HOT, blink: false },
+  { id: 'lowFuel', raised: tankIsLow(), grid: LOW_FUEL, blink: false },
 ];
 
 /** A temperature, defaulted so that a car which does not report one never trips a warning. */
