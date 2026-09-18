@@ -79,8 +79,8 @@ namespace OpenDashPlugin
         /// and a footer at the foot.
         /// </summary>
         /// <remarks>
-        /// The canvas draws the panel 1080 tall and nothing here sets a height. SimHub hands the control
-        /// to its own settings menu, whose window is whatever the user has dragged it to, so a fixed 1080
+        /// The canvas draws the panel 960 by 1180 and nothing here sets a height. SimHub hands the control
+        /// to its own settings menu, whose window is whatever the user has dragged it to, so a fixed height
         /// would clip the footer off a shorter one instead of shortening the page. The frame's MinHeight
         /// is the viewport instead, which is the same drawing wherever it is tall enough and a page that
         /// scrolls wherever it is not.

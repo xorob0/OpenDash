@@ -102,9 +102,16 @@ namespace OpenDashPlugin
         public const double ButtonPaddingX = 16;
         public const double ButtonIconGap = 8;
 
-        /// <summary>The focus ring: two pixels of accent, two pixels clear of the button's own edge.</summary>
-        public const double FocusRingWeight = 2;
-        public const double FocusRingOffset = 2;
+        /// <summary>
+        /// The focus ring: two pixels of accent, two pixels clear of the control's own edge.
+        /// </summary>
+        /// <remarks>
+        /// Mirrors of Theme's, which is what Widgets.cs draws from, rather than a second pair. Two
+        /// packages implemented the ring at once and both sets of constants survived the merge, so the
+        /// numbers a test could reach were not the numbers a control was drawn with.
+        /// </remarks>
+        public const double FocusRingWeight = Theme.FocusRing;
+        public const double FocusRingOffset = Theme.FocusRingOffset;
 
         /// <summary>What a disabled button keeps, which is the canvas's 40 %.</summary>
         public const double DisabledOpacity = 0.4;
