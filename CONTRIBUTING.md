@@ -26,9 +26,10 @@ dotnet test plugin/OpenDash.Tests
 dotnet build plugin/OpenDash -c Release
 ```
 
-Both workflows pin bun to the version in `bun install` above, for the same reason the SDK is pinned
-below: the TypeScript half carries 2,400 tests, and running them on whichever bun a runner happens to
-ship is the same gamble in a different language.
+Note that `bun.lock` is written at lockfile version 2, which a bun older than the one that wrote it
+cannot read: such a bun reports "Unknown lockfile version", ignores the file and rewrites it. If your
+`bun install` keeps rewriting the lockfile, that is why, and the remedy is to upgrade bun rather than
+to commit the rewritten file. CI deliberately does not pin bun for this reason.
 
 `global.json` pins that 8, and it is there for a reason rather than out of caution. A newer compiler
 resolves `array.Reverse()` to the span overload in `System.MemoryExtensions`, which reverses in place
