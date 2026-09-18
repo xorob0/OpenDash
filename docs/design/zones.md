@@ -519,7 +519,7 @@ beside the table above. An empty cell is a part the drawing does not carry at th
 
 | № | Page | `wide` | `grid` | `tall narrow` | `tall` |
 |---|---|---|---|---|---|
-| 2 | Delta | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` |  | `bar` · `scale` · `rule` |
+| 2 | Delta | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` | `bar` · `scale` · `rule` |
 | 7 | Tyres | `footer` · `compound` | `footer` · `compound` |  | `footer` · `compound` |
 | 8 | Pit view | `tyres` | `tyres` |  |  |
 | 10 | Inputs | `steer` | `steer` |  |  |

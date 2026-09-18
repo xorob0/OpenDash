@@ -231,10 +231,11 @@ export const SHEDDING: Record<string, Shedding> = {
  * this is what furniture the page keeps around it, and a page may have an entry in both.
  */
 export const PARTS: Record<string, Keeps> = {
-  // The bar and its scale are two thirds of the page's height and the drawing spends them on the
-  // number when the box is one column wide. The rule under the scale goes with them, being what
-  // separates the scale from the three sector deltas rather than a thing of its own.
-  delta: { wide: ['bar', 'scale', 'rule'], grid: ['bar', 'scale', 'rule'], tallNarrow: [], tall: ['bar', 'scale', 'rule'] },
+  // Every one of the four drawings carries the bar, its scale and the rule under it, the narrow one
+  // included: the catalogue's `tall narrow · 274 by 300` draws a 16 px track, four 24 px marks, the
+  // fill, the centre marker and the hairline, above the three sector deltas. This row said the
+  // opposite for the narrow column and spent the page's whole furniture on the number.
+  delta: { wide: ['bar', 'scale', 'rule'], grid: ['bar', 'scale', 'rule'], tallNarrow: ['bar', 'scale', 'rule'], tall: ['bar', 'scale', 'rule'] },
   // The summary word and the four corner toggles beside it are the drawing's `Tyres · RIGHTS`;
   // the fast repair and the tear-off stay at every shape.
   pitView: { wide: ['tyres'], grid: ['tyres'], tallNarrow: [], tall: [] },

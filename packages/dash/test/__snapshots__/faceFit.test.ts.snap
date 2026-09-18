@@ -141,7 +141,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
 
 850x480  zone 274x328  body 250x290  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
-  delta          tallNarrow keeps delta s1 s2 s3
+  delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
   fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
@@ -164,7 +164,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
 
 850x480  zone 274x366  body 250x328  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
-  delta          tallNarrow keeps delta s1 s2 s3
+  delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
   fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
@@ -187,7 +187,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
 
 800x480  zone 249x328  body 225x290  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
-  delta          tallNarrow keeps delta s1 s2 s3
+  delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
   fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
@@ -210,7 +210,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
 
 800x480  zone 249x366  body 225x328  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
-  delta          tallNarrow keeps delta s1 s2 s3
+  delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
   fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
@@ -279,7 +279,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
 
 800x286  zone 269x194  body 245x156  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest  sheds laps estimated delta average5 position stintLap s1 s2 s3  declared last sessionBest yourBest delta
-  delta          tallNarrow keeps delta s1 s2 s3
+  delta          tallNarrow keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3  sheds yourBest last sessionBest bestS1 bestS2 bestS3  declared s1 s2 s3 yourBest last
   speedo         tallNarrow keeps speed rpm  sheds redline
   fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
@@ -302,7 +302,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
 
 800x286  zone 269x226  body 245x188  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
-  delta          tallNarrow keeps delta s1 s2 s3
+  delta          tallNarrow keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
   fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
