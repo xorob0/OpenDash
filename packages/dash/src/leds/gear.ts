@@ -14,14 +14,14 @@
  * components/revSegments.ts is where the thresholds live, and the gear reads that rather than
  * restating them, so a driver with both learns one relationship and reads it in two places.
  *
- * XOR-230 replaced SimHub's per-car bands with the sim's own `DriverCarSL*` values, and it changed
+ * #281 replaced SimHub's per-car bands with the sim's own `DriverCarSL*` values, and it changed
  * that one function: a band is now entered on the car's own ladder where the car publishes one and
  * on SimHub's bands where it does not (ADR 0014). The gear did not have to know, which is the
  * property the single function was for. What it does mean is that a digit and a rev segment and an
  * LED on a strip all change colour on the same frame for the same reason.
  *
  * **The flash is a threshold of its own, not a property of the top band**, and reading it as one was
- * the defect XOR-233's review found here. `ShiftBand.blink` now carries the over-rev expression the
+ * the defect #284's review found here. `ShiftBand.blink` now carries the over-rev expression the
  * rev bar and the strip flash on — `max(Blink, Last)`, and never in the last gear — and the digit
  * reads that rather than flashing the moment the top band is entered.
  */
@@ -121,7 +121,7 @@ function gearsAtBand(band: ShiftBand, flashing: boolean): MatrixContainer[] {
  *
  * The band says *when* it flashes rather than merely *that* it does, and the digit has to honour
  * the difference: the redline band is entered at `Last` and flashes at `max(Blink, Last)`, and it
- * stops flashing in the last gear. Before XOR-233's review the digit flashed on the band, so on a
+ * stops flashing in the last gear. Before #284's review the digit flashed on the band, so on a
  * rig with a box and a screen the digit strobed while the bar's top band sat solid, and went on
  * strobing in top gear where the bar deliberately does not. Two conditional groups, over-rev first,
  * is the matrix's way of saying what `blinkBind` says on a screen segment.

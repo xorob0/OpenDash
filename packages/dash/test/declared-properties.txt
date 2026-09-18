@@ -291,3 +291,15 @@ OpenDash.FlagBoxMatrix4WaterTemp
 OpenDash.LedCentre
 OpenDash.LedRpmStyle
 OpenDash.LedFlagAnimation
+OpenDash.LedMirrorFit
+OpenDash.LedMirrorReady
+OpenDash.LedMirror8
+OpenDash.LedMirror9
+OpenDash.LedMirror10
+OpenDash.LedMirror12
+OpenDash.LedMirror14
+OpenDash.LedMirror15
+OpenDash.LedMirror16
+OpenDash.LedMirror18
+OpenDash.LedMirror20
+OpenDash.LedMirror25

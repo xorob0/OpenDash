@@ -133,7 +133,7 @@ says so, exactly as `layouts/800x480.ts` says it today.
 ### The face with the rev bar off
 
 **Derived, not drawn.** `OpenDash.RevBar` has a third state, `off`, for a driver whose wheel or DDU
-already carries LEDs across its top (XOR-138). Hiding the segments alone leaves the well lit by
+already carries LEDs across its top (#189). Hiding the segments alone leaves the well lit by
 nothing, so the face has a second arrangement, and its rectangles are the only ones in this document
 that no artboard gives. §10 records what the canvas owes.
 
@@ -438,7 +438,7 @@ Two worked examples first, because they are the two that show why it cannot be d
   wrong about the box it really answers: a zone that stacks one column has room for four of them,
   and what the build actually drew there was two 34 px times side by side with 234 px of the zone
   empty under them. See §10 — **the catalogue owes a redraw of this one**, and
-  [readability-pass.md](readability-pass.md) §1 is the ticket.
+  [#330](https://github.com/xorob0/OpenDash/issues/330) is the ticket.
 - **Relative.** `wide`: position, number, code, class, gap. `grid`: the same five. `tall narrow`:
   position, code and gap only, and eight rows rather than six. The number and the class chip go
   from between two columns that stay, which no rule about prefixes produces.
@@ -576,11 +576,11 @@ two pit walls and a board belongs to the screen it is drawn on.
 
 It is **not** `PositionMode`. That setting is which number a position column shows; this one is who
 is in the list at all, and one class counted by overall position is a legitimate thing to ask for.
-What `PositionMode: class` currently does to a list it did not reorder is XOR-161.
+What `PositionMode: class` currently does to a list it did not reorder is #212.
 
 Two pages read it: the leaderboard and the relative. Zone A lists nobody. Band D's own relative
 page is three gaps rather than a list, so filtering it means asking for the car *ahead in class*
-rather than listing fewer of them — the same idea, a different change, and XOR-159. The panel
+rather than listing fewer of them — the same idea, a different change, and #210. The panel
 offers the checkbox only where a page would change.
 
 ### The counter
@@ -713,7 +713,7 @@ The four modes the slot model already had — `ShiftLights`, `PositionMode`, `De
 because it is not one face's, whatever the second arrangement is: the round faces' rev arc and the
 companion's speedo draw the same segments from the same setting, and a screen may not read a
 property another screen owns. `ShiftLights` is now its deprecated alias and stays attached for a
-release: an rc.2 user's properties do not vanish without warning (XOR-119), and a package installed
+release: an rc.2 user's properties do not vanish without warning (#170), and a package installed
 beside an older plugin falls back through it.
 
 Every expression that reads one of these wraps it in `isnull()` with the default, so a package
@@ -772,9 +772,9 @@ candidates, none yet chosen:
 2. A header like the others, which costs 22 px of the column the gear is sized to.
 3. A name that appears for a second after the page changes and fades. This costs nothing at rest
    and is the same behaviour as the change notification, which suggests the two are one component
-   — and it needs a show-for-N-seconds primitive the format may not have (XOR-116).
+   — and it needs a show-for-N-seconds primitive the format may not have (#167).
 
-This section is filled in when the canvas answers it. XOR-103 owns the question.
+This section is filled in when the canvas answers it. #154 owns the question.
 
 ---
 
@@ -786,7 +786,7 @@ touching them is rule 10: *a round face uses its ring instead of a band.*
 
 `480round.ts` and `800round.ts` read `layout.slots`, which the zone work makes optional rather
 than removing, so they keep building throughout. The decision is owed before the card path is
-retired, not before the first zone face. XOR-94 owns it.
+retired, not before the first zone face. #145 owns it.
 
 ---
 
@@ -802,12 +802,12 @@ a mistake in this document.
 | Zone C's capacity | Stated as ten drivers at 1920; seven rows are drawn. |
 | Page dots | `pageIndicator` is still in the component list, against "there is no row of page dots". |
 | The fuel tank | Dropped from the drawn objects in the 0.7.0 changelog — "a quantity is a number" — and still listed among five in `canvas.json`'s detail-pass annotation. **Four objects are taken.** |
-| The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see XOR-108. |
+| The numeral family | Rule 4 says numerals are Barlow Condensed. The files ship as `openDash Display`, because WPF reads the width word out of a family name and folds the condensed faces into Barlow as a stretch, which a `.djson` cannot ask back. Same outlines, different name; see #159. |
 | The telltales' pictograms | Twenty-eight Material Design Icons are named on the canvas and the build "rasterises the chosen twelve", which are not listed, so the twelve are still owed as files. An `ImageItem` carries no tint, which the format research verifies, and a lamp therefore owes one file per colour it can be drawn in: nineteen in all, being a dark file for each of the twelve and a lit file for each of the seven that the drawing or a source gives a colour to. They are named `telltale-<lamp>-<state>` in `packages/dash/src/zones/telltales.ts`, and the rank draws whichever of them `design/assets.ts` holds, so the lamps gain their pictograms in the commit that brings the artwork together with its Apache 2.0 licence and the notice naming Pictogrammers. Until then a lamp is its box. |
 | What lights a telltale | Three of the twelve have a source and nine do not. The engine reads the `EngineWarnings` bits for water temperature and oil pressure, the fuel can reads the same low-fuel threshold every other light openDash drives reads, and the speed limiter reads `PitLimiterOn`. Nothing lights the two tyre lamps, the wiper, the car above the wavy tracks, ABS, ESP, the battery, the tyre pressure warning or the door: iRacing publishes no wiper, stability, tyre pressure or door state at all, `dcABS` is the level the driver has dialled in rather than an intervention, and a battery lamp reading the raw voltage would need a threshold nobody has chosen. **The nine are built and left dark**, because a dark lamp asserts nothing whereas a lamp bound to a property that means something else asserts the wrong thing. Which property lights each of them is the author's to answer, and two further answers are owed with it: the colour of the engine lamp, which the artboard draws dark and which is taken as danger red here because both bits it reads are failures rather than advisories, and the source of the count the artboard draws in the wiper's corner. That count is recorded in `telltales.ts` and is not drawn, for the reason the relative page's country flag is not drawn. |
 | Band D's value size | Every 60 and 58 px band draws its page values at 34 px over a 13 px label, 5 px apart. WPF's line box around a 34 px value runs 60.6 px from the top of that label, so the band clips it by a pixel. **The value shrinks** — 32 at 60, 30 at 58 — because a clipped numeral reads as a rendering fault. The band would have to grow, or the drawing come down; the 54 and 56 px bands draw 24 and are honoured exactly. |
-| The face with no rev bar | XOR-138 offered three answers, namely leave the gap, reclaim it, or give the band to something else, and said the artboards would choose. Since the second pass of 15 September the FaceVariants sheets do draw the third state and both arrangements beside each other, so this row no longer reads as it did. What the rev-bar-off drawing still carries, however, is the rev bar itself: an 822 × 28 rectangle at (14, 6) on the 850 sheet, a 576 × 24 one at (12, 6) on the 600, underneath a bar that has already risen into its room. **The caption is taken over the rectangle**, and `faceItems` leaves the well and the segments out entirely rather than hiding them; `Plugin.dc.html`, for its part, still reads "the rev bar stays". Reclaim is taken for the room, because the gap reads as a mis-crop and on the nano it is a ninth of the screen, and the rectangles in §1 remain derived by one rule and remain the thing to delete when drawn ones arrive. |
-| The slot counts in the titles | `canvas.json` titles the 1920 × 480 artboard "MVP · 12 slots" and the 1280 × 720 one "wheel screens · 12 slots", while what each draws underneath is the five-part zone face [ADR 0006](../decisions/0006-the-zone-face.md) settled, and `Dash.dc.html` keeps `.slotbox`, `.card` and `.grid4` in its stylesheet with nothing using them. **The drawing is taken**: a `ZoneLayout` declares no slot count at all, and twelve matches nothing on the 1280 × 720 body either, whose bar draws eleven readouts and whose band draws ten and three lamps. The twelve-slot package does still build beside the zone face, since `LAYOUTS` keeps `layout1920x480` and `build.ts` walks both lists until XOR-95 retires the card path. |
+| The face with no rev bar | #189 offered three answers, namely leave the gap, reclaim it, or give the band to something else, and said the artboards would choose. Since the second pass of 15 September the FaceVariants sheets do draw the third state and both arrangements beside each other, so this row no longer reads as it did. What the rev-bar-off drawing still carries, however, is the rev bar itself: an 822 × 28 rectangle at (14, 6) on the 850 sheet, a 576 × 24 one at (12, 6) on the 600, underneath a bar that has already risen into its room. **The caption is taken over the rectangle**, and `faceItems` leaves the well and the segments out entirely rather than hiding them; `Plugin.dc.html`, for its part, still reads "the rev bar stays". Reclaim is taken for the room, because the gap reads as a mis-crop and on the nano it is a ninth of the screen, and the rectangles in §1 remain derived by one rule and remain the thing to delete when drawn ones arrive. |
+| The slot counts in the titles | `canvas.json` titles the 1920 × 480 artboard "MVP · 12 slots" and the 1280 × 720 one "wheel screens · 12 slots", while what each draws underneath is the five-part zone face [ADR 0006](../decisions/0006-the-zone-face.md) settled, and `Dash.dc.html` keeps `.slotbox`, `.card` and `.grid4` in its stylesheet with nothing using them. **The drawing is taken**: a `ZoneLayout` declares no slot count at all, and twelve matches nothing on the 1280 × 720 body either, whose bar draws eleven readouts and whose band draws ten and three lamps. The twelve-slot package does still build beside the zone face, since `LAYOUTS` keeps `layout1920x480` and `build.ts` walks both lists until #146 retires the card path. |
 | The six slots of the 850 | The same convention gives 850 × 480 "5in · 6 slots", and nothing six-fold is drawn there. The only reading that yields six is the parts themselves, that is to say the bar's left end, its settings strip and its right end, then zones B and C and band D. **The parts are taken**, because that is what the artboard draws and what `faceItems` composes; the count is vocabulary left over from the model the face replaced. |
 | The "D grid" chip | Every FaceVariants sheet chips band D as `grid`, whereas the band it draws is 1280 × 60, or 800 × 58 on the nano, which `second/shape.ts` bands as wide and short rather than as the 430 × 300 the `grid` archetype is. **Neither is taken, because the band does not consult the shape model at all**: `bandPages.ts` draws one centred rank for a wide short box, and only zones B and C ask `shapeOf` for their page. The 600 × 686 sheet chips its own zones B and C the same way, and they measure 600 × 160 and 600 × 150, which is wide and short again. |
 | The strip at 850 × 480 and 800 × 480 | Both artboards caption five cells, namely slip, TC, cut, bias and ABS, and the build keeps four at 850 and three at 800, which §3 tabulates and `barStrip.test.ts` pins. **The artboards' own scale is taken**: each face now draws the bar at the size its artboard gives it, so the narrower faces gain cells the earlier measured layout had shed. What the two still drop is cut at 850 and cut and slip at 800, and the cause is the ends rather than the strip, each end being laid out from its own edge for the widest entry the catalogue holds rather than for the entry actually selected. Raising the count further therefore means narrowing the reserved end or measuring the strip's values below the size the end fields use, and the canvas has made neither decision. The 600 × 686 sheet is no longer a disagreement: it draws its five cells in fixed 54 px columns at a 12 px gap, which is what the build now does, with four pixels to spare that the widest class name governs. |
@@ -819,7 +819,7 @@ a mistake in this document.
 | DashComponents' zone A | The component sheet calls zone A "fixed on every layout" and describes the rev bar 40 tall in its well over a 1 px rule, the gear alone, a flag band 40 tall at the bottom edge and the limiter above the gear. That is the card face, which still builds and still draws precisely that. **The zone face follows the Zones artboards instead**: a 56 px bar of settled values takes the place of the rule under the rev bar, the segments are 32 tall inside a 40 px well, and the flag takes band D's sixty pixels rather than a strip of its own. The section wants the same superseded marking as its slot numbers. |
 | The same five parts on every face | The catalogue's anatomy says the five parts differ only in size from one rectangular face to the next. Two of the per-size artboards draw otherwise: 800 × 286 has no bar at all, which leaves four parts, and 600 × 686 stacks A over B over C rather than setting B beside A beside C. **The per-size artboards are taken**, being the more specific drawing, and §1 tabulates both departures. |
 | The gap chips on the face sheets | Each `FaceVariants` sheet counts the pages that do not fit its rectangle as the catalogue draws them, and the 1280 × 720 and 1280 × 480 sheets give every one of the twenty-one a shed count of nought. The catalogue's own `tall` drawings do shed: sectors keeps two of its three lap times, a leaderboard row loses its best and its last, and the opponents blocks lose the car number. **The drawings are taken**, since §5 was read off them; the counts are annotation over the top of them. |
-| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [readability-pass.md](readability-pass.md). |
+| Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 46 px, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw and the same pass over the other twenty pages are [#327](https://github.com/xorob0/OpenDash/issues/327) and the twenty tickets under it. |
 | Session's sixth field | The catalogue labels it *Est. laps* at `wide` and at `tall`, where the build labels it *Laps left*. **The build's label is kept**, on two grounds. Firstly, the value behind it is `RemainingLaps`, which is the session's own count of laps still to run, and no research note here describes that property as an estimate, so *Est.* would be a claim the datum does not make. Secondly, *Est. laps* is already the label of the fuel page's sixth field, where it carries `Computed.Fuel_RemainingLaps`, that is to say the range left in the tank; two pages drawing the same two words over two different quantities is precisely the confusion the rename would introduce. Either the catalogue renames this one, or the session field is rebound to something that is genuinely estimated. |
 | Session's third rank | The catalogue draws Strength, Incidents and Cars at `wide` and at `tall`, and **two of the three are built**. Strength of field is left out under [ADR 0009](../decisions/0009-does-the-plugin-compute.md), which found it published by SimHub in no form at all and struck it from the bar's catalogue of end fields for the same reason. The row is therefore two fields wide rather than three, and it closes over the hole the way [§11](#11-a-field-that-is-not-there) describes. |
 | Lap history's third column | The catalogue draws the fuel each lap cost, at every shape, where the pit wall's wide page draws the delta to the session best. **The delta is taken, and only at `wide`**, because no previous-lap property carries a consumption beside the time and keeping one per lap would be the plugin remembering between frames, which [ADR 0009](../decisions/0009-does-the-plugin-compute.md) refuses. The three narrower shapes therefore list two columns where the drawing lists three, and [second-screens.md](../second-screens.md) records the datum that is not there. |
@@ -905,7 +905,7 @@ target, verified in [research/simhub-dash-format.md](../research/simhub-dash-for
 [scope.md](../scope.md) is what OpenDash is and what it refuses to be.
 [ADR 0006](../decisions/0006-the-zone-face.md) is why the model changed.
 [brand.md](brand.md) is the reasoning behind the colours and the type.
-[readability-pass.md](readability-pass.md) is one ticket per page: what each of the twenty-one
+[#327](https://github.com/xorob0/OpenDash/issues/327) is one ticket per page: what each of the twenty-one
 would have to change to put the reading a driver needs first.
 [second-screens.md](../second-screens.md) is the companion and the pit wall, which share the
 twenty-one pages.

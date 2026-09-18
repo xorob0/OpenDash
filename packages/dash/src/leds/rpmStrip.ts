@@ -37,6 +37,7 @@ import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers,
 import { ignitionIsOn } from './gates.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
+import { carCentre } from './mirror.ts';
 import { centreStart, deviceLength, stripLength, type StripShape } from './strip.ts';
 
 const { and, eq, not, str } = ncalc;
@@ -114,7 +115,7 @@ const ladderLayers = (count: number, style: LedRpmStyle, which: Ladder): leds.Le
  *
  * These come *after* the two derived ladders so that they compose over them: a car in the table
  * gets its measured gear, and every other car and gear keeps the ladder iRacing publishes. That is
- * the "derived by default, table overrides" of XOR-233, and it is why an empty table costs nothing
+ * the "derived by default, table overrides" of #284, and it is why an empty table costs nothing
  * — no entries, no containers, no change to any profile.
  *
  * A car keyed here is matched on `CarModel` rather than by a `Groups.GameCarModelGroup`, because
@@ -161,27 +162,34 @@ const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[]
  * the strip is debugged.
  */
 const revCentre = (count: number): leds.LedContainer[] =>
-  LED_RPM_STYLES.map((style) => ({
-    kind: 'conditionalGroup' as const,
-    description: `style: ${style}`,
-    trigger: { expression: styleIs(style) },
-    children: [
+  LED_RPM_STYLES.map((style) => {
+    // `car` is the car's whole bar and is not one of the three looks: its LEDs, its colours, its
+    // order and its flash, from the table the plugin fetched (ADR 0018). Where there is no table it
+    // falls back to the ladder below, drawn the way `leftToRight` draws it -- which is the same tree
+    // the other three styles are, so the fallback is not a fourth thing to maintain.
+    const ladder: leds.LedContainer[] = [
       {
         kind: 'conditionalGroup' as const,
         description: "the car's own shift lights",
         trigger: { expression: mirrorAvailable() },
-        children: ladderLayers(count, style, 'mirror'),
+        children: ladderLayers(count, style === 'car' ? 'leftToRight' : style, 'mirror'),
       },
       {
         kind: 'conditionalGroup' as const,
         description: "SimHub's bands, for a car that publishes no ladder",
         trigger: { expression: not(mirrorAvailable()) },
-        children: ladderLayers(count, style, 'simhub'),
+        children: ladderLayers(count, style === 'car' ? 'leftToRight' : style, 'simhub'),
       },
       // Last, so a measured gear composes over whichever ladder was derived for the car.
-      ...tabledOverrides(count, style),
-    ],
-  }));
+      ...tabledOverrides(count, style === 'car' ? 'leftToRight' : style),
+    ];
+    return {
+      kind: 'conditionalGroup' as const,
+      description: `style: ${style}`,
+      trigger: { expression: styleIs(style) },
+      children: style === 'car' ? carCentre(count, ladder) : ladder,
+    };
+  });
 
 /** A progressive bar of `count` LEDs in one colour, driven by a 0..100 telemetry percentage. */
 const pedalBar = (count: number, value: Expr, color: string, label: string): leds.LedContainer[] =>
@@ -421,7 +429,7 @@ export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedP
   // Every native Status.* container tests GameRunning itself; CustomStatusContainer does not, and
   // its IsActiveBase catches a throwing expression and returns its default of 1.0 — so with the sim
   // closed, where the properties are null, a bare CustomStatus lights up. One native group gates
-  // the lot. What the strip does when the game is NOT running is XOR-249.
+  // the lot. What the strip does when the game is NOT running is #300.
   // Brightness sits under the running gate rather than over it: nothing outside that gate paints,
   // so a brightness group above it would scale nothing and would only cost an evaluation with the
   // sim closed.

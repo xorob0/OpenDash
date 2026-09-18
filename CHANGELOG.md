@@ -125,6 +125,27 @@ same one, and it says what happens to the face you have installed.
 
 ### Added
 
+- **An RGB strip mirrors the shift lights of the car you are driving** — its LEDs, its colours, the
+  order they light in, and how fast it flashes, in the gear you are in. A Porsche Cup fills from
+  both ends inwards, a Next Gen stock car runs green to amber to red, a W13 finishes on a block of
+  five blue, and none of that is a setting: it is the car. `Rev style` is a drop-down now, with
+  `The car's own` as the default and openDash's three looks — left to right, meet in middle, F1 —
+  beside it for anyone who would rather have one look in every car.
+  - iRacing publishes no part of this. It publishes four RPMs per car and nothing about colour,
+    order, LED count or the gear, so the pattern comes from a measured table: the open
+    [Lovely Car Data](https://github.com/Lovely-Sim-Racing/lovely-car-data) project, by Lovely Sim
+    Racing, ATSR and Gomez Sim Industries, under CC BY-NC-SA 4.0. openDash ships none of it and
+    **fetches it once**, as one archive of every car rather than one car at a time, so nothing about
+    which car you are driving leaves your machine. Everything after that works offline. Turning
+    update checks off turns this off too.
+  - A car with no table, a rig with no plugin, or a driver who prefers one of the three looks all
+    get exactly what they got before: the ladder iRacing publishes for the car, or SimHub's bands
+    for a car that publishes none. Nothing is lost by the mirror being unavailable.
+  - `Car bar size` decides what happens when the car's bar and your strip are different lengths:
+    fill the strip, or draw the bar at its own length in the middle of it. A bar that fills from
+    both ends still does at any strip length.
+  - [ADR 0018](docs/decisions/0018-the-cars-own-lights.md) records the four standing refusals this
+    moved, including the one that said the plugin does not compute.
 - The rev bar can be turned **off entirely**, for a wheel or DDU that already has LEDs across its
   top. `OpenDash.RevBar` carries the three states — `shift`, `rpm`, `off` — and the General row in
   the plugin panel is now a three-way choice rather than a toggle. `OpenDash.ShiftLights` stays

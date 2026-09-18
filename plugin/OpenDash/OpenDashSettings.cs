@@ -184,13 +184,18 @@ namespace OpenDashPlugin
         /// shape rather than per device and every shape reads this one name.</summary>
         public string LedCentre { get; set; } = Contract.DefaultLedCentre;
 
-        /// <summary>How the rev ladder fills a strip: "leftToRight", "meetInMiddle" or "f1". The look
-        /// only; the thresholds are the car's own whichever is set (ADR 0014).</summary>
+        /// <summary>How the rev ladder fills a strip: "car", "leftToRight", "meetInMiddle" or "f1".
+        /// The three openDash styles are the look only; the thresholds are the car's own whichever is
+        /// set (ADR 0014). "car" is the car's whole bar, from the fetched table (ADR 0018).</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
 
         /// <summary>Whether a flag on a strip moves. Off holds every flag from the frame it would have
         /// settled on and never turns one off.</summary>
         public bool LedFlagAnimation { get; set; } = Contract.DefaultLedFlagAnimation;
+
+        /// <summary>What a mirrored bar does on a strip that is not the car's length: "stretch" fills
+        /// the run, "exact" draws the bar at its own length in the middle of it.</summary>
+        public string LedMirrorFit { get; set; } = Contract.DefaultLedMirrorFit;
 
         /// <summary>One matrix's settings, 1-based, repaired if the array came back short.</summary>
         public string MatrixRest(int matrix) => Pick(FlagBoxRest, matrix, Contract.DefaultFlagBoxMatrixRest(matrix));
@@ -243,6 +248,7 @@ namespace OpenDashPlugin
             // legal one here rather than reaching the strip as itself.
             LedCentre = Contract.NormaliseLedCentre(LedCentre);
             LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+            LedMirrorFit = Contract.NormaliseChoice(LedMirrorFit, Contract.LedMirrorFits, Contract.DefaultLedMirrorFit);
         }
 
         /// <summary>
@@ -416,7 +422,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Every screen rather than none, because nothing outside this file knows the rig yet: the
         /// installer installs everything the plugin embeds, and the panel that adds a screen and removes
-        /// one is XOR-125. So an old settings file attaches exactly what it attached before the rig
+        /// one is #176. So an old settings file attaches exactly what it attached before the rig
         /// existed, and a driver who updates finds nothing reset; what the rig adds today is that the
         /// list can shrink at all.
         /// </remarks>
@@ -558,7 +564,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// A file that has never installed anything is a new install, and its rig is empty: that is the
-        /// first-run state the panel teaches from, and XOR-34's point that an empty rig is one fewer
+        /// first-run state the panel teaches from, and #85's point that an empty rig is one fewer
         /// surface than a wizard.
         ///
         /// Any other file gets one screen per folder openDash has written, because those are the
@@ -1082,6 +1088,7 @@ namespace OpenDashPlugin
             LedCentre = other.LedCentre;
             LedRpmStyle = other.LedRpmStyle;
             LedFlagAnimation = other.LedFlagAnimation;
+            LedMirrorFit = other.LedMirrorFit;
             // Cloned rather than shared, so that the panel writing into its copy does not reach back
             // into the settings the plugin is reading from.
             Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);

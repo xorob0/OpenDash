@@ -37,7 +37,7 @@ the reason below.
 that no consumer can fetch, so the release itself is the only feed there is.
 
 **The release body is the changelog.** It was GitHub's generated summary, a list of commits and
-pull requests whose shape this repository does not control; XOR-25 replaced it with the section of
+pull requests whose shape this repository does not control; #76 replaced it with the section of
 `CHANGELOG.md` for the tag, and the workflow refuses a tag that has no such section. A release cut
 before that change still carries the generated summary, so a consumer must not assume either
 shape.
@@ -50,7 +50,7 @@ disk.
 semver precedence including pre-release ordering, and `Versioning.Decide` turns a pair of versions
 into an `InstallStatus`. One sharp edge was found while reading it: an undotted numeric identifier
 was compared ordinally rather than numerically, so `0.2.0-rc10` was reported as older than
-`0.2.0-rc2`. XOR-122 has since closed it, since an identifier is now compared run by run with a
+`0.2.0-rc2`. #173 has since closed it, since an identifier is now compared run by run with a
 run of digits weighed by value, so that a tag cut in either form orders correctly and the dotted
 form is no longer a rule anybody has to remember.
 
@@ -122,7 +122,7 @@ runs on the thread that starts it. A rig with no network is a normal rig rather 
 
 **Whether openDash installs by itself.** It does not, ever. The check reports, and a person
 chooses. This is the line that matters most for something a driver relies on mid-season, and it is
-why XOR-106 is a button rather than a background updater. An update applied without asking is
+why #157 is a button rather than a background updater. An update applied without asking is
 indistinguishable, from the seat, from the dashboard breaking.
 
 ## What would reopen this
@@ -143,7 +143,7 @@ answer would be caching a static file rather than an openDash server.
 
 ### Good
 
-XOR-31 and XOR-106 become writable, and with them the cheapest distribution improvement available:
+#82 and #157 become writable, and with them the cheapest distribution improvement available:
 a user who already has openDash installed is exactly the user a dashboard manager does not help.
 The promise that a `.simhubdash` is a complete product on its own is untouched, since a package
 still installs and renders with no plugin and no network.
@@ -158,7 +158,7 @@ proxy that intercepts TLS, a corporate network that blocks GitHub. Each has to f
 quiet failure is harder to write and easier to get wrong than a loud one.
 
 The changelog a user is shown was GitHub's generated summary rather than the curated
-`CHANGELOG.md`, because that was what the release body held. XOR-25 has since made the release body
+`CHANGELOG.md`, because that was what the release body held. #76 has since made the release body
 the changelog's own section for the tag, so what the panel summarises is now written for a driver;
 releases cut before that change still carry the generated summary.
 
@@ -168,7 +168,7 @@ releases cut before that change still carry the generated summary.
 
 Whether the check should also look at the plugin's own version, or only at the dashboards. The
 mechanism is identical and the consequence is not: a plugin update requires the user to replace a
-DLL and restart SimHub, which is a considerably larger ask than reopening a dashboard, and XOR-105
+DLL and restart SimHub, which is a considerably larger ask than reopening a dashboard, and #156
 owns that question.
 
 Whether the twenty-four hour interval is right. It is chosen for being obviously not aggressive

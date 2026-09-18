@@ -138,6 +138,27 @@ export interface LedCustomStatus extends LedContainerBase {
 }
 
 /**
+ * A run of LEDs whose colour is an expression, evaluated every frame. SimHub calls it "Static
+ * Formula effect": static in that every LED of the run takes the same colour, formula in that the
+ * colour is computed rather than chosen.
+ *
+ * `DynamicColorContainer.SetResultBase` reads it through the `Color` overload of
+ * `ParseValueOrDefault`, which evaluates the formula **as a string** and hands the result to
+ * `ColorConverter.ConvertFromString` — so the expression yields `#AARRGGBB`, `#RRGGBB`, a named
+ * colour or `Transparent`, and an unreadable one leaves the LED at the container's default rather
+ * than throwing. That is the door a per-car pattern comes through (ADR 0018): one container per
+ * LED, one property per LED, and nothing in the profile that knows what a car is.
+ *
+ * It carries SimHub's blink fields too, and openDash writes none of them: a mirror blinks at the
+ * car's own interval, which is a number the profile does not have and the plugin does.
+ */
+export interface LedDynamicColor extends LedContainerBase {
+  kind: 'dynamicColor';
+  ledCount: number;
+  colorFormula: LedExpression;
+}
+
+/**
  * Every LED of a run computed by one expression returning an array of colours. The door that lets
  * a profile suit every car without a per-car table.
  */
@@ -182,6 +203,7 @@ export type LedContainer =
   | LedRemapGroup
   | LedStaticColor
   | LedCustomStatus
+  | LedDynamicColor
   | LedScriptedContent
   | LedRpmSegments
   | LedAnimation
@@ -209,6 +231,7 @@ export const CONTAINER_TYPES: Record<Exclude<LedContainer['kind'], 'raw'>, strin
   remapGroup: 'Groups.RemapGroup',
   staticColor: 'StaticColor',
   customStatus: 'CustomStatus',
+  dynamicColor: 'DynamicColor',
   scriptedContent: 'ScriptedContent',
   rpmSegments: 'RPMSegments',
   animation: 'Animation',
@@ -287,7 +310,7 @@ export const childrenOf = (c: LedContainer): readonly LedContainer[] =>
 
 /** How many LEDs a container paints, or undefined for one that does not say. */
 export const ledCountOf = (c: LedContainer): number | undefined =>
-  c.kind === 'staticColor' || c.kind === 'customStatus' || c.kind === 'scriptedContent'
+  c.kind === 'staticColor' || c.kind === 'customStatus' || c.kind === 'scriptedContent' || c.kind === 'dynamicColor'
     ? c.ledCount
     : c.kind === 'rpmSegments'
       ? c.segments.reduce((n, s) => n + s.ledCount, 0)

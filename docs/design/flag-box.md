@@ -143,7 +143,7 @@ means "not speeding" rather than "always speeding".
 Comparing two published numbers is arithmetic over properties rather than state between frames, so
 it is not computed telemetry.
 
-The three differ in **shape**, not only in colour, which [XOR-78](https://linear.app/xorob/issue/XOR-78)
+The three differ in **shape**, not only in colour, which [#129](https://github.com/xorob0/OpenDash/issues/129)
 requires. Two of them nearly did not: `purpose.pitLimiter` resolves to pure white, the same value
 as `purpose.flag.white`, so a filled panel for "limiter still on" would have been the white flag
 with a blink — telling a driver *last lap* when you mean *your limiter is on*. The token is not
@@ -228,7 +228,7 @@ a distance to a stall. Deriving one from track position and the stall's position
 telemetry, which [scope.md](../scope.md) refuses until
 [ADR 0009](../decisions/0009-does-the-plugin-compute.md) moves the line.
 
-So it is written down here rather than quietly computed. If XOR-47 moves that line, this is the
+So it is written down here rather than quietly computed. If #98 moves that line, this is the
 first thing to build with it.
 
 ### The gear, underneath everything
@@ -254,7 +254,7 @@ against a solid bar and went on strobing in top gear. The threshold is `overRevE
 than a boolean saying *that* — and `flagBox.test.ts` compares the digit's emitted flash against the
 rev bar's top segment's, string for string.
 
-[XOR-230](https://linear.app/xorob/issue/XOR-230) had earlier replaced SimHub's per-car bands
+[#281](https://github.com/xorob0/OpenDash/issues/281) had earlier replaced SimHub's per-car bands
 with the sim's own `DriverCarSL*` values, and it changed that one function and not this file: a band
 is now entered on the car's own ladder where the car publishes one and on SimHub's bands where it
 does not ([ADR 0014](../decisions/0014-the-shift-model.md)). The digit, a rev segment and an LED on

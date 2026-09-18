@@ -16,7 +16,7 @@
     "RaceSessionTime": "2700.0000 sec",
     "TcSetting": "3 (TC)",
     "AbsSetting": "2 (ABS)",
-    // The car's own shift lights. Placeholders rather than literals since XOR-250, so that a
+    // The car's own shift lights. Placeholders rather than literals since #301, so that a
     // scenario can hand the mirror a different car mid-run; these are the values every other
     // scenario inherits and the ones race-session.yaml carried before.
     "DriverCarRedLine": "9000.000",

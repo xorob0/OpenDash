@@ -79,7 +79,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// A pit wall is not here: it carries its own two headings, so this is never asked for one. Slots
-        /// is the kind the canvas never drew, and it leaves with XOR-95, so it borrows the shape of the
+        /// is the kind the canvas never drew, and it leaves with #146, so it borrows the shape of the
         /// face's heading rather than being given a design of its own.
         /// </remarks>
         private static string PaneTitle(ScreenInstance screen)
@@ -151,7 +151,7 @@ namespace OpenDashPlugin
         /// The first run, which is the empty state of the thing itself rather than a wizard in front of it.
         /// </summary>
         /// <remarks>
-        /// XOR-34's design, and the reason it is one fewer surface to build: nothing has to be dismissed,
+        /// #85's design, and the reason it is one fewer surface to build: nothing has to be dismissed,
         /// because the empty state stops appearing exactly when it stops being true.
         /// </remarks>
         private FrameworkElement BuildEmptyRig()
@@ -235,7 +235,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Removing the card would destroy the zone setup behind it and hide the thing that needs
-        /// fixing, which is the reasoning XOR-125 already applies to a failed install.
+        /// fixing, which is the reasoning #176 already applies to a failed install.
         /// </remarks>
         private FrameworkElement BuildMissingFolder(ScreenInstance screen)
         {

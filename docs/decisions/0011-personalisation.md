@@ -135,14 +135,14 @@ carries the telemetry the first did not.
 
 The A/B that would have isolated the bindings, the reference face against its themed twin in one
 session on one scenario, **was not obtained**. Dash Studio's automation could not reliably open a
-named package (XOR-257) and SimHub restarted repeatedly during the attempts. So there is no measured
+named package (#308) and SimHub restarted repeatedly during the attempts. So there is no measured
 cost per binding in this record, and the counts above are the evidence the decision rests on. That
 is weaker than it should be and it is said plainly rather than dressed up.
 
 It is weaker in a knowable direction, though. Every fact in the list above says the marginal binding
 is cheap: it is an NCalc evaluation and a comparison, on a scene graph that already performs 329 of
 them a frame, and it reaches WPF only when its value changes, which for a theme nobody is editing is
-never. Whoever takes XOR-76 should take the measurement with it, on a machine that will hold still.
+never. Whoever takes #127 should take the measurement with it, on a machine that will hold still.
 
 **The ceiling is the item count, and it was already there.** A face renders around 350 items today
 and already evaluates 329 bindings across them, because a dashboard that reads telemetry is mostly
@@ -161,19 +161,19 @@ the project is written against.
 
 | A user wants to change | Bucket | Why |
 |---|---|---|
-| Surfaces, text levels, state colours, the accent (XOR-76) | **Runtime** | `Color` targets bind; the literal becomes the `isnull` fallback |
-| A theme preset (XOR-48) | **Runtime** | A preset is a set of values the plugin writes to the same properties |
-| Colour-vision palettes (XOR-78) | **Runtime** | Same mechanism; the separation check is the plugin's, not the dash's |
-| Night mode, and switching by itself (XOR-77) | **Runtime** | The colour is a formula, so the switch can be an expression over the sim's time of day |
-| Frame colour (XOR-74) | **Runtime** | `BorderStyle.Bindings.BorderColor`, not the item-level spelling |
-| Frame thickness and corner radius (XOR-74) | **Runtime, bounded** | `int` targets on the same sub-object. A border eats the text box, so the bound range must be one `textFit` already proves |
-| Frame on or off (XOR-74) | **Runtime** | Thickness 0, or the item's `Visible` |
-| The idle screen's image, logo and layout (XOR-53) | **Runtime** | `ImagePath` is an unattributed bindable string, and a layout choice is a screen index, which the zones already prove |
-| Typeface (XOR-75) | **Build input** | Not because nothing binds, but because nothing re-measures. See below |
-| A size step, a notch larger or smaller (XOR-75) | **Build input** | `FontSize` binds and the box does not follow it; WPF clips what does not fit |
-| Spacing, padding, radii as *layout*, positions (XOR-80) | **Build input** | Every one of them was consumed by a layout decision in TypeScript |
+| Surfaces, text levels, state colours, the accent (#127) | **Runtime** | `Color` targets bind; the literal becomes the `isnull` fallback |
+| A theme preset (#99) | **Runtime** | A preset is a set of values the plugin writes to the same properties |
+| Colour-vision palettes (#129) | **Runtime** | Same mechanism; the separation check is the plugin's, not the dash's |
+| Night mode, and switching by itself (#128) | **Runtime** | The colour is a formula, so the switch can be an expression over the sim's time of day |
+| Frame colour (#125) | **Runtime** | `BorderStyle.Bindings.BorderColor`, not the item-level spelling |
+| Frame thickness and corner radius (#125) | **Runtime, bounded** | `int` targets on the same sub-object. A border eats the text box, so the bound range must be one `textFit` already proves |
+| Frame on or off (#125) | **Runtime** | Thickness 0, or the item's `Visible` |
+| The idle screen's image, logo and layout (#104) | **Runtime** | `ImagePath` is an unattributed bindable string, and a layout choice is a screen index, which the zones already prove |
+| Typeface (#126) | **Build input** | Not because nothing binds, but because nothing re-measures. See below |
+| A size step, a notch larger or smaller (#126) | **Build input** | `FontSize` binds and the box does not follow it; WPF clips what does not fit |
+| Spacing, padding, radii as *layout*, positions (#131) | **Build input** | Every one of them was consumed by a layout decision in TypeScript |
 | `font.cell`, the advances, the character budgets | **Build-time only** | Not a setting at any layer: they are how the boxes were measured, and a user changing one changes nothing but the truth of the measurement |
-| A package built from the user's own tokens (XOR-81) | **Build input, and the home of that bucket** | CI builds it; nothing runs on the user's machine |
+| A package built from the user's own tokens (#132) | **Build input, and the home of that bucket** | CI builds it; nothing runs on the user's machine |
 | Regenerating a package locally | **Not possible** | It means porting the generator to C# or shipping a JavaScript runtime. [ADR 0003](0003-plugin-settings-through-properties.md) rejected it and it stays rejected |
 
 ### Why geometry does not become a runtime setting, even though it binds
@@ -199,12 +199,12 @@ and a frame being switched off is free, because no box moves.
 
 ### Fonts: a curated set, and it is a build input
 
-[XOR-75](https://linear.app/xorob/issue/XOR-75) is right that an arbitrary system font is
+[#126](https://github.com/xorob0/OpenDash/issues/126) is right that an arbitrary system font is
 unofferable, and right that the answer is a curated set of OFL faces, each with its advances
 committed and each passing `textFit` for every package. This record adds where that set lives.
 
 The tempting shape is runtime: bind `Font`, ship every face in `_SHFonts`, and require every
-candidate to fit the boxes Barlow Condensed already fits, which is exactly XOR-75's own acceptance
+candidate to fit the boxes Barlow Condensed already fits, which is exactly #126's own acceptance
 line, "switching face never moves a value's position, only its glyphs". It is rejected for three
 reasons, in increasing order of weight:
 
@@ -222,7 +222,7 @@ reasons, in increasing order of weight:
    would not.
 
 So a typeface is a token, a token set is a build, and a build a user does not run is
-[XOR-81](https://linear.app/xorob/issue/XOR-81). That ticket stops being a nice-to-have and becomes
+[#132](https://github.com/xorob0/OpenDash/issues/132). That ticket stops being a nice-to-have and becomes
 the delivery mechanism for the whole build-input bucket.
 
 **Variant packages are rejected.** Ten faces times three typefaces times four themes is a release
@@ -246,11 +246,11 @@ gets nothing for them.** That is the price of the standalone promise and it is t
 ### Good
 
 The seven tickets this record blocked are unblocked, and each one now knows its shape before it is
-designed. XOR-76, XOR-48, XOR-77, XOR-74 and XOR-53 are runtime work against properties verified
-above; XOR-75 is a build input whose home is XOR-81; XOR-80 is both, and splits. XOR-78 was never
+designed. #127, #99, #128, #125 and #104 are runtime work against properties verified
+above; #126 is a build input whose home is #132; #131 is both, and splits. #129 was never
 blocked and is unaffected except that its palettes are now something a user can actually apply.
 
-`BorderColor` is bindable after all, so [XOR-74](https://linear.app/xorob/issue/XOR-74) is a whole
+`BorderColor` is bindable after all, so [#125](https://github.com/xorob0/OpenDash/issues/125) is a whole
 ticket rather than the "possibly nothing" it had been reduced to.
 
 The generator learns a real capability: bindings on sub-objects. `packages/generator/src/model.ts`
@@ -263,21 +263,21 @@ including the ones who never change a colour, unless the generator emits the lit
 is enabled, which is a build flag and a second scene graph to keep tested. How much it actually
 costs is not measured here, which is the weakest part of this record.
 
-Two tickets are smaller than they read. XOR-75 loses its runtime face switch, and XOR-80's "edit any
+Two tickets are smaller than they read. #126 loses its runtime face switch, and #131's "edit any
 token" splits down the middle: the colour layers are live, the size and spacing layers are a build.
 
 ### Unresolved
 
 **What a themed face actually costs, measured.** The counts say the bindings roughly double and
-every mechanism above says the marginal one is cheap, but the A/B was not obtained here. XOR-76 owes
+every mechanism above says the marginal one is cheap, but the A/B was not obtained here. #127 owes
 it.
 
 **Whether the generator should emit a themed face at all, or only on a flag.** Nothing says the cost
 is free, and a standalone package with no plugin pays it for nothing. A build flag buys the literal
-back and costs a second scene graph to keep tested. This is the first question XOR-76 has to answer
+back and costs a second scene graph to keep tested. This is the first question #127 has to answer
 and it is not answered here.
 
-**`ImagePath` is verified as a property, not as a behaviour.** XOR-53 needs to know what SimHub does
+**`ImagePath` is verified as a property, not as a behaviour.** #104 needs to know what SimHub does
 with a path that does not exist, a file replaced while the dash is open, and an image larger than
 the screen. Its own acceptance criteria already say so.
 

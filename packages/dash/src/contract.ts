@@ -8,7 +8,7 @@
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 
-const { add, and, concat, div, eq, fmt, iff, isnull, lt, mod, num, or, prop, str, truncate } = ncalc;
+const { add, and, concat, div, eq, fmt, iff, isnull, left, lt, mod, num, or, prop, str, truncate } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -35,11 +35,20 @@ export type SessionProgress = 'auto' | 'laps' | 'time';
  */
 export type LedCentre = 'rpm' | 'brake' | 'throttleBrake' | 'fuel';
 /**
- * How the rev ladder fills the strip. It decides the *look*, never the *when*: the thresholds are
- * the car's own either way (ADR 0014), and a style only chooses which LED takes which rung and
- * what colour it is.
+ * How the rev ladder fills the strip.
+ *
+ * The three openDash styles decide the *look*, never the *when*: the thresholds are the car's own
+ * either way (ADR 0014), and a style only chooses which LED takes which rung and what colour it is.
+ *
+ * `car` is not one of those. It is the car's own bar -- its LEDs, its colours, its order, its
+ * flash, in the gear it is in -- from a table the plugin fetches (ADR 0018), and it is the default
+ * because openDash's opinion is that the car is right. A car with no table, or a rig with no
+ * plugin, falls back to the ladder iRacing publishes, drawn `leftToRight`.
  */
-export type LedRpmStyle = 'leftToRight' | 'meetInMiddle' | 'f1';
+export type LedRpmStyle = 'car' | 'leftToRight' | 'meetInMiddle' | 'f1';
+
+/** What the mirror does when the car's bar and the strip are not the same length. */
+export type LedMirrorFit = 'stretch' | 'exact';
 
 /**
  * What the top of a rectangular face carries: the shift lights, a plain RPM bar, or nothing
@@ -51,7 +60,7 @@ export type LedRpmStyle = 'leftToRight' | 'meetInMiddle' | 'f1';
  * (ADR 0014). There is no fourth value for that and there should not be one.
  *
  * `ShiftLights` is not retired with it. It has shipped, it is one of the four names the plugin
- * attaches first, and README publishes it as a property an LED profile may read; XOR-119 is the
+ * attaches first, and README publishes it as a property an LED profile may read; #170 is the
  * rule that an rc.2 user's properties do not vanish without a release of warning. It stays as the
  * deprecated alias that {@link setting.revBar} falls back to.
  */
@@ -82,7 +91,22 @@ export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
 export const LED_CENTRES: readonly LedCentre[] = ['rpm', 'brake', 'throttleBrake', 'fuel'];
-export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['leftToRight', 'meetInMiddle', 'f1'];
+export const LED_RPM_STYLES: readonly LedRpmStyle[] = ['car', 'leftToRight', 'meetInMiddle', 'f1'];
+export const LED_MIRROR_FITS: readonly LedMirrorFit[] = ['stretch', 'exact'];
+
+/**
+ * The run lengths the plugin publishes a mirrored bar for: every centre length {@link ALL_SHAPES}
+ * uses, the brows included.
+ *
+ * It is a list rather than a range because each entry is a property name, and a property name is a
+ * public interface. A new strip shape whose centre is not in this list gets no mirror at all --
+ * silently, since the profile simply reads a property nobody attaches -- so `leds.test.ts` checks
+ * the two lists against each other.
+ */
+export const MIRROR_RUN_LENGTHS: readonly number[] = [8, 9, 10, 12, 14, 15, 16, 18, 20, 25];
+
+/** How many characters one colour takes in a packed run: `#AARRGGBB`. */
+export const MIRROR_COLOR_WIDTH = 9;
 
 /** The fifth centre, retired into `rpm`. Named so that the plugin can migrate it rather than guess. */
 export const RETIRED_LED_CENTRE = 'rpmOnly';
@@ -94,7 +118,8 @@ export const DEFAULTS = {
   DeltaReference: 'session' as DeltaReference,
   SessionProgress: 'auto' as SessionProgress,
   LedCentre: 'rpm' as LedCentre,
-  LedRpmStyle: 'leftToRight' as LedRpmStyle,
+  LedRpmStyle: 'car' as LedRpmStyle,
+  LedMirrorFit: 'stretch' as LedMirrorFit,
   LedFlagAnimation: true,
   // Nothing extra, because a blue flag is read by its colour and the band is the one place a
   // driver already knows to look; the class of the car behind is a thing to ask for rather than a
@@ -144,7 +169,7 @@ export function dashProperties(): string[] {
 
 /** The properties only a generated LED profile reads. ADR 0013. */
 export function ledProperties(): string[] {
-  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING].map(propertyName);
+  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING, LED_MIRROR_FIT_SETTING, LED_MIRROR_READY, ...MIRROR_RUN_LENGTHS.map(ledMirrorRunName)].map(propertyName);
 }
 
 /** The name of the setting choosing what the middle of a strip shows. */
@@ -165,6 +190,27 @@ export const LED_RPM_STYLE_SETTING = 'LedRpmStyle';
  * `RevBar` is appended to the shared group: both halves of the contract are pinned in order.
  */
 export const LED_FLAG_ANIMATION_SETTING = 'LedFlagAnimation';
+
+/** The name of the setting choosing how a car's bar is fitted to a strip that is a different length. */
+export const LED_MIRROR_FIT_SETTING = 'LedMirrorFit';
+
+/**
+ * Whether the plugin is publishing a mirrored bar this frame: it has a table for this car, the
+ * driver has asked for it, and the sim is in a gear it can draw. The one gate the mirror layer of
+ * every strip profile hangs on, and false for all five of the ways there can be no mirror -- no
+ * plugin, no tables fetched, no entry for the car, an entry that would not read, or a driver who
+ * chose one of openDash's own styles.
+ */
+export const LED_MIRROR_READY = 'LedMirrorReady';
+
+/**
+ * `LedMirror14`: a whole 14-LED run of the car's own bar, as one string.
+ *
+ * Fixed-width `#AARRGGBB` colours end to end, which is what lets the profile take LED `k` out of it
+ * with {@link setting.ledMirrorAt}. One property per run length rather than one per LED is 12 names
+ * in the contract instead of 149.
+ */
+export const ledMirrorRunName = (length: number): string => `LedMirror${length}`;
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
@@ -213,7 +259,7 @@ export const setting = {
   slot: (slot: number): Expr => isnull(prop(propertyName(slotSettingName(slot))), num(defaultCardForSlot(slot))),
   /** `isnull([OpenDash.LedCentre], 'rpm')` */
   ledCentre: (): Expr => isnull(prop(propertyName(LED_CENTRE_SETTING)), str(DEFAULTS.LedCentre)),
-  /** `isnull([OpenDash.LedRpmStyle], 'leftToRight')` */
+  /** `isnull([OpenDash.LedRpmStyle], 'car')` */
   ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
   /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
   ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
@@ -221,13 +267,27 @@ export const setting = {
   blueFlagDetail: (): Expr => isnull(prop(propertyName(BLUE_FLAG_DETAIL_SETTING)), str(DEFAULTS.BlueFlagDetail)),
   /** `isnull([OpenDash.BlueFlagDetail], 'none') = 'class'`: whether the band is in the given detail. */
   blueFlagDetailIs: (detail: BlueFlagDetail): Expr => eq(setting.blueFlagDetail(), str(detail)),
+  /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
+  ledMirrorFit: (): Expr => isnull(prop(propertyName(LED_MIRROR_FIT_SETTING)), str(DEFAULTS.LedMirrorFit)),
+  /** `isnull([OpenDash.LedMirrorReady], 0) = 1`: whether there is a mirrored bar to draw. */
+  ledMirrorReady: (): Expr => eq(isnull(prop(propertyName(LED_MIRROR_READY)), num(0)), num(1)),
+  /**
+   * `left(isnull([OpenDash.LedMirror14], ''), 18, 9)`: the colour of LED `k` (0-based) of a run of
+   * `length`, out of the one string the plugin publishes for that run.
+   *
+   * SimHub's `left(value, startIndex, length)` returns an empty string rather than throwing when the
+   * value is short or absent, and `DynamicColor` falls back to its own colour on an empty one -- so
+   * a rig with no plugin draws nothing here rather than failing. The group is gated on
+   * {@link setting.ledMirrorReady} in any case.
+   */
+  ledMirrorAt: (length: number, k: number): Expr => left(isnull(prop(propertyName(ledMirrorRunName(length))), str('')), MIRROR_COLOR_WIDTH, k * MIRROR_COLOR_WIDTH),
 };
 
 
 // --- The zone face -------------------------------------------------------------------------
 //
 // Additive. `Slot01` to `Slot12` stay declared and stay tested until the card path is retired in
-// XOR-95, because ten faces still read them and README.md publishes them as properties an LED
+// #146, because ten faces still read them and README.md publishes them as properties an LED
 // profile may read.
 //
 // The shape of these is the whole point of the model. A slot is arranged once, with a mouse,
@@ -346,7 +406,7 @@ export const ZONE_A_PAGES: readonly FaceZonePageMeta[] = [
  *
  * The catalogue artboard is headed "seven pages" and draws D1 through D8; the drawings are more
  * specific than the caption, so eight is taken and the disagreement is recorded in
- * docs/design/zones.md. The car page needs the telltale pictograms and arrives with XOR-97; the
+ * docs/design/zones.md. The car page needs the telltale pictograms and arrives with #148; the
  * mask is sized for eight from the start so that adding it costs nothing.
  */
 export const BAND_D_PAGES: readonly FaceZonePageMeta[] = [
@@ -899,7 +959,7 @@ export const secondScreen = {
 /**
  * SimHub composes at most four matrix contents, so a box setting exists once per matrix. People do
  * own more than one box — two in the corners of a monitor stand, one showing flags and one showing
- * the gear, is a setup somebody will build on day one — and XOR-124 settled that a screen owns its
+ * the gear, is a setup somebody will build on day one — and #175 settled that a screen owns its
  * settings as one group. A device is the same shape of thing, so it gets the same treatment.
  *
  * Rotation and serpentine wiring are deliberately **not** here. They are SimHub device settings
@@ -1006,7 +1066,7 @@ export const LIGHTS_NIGHT_MODE_SETTING = 'LightsNightMode';
  * {@link FLAG_BOX_LOW_FUEL_LAPS_SETTING} is the name that shipped and is not retired with it:
  * it stays attached as the deprecated alias {@link flagBox.lowFuelLaps} falls back through, so
  * that a rig set up against rc.2 keeps the number its driver chose. ADR 0003 makes a published
- * property name a public interface, and XOR-119 is the rule that one does not vanish without a
+ * property name a public interface, and #170 is the rule that one does not vanish without a
  * release of warning.
  */
 export const LIGHTS_LOW_FUEL_LAPS_SETTING = 'LightsLowFuelLaps';

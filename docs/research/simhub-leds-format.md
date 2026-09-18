@@ -355,7 +355,7 @@ same assembly, that every binding in a `.djson` uses.** It serialises the same w
 plus an optional `PreExpression`, with `Interpreter: 1, JSExt: 0` for JavaScript and NCalc by
 default.
 
-This settles the question XOR-224 said the whole block rests on. `isnull([OpenDash.ShiftLights], true)`
+This settles the question #275 said the whole block rests on. `isnull([OpenDash.ShiftLights], true)`
 evaluates inside a matrix profile exactly as it does inside a dashboard, the generator's existing
 `buildFormulaObject` emits it unchanged, and a setting changed in the panel reaches the screen and
 the box through one property and one expression language.

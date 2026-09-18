@@ -114,6 +114,24 @@ the "new plugin found" activation prompt on the desktop the first time; `screens
 `click` through it, or pre-activate by editing
 `C:\Program Files (x86)\SimHub\PluginsData\PluginsActivation.json`.
 
+### Reading a property value, which is how a plugin is checked without a dashboard
+
+The left menu's **Available properties** page lists every property with its live value, and its
+**Ncalc tester** button evaluates any expression against the running sim. Between them they answer
+"is the plugin publishing what I think, and does the expression a profile carries actually work",
+with no dashboard to open and no hardware to own — which is how the LED mirror was checked
+(docs/research/iracing-led-patterns.md, "Seen working").
+
+Two things make it usable from here:
+
+- **`type_text` does not work on this VM.** Put the text on the desktop session's clipboard instead
+  and paste it: `write_file` it to `C:\Windows\Temp\expr.txt`, then
+  `run_in_desktop('powershell.exe', '-NoProfile -Command "Set-Clipboard -Value ((Get-Content -Raw
+  ''C:\Windows\Temp\expr.txt'').Trim())"')`, then click the box and `press_keys('ctrl-a ctrl-v')`.
+  A `run_powershell` clipboard write does not reach it: session 0 has its own.
+- The result field is one line and clips a long value, so ask for the part you want rather than the
+  whole of it — `left(value, 18, 9)` rather than `value`.
+
 ## Pressing a wheel button
 
 Five OpenDash actions are bound to wheel buttons by a driver, and a test has to be able to press
