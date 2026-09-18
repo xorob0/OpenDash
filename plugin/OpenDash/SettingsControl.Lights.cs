@@ -48,7 +48,7 @@ namespace OpenDashPlugin
 
             var strips = Ui.Section("The strips",
                 Ui.Caption("An RGB LED strip across the wheel or the rim. Install the profile that matches your strip from the Install tab, then these three decide what it shows."),
-                Ui.Row("Strip centre", "What the middle of the strip shows. RPM is the one that keeps the brake on the sides.",
+                Ui.Row("Strip centre", "What the middle of the strip shows. The LEDs at the ends are lamps and are not affected by it.",
                     BuildChoice(Contract.LedCentres, PanelLights.CentreLabels, Settings.LedCentre, 220,
                         value => { Settings.LedCentre = value; Save(); })),
                 Ui.Row("Rev style", "How the ladder fills. Meet in middle works inwards from both ends; F1 is a formula wheel's colours, and flashes whole.",

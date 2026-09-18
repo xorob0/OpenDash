@@ -37,7 +37,7 @@ import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers,
 import { ignitionIsOn } from './gates.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
-import { centreStart, deviceLength, rightStart, stripLength, type StripShape } from './strip.ts';
+import { centreStart, deviceLength, stripLength, type StripShape } from './strip.ts';
 
 const { and, eq, not, str } = ncalc;
 
@@ -287,39 +287,6 @@ const centreFunctions = (count: number): leds.LedContainer[] => [
 ];
 
 /**
- * The sides: brake, and only under the default centre. Under any other centre they stay dark rather
- * than being filled with something the driver did not ask for.
- */
-const sides = (shape: StripShape): leds.LedContainer[] => {
-  if (shape.left === 0 && shape.right === 0) return [];
-  const brake = brakeInput();
-  const side = (start: number, count: number, label: string): leds.LedContainer => ({
-    kind: 'group',
-    description: `${label} side`,
-    startPosition: start,
-    children: Array.from({ length: count }, (_, k) => ({
-      kind: 'customStatus' as const,
-      description: `${label} brake ${String(k + 1).padStart(2, '0')}`,
-      startPosition: k + 1,
-      ledCount: 1,
-      color: ds.color.danger.primary,
-      enabledFormula: { expression: stepLit(brake, k, count) },
-    })),
-  });
-  return [
-    {
-      kind: 'conditionalGroup',
-      description: 'sides: brake, under the default centre only',
-      trigger: { expression: centreIs('rpm') },
-      children: [
-        ...(shape.left > 0 ? [side(1, shape.left, 'left')] : []),
-        ...(shape.right > 0 ? [side(rightStart(shape), shape.right, 'right')] : []),
-      ],
-    },
-  ];
-};
-
-/**
  * The effect catalogue placed on a shape.
  *
  * Every condition that is not the pit family lands on one lamp of one LED, which `lamps.ts`
@@ -383,8 +350,10 @@ export const rpmStripFileName = (shape: StripShape): string => `openDash ${shape
 /** The whole tree for one shape, before any reversal is applied. */
 const treeFor = (shape: StripShape): leds.LedContainer[] => [
   { kind: 'group', description: 'centre', startPosition: centreStart(shape), children: centreFunctions(shape.centre) },
-  ...sides(shape),
-  // After the rev ladder and the brake sides, so that it composes over them.
+  // After the rev ladder, so that it composes over it. The sides carry nothing but lamps: a brake
+  // gradient used to fill them under the default centre, and a group filled red by the pedal is a
+  // group on which an oil warning cannot come on. A driver who wants a pedal trace asks for one,
+  // through the brake and throttleBrake centres, and gets it where it can be read.
   ...effects(shape),
   // The 3/10/3's two further runs of nine repeat the centre, so a device with three strips says the
   // same thing on all three rather than leaving two of them dark.

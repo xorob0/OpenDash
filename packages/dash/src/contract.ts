@@ -20,8 +20,13 @@ export type PositionMode = 'overall' | 'class';
 export type DeltaReference = 'session' | 'alltime';
 export type SessionProgress = 'auto' | 'laps' | 'time';
 /**
- * What the middle of an RGB strip shows. The sides carry brake in the default, which is what the
- * hardware makers put there and what DNR puts on the same LEDs.
+ * What the middle of an RGB strip shows. It decides the middle alone: the sides of a strip are
+ * lamps, and nothing a driver chooses here reaches them.
+ *
+ * The sides carried a brake gradient under this setting's default, which is what the hardware
+ * makers put there and what DNR puts on the same LEDs. It is gone, because a group filled red by
+ * the pedal is a group on which an oil warning cannot come on, and the warning is the thing a side
+ * exists for. Brake is still available where it can be read, as a centre function.
  *
  * Four, not five. `rpmOnly` lit the same centre as `rpm` and differed only in leaving the sides
  * dark, which is a decision about the sides rather than about the centre, so it is retired into
