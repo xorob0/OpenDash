@@ -65,6 +65,14 @@ export const FLAG_FULL_NAME_PAD = ds.space[6];
  * The standing and the waved yellow read the same word and are told apart by the flash, which is
  * the rule the flag box keeps under "waving is blinking"; they cannot be out at once, so the block
  * never has to distinguish two things a driver can see side by side.
+ *
+ * **The blue flag's detail does not reach the block, and that is this table's own rule rather than
+ * an omission.** Band D can name the car a blue flag is being waved for, because `BlueFlagDetail`
+ * asks it to and sixty pixels of 15 px label have the room. Here one size serves every state and
+ * that size is the widest name divided into the block, so `BLUE · P24 LMP2` would not shrink the
+ * blue alone: it would set RED, BLACK and SAFETY at a third of their height on every face, which is
+ * fifteen conditions paying for one. A block is the flag that cannot be missed, and a class code
+ * half the face high is not what makes it one.
  */
 const BLOCK_NAMES: Readonly<Record<string, string>> = {
   red: 'RED',
