@@ -19,6 +19,8 @@
     <Compile Include="../OpenDash/ScreenInstance.cs" Link="Plugin/ScreenInstance.cs" />
     <Compile Include="../OpenDash/PackageCatalogue.cs" Link="Plugin/PackageCatalogue.cs" />
     <Compile Include="../OpenDash/ScreenInstaller.cs" Link="Plugin/ScreenInstaller.cs" />
+    <Compile Include="../OpenDash/LedBar.cs" Link="Plugin/LedBar.cs" />
+    <Compile Include="../OpenDash/LedBarProfile.cs" Link="Plugin/LedBarProfile.cs" />
     <Compile Include="../OpenDash/OpenDashSettings.cs" Link="Plugin/OpenDashSettings.cs" />
     <Compile Include="../OpenDash/Versioning.cs" Link="Plugin/Versioning.cs" />
     <Compile Include="../OpenDash/Installation.cs" Link="Plugin/Installation.cs" />

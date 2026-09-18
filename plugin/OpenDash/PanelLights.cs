@@ -28,6 +28,47 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.FlagBoxSides"/> value, in its order.</summary>
         public static readonly string[] SideLabels = { "Both", "Left", "Right" };
 
+        /// <summary>The heading over the strips a driver has added.</summary>
+        public const string BarsTitle = "Your LED bars";
+
+        /// <summary>
+        /// The line under it.
+        /// </summary>
+        /// <remarks>
+        /// A strip used to be a shape the Install tab offered and nothing more, so two strips on one rig
+        /// could be installed separately and not configured separately -- a wheel and a brow shared one
+        /// answer to what their middles show. A bar is an instance now, the way a screen is: it has a
+        /// name, a shape and settings of its own, and installing it is what puts a profile of that name
+        /// into SimHub.
+        /// </remarks>
+        public const string BarsCaption =
+            "An RGB strip on the wheel, the rim or above the monitor. Add one for each strip you have and give it a name; "
+            + "openDash installs a profile under that name, and the settings under it are that bar's alone.";
+
+        public const string NoBars = "No bars yet. Add one and openDash installs its profile into SimHub, ready to pick on the device.";
+
+        public const string AddBar = "Add an LED bar";
+
+        public const string BarNameTitle = "Call it";
+
+        public const string BarNameCaption = "Yours. It names the group here and the profile in SimHub's own LED profile list.";
+
+        public const string BarShapeTitle = "What shape is it";
+
+        public const string BarShapeCaption = "How many LEDs, and how they are grouped: the run in the middle carries the revs and the groups at the ends are lamps.";
+
+        /// <summary>What is said once a bar exists, which is the step SimHub does not take for you:
+        /// installing adds a profile, it does not select one on the device.</summary>
+        public static string BarAdded(string name)
+        {
+            return "Added " + name + " and installed its profile. Open your LED device in SimHub and select \"" + name + "\" on it.";
+        }
+
+        public static string BarAddFailed(string name)
+        {
+            return "Added " + name + ", but its profile could not be installed into SimHub. The Install tab says why.";
+        }
+
         /// <summary>The heading over the panels a driver has added.</summary>
         public const string PanelsTitle = "Your matrix panels";
 

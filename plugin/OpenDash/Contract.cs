@@ -1206,6 +1206,19 @@ namespace OpenDashPlugin
         /// </remarks>
         public static IEnumerable<string> PropertyNames(IEnumerable<ScreenInstance> screens)
         {
+            return PropertyNames(screens, null);
+        }
+
+        /// <summary>
+        /// Every property a rig of screens and a rig of LED bars attach, in attachment order.
+        /// </summary>
+        /// <remarks>
+        /// The bars come last, after the rig-wide light names they are instances of, for the reason the
+        /// screens come after the shared ones: an instance's group is appended and never interleaved, so
+        /// a rig with no bars declares exactly the list the pin holds.
+        /// </remarks>
+        public static IEnumerable<string> PropertyNames(IEnumerable<ScreenInstance> screens, IEnumerable<LedBar> bars)
+        {
             foreach (var name in SharedPropertyNames()) yield return name;
             if (screens != null)
             {
@@ -1216,6 +1229,12 @@ namespace OpenDashPlugin
                 }
             }
             foreach (var name in LightsPropertyNames()) yield return name;
+            if (bars == null) yield break;
+            foreach (var bar in bars)
+            {
+                if (bar == null || string.IsNullOrEmpty(bar.Namespace)) continue;
+                foreach (var name in LedBarProfile.Properties(bar.Namespace)) yield return name;
+            }
         }
 
         /// <summary>Every property of every screen OpenDash ships, which is what contract.ts declares
