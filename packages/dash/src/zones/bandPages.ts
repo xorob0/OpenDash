@@ -32,26 +32,28 @@ import { densityOf } from '../second/density.ts';
 import { dimUnless, rank, type RankMember } from '../second/rank.ts';
 import { TELLTALE_PAGE, telltaleItems } from './telltales.ts';
 import {
-  CHARS,
   airTemperature,
   bestLap,
-  clock,
-  currentLap,
   carPosition,
   carRelativeGap,
+  CHARS,
+  clock,
+  currentLap,
   fuel as fuelLevel,
   fuelLapsLeft,
   fuelLastLap,
   fuelPerLap,
   fuelTimeLeft,
+  fuelUnit,
   incidents,
   lastLap,
   localClock,
   minutesClock,
+  NO_TIME,
   roadTemperature,
+  sectorTime,
   simClock,
   windKmh,
-  NO_TIME,
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
@@ -81,6 +83,16 @@ export interface BandField {
   row?: readonly { sample: string; bind: string }[];
   /** A small unit or denominator drawn after the value. */
   after?: string;
+  /**
+   * The unit as the sim names it, with `after` as the design-time text.
+   *
+   * Fuel is the case: SimHub publishes the tank in the unit `FuelUnit` names, so a fixed "L" over a
+   * value in gallons is the same fault as a fixed speed unit, and the box is measured by whichever
+   * of the two spellings is wider.
+   */
+  afterBind?: string;
+  /** The longest spelling `afterBind` can produce, which the box is measured by. */
+  afterWidest?: string;
   color?: `#${string}`;
   /** The label's own colour, where it is not the label grey: D7 writes the driver's own position
    *  in the primary text the way it writes his own gap. */
@@ -106,7 +118,7 @@ const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)
 
 /** D1 Fuel: what a driver checks on a straight, which is why it is the default. */
 const fuel: readonly BandField[] = [
-  { id: 'fuel', label: 'Fuel', sample: '15.12', bind: fmt(fuelLevel(), '0.00'), chars: { digits: 5, specials: 1 }, after: 'L', color: ds.purpose.fuel.nominal },
+  { id: 'fuel', label: 'Fuel', sample: '15.12', bind: fmt(fuelLevel(), '0.00'), chars: { digits: 5, specials: 1 }, after: 'L', afterBind: fuelUnit(), afterWidest: 'GAL', color: ds.purpose.fuel.nominal },
   { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(fuelTimeLeft()), chars: CHARS.minutesClock },
   { id: 'laps', label: 'Est. laps', sample: '13.1', bind: fmt(fuelLapsLeft(), '0.0'), chars: CHARS.consumption },
   { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
@@ -163,11 +175,17 @@ const weather: readonly BandField[] = [
   { id: 'grip', label: 'Grip', sample: 'GREEN', bind: ncalc.ucase(isnull(game('TrackGripStatus'), str('--'))), chars: { digits: 7, specials: 0 }, widest: 'MODERATE' },
 ];
 
-/** D6 Sectors: the three of the last lap, then the lap itself and the session best. */
+/**
+ * D6 Sectors: the three of the last lap, then the lap itself and the session best.
+ *
+ * Through `sectorTime` rather than a bare format, so a sector nobody has set yet reads the same
+ * placeholder the two lap times on this page already read. Formatted raw it came out as 0.00, which
+ * on the one page a driver reads sector by sector is a time rather than an absence.
+ */
 const sectors: readonly BandField[] = [
-  { id: 's1', label: 'S1', sample: '28.41', bind: fmt(timespanToSeconds(ncalc.driverSector('lastlap', playerPosition(), 1)), '0.00'), chars: CHARS.sector },
-  { id: 's2', label: 'S2', sample: '41.07', bind: fmt(timespanToSeconds(ncalc.driverSector('lastlap', playerPosition(), 2)), '0.00'), chars: CHARS.sector },
-  { id: 's3', label: 'S3', sample: '32.83', bind: fmt(timespanToSeconds(ncalc.driverSector('lastlap', playerPosition(), 3)), '0.00'), chars: CHARS.sector },
+  { id: 's1', label: 'S1', sample: '28.41', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 1)), chars: CHARS.sector },
+  { id: 's2', label: 'S2', sample: '41.07', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 2)), chars: CHARS.sector },
+  { id: 's3', label: 'S3', sample: '32.83', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 3)), chars: CHARS.sector },
   { id: 'last', label: 'Last', sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime },
   { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(bestLap()), chars: CHARS.lapTime, color: ds.purpose.lap.sessionBest },
 ];
@@ -379,7 +397,13 @@ function blockTop(height: number, valueFs: number, labelFs: number, labelRow: nu
 
 /** Width the unit after a value takes. Measured, not the remainder of the field: a field whose
  *  value fills its width left the unit a box narrower than its own glyph, and WPF clipped it. */
-const unitWidth = (field: BandField): number => (field.after ? Math.ceil(measureText('BarlowMedium', field.after.toUpperCase(), ds.size.labelSm)) + 2 : 0);
+const unitWidth = (field: BandField): number => {
+  if (!field.after) return 0;
+  // Measured by the wider of the two spellings where the sim names the unit, since either may be
+  // the one drawn and a box cut for the shorter clips the longer.
+  const drawn = [field.after, ...(field.afterWidest ? [field.afterWidest] : [])].map((s) => measureText('BarlowMedium', s.toUpperCase(), ds.size.labelSm));
+  return Math.ceil(Math.max(...drawn)) + 2;
+};
 
 /** Width the value of a field takes, the numerals sharing its label included. */
 function valueWidthOf(field: BandField, valueFs: number): number {
@@ -453,6 +477,7 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
         items.push(
           unit(`${prefix}${field.id}.unit`, field.after, at.x + valueWidth + FIELD_GAP, valueTop + (valueFs - ds.size.labelSm), unitWidth(field), {
             size: ds.size.labelSm,
+            ...(field.afterBind ? { bind: field.afterBind, widest: field.afterWidest ?? field.after } : {}),
             leftBind: at.leftAt(valueWidth + FIELD_GAP),
             visibleBind: at.visibleBind,
           }),
