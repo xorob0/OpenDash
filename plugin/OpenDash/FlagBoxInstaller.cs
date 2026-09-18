@@ -43,6 +43,7 @@ using SimHub.Plugins.OutputPlugins.Dash;
 using SimHub.Plugins.ProfilesCommon;
 using LedsDriver = SimHub.Plugins.DataPlugins.RGBDriver.RGBLedsDriver;
 using LedsProfile = SimHub.Plugins.DataPlugins.RGBDriver.Settings.Profile;
+using LedsSettings = SimHub.Plugins.DataPlugins.RGBDriver.Settings.LedsSettings;
 
 namespace OpenDashPlugin
 {
@@ -92,9 +93,19 @@ namespace OpenDashPlugin
                 settings.Profiles,
                 settings.AvailableProfiles,
                 new object[] { embedded },
-                index => settings.AddProfile(embedded),
+                index => AddToSaved(settings, embedded),
                 driver.SaveSettings,
-                "matrix")[0];
+                "matrix",
+                FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles))[0];
+        }
+
+        /// <summary>Adds to the list SimHub saves. See <see cref="ProfileInstall.WhyNotAddProfile"/>.</summary>
+        private static void AddToSaved(MatrixSettings settings, RGBMatrixProfile profile)
+        {
+            profile.Settings = settings;
+            settings.InitProfile(profile);
+            settings.Profiles.Add(profile);
+            settings.RefreshSortedProfiles();
         }
 
         /// <summary>
@@ -196,9 +207,19 @@ namespace OpenDashPlugin
                 settings.Profiles,
                 settings.AvailableProfiles,
                 parsed.Cast<object>().ToList(),
-                index => settings.AddProfile(parsed[index]),
+                index => AddToSaved(settings, parsed[index]),
                 driver.SaveSettings,
-                "RGB LED");
+                "RGB LED",
+                FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles));
+        }
+
+        /// <summary>Adds to the list SimHub saves. See <see cref="ProfileInstall.WhyNotAddProfile"/>.</summary>
+        private static void AddToSaved(LedsSettings settings, LedsProfile profile)
+        {
+            profile.Settings = settings;
+            settings.InitProfile(profile);
+            settings.Profiles.Add(profile);
+            settings.RefreshSortedProfiles();
         }
 
         /// <summary>
@@ -288,12 +309,41 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Why neither installer calls SimHub's own `AddProfile`, which is the whole of the
+        /// "my profile never appeared" bug.
+        /// </summary>
+        /// <remarks>
+        /// `settings.AddProfile(p)` adds to `AvailableProfiles`, and that is a *computed* property:
+        /// `Profiles` normally, but `BuiltInProfiles` whenever the device ships built-in profiles and the
+        /// user has them switched on (ProfileSettingsBase.cs:422-438). A Fanatec wheel ships them. So on
+        /// such a rig the profile was appended to the device maker's list, `SaveSettings` serialised
+        /// `Profiles` without it, and it was gone at the next start -- while the verification below, which
+        /// reads `Profiles`, reported the install as failed. Two symptoms, one line.
+        ///
+        /// Each installer therefore does by hand what the protected `AddProfile(target, p)` does
+        /// (ProfileSettingsBase.cs:842-858), against `Profiles`: the back-reference, SimHub's own
+        /// per-driver initialisation, the add, and the sorted-list refresh the device's dropdown binds to.
+        /// Every step is public. Two four-line methods rather than one generic helper, because a type
+        /// parameter constrained to `ProfileBase` makes the compiler resolve every interface the concrete
+        /// profile implements, one of which lives in an assembly SimHub does not ship to plugin authors.
+        ///
+        /// The one step left out is that method's de-duplication pass, which renumbers any profile whose
+        /// id already appears: the caller has just removed ours by id, so there is nothing to renumber,
+        /// and letting it run would hand SimHub the chance to renumber the very profile we then go looking
+        /// for. `TargetGameFamily` is left alone for the same kind of reason -- it is set only under
+        /// `FilterByGameFamily`, which neither lighting driver overrides to true.
+        /// </remarks>
+        internal const string WhyNotAddProfile =
+            "SimHub's AddProfile targets AvailableProfiles, which is BuiltInProfiles on a device with "
+            + "built-in profiles switched on; the saved list is Profiles.";
+
+        /// <summary>
         /// Removes our copies, adds the embedded ones and asks SimHub to save once, returning a plan per
         /// member in the order given. A null member is one that could not be parsed: it is reported
         /// NotEmbedded and nothing is touched on its behalf.
         /// </summary>
         internal static IList<FlagBoxPlan> Install(
-            IList profiles, IList available, IReadOnlyList<object> embedded, Action<int> add, Action save, string what)
+            IList profiles, IList available, IReadOnlyList<object> embedded, Action<int> add, Action save, string what, bool builtInMode = false)
         {
             var results = new FlagBoxPlan[embedded.Count];
             var replaced = 0;
@@ -311,14 +361,12 @@ namespace OpenDashPlugin
                     // Ours is the one carrying our ProfileId. Anything else in either list is the user's
                     // and is not touched, which is the whole reason this is safer than merging the file.
                     //
-                    // Both lists, because AddProfile appends to AvailableProfiles while the file is
-                    // serialised from Profiles. For a plain Arduino matrix those are the same collection
-                    // -- AvailableProfiles returns Profiles unless the settings filter by game family or
-                    // have a built-in profiles path (ProfileSettingsBase.cs:422) -- but the LED driver
-                    // does have built-in profiles, the ones a device maker ships under
-                    // DevicesDefinitions/.../BuiltInLedsProfiles, so there the two genuinely part company
-                    // and removing from only one would leave a duplicate. BuiltInProfiles itself is never
-                    // touched: those profiles are the device maker's, not ours and not the user's.
+                    // Both lists. AvailableProfiles returns Profiles unless the settings filter by game
+                    // family or the device has built-in profiles switched on (ProfileSettingsBase.cs:422),
+                    // and a device maker's BuiltInLedsProfiles put the LED driver in the second case, so
+                    // there the two genuinely part company and removing from only one would leave a
+                    // duplicate. Adding goes to Profiles alone -- see ProfileInstall.WhyNotAddProfile --
+                    // and BuiltInProfiles is otherwise never touched: those are the maker's, not ours.
                     replaced += Remove(profiles, profile.ProfileId);
                     if (!ReferenceEquals(available, profiles))
                     {
@@ -372,6 +420,19 @@ namespace OpenDashPlugin
                         + what + " profile list.");
                 }
                 results[i] = plan;
+            }
+
+            // Installed correctly and still not in the device's list, which is a state rather than a
+            // failure: the dropdown is bound to AvailableProfiles, the user has it pointed at the maker's
+            // built-in profiles, and no amount of installing puts ours among those. Said once per install
+            // and carried on every plan, so the row and the announcement can both say which switch it is.
+            if (builtInMode)
+            {
+                Log.Info(what + ": " + FlagBoxInstallPlan.BuiltInModeNote);
+                for (var i = 0; i < results.Length; i++)
+                {
+                    if (results[i] != null) results[i].Note = FlagBoxInstallPlan.BuiltInModeNote;
+                }
             }
 
             if (added > 0)

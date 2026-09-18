@@ -859,7 +859,11 @@ describe('what the face does with a field that is not there', () => {
     const settings = MODULES.find((m) => m.id === 'carSettings')!;
     const items = textsIn(settings.build({ frame: rect(0, 0, 600, 280), density: 'zone', prefix: '' }));
     const abs = items.find((i) => i.name === 'abs.value')!;
-    expect(bound(abs, 'Visible')).toBe('!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))');
+    // Two signals, not one: the knob iRacing publishes for an adjustable system, or a level SimHub
+    // has for a fixed one. A car with neither still hides the cell, which is what this test is for.
+    expect(bound(abs, 'Visible')).toBe(
+      '(!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))',
+    );
     // `abs` opens the second line of the three-column grid, so the cell that has to move when the
     // car has no ABS is the one drawn after it rather than `abs` itself.
     const arbRear = items.find((i) => i.name === 'arbRear.value')!;

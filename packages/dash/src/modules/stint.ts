@@ -1,7 +1,16 @@
 /**
- * Module 18, Stint: how long you have been out, how much you have done, and what the last stop
- * cost. Every one of these is a per-car value on your own row rather than a session member, which
- * is why they all go through the player's leaderboard index.
+ * Module 18, Stint: where you are in the race, how long you have been out, how much longer the fuel
+ * lasts, and what the last stop cost.
+ *
+ * **The lead rank answers "how much of this race is left", from three directions.** The lap out of
+ * the estimated total is the one a driver says out loud; the fuel time is how long the tank lasts
+ * whatever the clock says; and the stint time is how long this run has been. A page about a stint
+ * that could not say how far through the race it was is the gap testing found.
+ *
+ * The driver's name and car number used to sit at the foot of it and no longer do. A number drawn
+ * as a full field is a fact about somebody you already know the identity of -- yourself -- and it
+ * was taking a cell from figures that change. It stays where it earns its place, which is a list of
+ * other people's cars.
  *
  * The pit window the design sheet draws is left out: a window is a strategy the plugin does not
  * compute, and a made-up one would be read as advice.
@@ -18,10 +27,10 @@
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
-import { CHARS, average5, carName, carNumber, clock, player } from '../second/values.ts';
+import { CHARS, average5, clock, fuelIsSettled, fuelTimeLeft, lapOfTotal, NO_VALUE, player } from '../second/values.ts';
 import { defineModule, fieldsRow, fld } from './module.ts';
 
-const { fmt, isnull, num, str, concat, driver, timespanToSeconds, game, ucase } = ncalc;
+const { fmt, iff, isnull, num, str, driver, timespanToSeconds, game } = ncalc;
 
 export const stint = defineModule('stint', (ctx) => {
   const d = densityOf(ctx.density);
@@ -36,30 +45,25 @@ export const stint = defineModule('stint', (ctx) => {
     [
       fieldsRow(
         [
-          fld(ctx, 'stintLaps', 'Stint laps', { sample: '12', bind: fmt(stintLaps, '0'), chars: CHARS.position, fs: d.big }),
+          fld(ctx, 'lap', 'Lap', { sample: '12 / 43', bind: lapOfTotal(), chars: CHARS.lapOfTotal, fs: d.big }),
+          // Gated on a completed lap for the reason `fuelIsSettled` gives: before one, SimHub is
+          // extrapolating a partial lap and this clock runs backwards and forwards as you drive.
+          fld(ctx, 'fuelTime', 'Fuel time', { sample: '0:31:40', bind: iff(fuelIsSettled(), clock(fuelTimeLeft()), str(NO_VALUE)), chars: CHARS.clock, fs: d.big }),
           fld(ctx, 'stintTime', 'Stint time', { sample: '0:21:40', bind: clock(stintSeconds), chars: CHARS.clock, fs: d.big }),
-          fld(ctx, 'completed', 'Laps completed', { sample: '12', bind: fmt(completed, '0'), chars: CHARS.position, fs: d.big }),
         ],
         ctx,
       ),
       fieldsRow(
         [
+          fld(ctx, 'stintLaps', 'Stint laps', { sample: '12', bind: fmt(stintLaps, '0'), chars: CHARS.position, fs: d.mid }),
+          fld(ctx, 'completed', 'Laps completed', { sample: '12', bind: fmt(completed, '0'), chars: CHARS.position, fs: d.mid }),
           fld(ctx, 'stops', 'Stops', { sample: '1', bind: fmt(stops, '0'), chars: CHARS.position, fs: d.mid }),
           fld(ctx, 'lastStop', 'Last stop', { sample: '24.3', bind: fmt(lastStop, '0.0'), chars: CHARS.consumption, fs: d.mid, follower: { text: 's' } }),
         ],
         ctx,
       ),
       fieldsRow(
-        [
-          // The driver's initials are a proportional label and the car number a monospaced value,
-          // rather than one string in digit cells. `YOU · #12` was the latter: the hash overruns
-          // a cell cut for digits, and so would an M or a W in somebody's initials.
-          fld(ctx, 'driver', 'Driver · YOU', { sample: '12', bind: carNumber(me), chars: CHARS.carNumber, fs: d.small }, {
-            labelBind: concat(str('DRIVER · '), ucase(carName(me))),
-            labelWidest: 'DRIVER · WWW',
-          }),
-          fld(ctx, 'avgLap', 'Avg lap', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, fs: d.small }),
-        ],
+        [fld(ctx, 'avgLap', 'Avg lap', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, fs: d.small })],
         ctx,
       ),
     ],
