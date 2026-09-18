@@ -1260,10 +1260,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every action one companion registers, in registration order.</summary>
+        /// <summary>
+        /// None. A companion is paged by SimHub, not by openDash.
+        /// </summary>
+        /// <remarks>
+        /// There were two -- next module, and hold for a glance -- and both moved `CompanionPage`,
+        /// which is what the screens were gated on. That gate is why a tap did nothing: SimHub's only
+        /// touch gesture maps a tap to the previous or next screen, and its navigation walks the
+        /// screens whose expression is true, so with one of twenty-one enabled there was nowhere to
+        /// go. The rotation alone gates them now, so SimHub's own per-dashboard "Next screen" binding
+        /// pages a companion from a wheel button and a tap pages it from the screen.
+        ///
+        /// Registering an action that no longer moves anything would put a dead row in SimHub's
+        /// Controls and events, which is worse than not offering one. #362 is where they come back if
+        /// SimHub ever gives a plugin a way to choose the screen itself.
+        /// </remarks>
         public static IEnumerable<string> CompanionActionNames(string ns)
         {
-            yield return NextModuleActionFor(ns);
-            yield return HoldQuickGlanceActionFor(ns);
+            yield break;
         }
 
         /// <summary>

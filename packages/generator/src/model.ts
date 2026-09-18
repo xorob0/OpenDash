@@ -459,6 +459,18 @@ export interface DashboardMetadata {
   author: string;
   description?: string;
   category?: string | null;
+  /**
+   * Which touch mode SimHub should put this dashboard in, when the user has left that on automatic.
+   *
+   * `simple` is a tap on the left or right half of the screen for the previous or next screen, which
+   * is the only touch SimHub offers a dashboard at all. `advanced` hands raw touch points to the
+   * items. `user` leaves it to whatever the display's own setting says, which is the default and what
+   * every dashboard here sent before there was a choice.
+   *
+   * `BitmapDisplayBase.GetEffectiveTouchMode` is where it is read, and it is consulted only while
+   * `TouchModeAuto` is on -- a display whose owner has picked a mode keeps it.
+   */
+  touchMode?: 'user' | 'simple' | 'advanced';
   /** Semantic version string; the plugin compares it to decide whether to reinstall. */
   version: string;
   /** SimHub version the output was tested against, e.g. "9.12.6". */

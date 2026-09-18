@@ -36,6 +36,24 @@ export interface NCalcFunction {
   readonly note?: string;
 }
 
+/**
+ * The note on the two functions that can throw, which is a worse failure than a wrong arity.
+ *
+ * Both are `IndexToPosition(lastData?.NewData?.BestLapOpponent...Position).Value`. The property
+ * behind the `?.` chain is a plain `int` defaulting to -1, so the only way the argument is null is
+ * the chain itself -- a frame on which SimHub's `NewData` reference is momentarily absent, which is
+ * a race a dashboard evaluating on its own thread observes while the data is being rewritten. Then
+ * `IndexToPosition` returns null and `.Value` throws, and a throwing expression draws the empty
+ * string exactly as a mis-dispatched one does. A field goes blank for a frame and comes back.
+ *
+ * `BestLapOpponentPosition` and `BestLapOpponentSameClassPosition` are public properties of
+ * `StatusDataBase`, so `second/values.ts` reads them under `GameData` instead. These stay listed
+ * because they exist and the list is a record of what SimHub has, not of what openDash calls;
+ * `expressions.test.ts` is what keeps a package from calling them.
+ */
+const THROWS =
+  'takes a dummy argument, and throws on a frame where SimHub has no data: read GameData.BestLapOpponentPosition instead';
+
 const exactly = (name: string, n: number, note?: string): NCalcFunction => ({ name, arity: { exactly: n }, ...(note ? { note } : {}) });
 const oneOf = (name: string, ns: readonly number[], note?: string): NCalcFunction => ({ name, arity: { oneOf: ns }, ...(note ? { note } : {}) });
 const atLeast = (name: string, n: number, note?: string): NCalcFunction => ({ name, arity: { atLeast: n }, ...(note ? { note } : {}) });
@@ -89,8 +107,8 @@ const REGISTRY: readonly NCalcFunction[] = [
   exactly('dashboardheight', 0),
   exactly('dashboardwidth', 0),
   exactly('drivergamespecificdata', 2),
-  exactly('getbestlapopponentleaderboardposition', 1, 'declared without a parameter, but its delegate takes one, so a dummy 0 is required'),
-  exactly('getbestlapopponentleaderboardposition_playerclassonly', 1, 'the same dummy argument'),
+  exactly('getbestlapopponentleaderboardposition', 1, THROWS),
+  exactly('getbestlapopponentleaderboardposition_playerclassonly', 1, THROWS),
   exactly('getbestsplitleaderboardposition', 1),
   exactly('getbestsplitleaderboardposition_playerclassonly', 1),
   exactly('getbestsplittime', 1),

@@ -96,7 +96,20 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
     idle: true,
     pit: false,
     backgroundColor: ds.color.surface.base,
-    enabledExpression: secondScreen.moduleShown(page),
+    // The rotation alone, not the rotation and the plugin's page.
+    //
+    // **This is what makes tapping the screen work.** SimHub's only touch gesture on a dashboard is
+    // `ProcessSimpleTouch`, which maps a tap on the left or right half to the previous or next
+    // screen -- and `Dashboard.SelectNextScreen` walks `GetActiveScreens()`, which keeps only the
+    // screens whose expression is true. While openDash enabled exactly one of the twenty-one, that
+    // list had one member and next and previous were both no-ops: tapping a companion did nothing at
+    // all, which is what a rig reported.
+    //
+    // So SimHub owns the paging here and `CompanionPage` no longer drives it. What that costs is the
+    // start module and the held quick glance, both of which needed openDash to be the one choosing;
+    // SimHub publishes no hook a plugin can use to change the screen, so there is no way to keep them
+    // and have the tap work. #362 is where they go if one ever appears.
+    enabledExpression: secondScreen.moduleEnabled(page),
     items,
   };
 }
@@ -104,11 +117,14 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
 /** The companion dashboard: 21 screens, one per module, in page order, one of them enabled. */
 export function companionDashboard(size: CompanionSize, metadata: DashboardMetadata): Dashboard {
   return {
+    // A companion is a phone or a tablet and the tap is how it is driven, so it asks for the simple
+    // mode rather than leaving it to whatever the display's own setting happens to be. SimHub reads
+    // this only while that setting is on automatic, so somebody who has chosen a mode keeps it.
+    metadata: { ...metadata, touchMode: 'simple' },
     name: size.folder,
     width: size.width,
     height: size.height,
     backgroundColor: ds.color.surface.base,
     screens: Array.from({ length: MODULE_COUNT }, (_, i) => companionScreen(size, i + 1)),
-    metadata,
   };
 }

@@ -26,6 +26,7 @@ const {
   eq,
   gt,
   lt,
+  ge,
   and,
   concat,
   fmt,
@@ -211,8 +212,30 @@ export const rowIndex = {
 /** How many cars a split list leaves out: the run between the rows it keeps and the window. */
 export const splitHiddenCars = (topRows: number, rows: number): Expr => sub(splitWindowTop(topRows, rows), num(topRows + 1));
 
-/** The leaderboard index of the car holding the session's best lap. */
-export const sessionBestRow = (): Expr => bestLapPosition();
+/**
+ * The leaderboard index of the car holding the session's best lap, or -1 while there is none.
+ *
+ * **Read as a property, never through `getbestlapopponentleaderboardposition()`.** That function is
+ * `IndexToPosition(lastData?.NewData?.BestLapOpponentPosition).Value`, and the `?.` chain makes the
+ * argument `int?` although the property behind it is a plain `int` defaulting to -1. So on any frame
+ * where SimHub's `NewData` reference is momentarily null -- between the ticks it swaps them on, which
+ * is a race a dashboard evaluating on its own thread can and does observe -- `IndexToPosition` hands
+ * back null and `.Value` throws.
+ *
+ * A throwing NCalc expression does not fail loudly in SimHub. It draws **the empty string**, which is
+ * the same trap `left([Class], 4)` fell into and the reason `ncalcFunctions.ts` exists. Every field
+ * whose text went through this function therefore blanked on those frames and came back on the next:
+ * reported from a rig as the session's best time appearing on the second lap and then "blinking a
+ * lot", steady again once the car stopped and the data stopped being rewritten under it.
+ *
+ * `BestLapOpponentPosition` is a public property of `StatusDataBase`, so SimHub publishes it under
+ * `GameData` like any other, and reading it cannot throw. `IndexToPosition`'s own arithmetic is the
+ * `+ 1`, which applies to a real index and not to the -1 that means "nobody yet".
+ */
+export const sessionBestRow = (): Expr => {
+  const index = isnull(game('BestLapOpponentPosition'), num(-1));
+  return iff(ge(index, num(0)), add(index, num(1)), num(-1));
+};
 
 /** The session's best lap, which is the best lap of that car. */
 export const sessionBestLap = (): Expr => driver('bestlap', sessionBestRow());

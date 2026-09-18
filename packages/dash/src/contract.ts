@@ -870,6 +870,21 @@ export function moduleSettingName(number: number): string {
  */
 export const COMPANION_PAGE_SETTING = 'CompanionPage';
 
+/**
+ * **Nothing on a companion reads the page any more, and that is deliberate.**
+ *
+ * SimHub's only touch gesture on a dashboard maps a tap to the previous or next *screen*, and its
+ * navigation walks the screens whose expression is true. While openDash enabled exactly one of the
+ * twenty-one, that list had one member and a tap did nothing at all. So the rotation alone decides
+ * which screens exist and SimHub decides which of them is up.
+ *
+ * The property stays published. It has shipped, README names it, and #170 is the rule that an
+ * rc user's properties do not vanish without a release of warning; what it costs while it is unread
+ * is one name in a list. It comes back into use, with the start module and the held glance, if
+ * SimHub ever gives a plugin a way to choose the screen -- #362.
+ */
+export const COMPANION_PAGE_IS_UNREAD = true;
+
 /** Lap times, which is the first module in page order and what a companion opens on. */
 export const DEFAULT_COMPANION_PAGE = 0;
 

@@ -653,17 +653,18 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_companion_owns_a_next_module_button_and_a_glance()
+        public void A_companion_registers_no_action_because_SimHub_pages_it()
         {
-            // The canvas draws "Next module" on the companion pane and nothing registered an action for
-            // it. The comment here used to say the panel reported it as not bound, which the panel did
-            // not do either: the pane had no wheel-button section at all.
-            Assert.Equal(
-                new[] { "CompanionNextModule", "CompanionHoldQuickGlance" },
-                Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix).ToArray());
+            // None, and that is the change. Both of the companion's actions moved `CompanionPage`, the
+            // screens were gated on it, and that gate is why a tap on the phone did nothing: SimHub's
+            // only touch gesture maps a tap to the previous or next screen and its navigation walks
+            // the screens whose expression is true, so one of twenty-one enabled had nowhere to go.
+            // SimHub owns the paging now, and an action that moves nothing would be a dead row in its
+            // Controls and events.
+            Assert.Empty(Contract.ScreenActionNames(Contract.KindCompanion, Contract.CompanionPrefix));
+            Assert.Empty(Contract.CompanionActionNames("Rim"));
+            // The name is kept, because a face still uses the same spelling for its own zones.
             Assert.Equal("RimNextModule", Contract.NextModuleActionFor("Rim"));
-            // Per instance like a face's, so a second companion on the rig moves on its own button.
-            Assert.Equal(new[] { "RimNextModule", "RimHoldQuickGlance" }, Contract.CompanionActionNames("Rim").ToArray());
             // A pit wall has the glance alone: it cycles nothing, every panel being on screen at once,
             // but the canvas asks for a page called up on demand over a zone's assigned one.
             Assert.Equal(new[] { "PitWallHoldQuickGlance" }, Contract.ScreenActionNames(Contract.KindPitWall, Contract.PitWallPrefix).ToArray());
