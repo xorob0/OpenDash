@@ -967,7 +967,7 @@ namespace OpenDashPlugin.Tests
                 LightsBrightness = 250,
                 LightsNightBrightness = -4,
                 FlagBoxLowFuelLaps = -1,
-                FlagBoxOilTemp = -20,
+                FlagBoxMatrixOilTemp = new[] { -20, 0, 0, 0 },
             };
             settings.Normalise();
 
@@ -976,7 +976,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultFlagBoxLowFuelLaps, settings.FlagBoxLowFuelLaps);
             // Zero, not a Celsius number: zero means "not set" and lets the profile pick the default
             // for whichever unit SimHub is in.
-            Assert.Equal(0, settings.FlagBoxOilTemp);
+            Assert.Equal(0, settings.MatrixOilTemp(1));
         }
 
         [Fact]
@@ -1034,11 +1034,7 @@ namespace OpenDashPlugin.Tests
                 LightsBrightness = 60,
                 LightsNightBrightness = 10,
                 LightsNightMode = true,
-                FlagBoxCriticalOnly = true,
-                FlagBoxGear = false,
                 FlagBoxLowFuelLaps = 5,
-                FlagBoxOilTemp = 130,
-                FlagBoxWaterTemp = 115,
                 LedCentre = "fuel",
                 LedRpmStyle = "f1",
                 LedFlagAnimation = false,
@@ -1047,17 +1043,23 @@ namespace OpenDashPlugin.Tests
             source.FlagBoxRest[1] = "gear";
             source.FlagBoxSide[0] = "left";
             source.FlagBoxFlags[3] = true;
+            // The four that moved under the matrix are set per panel, so the copy has to carry the
+            // arrays rather than four scalars.
+            source.FlagBoxMatrixCriticalOnly[0] = true;
+            source.FlagBoxMatrixGear[1] = false;
+            source.FlagBoxMatrixOilTemp[0] = 130;
+            source.FlagBoxMatrixWaterTemp[0] = 115;
 
             var copy = new OpenDashSettings();
             copy.CopyFrom(source);
             Assert.Equal(60, copy.LightsBrightness);
             Assert.Equal(10, copy.LightsNightBrightness);
             Assert.True(copy.LightsNightMode);
-            Assert.True(copy.FlagBoxCriticalOnly);
-            Assert.False(copy.FlagBoxGear);
             Assert.Equal(5, copy.FlagBoxLowFuelLaps);
-            Assert.Equal(130, copy.FlagBoxOilTemp);
-            Assert.Equal(115, copy.FlagBoxWaterTemp);
+            Assert.True(copy.MatrixCriticalOnly(1));
+            Assert.False(copy.MatrixGear(2));
+            Assert.Equal(130, copy.MatrixOilTemp(1));
+            Assert.Equal(115, copy.MatrixWaterTemp(1));
             Assert.Equal("gear", copy.MatrixRest(2));
             Assert.Equal("left", copy.MatrixSide(1));
             Assert.True(copy.MatrixFlags(4));
@@ -1068,6 +1070,8 @@ namespace OpenDashPlugin.Tests
             // A clone, not the same array: editing one settings object must not edit the other.
             copy.FlagBoxRest[1] = "dark";
             Assert.Equal("gear", source.MatrixRest(2));
+            copy.FlagBoxMatrixOilTemp[0] = 90;
+            Assert.Equal(130, source.MatrixOilTemp(1));
         }
 
         [Fact]
@@ -1106,8 +1110,51 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(100, settings.LightsBrightness);
             Assert.True(settings.LightsNightBrightness < settings.LightsBrightness);
             Assert.False(settings.LightsNightMode);
-            Assert.False(settings.FlagBoxCriticalOnly);
-            Assert.True(settings.FlagBoxGear);
+            // Per panel since the settings a box owns moved under it, and the defaults did not move
+            // with the names: quiet off and the gear on, on every panel.
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.False(settings.MatrixCriticalOnly(matrix));
+                Assert.True(settings.MatrixGear(matrix));
+                Assert.Equal(0, settings.MatrixOilTemp(matrix));
+                Assert.Equal(0, settings.MatrixWaterTemp(matrix));
+            }
+        }
+
+        [Fact]
+        public void A_flag_box_setting_written_before_it_belonged_to_a_box_reaches_all_four_panels()
+        {
+            // The migration ADR 0003 owes: a driver who had turned the gear off, or set a Fahrenheit
+            // oil threshold, keeps it on every box they own rather than being silently reset.
+            var json = "{\"FlagBoxCriticalOnly\":true,\"FlagBoxGear\":false,\"FlagBoxOilTemp\":250,\"FlagBoxWaterTemp\":235}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.True(settings.MatrixCriticalOnly(matrix));
+                Assert.False(settings.MatrixGear(matrix));
+                Assert.Equal(250, settings.MatrixOilTemp(matrix));
+                Assert.Equal(235, settings.MatrixWaterTemp(matrix));
+            }
+
+            // Cleared, so it happens once: a value the driver sets on one panel afterwards is not
+            // overwritten by the legacy scalar on the next load.
+            Assert.Null(settings.FlagBoxCriticalOnly);
+            Assert.Null(settings.FlagBoxGear);
+            Assert.Null(settings.FlagBoxOilTemp);
+            Assert.Null(settings.FlagBoxWaterTemp);
+        }
+
+        [Fact]
+        public void A_panel_set_since_the_move_is_not_overwritten_by_the_migration()
+        {
+            var json = "{\"FlagBoxMatrixGear\":[false,true,true,true]}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            Assert.False(settings.MatrixGear(1));
+            Assert.True(settings.MatrixGear(2));
         }
 
         [Fact]

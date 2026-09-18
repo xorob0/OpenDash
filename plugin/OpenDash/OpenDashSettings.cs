@@ -127,17 +127,20 @@ namespace OpenDashPlugin
 
         public bool LightsNightMode { get; set; } = Contract.DefaultLightsNightMode;
 
-        public bool FlagBoxCriticalOnly { get; set; } = Contract.DefaultFlagBoxCriticalOnly;
-
-        public bool FlagBoxGear { get; set; } = Contract.DefaultFlagBoxGear;
-
         public int FlagBoxLowFuelLaps { get; set; } = Contract.DefaultFlagBoxLowFuelLaps;
 
-        /// <summary>Zero means "not set", so that the profile's own per-unit default applies. A driver in
-        /// Fahrenheit who has never opened this page must not get a Celsius number.</summary>
-        public int FlagBoxOilTemp { get; set; }
+        // The four settings a box owns, as they were written before they belonged to a box: one value
+        // for the whole tab. Nullable and with no initialiser, so that "absent" is distinguishable from
+        // "the driver chose the default"; MigrateFlagBoxToMatrices() copies each into all four panels
+        // once and then clears it, the way Modules and Zones are emptied into the rig. A property name
+        // is a public interface (ADR 0003), so the rename ships with the migration rather than after it.
+        public bool? FlagBoxCriticalOnly { get; set; }
 
-        public int FlagBoxWaterTemp { get; set; }
+        public bool? FlagBoxGear { get; set; }
+
+        public int? FlagBoxOilTemp { get; set; }
+
+        public int? FlagBoxWaterTemp { get; set; }
 
         /// <summary>Per matrix, index 0 is matrix 1. Always four long after Normalise().</summary>
         public string[] FlagBoxRest { get; set; } = Contract.DefaultFlagBoxRests();
@@ -152,6 +155,20 @@ namespace OpenDashPlugin
         public bool[] FlagBoxWarnings { get; set; } = Contract.DefaultFlagBoxOn();
 
         public string[] FlagBoxSide { get; set; } = Contract.DefaultFlagBoxSides();
+
+        // The four that moved under the matrix. They carry the Matrix infix although their six siblings
+        // above do not, because the unprefixed name is still occupied by the legacy scalar each one
+        // migrates from and a saved file cannot hold one name as both a bool and a bool[].
+
+        public bool[] FlagBoxMatrixCriticalOnly { get; set; } = Contract.DefaultFlagBoxCriticalOnlys();
+
+        public bool[] FlagBoxMatrixGear { get; set; } = Contract.DefaultFlagBoxGears();
+
+        /// <summary>Zero means "not set", so that the profile's own per-unit default applies. A driver in
+        /// Fahrenheit who has never opened this page must not get a Celsius number.</summary>
+        public int[] FlagBoxMatrixOilTemp { get; set; } = Contract.DefaultFlagBoxTemps();
+
+        public int[] FlagBoxMatrixWaterTemp { get; set; } = Contract.DefaultFlagBoxTemps();
 
         /// <summary>What the middle of an RGB strip shows: "rpm", "brake", "throttleBrake" or "fuel".
         /// One value for the rig and not an array, because openDash generates one profile per strip
@@ -179,6 +196,14 @@ namespace OpenDashPlugin
 
         public string MatrixSide(int matrix) => Pick(FlagBoxSide, matrix, Contract.DefaultFlagBoxSide);
 
+        public bool MatrixCriticalOnly(int matrix) => Pick(FlagBoxMatrixCriticalOnly, matrix, Contract.DefaultFlagBoxCriticalOnly);
+
+        public bool MatrixGear(int matrix) => Pick(FlagBoxMatrixGear, matrix, Contract.DefaultFlagBoxGear);
+
+        public int MatrixOilTemp(int matrix) => Pick(FlagBoxMatrixOilTemp, matrix, 0);
+
+        public int MatrixWaterTemp(int matrix) => Pick(FlagBoxMatrixWaterTemp, matrix, 0);
+
         private static T Pick<T>(T[] values, int matrix, T fallback)
         {
             if (values == null || matrix < 1 || matrix > values.Length) return fallback;
@@ -192,19 +217,51 @@ namespace OpenDashPlugin
             LightsBrightness = Contract.NormaliseBrightness(LightsBrightness);
             LightsNightBrightness = Contract.NormaliseBrightness(LightsNightBrightness);
             if (FlagBoxLowFuelLaps < 0) FlagBoxLowFuelLaps = Contract.DefaultFlagBoxLowFuelLaps;
-            if (FlagBoxOilTemp < 0) FlagBoxOilTemp = 0;
-            if (FlagBoxWaterTemp < 0) FlagBoxWaterTemp = 0;
             FlagBoxRest = Resize(FlagBoxRest, Contract.DefaultFlagBoxRests(), v => Array.IndexOf(Contract.FlagBoxRests, v) >= 0);
             FlagBoxSide = Resize(FlagBoxSide, Contract.DefaultFlagBoxSides(), v => Array.IndexOf(Contract.FlagBoxSides, v) >= 0);
             FlagBoxFlags = Resize(FlagBoxFlags, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxPit = Resize(FlagBoxPit, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxSpotter = Resize(FlagBoxSpotter, Contract.DefaultFlagBoxOn(), v => true);
             FlagBoxWarnings = Resize(FlagBoxWarnings, Contract.DefaultFlagBoxOn(), v => true);
+            FlagBoxMatrixCriticalOnly = Resize(FlagBoxMatrixCriticalOnly, Contract.DefaultFlagBoxCriticalOnlys(), v => true);
+            FlagBoxMatrixGear = Resize(FlagBoxMatrixGear, Contract.DefaultFlagBoxGears(), v => true);
+            FlagBoxMatrixOilTemp = Resize(FlagBoxMatrixOilTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
+            FlagBoxMatrixWaterTemp = Resize(FlagBoxMatrixWaterTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
+            // After the arrays are four long, so the migration has four slots to fill.
+            MigrateFlagBoxToMatrices();
             // No array to repair: the strips carry one value each for the whole rig. A profile reads
             // both through isnull() with its own default, so an unrecognised spelling has to become a
             // legal one here rather than reaching the strip as itself.
             LedCentre = Contract.NormaliseLedCentre(LedCentre);
             LedRpmStyle = Contract.NormaliseChoice(LedRpmStyle, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
+        }
+
+        /// <summary>
+        /// Carries a settings file written before the four settings a box owns belonged to a box.
+        /// </summary>
+        /// <remarks>
+        /// Each legacy scalar goes into all four panels and is then cleared, exactly as Modules and
+        /// Zones are emptied into the rig: a driver who had set "critical flags only" keeps it on every
+        /// box they own rather than being silently reset to the default. Cleared afterwards so that it
+        /// happens once; a file written by this version carries nulls and is left alone, and a value a
+        /// driver sets on one panel afterwards is not overwritten on the next load.
+        ///
+        /// It runs after the arrays are four long, so there are always four slots to fill.
+        /// </remarks>
+        private void MigrateFlagBoxToMatrices()
+        {
+            for (var i = 0; i < Contract.FlagBoxMatrices.Count; i++)
+            {
+                if (FlagBoxCriticalOnly.HasValue) FlagBoxMatrixCriticalOnly[i] = FlagBoxCriticalOnly.Value;
+                if (FlagBoxGear.HasValue) FlagBoxMatrixGear[i] = FlagBoxGear.Value;
+                if (FlagBoxOilTemp.HasValue) FlagBoxMatrixOilTemp[i] = FlagBoxOilTemp.Value < 0 ? 0 : FlagBoxOilTemp.Value;
+                if (FlagBoxWaterTemp.HasValue) FlagBoxMatrixWaterTemp[i] = FlagBoxWaterTemp.Value < 0 ? 0 : FlagBoxWaterTemp.Value;
+            }
+
+            FlagBoxCriticalOnly = null;
+            FlagBoxGear = null;
+            FlagBoxOilTemp = null;
+            FlagBoxWaterTemp = null;
         }
 
         private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)
@@ -978,6 +1035,10 @@ namespace OpenDashPlugin
             FlagBoxLowFuelLaps = other.FlagBoxLowFuelLaps;
             FlagBoxOilTemp = other.FlagBoxOilTemp;
             FlagBoxWaterTemp = other.FlagBoxWaterTemp;
+            FlagBoxMatrixCriticalOnly = other.FlagBoxMatrixCriticalOnly == null ? null : (bool[])other.FlagBoxMatrixCriticalOnly.Clone();
+            FlagBoxMatrixGear = other.FlagBoxMatrixGear == null ? null : (bool[])other.FlagBoxMatrixGear.Clone();
+            FlagBoxMatrixOilTemp = other.FlagBoxMatrixOilTemp == null ? null : (int[])other.FlagBoxMatrixOilTemp.Clone();
+            FlagBoxMatrixWaterTemp = other.FlagBoxMatrixWaterTemp == null ? null : (int[])other.FlagBoxMatrixWaterTemp.Clone();
             FlagBoxRest = other.FlagBoxRest == null ? null : (string[])other.FlagBoxRest.Clone();
             FlagBoxFlags = other.FlagBoxFlags == null ? null : (bool[])other.FlagBoxFlags.Clone();
             FlagBoxPit = other.FlagBoxPit == null ? null : (bool[])other.FlagBoxPit.Clone();

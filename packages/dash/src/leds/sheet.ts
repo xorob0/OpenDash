@@ -41,7 +41,9 @@ export function glyphCatalogue(): Glyph[] {
   }
   for (const state of pitStates()) out.push({ name: `Pit ${state.id}`, kind: 'pit', frames: gridFrames(state.grid) });
   for (const state of spotterStates(1)) out.push({ name: `Spotter ${state.id}`, kind: 'spotter', frames: gridFrames(state.grid) });
-  for (const state of warningStates()) out.push({ name: `Warning ${state.id}`, kind: 'warning', frames: gridFrames(state.grid) });
+  // Matrix 1, as the spotter above is: a picture does not depend on which panel draws it, and the
+  // thresholds the warnings compare against do not change what is drawn.
+  for (const state of warningStates(1)) out.push({ name: `Warning ${state.id}`, kind: 'warning', frames: gridFrames(state.grid) });
   for (const band of shiftBands()) {
     for (const gear of GEARS) {
       out.push({ name: `Gear ${gear} ${band.id}`, kind: 'gear', frames: [pixelsOf(gearGrid(gear), { G: band.colour }, `gear ${gear}`)] });

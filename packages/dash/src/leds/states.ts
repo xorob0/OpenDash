@@ -15,7 +15,7 @@
  * "Held briefly so it cannot strobe" on the face sheet is read here as a plain still frame. A
  * minimum on-time is memory between frames, which ADR 0009 does not admit, so it is not built.
  */
-import { flagBox, flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
+import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type MatrixContainer, type MatrixFrame } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
@@ -226,10 +226,14 @@ export function spotterStates(matrix: FlagBoxMatrix): BoxState[] {
  * The three warnings, highest first. Each threshold is a contract property; the temperatures are
  * compared in whatever unit SimHub is already reporting them in, so a driver in Fahrenheit sets a
  * Fahrenheit number and gets a Fahrenheit comparison.
+ *
+ * The two temperatures belong to the panel and the fuel threshold does not: how hot is too hot is a
+ * judgement a driver may want said on one box and not on another, whereas "am I low on fuel" is one
+ * answer the whole rig shares with the strip and the faces.
  */
-export const warningStates = (): BoxState[] => [
-  { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBox.oilTemp()), grid: OIL_HOT, blink: false },
-  { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBox.waterTemp()), grid: WATER_HOT, blink: false },
+export const warningStates = (matrix: FlagBoxMatrix): BoxState[] => [
+  { id: 'oilHot', raised: gt(isTemp(game('OilTemperature')), flagBoxMatrix(matrix).oilTemp()), grid: OIL_HOT, blink: false },
+  { id: 'waterHot', raised: gt(isTemp(game('WaterTemperature')), flagBoxMatrix(matrix).waterTemp()), grid: WATER_HOT, blink: false },
   { id: 'lowFuel', raised: tankIsLow(), grid: LOW_FUEL, blink: false },
 ];
 

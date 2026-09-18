@@ -59,26 +59,32 @@ export const COLUMNS = 8;
  */
 export const drawnFlags = (criticalOnly: boolean): FlagCondition[] => flagsShown(criticalOnly).filter((c) => flagFrames(c.id) !== undefined);
 
-/** `OpenDash.FlagBoxCriticalOnly` as a condition. */
-export const criticalOnly = (): Expr => ncalc.eq(flagBox.criticalOnly(), 'true');
+/**
+ * `OpenDash.FlagBoxMatrix<N>CriticalOnly` as a condition.
+ *
+ * Per matrix rather than per tab since the settings a box owns moved under it: a rig with a box in
+ * each corner can now show the whole catalogue on one and the critical flags alone on the other,
+ * which is the setup the per-matrix group exists for.
+ */
+export const criticalOnly = (matrix: FlagBoxMatrix): Expr => ncalc.eq(flagBoxMatrix(matrix).criticalOnly(), 'true');
 
 /**
  * The flag effects, highest priority first, each shown only when no higher flag is out *and* the
  * switch has not silenced it.
  */
-export function flagContainers(): MatrixContainer[] {
+export function flagContainers(matrix: FlagBoxMatrix): MatrixContainer[] {
   const shown = drawnFlags(false);
   return shown.map((condition) => ({
     kind: 'when' as const,
     description: condition.id,
-    formula: conditionVisible(condition, criticalOnly(), shown),
+    formula: conditionVisible(condition, criticalOnly(matrix), shown),
     children: [{ kind: 'animation' as const, description: `${condition.id} glyph`, frames: flagFrames(condition.id) ?? [] }],
   }));
 }
 
 /** The catalogue, in order. */
-export function flagsGroup(): MatrixContainer {
-  return { kind: 'group', description: 'Flags', children: flagContainers() };
+export function flagsGroup(matrix: FlagBoxMatrix): MatrixContainer {
+  return { kind: 'group', description: 'Flags', children: flagContainers(matrix) };
 }
 
 /**
@@ -86,7 +92,7 @@ export function flagsGroup(): MatrixContainer {
  * switch has silenced does not hold the panel: with critical-flags-only on, a chequered flag shows
  * the gear rather than nothing.
  */
-export const noFlagShowing = (): Expr => noFlagShown(criticalOnly(), drawnFlags(false));
+export const noFlagShowing = (matrix: FlagBoxMatrix): Expr => noFlagShown(criticalOnly(matrix), drawnFlags(false));
 
 /**
  * Everything below the flags, for one matrix, in order: the pit family, the spotter, the three
@@ -101,7 +107,7 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
   const m = flagBoxMatrix(matrix);
   const pit = pitStates();
   const spotter = spotterStates(matrix);
-  const warnings = warningStates();
+  const warnings = warningStates(matrix);
   const on = (setting: Expr): Expr => eq(setting, 'true');
   return [
     // Its own switch, not the flags'. A driver who turns flags off on a panel has not asked to lose
@@ -123,7 +129,7 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
       kind: 'when',
       description: 'Resting',
       formula: and(eq(m.rest(), "'gear'"), noneRaised(pit), noneRaised(spotter), noneRaised(warnings)),
-      children: [gearGroup()],
+      children: [gearGroup(matrix)],
     },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
 }
@@ -145,9 +151,9 @@ export function matrixGroup(matrix: FlagBoxMatrix): MatrixContainer | undefined 
   // "No flag is holding THIS panel": a flag only suppresses what is under it on a panel that is
   // actually showing flags. Gating on noFlagShowing() alone blacked out the spotter, the warnings
   // and the gear on a panel with Flags switched off, for the whole time a flag was out.
-  const flagsFree = or(not(eq(m.flags(), 'true')), noFlagShowing());
+  const flagsFree = or(not(eq(m.flags(), 'true')), noFlagShowing(matrix));
   const children: MatrixContainer[] = [
-    { kind: 'when', description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup()] },
+    { kind: 'when', description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup(matrix)] },
     { kind: 'when', description: 'Below the flags', formula: flagsFree, children: belowFlags(matrix) },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
   if (children.length === 0) return undefined;
