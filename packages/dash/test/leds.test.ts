@@ -61,6 +61,7 @@ describe('the strip shapes', () => {
 
   test('the named device families are the shapes people actually own', () => {
     expect(shapeById('3-9-3')?.devices).toContain('Fanatec ClubSport / Podium wheels');
+    expect(shapeById('3-9-3-fanalab')?.devices).toContain('Fanatec ClubSport / Podium wheels driven through Fanalab');
     expect(shapeById('4-14-4')?.devices).toContain('SimRep Engineering MLD');
     // The shapes no maker's name attaches to are the ones someone wires themselves.
     for (const id of ['2-10-2', '4-9-4', '5-10-5', '0-8-0', '0-9-0', '0-10-0', '0-12-0', '0-16-0']) expect(shapeById(id)?.devices).toEqual(['generic WS2812b runs']);
@@ -85,6 +86,36 @@ describe('the strip shapes', () => {
     expect(leds.containerTypeOf(p.containers[0]!)).toBe('Groups.RemapGroup');
     // ...and the un-reversed sibling is the same tree without the wrapper.
     expect(leds.containerTypeOf(profileFor('4-14-4').containers[0]!)).toBe('Groups.GameRunningGroup');
+  });
+
+  test('the Fanalab order is a remap too, and it is no reversal of anything', () => {
+    const shape = shapeById('3-9-3-fanalab')!;
+    // The device presents the nine rev LEDs first, then the right flag LEDs from the outside in,
+    // then the left. `positions[i]` is the physical LED logical `i` paints, so the centre's nine
+    // land on physical 1..9, the right side's outermost on physical 10 and the left side's on 13.
+    expect(shape.positions).toEqual([13, 14, 15, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 11, 10]);
+    expect(shape.positions).not.toEqual(reversedPositions(15));
+    // Every physical LED of the device is painted by exactly one logical one, or a lamp lands nowhere.
+    expect(new Set(shape.positions!).size).toBe(deviceLength(shape));
+
+    const p = profileFor('3-9-3-fanalab');
+    expect(leds.containerTypeOf(p.containers[0]!)).toBe('Groups.RemapGroup');
+    // The plain 3/9/3 keeps its own order: the Simucube, Cammus and Moza wheels of that shape are
+    // wired in order, and a driver who installed it must not have it relit underneath them.
+    expect(shapeById('3-9-3')?.positions).toBeUndefined();
+    expect(leds.containerTypeOf(profileFor('3-9-3').containers[0]!)).toBe('Groups.GameRunningGroup');
+  });
+
+  test('only a shape the maker wired in an order of its own is remapped, and it covers every LED of the device', () => {
+    // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
+    // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
+    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id)).toEqual(['3-9-3-fanalab', '4-14-4-reversed']);
+    // SetResultBase indexes Positions[i] for every lit LED, so a list shorter than the run throws
+    // once per frame. The validator catches it, and this catches a row that forgot to grow.
+    for (const s of ALL_SHAPES.filter((s) => s.positions)) {
+      expect({ id: s.id, covered: s.positions!.length }).toMatchObject({ covered: deviceLength(s) });
+      expect({ id: s.id, inRange: s.positions!.every((p) => p >= 1 && p <= deviceLength(s)) }).toMatchObject({ inRange: true });
+    }
   });
 });
 
@@ -516,7 +547,7 @@ describe('every generated profile', () => {
   test('is gated on the sim running, because a CustomStatus that throws is ON rather than off', () => {
     for (const shape of ALL_SHAPES) {
       const p = rpmStripProfile(shape, stableGuid(`t/${shape.id}`));
-      const outer = shape.reversed ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
+      const outer = shape.positions ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
       expect({ shape: shape.id, type: leds.containerTypeOf(outer) }).toMatchObject({ type: 'Groups.GameRunningGroup' });
     }
   });
@@ -531,7 +562,7 @@ describe('every generated profile', () => {
       const bright = walk(p.containers).filter((c) => leds.containerTypeOf(c) === 'Groups.BrightnessFormulaGroup');
       expect({ shape: shape.id, groups: bright.length }).toMatchObject({ groups: 1 });
       // One group over the whole tree: the run under it is everything the profile draws.
-      const outer = shape.reversed ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
+      const outer = shape.positions ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
       expect({ shape: shape.id, under: leds.childrenOf(outer).map((c) => leds.containerTypeOf(c)) }).toMatchObject({ under: ['Groups.BrightnessFormulaGroup'] });
       const fields = (bright[0] as Extract<leds.LedContainer, { kind: 'raw' }>).fields ?? {};
       expect({ shape: shape.id, formula: fields.BrightnessFormula }).toMatchObject({ formula: { Expression: flagBox.brightness() } });
