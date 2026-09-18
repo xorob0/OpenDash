@@ -12,7 +12,7 @@ including any that the plugin does not install.
 From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
 strips, the brows and the flag box, together with a `manifest.json` listing everything published.
 
-## 0.2.0-rc.3 (2026-09-18)
+## 0.3.0-rc.1 (2026-09-18)
 
 The candidate that finishes the zone face. The whole design canvas was measured against the build,
 requirement by requirement, and the differences were closed: band D now cycles its eight pages,
@@ -26,6 +26,13 @@ Fanalab, and the companion pages itself rather than borrowing SimHub's own ring.
 Several of the corrections below are readings that were simply wrong, and had been wrong for some
 time. If you race in a multi-class field, if you drive an imperial rig, or if you rely on the
 spotter, it would be worth reading the Fixed section before anything else.
+
+The version moves to 0.3.0 rather than to a third 0.2 candidate because of how much of the settings
+surface this adds: twelve further properties, a flag format and a lap review that a screen owns
+individually, a filter and a page-on-demand that a pit wall owns, four settings that moved from the
+Lights tab into each flag box panel's own group, and a twenty-first LED profile. A settings file
+written against 0.2.0-rc.2 is migrated rather than discarded, so nothing is lost by upgrading, but
+the surface is wide enough that it is not the same minor version.
 
 ### Added
 
