@@ -146,8 +146,12 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(16, PanelMetrics.ButtonPaddingX);
             Assert.Equal(8, PanelMetrics.ButtonIconGap);
-            Assert.Equal(2, PanelMetrics.FocusRingWeight);
-            Assert.Equal(2, PanelMetrics.FocusRingOffset);
+            // Against Theme, which is what the control is actually drawn from: pinning the literal
+            // let the two pairs drift apart for as long as nobody read both.
+            Assert.Equal(Theme.FocusRing, PanelMetrics.FocusRingWeight);
+            Assert.Equal(Theme.FocusRingOffset, PanelMetrics.FocusRingOffset);
+            Assert.Equal(2, Theme.FocusRing);
+            Assert.Equal(2, Theme.FocusRingOffset);
             Assert.Equal(0.4, PanelMetrics.DisabledOpacity);
         }
 
