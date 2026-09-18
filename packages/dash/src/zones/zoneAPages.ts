@@ -27,7 +27,6 @@ import { inset, rect } from '../design/geometry.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
-import { UNIT_GAP } from '../second/field.ts';
 import { CHARS, speed, speedUnit } from '../second/values.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { shapeOf } from '../second/shape.ts';
@@ -87,6 +86,18 @@ const rowGap = (height: number, share: number): number => Math.max(2, Math.round
 const GHOSTS: GearGhosts = { gap: ds.space[3] };
 
 /**
+ * Gap between a zone A value and the small label after it, which is not `second/field.ts`'s.
+ *
+ * `UNIT_GAP` is six, and six is what the catalogue draws for a module's field: the fuel, the tyres
+ * and the speedo all set their unit six pixels off the number. Zone A is drawn wider. Every one of
+ * the seven per-size Dash artboards sets this row at eight, at every size it draws them — 58, 47,
+ * 36 and 23 px values alike — and the catalogue draws the A3 gear's label at eight as well, so it
+ * is a literal of the zone rather than a share of the value. A follower two pixels closer than the
+ * drawing is not a clip, but it is the pair reading as one word.
+ */
+const UNIT_GAP = 8;
+
+/**
  * Gap between the speed and the rpm value beside it on A3. Ten pixels on the catalogue, which is
  * off the `space` scale (it goes 8 then 12), so the literal stays here with the canvas as its
  * citation. Wider than `UNIT_GAP`, because these are two values rather than a value and its unit.
@@ -124,7 +135,7 @@ type Run =
  *
  * A follower is positioned from the cells, as `numeral` says it is: the slack a box takes beyond
  * its text is there so that WPF clips no glyph, and counting it as width would put it between the
- * value and its unit, where the canvas draws a gap of exactly six pixels.
+ * value and its unit, where the canvas draws a gap of exactly eight pixels.
  */
 function runWidth(run: Run): number {
   if (run.kind === 'label') return Math.ceil(measureText('BarlowMedium', run.widest, run.fs));
