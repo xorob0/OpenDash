@@ -99,31 +99,50 @@ export const CAR_BOTH: Grid = Array.from({ length: 8 }, () => 'WW....WW');
 
 // --- The warnings ----------------------------------------------------------------------------
 
-/** Low fuel: a tank emptying — a bar across the bottom two rows only. */
+/**
+ * Low fuel: the pump, body and hose, as the face sheet draws it.
+ *
+ * It was a tank outline, which is a rectangle with a rectangle inside it — the limiter frame's
+ * vocabulary, and nothing a driver has seen anywhere else. ISO 2575 registers the pump for the
+ * fuel level telltale, so it is the one picture in this family the driver already knows from the
+ * road car, and knowing it is worth more than a shape that fits the grid more comfortably.
+ */
 export const LOW_FUEL: Grid = [
-  '.YYYYYY.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.Y....Y.',
-  '.YYYYYY.',
-  '.YYYYYY.',
+  '.YYYYY..',
+  '.Y...Y.Y',
+  '.YYYYY.Y',
+  '.Y...Y.Y',
+  '.Y...YYY',
+  '.Y...Y..',
+  '.Y...Y..',
+  'YYYYYYY.',
 ];
 
-/** Oil too hot: the meatball's cousin, a disc with a drip, in orange. */
+/**
+ * Oil too hot: the can, spout up and a drop falling from it, as the face sheet draws it.
+ *
+ * It was a disc, which is the meatball's own shape in a second orange — the one thing the
+ * uniqueness rule in glyphFit.test.ts exists to refuse, and the confusion that costs most, since
+ * the meatball is an instruction to come in and the oil lamp is not. ISO 2575 registers the can
+ * for the oil telltale.
+ */
 export const OIL_HOT: Grid = [
-  '...OO...',
-  '..OOOO..',
-  '.OOOOOO.',
-  'OOOOOOOO',
-  'OOOOOOOO',
-  '.OOOOOO.',
-  '..OOOO..',
-  '...OO...',
+  '.......O',
+  '......O.',
+  '.....O..',
+  '.OOOOO..',
+  'OOOOOOO.',
+  'OOOOOOO.',
+  '.OOOOO..',
+  '...O....',
 ];
 
-/** Water too hot: waves, in orange, so the two temperatures are told apart by shape. */
+/**
+ * Water too hot: waves, in orange, so the two temperatures are told apart by shape.
+ *
+ * Two bands of three rows and a blank, not two single rows. The face sheet's prose says "two rows
+ * of waves" and its own artboard draws these eight, and the artboard is the drawing, so it wins.
+ */
 export const WATER_HOT: Grid = [
   '..OO..OO',
   '.O..OO..',
