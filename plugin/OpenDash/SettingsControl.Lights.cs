@@ -190,7 +190,7 @@ namespace OpenDashPlugin
             var rename = Ui.LinkButton("Rename");
             rename.ToolTip = "Change what this panel is called here.";
             rename.Click += (sender, args) => ShowRenameMatrixPanel(m);
-            var remove = Ui.LinkButton("Remove this panel", Theme.Danger);
+            var remove = Ui.LinkButton("Remove", Theme.Danger);
             remove.ToolTip = "Take this panel out. Its content goes dark and the slot is free again.";
             remove.Click += (sender, args) =>
             {
@@ -272,7 +272,9 @@ namespace OpenDashPlugin
             var rename = Ui.LinkButton("Rename");
             rename.ToolTip = "Change what this bar is called here. Its profile in SimHub keeps the name it was installed under until you install it again.";
             rename.Click += (sender, args) => ShowRenameLedBar(ns);
-            var remove = Ui.LinkButton("Remove this bar", Theme.Danger);
+            // "Remove" and not "Remove this bar": a group is indented inside its section and the longer
+            // words were cut off at the panel's edge.
+            var remove = Ui.LinkButton("Remove", Theme.Danger);
             remove.ToolTip = "Take this bar off the rig and its profile out of SimHub.";
             remove.Click += (sender, args) => RemoveLedBar(ns);
             var row = Ui.Row(new Border(), Ui.HStack(12, rename, remove));
@@ -299,7 +301,7 @@ namespace OpenDashPlugin
                 return;
             }
 
-            var ids = shapes.Keys.ToArray();
+            var ids = shapes.Select(entry => entry.Key).ToArray();
             var labels = ids.Select(PanelLightRows.ShapeLabel).ToArray();
             var shape = ids[0];
             var name = new TextBox
@@ -309,7 +311,7 @@ namespace OpenDashPlugin
                 FontSize = Theme.SizeLabel,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Left,
-                Text = PanelLightRows.ShapeLabel(shape),
+                Text = DefaultBarName(shape),
             };
             var typed = false;
             name.TextChanged += (sender, args) => typed = name.IsKeyboardFocusWithin;
@@ -318,7 +320,7 @@ namespace OpenDashPlugin
                 BuildChoice(ids, labels, shape, 280, value =>
                 {
                     shape = value;
-                    if (!typed) name.Text = PanelLightRows.ShapeLabel(value);
+                    if (!typed) name.Text = DefaultBarName(value);
                 }));
             shapeRow.Width = BodyWidth;
             var nameRow = Ui.Row(PanelLights.BarNameTitle, PanelLights.BarNameCaption, name);
@@ -334,6 +336,14 @@ namespace OpenDashPlugin
                 Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
         }
 
+        /// <summary>What the name box opens on: the name the build gave the profile for that shape, so
+        /// the row in SimHub's own LED profile list says whose it is rather than reading as a bare
+        /// geometry among everybody else's profiles.</summary>
+        private static string DefaultBarName(string shape)
+        {
+            return FlagBoxProfile.FilePrefix + PanelLightRows.ShapeLabel(shape);
+        }
+
         private FrameworkElement BuildAddLedBarRow()
         {
             var add = Ui.AddButton(PanelLights.AddBar, PanelMetrics.RowButtonHeight);
@@ -344,28 +354,44 @@ namespace OpenDashPlugin
             return add;
         }
 
-        /// <summary>Every strip shape this build embedded, as shape id to profile JSON.</summary>
-        private static IDictionary<string, string> EmbeddedShapes()
+        /// <summary>
+        /// Every strip shape this build embedded, as shape id to profile JSON, in the order the canvas
+        /// puts them.
+        /// </summary>
+        /// <remarks>
+        /// The order matters because it decides what the list opens on. Sorted by id it opened on
+        /// "0/10/0", a bare run nobody owns; PanelLightRows.Rows is the canvas's own order and opens on
+        /// the wheels, which is what a driver adding their first bar has.
+        /// </remarks>
+        private static IList<KeyValuePair<string, string>> EmbeddedShapes()
         {
             var log = new SimHubInstallLog();
             var assembly = typeof(OpenDash).Assembly;
-            var json = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            var json = new Dictionary<string, string>(StringComparer.Ordinal);
+            var profiles = new List<LightProfile>();
             foreach (var resource in FlagBoxProfile.StripResourceNames(assembly))
             {
                 var id = FlagBoxProfile.ShapeIdOf(resource);
                 if (id == null || json.ContainsKey(id)) continue;
                 var text = FlagBoxProfile.ResourceText(assembly, resource, log);
-                if (text != null) json[id] = text;
+                if (text == null) continue;
+                json[id] = text;
+                profiles.Add(new LightProfile(id, FlagBoxProfile.ProfileNameOf(text)));
             }
-            return json;
+            var ordered = new List<KeyValuePair<string, string>>();
+            foreach (var row in PanelLightRows.Rows(profiles))
+            {
+                foreach (var id in row.ShapeIds) ordered.Add(new KeyValuePair<string, string>(id, json[id]));
+            }
+            return ordered;
         }
 
-        private void AddLedBar(string shape, string name, IDictionary<string, string> shapes)
+        private void AddLedBar(string shape, string name, IList<KeyValuePair<string, string>> shapes)
         {
             var bar = Settings.AddLedBar(shape, name);
             Save();
-            string embedded;
-            var ok = shapes.TryGetValue(shape, out embedded);
+            var embedded = shapes.FirstOrDefault(entry => string.Equals(entry.Key, shape, StringComparison.Ordinal)).Value;
+            var ok = embedded != null;
             if (ok)
             {
                 var plan = InstallBar(bar, embedded);
