@@ -39,6 +39,9 @@ export const sectors = defineModule('sectors', (ctx) => {
     ctx.frame,
     [
       fieldsRow(sectorSpecs(ctx.prefix, d.big, { bare }), ctx, SECTOR_GAP),
+      // Not rigid, deliberately. The strip's three cells sit under the three sector times and are
+      // read against them, so it is the second kind of fixed row: growing the numerals around a
+      // drawing that cannot follow is what takes the page's hierarchy away. shape.test.ts holds it.
       blockRow(stripHeight, (bottom) => sectorStrip(`${ctx.prefix}strip`, rect(ctx.frame.left, bottom - stripHeight, ctx.frame.width, stripHeight))),
       fieldsRow(
         [
