@@ -61,7 +61,7 @@ export const fuel = defineModule('fuel', (ctx) => {
             chars: CHARS.fuel,
             fs: d.big,
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
-            follower: { text: 'L', bind: fuelUnit() },
+            follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
           }),
           fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(fuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
           fld(ctx, 'lapsLeft', 'Est. laps', {
