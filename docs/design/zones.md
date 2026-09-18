@@ -868,6 +868,17 @@ under the same mode, although none of them carries an optional field today: the 
 oil pressure the sim does not wire rather than drawing 0.0, which is a reading and a wrong one, and
 it gave those readings up when D8 became the telltale rank.
 
+**The lap review is the largest of the boxes drawn over zone A**, at `min(1200, face width)` by 160,
+centred on the hero rectangle and clamped to the face, and it is pushed last, so while it is out it
+covers the lap-time pop-up and the change notification, whose frames it contains in both directions.
+The ranking is by geometry rather than by an exclusion chain, because a chain would have to reach
+into the pop-ups, whose conditions know nothing of a face and so cannot ask which face's setting is
+on. What it never covers is band D, the rev bar well, the bar of settled values or the limiter
+banner, the pit alerts being pushed before the whole transient family. It sheds the fuel pair, then
+the driver line and its sector strip, before it shrinks anything, and the two deltas are the floor:
+a review shed down to a lap time alone would say less than the pop-up it replaces. It is off by
+default, for the reason the band is the default flag format.
+
 A change of setting is announced the same way, and one token of its group is deliberately unread:
 `indicator.changeNotification.settleFrames` exists for a rotary swept through its positions, and
 SimHub's own `changed()` window already collapses a sweep into one notification, so nothing settles
