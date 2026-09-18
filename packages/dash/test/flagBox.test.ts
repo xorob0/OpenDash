@@ -742,8 +742,10 @@ describe('the pit family, the spotter and the warnings', () => {
     const inLane = pitStates().find((s) => s.id === 'limiterInLane');
     const out = pitStates().find((s) => s.id === 'limiterOutOfLane');
     expect(inLane?.grid).not.toEqual(out?.grid);
+    // Both are held, so the shape is the whole of the difference and the assertion above is the
+    // only thing standing between them.
     expect(inLane?.blink).toBe(false);
-    expect(out?.blink).toBe(true);
+    expect(out?.blink).toBe(false);
     // Neither is a filled panel: purpose.pitLimiter is pure white, so a filled one would be the
     // white flag. The frame says "contained"; the exclamation mark says "stop".
     for (const state of [inLane, out]) {
@@ -756,6 +758,15 @@ describe('the pit family, the spotter and the warnings', () => {
   test('speeding outranks both, and is a different picture again', () => {
     expect(pitStates()[0]?.id).toBe('speeding');
     expect(pitStates()[0]?.grid).not.toEqual(pitStates()[1]?.grid);
+  });
+
+  test('nothing below the flags moves, because movement is reserved for a flag that interrupts the race', () => {
+    // A limiter left on and a temperature climbing are conditions a driver lives with for minutes,
+    // so a picture that strobed for those minutes would spend the box's only attention signal on
+    // the states least able to give it back.
+    for (const state of [...pitStates(), ...spotterStates(1), ...warningStates()]) {
+      expect({ state: state.id, blink: state.blink }).toEqual({ state: state.id, blink: false });
+    }
   });
 
   test('speeding is a comparison of two published numbers, not state between frames', () => {
