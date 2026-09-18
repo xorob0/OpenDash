@@ -43,6 +43,7 @@ namespace OpenDashPlugin
                 BuildFacePicture(screen, face),
                 BuildStripCaption(face),
                 BuildFlagFormatRow(screen),
+                BuildLapReviewRow(screen),
                 BuildFaceWarning(screen),
                 BuildWheelButtons(screen, face),
             };
@@ -69,6 +70,32 @@ namespace OpenDashPlugin
             var row = Ui.Row(
                 "Flags",
                 "Band D hands a flag the strip at the foot. Full screen hands it zones B, A and C together, which cannot be missed and takes the gear with it for as long as the flag is out.",
+                control);
+            row.Width = BodyWidth;
+            return row;
+        }
+
+        /// <summary>When this screen shows the lap review.</summary>
+        /// <remarks>
+        /// On the screen's own pane rather than on the Data tab, and for a stronger version of the
+        /// reason the flag format is there: the panel takes the hero for four seconds at every
+        /// crossing, so a rig with a display on the desk and a rim in the driver's hands wants it on
+        /// the one and certainly not on the other. Under the flag format, because the two are the
+        /// same question asked about two things that cover the face.
+        ///
+        /// Off leads the control, which is also the default: what takes the face is asked for.
+        /// </remarks>
+        private FrameworkElement BuildLapReviewRow(ScreenInstance screen)
+        {
+            var control = BuildSegmented(Contract.LapReviewModes, new[] { "Off", "Races", "Always" }, Settings.ScreenLapReview(screen.Namespace), value =>
+            {
+                screen.LapReview = value;
+                Save();
+            });
+            var row = Ui.Row(
+                "Lap review",
+                "A panel over the gear for four seconds at the line: the lap you have just done, its sectors, what it was worth against "
+                + "the session best and the lap before, and the fuel it cost. Races means the sessions your sim calls Race.",
                 control);
             row.Width = BodyWidth;
             return row;

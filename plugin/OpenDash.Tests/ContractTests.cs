@@ -63,10 +63,10 @@ namespace OpenDashPlugin.Tests
             var names = Contract.PropertyNames().ToList();
             // Four settings, twelve slots, the rev bar mode, the blue flag detail, the zone face of
             // every face that ships
-            // (four pages, four masks, four starts, four class filters, four bar fields, the glance
-            // and the flag format), twenty-one companion modules, four pit wall zones, the wide zone,
-            // the URL, the pit wall's class filter, and the flag box.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1;
+            // (four pages, four masks, four starts, four class filters, four bar fields, the glance,
+            // the flag format and the lap review), twenty-one companion modules, four pit wall zones,
+            // the wide zone, the URL, the pit wall's class filter, and the flag box.
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1;
             // Six global flag box settings and ten per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
             // only, the gear and the two temperature thresholds moved under the matrix that owns them,
@@ -78,9 +78,10 @@ namespace OpenDashPlugin.Tests
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
             // LedRpmStyle were declared by one side only. 256 before the four settings a box owns
             // became four per matrix, which is twelve names more, 269 before the pit wall gained the
-            // class filter its board and its list zones read, and 270 before band D was allowed to
-            // name the car a blue flag is being waved for.
-            Assert.Equal(271, names.Count);
+            // class filter its board and its list zones read, 270 before band D was allowed to name the
+            // car a blue flag is being waved for, and 271 before each face was given its own answer to
+            // when the lap review is shown.
+            Assert.Equal(279, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -109,6 +110,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(34).Take(4));
             Assert.Equal(p + "QuickGlance", names[38]);
             Assert.Equal(p + "FlagFormat", names[39]);
+            Assert.Equal(p + "LapReview", names[40]);
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
@@ -242,6 +244,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("ShiftLights: " + Contract.DefaultShiftLights.ToString().ToLowerInvariant(), source);
             Assert.Equal(Contract.RevBarModes, ListOf(source, "REV_BAR_MODES"));
             Assert.Equal(Contract.BlueFlagDetails, ListOf(source, "BLUE_FLAG_DETAILS"));
+            Assert.Equal(Contract.LapReviewModes, ListOf(source, "LAP_REVIEW_MODES"));
             Assert.Contains("BlueFlagDetail: '" + Contract.DefaultBlueFlagDetail + "'", source);
             Assert.Equal(Contract.LedCentres, ListOf(source, "LED_CENTRES"));
             Assert.Equal(Contract.LedRpmStyles, ListOf(source, "LED_RPM_STYLES"));
@@ -525,9 +528,9 @@ namespace OpenDashPlugin.Tests
                     Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
                 }
             }
-            // Twenty-two each: four zones times page, mask, start and class filter, four bar fields,
-            // the glance and the flag format.
-            Assert.Equal(22, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+            // Twenty-three each: four zones times page, mask, start and class filter, four bar fields,
+            // the glance, the flag format and the lap review.
+            Assert.Equal(23, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
         }
 
         [Fact]

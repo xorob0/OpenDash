@@ -638,7 +638,18 @@ export const sectorDelta = (sector: number): Expr =>
 /** Absolute seconds, for a gain-or-loss bar that only knows how far it is from zero. */
 export const magnitude = (expr: Expr): Expr => abs(expr);
 
-/** Deltas this close to zero are drawn as neither faster nor slower, as on the dash's delta card. */
+/**
+ * Deltas this close to zero are drawn as neither faster nor slower, as on the dash's delta card.
+ *
+ * The canvas states a two-colour rule for the lap review's own deltas -- red when slower, green when
+ * faster -- and the code has three states here, the third being `purpose.delta.zero` inside this
+ * band. The three are kept, and for a finished lap as well as for a live one. A lap that came in
+ * five thousandths off the session best is not a lap that was faster, and colouring it as though it
+ * were is a claim the number does not carry; besides, one comparison drawn two ways is how the delta
+ * card and the delta module would come to disagree, since every surface that draws a delta goes
+ * through {@link deltaColour}. The difference from the canvas is recorded here rather than resolved
+ * by a second rule.
+ */
 export const DELTA_DEADBAND = 0.005;
 
 /** Green when faster, red when slower, white within the deadband. */

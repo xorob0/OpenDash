@@ -620,6 +620,24 @@ namespace OpenDashPlugin
         public const string DefaultFlagFormat = "band";
 
         /// <summary>
+        /// When a face shows the lap review: never, in a race, or in every session. Mirrors
+        /// LAP_REVIEW_MODES in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Three values and not the canvas's four. "Race" is the one session name openDash can match
+        /// with certainty; a "practice" value would have to match a set of spellings -- lone, open,
+        /// offline testing, warmup -- that no committed trace carries, and a value that silently
+        /// never matches is worse than one that is not offered.
+        /// </remarks>
+        public static readonly string[] LapReviewModes = { "off", "race", "all" };
+
+        /// <summary>Off: the panel covers the gear for four seconds of every lap, and the lap-time
+        /// pop-up already gives a driver the two figures they wait for at the line in a third of the
+        /// room. What takes the face is asked for, which is why the flag format defaults to the band
+        /// as well.</summary>
+        public const string DefaultLapReview = "off";
+
+        /// <summary>
         /// The characters a namespace may be spelled with, and the rule that produces one from a name.
         /// </summary>
         /// <remarks>
@@ -695,6 +713,17 @@ namespace OpenDashPlugin
         public static string FlagFormatProperty(FaceSize face)
         {
             return FlagFormatProperty(FacePrefix(face));
+        }
+
+        /// <summary>Property name of a face's lap review: Face1920x480LapReview.</summary>
+        public static string LapReviewProperty(string ns)
+        {
+            return ns + "LapReview";
+        }
+
+        public static string LapReviewProperty(FaceSize face)
+        {
+            return LapReviewProperty(FacePrefix(face));
         }
 
         /// <summary>
@@ -840,6 +869,7 @@ namespace OpenDashPlugin
             // Last, after the glance: the names before it have shipped and both halves of the contract
             // assert the group by index, so a new one joins the end of it.
             yield return FlagFormatProperty(ns);
+            yield return LapReviewProperty(ns);
         }
 
         public static IEnumerable<string> FacePropertyNames(FaceSize face)

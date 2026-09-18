@@ -54,6 +54,9 @@ import {
   REV_BAR_MODES,
   REV_BAR_SETTING,
   BLUE_FLAG_DETAILS,
+  LAP_REVIEW_MODES,
+  DEFAULT_LAP_REVIEW,
+  lapReviewSettingName,
   BLUE_FLAG_DETAIL_SETTING,
   SESSION_PROGRESS_MODES,
   setting,
@@ -84,8 +87,9 @@ describe('settings', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
     // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
-    // page, mask, start and the class filter -- plus the bar's ends, the glance and the flag format.
-    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 2;
+    // page, mask, start and the class filter -- plus the bar's ends, the glance, the flag format and
+    // the lap review.
+    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 3;
     // The last two terms are the lights, which are not screens but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is six
     // global and ten per matrix, the way every face carries its own group; the strips are the three
@@ -101,9 +105,10 @@ describe('settings', () => {
     // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
     // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
     // 256 before the four settings a box owns became four per matrix, which is twelve names more,
-    // 269 before the pit wall gained the class filter its board and its list zones read, and 270
-    // before band D was allowed to name the car a blue flag is being waved for.
-    expect(props).toHaveLength(271);
+    // 269 before the pit wall gained the class filter its board and its list zones read, 270 before
+    // band D was allowed to name the car a blue flag is being waved for, and 271 before each face
+    // was given its own answer to when the lap review is shown.
+    expect(props).toHaveLength(279);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -124,9 +129,11 @@ describe('settings', () => {
     expect(props).toContain('OpenDash.Face800x286QuickGlance');
     expect(props).toContain('OpenDash.Face1920x480FlagFormat');
     expect(props).toContain('OpenDash.Face600x686FlagFormat');
+    expect(props).toContain('OpenDash.Face1920x480LapReview');
+    expect(props).toContain('OpenDash.Face800x286LapReview');
     // And nothing without a prefix, which is the promise: a bare ZoneA would be one face's
     // settings silently shared with every other.
-    expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat)/.test(p))).toEqual([]);
+    expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat|LapReview)/.test(p))).toEqual([]);
     const lights = flagBoxProperties().length + ledProperties().length;
     expect(props.slice(-(lights + 7), -lights)).toEqual(['OpenDash.PitWallZoneA', 'OpenDash.PitWallZoneB', 'OpenDash.PitWallZoneC', 'OpenDash.PitWallZoneD', 'OpenDash.PitWallWide', 'OpenDash.WebViewUrl', 'OpenDash.PitWallClassOnly']);
     // One filter for the screen and not one per zone: a pit wall zone is a widget pointed at one
@@ -156,6 +163,13 @@ describe('settings', () => {
     expect(flagFormatSettingName(FACE_SIZES[0]!)).toBe('Face1920x480FlagFormat');
     expect(zone.flagFormat(FACE_SIZES[0]!)).toBe("isnull([OpenDash.Face1920x480FlagFormat], 'band')");
     expect(zone.flagFormatIs(FACE_SIZES[6]!, 'full')).toBe("(isnull([OpenDash.Face800x286FlagFormat], 'band')) = ('full')");
+    // The lap review is the face's own for the same reason, and off on every one of them until
+    // somebody asks: the panel covers the gear for four seconds of every lap.
+    expect(LAP_REVIEW_MODES).toEqual(['off', 'race', 'all']);
+    expect(DEFAULT_LAP_REVIEW).toBe('off');
+    for (const face of FACE_SIZES) expect(facePropertyNames(face)).toContain(lapReviewSettingName(face));
+    expect(lapReviewSettingName(FACE_SIZES[0]!)).toBe('Face1920x480LapReview');
+    expect(zone.lapReview(FACE_SIZES[0]!)).toBe("isnull([OpenDash.Face1920x480LapReview], 'off')");
   });
 
   test('every property belongs to one screen or to every screen', () => {
@@ -329,6 +343,11 @@ describe('plugin mirror', () => {
     expect(source).toContain(`public const string DefaultRevBar = ${revBarConst(DEFAULTS.RevBar)};`);
     expect(source).toContain(`FlagFormats = ${csArray(FLAG_FORMATS)};`);
     expect(source).toContain(`public const string DefaultFlagFormat = "${DEFAULT_FLAG_FORMAT}";`);
+    expect(source).toContain(`LapReviewModes = ${csArray(LAP_REVIEW_MODES)};`);
+    expect(source).toContain(`public const string DefaultLapReview = "${DEFAULT_LAP_REVIEW}";`);
+    // And offered on the panel, beside the flag format: a setting nothing in the panel writes can
+    // only be reached by hand-editing the settings file, which is how the flag format shipped once.
+    expect(panelSource()).toContain('Contract.LapReviewModes');
     // And offered on the panel, which is the half of a setting that makes it one. The format was
     // declared, mirrored and attached with nothing in the panel writing it, so the only way to draw
     // a flag over the body was to hand-edit the settings file.
