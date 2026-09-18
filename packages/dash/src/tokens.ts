@@ -265,6 +265,16 @@ export const ds = {
     label: num('font.size.label'),
     labelSm: num('font.size.labelSm'),
   },
+  /**
+   * The other numeral scale, whose scope line in the token file reads "Plugin panel, and the pit
+   * wall tables, at 96 dpi logical pixels". It is a sibling of `size` rather than a branch of it
+   * because it is measured for a monitor at desk distance and not for a DDU at arm's length: the
+   * two ramps meet only where the second screens' lower steps land on it.
+   */
+  ui: {
+    numeral: num('font.size.ui.numeral'),
+    numeralLg: num('font.size.ui.numeralLg'),
+  },
   space: {
     1: num('space.1'),
     2: num('space.2'),

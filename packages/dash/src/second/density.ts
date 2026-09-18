@@ -4,7 +4,11 @@
  * uses comes from this table rather than from a literal.
  *
  * The numbers are the design canvas's two ramps: the companion's 116 / 64 / 46 / 34 / 24 and the
- * pit wall zone's 64 / 46 / 34 / 24 / 16. Both ramps label at 15 over a 13 px small label, which is
+ * pit wall zone's 64 / 46 / 34 / 24 / 16. Each step is read from `ds` rather than written here, so
+ * a size that moves in `design/tokens.json` reaches the drawing; the two ramps overlap by four
+ * steps, which is why the same token is named `big` on one and `hero` on the other. The lower two
+ * steps are the `ui` scale, whose scope line covers the pit wall tables at 96 dpi, and the upper
+ * three are the card ramp the face already draws. Both ramps label at 15 over a 13 px small label, which is
  * the pair every artboard draws and the one distinction a page cannot lose: a label and a unit that
  * are the same size read as one run of text. `wide` is a zone that spans a column: the same type,
  * more room across.
@@ -67,11 +71,11 @@ export interface DensitySpec {
 }
 
 const COMPANION: DensitySpec = {
-  hero: 116,
-  big: 64,
-  mid: 46,
-  small: 34,
-  tiny: 24,
+  hero: ds.size.hero,
+  big: ds.size.lapTime,
+  mid: ds.size.value,
+  small: ds.size.valueSm,
+  tiny: ds.ui.numeralLg,
   label: ds.size.label,
   labelRow: ds.size.labelSm,
   labelSm: ds.size.labelSm,
@@ -90,11 +94,11 @@ const COMPANION: DensitySpec = {
 };
 
 const ZONE: DensitySpec = {
-  hero: 64,
-  big: 46,
-  mid: 34,
-  small: 24,
-  tiny: 16,
+  hero: ds.size.lapTime,
+  big: ds.size.value,
+  mid: ds.size.valueSm,
+  small: ds.ui.numeralLg,
+  tiny: ds.ui.numeral,
   label: ds.size.label,
   labelRow: ds.size.labelSm,
   labelSm: ds.size.labelSm,
@@ -128,9 +132,11 @@ const ZONE: DensitySpec = {
  */
 const COMPACT: DensitySpec = {
   ...ZONE,
-  hero: 46,
-  big: 34,
-  mid: 24,
+  hero: ZONE.big,
+  big: ZONE.mid,
+  mid: ZONE.small,
+  // TODO: font.size.ui has no step between numeral (16) and numeralLg (24), and none below 16 that
+  // is a numeral rather than a label, so the last two rungs of the step-down have no token to read.
   small: 18,
   tiny: 14,
   label: 13,
