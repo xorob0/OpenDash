@@ -11,6 +11,45 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelAddScreenTests
     {
+        /// <summary>
+        /// The dialog opens on 850 x 480 where that size is offered, and on the first entry otherwise.
+        /// </summary>
+        /// <remarks>
+        /// It used to open on whichever size came first in the catalogue, which is the 1920 x 480: the
+        /// widest, the one the artboards lead with, and not the one most of these screens are. Reported
+        /// from a rig as the size that should be the default and the most tested.
+        ///
+        /// Held against the real catalogue as well as a made-up one, because the point of the change is
+        /// which size a driver is actually offered.
+        /// </remarks>
+        [Fact]
+        public void The_size_control_opens_on_the_preferred_face()
+        {
+            var faces = new ScreenType(Contract.KindFace, "Dash face", "caption", new[]
+            {
+                Package("openDash", Contract.KindFace, 1920, 480),
+                Package("openDash 850x480", Contract.KindFace, 850, 480),
+                Package("openDash 800x480", Contract.KindFace, 800, 480),
+            });
+            var offered = PanelAddScreen.Offered(faces);
+            var index = PanelAddScreen.PreferredIndex(faces);
+            Assert.Equal(Contract.PreferredFaceWidth, offered[index].Width);
+            Assert.Equal(Contract.PreferredFaceHeight, offered[index].Height);
+
+            // A type that does not offer it keeps the first entry, which is every type but the face.
+            var companions = new ScreenType(Contract.KindCompanion, "Companion", "caption", new[]
+            {
+                Package("openDash Companion", Contract.KindCompanion, 850, 480),
+                Package("openDash Companion portrait", Contract.KindCompanion, 480, 850),
+            });
+            Assert.InRange(PanelAddScreen.PreferredIndex(companions), 0, PanelAddScreen.Offered(companions).Count - 1);
+
+            // And the migration target is deliberately NOT moved with it: a settings file written
+            // before the faces were separated already landed on that face for everyone on rc.2.
+            Assert.Equal(1920, Contract.ReferenceFace.Width);
+            Assert.Equal(480, Contract.ReferenceFace.Height);
+        }
+
         private static PackageEntry Package(string folder, string kind, int width, int height)
         {
             return new PackageEntry

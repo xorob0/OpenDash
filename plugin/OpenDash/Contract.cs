@@ -546,8 +546,40 @@ namespace OpenDashPlugin
             new FaceSize(600, 686, FaceBody.Column, new[] { 234, 160, 150 }, true, 1, 36, 46, 546, 56),
         };
 
-        /// <summary>The face a rig is most likely to have, and where a pre-face setting is migrated to.</summary>
+        /// <summary>
+        /// Where a pre-face setting is migrated to, and the face the panel draws its picture of.
+        /// </summary>
+        /// <remarks>
+        /// **Frozen, and not the same question as which size a driver is offered first.** A settings
+        /// file written before the faces were separated has its zones migrated onto this one, and that
+        /// already happened for everybody on 0.3.0-rc.2; moving it now would take a rig's settings off
+        /// the face they landed on and put them on another. <see cref="PreferredFaceWidth"/> is the
+        /// other question and is free to differ.
+        /// </remarks>
         public static FaceSize ReferenceFace { get { return FaceSizes[0]; } }
+
+        /// <summary>
+        /// The size the Add a screen dialog opens on: 850 x 480.
+        /// </summary>
+        /// <remarks>
+        /// What openDash is tested on and what most of the screens running it actually are. The dialog
+        /// used to open on whichever size came first in the catalogue, which is the 1920 x 480 -- the
+        /// widest, the one the artboards lead with, and not the one most people have. A driver whose
+        /// screen is something else still has to say so, which the caption already asks of them.
+        /// </remarks>
+        public const int PreferredFaceWidth = 850;
+
+        public const int PreferredFaceHeight = 480;
+
+        /// <summary>The face of that size, or null when nothing ships at it.</summary>
+        public static FaceSize? FaceOf(int width, int height)
+        {
+            foreach (var face in FaceSizes)
+            {
+                if (face.Width == width && face.Height == height) return face;
+            }
+            return null;
+        }
 
         /// <summary>
         /// The prefix a face's settings carry, for instance "Face1920x480".
