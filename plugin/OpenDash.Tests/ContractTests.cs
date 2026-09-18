@@ -66,7 +66,7 @@ namespace OpenDashPlugin.Tests
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance,
             // the flag format, the lap review and its own rev bar), twenty-one companion modules,
             // every zone of every pit wall page, the page it opens on and the page it is showing,
-            // the URL, the pit wall's class filter, and the flag box.
+            // the URL, the pit wall's class filter, its flag format, and the flag box.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
             // Six global flag box settings and eleven per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
@@ -74,7 +74,7 @@ namespace OpenDashPlugin.Tests
             // and the switch on the spotter bar's movement joined the rig's own names; the eleventh is
             // the switch on the digit's redline flash, which is a panel's own for the same reason.
             Assert.Equal(
-                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 3 + 6 + Contract.FlagBoxMatrices.Count * 11 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 6 + Contract.FlagBoxMatrices.Count * 11 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -89,9 +89,10 @@ namespace OpenDashPlugin.Tests
             // the top, 304 before the strip shapes became a grid and the mirror had to publish a
             // run for every centre the grid reaches, and 317 before a pit wall zone belonged to a page:
             // four zones and a wide one became twelve, and the pit wall gained the page it opens on and
-            // the page it shows, and 325 before a companion was given its own answer to how it draws a
-            // flag.
-            Assert.Equal(327, names.Count);
+            // the page it shows, 325 before a companion was given its own answer to how it draws a
+            // flag, and 327 before the pit wall was given the same one and the flag readout came off
+            // its header.
+            Assert.Equal(328, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -134,8 +135,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionPage", names[afterFaces + 21]);
             Assert.Equal("CompanionFlagFormat", names[afterFaces + 22]);
             Assert.Equal("CompanionOpenOn", names[afterFaces + 23]);
-            Assert.Equal(new[] { "PitWallRaceA", "PitWallRaceB", "PitWallTowerWide", "PitWallTowerA", "PitWallTowerB", "PitWallTelemetryA", "PitWallTelemetryB", "PitWallTelemetryC", "PitWallPortraitA", "PitWallPortraitB", "PitWallPortraitC", "PitWallPortraitD", "PitWallPage", "WebViewUrl", "PitWallClassOnly", "LightsBrightness", "LightsNightBrightness",
-                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 24).Take(21));
+            Assert.Equal(new[] { "PitWallRaceA", "PitWallRaceB", "PitWallTowerWide", "PitWallTowerA", "PitWallTowerB", "PitWallTelemetryA", "PitWallTelemetryB", "PitWallTelemetryC", "PitWallPortraitA", "PitWallPortraitB", "PitWallPortraitC", "PitWallPortraitD", "PitWallPage", "WebViewUrl", "PitWallClassOnly", "PitWallFlagFormat", "LightsBrightness", "LightsNightBrightness",
+                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 24).Take(22));
             // One filter for the screen, not one per zone: a pit wall zone is a widget pointed at one
             // dashboard file per rectangle, so zones A and B of the race page are the same file. The
             // page they belong to is what tells them apart now, and that is a different question.
@@ -143,6 +144,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("PitWallClassOnly", Contract.PitWallClassOnlyProperty(Contract.PitWallPrefix));
             Assert.Equal("GarageClassOnly", Contract.PitWallClassOnlyProperty("Garage"));
             Assert.Single(names.Where(n => n.EndsWith("PitWallClassOnly", StringComparison.Ordinal)));
+            // The companion's three answers, asked of the wall, and defaulting to the band rather than
+            // the companion's full screen: a wall is watched because of the flag, so covering it is the
+            // one thing the flag must not do.
+            Assert.Equal("band", Contract.DefaultPitWallFlagFormat);
+            Assert.Equal(new[] { "off", "band", "full" }, Contract.CompanionFlagFormats);
+            Assert.Equal("PitWallFlagFormat", Contract.PitWallFlagFormatProperty(Contract.PitWallPrefix));
+            Assert.Equal("GarageFlagFormat", Contract.PitWallFlagFormatProperty("Garage"));
+            Assert.Equal("band", Contract.NormalisePitWallFlagFormat(null));
+            Assert.Equal("band", Contract.NormalisePitWallFlagFormat("sideways"));
+            Assert.Equal("full", Contract.NormalisePitWallFlagFormat("full"));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 

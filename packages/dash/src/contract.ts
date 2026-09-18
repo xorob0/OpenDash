@@ -236,7 +236,7 @@ export const ledMirrorRunName = (length: number): string => `LedMirror${length}`
 
 /** The properties only the companion and the pit wall read: module switches, zone pages, the URL. */
 export function secondScreenProperties(): string[] {
-  const pitWall = [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING];
+  const pitWall = [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING, PIT_WALL_FLAG_FORMAT_SETTING];
   return [...companionProperties(), ...pitWall].map(propertyName);
 }
 
@@ -730,7 +730,7 @@ export function screenProperties(prefix: string): string[] {
   const face = faceForPrefix(prefix);
   if (face) return facePropertyNames(face).map(propertyName);
   if (prefix === PIT_WALL_PREFIX) {
-    return [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING].map(propertyName);
+    return [...allPitWallZoneSettingNames(), PIT_WALL_PAGE_SETTING, WEB_VIEW_SETTING, PIT_WALL_CLASS_ONLY_SETTING, PIT_WALL_FLAG_FORMAT_SETTING].map(propertyName);
   }
   if (prefix === COMPANION_PREFIX) return companionProperties().map(propertyName);
   throw new RangeError(`contract: no screen carries the prefix ${JSON.stringify(prefix)}`);
@@ -921,6 +921,9 @@ export const DEFAULT_COMPANION_PAGE = 0;
  * `off` is the third answer and the face has no equivalent, because a face's band costs nothing to
  * leave on. A companion's full-screen flag costs the whole module, and somebody using theirs as a
  * dedicated relative will want it left alone.
+ *
+ * The pit wall takes the same three answers through {@link PIT_WALL_FLAG_FORMAT_SETTING}, with
+ * `band` as its default; the type keeps the companion's name because it is the name that shipped.
  */
 export type CompanionFlagFormat = 'off' | 'band' | 'full';
 export const COMPANION_FLAG_FORMATS: readonly CompanionFlagFormat[] = ['off', 'band', 'full'];
@@ -1130,6 +1133,25 @@ export const WEB_VIEW_SETTING = 'WebViewUrl';
 export const PIT_WALL_CLASS_ONLY_SETTING = 'PitWallClassOnly';
 export const DEFAULT_PIT_WALL_CLASS_ONLY = false;
 
+/**
+ * `PitWallFlagFormat`: how a pit wall draws a flag -- not at all, as a band under the header, or
+ * over the body.
+ *
+ * The companion's three-way question, asked of the other big screen, and it replaces what the
+ * header used to do. The header carried a colour block and a word built from the six flags SimHub
+ * normalises; it was reported from a rig as not working, and a 24 px block in a corner of a 1920 px
+ * strip would not have been the answer even when it lit. A flag is the one thing on a pit wall that
+ * has to be seen from across the room, so it is the page's and not a readout's.
+ *
+ * `band` is the default rather than the companion's `full`. A companion is a phone showing one
+ * module and a full-screen flag costs one list; a pit wall is a board, a track map and four zones
+ * that somebody is watching *because* of the flag -- covering them at the moment a yellow comes out
+ * hides the cars the yellow is about. `full` is still there for a second monitor used as a flag
+ * panel, and `off` for a wall that should never change.
+ */
+export const PIT_WALL_FLAG_FORMAT_SETTING = 'PitWallFlagFormat';
+export const DEFAULT_PIT_WALL_FLAG_FORMAT: CompanionFlagFormat = 'band';
+
 /** The URL the web view page shows until the user sets one. Empty means "nothing configured". */
 export const DEFAULT_WEB_VIEW_URL = '';
 
@@ -1181,6 +1203,10 @@ export const secondScreen = {
   webViewUrl: (): Expr => isnull(prop(propertyName(WEB_VIEW_SETTING)), str(DEFAULT_WEB_VIEW_URL)),
   /** `isnull([OpenDash.PitWallClassOnly], false)`: whether this pit wall's lists show the player's class. */
   classOnly: (): Expr => isnull(prop(propertyName(PIT_WALL_CLASS_ONLY_SETTING)), String(DEFAULT_PIT_WALL_CLASS_ONLY)),
+  /** `isnull([OpenDash.PitWallFlagFormat], 'band')`: how this pit wall draws a flag. */
+  pitWallFlagFormat: (): Expr => isnull(prop(propertyName(PIT_WALL_FLAG_FORMAT_SETTING)), str(DEFAULT_PIT_WALL_FLAG_FORMAT)),
+  /** `... = 'band'`: whether this pit wall is in the given flag format. */
+  pitWallFlagFormatIs: (format: CompanionFlagFormat): Expr => eq(secondScreen.pitWallFlagFormat(), str(format)),
 };
 
 // --- The flag box ---------------------------------------------------------------------------

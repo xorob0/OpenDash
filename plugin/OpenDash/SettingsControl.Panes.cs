@@ -751,6 +751,7 @@ namespace OpenDashPlugin
             var classOnly = BuildToggle(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(); });
             classOnly.ToolTip = "Show the board, the leaderboard and the relative for your own class";
             rows.Add(Ui.Row("My class only", "The board and the list zones show the class you are racing in rather than the whole field.", classOnly));
+            rows.Add(BuildPitWallFlagRow(screen));
             return rows.ToArray();
         }
 
@@ -982,6 +983,23 @@ namespace OpenDashPlugin
                 new[] { "Off", "Bar", "Full screen" },
                 Settings.ScreenCompanionFlagFormat(screen.Namespace),
                 value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); Save(); });
+            return Ui.Row(text, segmented);
+        }
+
+        /// <summary>How this pit wall draws a flag. The bar by default, not the companion's full screen:
+        /// a wall is watched *because* of the flag, and covering the board at the moment a yellow comes
+        /// out hides the cars the yellow is about.</summary>
+        private FrameworkElement BuildPitWallFlagRow(ScreenInstance screen)
+        {
+            var text = Ui.VStack(4, Ui.Body("Flags"),
+                Ui.Caption("The bar is a strip under the header, which leaves the board and the zones readable. "
+                    + "Full screen takes everything below the header, for a monitor kept as a flag panel. Off draws none."));
+            text.MaxWidth = 420;
+            var segmented = BuildSegmented(
+                Contract.CompanionFlagFormats,
+                new[] { "Off", "Bar", "Full screen" },
+                Settings.ScreenPitWallFlagFormat(screen.Namespace),
+                value => { screen.PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(value); Save(); });
             return Ui.Row(text, segmented);
         }
 

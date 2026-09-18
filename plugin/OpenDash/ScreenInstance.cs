@@ -104,6 +104,11 @@ namespace OpenDashPlugin
         /// <summary>Whether this pit wall's board and its zone lists show the player's own class.</summary>
         public bool PitWallClassOnly { get; set; }
 
+        /// <summary>How this pit wall draws a flag: off, a band under the header, or over the body.
+        /// The companion's question asked of the wall, and what replaced the flag readout the header
+        /// carried.</summary>
+        public string PitWallFlagFormat { get; set; }
+
         /// <summary>Zone and page a held button shows on this pit wall, released back to where it was,
         /// packed as zone index times a hundred plus the page the way a face's glance is.</summary>
         public int PitWallQuickGlance { get; set; } = Contract.DefaultPitWallQuickGlance;
@@ -325,6 +330,7 @@ namespace OpenDashPlugin
                 WebViewUrl = fresh ? Contract.DefaultWebViewUrl : Contract.NormaliseUrl(WebViewUrl);
                 PitWallQuickGlance = fresh ? Contract.DefaultPitWallQuickGlance : Contract.NormalisePitWallQuickGlance(PitWallQuickGlance);
                 PitWallPage = fresh ? Contract.DefaultPitWallPage : Contract.NormalisePitWallPage(PitWallPage);
+                PitWallFlagFormat = Contract.NormalisePitWallFlagFormat(PitWallFlagFormat);
                 // Consumed. Leaving them would make the next Normalise migrate over whatever the user
                 // has since chosen, which is a settings file that quietly reverts.
                 Zones = null;
@@ -339,6 +345,7 @@ namespace OpenDashPlugin
                 PitWallQuickGlance = 0;
                 PitWallPage = Contract.DefaultPitWallPage;
                 PitWallClassOnly = false;
+                PitWallFlagFormat = null;
             }
 
             if (IsCompanion)
@@ -489,6 +496,7 @@ namespace OpenDashPlugin
                 WebViewUrl = WebViewUrl,
                 PitWallQuickGlance = PitWallQuickGlance,
                 PitWallClassOnly = PitWallClassOnly,
+                PitWallFlagFormat = PitWallFlagFormat,
                 Modules = Modules == null ? null : (bool[])Modules.Clone(),
                 CompanionPage = CompanionPage,
                 CompanionStart = CompanionStart,

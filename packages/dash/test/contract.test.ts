@@ -125,10 +125,10 @@ describe('settings', () => {
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
         3 +
-        // Every zone of every pit wall page, then the page it shows, the web view address and the
-        // class filter.
+        // Every zone of every pit wall page, then the page it shows, the web view address, the
+        // class filter and how it draws a flag.
         allPitWallZoneSettingNames().length +
-        3 +
+        4 +
         flagBoxProperties().length +
         ledProperties().length,
     );
@@ -145,8 +145,10 @@ describe('settings', () => {
     // grid and the mirror had to publish a run for every centre the grid reaches, and 317 before a
     // pit wall zone belonged to a page: four zones and a wide one became twelve, and the pit wall
     // gained the page it shows, 325 before a companion was given its own answer to how it draws a
-    // flag, and 326 before it was given the module the plugin holds it on while SimHub loads.
-    expect(props).toHaveLength(327);
+    // flag, 326 before it was given the module the plugin holds it on while SimHub loads, and 327
+    // before the pit wall was given the same three-way answer as the companion and the header's
+    // flag readout, which did not work on a rig, was taken off the strip.
+    expect(props).toHaveLength(328);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -173,7 +175,7 @@ describe('settings', () => {
     // settings silently shared with every other.
     expect(props.filter((p) => /^OpenDash\.(Zone|Bar|QuickGlance|FlagFormat|LapReview)/.test(p))).toEqual([]);
     const lights = flagBoxProperties().length + ledProperties().length;
-    expect(props.slice(-(lights + 15), -lights)).toEqual([
+    expect(props.slice(-(lights + 16), -lights)).toEqual([
       'OpenDash.PitWallRaceA',
       'OpenDash.PitWallRaceB',
       'OpenDash.PitWallTowerWide',
@@ -189,6 +191,7 @@ describe('settings', () => {
       'OpenDash.PitWallPage',
       'OpenDash.WebViewUrl',
       'OpenDash.PitWallClassOnly',
+      'OpenDash.PitWallFlagFormat',
     ]);
     // One filter for the screen and not one per zone: a pit wall zone is a widget pointed at one
     // dashboard file per rectangle, so zones A and B of the race page are the same file.

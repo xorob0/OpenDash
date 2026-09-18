@@ -1140,6 +1140,13 @@ namespace OpenDashPlugin
             return screen == null ? Contract.DefaultPitWallClassOnly : screen.PitWallClassOnly;
         }
 
+        /// <summary>How one pit wall draws a flag: off, a band under the header, or over the body.</summary>
+        public string ScreenPitWallFlagFormat(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultPitWallFlagFormat : Contract.NormalisePitWallFlagFormat(screen.PitWallFlagFormat);
+        }
+
         /// <summary>The zone and page a held button shows on one pit wall.</summary>
         public int ScreenPitWallQuickGlance(string ns)
         {

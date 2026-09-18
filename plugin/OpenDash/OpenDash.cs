@@ -465,6 +465,7 @@ namespace OpenDashPlugin
                     this.AttachDelegate(Contract.PitWallPageProperty(s.Namespace), () => Settings.ScreenPitWallPage(s.Namespace));
                     this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
                     this.AttachDelegate(Contract.PitWallClassOnlyProperty(s.Namespace), () => Settings.ScreenPitWallClassOnly(s.Namespace));
+                    this.AttachDelegate(Contract.PitWallFlagFormatProperty(s.Namespace), () => Settings.ScreenPitWallFlagFormat(s.Namespace));
                 }
             }
         }

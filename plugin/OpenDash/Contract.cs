@@ -22,6 +22,7 @@ namespace OpenDashPlugin
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
         public const string PitWallClassOnly = "PitWallClassOnly";
+        public const string PitWallFlagFormat = "PitWallFlagFormat";
 
         /// <summary>The lights. Not a screen, but their settings are properties for the same reason the
         /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.
@@ -710,6 +711,7 @@ namespace OpenDashPlugin
                 // Last, after the web view: the six before it have shipped and both halves of the
                 // contract assert the group by index, so a new one joins the end of it.
                 yield return PitWallClassOnlyProperty(ns);
+                yield return PitWallFlagFormatProperty(ns);
                 yield break;
             }
             // A slots face reads the twelve shared slot properties and nothing of its own, which is why
@@ -748,6 +750,7 @@ namespace OpenDashPlugin
                 yield return PitWallPage;
                 yield return WebViewUrl;
                 yield return PitWallClassOnly;
+                yield return PitWallFlagFormat;
                 yield break;
             }
             throw new ArgumentOutOfRangeException("prefix", prefix, "no screen carries that prefix");
@@ -1126,6 +1129,24 @@ namespace OpenDashPlugin
         /// DEFAULT_PIT_WALL_CLASS_ONLY in contract.ts.</summary>
         public const bool DefaultPitWallClassOnly = false;
 
+        /// <summary>How a pit wall draws a flag: "off", "band" or "full". The companion's three
+        /// answers, asked of the other big screen, and it is what replaced the flag readout the
+        /// header used to carry -- six normalised properties and a 24 px block, which did not light
+        /// on a rig and would not have been where anyone looked for a flag even when it did.
+        ///
+        /// "band" rather than the companion's "full": a pit wall is a board, a track map and four
+        /// zones that somebody is watching because of the flag, so covering them the moment a yellow
+        /// comes out hides the cars the yellow is about. Mirrors DEFAULT_PIT_WALL_FLAG_FORMAT in
+        /// contract.ts.</summary>
+        public const string DefaultPitWallFlagFormat = "band";
+
+        /// <summary>One of <see cref="CompanionFlagFormats"/>, or the default when it is anything
+        /// else. The same three answers as a companion's, so the same list.</summary>
+        public static string NormalisePitWallFlagFormat(string format)
+        {
+            return NormaliseChoice(format, CompanionFlagFormats, DefaultPitWallFlagFormat);
+        }
+
         /// <summary>The class filter of every face zone, in letter order.</summary>
         public static bool[] DefaultFaceZoneClassOnly()
         {
@@ -1384,6 +1405,15 @@ namespace OpenDashPlugin
         public static string PitWallClassOnlyProperty(string ns)
         {
             return ns + "ClassOnly";
+        }
+
+        /// <summary>Property name of a pit wall's flag format: PitWallFlagFormat, or GarageFlagFormat
+        /// on a second one. The same shape as a face's and a companion's, and the same suffix: three
+        /// kinds of screen ask one question and a second spelling of it would be a second answer to
+        /// keep in step.</summary>
+        public static string PitWallFlagFormatProperty(string ns)
+        {
+            return ns + "FlagFormat";
         }
 
         /// <summary>Default page of a zone, by its letter.</summary>

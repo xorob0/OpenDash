@@ -1263,8 +1263,8 @@ namespace OpenDashPlugin.Tests
             var names = settings.DeclaredProperties().ToList();
             // Plus two for the companion's page and its flag format, which are the names it owns that
             // are not switches, and the pit wall's own: a zone per page, the page it shows,
-            // the URL and the class filter.
-            var perPitWall = Contract.PitWallZoneSlots.Count + 3;
+            // the URL, the class filter and its own flag format.
+            var perPitWall = Contract.PitWallZoneSlots.Count + 4;
             Assert.Equal(shared + 2 * perFace + Modules.Count + 3 + perPitWall + lights, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Contains("Face1920x480ZoneA", names);
@@ -1272,6 +1272,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("CompanionModule21", names);
             Assert.Contains("WebViewUrl", names);
             Assert.Contains("PitWallClassOnly", names);
+            Assert.Contains("PitWallFlagFormat", names);
             // And the six faces the rig has not got are not declared at all.
             Assert.DoesNotContain("Face1280x480ZoneA", names);
 
