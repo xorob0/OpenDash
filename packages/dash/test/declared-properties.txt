@@ -327,3 +327,4 @@ OpenDash.LedMirror22
 OpenDash.LedMirror23
 OpenDash.LedMirror24
 OpenDash.LedMirror25
+OpenDash.LedSpotterWhole

@@ -125,7 +125,7 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_rewrite_moves_three_names_two_fields_and_nothing_else()
+        public void The_rewrite_moves_the_bars_own_names_two_fields_and_nothing_else()
         {
             var embedded = BuiltStripProfile();
             if (embedded == null) return;

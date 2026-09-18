@@ -301,6 +301,12 @@ namespace OpenDashPlugin
             return bar == null ? LedFlagAnimation : bar.FlagAnimation;
         }
 
+        public bool BarSpotterWhole(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar == null ? Contract.DefaultLedSpotterWhole : bar.SpotterWhole;
+        }
+
         /// <summary>
         /// Adds a bar of a shape, with the rig's own settings as its starting point.
         /// </summary>

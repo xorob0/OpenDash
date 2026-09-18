@@ -26,10 +26,29 @@ namespace OpenDashPlugin
         public const string DocumentationUrl = "https://github.com/xorob0/OpenDash#readme";
         public const string IssuesUrl = "https://github.com/xorob0/OpenDash/issues";
 
+        /// <summary>
+        /// What the page grows to, and what it will not grow past.
+        /// </summary>
+        /// <remarks>
+        /// The canvas draws it 960 wide and it used to be exactly that, pinned and left-aligned, so a
+        /// driver with SimHub across a 4K monitor read a column of settings in the left third of it and
+        /// one on a narrow window scrolled sideways. It fills what it is given now, between a floor
+        /// short enough for a half-screen window and a ceiling that keeps a line of prose readable --
+        /// past about twelve hundred a caption is a single line running the width of a desk, which is
+        /// the thing line length rules exist to prevent.
+        /// </remarks>
+        private const double PageMinWidth = 640;
+        private const double PageMaxWidth = 1200;
+
+        /// <summary>The width the canvas draws, which is what every fixed measure inside is still drawn
+        /// against: a card, a picture of a face, a drop-down. Those keep their size and the room around
+        /// them changes, which is what makes the page wider rather than everything in it.</summary>
         private const double PageWidth = 960;
         private const double PagePadding = 32;
 
-        /// <summary>The column a tab has to itself: the page less its own frame and its side padding.</summary>
+        /// <summary>The column a tab has to itself at the canvas's width: the page less its own frame and
+        /// its side padding. A ceiling now rather than a width — what is drawn to it caps there and what
+        /// stretches simply stretches.</summary>
         private const double BodyWidth = PageWidth - 2 * PanelMetrics.BorderWeight - 2 * PagePadding;
 
         /// <summary>What a button holds even when its word is short, so that two of them in a row are the
@@ -107,8 +126,9 @@ namespace OpenDashPlugin
             {
                 BorderBrush = Ui.Brush(Theme.Rule),
                 BorderThickness = new Thickness(PanelMetrics.BorderWeight),
-                MaxWidth = PageWidth,
-                HorizontalAlignment = HorizontalAlignment.Left,
+                MinWidth = PageMinWidth,
+                MaxWidth = PageMaxWidth,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
                 Child = page,
             };
             var scroller = new ScrollViewer

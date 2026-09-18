@@ -92,7 +92,7 @@ namespace OpenDashPlugin
         /// <summary>The cards, wrapped, and the add card after them.</summary>
         private FrameworkElement BuildCardRow(IReadOnlyList<ScreenInstance> rig)
         {
-            var wrap = new WrapPanel { Width = BodyWidth, HorizontalAlignment = HorizontalAlignment.Left };
+            var wrap = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Left };
             var current = Selected;
             foreach (var screen in rig)
             {
@@ -374,7 +374,7 @@ namespace OpenDashPlugin
                         typeCaption.Text = type.Caption;
                         showSize();
                     }));
-            typeRow.Width = BodyWidth;
+            typeRow.HorizontalAlignment = HorizontalAlignment.Stretch;
 
             showSize();
 
@@ -387,7 +387,7 @@ namespace OpenDashPlugin
             cancel.Click += (sender, args) => Redraw();
 
             var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
-            nameRow.Width = BodyWidth;
+            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
 
             bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
                 typeRow,
@@ -419,7 +419,7 @@ namespace OpenDashPlugin
             var row = question == SizeQuestion.Orientation
                 ? Ui.Row(PanelAddScreen.OrientationTitle, PanelAddScreen.OrientationCaption, control)
                 : Ui.Row(PanelAddScreen.SizeTitle, PanelAddScreen.SizeCaption, control);
-            row.Width = BodyWidth;
+            row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
         }
 

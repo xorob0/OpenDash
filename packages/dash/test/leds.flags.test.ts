@@ -205,9 +205,12 @@ describe('where a flag is drawn', () => {
     // put a flag on; there the ranking on that lamp decides, and the test above is what holds it.
     for (const shape of roomy) {
       const placed = placedOf(profileFor(shape).containers);
+      // The lamp drawings alone. A spotter also has a whole-strip copy, which is the driver's own
+      // switch and off unless they ask for it, and it covers the run by design; it is excluded by its
+      // extent rather than by its name, so a lamp drawing that grew to the whole run would still fail.
       const covers = (labels: readonly string[]): Set<number> => {
         const lit = new Set<number>();
-        for (const p of placed.filter((q) => labels.includes(q.description))) {
+        for (const p of placed.filter((q) => labels.includes(q.description) && q.count !== stripLength(shape))) {
           for (let i = 0; i < (p.count ?? 0); i += 1) lit.add(p.start + i);
         }
         return lit;
