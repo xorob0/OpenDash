@@ -53,6 +53,8 @@ import {
   PROPERTY_PREFIX,
   REV_BAR_MODES,
   REV_BAR_SETTING,
+  BLUE_FLAG_DETAILS,
+  BLUE_FLAG_DETAIL_SETTING,
   SESSION_PROGRESS_MODES,
   setting,
   SLOT_MAX,
@@ -91,15 +93,17 @@ describe('settings', () => {
     // critical flags only, the gear and the two temperatures -- moved under the matrix that owns them.
     expect(flagBoxProperties()).toHaveLength(6 + FLAG_BOX_MATRICES.length * 10);
     expect(ledProperties()).toEqual(['OpenDash.LedCentre', 'OpenDash.LedRpmStyle', 'OpenDash.LedFlagAnimation']);
-    // The lone 1 is RevBar, which every screen shares with the four modes and the twelve slots.
+    // The lone 2 is RevBar and the blue flag detail, which every screen shares with the four modes
+    // and the twelve slots.
     expect(props).toHaveLength(
-      4 + SLOT_MAX + 1 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 3 + flagBoxProperties().length + ledProperties().length,
+      4 + SLOT_MAX + 2 + FACE_SIZES.length * perFace + MODULE_COUNT + PIT_WALL_ZONE_LETTERS.length + 3 + flagBoxProperties().length + ledProperties().length,
     );
     // And what that sum comes to, said out loud: ContractTests.cs asserts the same number of the
     // plugin's own list, and the two were 246 and 244 for as long as the strips went unattached.
     // 256 before the four settings a box owns became four per matrix, which is twelve names more,
-    // and 269 before the pit wall gained the class filter its board and its list zones read.
-    expect(props).toHaveLength(270);
+    // 269 before the pit wall gained the class filter its board and its list zones read, and 270
+    // before band D was allowed to name the car a blue flag is being waved for.
+    expect(props).toHaveLength(271);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -108,6 +112,10 @@ describe('settings', () => {
     // them until the card path is retired, because ten faces still read them.
     // Appended to the shared group rather than beside ShiftLights, which has shipped at index 0.
     expect(props[4 + SLOT_MAX]).toBe('OpenDash.RevBar');
+    // Appended after it for the same reason, and shared rather than a face's: the flag *format* is
+    // per screen because it decides how much of one screen a flag takes, whereas what a band is
+    // allowed to say is the same answer wherever it is written.
+    expect(props[5 + SLOT_MAX]).toBe('OpenDash.BlueFlagDetail');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -170,7 +178,9 @@ describe('settings', () => {
     // RevBar is shared too, and has to be: only a rectangular face has a second arrangement, but the
     // round faces' rev arc and the companion's speedo draw the same segments and read the same
     // setting, and a screen may not read a property another screen owns.
-    expect(shared).toEqual([...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)), REV_BAR_SETTING].map((n) => `${PROPERTY_PREFIX}.${n}`));
+    expect(shared).toEqual(
+      [...fixed, ...Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)), REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING].map((n) => `${PROPERTY_PREFIX}.${n}`),
+    );
 
     // The web view address is the pit wall's although its name carries no prefix: it was named
     // before the idiom, and no other screen has a browser page to point anywhere.
@@ -323,6 +333,14 @@ describe('plugin mirror', () => {
     // declared, mirrored and attached with nothing in the panel writing it, so the only way to draw
     // a flag over the body was to hand-edit the settings file.
     expect(panelSource()).toContain('Contract.FlagFormats');
+    // The blue flag detail is shared, so it sits beside the four modes rather than beside the flag
+    // format. There is no panel assertion under it: the row that writes it belongs on the Data tab,
+    // which is the tab for settings that mean the same thing on every screen, and until it is there
+    // the setting sits at its default and the band draws what it has always drawn.
+    expect(source).toContain(`public const string ${BLUE_FLAG_DETAIL_SETTING} = "${BLUE_FLAG_DETAIL_SETTING}";`);
+    expect(source).toContain(`BlueFlagDetails = ${csArray(BLUE_FLAG_DETAILS)};`);
+    expect(source).toContain(`public const string DefaultBlueFlagDetail = "${DEFAULTS.BlueFlagDetail}";`);
+    expect(pluginSource('OpenDash.cs')).toContain(`this.AttachDelegate(Contract.${BLUE_FLAG_DETAIL_SETTING},`);
     expect(source).toContain(`PositionModes = ${csArray(POSITION_MODES)};`);
     expect(source).toContain(`DeltaReferences = ${csArray(DELTA_REFERENCES)};`);
     expect(source).toContain(`SessionProgressModes = ${csArray(SESSION_PROGRESS_MODES)};`);

@@ -18,6 +18,7 @@ namespace OpenDashPlugin
         public const string PositionMode = "PositionMode";
         public const string DeltaReference = "DeltaReference";
         public const string SessionProgress = "SessionProgress";
+        public const string BlueFlagDetail = "BlueFlagDetail";
         public const string PitWallWide = "PitWallWide";
         public const string WebViewUrl = "WebViewUrl";
         public const string PitWallClassOnly = "PitWallClassOnly";
@@ -104,6 +105,23 @@ namespace OpenDashPlugin
 
         public static readonly string[] SessionProgressModes = { "auto", "laps", "time" };
         public const string DefaultSessionProgress = "auto";
+
+        /// <summary>
+        /// What a blue flag band says beyond its colour: nothing, the class of the car behind, or
+        /// that car's position and class. Mirrors BLUE_FLAG_DETAILS in contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// Shared and not a face's, which is the difference from the flag format beside it. The
+        /// format decides how much of one screen a flag takes and so differs between a rim read at
+        /// arm's length and a display in the corner of the eye; this decides what a band is allowed
+        /// to say, which is the same answer wherever it is written. Appended to the shared group
+        /// after the rev bar, since both halves of the contract assert that group by index.
+        /// </remarks>
+        public static readonly string[] BlueFlagDetails = { "none", "class", "positionClass" };
+
+        /// <summary>Nothing extra: a blue flag is read by its colour, and the class of the car
+        /// behind is a thing to ask for rather than a thing to be given while lifting.</summary>
+        public const string DefaultBlueFlagDetail = "none";
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -565,6 +583,7 @@ namespace OpenDashPlugin
             yield return SessionProgress;
             for (var slot = 1; slot <= SlotCount; slot++) yield return SlotProperty(slot);
             yield return RevBar;
+            yield return BlueFlagDetail;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

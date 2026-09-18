@@ -61,7 +61,8 @@ namespace OpenDashPlugin.Tests
         public void Property_names_cover_the_dash_the_companion_and_the_pit_wall()
         {
             var names = Contract.PropertyNames().ToList();
-            // Four settings, twelve slots, the rev bar mode, the zone face of every face that ships
+            // Four settings, twelve slots, the rev bar mode, the blue flag detail, the zone face of
+            // every face that ships
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance
             // and the flag format), twenty-one companion modules, four pit wall zones, the wide zone,
             // the URL, the pit wall's class filter, and the flag box.
@@ -71,14 +72,15 @@ namespace OpenDashPlugin.Tests
             // only, the gear and the two temperature thresholds moved under the matrix that owns them,
             // and the switch on the spotter bar's movement joined the rig's own names.
             Assert.Equal(
-                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 3 + 6 + Contract.FlagBoxMatrices.Count * 10 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 4 + 3 + 6 + Contract.FlagBoxMatrices.Count * 10 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
             // LedRpmStyle were declared by one side only. 256 before the four settings a box owns
-            // became four per matrix, which is twelve names more, and 269 before the pit wall gained the
-            // class filter its board and its list zones read.
-            Assert.Equal(270, names.Count);
+            // became four per matrix, which is twelve names more, 269 before the pit wall gained the
+            // class filter its board and its list zones read, and 270 before band D was allowed to
+            // name the car a blue flag is being waved for.
+            Assert.Equal(271, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -93,20 +95,25 @@ namespace OpenDashPlugin.Tests
             // the twelve slots have shipped and this test asserts them by index. XOR-119, XOR-138.
             Assert.Equal("RevBar", names[16]);
             Assert.Contains("RevBar", Contract.SharedPropertyNames());
+            // And the blue flag detail after it, shared for a different reason: the flag format is
+            // the screen's because it decides how much of one screen a flag takes, whereas what a
+            // band may say is the same answer wherever it is written.
+            Assert.Equal("BlueFlagDetail", names[17]);
+            Assert.Contains("BlueFlagDetail", Contract.SharedPropertyNames());
 
             var p = Contract.FacePrefix(Contract.ReferenceFace);
-            Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(17).Take(4));
-            Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(21).Take(4));
-            Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(25).Take(4));
-            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(29).Take(4));
-            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(33).Take(4));
-            Assert.Equal(p + "QuickGlance", names[37]);
-            Assert.Equal(p + "FlagFormat", names[38]);
+            Assert.Equal(new[] { p + "ZoneA", p + "ZoneB", p + "ZoneC", p + "ZoneD" }, names.Skip(18).Take(4));
+            Assert.Equal(new[] { p + "ZoneAPages", p + "ZoneBPages", p + "ZoneCPages", p + "ZoneDPages" }, names.Skip(22).Take(4));
+            Assert.Equal(new[] { p + "ZoneAStart", p + "ZoneBStart", p + "ZoneCStart", p + "ZoneDStart" }, names.Skip(26).Take(4));
+            Assert.Equal(new[] { p + "ZoneAClassOnly", p + "ZoneBClassOnly", p + "ZoneCClassOnly", p + "ZoneDClassOnly" }, names.Skip(30).Take(4));
+            Assert.Equal(new[] { p + "BarLeft1", p + "BarLeft2", p + "BarRight1", p + "BarRight2" }, names.Skip(34).Take(4));
+            Assert.Equal(p + "QuickGlance", names[38]);
+            Assert.Equal(p + "FlagFormat", names[39]);
             // And no name without a face, which is the promise: a bare ZoneA would be one screen's
             // settings silently shared with every other.
             Assert.DoesNotContain(names, n => n.StartsWith("Zone", StringComparison.Ordinal) && !n.StartsWith("Face", StringComparison.Ordinal));
 
-            var afterFaces = 17 + Contract.FaceSizes.Count * perFace;
+            var afterFaces = 18 + Contract.FaceSizes.Count * perFace;
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
@@ -234,6 +241,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.SessionProgressModes, ListOf(source, "SESSION_PROGRESS_MODES"));
             Assert.Contains("ShiftLights: " + Contract.DefaultShiftLights.ToString().ToLowerInvariant(), source);
             Assert.Equal(Contract.RevBarModes, ListOf(source, "REV_BAR_MODES"));
+            Assert.Equal(Contract.BlueFlagDetails, ListOf(source, "BLUE_FLAG_DETAILS"));
+            Assert.Contains("BlueFlagDetail: '" + Contract.DefaultBlueFlagDetail + "'", source);
             Assert.Equal(Contract.LedCentres, ListOf(source, "LED_CENTRES"));
             Assert.Equal(Contract.LedRpmStyles, ListOf(source, "LED_RPM_STYLES"));
             Assert.Contains("LedCentre: '" + Contract.DefaultLedCentre + "'", source);

@@ -93,6 +93,11 @@ namespace OpenDashPlugin
 
         public string SessionProgress { get; set; } = Contract.DefaultSessionProgress;
 
+        /// <summary>What a blue flag band says beyond its colour: "none", "class" or "positionClass".
+        /// Shared, because what a band may say is the same answer on every screen; the flag *format*,
+        /// which decides how much of a screen a flag takes, is the screen's own.</summary>
+        public string BlueFlagDetail { get; set; } = Contract.DefaultBlueFlagDetail;
+
         /// <summary>Card number per slot, index 0 is slot 1. Always Contract.SlotCount long after Normalise().</summary>
         public int[] Slots { get; set; } = Contract.DefaultSlots();
 
@@ -367,6 +372,7 @@ namespace OpenDashPlugin
             PositionMode = Contract.NormaliseChoice(PositionMode, Contract.PositionModes, Contract.DefaultPositionMode);
             DeltaReference = Contract.NormaliseChoice(DeltaReference, Contract.DeltaReferences, Contract.DefaultDeltaReference);
             SessionProgress = Contract.NormaliseChoice(SessionProgress, Contract.SessionProgressModes, Contract.DefaultSessionProgress);
+            BlueFlagDetail = Contract.NormaliseChoice(BlueFlagDetail, Contract.BlueFlagDetails, Contract.DefaultBlueFlagDetail);
             NormaliseLights();
 
             var normalised = Contract.DefaultSlots();
@@ -1036,6 +1042,7 @@ namespace OpenDashPlugin
             PositionMode = other.PositionMode;
             DeltaReference = other.DeltaReference;
             SessionProgress = other.SessionProgress;
+            BlueFlagDetail = other.BlueFlagDetail;
             Screens = other.Screens == null ? null : new List<string>(other.Screens);
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
             Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();

@@ -28,6 +28,7 @@ OpenDash.Slot10
 OpenDash.Slot11
 OpenDash.Slot12
 OpenDash.RevBar
+OpenDash.BlueFlagDetail
 OpenDash.Face1920x480ZoneA
 OpenDash.Face1920x480ZoneAPages
 OpenDash.Face1920x480ZoneAStart
