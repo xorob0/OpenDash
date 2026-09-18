@@ -52,7 +52,7 @@ const { and, computed, concat, eq, fmt, game, isnull, lt, not, num, signed, str,
  * is, with the sheet as its citation rather than a ratio.
  */
 export const POP_UP_WIDTH = 560;
-export const POP_UP_HEIGHT = 120;
+export const POP_UP_HEIGHT = ds.indicator.popUp.height;
 
 /** The rule along the top edge, counted inside the box. */
 export const POP_UP_RULE = 2;
@@ -75,7 +75,7 @@ export const POP_UP_SECONDARY_SIZE = ds.size.value;
  * It is a length of time and a scene graph has no clock, so it is only ever read as part of a
  * condition that is true for that long on its own. {@link LAP_POP_UP} is the one that can.
  */
-export const POP_UP_SECONDS = 3;
+export const POP_UP_SECONDS = ds.indicator.popUp.durationMs / 1000;
 
 /** One run of a pop-up: the value, or the figure after it. */
 export interface PopUpText {
@@ -167,12 +167,8 @@ export function popUp(frame: Rect, spec: PopUpSpec, prefix = 'popUp'): LayerItem
   const valueY = labelY + ds.size.label + POP_UP_GAP;
   const labelWidth = Math.ceil(measureText('BarlowMedium', labelText(spec.label), ds.size.label)) + boxSlack(ds.size.label);
   const children: Item[] = [
-    band(`${name}.box`, frame, ds.color.surface.zone),
-    // `purpose.popUp.rule` is `{color.text.primary}` and `purpose.popUp.surface` is
-    // `{color.surface.zone}`: the same two colours reached through the door `ds` exposes. The
-    // pop-up group of tokens.json is not in `ds`, and adding it is what would let this read
-    // `ds.purpose.popUp` instead.
-    band(`${name}.rule`, rect(frame.left, frame.top, frame.width, POP_UP_RULE), ds.color.text.primary),
+    band(`${name}.box`, frame, ds.purpose.popUp.surface),
+    band(`${name}.rule`, rect(frame.left, frame.top, frame.width, POP_UP_RULE), ds.purpose.popUp.rule),
     label(`${name}.label`, spec.label.text, x, labelY, labelWidth, { bind: spec.label.bind, ...(spec.label.widest ? { widest: spec.label.widest } : {}) }),
     popUpRun(`${name}.value`, spec.value, x, valueY, fit.valueFs, spec.colour, spec.flashMs),
   ];
