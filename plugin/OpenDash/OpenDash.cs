@@ -296,6 +296,9 @@ namespace OpenDashPlugin
             // speedo read it too, and attached last of the shared group because ShiftLights is one of
             // the names this list has always opened with. XOR-119, XOR-138.
             this.AttachDelegate(Contract.RevBar, () => Settings.RevBarMode());
+            // And after it, for the same reason: every band that writes a name reads this, on a face
+            // and on a card face alike, so it belongs to the rig rather than to a screen.
+            this.AttachDelegate(Contract.BlueFlagDetail, () => Settings.BlueFlagDetail);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

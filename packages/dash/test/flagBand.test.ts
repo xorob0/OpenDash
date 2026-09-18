@@ -14,8 +14,9 @@
  * blinking the whole layer away.
  */
 import { describe, expect, test } from 'bun:test';
-import { BLACK_FLAG_BORDER, FLAG_BLINK_MS, FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
+import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
 import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
+import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
 import { FLAG_CATALOGUE } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
@@ -152,9 +153,11 @@ describe('the flag name', () => {
       // the band is drawn in rather than the one it used to be.
       for (const id of [...COLOURED, 'black']) {
         const names = labelsOf(layerOf(face, id).children);
-        expect({ id, drawn: names.length }).toEqual({ id, drawn: 1 });
-        const name = names[0]!;
-        expect({ id, font: name.font, weight: name.fontWeight }).toEqual({ id, font: ds.font.label, weight: FLAG_NAME_WEIGHT });
+        // One run each, and three on the blue: it is the one band that can say more than its own
+        // name, one run per value of BlueFlagDetail with one of the three visible at a time. They
+        // are the same line box in the same face, which is what this test is about.
+        expect({ id, drawn: names.length }).toEqual({ id, drawn: id === BLUE_FLAG_ID ? BLUE_FLAG_DETAILS.length : 1 });
+        for (const name of names) expect({ id, font: name.font, weight: name.fontWeight }).toEqual({ id, font: ds.font.label, weight: FLAG_NAME_WEIGHT });
       }
       expect(labelsOf(layerOf(face, 'chequered').children)).toEqual([]);
     });

@@ -60,6 +60,24 @@ export const REV_BAR_MODES: readonly RevBarMode[] = ['shift', 'rpm', 'off'];
 /** Appended to the group every screen shares rather than folded into the four fixed names, which have shipped. */
 export const REV_BAR_SETTING = 'RevBar';
 
+/**
+ * What a blue flag band says beyond its colour: nothing, the class of the car behind, or that
+ * car's position and class.
+ *
+ * Shared rather than a face's, and that is the difference from the flag *format*, which is per
+ * screen. The format decides how much of one screen a flag takes and so differs between a rim read
+ * at arm's length and a display in the corner of the eye; this decides what the band is allowed to
+ * *say*, which is the same answer wherever it is written. Every band that carries a name reads it,
+ * and a band that carries none -- the nano's twelve pixel strip and the companion's -- reads
+ * nothing and draws nothing extra.
+ *
+ * Appended after the rev bar for the reason the rev bar is appended after the slots: both halves of
+ * the contract assert the shared group by index and a new name goes on the end of it.
+ */
+export type BlueFlagDetail = 'none' | 'class' | 'positionClass';
+export const BLUE_FLAG_DETAILS: readonly BlueFlagDetail[] = ['none', 'class', 'positionClass'];
+export const BLUE_FLAG_DETAIL_SETTING = 'BlueFlagDetail';
+
 export const POSITION_MODES: readonly PositionMode[] = ['overall', 'class'];
 export const DELTA_REFERENCES: readonly DeltaReference[] = ['session', 'alltime'];
 export const SESSION_PROGRESS_MODES: readonly SessionProgress[] = ['auto', 'laps', 'time'];
@@ -78,6 +96,10 @@ export const DEFAULTS = {
   LedCentre: 'rpm' as LedCentre,
   LedRpmStyle: 'leftToRight' as LedRpmStyle,
   LedFlagAnimation: true,
+  // Nothing extra, because a blue flag is read by its colour and the band is the one place a
+  // driver already knows to look; the class of the car behind is a thing to ask for rather than a
+  // thing to be given while lifting.
+  BlueFlagDetail: 'none' as BlueFlagDetail,
 } as const;
 
 /** `Slot01` .. `Slot12` for a 1-based slot index. */
@@ -117,7 +139,7 @@ export const propertyName = (name: string): string => `${PROPERTY_PREFIX}.${name
 export function dashProperties(): string[] {
   const fixed = ['ShiftLights', 'PositionMode', 'DeltaReference', 'SessionProgress'];
   const slots = Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1));
-  return [...[...fixed, ...slots, REV_BAR_SETTING].map(propertyName), ...zoneProperties()];
+  return [...[...fixed, ...slots, REV_BAR_SETTING, BLUE_FLAG_DETAIL_SETTING].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only a generated LED profile reads. ADR 0013. */
@@ -195,6 +217,10 @@ export const setting = {
   ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
   /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
   ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
+  /** `isnull([OpenDash.BlueFlagDetail], 'none')`: what a blue band says beyond its colour. */
+  blueFlagDetail: (): Expr => isnull(prop(propertyName(BLUE_FLAG_DETAIL_SETTING)), str(DEFAULTS.BlueFlagDetail)),
+  /** `isnull([OpenDash.BlueFlagDetail], 'none') = 'class'`: whether the band is in the given detail. */
+  blueFlagDetailIs: (detail: BlueFlagDetail): Expr => eq(setting.blueFlagDetail(), str(detail)),
 };
 
 

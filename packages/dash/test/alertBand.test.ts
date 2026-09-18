@@ -16,7 +16,9 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, ALERT_FLASH_MS, type AlertBandStyle } from '../src/components/alertBand.ts';
-import { flagStrip } from '../src/components/flagStrip.ts';
+import { BLUE_FLAG_ID, flagStrip } from '../src/components/flagStrip.ts';
+import { BLUE_FLAG_DETAILS, setting } from '../src/contract.ts';
+import { carBehindClass, carBehindPositionClass } from '../src/second/values.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { flagBit, FLAG_CATALOGUE, type SessionFlagBit } from '../src/flags.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
@@ -82,8 +84,44 @@ describe('the band is the catalogue', () => {
   test('every band names itself, except the chequer, which has no name to write', () => {
     for (const condition of FLAG_CATALOGUE) {
       const names = texts(layerOf(condition.id)).map((t) => t.text);
-      expect({ id: condition.id, names }).toEqual({ id: condition.id, names: condition.band.shape === 'chequer' ? [] : [condition.band.label] });
+      if (condition.band.shape === 'chequer') {
+        expect({ id: condition.id, names }).toEqual({ id: condition.id, names: [] });
+        continue;
+      }
+      // The blue is the one band that can say more than its own name, so it carries a run per
+      // value of BlueFlagDetail; every run opens with the label, which is what the setting is a
+      // detail *of*.
+      const expected = condition.id === BLUE_FLAG_ID ? BLUE_FLAG_DETAILS.length : 1;
+      expect({ id: condition.id, drawn: names.length }).toEqual({ id: condition.id, drawn: expected });
+      for (const name of names) expect({ id: condition.id, name, opens: name.startsWith(condition.band.label) }).toEqual({ id: condition.id, name, opens: true });
     }
+  });
+
+  /**
+   * What a blue flag says beyond its colour, which is the one thing `OpenDash.BlueFlagDetail`
+   * decides. Three runs over one line box, exactly one of them visible, so the band cannot end up
+   * writing its name twice over somebody's chosen detail.
+   */
+  test('the blue band carries one run per detail, and exactly one of them shows', () => {
+    const runs = texts(layerOf('blue'));
+    expect(runs.map((r) => r.name)).toEqual(['flag.blue.label', 'flag.blue.label.class', 'flag.blue.label.positionClass']);
+    // The plain run is the label as it has always been drawn and is bound to nothing; the two
+    // details are bound and each declares the widest string it can draw, since WPF clips whatever
+    // does not fit and a bound run measured on its sample is a run measured on the wrong string.
+    expect(runs[0]!.bindings?.Text).toBeUndefined();
+    for (const run of runs.slice(1)) {
+      expect({ name: run.name, bound: typeof run.bindings?.Text?.formula === 'string' }).toEqual({ name: run.name, bound: true });
+      expect({ name: run.name, widest: run.widest }).toMatchObject({ name: run.name, widest: expect.any(String) });
+      expect(run.widest!.length).toBeGreaterThan(runs[0]!.text.length);
+    }
+    // One per value, and each visible on its own value alone.
+    BLUE_FLAG_DETAILS.forEach((detail, i) => {
+      expect(runs[i]!.bindings?.Visible?.formula).toBe(setting.blueFlagDetailIs(detail));
+    });
+    // The class of the car behind and its position come from the relative helpers rather than from
+    // a second reading of the leaderboard, so the band and the tables cannot name two cars.
+    expect(runs[1]!.bindings?.Text?.formula).toContain(carBehindClass());
+    expect(runs[2]!.bindings?.Text?.formula).toContain(carBehindPositionClass());
   });
 
   test('the nano writes no name at all, at any of the fifteen', () => {
