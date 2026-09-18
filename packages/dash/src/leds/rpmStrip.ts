@@ -34,6 +34,7 @@ import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, r
 import { brake as brakeInput, fuelPercent, tankIsLow, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
+import { ignitionIsOn } from './gates.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { centreStart, deviceLength, rightStart, stripLength, type StripShape } from './strip.ts';
@@ -423,6 +424,24 @@ const brightnessGroup = (children: readonly leds.LedContainer[]): leds.LedContai
 });
 
 /**
+ * The car switched on, over everything a strip draws.
+ *
+ * The box has asked this since it shipped and the strip never did, so a driver sitting in the
+ * garage with the car off had a dark flag box beside a wheel drawing a pit-lane state, a brake
+ * gradient and whatever else had a non-zero property. {@link ignitionIsOn} is the box's own gate,
+ * read from one place by both.
+ *
+ * Unlike the box the strip goes fully dark rather than showing a standby mark: a mark on a strip is
+ * a lit LED, and an LED lit to mean "off" is the confusion this gate exists to remove.
+ */
+const ignitionGroup = (children: readonly leds.LedContainer[]): leds.LedContainer => ({
+  kind: 'conditionalGroup',
+  description: 'only while the car is switched on',
+  trigger: { expression: ignitionIsOn() },
+  children,
+});
+
+/**
  * The profile for one strip shape. A strip the maker wired in some other order is the same tree
  * inside a `Groups.RemapGroup` that turns logical positions into physical ones, which is the whole
  * reason a new device is a row of numbers rather than a second profile.
@@ -437,11 +456,15 @@ export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedP
   // Brightness sits under the running gate rather than over it: nothing outside that gate paints,
   // so a brightness group above it would scale nothing and would only cost an evaluation with the
   // sim closed.
+  // The ignition gate is the innermost of the three, because it is the only one of them a driver
+  // turns on and off within a session. None of the three carries a startPosition: the fit rule in
+  // the generator accumulates offsets down the tree, so a group that carried one would move every
+  // LED beneath it.
   const running: leds.LedContainer = {
     kind: 'raw',
     containerType: 'Groups.GameRunningGroup',
     description: 'only while the sim is running',
-    children: [brightnessGroup(treeFor(shape))],
+    children: [brightnessGroup([ignitionGroup(treeFor(shape))])],
   };
   const tree = [running];
   return {
