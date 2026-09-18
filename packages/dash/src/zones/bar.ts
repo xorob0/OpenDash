@@ -201,8 +201,11 @@ const labelWidth = (text: string): number => Math.ceil(measureText('BarlowMedium
  * rounded up to an even number.
  *
  * The column is fixed rather than measured so that the seven read as a rank of equal cells, which
- * is what the artboards draw; "Bias 50.5" at 34 px is the one reading wider than the column it is
- * given, and it takes the pixel it needs rather than losing its last digit.
+ * is what the artboards draw. The widening is a guard and no face currently uses it: "Bias 50.5"
+ * is the widest of the seven at either value size and it fills its column exactly, 57 of 57 at
+ * 34 px and 50 of 54 at 28 px, so every cell comes out at the column rounded up. It stays because
+ * a sample or a size that grows past the column would otherwise lose its last digit to WPF in
+ * silence, which is the one failure this file cannot see.
  *
  * Even, because the strip is a centred rank that closes over what is missing, and `rank` centres
  * on `(width - total) / 2` twice over: once in the static rect, which `roundRect` rounds, and once
