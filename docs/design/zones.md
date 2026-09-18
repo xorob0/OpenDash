@@ -345,9 +345,10 @@ narrow face that is not seven cells:
 
 A cell is the artboard's column rather than a measurement of its own reading, so the seven read as
 a rank of equal cells; it is rounded up to an even width, because the strip closes over what is
-missing and centres on half of what is left. A reading wider than the column widens that cell
-rather than losing a digit, and "Bias 50.5" at 34 px is the only one that does: it takes 58 px
-where the other six sit in their 57.
+missing and centres on half of what is left. Every cell therefore takes the column rounded up, 58
+on the faces drawn at 57 and 54 on those drawn at 54. A reading wider than its column would widen
+that one cell rather than lose a digit, although none is: "Bias 50.5" is the widest of the seven
+and fills its column exactly at 34 px, 57 of 57, with four pixels to spare at 28.
 
 **The order it sheds in is not the order it draws in.** A driver on a GT3 car moves the brake bias
 every corner and has TC and ABS on wheel dials; the mixture changes once a stint; slip, cut and the
