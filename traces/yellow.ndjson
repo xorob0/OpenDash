@@ -233,6 +233,7 @@
 {"p":"OpenDash.Face850x480ZoneD","v":0}
 {"p":"OpenDash.FlagBoxLowFuelLaps","v":2}
 {"p":"OpenDash.LightsLowFuelLaps","v":2}
+{"p":"OpenDash.PitWallClassOnly","v":false}
 {"p":"OpenDash.PitWallWide","v":5}
 {"p":"OpenDash.PitWallZoneA","v":0}
 {"p":"OpenDash.PitWallZoneB","v":1}
