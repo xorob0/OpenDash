@@ -172,7 +172,9 @@ export const DENSITIES: Record<Density, DensitySpec> = {
   companion: COMPANION,
   zone: ZONE,
   compact: COMPACT,
-  wide: ZONE,
+  // A wide zone is a pit wall screen too, so it takes the panel's label; it stays a density of its
+  // own because a module reads the name to decide what a wide box may draw, not to size its type.
+  wide: PANEL,
   panel: PANEL,
 };
 

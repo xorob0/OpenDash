@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { densityOf, rampOf } from '../src/second/density.ts';
-import { resolveToken } from '../src/tokens.ts';
+import { ds, resolveToken } from '../src/tokens.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, denominatorSize } from '../src/second/field.ts';
 import { READOUT_GAP } from '../src/components/readout.ts';
 
@@ -54,7 +54,9 @@ describe('the label ramp', () => {
   test('a label is a step above its small label at every density, never level with it', () => {
     // The distinction the sheets draw and the one a page cannot lose: `.lbl` over `.lbl-sm`. The
     // zone ramp used to set both from `labelSm`, so a label and the unit after it read as one run.
-    for (const density of ['companion', 'zone', 'wide'] as const) {
+    // A face only. The pit wall draws both at 13 and tells them apart by colour, which is the case
+    // below; the two sizes are a rule of the sheets that write `.lbl`, not of every ramp.
+    for (const density of ['companion', 'zone'] as const) {
       const d = densityOf(density);
       expect({ density, label: d.label, labelSm: d.labelSm }).toEqual({ density, label: 15, labelSm: 13 });
     }
@@ -66,7 +68,7 @@ describe('the label ramp', () => {
     // Every artboard centres its label in a `height: 13px` row, so the step from 13 to 15 is bought
     // in width alone. A row that grew with the type would push the pit wall panels, whose heights
     // the sheets fix to the pixel, past their own frames.
-    for (const density of ['companion', 'zone', 'wide'] as const) {
+    for (const density of ['companion', 'zone', 'wide', 'panel'] as const) {
       expect({ density, labelRow: densityOf(density).labelRow }).toEqual({ density, labelRow: 13 });
     }
     expect(densityOf('compact').labelRow).toBe(12);
@@ -76,9 +78,20 @@ describe('the label ramp', () => {
     // The six pit wall sheets and Panels.dc.html label every field at 13 and never use the 15 that
     // ZoneCatalogue.dc.html draws; only the label moves, so the row and everything measured off it
     // stay where the zone ramp puts them.
-    const panel = densityOf('panel');
-    expect({ label: panel.label, labelRow: panel.labelRow, labelSm: panel.labelSm }).toEqual({ label: 13, labelRow: 13, labelSm: 13 });
-    expect(panel).toEqual({ ...densityOf('zone'), label: 13 });
+    for (const density of ['panel', 'wide'] as const) {
+      const d = densityOf(density);
+      expect({ density, label: d.label, labelRow: d.labelRow, labelSm: d.labelSm }).toEqual({ density, label: 13, labelRow: 13, labelSm: 13 });
+      expect({ density, spec: d }).toEqual({ density, spec: { ...densityOf('zone'), label: 13 } });
+    }
+  });
+
+  test('so a pit wall label and the small label beside it are told apart by colour, not by size', () => {
+    // The sheets collapse the step deliberately: `.lblt` and `.lbl-sm` are both 13 px and differ
+    // only in ink. Nothing may therefore rely on the size to separate a label from a unit on a pit
+    // wall, and the two colours are what the separation rests on.
+    expect(densityOf('panel').label).toBe(densityOf('panel').labelSm);
+    expect({ label: ds.color.text.label, small: ds.color.text.secondary }).toEqual({ label: '#5A6069', small: '#8A9099' });
+    expect(ds.color.text.label).not.toBe(ds.color.text.secondary);
   });
 });
 
