@@ -95,7 +95,7 @@ function evaluate(expression: string, set: readonly SessionFlagBit[], criticalOn
   }
   let s = expression;
   for (const [property, value] of truths) s = s.split(property).join(value);
-  s = s.split('isnull([OpenDash.FlagBoxCriticalOnly], false)').join(criticalOnly ? 'true' : 'false');
+  s = s.split('isnull([OpenDash.FlagBoxMatrix1CriticalOnly], false)').join(criticalOnly ? 'true' : 'false');
   // NCalc's operators to JavaScript's, on a string that now holds only literals and operators.
   s = s.replace(/\band\b/g, '&&').replace(/\bor\b/g, '||').replace(/([^!<>=])=([^=])/g, '$1===$2');
   if (!/^[\s()!&|=01a-z]+$/.test(s)) throw new Error(`the condition holds something this cannot evaluate: ${s}`);
@@ -105,7 +105,7 @@ function evaluate(expression: string, set: readonly SessionFlagBit[], criticalOn
 
 /** Which flag the box shows with these bits raised, or undefined when it shows none. */
 function shown(set: readonly SessionFlagBit[], criticalOnly = false): string | undefined {
-  const lit = flagContainers().filter((c) => {
+  const lit = flagContainers(1).filter((c) => {
     const formula = (c as Extract<MatrixContainer, { kind: 'when' }>).formula;
     return evaluate(typeof formula === 'string' ? formula : formula.expression, set, criticalOnly);
   });
@@ -203,7 +203,7 @@ describe('one ordered list, shared with the face', () => {
   });
 
   test('the box draws the catalogue in that same order', () => {
-    const drawn = flagContainers().map((c) => c.description);
+    const drawn = flagContainers(1).map((c) => c.description);
     expect(drawn).toEqual(drawnFlags(false).map((c) => c.id));
     // The face's six keep their relative rank inside the longer list, or the two would disagree.
     const faceIds = ['black', 'yellow', 'blue', 'white', 'green', 'chequered'];
@@ -265,9 +265,14 @@ describe('several conditions true at once', () => {
 });
 
 describe('critical flags only', () => {
-  test('it is a contract property and it defaults to off', () => {
-    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxCriticalOnly');
-    expect(serializeProfile(profile)).toInclude('isnull([OpenDash.FlagBoxCriticalOnly], false)');
+  test('it is a contract property of each panel and it defaults to off', () => {
+    // Per matrix since the settings a box owns moved under it: a rig with a box in each corner can
+    // show the whole catalogue on one and the critical flags alone on the other, which is what the
+    // per-matrix group is for and which one value above every panel could not do.
+    for (const matrix of FLAG_BOX_MATRICES) {
+      expect(flagBoxProperties()).toContain(`OpenDash.FlagBoxMatrix${matrix}CriticalOnly`);
+      expect(serializeProfile(profile)).toInclude(`isnull([OpenDash.FlagBoxMatrix${matrix}CriticalOnly], false)`);
+    }
   });
 
   test('with it on, the box keeps the flags that mean slow down or are addressed to you', () => {
@@ -292,8 +297,8 @@ describe('critical flags only', () => {
     // the catalogue above; what is asserted here is the mechanism, which survives a reordering.
     const white = flagCondition('white');
     const green = flagCondition('green');
-    expect(conditionVisible(green, criticalOnly())).toInclude(`!(${conditionShown(white, criticalOnly())})`);
-    expect(conditionVisible(green, criticalOnly())).not.toInclude(`!(${conditionRaised(white)})`);
+    expect(conditionVisible(green, criticalOnly(1))).toInclude(`!(${conditionShown(white, criticalOnly(1))})`);
+    expect(conditionVisible(green, criticalOnly(1))).not.toInclude(`!(${conditionRaised(white)})`);
     // And the switch still takes the news away rather than moving it.
     expect(shown(['checkered', 'blue'], false)).toBe('blue');
     expect(shown(['checkered'], true)).toBeUndefined();
@@ -303,9 +308,9 @@ describe('critical flags only', () => {
   test('the switch is a guard on each flag, not a second copy of the catalogue', () => {
     // Carrying the list twice reads better in the file and costs twice the glyphs, and the tree is
     // already written once per matrix, so the doubling would be eightfold by the time it hits disk.
-    expect(flagContainers()).toHaveLength(drawnFlags(false).length);
+    expect(flagContainers(1)).toHaveLength(drawnFlags(false).length);
     const text = serializeProfile(profile);
-    expect(text).toInclude('isnull([OpenDash.FlagBoxCriticalOnly], false)');
+    expect(text).toInclude('isnull([OpenDash.FlagBoxMatrix1CriticalOnly], false)');
   });
 
   test('a critical flag is shown whatever the switch says', () => {
@@ -456,16 +461,45 @@ describe('what the box does when nobody is racing', () => {
 
 describe('brightness', () => {
   test('day, night and the switch are all contract properties', () => {
-    expect(flagBoxProperties().slice(0, 8)).toEqual([
+    // Six global names, not nine: critical flags only, the gear and the two temperature thresholds
+    // moved under the matrix that owns them, and what is left above every panel is the rig's
+    // brightness trio, the one low-fuel threshold the strip and the faces read too, and the switch
+    // on the spotter bar's movement.
+    expect(flagBoxProperties().slice(0, 6)).toEqual([
       'OpenDash.LightsBrightness',
       'OpenDash.LightsNightBrightness',
       'OpenDash.LightsNightMode',
-      'OpenDash.FlagBoxCriticalOnly',
-      'OpenDash.FlagBoxGear',
       'OpenDash.FlagBoxLowFuelLaps',
-      'OpenDash.FlagBoxOilTemp',
-      'OpenDash.FlagBoxWaterTemp',
+      'OpenDash.LightsLowFuelLaps',
+      'OpenDash.FlagBoxSpotterAnimation',
     ]);
+  });
+
+  test('no flag box setting is read without a matrix, save the four the rig owns', () => {
+    // The rule the move is for: a FlagBox* name with no index in it is one box's setting silently
+    // shared with every other box on the rig, which is how Critical flags only, the gear and the two
+    // temperatures came to sit above four panels at once.
+    // FlagBoxSpotterAnimation is the rig's for the reason the brightness trio is: a driver who finds
+    // a moving bar distracting finds it distracting on every panel they own.
+    const rigWide = new Set([
+      'OpenDash.LightsBrightness',
+      'OpenDash.LightsNightBrightness',
+      'OpenDash.LightsNightMode',
+      'OpenDash.LightsLowFuelLaps',
+      'OpenDash.FlagBoxSpotterAnimation',
+    ]);
+    const text = serializeProfile(profile);
+    for (const name of flagBoxProperties()) {
+      if (rigWide.has(name)) continue;
+      // FlagBoxLowFuelLaps is the deprecated alias of LightsLowFuelLaps and is read only inside its
+      // isnull() chain, so it is rig-wide in substance whatever its name says.
+      if (name === 'OpenDash.FlagBoxLowFuelLaps') continue;
+      expect({ name, indexed: /^OpenDash\.FlagBoxMatrix[1-4]/.test(name) }).toMatchObject({ indexed: true });
+    }
+    // ...and the profile reads nothing of the old shape, which is the half a reader can check.
+    for (const gone of ['[OpenDash.FlagBoxCriticalOnly]', '[OpenDash.FlagBoxGear]', '[OpenDash.FlagBoxOilTemp]', '[OpenDash.FlagBoxWaterTemp]']) {
+      expect({ gone, present: text.includes(gone) }).toMatchObject({ present: false });
+    }
   });
 
   test('they are named for the rig, not for this box', () => {
@@ -652,23 +686,23 @@ describe('the gear, as the resting state', () => {
   test('every flag outranks it, so the panel is never two things at once', () => {
     // With any flag raised the resting condition is false, whichever way the switch is set.
     for (const condition of FLAG_CATALOGUE) {
-      expect(evaluate(noFlagShowing(), condition.bits, false)).toBe(false);
-      if (condition.critical) expect(evaluate(noFlagShowing(), condition.bits, true)).toBe(false);
+      expect(evaluate(noFlagShowing(1), condition.bits, false)).toBe(false);
+      if (condition.critical) expect(evaluate(noFlagShowing(1), condition.bits, true)).toBe(false);
     }
-    expect(evaluate(noFlagShowing(), [], false)).toBe(true);
+    expect(evaluate(noFlagShowing(1), [], false)).toBe(true);
   });
 
   test('a flag the switch has silenced stops suppressing the gear', () => {
     // The chequer is not critical: with the switch on it is not shown, so it must not hold the
     // panel dark either.
-    expect(evaluate(noFlagShowing(), ['checkered'], false)).toBe(false);
-    expect(evaluate(noFlagShowing(), ['checkered'], true)).toBe(true);
+    expect(evaluate(noFlagShowing(1), ['checkered'], false)).toBe(false);
+    expect(evaluate(noFlagShowing(1), ['checkered'], true)).toBe(true);
   });
 
   test('the gear switch is a contract property, and off means dark', () => {
-    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxGear');
+    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxMatrix1Gear');
     const text = serializeProfile(profile);
-    expect(text).toInclude('isnull([OpenDash.FlagBoxGear], true)');
+    expect(text).toInclude('isnull([OpenDash.FlagBoxMatrix1Gear], true)');
     // Off leaves the panel dark rather than showing something else: the switch is the gear
     // group's own condition, and there is no sibling to take its place.
     const gear = all.find((c) => c.description === 'Gear');
@@ -764,7 +798,7 @@ describe('the pit family, the spotter and the warnings', () => {
     // A limiter left on and a temperature climbing are conditions a driver lives with for minutes,
     // so a picture that strobed for those minutes would spend the box's only attention signal on
     // the states least able to give it back.
-    for (const state of [...pitStates(), ...spotterStates(1), ...warningStates()]) {
+    for (const state of [...pitStates(), ...spotterStates(1), ...warningStates(1)]) {
       expect({ state: state.id, blink: state.blink }).toEqual({ state: state.id, blink: false });
     }
   });
@@ -830,10 +864,71 @@ describe('the pit family, the spotter and the warnings', () => {
     expect(text).toInclude('isnull([DataCorePlugin.GameData.PitLimiterSpeedMs], 999)');
   });
 
-  test('the pit family outranks the spotter, which outranks the warnings', () => {
+  test('the pit family outranks the warnings, and the spotter is not in the ranking at all', () => {
     const below = all.find((c) => c.description === 'Below the flags');
     const order = below && 'children' in below ? below.children.map((c) => c.description) : [];
-    expect(order).toEqual(['Pit', 'Spotter', 'Warnings', 'Resting']);
+    expect(order).toEqual(['Pit', 'Warnings', 'Resting']);
+  });
+
+  test('the spotter is the last container of a panel, painted after the flags and after all of that', () => {
+    // It was the second rank below the flags, so a yellow hid a car alongside and a car alongside
+    // blanked the warnings and the gear. It is an overlay now: last, and over everything.
+    for (const matrix of FLAG_BOX_MATRICES) {
+      const panel = all.find((c) => c.description === `Matrix ${matrix}`);
+      const order = panel && 'children' in panel ? panel.children.map((c) => c.description) : [];
+      expect({ matrix, order }).toMatchObject({ order: ['Flags', 'Below the flags', 'Spotter'] });
+    }
+  });
+
+  test('the spotter container names no flag bit and no pit condition, which is what "never hidden by a yellow" means', () => {
+    // The machine-checkable half of the overlay. The visual half -- that an absent pixel leaves the
+    // flag beneath it showing -- is a claim about SimHub's merge and belongs on the rig.
+    const spotter = all.find((c) => c.description === 'Spotter');
+    expect(spotter?.kind).toBe('when');
+    const formula = spotter && 'formula' in spotter ? String(spotter.formula) : '';
+    expect(formula).toBe(`(isnull([OpenDash.FlagBoxMatrix1Spotter], true)) = (true)`);
+    const subtree = JSON.stringify(spotter);
+    for (const forbidden of ['SessionFlagsDetails', 'PitLimiterOn', 'IsInPitLane', 'OilTemperature', 'Fuel_RemainingLaps']) {
+      expect({ forbidden, named: subtree.includes(forbidden) }).toMatchObject({ named: false });
+    }
+    // ...and nothing beneath it excludes it either, which is the other half: the warnings and the
+    // gear stop being blanked by a car alongside.
+    const below = all.find((c) => c.description === 'Below the flags');
+    expect(JSON.stringify(below)).not.toInclude('SpotterCarLeft');
+  });
+
+  test('every spotter frame leaves the middle of the panel absent, so what is under it shows through', () => {
+    for (const growing of [false, true]) {
+      for (const state of spotterStates(1, growing)) {
+        for (const grid of state.steps ?? [state.grid]) {
+          // The widest step of the growing bar reaches three columns in from an edge, so the band it
+          // always leaves is the two centre columns rather than four.
+          for (const row of grid) expect({ state: state.id, row, centre: row.slice(3, 5) }).toMatchObject({ centre: '..' });
+        }
+      }
+    }
+    // Held, which is the default and the case the canvas draws over a standing yellow: two columns
+    // an edge, so columns three to six keep the flag.
+    for (const state of spotterStates(1)) {
+      for (const row of state.grid) expect({ state: state.id, row, ground: row.slice(2, 6) }).toMatchObject({ ground: '....' });
+    }
+  });
+
+  test('the growing bar is a switch of its own, off by default, and is otherwise the held bar', () => {
+    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxSpotterAnimation');
+    expect(serializeProfile(profile)).toInclude('isnull([OpenDash.FlagBoxSpotterAnimation], false)');
+    // Three frames of one, two and three columns, the middle of which is the held picture: the
+    // growing variant is the held one with a step either side rather than a second drawing.
+    const lit = (grid: readonly string[]): number => (grid[0] ?? '').split('').filter((c) => c !== '.').length;
+    for (const state of spotterStates(1, true)) {
+      expect({ state: state.id, frames: state.steps?.length }).toMatchObject({ frames: 3 });
+      const steps = state.steps ?? [];
+      const perSide = state.id.startsWith('carBoth') ? 2 : 1;
+      expect({ state: state.id, widths: steps.map(lit) }).toMatchObject({ widths: [perSide, 2 * perSide, 3 * perSide] });
+      expect({ state: state.id, settles: steps[1]?.join('|') }).toMatchObject({ settles: state.grid.join('|') });
+    }
+    // Growing is not blinking: no frame of it is dark, so the bar is on the whole time.
+    for (const state of spotterStates(1, true)) expect({ state: state.id, blink: state.blink }).toMatchObject({ blink: false });
   });
 
   test('low fuel is measured in laps, because litres mean nothing without the car', () => {
@@ -860,7 +955,7 @@ describe('the pit family, the spotter and the warnings', () => {
   });
 
   test('no two of these states draw the same picture', () => {
-    const grids = [...pitStates(), ...spotterStates(1), ...warningStates()].map((s) => s.grid.join('|'));
+    const grids = [...pitStates(), ...spotterStates(1), ...warningStates(1)].map((s) => s.grid.join('|'));
     expect(new Set(grids).size).toBe(grids.length);
   });
 

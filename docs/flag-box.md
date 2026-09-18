@@ -81,6 +81,9 @@ Out of the box, matrix 1 does everything and 2 to 4 are off, which is the right 
 | **Spotter** | Let a car alongside take this panel. |
 | **Warnings** | Let low fuel, oil and water take this panel. |
 | **Mounted** | `Both`, `Left` or `Right`. |
+| **Critical flags only** | Quiet until something matters. Drops the chequer, the white, the green and the start gantry; keeps everything that means slow down or is addressed to you. |
+| **Show the gear** | Off leaves this panel dark when nothing else is on it. |
+| **Oil / Water temperature** | In **your own unit**. Leave them at 0 and openDash uses the right default for whichever unit SimHub is set to: 120 °C or 248 °F for oil, 110 °C or 230 °F for water. |
 
 **Mounted is the one to get right.** It is where the box physically is, not what you want it to
 show. A box on the left of your wheel that lights for a car on your *right* is worse than no box at
@@ -94,10 +97,12 @@ A two-box setup people build on day one: one in each corner of the monitor stand
 | | |
 |---|---|
 | **Brightness** / **Night brightness** / **Night mode** | These are for the whole rig, not just this box. Sixty-four LEDs at full output beside a wheel in a dark room is genuinely too bright; night mode is a switch you flip, not a time of day openDash guesses at. |
-| **Critical flags only** | Quiet until something matters. Drops the chequer, the white, the green and the start gantry; keeps everything that means slow down or is addressed to you. |
-| **Show the gear** | Off leaves the panel dark when nothing else is on it. |
-| **Low fuel, laps** | Laps left in the tank, not litres — litres mean nothing without knowing the car. |
-| **Oil / Water temperature** | In **your own unit**. Leave them at 0 and openDash uses the right default for whichever unit SimHub is set to: 120 °C or 248 °F for oil, 110 °C or 230 °F for water. |
+| **Low fuel, laps** | Laps left in the tank, not litres — litres mean nothing without knowing the car. One number for the whole rig: the box, the screens' fuel telltale and the pop-up all use it. |
+| **Spotter bar grows** | Off by default. On, the bar grows inwards from the edge instead of simply being there. |
+
+**Critical flags only**, **Show the gear** and the two temperatures used to live here, one value for
+every panel. They belong to a panel and are now in each matrix's own group above; a setting you had
+already chosen is carried into all four panels the first time this version reads your settings.
 
 ## What it shows, and in what order
 
@@ -122,9 +127,14 @@ you can learn the box away from the car.
 | 14 | Set — two bars of the start gantry | |
 | 15 | Ready — one bar | |
 | | **Pit**: speeding, then limiter out of the lane, then limiter in the lane | |
-| | **Spotter**: a bar down the edge a car is on | |
 | | **Warnings**: oil, then water, then low fuel | |
 | | **The gear**, coloured by the shift lights, when nothing else is out | |
+
+**The spotter is not in that table**, and that is deliberate. A bar down the edge a car is on is
+drawn *over* whatever else the panel is showing rather than instead of it, so a car alongside is
+never hidden by a yellow and never hides the gear. With one box you will see the gear in the middle
+of the panel with a bar down one edge, which is two facts at once and is what you want at that
+moment.
 
 A black flag is an **outline** because black is the absence of light: a black panel is a box that
 is off. A waved yellow is the yellow flag **blinking**, which is how you tell it from a standing
@@ -163,9 +173,9 @@ reasoning is in [scope.md](scope.md).
 | Nothing at all, ever | The profile is not installed, or not selected on the device. Step 2. |
 | A single dim dot in the middle | The box is working and the car's ignition is off. That mark exists so this is not confused with a broken profile. |
 | Everything sideways, mirrored or shredded | Rotation or serpentine on the *device*. Step 1, not the openDash panel. |
-| The gear is dark but flags work | **Show the gear** is off, or that matrix's **At rest** is `Dark`. |
+| The gear is dark but flags work | That matrix's **Show the gear** is off, or its **At rest** is `Dark`. |
 | A car alongside lights the wrong box | **Mounted** is set to the side you want rather than the side the box is on. |
-| The chequered flag never shows | **Critical flags only** is on. It is not a critical flag. |
+| The chequered flag never shows | That matrix's **Critical flags only** is on. It is not a critical flag. |
 | Far too bright at night | **Night brightness**, and turn **Night mode** on. |
 
 ## Honesty about what has been checked

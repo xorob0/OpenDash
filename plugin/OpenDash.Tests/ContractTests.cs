@@ -66,15 +66,18 @@ namespace OpenDashPlugin.Tests
             // and the flag format), twenty-one companion modules, four pit wall zones, the wide zone,
             // the URL, and the flag box.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1;
-            // Nine global flag box settings and six per matrix, the way every face carries its own
-            // group, and then the three the strips read.
+            // Six global flag box settings and ten per matrix, the way every face carries its own
+            // group, and then the three the strips read. It was nine and six until critical flags
+            // only, the gear and the two temperature thresholds moved under the matrix that owns them,
+            // and the switch on the spotter bar's movement joined the rig's own names.
             Assert.Equal(
-                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 9 + Contract.FlagBoxMatrices.Count * 6 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 1 + Contract.FaceSizes.Count * perFace + 21 + 4 + 2 + 6 + Contract.FlagBoxMatrices.Count * 10 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
-            // LedRpmStyle were declared by one side only.
-            Assert.Equal(256, names.Count);
+            // LedRpmStyle were declared by one side only. 256 before the four settings a box owns
+            // became four per matrix, which is twelve names more.
+            Assert.Equal(269, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -106,8 +109,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
             Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
             Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
-            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LightsBrightness", "LightsNightBrightness", "LightsNightMode", "FlagBoxCriticalOnly", "FlagBoxGear",
-                "FlagBoxLowFuelLaps", "FlagBoxOilTemp", "FlagBoxWaterTemp", "LightsLowFuelLaps" }, names.Skip(afterFaces + 21).Take(15));
+            Assert.Equal(new[] { "PitWallZoneA", "PitWallZoneB", "PitWallZoneC", "PitWallZoneD", "PitWallWide", "WebViewUrl", "LightsBrightness", "LightsNightBrightness", "LightsNightMode",
+                "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 21).Take(12));
             Assert.Equal("OpenDash", Contract.Prefix);
         }
 
@@ -361,11 +364,15 @@ namespace OpenDashPlugin.Tests
             // (ADR 0013); declared at all because a profile reads them, and an undeclared read fails
             // the dash build. The strips follow the matrices, so the flag box's last name is the last
             // before them rather than the last of all.
-            Assert.Equal("FlagBoxMatrix4Side", Contract.PropertyNames().Except(Contract.LedPropertyNames()).Last());
+            Assert.Equal("FlagBoxMatrix4WaterTemp", Contract.PropertyNames().Except(Contract.LedPropertyNames()).Last());
             // One threshold for the strip, the rev bar and the box, under the Lights* name; the box's
             // own name stays attached as its deprecated alias, which is what a profile of the rc.2
             // vintage reads and what the contract's second isnull() falls back to.
             Assert.Contains(Contract.LightsLowFuelLaps, Contract.LightsPropertyNames());
+            // The spotter bar's movement is the rig's rather than a box's, and off by default: on this
+            // box movement means act, and a car alongside informs.
+            Assert.Contains(Contract.FlagBoxSpotterAnimation, Contract.LightsPropertyNames());
+            Assert.False(Contract.DefaultFlagBoxSpotterAnimation);
             Assert.Contains(Contract.FlagBoxLowFuelLaps, Contract.LightsPropertyNames());
             Assert.Equal("LedFlagAnimation", Contract.PropertyNames().Last());
             Assert.True(Contract.DefaultFlagBoxGear);
@@ -376,6 +383,23 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("dark", Contract.DefaultFlagBoxMatrixRest(4));
             Assert.Equal("both", Contract.DefaultFlagBoxSide);
             Assert.Equal("FlagBoxMatrix2Spotter", Contract.FlagBoxMatrixProperty(2, "Spotter"));
+            // The four settings a box owns are that box's, so a rig with one in each corner can show
+            // the whole catalogue on one and the gear alone on the other.
+            Assert.Equal("FlagBoxMatrix3CriticalOnly", Contract.FlagBoxMatrixProperty(3, "CriticalOnly"));
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                var own = Contract.FlagBoxMatrixProperties(matrix).ToList();
+                Assert.Contains(Contract.FlagBoxMatrixProperty(matrix, "CriticalOnly"), own);
+                Assert.Contains(Contract.FlagBoxMatrixProperty(matrix, "Gear"), own);
+                Assert.Contains(Contract.FlagBoxMatrixProperty(matrix, "OilTemp"), own);
+                Assert.Contains(Contract.FlagBoxMatrixProperty(matrix, "WaterTemp"), own);
+            }
+            // ...and the names they replaced are gone from the attached list, which is what a
+            // migration rather than an alias means.
+            foreach (var gone in new[] { "FlagBoxCriticalOnly", "FlagBoxGear", "FlagBoxOilTemp", "FlagBoxWaterTemp" })
+            {
+                Assert.DoesNotContain(gone, Contract.PropertyNames());
+            }
             // Pit is its own switch, not the flags'. A driver who silences flags on a panel has not
             // asked to lose the pit limiter warning with them.
             Assert.Contains("FlagBoxMatrix1Pit", Contract.PropertyNames());

@@ -6,8 +6,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
-import { PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE, setting } from '../src/contract.ts';
-import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength } from '../src/leds/strip.ts';
+import { PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE, setting, type LedCentre } from '../src/contract.ts';
+import { ALL_SHAPES, BROW_SHAPES, STRIP_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
 import {
@@ -27,6 +27,9 @@ import {
   flagEffects,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
+import { ignitionIsOn } from '../src/leds/gates.ts';
+import * as values from '../src/second/values.ts';
+import { fuelPercent } from '../src/second/values.ts';
 // The flag box's own states, so that "the strip and the box compare the same thing" is asserted
 // against the box rather than against a copy of what the box is believed to say.
 import { warningStates } from '../src/leds/states.ts';
@@ -43,6 +46,18 @@ const profileFor = (id: string): leds.LedProfile => {
 /** Every container in a profile, depth first, with the text of every expression it carries. */
 const walk = (cs: readonly leds.LedContainer[]): leds.LedContainer[] => cs.flatMap((c) => [c, ...walk(leds.childrenOf(c))]);
 const textOf = (p: leds.LedProfile): string => leds.serializeProfile(p);
+
+const descriptionOf = (c: leds.LedContainer): string => String((c as { description?: unknown }).description ?? '');
+
+/**
+ * The LEDs one centre function draws on one shape. The first match is the centre itself: the
+ * 3/10/3's two further runs repeat the same functions further along the device.
+ */
+const centreChildren = (shape: StripShape, which: LedCentre): readonly leds.LedContainer[] => {
+  const group = walk(rpmStripProfile(shape, stableGuid(`t/centre/${shape.id}`)).containers).find((c) => descriptionOf(c) === `centre: ${which}`);
+  if (!group) throw new Error(`no ${which} centre on ${shape.id}`);
+  return leds.childrenOf(group);
+};
 
 describe('the strip shapes', () => {
   test('every shape has a unique id, a sane geometry and a file name with no path separator in it', () => {
@@ -322,7 +337,7 @@ describe('the effect catalogue', () => {
 
   test('the strip and the box read one low-fuel threshold, so a rig has one answer to "am I low"', () => {
     const strip = ALL_EFFECTS().find((e) => e.id === 'lowFuel')!;
-    const box = warningStates().find((s) => s.id === 'lowFuel')!;
+    const box = warningStates(1).find((s) => s.id === 'lowFuel')!;
     expect(strip.when).toBe(box.raised);
     expect(strip.when).toContain('[OpenDash.LightsLowFuelLaps]');
     // It read CarSettings_FuelAlertActive, which is SimHub's own alert and what the native container
@@ -544,11 +559,44 @@ describe('every generated profile', () => {
     }
   });
 
-  test('is gated on the sim running, because a CustomStatus that throws is ON rather than off', () => {
+  test('nests the four gates outside in, and nothing of the tree escapes above them', () => {
+    // The sim-running gate is a correctness fix rather than tidiness: a CustomStatus that throws is
+    // ON rather than off, so with the sim closed a bare one lights. The ignition gate is the second
+    // half of the same sentence, and the strip had been missing it while the box beside it had it.
     for (const shape of ALL_SHAPES) {
       const p = rpmStripProfile(shape, stableGuid(`t/${shape.id}`));
-      const outer = shape.positions ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
-      expect({ shape: shape.id, type: leds.containerTypeOf(outer) }).toMatchObject({ type: 'Groups.GameRunningGroup' });
+      // The remap is outermost and only on a shape the maker wired in an order of its own.
+      expect({ shape: shape.id, roots: p.containers.length }).toMatchObject({ roots: 1 });
+      const outermost = p.containers[0]!;
+      if (shape.positions) {
+        expect({ shape: shape.id, type: leds.containerTypeOf(outermost) }).toMatchObject({ type: 'Groups.RemapGroup' });
+      } else {
+        expect({ shape: shape.id, remapped: leds.containerTypeOf(outermost) === 'Groups.RemapGroup' }).toMatchObject({ remapped: false });
+      }
+      const running = shape.positions ? leds.childrenOf(outermost)[0]! : outermost;
+      // Each gate is the only child of the one above it, so a gate near the top answers for
+      // everything below it rather than for one branch of it.
+      const chain = [running];
+      while (leds.childrenOf(chain[chain.length - 1]!).length === 1) chain.push(leds.childrenOf(chain[chain.length - 1]!)[0]!);
+      expect({ shape: shape.id, gates: chain.slice(0, 3).map((c) => leds.containerTypeOf(c)) }).toMatchObject({
+        gates: ['Groups.GameRunningGroup', 'Groups.BrightnessFormulaGroup', 'Groups.CustomConditionalGroup'],
+      });
+      const ignition = chain[2]!;
+      expect({ shape: shape.id, gate: ignition.description }).toMatchObject({ gate: 'only while the car is switched on' });
+      expect({ shape: shape.id, when: (ignition as Extract<leds.LedContainer, { kind: 'conditionalGroup' }>).trigger.expression }).toMatchObject({
+        when: ignitionIsOn(),
+      });
+      // The fit rule accumulates offsets down the tree, so a gate carrying a startPosition would
+      // move every LED beneath it.
+      for (const gate of [outermost, ...chain.slice(0, 3)]) {
+        expect({ shape: shape.id, gate: gate.description, at: (gate as { startPosition?: number }).startPosition }).toMatchObject({ at: undefined });
+      }
+      // ...and nothing paints outside them: every customStatus in the profile is under all three.
+      const under = new Set(walk(leds.childrenOf(ignition)));
+      for (const c of walk(p.containers)) {
+        if (c.kind !== 'customStatus') continue;
+        expect({ shape: shape.id, led: c.description, inside: under.has(c) }).toMatchObject({ inside: true });
+      }
     }
   });
 
@@ -586,6 +634,9 @@ describe('every generated profile', () => {
       ds.color.danger.primary,
       ds.color.info.primary,
       ds.color.neutral.primary,
+      // The middle mark of an odd throttle-and-brake centre, which is the text colour rather than a
+      // pedal's: it is the one LED of that bar that is not reporting a pedal at all.
+      ds.color.text.primary,
       // The off phase of a blink is a colour like any other and comes from the sheet like any other.
       ds.color.surface.base,
     ]);
@@ -632,6 +683,85 @@ describe('every generated profile', () => {
       }
     }
     expect([...delays].sort((a, b) => a - b)).toEqual([FAST_BLINK_MS, SLOW_BLINK_MS]);
+  });
+
+  test('an odd centre keeps the two pedals equal and spends the spare LED on a white middle mark', () => {
+    // It gave the odd LED to brake and painted it red, so on half the shapes the two pedals read at
+    // different scales: a foot flat on each filled one side one LED further than the other.
+    const odd = ALL_SHAPES.filter((s) => s.centre % 2 === 1);
+    expect(odd.map((s) => s.id)).toEqual(['3-9-3', '3-9-3-fanalab', '4-9-4', '0-9-0', 'brow-9', 'brow-15', 'brow-25']);
+    for (const shape of odd) {
+      const kids = centreChildren(shape, 'throttleBrake');
+      const of = (prefix: string): leds.LedContainer[] => kids.filter((c) => String(descriptionOf(c)).startsWith(prefix));
+      const half = (shape.centre - 1) / 2;
+      expect({ shape: shape.id, brake: of('brake ').length, throttle: of('throttle ').length }).toMatchObject({ brake: half, throttle: half });
+      const mark = of('centre mark');
+      expect({ shape: shape.id, marks: mark.length }).toMatchObject({ marks: 1 });
+      const row = mark[0] as Extract<leds.LedContainer, { kind: 'customStatus' }>;
+      // White, from the token, and always lit: it is where the middle is, not a reading.
+      expect({ shape: shape.id, colour: row.color, at: row.startPosition, when: row.enabledFormula.expression }).toMatchObject({
+        colour: ds.color.text.primary,
+        at: half + 1,
+        when: 'true',
+      });
+      // The two halves are mirrored about it, so neither pedal reaches further than the other.
+      expect({ shape: shape.id, brakeAt: of('brake ').map((c) => (c as { startPosition: number }).startPosition) }).toMatchObject({
+        brakeAt: Array.from({ length: half }, (_, k) => half - k),
+      });
+      expect({ shape: shape.id, throttleAt: of('throttle ').map((c) => (c as { startPosition: number }).startPosition) }).toMatchObject({
+        throttleAt: Array.from({ length: half }, (_, k) => half + 2 + k),
+      });
+    }
+    // An even centre has no spare LED to spend: its two halves already meet in the middle.
+    for (const shape of ALL_SHAPES.filter((s) => s.centre % 2 === 0)) {
+      const kids = centreChildren(shape, 'throttleBrake');
+      expect({ shape: shape.id, marks: kids.filter((c) => descriptionOf(c) === 'centre mark').length }).toMatchObject({ marks: 0 });
+    }
+  });
+
+  test('the fuel centre raises itself on the one low-fuel threshold, at the flag band rate', () => {
+    // Five percent of the tank was a third answer to "am I low" beside the box's and the lamp's, and
+    // it is not one a driver can act on: it is two laps in one car and half a lap in another.
+    const box = warningStates(1).find((s) => s.id === 'lowFuel')!;
+    for (const shape of ALL_SHAPES) {
+      const kids = centreChildren(shape, 'fuel') as Extract<leds.LedContainer, { kind: 'customStatus' }>[];
+      expect({ shape: shape.id, leds: kids.length }).toMatchObject({ leds: shape.centre });
+      for (const row of kids) {
+        const at = `${shape.id} ${String(row.description)}`;
+        expect({ at, threshold: row.blinkFormula?.expression.includes(box.raised) }).toMatchObject({ threshold: true });
+        // The *height* is still FuelPercent, which is what a fuel bar is; only the threshold moved.
+        expect({ at, height: row.enabledFormula.expression.includes('FuelPercent') }).toMatchObject({ height: true });
+        expect({ at, fivePercent: row.blinkFormula?.expression.includes(ncalc.gt(ncalc.num(5), fuelPercent())) }).toMatchObject({ fivePercent: false });
+        // 250 ms, the flag band's own half period, so the bar pulses with every other slow blink on
+        // the strip rather than at a multiple of the shift constant that would move with it.
+        expect({ at, delay: row.blinkDelayMs }).toMatchObject({ delay: SLOW_BLINK_MS });
+      }
+    }
+    expect(SLOW_BLINK_MS).toBe(Math.round(1000 / ds.indicator.flagBand.flashHz / 2));
+  });
+
+  test('the brake reaches a strip through the centre alone: no centre value fills a side with it', () => {
+    // The sides were a brake gradient under the default centre, and a group filled red by the pedal
+    // is a group on which an oil warning cannot come on. The gradient is gone rather than recoloured:
+    // the ends are lamps, and brake is still offered where it can be read, as a centre function.
+    // This is the assertion that keeps the decision from being undone by a later edit.
+    const brake = values.brake();
+    for (const shape of ALL_SHAPES) {
+      const p = rpmStripProfile(shape, stableGuid(`t/sides/${shape.id}`));
+      const trail = (cs: readonly leds.LedContainer[], path: readonly string[]): { at: string; path: readonly string[] }[] =>
+        cs.flatMap((c) => {
+          const here = [...path, descriptionOf(c)];
+          const reads = JSON.stringify([(c as { enabledFormula?: unknown }).enabledFormula, (c as { trigger?: unknown }).trigger]).includes(brake);
+          return [...(reads ? [{ at: descriptionOf(c), path: here }] : []), ...trail(leds.childrenOf(c), here)];
+        });
+      for (const found of trail(p.containers, [])) {
+        // Under the centre group, or under one of the 3/10/3's further runs, which repeat it.
+        const root = found.path.find((d) => d === 'centre' || d.startsWith('extra run '));
+        expect({ shape: shape.id, at: found.at, under: root }).toMatchObject({ under: expect.any(String) });
+      }
+      // ...and the group itself is gone by name, so a reader does not find a dead comment about it.
+      expect({ shape: shape.id, group: leds.serializeProfile(p).includes('sides: brake') }).toMatchObject({ group: false });
+    }
   });
 
   test('offers every centre function and carries a stable id', () => {

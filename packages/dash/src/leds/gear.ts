@@ -2,8 +2,8 @@
  * The gear on the matrix: what the box shows when nothing is happening.
  *
  * It is the resting state rather than a feature of its own. Every flag outranks it and takes the
- * panel; when they let go, the gear is what comes back. `OpenDash.FlagBoxGear` turns it off, and
- * off means dark rather than something else.
+ * panel; when they let go, the gear is what comes back. `OpenDash.FlagBoxMatrix<N>Gear` turns it off
+ * for that panel, and off means dark rather than something else.
  *
  * **These are glyphs in source, not text rendered small.** The bundled Barlow Condensed does not
  * exist at eight pixels, and a thin face leaves one or two pixels between a 6 and an 8 on a box
@@ -26,7 +26,7 @@
  * reads that rather than flashing the moment the top band is entered.
  */
 import { shiftBands, type ShiftBand } from '../components/revSegments.ts';
-import { flagBox } from '../contract.ts';
+import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type Hex, type MatrixContainer } from '../generator.ts';
 import { ds } from '../tokens.ts';
 import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
@@ -138,11 +138,11 @@ function bandChildren(band: ShiftBand): MatrixContainer[] {
  * The gear, banded by the shift model. The bands are ranked highest first so that exactly one
  * paints: redline, then the second band, then the first, then the resting colour.
  */
-export function gearGroup(): MatrixContainer {
+export function gearGroup(matrix: FlagBoxMatrix): MatrixContainer {
   return {
     kind: 'when',
     description: 'Gear',
-    formula: eq(flagBox.gear(), 'true'),
+    formula: eq(flagBoxMatrix(matrix).gear(), 'true'),
     children: shiftBands().map((band, i, bands) => ({
       kind: 'when' as const,
       description: `Gear ${band.id}`,
