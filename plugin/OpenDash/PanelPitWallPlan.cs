@@ -51,8 +51,13 @@ namespace OpenDashPlugin
         public const double RowGap = 14;
 
         /// <summary>Every control in the list is the same box: the four zones, the wide zone and the web
-        /// view address, at the full control height and so at the body size rather than the label size.</summary>
-        public const double SelectWidth = 220;
+        /// view address, at the full control height and so at the body size rather than the label size.
+        ///
+        /// It was 220, which is what the face pane's glance select takes. The wide zone names three of
+        /// its six pages by what the extra width buys, and "Lap history · delta to best" is longer than
+        /// anything the narrow list holds, so the box grew with the longest label rather than letting a
+        /// ComboBox ellipsise the half of the name that says which page it is.</summary>
+        public const double SelectWidth = 260;
 
         public const double SelectHeight = Theme.ControlHeight;
 

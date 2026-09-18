@@ -122,9 +122,9 @@ namespace OpenDashPlugin
         {
             new ZonePage(0, "inputs", "Inputs"),
             new ZonePage(1, "web", "Web view"),
-            new ZonePage(2, "lapHistory", "Lap history"),
+            new ZonePage(2, "lapHistory", "Lap history · delta to best"),
             new ZonePage(3, "opponents", "Opponents · best and last"),
-            new ZonePage(4, "tyres", "Tyres"),
+            new ZonePage(4, "tyres", "Tyres · psi and kPa"),
             new ZonePage(5, "carTelemetry", "Car telemetry"),
         };
 
