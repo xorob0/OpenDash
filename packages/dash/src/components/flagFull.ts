@@ -8,13 +8,20 @@
  * widgets, so for as long as a flag is out zone A is not readable. The rev bar, the bar of settled
  * values and band D are outside the block and keep drawing.
  *
- * It is a sibling of `flagStrip` rather than a mode of it, and it copies that file's six states
- * rather than sharing them: the same priority, the same colours, the black light on dark, the
- * chequer as a half-height board with no name, and the yellow flashing an opaque block over its
- * fill rather than blinking the layer away. Where the two differ is the rectangle and the type
- * size, and the type size is the reason this is not a parameter on the other one: a name that is
- * one label row high is measured against a sixty pixel band, and a name that is nearly half the
- * face high has to be measured down until it fits the face it is on.
+ * It is a sibling of `flagStrip` rather than a mode of it, and the two now read one list: every
+ * condition of `FLAG_CATALOGUE`, ranked by the band's own `conditionVisible`, so that the format a
+ * driver chose cannot change which flag is out. When the format first landed it drew the six
+ * properties SimHub normalises, which meant that under a red flag or a full-course caution the band
+ * named the condition and the block, having no state for it, drew nothing at all: the driver who had
+ * asked for the flag that cannot be missed saw the least of it.
+ *
+ * The three shapes are `alertBand`'s and are drawn here rather than called: a filled block named in
+ * `purpose.flag.onFlag`, an outlined block named in the alert's colour over an opaque ground, and
+ * the chequer as a half-height board with no name. Two things differ at this scale and are why the
+ * block is not a style of the band. The flash covers the whole frame rather than an inset one,
+ * since a block that is the face has no 3 px edge to keep through the dark phase; and the type is
+ * measured down rather than set, because a name one label row high is measured against sixty pixels
+ * and a name nearly half the face high is measured against the face.
  *
  * The frame is handed in rather than computed here, because a component is a function of a
  * rectangle: `bodyRect` in `zones/layout.ts` is what every face passes, and the same component
@@ -27,7 +34,8 @@ import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
-import { BLACK_FLAG_BORDER, FLAG_BLINK_MS, flagVisible, type FlagProperty } from './flagStrip.ts';
+import { bandRaised, conditionVisible, FLAG_CATALOGUE, type FlagCondition } from '../flags.ts';
+import { BLACK_FLAG_BORDER, FLAG_BLINK_MS } from './flagStrip.ts';
 
 /**
  * The name's size as a fraction of the block's height.
@@ -42,31 +50,58 @@ export const FLAG_FULL_NAME_RATIO = 0.447;
 /** Room left either side of the name, which is what the sheets' size is measured down to fit. */
 export const FLAG_FULL_NAME_PAD = ds.space[6];
 
-/** The name the black flag is written under, drawn in its own ink rather than on the fill. */
-const BLACK_NAME = 'BLACK';
-
-interface SolidFull {
-  id: string;
-  flag: FlagProperty;
-  name: string;
-  color: Hex;
-  flash: boolean;
-}
+/**
+ * What each condition reads as on the block: the band's label cut to one word, in the manner of the
+ * five the FaceVariants sheets drew.
+ *
+ * A table rather than the band's own label, because the block's name is a fact about the block's
+ * width. One size serves every state, that size is the widest name divided into the block, and the
+ * band writes "BLACK FLAG · FURLED": taking the labels as they are would set every name on the
+ * portrait face at 69 px where the sheets draw 244, which is neither the block the sheets drew nor a
+ * word worth the body. Cut, the widest is MEATBALL, and the only face that pays anything at all for
+ * the nine conditions the block did not use to have is the portrait one, at 143 px against the 183
+ * the five sheet names allowed.
+ *
+ * The standing and the waved yellow read the same word and are told apart by the flash, which is
+ * the rule the flag box keeps under "waving is blinking"; they cannot be out at once, so the block
+ * never has to distinguish two things a driver can see side by side.
+ */
+const BLOCK_NAMES: Readonly<Record<string, string>> = {
+  red: 'RED',
+  disqualify: 'DSQ',
+  furled: 'FURLED',
+  black: 'BLACK',
+  meatball: 'MEATBALL',
+  caution: 'SAFETY',
+  yellowWaving: 'YELLOW',
+  yellow: 'YELLOW',
+  debris: 'DEBRIS',
+  blue: 'BLUE',
+  white: 'WHITE',
+  green: 'GREEN',
+  startSet: 'SET',
+  startReady: 'READY',
+};
 
 /**
- * The four states filled with one colour and named, in the order `flagStrip` lists them. The names
- * are the one word the sheets write across the block, not the band's "YELLOW FLAG": at this size
- * the block is the flag and the second word says nothing the first does not.
+ * The name, or the failure to build the face at all.
+ *
+ * Every face calls this for every condition, so a condition that reaches the catalogue without a
+ * name on the block fails `bun run build` rather than drawing an unnamed colour. That is the same
+ * gate `AlertBandSpec` is for the band, expressed as a throw because a `FlagCondition`'s id is a
+ * string and no type can be made to refuse it.
  */
-const SOLID: readonly SolidFull[] = [
-  { id: 'yellow', flag: 'Flag_Yellow', name: 'YELLOW', color: ds.purpose.flag.yellow, flash: true },
-  { id: 'blue', flag: 'Flag_Blue', name: 'BLUE', color: ds.purpose.flag.blue, flash: false },
-  { id: 'white', flag: 'Flag_White', name: 'WHITE', color: ds.purpose.flag.white, flash: false },
-  { id: 'green', flag: 'Flag_Green', name: 'GREEN', color: ds.purpose.flag.green, flash: false },
-];
+const blockName = (condition: FlagCondition): string => {
+  const name = BLOCK_NAMES[condition.id];
+  if (name === undefined) throw new RangeError(`${condition.id} has no name on the full-screen block`);
+  return name;
+};
 
-/** Every name the format can draw. The chequer is absent because it carries none. */
-export const FLAG_FULL_NAMES: readonly string[] = [BLACK_NAME, ...SOLID.map((s) => s.name)];
+/** Whether the condition carries a name at all. The chequer is the one that does not. */
+const named = (condition: FlagCondition): boolean => condition.band.shape !== 'chequer';
+
+/** Every name the format can draw, once each, which is what the one size is measured against. */
+export const FLAG_FULL_NAMES: readonly string[] = [...new Set(FLAG_CATALOGUE.filter(named).map(blockName))];
 
 /**
  * One size for every name on a face: the sheets' fraction of the block, shrunk until the widest
@@ -103,7 +138,7 @@ function flagFullName(name: string, frame: Rect, text: string, color: Hex): Item
 }
 
 /**
- * The off phase of the yellow's flash: the face's own ground, opaque, over the whole block.
+ * The off phase of the waved yellow's flash: the face's own ground, opaque, over the whole block.
  *
  * `blink` on the layer would draw nothing at all for half of every cycle and the zones the flag
  * covers would read straight through it, which is the bug the band was fixed for. The block covers
@@ -117,44 +152,34 @@ const flashFull = (name: string, frame: Rect): RectangleItem => ({
   blink: { enabled: true, delayMs: FLAG_BLINK_MS },
 });
 
-function solidFull(frame: Rect, prefix: string, spec: SolidFull): LayerItem {
-  return {
-    kind: 'layer',
-    name: `${prefix}.${spec.id}`,
-    children: [
-      band(`${prefix}.${spec.id}.band`, frame, spec.color),
-      flagFullName(`${prefix}.${spec.id}.name`, frame, spec.name, ds.purpose.flag.onFlag),
-      ...(spec.flash ? [flashFull(`${prefix}.${spec.id}.flash`, frame)] : []),
-    ],
-    ...withBindings({ Visible: flagVisible(spec.flag) }),
-  };
-}
+/** A block filled with the alert's colour, named on the fill, flashing where the condition flashes. */
+const filledFull = (name: string, frame: Rect, colour: Hex, text: string, flash: boolean): Item[] => [
+  band(`${name}.band`, frame, colour),
+  flagFullName(`${name}.name`, frame, text, ds.purpose.flag.onFlag),
+  ...(flash ? [flashFull(`${name}.flash`, frame)] : []),
+];
 
 /**
- * The black flag, light on dark exactly as the band draws it: `purpose.flag.black` is `#F5F7FA` and
- * is the ink rather than the ground, so a block filled with it would be the white flag. The border
- * stays for the same reason it does on the band, a dark block on a dark dash needing an edge.
+ * A block outlined and named in the alert's colour over the face's own ground, which is how the
+ * black family and the start gantry are drawn.
+ *
+ * `purpose.flag.black` is `#F5F7FA` and is the ink rather than the ground, so a block filled with it
+ * would be the white flag. The border stays for the reason it does on the band: a dark block on a
+ * dark dash needs an edge to read as a block rather than as the face going out.
  */
-function blackFull(frame: Rect, prefix: string): LayerItem {
-  return {
-    kind: 'layer',
-    name: `${prefix}.black`,
-    children: [
-      band(`${prefix}.black.band`, frame, ds.color.surface.base, { border: { color: ds.purpose.flag.black, width: BLACK_FLAG_BORDER } }),
-      flagFullName(`${prefix}.black.name`, frame, BLACK_NAME, ds.purpose.flag.black),
-    ],
-    ...withBindings({ Visible: flagVisible('Flag_Black') }),
-  };
-}
+const outlinedFull = (name: string, frame: Rect, colour: Hex, text: string): Item[] => [
+  band(`${name}.band`, frame, ds.color.surface.base, { border: { color: colour, width: BLACK_FLAG_BORDER } }),
+  flagFullName(`${name}.name`, frame, text, colour),
+];
 
 /**
  * The chequer: the band's board at the block's scale, half the block high, opening on the ground one
  * square in, so that the two formats are one flag at two sizes rather than two drawings of it.
  */
-function chequeredFull(frame: Rect, prefix: string): LayerItem {
+function chequeredFull(name: string, frame: Rect): Item[] {
   const check = frame.height / 2;
   const columns = Math.ceil(frame.width / check);
-  const children: Item[] = [band(`${prefix}.chequered.band`, frame, ds.color.surface.base)];
+  const children: Item[] = [band(`${name}.band`, frame, ds.color.surface.base)];
   // The edges are rounded and the squares cut between them, rather than each square being rounded
   // on its own. A block of odd height puts the check on a half pixel, and a square whose left and
   // width then round apart ends a pixel past the block: the arrangement without the rev bar is
@@ -166,13 +191,43 @@ function chequeredFull(frame: Rect, prefix: string): LayerItem {
     for (let col = (row + 1) % 2; col < columns; col += 2) {
       const left = edge(col, frame.left, frame.width);
       const width = edge(col + 1, frame.left, frame.width) - left;
-      children.push(band(`${prefix}.chequered.r${row}c${String(col).padStart(2, '0')}`, rect(left, top, width, height), ds.purpose.flag.chequer));
+      children.push(band(`${name}.r${row}c${String(col).padStart(2, '0')}`, rect(left, top, width, height), ds.purpose.flag.chequer));
     }
   }
-  return { kind: 'layer', name: `${prefix}.chequered`, children, ...withBindings({ Visible: flagVisible('Flag_Checkered') }) };
+  return children;
 }
 
-/** One Layer per flag over `frame`, each visible when its flag is out and no higher one is. */
-export function flagFull(frame: Rect, prefix = 'flagFull'): Item[] {
-  return [blackFull(frame, prefix), chequeredFull(frame, prefix), ...SOLID.map((spec) => solidFull(frame, prefix, spec))];
+/** The shape the condition asks for, at the block's scale. */
+const blockParts = (name: string, frame: Rect, condition: FlagCondition): Item[] => {
+  const spec = condition.band;
+  switch (spec.shape) {
+    case 'filled':
+      return filledFull(name, frame, spec.colour, blockName(condition), spec.flash ?? false);
+    case 'outlined':
+      return outlinedFull(name, frame, spec.colour, blockName(condition));
+    case 'chequer':
+      return chequeredFull(name, frame);
+  }
+};
+
+/**
+ * One Layer per condition over `frame`, each visible when its condition is raised and none above it
+ * in the catalogue is.
+ *
+ * `bandRaised` and the same `false` for the critical-flags switch as band D, which is what makes the
+ * two formats one reading of one list: null-safe, so a sim publishing no `SessionFlagsDetails`
+ * leaves the block dark rather than covering the gear with the highest-ranked flag in it, and
+ * limited where a bit outlives the flag it announces, so the green does not sit over zone A for a
+ * whole stint.
+ */
+export function flagFull(frame: Rect, prefix = 'flagFull'): LayerItem[] {
+  return FLAG_CATALOGUE.map((condition) => {
+    const name = `${prefix}.${condition.id}`;
+    return {
+      kind: 'layer',
+      name,
+      children: blockParts(name, frame, condition),
+      ...withBindings({ Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) }),
+    };
+  });
 }
