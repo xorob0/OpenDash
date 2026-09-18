@@ -193,7 +193,7 @@ export function fieldWidth(spec: FieldSpec, density: Density): number {
  *
  * That tail is the part this used to omit. A WPF line box runs about a fifth of the font size
  * below the baseline row it sits on, so a row declaring `label + gap + fs` really draws a tenth of
- * `fs` further down than it said. On a companion page nobody noticed, because the box is 336 px
+ * `fs` further down than it said. On a companion page nobody noticed, because the box is 356 px
  * tall and the slack absorbs it. On a 237 by 160 zone of the nano it is what put a lap time
  * twenty-two pixels past the bottom edge.
  */
