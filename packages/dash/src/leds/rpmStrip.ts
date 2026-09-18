@@ -31,14 +31,14 @@ import { DEFAULTS, flagBox, LED_CENTRES, LED_RPM_STYLES, setting } from '../cont
 import type { LedCentre, LedRpmStyle } from '../contract.ts';
 import { mirrorAvailable } from '../shift.ts';
 import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
-import { brake as brakeInput, fuelPercent, throttle as throttleInput } from '../second/values.ts';
+import { brake as brakeInput, fuelPercent, tankIsLow, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { centreStart, deviceLength, rightStart, stripLength, type StripShape } from './strip.ts';
 
-const { and, eq, gt, not, num, str } = ncalc;
+const { and, eq, not, str } = ncalc;
 
 /** `isnull([OpenDash.LedCentre], 'rpm') = '<which>'`, the gate on each centre function. */
 const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which));
@@ -195,35 +195,58 @@ const pedalBar = (count: number, value: Expr, color: string, label: string): led
 
 /**
  * Throttle and brake filling outwards from the middle: brake takes the left half, running out from
- * the centre, throttle the right. An odd centre gives brake the extra LED, since a driver watching
- * this is watching the brake.
+ * the centre, throttle the right.
+ *
+ * An odd centre keeps the two halves equal and spends the spare LED on the middle, lit white and
+ * lit always. Giving it to brake instead — which is what this did — made the two pedals read at
+ * different scales on half the shapes, so a foot flat on each filled one side one LED further than
+ * the other and the bar was never symmetrical about anything. A standing mark is also the only way
+ * a driver can see where the middle *is* when neither pedal is down.
  */
 const throttleBrakeBar = (count: number): leds.LedContainer[] => {
-  const brakeCount = Math.ceil(count / 2);
-  const throttleCount = count - brakeCount;
-  const brake = Array.from({ length: brakeCount }, (_, k) => ({
+  const middle = count % 2 === 1 ? 1 : 0;
+  const half = (count - middle) / 2;
+  const brake = Array.from({ length: half }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `brake ${String(k + 1).padStart(2, '0')}`,
     // Fills outwards: the LED nearest the middle is the first to light.
-    startPosition: brakeCount - k,
+    startPosition: half - k,
     ledCount: 1,
     color: ds.color.danger.primary,
-    enabledFormula: { expression: stepLit(brakeInput(), k, brakeCount) },
+    enabledFormula: { expression: stepLit(brakeInput(), k, half) },
   }));
-  const throttle = Array.from({ length: throttleCount }, (_, k) => ({
+  const centre: leds.LedContainer[] =
+    middle === 1
+      ? [
+          {
+            kind: 'customStatus' as const,
+            description: 'centre mark',
+            startPosition: half + 1,
+            ledCount: 1,
+            color: ds.color.text.primary,
+            enabledFormula: { expression: TRUE },
+          },
+        ]
+      : [];
+  const throttle = Array.from({ length: half }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `throttle ${String(k + 1).padStart(2, '0')}`,
-    startPosition: brakeCount + 1 + k,
+    startPosition: half + middle + 1 + k,
     ledCount: 1,
     color: ds.color.good.primary,
-    enabledFormula: { expression: stepLit(throttleInput(), k, throttleCount) },
+    enabledFormula: { expression: stepLit(throttleInput(), k, half) },
   }));
-  return [...brake, ...throttle];
+  return [...brake, ...centre, ...throttle];
 };
 
 /**
- * The fuel gauge: a bar that empties, and blinks below five percent. `FuelPercent` is SimHub's own,
- * so there is nothing computed here.
+ * The fuel gauge: a bar that empties, and blinks once the tank is low. The *height* is
+ * `FuelPercent`, which is SimHub's own; the *threshold* is {@link tankIsLow}, the laps remaining
+ * against the one number in laps the driver set.
+ *
+ * The bar used to raise itself at five percent of the tank, which was a third answer to "am I low"
+ * beside the box's and the lamp's. Five percent is also not a threshold a driver can act on: it is
+ * two laps in one car and half a lap in another, which is the whole reason the setting is in laps.
  *
  * Slow, which is what the catalogue's own low-fuel lamp blinks at: one condition cannot be urgent on
  * the centre and merely true on a lamp of the same strip. Its off phase is the low-fuel colour rather
@@ -231,7 +254,7 @@ const throttleBrakeBar = (count: number): leds.LedContainer[] => {
  */
 const fuelBar = (count: number): leds.LedContainer[] => {
   const percent = fuelPercent();
-  const low = gt(num(5), percent);
+  const low = tankIsLow();
   return Array.from({ length: count }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `fuel ${String(k + 1).padStart(2, '0')}`,
