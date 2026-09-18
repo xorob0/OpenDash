@@ -23,6 +23,7 @@ import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { flagFull } from '../components/flagFull.ts';
 import { pitAlerts } from '../components/pitAlerts.ts';
 import { popUps } from '../components/popUp.ts';
+import { changeNotifications } from '../components/changeNotification.ts';
 import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
 import { bodyRect, layoutWithoutRevBar, rectOf, type ZoneLayout } from './layout.ts';
@@ -162,6 +163,11 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
   // column, the bar of settled values above it and band D below, where a flag has the better claim
   // on the same sixty pixels. Drawn after the limiter, which is the only other thing over a zone.
   items.push(...popUps(z.zoneA, 'popUp'));
+
+  // And the smaller box of the same family, on the same rectangle: a car setting that has just
+  // moved, for the three seconds SimHub's own window holds it. Ranked under the lap-time pop-up
+  // inside the component, so a lap time at the line is never covered by a click of traction control.
+  items.push(...changeNotifications(z.zoneA, 'notice'));
 
   return items;
 }
