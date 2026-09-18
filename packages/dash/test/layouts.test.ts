@@ -12,7 +12,7 @@
 import { describe, expect, test } from 'bun:test';
 import { CARDS } from '../src/cards/index.ts';
 import { PRESSURE_TIERS, pressureTier, pressureTierFor } from '../src/cards/tyrePressures.ts';
-import { CHEQUER_COUNT, CHEQUER_SIZE, CHEQUER_STEP } from '../src/components/flagRing.ts';
+import { CHEQUER_SIZE, chequerCount, chequerRim, chequerStep } from '../src/components/flagRing.ts';
 import { FLAG_STRIP_STYLES } from '../src/components/flagStrip.ts';
 import { FLAG_CATALOGUE } from '../src/flags.ts';
 import { GEAR_SIZES, gear, ghostedGearWidth } from '../src/components/gear.ts';
@@ -681,6 +681,8 @@ interface RoundRow {
   slot: [number, number];
   origins: number[][];
   face: { cx: number; cy: number; r: number };
+  /** Checks of the chequered ring, which is a count of the rim rather than a constant of the component. */
+  checks: number;
   hero: HeroGeometry;
   cardPadding?: { y: number; x: number };
 }
@@ -696,6 +698,7 @@ const ROUND_ROWS: RoundRow[] = [
     slot: [140, 108],
     origins: [[20, 186], [320, 186]],
     face: FACE_480,
+    checks: 46,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 240, cy: 240, r: 206 }, segment: { width: 22, height: 14 } },
       // The gap between the two slots, which takes the spec's 260 gear without a size of its own.
@@ -712,6 +715,7 @@ const ROUND_ROWS: RoundRow[] = [
     // Left column, right column, then the bottom row.
     origins: [[44, 290], [44, 404], [576, 290], [576, 404], [210, 562], [410, 562]],
     face: FACE_800,
+    checks: 78,
     hero: {
       rev: { kind: 'revArc', circle: { cx: 400, cy: 400, r: 352 }, segment: { width: 30, height: 18 } },
       // The gear with its two neighbours ghosted, at the 0.4 of it this artboard draws.
@@ -824,20 +828,41 @@ describe('the round faces, row by row of the spec table', () => {
         expect(items.filter((i) => i.kind === 'layer' && i.name.startsWith('flag.')).map((i) => i.name)).toEqual(['flag.black', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']);
       });
 
-      test('the chequered ring is 24 white 20 x 12 checks at 15 degree steps offset half a step, centred 6 px inside the rim, and nothing else', () => {
+      test('the chequered ring is white 16 x 12 checks alternating with dark of the same width the whole way round, offset half a step, on a rim that keeps their corners on the face, and nothing else', () => {
         const checks = layerNamed(items, 'flag.chequered').children;
-        expect(checks).toHaveLength(CHEQUER_COUNT);
-        expect(CHEQUER_COUNT).toBe(24);
-        expect(CHEQUER_STEP).toBe(15);
-        expect(CHEQUER_SIZE).toEqual({ width: 20, height: 12 });
+        const rim = chequerRim(face);
+        const count = chequerCount(face);
+        const step = chequerStep(face);
+        expect(count).toBe(row.checks);
+        expect(count % 2).toBe(0);
+        expect(CHEQUER_SIZE).toEqual({ width: 16, height: 12 });
+        expect(checks).toHaveLength(count);
+        // What makes it a chequer rather than dots on a ring: the dark arc between two checks is
+        // the check's own width, within the pixel the rim cannot divide evenly.
+        const gap = (2 * Math.PI * rim.r) / count - CHEQUER_SIZE.width;
+        expect(Math.abs(gap - CHEQUER_SIZE.width)).toBeLessThanOrEqual(1);
+        // The ring is still the outer 12 px of the face: the rim gives up only the fraction of a
+        // pixel by which a chord's corners overshoot its outer edge.
+        expect(face.r - rim.r).toBeGreaterThanOrEqual(CHEQUER_SIZE.height / 2);
+        expect(face.r - rim.r).toBeLessThan(CHEQUER_SIZE.height / 2 + 1);
         checks.forEach((c, k) => {
           if (c.kind !== 'rect') throw new Error('check');
           expect(c.name).toBe(`flag.chequered.c${pad2(k)}`);
           expect(c.backgroundColor).toBe('#F5F7FA');
-          expect(c.rotation ?? 0).toBe((k + 0.5) * 15);
-          expect({ width: c.rect.width, height: c.rect.height }).toEqual({ width: 20, height: 12 });
-          expect(Math.abs(distance(centre(c.rect), centrePoint) - (face.r - 6))).toBeLessThanOrEqual(1);
+          expect(c.rotation ?? 0).toBe((k + 0.5) * step);
+          expect({ width: c.rect.width, height: c.rect.height }).toEqual({ width: 16, height: 12 });
+          expect(Math.abs(distance(centre(c.rect), centrePoint) - rim.r)).toBeLessThanOrEqual(1);
           expect(c.border?.radius).toBeUndefined();
+          // Corners, not the centre: a check near twelve o'clock left the canvas by a third of a
+          // pixel while its centre was still comfortably on the rim.
+          const half = { x: CHEQUER_SIZE.width / 2, y: CHEQUER_SIZE.height / 2 };
+          const a = ((c.rotation ?? 0) * Math.PI) / 180;
+          for (const sx of [-1, 1])
+            for (const sy of [-1, 1]) {
+              const p = centre(c.rect);
+              const corner = { x: p.x + sx * half.x * Math.cos(a) - sy * half.y * Math.sin(a), y: p.y + sx * half.x * Math.sin(a) + sy * half.y * Math.cos(a) };
+              expect({ name: c.name, corner, inside: distance(corner, centrePoint) <= face.r }).toMatchObject({ inside: true });
+            }
         });
       });
 
@@ -872,7 +897,7 @@ describe('the round faces, row by row of the spec table', () => {
         const segments = [...layerNamed(items, 'revArc.shiftLights').children, ...layerNamed(items, 'revArc.shiftLightsSimHub').children, ...layerNamed(items, 'revArc.rpmBar').children].filter(hasRect);
         const checks = layerNamed(items, 'flag.chequered').children.filter(hasRect);
         expect(segments).toHaveLength(45);
-        expect(checks).toHaveLength(CHEQUER_COUNT);
+        expect(checks).toHaveLength(chequerCount(face));
         const heroBoxes = [...gearNames(row), 'pitLimiter.band'].map((name) => {
           const item = [...walkItems(items)].find((i) => i.name === name);
           if (!item || !hasRect(item)) throw new Error(`${name} has no rect`);
