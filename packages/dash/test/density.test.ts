@@ -7,13 +7,14 @@
  * change that should be deliberate.
  */
 import { describe, expect, test } from 'bun:test';
-import { densityOf } from '../src/second/density.ts';
+import { densityOf, rampOf } from '../src/second/density.ts';
+import { resolveToken } from '../src/tokens.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, denominatorSize } from '../src/second/field.ts';
 import { READOUT_GAP } from '../src/components/readout.ts';
 
 describe('the gaps the canvas draws', () => {
   test('a label row is five pixels above its value row, at every density', () => {
-    for (const density of ['companion', 'zone', 'compact', 'wide'] as const) {
+    for (const density of ['companion', 'zone', 'compact', 'wide', 'panel'] as const) {
       expect({ density, fieldGap: densityOf(density).fieldGap }).toEqual({ density, fieldGap: 5 });
     }
     expect(READOUT_GAP).toBe(5);
@@ -25,6 +26,27 @@ describe('the gaps the canvas draws', () => {
 
   test('a denominator is 32 beside a 46 px value and 44 beside a 64 px one', () => {
     expect([denominatorSize(34), denominatorSize(46), denominatorSize(64), denominatorSize(76)]).toEqual([23, 32, 44, 53]);
+  });
+});
+
+describe('the type ramp', () => {
+  /**
+   * The sizes design/tokens.json carries that a second screen may draw at. The card ramp covers the
+   * three large steps and the ui scale, whose own scope line names the pit wall tables, the two
+   * small ones; a ramp step that is not one of these is a number the token file cannot move.
+   */
+  const RAMP_TOKENS = ['font.size.hero', 'font.size.lapTime', 'font.size.value', 'font.size.valueSm', 'font.size.ui.numeralLg', 'font.size.ui.numeral'];
+
+  test('every step of the companion and zone ramps is a token value', () => {
+    const sizes = new Set(RAMP_TOKENS.map((path) => resolveToken(path)));
+    for (const density of ['companion', 'zone', 'wide'] as const) {
+      for (const size of rampOf(density)) expect({ density, size, fromToken: sizes.has(size) }).toEqual({ density, size, fromToken: true });
+    }
+  });
+
+  test('and the compact ramp is the zone ramp stepped down, but for its last two rungs', () => {
+    // 18 and 14 are the two numbers in this file that no token carries; see the TODO beside them.
+    expect(rampOf('compact')).toEqual([14, 18, ...rampOf('zone').slice(1, 4)]);
   });
 });
 
@@ -48,6 +70,15 @@ describe('the label ramp', () => {
       expect({ density, labelRow: densityOf(density).labelRow }).toEqual({ density, labelRow: 13 });
     }
     expect(densityOf('compact').labelRow).toBe(12);
+  });
+
+  test('and drops back to 13 on the pit wall, which is the one ramp its sheets write as `.lblt`', () => {
+    // The six pit wall sheets and Panels.dc.html label every field at 13 and never use the 15 that
+    // ZoneCatalogue.dc.html draws; only the label moves, so the row and everything measured off it
+    // stay where the zone ramp puts them.
+    const panel = densityOf('panel');
+    expect({ label: panel.label, labelRow: panel.labelRow, labelSm: panel.labelSm }).toEqual({ label: 13, labelRow: 13, labelSm: 13 });
+    expect(panel).toEqual({ ...densityOf('zone'), label: 13 });
   });
 });
 
