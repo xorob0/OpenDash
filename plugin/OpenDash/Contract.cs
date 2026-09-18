@@ -778,6 +778,20 @@ namespace OpenDashPlugin
             return LapReviewProperty(FacePrefix(face));
         }
 
+        /// <summary>Property name of what a face carries at the top: Face1920x480RevBar. Per screen,
+        /// because a wheel whose rim already has LEDs across it and a display that has none are two
+        /// screens on one rig, and the rig-wide RevBar answered for both at once. The rig-wide name
+        /// stays attached as the fallback underneath it.</summary>
+        public static string RevBarProperty(string ns)
+        {
+            return ns + "RevBar";
+        }
+
+        public static string RevBarProperty(FaceSize face)
+        {
+            return RevBarProperty(FacePrefix(face));
+        }
+
         /// <summary>
         /// The actions a driver binds to a wheel button. Named as verbs, because a property is a noun:
         /// `OpenDash.QuickGlance` is what the glance is set to and `OpenDash.HoldQuickGlance` is the
@@ -922,6 +936,7 @@ namespace OpenDashPlugin
             // assert the group by index, so a new one joins the end of it.
             yield return FlagFormatProperty(ns);
             yield return LapReviewProperty(ns);
+            yield return RevBarProperty(ns);
         }
 
         public static IEnumerable<string> FacePropertyNames(FaceSize face)

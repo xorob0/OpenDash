@@ -12,6 +12,7 @@
 //
 // ADR 0013 is why the page exists; docs/design/flag-box.md is what the box draws.
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -22,7 +23,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildLightsTab()
         {
             var matrices = new List<UIElement>();
-            foreach (var matrix in Contract.FlagBoxMatrices) matrices.Add(BuildMatrixGroup(matrix));
+            foreach (var matrix in Settings.MatrixPanels()) matrices.Add(BuildMatrixGroup(matrix));
 
             var box = Ui.Section("The flag box",
                 Ui.Caption(
@@ -43,12 +44,11 @@ namespace OpenDashPlugin
                 // means act, and a car alongside is something you live with for half a straight.
                 Ui.Row("Spotter bar grows", "On, the bar grows inwards from the edge; off it is simply there. The bar is painted over whatever else is on the panel either way, so a flag stays readable under it.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
 
-            var panels = Ui.Section("What each panel does",
-                Ui.Caption(
-                    "SimHub composes up to four matrix contents. Matrix 1 does everything by default; open a second "
-                        + "only if you own a second box."));
+            var panels = Ui.Section(PanelLights.PanelsTitle, Ui.Caption(PanelLights.PanelsCaption));
             var panelRows = (StackPanel)panels.Child;
+            if (matrices.Count == 0) panelRows.Children.Add(Ui.Caption(PanelLights.NoPanels));
             foreach (var row in matrices) panelRows.Children.Add(row);
+            panelRows.Children.Add(BuildAddMatrixRow());
 
             // The attribution row is not decoration. The car tables are somebody else's work under
             // CC BY-NC-SA 4.0 (ADR 0018), openDash ships none of them, and a user is entitled to know
@@ -96,11 +96,66 @@ namespace OpenDashPlugin
         /// two boxes, one in each corner of a monitor stand, and that rig has to be configurable. This is
         /// the "less often used, but kept" rule applied where it costs the most scroll.
         /// </remarks>
+        /// <summary>
+        /// The button that adds a panel, and nothing else: the name is asked for on the panel it opens.
+        /// </summary>
+        /// <remarks>
+        /// It disappears when all four slots are taken rather than failing on the press, because SimHub
+        /// composes four contents and not five, and a button that cannot work is worse than none.
+        /// </remarks>
+        private FrameworkElement BuildAddMatrixRow()
+        {
+            if (Settings.FreeMatrixSlot() == 0)
+            {
+                var full = Ui.Caption("All four of SimHub's matrix contents are in use, so there is no room for another panel.");
+                full.Margin = new Thickness(0, 8, 0, 0);
+                return full;
+            }
+            var add = Ui.AddButton(PanelLights.AddPanel, PanelMetrics.RowButtonHeight);
+            add.HorizontalAlignment = HorizontalAlignment.Left;
+            add.Margin = new Thickness(0, 8, 0, 0);
+            add.ToolTip = "Add one of SimHub's four matrix contents and give it settings of its own.";
+            add.Click += (sender, args) => ShowAddMatrixPanel();
+            return add;
+        }
+
+        /// <summary>Naming the panel, in place, the way a screen is named when it is added.</summary>
+        private void ShowAddMatrixPanel()
+        {
+            var slot = Settings.FreeMatrixSlot();
+            if (slot == 0) return;
+            var name = new TextBox
+            {
+                Width = 280,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Text = "Matrix " + slot,
+            };
+            var add = Ui.OutlineButton(PanelLights.AddPanel, PanelMetrics.RowButtonHeight);
+            add.MinWidth = ButtonMinWidth;
+            add.Click += (sender, args) =>
+            {
+                Settings.AddMatrixPanel(name.Text);
+                Save();
+                Redraw();
+            };
+            var cancel = Ui.LinkButton("Cancel");
+            cancel.Click += (sender, args) => Redraw();
+            var nameRow = Ui.Row(PanelLights.PanelNameTitle, PanelLights.PanelNameCaption, name);
+            nameRow.Width = BodyWidth;
+            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddPanel,
+                Ui.Caption("It will be " + PanelLights.PanelSlot(slot) + ", which is the content number to pick on the device itself."),
+                nameRow,
+                Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
+        }
+
         private FrameworkElement BuildMatrixGroup(int matrix)
         {
             var m = matrix;
-            var summary = m == 1 ? null : "off by default";
-            return Ui.Collapsible("Matrix " + m, summary, m == 1, () =>
+            var summary = PanelLights.PanelSlot(m);
+            return Ui.Collapsible(Settings.MatrixName(m) ?? ("Matrix " + m), summary, Settings.MatrixPanels().First() == m, () =>
             {
                 var rest = BuildSegmented(Contract.FlagBoxRests, PanelLights.RestLabels, Settings.MatrixRest(m), value =>
                 {
@@ -121,6 +176,7 @@ namespace OpenDashPlugin
                     // Which side the box is physically on. One to the left of the wheel lighting for a car
                     // on the right is worse than no box at all, so it is asked rather than guessed.
                     Ui.Row("Mounted", "Which side of the rig this box is on. A left box must not light for a car on your right.", side),
+                    BuildMatrixPanelActions(m),
                     // The four that moved off the tab header. They read as this panel's own rather than as
                     // the rig's, which is what they had become by sitting above every panel at once.
                     Ui.Row("Critical flags only", "Quiet until something matters: drops the chequer, the white, the green and the start gantry.", BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[m - 1] = on; Save(); })),
@@ -133,6 +189,53 @@ namespace OpenDashPlugin
                     Ui.Row("Oil temperature", "In your own unit; 0 uses the default for it (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
                     Ui.Row("Water temperature", "In your own unit; 0 uses the default for it (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
             });
+        }
+        /// <summary>Renaming a panel and taking it away, at the foot of its own group.</summary>
+        private FrameworkElement BuildMatrixPanelActions(int matrix)
+        {
+            var m = matrix;
+            var rename = Ui.LinkButton("Rename");
+            rename.ToolTip = "Change what this panel is called here.";
+            rename.Click += (sender, args) => ShowRenameMatrixPanel(m);
+            var remove = Ui.LinkButton("Remove this panel", Theme.Danger);
+            remove.ToolTip = "Take this panel out. Its content goes dark and the slot is free again.";
+            remove.Click += (sender, args) =>
+            {
+                Settings.RemoveMatrixPanel(m);
+                Save();
+                Redraw();
+            };
+            var row = Ui.Row(new Border(), Ui.HStack(12, rename, remove));
+            row.Width = BodyWidth;
+            return row;
+        }
+
+        private void ShowRenameMatrixPanel(int matrix)
+        {
+            var name = new TextBox
+            {
+                Width = 280,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Text = Settings.MatrixName(matrix) ?? string.Empty,
+            };
+            var save = Ui.OutlineButton("Rename", PanelMetrics.RowButtonHeight);
+            save.MinWidth = ButtonMinWidth;
+            save.Click += (sender, args) =>
+            {
+                Settings.RenameMatrixPanel(matrix, name.Text);
+                Save();
+                Redraw();
+            };
+            var cancel = Ui.LinkButton("Cancel");
+            cancel.Click += (sender, args) => Redraw();
+            var nameRow = Ui.Row(PanelLights.PanelNameTitle, PanelLights.PanelNameCaption, name);
+            nameRow.Width = BodyWidth;
+            bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + (Settings.MatrixName(matrix) ?? ("Matrix " + matrix)),
+                nameRow,
+                Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
         }
     }
 }

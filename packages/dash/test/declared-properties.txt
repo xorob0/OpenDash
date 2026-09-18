@@ -52,6 +52,7 @@ OpenDash.Face1920x480BarRight2
 OpenDash.Face1920x480QuickGlance
 OpenDash.Face1920x480FlagFormat
 OpenDash.Face1920x480LapReview
+OpenDash.Face1920x480RevBar
 OpenDash.Face1280x480ZoneA
 OpenDash.Face1280x480ZoneAPages
 OpenDash.Face1280x480ZoneAStart
@@ -75,6 +76,7 @@ OpenDash.Face1280x480BarRight2
 OpenDash.Face1280x480QuickGlance
 OpenDash.Face1280x480FlagFormat
 OpenDash.Face1280x480LapReview
+OpenDash.Face1280x480RevBar
 OpenDash.Face1280x400ZoneA
 OpenDash.Face1280x400ZoneAPages
 OpenDash.Face1280x400ZoneAStart
@@ -98,6 +100,7 @@ OpenDash.Face1280x400BarRight2
 OpenDash.Face1280x400QuickGlance
 OpenDash.Face1280x400FlagFormat
 OpenDash.Face1280x400LapReview
+OpenDash.Face1280x400RevBar
 OpenDash.Face850x480ZoneA
 OpenDash.Face850x480ZoneAPages
 OpenDash.Face850x480ZoneAStart
@@ -121,6 +124,7 @@ OpenDash.Face850x480BarRight2
 OpenDash.Face850x480QuickGlance
 OpenDash.Face850x480FlagFormat
 OpenDash.Face850x480LapReview
+OpenDash.Face850x480RevBar
 OpenDash.Face800x480ZoneA
 OpenDash.Face800x480ZoneAPages
 OpenDash.Face800x480ZoneAStart
@@ -144,6 +148,7 @@ OpenDash.Face800x480BarRight2
 OpenDash.Face800x480QuickGlance
 OpenDash.Face800x480FlagFormat
 OpenDash.Face800x480LapReview
+OpenDash.Face800x480RevBar
 OpenDash.Face1280x720ZoneA
 OpenDash.Face1280x720ZoneAPages
 OpenDash.Face1280x720ZoneAStart
@@ -167,6 +172,7 @@ OpenDash.Face1280x720BarRight2
 OpenDash.Face1280x720QuickGlance
 OpenDash.Face1280x720FlagFormat
 OpenDash.Face1280x720LapReview
+OpenDash.Face1280x720RevBar
 OpenDash.Face800x286ZoneA
 OpenDash.Face800x286ZoneAPages
 OpenDash.Face800x286ZoneAStart
@@ -190,6 +196,7 @@ OpenDash.Face800x286BarRight2
 OpenDash.Face800x286QuickGlance
 OpenDash.Face800x286FlagFormat
 OpenDash.Face800x286LapReview
+OpenDash.Face800x286RevBar
 OpenDash.Face600x686ZoneA
 OpenDash.Face600x686ZoneAPages
 OpenDash.Face600x686ZoneAStart
@@ -213,6 +220,7 @@ OpenDash.Face600x686BarRight2
 OpenDash.Face600x686QuickGlance
 OpenDash.Face600x686FlagFormat
 OpenDash.Face600x686LapReview
+OpenDash.Face600x686RevBar
 OpenDash.CompanionModule01
 OpenDash.CompanionModule02
 OpenDash.CompanionModule03

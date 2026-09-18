@@ -28,6 +28,37 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.FlagBoxSides"/> value, in its order.</summary>
         public static readonly string[] SideLabels = { "Both", "Left", "Right" };
 
+        /// <summary>The heading over the panels a driver has added.</summary>
+        public const string PanelsTitle = "Your matrix panels";
+
+        /// <summary>
+        /// The line under it, and what it says when there are none.
+        /// </summary>
+        /// <remarks>
+        /// A rig starts with no panels, the way it starts with no screens. Four numbered groups of eleven
+        /// settings, one of them switched on because it was first, is a page for hardware most people own
+        /// none of; a panel exists because somebody said they have one, and it carries the name they gave
+        /// it rather than its slot number.
+        /// </remarks>
+        public const string PanelsCaption =
+            "SimHub composes up to four contents onto one matrix device. Add one for each panel you actually have, and "
+            + "give it a name you will recognise — \"top left\", \"by the wheel\".";
+
+        public const string NoPanels = "No panels yet. The flag box profile is installed and will draw nothing until you add one.";
+
+        public const string AddPanel = "Add a matrix panel";
+
+        public const string PanelNameTitle = "Call it";
+
+        public const string PanelNameCaption = "Yours. It names the group here; the panel itself is whichever of SimHub's four contents this is.";
+
+        /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since
+        /// that is the number a driver has to match on the device itself.</summary>
+        public static string PanelSlot(int matrix)
+        {
+            return "SimHub matrix " + matrix;
+        }
+
         /// <summary>The section the three rig-wide settings sit in, at the foot of the tab: they are not
         /// the flag box's, and a driver who owns a strip as well as a box sets them once.</summary>
         public const string RigWideTitle = "For every light";

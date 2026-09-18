@@ -28,7 +28,7 @@ import { segment, type SegmentOptions } from '../elements/segment.ts';
 import { mirrorAvailable, mirrorOverRev, mirrorStageLit, overRevEither, simhubOverRev, simhubStageLit, stageEntered } from '../shift.ts';
 import { ds } from '../tokens.ts';
 
-const { game, gt, num, iff, str, not, and } = ncalc;
+const { and, eq, game, gt, iff, not, num, str } = ncalc;
 
 /** Half period of the redline flash in ms: 1000 / flashHz / 2, floored (62 at 8 Hz). */
 export const REDLINE_BLINK_MS = Math.floor(1000 / ds.shiftLights.flashHz / 2);
@@ -154,7 +154,7 @@ export const SAMPLE_LIT = 9;
  * is SimHub's bands for a car that publishes none, and `<prefix>.rpmBar` is the plain bar that
  * both `rpm` and `off` fall to. Exactly one is visible at a time.
  */
-export function revLayers(prefix: string, placements: readonly RevSegmentPlacement[]): [LayerItem, LayerItem, LayerItem] {
+export function revLayers(prefix: string, placements: readonly RevSegmentPlacement[], mode: Expr = setting.revBar()): [LayerItem, LayerItem, LayerItem] {
   const count = placements.length;
   const build = (layer: RevLayer): LayerItem['children'] =>
     placements.map((p, k) =>
@@ -164,7 +164,9 @@ export function revLayers(prefix: string, placements: readonly RevSegmentPlaceme
       }),
     );
 
-  const on = setting.revBarIs('shift');
+  // Which screen is asking. A zone face passes its own `Face<size>RevBar` read, which falls back to
+  // the rig's; the round faces' arc and the speedo module pass nothing and get the rig's.
+  const on = eq(mode, str('shift'));
   const layer = (name: string, which: RevLayer, visible: Expr): LayerItem => ({
     kind: 'layer',
     name: `${prefix}.${name}`,

@@ -518,6 +518,18 @@ export const DEFAULT_FLAG_FORMAT: FlagFormat = 'band';
 export const flagFormatSettingName = (face: FaceSize): string => `${facePrefix(face)}FlagFormat`;
 
 /**
+ * `Face1920x480RevBar`: what the top of *this* face carries.
+ *
+ * Per screen, and it should always have been. A rig with a 1920 on the dash and an 850 on the rim
+ * is two screens at two distances, and the wheel that carries its own LEDs across the top is one of
+ * them and not the other -- so "off, my wheel already has lights" was a rig-wide answer that turned
+ * the bar off on the display as well. The rig-wide {@link REV_BAR_SETTING} stays attached as the
+ * fallback below it, both because it has shipped and because the round faces' arc and the speedo
+ * module still read it.
+ */
+export const revBarSettingName = (face: FaceSize): string => `${facePrefix(face)}RevBar`;
+
+/**
  * When this face shows the lap review: never, in a race, or in every session.
  *
  * Per screen for the reason the flag format is, and more strongly: the review is 1200 by 160 and
@@ -562,6 +574,18 @@ export const zone = {
   barField: (face: FaceSize, slot: BarSlot): Expr => isnull(prop(propertyName(barFieldSettingName(face, slot))), num(DEFAULT_BAR_FIELDS[slot])),
   /** `isnull([OpenDash.Face1920x480ZoneCClassOnly], false)`: whether this zone's lists show the player's class. */
   classOnly: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneClassOnlySettingName(face, z))), String(DEFAULT_ZONE_CLASS_ONLY)),
+  /**
+   * `isnull([OpenDash.Face1920x480RevBar], isnull([OpenDash.RevBar], ...))`: what this face carries
+   * at the top.
+   *
+   * Three fallbacks deep, and each earns its place: this face's own answer, then the rig's, then
+   * the deprecated `ShiftLights` a package installed beside an rc.2 plugin would find. A settings
+   * file written before the setting was per screen therefore keeps drawing what its owner chose,
+   * on every face, until they answer one of them individually.
+   */
+  revBar: (face: FaceSize): Expr => isnull(prop(propertyName(revBarSettingName(face))), setting.revBar()),
+  /** `... = 'off'`: whether this face is in the given rev bar mode. */
+  revBarIs: (face: FaceSize, mode: RevBarMode): Expr => eq(zone.revBar(face), str(mode)),
   /** `isnull([OpenDash.Face1920x480FlagFormat], 'band')`: how this face draws a flag. */
   flagFormat: (face: FaceSize): Expr => isnull(prop(propertyName(flagFormatSettingName(face))), str(DEFAULT_FLAG_FORMAT)),
   /** `isnull([OpenDash.Face1920x480FlagFormat], 'band') = 'full'`: whether this face is in the given format. */
@@ -582,7 +606,7 @@ export const zone = {
 export function facePropertyNames(face: FaceSize): string[] {
   const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
-  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face), lapReviewSettingName(face)];
+  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face), lapReviewSettingName(face), revBarSettingName(face)];
 }
 
 /** Every zone property of every face that ships. */
