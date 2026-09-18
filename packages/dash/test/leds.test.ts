@@ -106,7 +106,10 @@ describe('the strip shapes', () => {
     expect(leds.containerTypeOf(profileFor('3-9-3').containers[0]!)).toBe('Groups.GameRunningGroup');
   });
 
-  test('a remap covers every LED of the device, which is the one way it fails loudly rather than quietly', () => {
+  test('only a shape the maker wired in an order of its own is remapped, and it covers every LED of the device', () => {
+    // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
+    // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
+    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id)).toEqual(['3-9-3-fanalab', '4-14-4-reversed']);
     // SetResultBase indexes Positions[i] for every lit LED, so a list shorter than the run throws
     // once per frame. The validator catches it, and this catches a row that forgot to grow.
     for (const s of ALL_SHAPES.filter((s) => s.positions)) {
