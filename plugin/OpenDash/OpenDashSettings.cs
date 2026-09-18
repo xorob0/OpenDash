@@ -726,7 +726,7 @@ namespace OpenDashPlugin
         public int ScreenCompanionPage(string ns)
         {
             var screen = ScreenByNamespace(ns);
-            return screen == null ? Contract.DefaultCompanionStart : Contract.NormalisePage(screen.CompanionPage, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionStart);
+            return screen == null ? Contract.DefaultCompanionPage : Contract.NormalisePage(screen.CompanionPage, OpenDashPlugin.Modules.Count, Contract.DefaultCompanionPage);
         }
 
         /// <summary>The module one companion opens on.</summary>

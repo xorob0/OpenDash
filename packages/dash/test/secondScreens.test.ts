@@ -7,6 +7,7 @@ import { describe, expect, test } from 'bun:test';
 import { measureText, type MeasuredFace } from '../src/design/advances.ts';
 import { LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
 import {
+  COMPANION_PAGE_SETTING,
   MODULE_CATALOGUE,
   MODULE_COUNT,
   PIT_WALL_WIDE_ZONE_PAGES,
@@ -197,19 +198,27 @@ describe('the companion', () => {
     expect(new Set(rows.map((top) => Math.min(...labels.filter((l) => l.rect.top === top).map((l) => l.rect.left)))).size).toBe(1);
   });
 
-  test('switches each screen on its own plugin setting', () => {
+  test('switches each screen on its own module and on the page the plugin is showing', () => {
+    // Both halves. The page is what a wheel button moves and is what decides which of the
+    // twenty-one is up, so exactly one screen is enabled at a time and SimHub shows that one; the
+    // rotation is still asked, so a driver with no plugin sees a module they have left on and so
+    // that the switches are read by the package that offers them.
     main.screens.forEach((screen, i) => {
-      expect(screen.enabledExpression).toBe(secondScreen.moduleEnabled(i + 1));
+      expect(screen.enabledExpression).toBe(secondScreen.moduleShown(i + 1));
       expect(screen.enabledExpression).toContain(moduleSettingName(i + 1));
+      expect(screen.enabledExpression).toContain(`OpenDash.${COMPANION_PAGE_SETTING}`);
+      expect(screen.enabledExpression).toContain(`= (${i})`);
     });
     // Energy, damage and track rivals default to off, which is a 0 in the expression.
     expect(main.screens[5]!.enabledExpression).toContain(', 0)');
     expect(main.screens[0]!.enabledExpression).toContain(', 1)');
+    // And the page defaults to the first module, so a package with no plugin opens on lap times.
+    expect(secondScreen.companionPage()).toBe(`isnull([OpenDash.${COMPANION_PAGE_SETTING}], 0)`);
   });
 
-  test('gives every screen the same roles, so the page ring works in and out of a session', () => {
+  test('gives every screen the same roles, so the page shows in and out of a session', () => {
     // SimHub only filters screens by role when the roles differ between them; identical roles keep
-    // every enabled screen in the Next/Previous ring whatever the game is doing.
+    // whichever screen the page names showing whatever the game is doing.
     const roles = new Set(main.screens.map((s) => `${s.inGame};${s.idle};${s.pit}`));
     expect([...roles]).toEqual(['true;true;false']);
   });

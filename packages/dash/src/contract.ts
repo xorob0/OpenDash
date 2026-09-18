@@ -750,16 +750,29 @@ export function moduleSettingName(number: number): string {
 }
 
 /**
+ * `CompanionPage`: the module a companion is showing, as a 0-based page index.
+ *
+ * It is the companion's answer to a pit wall's `PitWallZoneA`: live state the plugin holds and the
+ * dashboard follows, moved by the `CompanionNextModule` action and by the held glance. The start
+ * module and the glance module are *not* properties beside it, and deliberately so -- a second-screen
+ * property has to be read by a package, which `secondScreens.test.ts` enforces, and nothing on the
+ * screen reads either of them: a start page is applied once by `Init` and a glance is a value the
+ * hold copies into this one and copies back on release. That is the idiom the pit wall's own glance
+ * landed on, and one idiom is enough.
+ */
+export const COMPANION_PAGE_SETTING = 'CompanionPage';
+
+/** Lap times, which is the first module in page order and what a companion opens on. */
+export const DEFAULT_COMPANION_PAGE = 0;
+
+/**
  * Every property the companion owns, in the order the plugin attaches them.
  *
- * The modules alone, for now. The plugin also decides which module the companion opens on and which
- * one a held button shows, and it holds both, but neither is a property yet: a second-screen
- * property has to be *read* by a package, which `secondScreens.test.ts` enforces, and the companion
- * cannot read a page setting while it is twenty-one top-level screens that SimHub itself pages. The
- * change that makes it one paged screen is the change that declares them.
+ * The twenty-one module switches, and then the page. The page is appended rather than inserted for
+ * the reason every other name is: both halves of the contract assert this group by index.
  */
 export function companionProperties(): string[] {
-  return MODULE_CATALOGUE.map((m) => moduleSettingName(m.number));
+  return [...MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)), COMPANION_PAGE_SETTING];
 }
 
 /**
@@ -847,6 +860,20 @@ export const secondScreen = {
    * as a number and treats as enabled when it is above zero. A boolean property converts to 1.
    */
   moduleEnabled: (number: number): Expr => isnull(prop(propertyName(moduleSettingName(number))), num(moduleAt(number).enabled ? 1 : 0)),
+  /** `isnull([OpenDash.CompanionPage], 0)`: the module the companion is showing, 0-based. */
+  companionPage: (): Expr => isnull(prop(propertyName(COMPANION_PAGE_SETTING)), num(DEFAULT_COMPANION_PAGE)),
+  /**
+   * A module's screen is enabled when the rotation leaves it on *and* it is the page the plugin is
+   * showing, which is what makes the companion one screen at a time rather than a ring SimHub pages.
+   *
+   * Both halves earn their place. The page is what a wheel button moves, so it is what decides which
+   * of the twenty-one is up; the rotation is still asked, so that a driver with no plugin sees the
+   * first module they have left on rather than a screen they switched off, and so that the switches
+   * are read by the package that offers them. SimHub re-evaluates every screen's expression each
+   * frame and moves off a screen that has stopped being enabled, which is the same mechanism the two
+   * arrangements of a zone face are chosen by.
+   */
+  moduleShown: (number: number): Expr => and(secondScreen.moduleEnabled(number), eq(secondScreen.companionPage(), num(number - 1))),
   /** `isnull([OpenDash.PitWallZoneA], 0)`: which page a zone's widget shows. */
   zonePage: (letter: PitWallZoneLetter): Expr => isnull(prop(propertyName(pitWallZoneSettingName(letter))), num(PIT_WALL_DEFAULT_ZONE_PAGES[letter])),
   /** `isnull([OpenDash.PitWallWide], 5)`. */

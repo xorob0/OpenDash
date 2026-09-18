@@ -983,6 +983,12 @@ namespace OpenDashPlugin
             return ModuleProperty(CompanionPrefix, module);
         }
 
+        /// <summary>Property name of a companion's live page: CompanionPage.</summary>
+        public static string CompanionPageProperty(string ns)
+        {
+            return ns + "Page";
+        }
+
         /// <summary>The module a companion opens on, and the one a held button shows: lap times, which
         /// is the first in page order, and the track map, which is what a glance is usually for. Both
         /// count from zero, so the track map is module 13 at page 12.</summary>
@@ -990,19 +996,28 @@ namespace OpenDashPlugin
 
         public const int DefaultCompanionQuickGlance = 12;
 
+        /// <summary>The page a companion reads before anything has set one, which is the first module.
+        /// Mirrors DEFAULT_COMPANION_PAGE in contract.ts: a package installed without the plugin opens
+        /// on lap times and, having nothing to move it, stays there.</summary>
+        public const int DefaultCompanionPage = 0;
+
         /// <summary>
-        /// Every property one companion owns, in attachment order.
+        /// Every property one companion owns, in attachment order: the module switches, then the page.
         /// </summary>
         /// <remarks>
-        /// The modules alone. The plugin also holds the module a companion is showing, the one it opens
-        /// on and the one a held button shows -- the two wheel actions move them -- but none of the
-        /// three is a property yet: a second-screen property has to be read by a package, which
-        /// packages/dash/test/secondScreens.test.ts enforces, and the companion cannot read a page
-        /// setting while it is twenty-one top-level screens that SimHub itself pages.
+        /// The start module and the glance module are not among them, and that is the idiom rather than
+        /// an omission: a second-screen property has to be read by a package, which
+        /// packages/dash/test/secondScreens.test.ts enforces, and nothing on the screen reads either of
+        /// them. The start is applied once by Init and the glance is a value the hold copies into the
+        /// page and copies back on release, which is exactly how a pit wall's own glance works.
+        ///
+        /// The page is appended after the twenty-one rather than put in front of them, because both
+        /// halves of the contract assert this group by index.
         /// </remarks>
         public static IEnumerable<string> CompanionPropertyNames(string ns)
         {
             for (var module = 1; module <= Modules.Count; module++) yield return ModuleProperty(ns, module);
+            yield return CompanionPageProperty(ns);
         }
 
         /// <summary>Every action one companion registers, in registration order.</summary>

@@ -332,6 +332,10 @@ namespace OpenDashPlugin
                         var captured = module;
                         this.AttachDelegate(Contract.ModuleProperty(s.Namespace, captured), () => Settings.ScreenModule(s.Namespace, captured));
                     }
+                    // The page the companion is on, which its screens' enabled expressions follow. Live
+                    // state and not a saved setting: Init puts it back on the start module, exactly as
+                    // it puts every zone back on the page it opens on.
+                    this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace), () => Settings.ScreenCompanionPage(s.Namespace));
                 }
                 else if (s.IsPitWall)
                 {
