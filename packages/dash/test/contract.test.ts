@@ -57,6 +57,7 @@ import {
   REV_BAR_SETTING,
   BLUE_FLAG_DETAILS,
   COMPANION_FLAG_FORMAT_SETTING,
+  COMPANION_OPEN_ON_SETTING,
   COMPANION_PAGE_SETTING,
   LAP_REVIEW_MODES,
   DEFAULT_LAP_REVIEW,
@@ -122,8 +123,8 @@ describe('settings', () => {
         2 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
-        // The page the companion is showing, and how it draws a flag.
-        2 +
+        // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
+        3 +
         // Every zone of every pit wall page, then the page it shows, the web view address and the
         // class filter.
         allPitWallZoneSettingNames().length +
@@ -143,9 +144,9 @@ describe('settings', () => {
     // given its own answer to what it carries at the top, and 304 before the strip shapes became a
     // grid and the mirror had to publish a run for every centre the grid reaches, and 317 before a
     // pit wall zone belonged to a page: four zones and a wide one became twelve, and the pit wall
-    // gained the page it shows, and 325 before a companion was given its own answer to how it draws
-    // a flag.
-    expect(props).toHaveLength(326);
+    // gained the page it shows, 325 before a companion was given its own answer to how it draws a
+    // flag, and 326 before it was given the module the plugin holds it on while SimHub loads.
+    expect(props).toHaveLength(327);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -260,6 +261,7 @@ describe('settings', () => {
       ...Array.from({ length: MODULE_COUNT }, (_, i) => `${PROPERTY_PREFIX}.${moduleSettingName(i + 1)}`),
       `${PROPERTY_PREFIX}.${COMPANION_PAGE_SETTING}`,
       `${PROPERTY_PREFIX}.${COMPANION_FLAG_FORMAT_SETTING}`,
+      `${PROPERTY_PREFIX}.${COMPANION_OPEN_ON_SETTING}`,
     ]);
 
     const own = facePrefix(FACE_SIZES[0]!);
@@ -399,8 +401,11 @@ describe('plugin mirror', () => {
     expect(pluginSource('Contract.cs')).toContain('public static string CompanionPageProperty(string ns)');
     expect(pluginSource('OpenDash.cs')).toContain('this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace)');
     const panel = panelSource();
-    // No control writes them, because nothing would read what they wrote.
-    expect(panel).not.toContain('screen.CompanionStart = value;');
+    // The start module writes its setting and forces it, which is what moves the screen now: the
+    // page above is no longer read by the package.
+    expect(panel).toContain('screen.CompanionStart = value;');
+    expect(panel).toContain('screen.OpenOnStartModule();');
+    // The glance does not, because coming back needs a module openDash cannot name. #362.
     expect(panel).not.toContain('screen.CompanionQuickGlance = value');
     // And no binder offers an action the companion no longer registers.
     expect(panel).not.toContain('Contract.NextModuleActionFor(screen.Namespace)');

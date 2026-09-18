@@ -1230,7 +1230,29 @@ namespace OpenDashPlugin
             // Last, after the page: both halves of the contract assert this group by index, so a new
             // name joins the end of it.
             yield return CompanionFlagFormatProperty(ns);
+            yield return CompanionOpenOnProperty(ns);
         }
+
+        /// <summary>Property name of the module a companion is being forced onto: CompanionOpenOn.</summary>
+        public static string CompanionOpenOnProperty(string ns)
+        {
+            return ns + "OpenOn";
+        }
+
+        /// <summary>Force nothing, which is what every frame but the first few seconds reads.</summary>
+        public const int DefaultCompanionOpenOn = -1;
+
+        /// <summary>
+        /// How long after SimHub loads a companion is held on its start module.
+        /// </summary>
+        /// <remarks>
+        /// Long enough for SimHub to have loaded the dashboard and evaluated its screens, short enough
+        /// that a driver reaching for the screen is never fighting it. The window exists because the
+        /// only way a plugin can choose a screen is to leave exactly one enabled and let SimHub move
+        /// off the others; once it has moved, everything re-enables around a selection SimHub has no
+        /// reason to leave, and a tap pages from there.
+        /// </remarks>
+        public static readonly TimeSpan CompanionOpenOnWindow = TimeSpan.FromSeconds(6);
 
         /// <summary>Property name of a companion's flag format: CompanionFlagFormat.</summary>
         public static string CompanionFlagFormatProperty(string ns)

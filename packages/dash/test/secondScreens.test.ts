@@ -19,7 +19,7 @@ import {
   secondScreenProperties,
 } from '../src/contract.ts';
 import { ncalc, validatePackage, type ChartItem, type Dashboard, type Item, type RadarItem, type RectangleItem, type StaticMapItem, type TextItem, type WidgetItem } from '../src/generator.ts';
-import { PIT_WALL_PAGES, type PitWallPageMeta } from '../src/contract.ts';
+import { COMPANION_OPEN_ON_SETTING, PIT_WALL_PAGES, type PitWallPageMeta } from '../src/contract.ts';
 import { PROPERTY_PREFIX } from '../src/contract.ts';
 import { packImages } from '../src/build.ts';
 import { MODULES, pageBuilder } from '../src/modules/index.ts';
@@ -205,20 +205,25 @@ describe('the companion', () => {
   });
 
   /**
-   * Every screen on its own module switch, and on nothing else.
+   * Every screen on its own module switch, and on the module the plugin is forcing where it forces one.
    *
-   * It used to be both halves -- the switch and the page the plugin was showing -- so exactly one of
-   * the twenty-one was enabled at a time. That is what made a tap do nothing: SimHub's only touch
-   * gesture maps a tap to the previous or next *screen*, and `Dashboard.SelectNextScreen` walks the
-   * screens whose expression is true, so a list of one had nowhere to go. The rotation alone now
-   * decides which screens exist and SimHub decides which is up.
+   * It used to be the switch and *the page the plugin was showing*, evaluated every frame, so exactly
+   * one of the twenty-one was ever enabled. That is what made a tap do nothing: SimHub's only touch
+   * gesture maps a tap to the previous or next screen, and `SelectNextScreen` walks the screens whose
+   * expression is true, so a list of one had nowhere to go.
+   *
+   * The forcing half is false on every ordinary frame, so the rotation alone decides what exists and
+   * SimHub decides which is up. It goes true for the few seconds after SimHub loads, and one screen
+   * left standing is one SimHub selects -- which is how a companion still opens on a chosen module.
    */
   test('switches each screen on its own module, and leaves the paging to SimHub', () => {
     main.screens.forEach((screen, i) => {
-      expect(screen.enabledExpression).toBe(secondScreen.moduleEnabled(i + 1));
+      expect(screen.enabledExpression).toBe(secondScreen.moduleLive(i + 1));
       expect(screen.enabledExpression).toContain(moduleSettingName(i + 1));
-      // The page is not in it, which is the whole of the change.
+      // The page the plugin used to drive it with is not in it, which is the whole of the change.
       expect(screen.enabledExpression).not.toContain(`OpenDash.${COMPANION_PAGE_SETTING}`);
+      // And the force is, defaulting to -1 so that a package with no plugin forces nothing.
+      expect(screen.enabledExpression).toContain(`OpenDash.${COMPANION_OPEN_ON_SETTING}], -1)`);
     });
     // Energy, damage and track rivals default to off, which is a 0 in the expression.
     expect(main.screens[5]!.enabledExpression).toContain(', 0)');

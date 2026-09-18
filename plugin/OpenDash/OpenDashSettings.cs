@@ -1110,6 +1110,22 @@ namespace OpenDashPlugin
             return screen == null ? Contract.DefaultPitWallPage : Contract.NormalisePitWallPage(screen.PitWallPage);
         }
 
+        /// <summary>The module one companion is being forced onto, or -1 once the window has passed.</summary>
+        public int ScreenCompanionOpenOn(string ns)
+        {
+            var screen = ScreenByNamespace(ns);
+            return screen == null ? Contract.DefaultCompanionOpenOn : screen.CompanionOpenOn;
+        }
+
+        /// <summary>Hands every companion's paging back to SimHub, which Init does once the window passes.</summary>
+        public void ReleaseStartModules()
+        {
+            foreach (var screen in RigScreens())
+            {
+                if (screen.IsCompanion) screen.ReleaseStartModule();
+            }
+        }
+
         /// <summary>How one companion draws a flag: off, the strip at the foot, or over the module.</summary>
         public string ScreenCompanionFlagFormat(string ns)
         {

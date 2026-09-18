@@ -1265,7 +1265,7 @@ namespace OpenDashPlugin.Tests
             // are not switches, and the pit wall's own: a zone per page, the page it shows,
             // the URL and the class filter.
             var perPitWall = Contract.PitWallZoneSlots.Count + 3;
-            Assert.Equal(shared + 2 * perFace + Modules.Count + 2 + perPitWall + lights, names.Count);
+            Assert.Equal(shared + 2 * perFace + Modules.Count + 3 + perPitWall + lights, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Contains("Face1920x480ZoneA", names);
             Assert.Contains("Face850x480ZoneA", names);
@@ -1277,7 +1277,7 @@ namespace OpenDashPlugin.Tests
 
             settings.RemoveScreen("Face850x480");
             settings.Normalise();
-            Assert.Equal(shared + perFace + Modules.Count + 2 + perPitWall + lights, settings.DeclaredProperties().Count());
+            Assert.Equal(shared + perFace + Modules.Count + 3 + perPitWall + lights, settings.DeclaredProperties().Count());
         }
 
         /// <summary>A screen on the stock namespace for its kind and size, as the first one at a size is.</summary>

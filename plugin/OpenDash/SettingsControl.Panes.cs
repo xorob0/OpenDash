@@ -928,14 +928,45 @@ namespace OpenDashPlugin
         /// nothing to walk. A row that no longer does anything is worse than a row that is not there,
         /// so they are replaced by the sentence saying where the controls went.
         /// </remarks>
+        /// <summary>One module of the catalogue, numbered as the panel numbers them.</summary>
+        private ComboBox BuildModuleSelect(int selected, string tooltip, Action<int> chosen)
+        {
+            var select = new ComboBox
+            {
+                Width = PanelPitWallPlan.SelectWidth,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                ToolTip = tooltip,
+            };
+            Ui.Field(select, Theme.ControlHeightSm);
+            foreach (var module in Modules.All) select.Items.Add(module.Number.ToString("00") + " \u00b7 " + module.Name);
+            select.SelectedIndex = selected >= 0 && selected < Modules.Count ? selected : 0;
+            select.SelectionChanged += (sender, args) =>
+            {
+                if (select.SelectedIndex < 0 || select.SelectedIndex >= Modules.Count) return;
+                chosen(select.SelectedIndex);
+                Save();
+            };
+            return select;
+        }
+
         private FrameworkElement BuildCompanionPaging(ScreenInstance screen)
         {
+            var startText = Ui.VStack(4, Ui.Body("Opens on"),
+                Ui.Caption("The module a session starts on. openDash holds it there for a few seconds while SimHub loads, then hands the paging back."));
+            startText.MaxWidth = 420;
             return Ui.Section("Which module is up",
                 Ui.Caption(
                     "Tap the left or right half of the screen to go back or forward through the modules you have left on. "
                     + "To page it from a wheel button instead, bind SimHub's own \"Next screen\" for this dashboard under "
                     + "Controls and events.",
-                    BodyWidth));
+                    BodyWidth),
+                Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session opens on", value =>
+                {
+                    screen.CompanionStart = value;
+                    // And force it now, so the screen in front of you moves rather than waiting for the
+                    // next SimHub start. Somebody choosing where it opens is looking at the thing.
+                    screen.OpenOnStartModule();
+                })));
         }
 
         /// <summary>How this companion draws a flag. Full screen by default, which is what a phone on a

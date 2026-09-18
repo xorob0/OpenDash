@@ -74,7 +74,7 @@ namespace OpenDashPlugin.Tests
             // and the switch on the spotter bar's movement joined the rig's own names; the eleventh is
             // the switch on the digit's redline flash, which is a panel's own for the same reason.
             Assert.Equal(
-                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 2 + Contract.PitWallZoneSlots.Count + 3 + 6 + Contract.FlagBoxMatrices.Count * 11 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 3 + 6 + Contract.FlagBoxMatrices.Count * 11 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -91,7 +91,7 @@ namespace OpenDashPlugin.Tests
             // four zones and a wide one became twelve, and the pit wall gained the page it opens on and
             // the page it shows, and 325 before a companion was given its own answer to how it draws a
             // flag.
-            Assert.Equal(326, names.Count);
+            Assert.Equal(327, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -133,8 +133,9 @@ namespace OpenDashPlugin.Tests
             // one companion name that is not a switch. The start and the glance are not properties.
             Assert.Equal("CompanionPage", names[afterFaces + 21]);
             Assert.Equal("CompanionFlagFormat", names[afterFaces + 22]);
+            Assert.Equal("CompanionOpenOn", names[afterFaces + 23]);
             Assert.Equal(new[] { "PitWallRaceA", "PitWallRaceB", "PitWallTowerWide", "PitWallTowerA", "PitWallTowerB", "PitWallTelemetryA", "PitWallTelemetryB", "PitWallTelemetryC", "PitWallPortraitA", "PitWallPortraitB", "PitWallPortraitC", "PitWallPortraitD", "PitWallPage", "WebViewUrl", "PitWallClassOnly", "LightsBrightness", "LightsNightBrightness",
-                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 23).Take(21));
+                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 24).Take(21));
             // One filter for the screen, not one per zone: a pit wall zone is a widget pointed at one
             // dashboard file per rectangle, so zones A and B of the race page are the same file. The
             // page they belong to is what tells them apart now, and that is a different question.
@@ -171,8 +172,8 @@ namespace OpenDashPlugin.Tests
             // The twenty-one switches, the page and the flag format. The start module and the glance
             // module are the plugin's own state and not properties, because nothing on the screen reads
             // either of them.
-            Assert.Equal(Modules.Count + 2, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
-            Assert.Equal("CompanionFlagFormat", Contract.ScreenPropertyNames(Contract.CompanionPrefix).Last());
+            Assert.Equal(Modules.Count + 3, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());
+            Assert.Equal("CompanionOpenOn", Contract.ScreenPropertyNames(Contract.CompanionPrefix).Last());
             Assert.Equal(Contract.FacePropertyNames(Contract.ReferenceFace), Contract.ScreenPropertyNames(Contract.FacePrefix(Contract.ReferenceFace)));
 
             Assert.True(Contract.IsKnownScreen(Contract.FacePrefix(Contract.ReferenceFace)));

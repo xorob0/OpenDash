@@ -105,11 +105,16 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
     // list had one member and next and previous were both no-ops: tapping a companion did nothing at
     // all, which is what a rig reported.
     //
-    // So SimHub owns the paging here and `CompanionPage` no longer drives it. What that costs is the
-    // start module and the held quick glance, both of which needed openDash to be the one choosing;
-    // SimHub publishes no hook a plugin can use to change the screen, so there is no way to keep them
-    // and have the tap work. #362 is where they go if one ever appears.
-    enabledExpression: secondScreen.moduleEnabled(page),
+    // So SimHub owns the paging here and `CompanionPage` no longer drives it.
+    //
+    // The second half of the expression is how the start module survives that. It is false on every
+    // ordinary frame -- so the rotation alone decides what exists and a tap pages it -- and true for
+    // the few seconds after SimHub loads during which the plugin names one module. One screen left
+    // standing is one SimHub selects, which is the same mechanism the old gate ran on, used once
+    // instead of every frame. The held glance needs it twice and cannot have it: coming back means
+    // naming the module the driver was on, and SimHub neither publishes that nor lets a plugin ask.
+    // #362.
+    enabledExpression: secondScreen.moduleLive(page),
     items,
   };
 }

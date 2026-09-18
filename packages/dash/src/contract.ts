@@ -885,6 +885,27 @@ export const COMPANION_PAGE_SETTING = 'CompanionPage';
  */
 export const COMPANION_PAGE_IS_UNREAD = true;
 
+/**
+ * `CompanionOpenOn`: the module to force, or -1 for none. The start module, recovered.
+ *
+ * **openDash can still choose a screen; it just cannot choose it twice.** SimHub re-evaluates every
+ * screen's expression each frame and moves off one that has stopped being enabled -- the mechanism
+ * the companion ran on before, and the reason the old gate worked at all. So leaving exactly one
+ * module enabled still forces SimHub onto it. The plugin holds this at the start module for a few
+ * seconds after SimHub loads and then clears it, and everything re-enables around a screen SimHub
+ * has already selected and has no reason to leave.
+ *
+ * What it does *not* recover is the held glance, and the difference is memory rather than control.
+ * Going to a module is one forced selection; coming back is a second one, to whichever module the
+ * driver had been on -- and now that SimHub owns the paging, openDash does not know what that is.
+ * SimHub publishes no property naming the selected screen. Its own navigation stack does know, and
+ * `Dashboard.GotoScreen` uses it, but that method is internal. #362.
+ */
+export const COMPANION_OPEN_ON_SETTING = 'CompanionOpenOn';
+
+/** -1: force nothing, which is what a package with no plugin reads and what every ordinary frame is. */
+export const DEFAULT_COMPANION_OPEN_ON = -1;
+
 /** Lap times, which is the first module in page order and what a companion opens on. */
 export const DEFAULT_COMPANION_PAGE = 0;
 
@@ -913,7 +934,7 @@ export const COMPANION_FLAG_FORMAT_SETTING = 'CompanionFlagFormat';
  * the reason every other name is: both halves of the contract assert this group by index.
  */
 export function companionProperties(): string[] {
-  return [...MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)), COMPANION_PAGE_SETTING, COMPANION_FLAG_FORMAT_SETTING];
+  return [...MODULE_CATALOGUE.map((m) => moduleSettingName(m.number)), COMPANION_PAGE_SETTING, COMPANION_FLAG_FORMAT_SETTING, COMPANION_OPEN_ON_SETTING];
 }
 
 /**
@@ -1133,6 +1154,18 @@ export const secondScreen = {
    * arrangements of a zone face are chosen by.
    */
   moduleShown: (number: number): Expr => and(secondScreen.moduleEnabled(number), eq(secondScreen.companionPage(), num(number - 1))),
+  /** `isnull([OpenDash.CompanionOpenOn], -1)`: the module the plugin is forcing, or -1. */
+  companionOpenOn: (): Expr => isnull(prop(propertyName(COMPANION_OPEN_ON_SETTING)), num(DEFAULT_COMPANION_OPEN_ON)),
+  /**
+   * A module's screen is enabled when the rotation leaves it on, and -- while the plugin is forcing
+   * one -- when it is the one being forced.
+   *
+   * The second half is false on every ordinary frame, so SimHub's own paging owns the screen and a
+   * tap works. It goes true for a few seconds after SimHub loads, which leaves one screen standing
+   * and makes SimHub select it: that is the start module.
+   */
+  moduleLive: (number: number): Expr =>
+    and(secondScreen.moduleEnabled(number), or(lt(secondScreen.companionOpenOn(), num(0)), eq(secondScreen.companionOpenOn(), num(number - 1)))),
   /** `isnull([OpenDash.PitWallRaceA], 0)`: which page one page's zone shows. */
   zonePage: (id: PitWallPageMeta['id'], slot: string): Expr =>
     isnull(prop(propertyName(pitWallZoneSettingName(id, slot))), num(pitWallZoneSlot(id, slot).fallback)),
