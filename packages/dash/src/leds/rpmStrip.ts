@@ -36,7 +36,7 @@ import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
 import { lampsOf, type PlacedLamp } from './lamps.ts';
 import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
-import { centreStart, deviceLength, reversedPositions, rightStart, stripLength, type StripShape } from './strip.ts';
+import { centreStart, deviceLength, rightStart, stripLength, type StripShape } from './strip.ts';
 
 const { and, eq, gt, not, num, str } = ncalc;
 
@@ -400,9 +400,9 @@ const brightnessGroup = (children: readonly leds.LedContainer[]): leds.LedContai
 });
 
 /**
- * The profile for one strip shape. A reversed strip is the same tree inside a `Groups.RemapGroup`
- * that turns logical positions into physical ones, which is the whole reason a new device is a row
- * of numbers rather than a second profile.
+ * The profile for one strip shape. A strip the maker wired in some other order is the same tree
+ * inside a `Groups.RemapGroup` that turns logical positions into physical ones, which is the whole
+ * reason a new device is a row of numbers rather than a second profile.
  */
 export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedProfile {
   const length = deviceLength(shape);
@@ -425,7 +425,7 @@ export function rpmStripProfile(shape: StripShape, profileId: string): leds.LedP
     name: rpmStripProfileName(shape),
     profileId,
     ledCount: length,
-    containers: shape.reversed ? [{ kind: 'remapGroup', description: 'wired from the far end', positions: reversedPositions(length), children: tree }] : tree,
+    containers: shape.positions ? [{ kind: 'remapGroup', description: 'the order this device is wired in', positions: shape.positions, children: tree }] : tree,
   };
 }
 

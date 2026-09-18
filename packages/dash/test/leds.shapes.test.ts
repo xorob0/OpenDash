@@ -20,13 +20,13 @@ import { FLAG_BOX_FILE } from '../src/build.ts';
 const fileOf = (shape: (typeof ALL_SHAPES)[number]): string => `${rpmStripFileName(shape)}${leds.LEDS_PROFILE_EXTENSION}`;
 
 describe('the profile file names', () => {
-  test('are twelve strips and seven brows, which with the flag box is the twenty a release carries', () => {
+  test('are thirteen strips and seven brows, which with the flag box is the twenty-one a release carries', () => {
     // The plugin's Lights section offers a row per embedded profile, so this count is the number of
     // rows a driver sees. It is pinned because it is easy to lose one: a shape dropped from the
     // declarations is a device that silently stops being installable.
-    expect(STRIP_SHAPES.length).toBe(12);
+    expect(STRIP_SHAPES.length).toBe(13);
     expect(BROW_SHAPES.length).toBe(7);
-    expect(ALL_SHAPES.length).toBe(19);
+    expect(ALL_SHAPES.length).toBe(20);
   });
 
   test('never collide with each other', () => {
