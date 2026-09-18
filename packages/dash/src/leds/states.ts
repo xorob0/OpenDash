@@ -19,7 +19,7 @@ import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type MatrixContainer, type MatrixFrame } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
-import { blinkFrames, still, type Grid, type Palette } from './glyph.ts';
+import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
 import { tankIsLow } from '../second/values.ts';
 
 const { and, eq, game, gt, lt, computed, not, num, str } = ncalc;
@@ -91,11 +91,34 @@ export const SPEEDING: Grid = [
 ];
 
 // --- The spotter -----------------------------------------------------------------------------
+//
+// The bar is an overlay rather than a rank: it lights the edge columns and leaves the rest of the
+// panel absent, and SimHub's own merge drops an absent pixel rather than clearing what is beneath
+// it (docs/research/simhub-leds-format.md). Painted after the flags, it therefore shows a car
+// alongside *over* a standing yellow instead of instead of it, which is the whole point: the flag
+// stays readable and the bar says which side.
+//
+// Two columns rather than one, so it is not mistaken for a stuck LED. White rather than the purple
+// the canvas draws: design/tokens.json holds no such value and a colour is decided there.
 
-/** A car on the left: a bar down the left edge. Two columns, so it is not mistaken for an artefact. */
-export const CAR_LEFT: Grid = Array.from({ length: 8 }, () => 'WW......');
-export const CAR_RIGHT: Grid = Array.from({ length: 8 }, () => '......WW');
-export const CAR_BOTH: Grid = Array.from({ length: 8 }, () => 'WW....WW');
+const bar = (columns: readonly number[]): Grid => Array.from({ length: 8 }, () => Array.from({ length: 8 }, (_, c) => (columns.includes(c) ? 'W' : '.')).join(''));
+
+/** A car on the left: a bar down the left edge, held. */
+export const CAR_LEFT: Grid = bar([0, 1]);
+export const CAR_RIGHT: Grid = bar([6, 7]);
+export const CAR_BOTH: Grid = bar([0, 1, 6, 7]);
+
+/**
+ * The same bars growing inwards, one column then two then three.
+ *
+ * The middle step is the held picture, so the growing variant is the held one with a step either
+ * side of it rather than a second drawing. The sequence loops, which is what an `AnimationContainer`
+ * does with any frame list; there is no play-once, and a bar that grew and then stopped would be
+ * indistinguishable from the held one after the first second anyway.
+ */
+export const CAR_LEFT_GROWING: readonly Grid[] = [bar([0]), CAR_LEFT, bar([0, 1, 2])];
+export const CAR_RIGHT_GROWING: readonly Grid[] = [bar([7]), CAR_RIGHT, bar([5, 6, 7])];
+export const CAR_BOTH_GROWING: readonly Grid[] = [bar([0, 7]), CAR_BOTH, bar([0, 1, 2, 5, 6, 7])];
 
 // --- The warnings ----------------------------------------------------------------------------
 
@@ -185,8 +208,15 @@ const speeding = (): Expr => and(inLane(), gt(speedMs(), ncalc.add(pitLimitMs(),
 export interface BoxState {
   id: string;
   raised: Expr;
+  /** The settled picture: what the state shows once it is no longer moving. */
   grid: Grid;
   blink: boolean;
+  /**
+   * The frames it cycles instead, for the one state that may move. `grid` is still the settled
+   * picture and is what the state shows with movement switched off, so a variant is never a second
+   * drawing of the same fact.
+   */
+  steps?: readonly Grid[];
 }
 
 /**
@@ -209,16 +239,20 @@ export const pitStates = (): BoxState[] => [
  * all become `SpotterCarLeft`), so the two-car state does not survive. Three states are shipped
  * rather than a fourth faked; see docs/design/flag-box.md.
  */
-export function spotterStates(matrix: FlagBoxMatrix): BoxState[] {
+export function spotterStates(matrix: FlagBoxMatrix, growing = false): BoxState[] {
   const side = flagBoxMatrix(matrix).side();
   const left = eq(game('SpotterCarLeft'), num(1));
   const right = eq(game('SpotterCarRight'), num(1));
   const isSide = (name: string): Expr => eq(side, str(name));
   const shows = (name: string): Expr => ncalc.or(isSide('both'), isSide(name));
+  // The two variants are named apart rather than sharing one name, because they are two pictures
+  // and the contact sheet addresses a picture by the name the profile draws it under.
+  const id = (name: string): string => (growing ? `${name}Growing` : name);
+  const steps = (grids: readonly Grid[]): { steps?: readonly Grid[] } => (growing ? { steps: grids } : {});
   return [
-    { id: 'carBoth', raised: and(isSide('both'), left, right), grid: CAR_BOTH, blink: false },
-    { id: 'carLeft', raised: and(shows('left'), left), grid: CAR_LEFT, blink: false },
-    { id: 'carRight', raised: and(shows('right'), right), grid: CAR_RIGHT, blink: false },
+    { id: id('carBoth'), raised: and(isSide('both'), left, right), grid: CAR_BOTH, blink: false, ...steps(CAR_BOTH_GROWING) },
+    { id: id('carLeft'), raised: and(shows('left'), left), grid: CAR_LEFT, blink: false, ...steps(CAR_LEFT_GROWING) },
+    { id: id('carRight'), raised: and(shows('right'), right), grid: CAR_RIGHT, blink: false, ...steps(CAR_RIGHT_GROWING) },
   ];
 }
 
@@ -251,12 +285,25 @@ export function stateContainers(list: readonly BoxState[], kind: string): Matrix
 }
 
 /**
- * No state below the flags sets `blink`, so the first branch is unreachable today. It is kept
- * rather than deleted because `blink` is what the rule is written in: flagBox.test.ts asserts that
- * every state here is held, and an invariant with no field to name cannot be tested.
+ * No state below the flags sets `blink`, so that branch is unreachable today. It is kept rather
+ * than deleted because `blink` is what the rule is written in: flagBox.test.ts asserts that every
+ * state here is held, and an invariant with no field to name cannot be tested.
+ *
+ * `steps` is the one exception to "nothing below the flags moves", and it is a switch the driver
+ * turns on rather than a rate: growing is not blinking, since no frame of it is dark and the bar is
+ * on the whole time. A state that is neither blinking nor growing is one still frame.
  */
-const framesOf = (state: BoxState): MatrixFrame[] =>
-  state.blink ? blinkFrames(state.grid, DARK, STATE_PALETTE, STATE_BLINK_HZ, state.id) : still(state.grid, STATE_PALETTE, state.id);
+const framesOf = (state: BoxState): MatrixFrame[] => {
+  if (state.steps) return sequence(state.steps, state.id);
+  return state.blink ? blinkFrames(state.grid, DARK, STATE_PALETTE, STATE_BLINK_HZ, state.id) : still(state.grid, STATE_PALETTE, state.id);
+};
+
+/** Half a blink each, so a bar that grows keeps the rate everything else on this box moves at. */
+export const STATE_STEP_MS = Math.round(1000 / STATE_BLINK_HZ / 2);
+
+/** One picture per step, every step the same length; the container loops it. */
+const sequence = (grids: readonly Grid[], name: string): MatrixFrame[] =>
+  grids.map((grid) => ({ durationMs: STATE_STEP_MS, pixels: pixelsOf(grid, STATE_PALETTE, name) }));
 
 /** Nothing in the list is raised: what the next thing down needs to be true. */
 export const noneRaised = (list: readonly BoxState[]): Expr => and(...list.map((s) => not(s.raised)));

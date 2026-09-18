@@ -11,7 +11,15 @@
  *         when the ignition is on
  *           matrix 1..4                each offset onto its own panel
  *             flags                    the alert catalogue, in priority order
- *             below the flags          the pit family, the spotter, the warnings, then the gear
+ *             below the flags          the pit family, the warnings, then the gear
+ *             the spotter              an overlay on the edge, painted over all of it
+ *
+ * **The spotter is the one thing that is not a rank.** It was the second rank below the flags, so
+ * any flag at all hid a car alongside and a car alongside blanked the warnings and the gear beneath
+ * it. It is now the last container of the matrix, and it lights the edge columns and leaves the
+ * rest of the panel absent; SimHub composes containers in order and drops an absent pixel rather
+ * than clearing what is under it, so a standing yellow keeps columns three to six and the bar says
+ * which side. Nothing suppresses it and it suppresses nothing, which is what an overlay is.
  *
  * **Not racing is dark**, and that is the decision rather than a gap. Idle screens are a refusal
  * in scope.md, and a glowing logo on somebody's desk when nothing is running is the hardest
@@ -95,18 +103,21 @@ export function flagsGroup(matrix: FlagBoxMatrix): MatrixContainer {
 export const noFlagShowing = (matrix: FlagBoxMatrix): Expr => noFlagShown(criticalOnly(matrix), drawnFlags(false));
 
 /**
- * Everything below the flags, for one matrix, in order: the pit family, the spotter, the three
- * warnings, then the gear.
+ * Everything below the flags, for one matrix, in order: the pit family, the three warnings, then
+ * the gear.
  *
- * The order is the point. A spotter warning that hides a yellow, or a low fuel light that hides
- * one for the rest of a stint, is the failure this ranking exists to prevent — so all of it sits
- * under `noFlagShowing()`, and each layer's condition excludes the layers above it.
+ * The order is the point. A low fuel light that hides a limiter warning for the rest of a stint is
+ * the failure this ranking exists to prevent — so all of it sits under `noFlagShowing()`, and each
+ * layer's condition excludes the layers above it.
+ *
+ * The spotter is deliberately absent: it is {@link spotterOverlay} now, painted after all of this
+ * rather than ranked within it, so the gear shows through the middle of the panel while a car is
+ * alongside instead of being blanked by it.
  */
 export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
-  const { and, eq, not } = ncalc;
+  const { and, eq } = ncalc;
   const m = flagBoxMatrix(matrix);
   const pit = pitStates();
-  const spotter = spotterStates(matrix);
   const warnings = warningStates(matrix);
   const on = (setting: Expr): Expr => eq(setting, 'true');
   return [
@@ -115,23 +126,39 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
     { kind: 'when', description: 'Pit', formula: on(m.pit()), children: stateContainers(pit, 'Pit') },
     {
       kind: 'when',
-      description: 'Spotter',
-      formula: and(on(m.spotter()), noneRaised(pit)),
-      children: stateContainers(spotter, 'Spotter'),
-    },
-    {
-      kind: 'when',
       description: 'Warnings',
-      formula: and(on(m.warnings()), noneRaised(pit), noneRaised(spotter)),
+      formula: and(on(m.warnings()), noneRaised(pit)),
       children: stateContainers(warnings, 'Warning'),
     },
     {
       kind: 'when',
       description: 'Resting',
-      formula: and(eq(m.rest(), "'gear'"), noneRaised(pit), noneRaised(spotter), noneRaised(warnings)),
+      formula: and(eq(m.rest(), "'gear'"), noneRaised(pit), noneRaised(warnings)),
       children: [gearGroup(matrix)],
     },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
+}
+
+/**
+ * The spotter, as the last thing painted on a panel.
+ *
+ * Gated on the panel's own Spotter switch and on nothing else: no flag bit, no pit condition, no
+ * exclusion of anything above it. That is the machine-checkable form of "a car alongside is never
+ * hidden by a yellow", and it is what the frames make safe — they light two edge columns and leave
+ * the other six absent, so what was drawn underneath keeps them.
+ *
+ * Two branches on the animation switch, the way {@link gearGroup} splits the redline band into
+ * flashing and steady: an `AnimationContainer` has no condition on its own frames, so "grows only
+ * when the driver asked it to" is two sets of frames under two conditions. Off is the default,
+ * because movement on this box means act and a car alongside informs.
+ */
+export function spotterOverlay(matrix: FlagBoxMatrix): MatrixContainer[] {
+  const { eq, not } = ncalc;
+  const moves = eq(flagBox.spotterAnimation(), 'true');
+  return [
+    { kind: 'when', description: 'Spotter growing', formula: moves, children: stateContainers(spotterStates(matrix, true), 'Spotter') },
+    { kind: 'when', description: 'Spotter held', formula: not(moves), children: stateContainers(spotterStates(matrix, false), 'Spotter') },
+  ];
 }
 
 /**
@@ -152,9 +179,12 @@ export function matrixGroup(matrix: FlagBoxMatrix): MatrixContainer | undefined 
   // actually showing flags. Gating on noFlagShowing() alone blacked out the spotter, the warnings
   // and the gear on a panel with Flags switched off, for the whole time a flag was out.
   const flagsFree = or(not(eq(m.flags(), 'true')), noFlagShowing(matrix));
-  const children: MatrixContainer[] = [
-    { kind: 'when', description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup(matrix)] },
-    { kind: 'when', description: 'Below the flags', formula: flagsFree, children: belowFlags(matrix) },
+  const children = [
+    { kind: 'when' as const, description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup(matrix)] },
+    { kind: 'when' as const, description: 'Below the flags', formula: flagsFree, children: belowFlags(matrix) },
+    // Last, and outside `flagsFree`: an overlay is painted over whatever the two above it drew. It
+    // needs no StartPositionMatrix of its own, since it sits inside the group that carries one.
+    { kind: 'when' as const, description: 'Spotter', formula: eq(m.spotter(), 'true'), children: spotterOverlay(matrix) },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
   if (children.length === 0) return undefined;
   return { kind: 'when', description: `Matrix ${matrix}`, matrix, formula: doesSomething, children };

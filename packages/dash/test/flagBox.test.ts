@@ -461,15 +461,17 @@ describe('what the box does when nobody is racing', () => {
 
 describe('brightness', () => {
   test('day, night and the switch are all contract properties', () => {
-    // Five global names, not nine: critical flags only, the gear and the two temperature thresholds
+    // Six global names, not nine: critical flags only, the gear and the two temperature thresholds
     // moved under the matrix that owns them, and what is left above every panel is the rig's
-    // brightness trio and the one low-fuel threshold the strip and the faces read too.
-    expect(flagBoxProperties().slice(0, 5)).toEqual([
+    // brightness trio, the one low-fuel threshold the strip and the faces read too, and the switch
+    // on the spotter bar's movement.
+    expect(flagBoxProperties().slice(0, 6)).toEqual([
       'OpenDash.LightsBrightness',
       'OpenDash.LightsNightBrightness',
       'OpenDash.LightsNightMode',
       'OpenDash.FlagBoxLowFuelLaps',
       'OpenDash.LightsLowFuelLaps',
+      'OpenDash.FlagBoxSpotterAnimation',
     ]);
   });
 
@@ -477,7 +479,15 @@ describe('brightness', () => {
     // The rule the move is for: a FlagBox* name with no index in it is one box's setting silently
     // shared with every other box on the rig, which is how Critical flags only, the gear and the two
     // temperatures came to sit above four panels at once.
-    const rigWide = new Set(['OpenDash.LightsBrightness', 'OpenDash.LightsNightBrightness', 'OpenDash.LightsNightMode', 'OpenDash.LightsLowFuelLaps']);
+    // FlagBoxSpotterAnimation is the rig's for the reason the brightness trio is: a driver who finds
+    // a moving bar distracting finds it distracting on every panel they own.
+    const rigWide = new Set([
+      'OpenDash.LightsBrightness',
+      'OpenDash.LightsNightBrightness',
+      'OpenDash.LightsNightMode',
+      'OpenDash.LightsLowFuelLaps',
+      'OpenDash.FlagBoxSpotterAnimation',
+    ]);
     const text = serializeProfile(profile);
     for (const name of flagBoxProperties()) {
       if (rigWide.has(name)) continue;
@@ -854,10 +864,71 @@ describe('the pit family, the spotter and the warnings', () => {
     expect(text).toInclude('isnull([DataCorePlugin.GameData.PitLimiterSpeedMs], 999)');
   });
 
-  test('the pit family outranks the spotter, which outranks the warnings', () => {
+  test('the pit family outranks the warnings, and the spotter is not in the ranking at all', () => {
     const below = all.find((c) => c.description === 'Below the flags');
     const order = below && 'children' in below ? below.children.map((c) => c.description) : [];
-    expect(order).toEqual(['Pit', 'Spotter', 'Warnings', 'Resting']);
+    expect(order).toEqual(['Pit', 'Warnings', 'Resting']);
+  });
+
+  test('the spotter is the last container of a panel, painted after the flags and after all of that', () => {
+    // It was the second rank below the flags, so a yellow hid a car alongside and a car alongside
+    // blanked the warnings and the gear. It is an overlay now: last, and over everything.
+    for (const matrix of FLAG_BOX_MATRICES) {
+      const panel = all.find((c) => c.description === `Matrix ${matrix}`);
+      const order = panel && 'children' in panel ? panel.children.map((c) => c.description) : [];
+      expect({ matrix, order }).toMatchObject({ order: ['Flags', 'Below the flags', 'Spotter'] });
+    }
+  });
+
+  test('the spotter container names no flag bit and no pit condition, which is what "never hidden by a yellow" means', () => {
+    // The machine-checkable half of the overlay. The visual half -- that an absent pixel leaves the
+    // flag beneath it showing -- is a claim about SimHub's merge and belongs on the rig.
+    const spotter = all.find((c) => c.description === 'Spotter');
+    expect(spotter?.kind).toBe('when');
+    const formula = spotter && 'formula' in spotter ? String(spotter.formula) : '';
+    expect(formula).toBe(`(isnull([OpenDash.FlagBoxMatrix1Spotter], true)) = (true)`);
+    const subtree = JSON.stringify(spotter);
+    for (const forbidden of ['SessionFlagsDetails', 'PitLimiterOn', 'IsInPitLane', 'OilTemperature', 'Fuel_RemainingLaps']) {
+      expect({ forbidden, named: subtree.includes(forbidden) }).toMatchObject({ named: false });
+    }
+    // ...and nothing beneath it excludes it either, which is the other half: the warnings and the
+    // gear stop being blanked by a car alongside.
+    const below = all.find((c) => c.description === 'Below the flags');
+    expect(JSON.stringify(below)).not.toInclude('SpotterCarLeft');
+  });
+
+  test('every spotter frame leaves the middle of the panel absent, so what is under it shows through', () => {
+    for (const growing of [false, true]) {
+      for (const state of spotterStates(1, growing)) {
+        for (const grid of state.steps ?? [state.grid]) {
+          // The widest step of the growing bar reaches three columns in from an edge, so the band it
+          // always leaves is the two centre columns rather than four.
+          for (const row of grid) expect({ state: state.id, row, centre: row.slice(3, 5) }).toMatchObject({ centre: '..' });
+        }
+      }
+    }
+    // Held, which is the default and the case the canvas draws over a standing yellow: two columns
+    // an edge, so columns three to six keep the flag.
+    for (const state of spotterStates(1)) {
+      for (const row of state.grid) expect({ state: state.id, row, ground: row.slice(2, 6) }).toMatchObject({ ground: '....' });
+    }
+  });
+
+  test('the growing bar is a switch of its own, off by default, and is otherwise the held bar', () => {
+    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxSpotterAnimation');
+    expect(serializeProfile(profile)).toInclude('isnull([OpenDash.FlagBoxSpotterAnimation], false)');
+    // Three frames of one, two and three columns, the middle of which is the held picture: the
+    // growing variant is the held one with a step either side rather than a second drawing.
+    const lit = (grid: readonly string[]): number => (grid[0] ?? '').split('').filter((c) => c !== '.').length;
+    for (const state of spotterStates(1, true)) {
+      expect({ state: state.id, frames: state.steps?.length }).toMatchObject({ frames: 3 });
+      const steps = state.steps ?? [];
+      const perSide = state.id.startsWith('carBoth') ? 2 : 1;
+      expect({ state: state.id, widths: steps.map(lit) }).toMatchObject({ widths: [perSide, 2 * perSide, 3 * perSide] });
+      expect({ state: state.id, settles: steps[1]?.join('|') }).toMatchObject({ settles: state.grid.join('|') });
+    }
+    // Growing is not blinking: no frame of it is dark, so the bar is on the whole time.
+    for (const state of spotterStates(1, true)) expect({ state: state.id, blink: state.blink }).toMatchObject({ blink: false });
   });
 
   test('low fuel is measured in laps, because litres mean nothing without the car', () => {

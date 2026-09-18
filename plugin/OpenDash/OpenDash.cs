@@ -171,6 +171,7 @@ namespace OpenDashPlugin
             // is what a settings file on disk is keyed by.
             this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
             this.AttachDelegate(Contract.LightsLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
+            this.AttachDelegate(Contract.FlagBoxSpotterAnimation, () => Settings.FlagBoxSpotterAnimation);
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 var m = matrix;

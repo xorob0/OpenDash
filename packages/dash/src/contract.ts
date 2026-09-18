@@ -944,6 +944,20 @@ export const DEFAULT_WATER_TEMP: Record<string, number> = { Celcius: 110, Fahren
  */
 export const DEFAULT_FLAG_BOX_CRITICAL_ONLY = false;
 
+/**
+ * Whether the spotter bar grows inwards or is simply there.
+ *
+ * The rig's rather than a box's, for the reason the brightness trio is: a driver who finds a moving
+ * bar distracting finds it distracting on every panel they own.
+ *
+ * Off, unlike the flags' own switch, and the difference is the whole of what the box's vocabulary
+ * says. Movement means act: a flag that ends or interrupts the race moves, and everything that
+ * merely informs is held. A car alongside informs, so the bar that says so holds by default and
+ * moves only for a driver who has asked it to.
+ */
+export const FLAG_BOX_SPOTTER_ANIMATION_SETTING = 'FlagBoxSpotterAnimation';
+export const DEFAULT_FLAG_BOX_SPOTTER_ANIMATION = false;
+
 /** Reads of the lights settings, each defaulted so the profile works without the plugin. */
 export const flagBox = {
   /** `isnull([OpenDash.LightsBrightness], 100)`: the day brightness. */
@@ -965,6 +979,8 @@ export const flagBox = {
    */
   lowFuelLaps: (): Expr =>
     isnull(prop(propertyName(LIGHTS_LOW_FUEL_LAPS_SETTING)), isnull(prop(propertyName(FLAG_BOX_LOW_FUEL_LAPS_SETTING)), num(DEFAULT_FLAG_BOX_LOW_FUEL_LAPS))),
+  /** `isnull([OpenDash.FlagBoxSpotterAnimation], false)`: whether the spotter bar grows. */
+  spotterAnimation: (): Expr => isnull(prop(propertyName(FLAG_BOX_SPOTTER_ANIMATION_SETTING)), String(DEFAULT_FLAG_BOX_SPOTTER_ANIMATION)),
 };
 
 /** `if(unit = 'Fahrenheit', 248, if(unit = 'Kelvin', 393, 120))`, so no default is wrong in a unit. */
@@ -988,6 +1004,7 @@ export function flagBoxProperties(): string[] {
     // packages/dash/test/declared-properties.txt, and both halves of the contract assert its head
     // by index, so a new name joins the end of the group and is never inserted into it.
     LIGHTS_LOW_FUEL_LAPS_SETTING,
+    FLAG_BOX_SPOTTER_ANIMATION_SETTING,
   ];
   const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
   return [...global, ...perMatrix].map(propertyName);

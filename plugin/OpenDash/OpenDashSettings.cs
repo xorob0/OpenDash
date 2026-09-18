@@ -129,6 +129,10 @@ namespace OpenDashPlugin
 
         public int FlagBoxLowFuelLaps { get; set; } = Contract.DefaultFlagBoxLowFuelLaps;
 
+        /// <summary>Whether the spotter bar grows inwards. The rig's rather than a box's, and off by
+        /// default: a car alongside informs, and only a flag that interrupts the race moves.</summary>
+        public bool FlagBoxSpotterAnimation { get; set; } = Contract.DefaultFlagBoxSpotterAnimation;
+
         // The four settings a box owns, as they were written before they belonged to a box: one value
         // for the whole tab. Nullable and with no initialiser, so that "absent" is distinguishable from
         // "the driver chose the default"; MigrateFlagBoxToMatrices() copies each into all four panels
@@ -1033,6 +1037,7 @@ namespace OpenDashPlugin
             FlagBoxCriticalOnly = other.FlagBoxCriticalOnly;
             FlagBoxGear = other.FlagBoxGear;
             FlagBoxLowFuelLaps = other.FlagBoxLowFuelLaps;
+            FlagBoxSpotterAnimation = other.FlagBoxSpotterAnimation;
             FlagBoxOilTemp = other.FlagBoxOilTemp;
             FlagBoxWaterTemp = other.FlagBoxWaterTemp;
             FlagBoxMatrixCriticalOnly = other.FlagBoxMatrixCriticalOnly == null ? null : (bool[])other.FlagBoxMatrixCriticalOnly.Clone();

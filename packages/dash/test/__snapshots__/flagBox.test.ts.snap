@@ -47,13 +47,6 @@ exports[`the emitted file the tree 1`] = `
               animation Pit limiterOutOfLane glyph
             when Pit limiterInLane
               animation Pit limiterInLane glyph
-          when Spotter
-            when Spotter carBoth
-              animation Spotter carBoth glyph
-            when Spotter carLeft
-              animation Spotter carLeft glyph
-            when Spotter carRight
-              animation Spotter carRight glyph
           when Warnings
             when Warning oilHot
               animation Warning oilHot glyph
@@ -179,6 +172,21 @@ exports[`the emitted file the tree 1`] = `
                   animation Gear 8 rest glyph
                 when Gear 9 rest
                   animation Gear 9 rest glyph
+        when Spotter
+          when Spotter growing
+            when Spotter carBothGrowing
+              animation Spotter carBothGrowing glyph
+            when Spotter carLeftGrowing
+              animation Spotter carLeftGrowing glyph
+            when Spotter carRightGrowing
+              animation Spotter carRightGrowing glyph
+          when Spotter held
+            when Spotter carBoth
+              animation Spotter carBoth glyph
+            when Spotter carLeft
+              animation Spotter carLeft glyph
+            when Spotter carRight
+              animation Spotter carRight glyph
       when Matrix 2 -> matrix 2
         when Flags
           group Flags
@@ -220,13 +228,6 @@ exports[`the emitted file the tree 1`] = `
               animation Pit limiterOutOfLane glyph
             when Pit limiterInLane
               animation Pit limiterInLane glyph
-          when Spotter
-            when Spotter carBoth
-              animation Spotter carBoth glyph
-            when Spotter carLeft
-              animation Spotter carLeft glyph
-            when Spotter carRight
-              animation Spotter carRight glyph
           when Warnings
             when Warning oilHot
               animation Warning oilHot glyph
@@ -352,6 +353,21 @@ exports[`the emitted file the tree 1`] = `
                   animation Gear 8 rest glyph
                 when Gear 9 rest
                   animation Gear 9 rest glyph
+        when Spotter
+          when Spotter growing
+            when Spotter carBothGrowing
+              animation Spotter carBothGrowing glyph
+            when Spotter carLeftGrowing
+              animation Spotter carLeftGrowing glyph
+            when Spotter carRightGrowing
+              animation Spotter carRightGrowing glyph
+          when Spotter held
+            when Spotter carBoth
+              animation Spotter carBoth glyph
+            when Spotter carLeft
+              animation Spotter carLeft glyph
+            when Spotter carRight
+              animation Spotter carRight glyph
       when Matrix 3 -> matrix 3
         when Flags
           group Flags
@@ -393,13 +409,6 @@ exports[`the emitted file the tree 1`] = `
               animation Pit limiterOutOfLane glyph
             when Pit limiterInLane
               animation Pit limiterInLane glyph
-          when Spotter
-            when Spotter carBoth
-              animation Spotter carBoth glyph
-            when Spotter carLeft
-              animation Spotter carLeft glyph
-            when Spotter carRight
-              animation Spotter carRight glyph
           when Warnings
             when Warning oilHot
               animation Warning oilHot glyph
@@ -525,6 +534,21 @@ exports[`the emitted file the tree 1`] = `
                   animation Gear 8 rest glyph
                 when Gear 9 rest
                   animation Gear 9 rest glyph
+        when Spotter
+          when Spotter growing
+            when Spotter carBothGrowing
+              animation Spotter carBothGrowing glyph
+            when Spotter carLeftGrowing
+              animation Spotter carLeftGrowing glyph
+            when Spotter carRightGrowing
+              animation Spotter carRightGrowing glyph
+          when Spotter held
+            when Spotter carBoth
+              animation Spotter carBoth glyph
+            when Spotter carLeft
+              animation Spotter carLeft glyph
+            when Spotter carRight
+              animation Spotter carRight glyph
       when Matrix 4 -> matrix 4
         when Flags
           group Flags
@@ -566,13 +590,6 @@ exports[`the emitted file the tree 1`] = `
               animation Pit limiterOutOfLane glyph
             when Pit limiterInLane
               animation Pit limiterInLane glyph
-          when Spotter
-            when Spotter carBoth
-              animation Spotter carBoth glyph
-            when Spotter carLeft
-              animation Spotter carLeft glyph
-            when Spotter carRight
-              animation Spotter carRight glyph
           when Warnings
             when Warning oilHot
               animation Warning oilHot glyph
@@ -697,7 +714,22 @@ exports[`the emitted file the tree 1`] = `
                 when Gear 8 rest
                   animation Gear 8 rest glyph
                 when Gear 9 rest
-                  animation Gear 9 rest glyph"
+                  animation Gear 9 rest glyph
+        when Spotter
+          when Spotter growing
+            when Spotter carBothGrowing
+              animation Spotter carBothGrowing glyph
+            when Spotter carLeftGrowing
+              animation Spotter carLeftGrowing glyph
+            when Spotter carRightGrowing
+              animation Spotter carRightGrowing glyph
+          when Spotter held
+            when Spotter carBoth
+              animation Spotter carBoth glyph
+            when Spotter carLeft
+              animation Spotter carLeft glyph
+            when Spotter carRight
+              animation Spotter carRight glyph"
 `;
 
 exports[`the emitted file the glyphs 1`] = `
@@ -1034,36 +1066,6 @@ GG....GG
 GG....GG
 GGGGGGGG
 GGGGGGGG
-
-Spotter carBoth
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-
-Spotter carLeft
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
-
-Spotter carRight
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
 
 Warning oilHot
 .......D
@@ -1633,6 +1635,120 @@ Gear 9 rest
 ....C...
 ..CC....
 ........
+
+Spotter carBothGrowing
+G......G
+G......G
+G......G
+G......G
+G......G
+G......G
+G......G
+G......G
+  --
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+  --
+GGG..GGG
+GGG..GGG
+GGG..GGG
+GGG..GGG
+GGG..GGG
+GGG..GGG
+GGG..GGG
+GGG..GGG
+
+Spotter carLeftGrowing
+G.......
+G.......
+G.......
+G.......
+G.......
+G.......
+G.......
+G.......
+  --
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+  --
+GGG.....
+GGG.....
+GGG.....
+GGG.....
+GGG.....
+GGG.....
+GGG.....
+GGG.....
+
+Spotter carRightGrowing
+.......G
+.......G
+.......G
+.......G
+.......G
+.......G
+.......G
+.......G
+  --
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
+  --
+.....GGG
+.....GGG
+.....GGG
+.....GGG
+.....GGG
+.....GGG
+.....GGG
+.....GGG
+
+Spotter carBoth
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+GG....GG
+
+Spotter carLeft
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+GG......
+
+Spotter carRight
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
+......GG
 
 legend
 A #33383F
