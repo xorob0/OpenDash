@@ -42,6 +42,7 @@ namespace OpenDashPlugin
                     BodyWidth),
                 BuildFacePicture(screen, face),
                 BuildStripCaption(face),
+                BuildRevBarRow(screen),
                 BuildFlagFormatRow(screen),
                 BuildLapReviewRow(screen),
                 BuildFaceWarning(screen),
@@ -49,6 +50,34 @@ namespace OpenDashPlugin
             };
             RefreshFaceWarning(screen);
             return Ui.VStack(12, rows.ToArray());
+        }
+
+        /// <summary>
+        /// What this screen carries at the top: the shift lights, a plain RPM bar, or nothing.
+        /// </summary>
+        /// <remarks>
+        /// On the screen's own pane rather than on the Data tab, and it is the row that most obviously
+        /// never belonged there: a wheel whose rim already carries LEDs across its top wants no rev bar
+        /// and the display on the desk beside it wants one, and the rig-wide switch answered for both.
+        /// Both arrangements are built into every face and SimHub shows the one this picks, so the
+        /// choice costs no reinstall; off redraws the face without the well, and the zones start where
+        /// the recess did.
+        ///
+        /// First of the three rows under the plan, because it is the one that changes the plan: the
+        /// other two decide what covers the face and this decides what the face is.
+        /// </remarks>
+        private FrameworkElement BuildRevBarRow(ScreenInstance screen)
+        {
+            var control = BuildSegmented(Contract.RevBarModes, PanelDataTab.RevBarLabels, Settings.ScreenRevBar(screen.Namespace), value =>
+            {
+                Settings.SetScreenRevBar(screen.Namespace, value);
+                Save();
+                // The plan above redraws without the well, which is the whole of what Off does.
+                Redraw();
+            });
+            var row = Ui.Row(PanelDataTab.RevBarTitle, PanelDataTab.RevBarCaption, control);
+            row.Width = BodyWidth;
+            return row;
         }
 
         /// <summary>Which of the two formats a flag takes on this screen.</summary>
@@ -963,7 +992,34 @@ namespace OpenDashPlugin
                     + "first ones.",
                     BodyWidth),
                 picture,
+                BuildSlotsRevBarRow(),
                 BuildSlotWarning());
+        }
+
+        /// <summary>
+        /// What a card face carries at the top, which is the rig-wide `RevBar` and not a screen's own.
+        /// </summary>
+        /// <remarks>
+        /// A zone face answers this on its own pane, under its own property. A card face owns no
+        /// properties at all -- it reads the twelve shared slots and nothing else, which is why two of
+        /// them cannot be told apart -- so its arc reads the rig-wide name, and this row is where that
+        /// name is still written from. It is a property of the model being retired rather than
+        /// something this fixes, and it is here so that a driver with a round face does not lose the
+        /// switch when the zone faces take their own.
+        /// </remarks>
+        private FrameworkElement BuildSlotsRevBarRow()
+        {
+            var control = BuildSegmented(Contract.RevBarModes, PanelDataTab.RevBarLabels, Settings.RevBarMode(), value =>
+            {
+                Settings.SetRevBar(value);
+                Save();
+            });
+            var row = Ui.Row(
+                PanelDataTab.RevBarTitle,
+                "Shift lights, a plain arc, or off. A card face has no settings of its own, so this is the answer for every card face on the rig.",
+                control);
+            row.Width = BodyWidth;
+            return row;
         }
 
         private FrameworkElement BuildSlotGrid(int firstSlot)

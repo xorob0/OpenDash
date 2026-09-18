@@ -18,6 +18,7 @@ import {
   facePrefix,
   pagesForZone,
   setting,
+  zone as zoneSetting,
   zoneCounterReadings,
   zoneProperties,
 } from '../src/contract.ts';
@@ -1277,9 +1278,13 @@ describe('the rev bar can be off entirely', () => {
         screens: [FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR],
       });
       const { on, off } = screensOf(built);
-      // Complementary, so SimHub's screen-role pass always has exactly one to choose.
-      expect(off.enabledExpression).toBe(setting.revBarIs('off'));
-      expect(on.enabledExpression).toBe(`!(${setting.revBarIs('off')})`);
+      // Complementary, so SimHub's screen-role pass always has exactly one to choose. And it is
+      // this face's own answer: a rig with a wheel that carries its own LEDs and a display that
+      // does not is two screens, and one switch used to answer for both.
+      const size = sizeOf(face);
+      expect(off.enabledExpression).toBe(zoneSetting.revBarIs(size, 'off'));
+      expect(on.enabledExpression).toBe(`!(${zoneSetting.revBarIs(size, 'off')})`);
+      expect(off.enabledExpression).toInclude(setting.revBarIs('off').replace(/^\(|\) = \('off'\)$/g, ''));
     }
   });
 

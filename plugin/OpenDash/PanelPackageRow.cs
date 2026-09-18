@@ -11,6 +11,19 @@ namespace OpenDashPlugin
     public static class PanelPackageRow
     {
         /// <summary>
+        /// The line under the section's heading.
+        /// </summary>
+        /// <remarks>
+        /// It used to say "adding one here makes it a screen", which was true and was the problem: a
+        /// screen has a name, a size and settings of its own, and a row that knows only the package could
+        /// offer none of them. Adding is the Rig tab's now, and this sentence is what sends somebody
+        /// there rather than leaving them to find the other tab.
+        /// </remarks>
+        public const string SectionCaption =
+            "One package per size, installed into SimHub DashTemplates. A package becomes a screen when you add one on "
+            + "the Rig tab, and a package can back more than one screen.";
+
+        /// <summary>
         /// The row's first line.
         /// </summary>
         /// <remarks>

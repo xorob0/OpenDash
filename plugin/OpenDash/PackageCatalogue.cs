@@ -318,7 +318,7 @@ namespace OpenDashPlugin
         /// A screen made from a package, taking the stock namespace and folder when the rig has neither.
         /// </summary>
         /// <param name="taken">The namespaces the rig already holds, so a second screen at a size gets its own.</param>
-        public static ScreenInstance NewScreen(PackageEntry entry, string name, IEnumerable<string> taken)
+        public static ScreenInstance NewScreen(PackageEntry entry, string name, IEnumerable<string> taken, IEnumerable<string> folders = null)
         {
             var screen = new ScreenInstance
             {
@@ -340,7 +340,7 @@ namespace OpenDashPlugin
             else
             {
                 screen.Namespace = UniqueNamespace(screen.Name, used);
-                screen.Folder = PrimaryFolder + " " + screen.Name;
+                screen.Folder = UniqueFolder(screen.Name, folders, entry.Folder);
             }
             screen.Normalise();
             return screen;
@@ -363,6 +363,34 @@ namespace OpenDashPlugin
             while (taken.Contains(candidate) || Contract.IsReservedNamespace(candidate))
             {
                 candidate = slug + n.ToString(CultureInfo.InvariantCulture);
+                n++;
+            }
+            return candidate;
+        }
+
+        /// <summary>
+        /// A DashTemplates folder nothing else on the rig owns.
+        /// </summary>
+        /// <remarks>
+        /// Two screens sharing a folder is not a cosmetic collision: removing one deletes the other's
+        /// dashboard, and writing one overwrites it. A name is deduplicated by a numeral in brackets and
+        /// a folder cannot be, since the brackets would reach a path; a numeral after the name is what a
+        /// folder takes. <paramref name="stock"/> is the package's own folder, which is never given out
+        /// here -- the screen that holds it is the stock one, and this is only asked for the others.
+        /// </remarks>
+        public static string UniqueFolder(string name, IEnumerable<string> taken, string stock)
+        {
+            var used = new HashSet<string>(taken ?? new string[0], StringComparer.OrdinalIgnoreCase);
+            if (stock != null) used.Add(stock);
+            var slug = (name ?? string.Empty).Trim();
+            foreach (var bad in System.IO.Path.GetInvalidFileNameChars()) slug = slug.Replace(bad, ' ');
+            slug = slug.Trim();
+            if (slug.Length == 0) slug = "screen";
+            var candidate = PrimaryFolder + " " + slug;
+            var n = 2;
+            while (used.Contains(candidate))
+            {
+                candidate = PrimaryFolder + " " + slug + " " + n.ToString(CultureInfo.InvariantCulture);
                 n++;
             }
             return candidate;

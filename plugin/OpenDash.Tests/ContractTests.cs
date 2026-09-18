@@ -64,9 +64,10 @@ namespace OpenDashPlugin.Tests
             // Four settings, twelve slots, the rev bar mode, the blue flag detail, the zone face of
             // every face that ships
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance,
-            // the flag format and the lap review), twenty-one companion modules, four pit wall zones,
+            // the flag format, the lap review and its own rev bar), twenty-one companion modules,
+            // four pit wall zones,
             // the wide zone, the URL, the pit wall's class filter, and the flag box.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1;
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
             // Six global flag box settings and eleven per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
             // only, the gear and the two temperature thresholds moved under the matrix that owns them,
@@ -83,9 +84,10 @@ namespace OpenDashPlugin.Tests
             // car a blue flag is being waved for, 271 before each face was given its own answer to when
             // the lap review is shown, 279 before the companion's page became the plugin's, 280
             // before the mirror brought its fit, its gate and one packed run per length a centre can
-            // be, and 292 before each matrix was given its own answer to whether the digit flashes
-            // through the redline.
-            Assert.Equal(296, names.Count);
+            // be, 292 before each matrix was given its own answer to whether the digit flashes
+            // through the redline, and 296 before each face was given its own answer to what it
+            // carries at the top.
+            Assert.Equal(304, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -556,9 +558,9 @@ namespace OpenDashPlugin.Tests
                     Assert.StartsWith(Contract.FacePrefix(face), name, StringComparison.Ordinal);
                 }
             }
-            // Twenty-three each: four zones times page, mask, start and class filter, four bar fields,
-            // the glance, the flag format and the lap review.
-            Assert.Equal(23, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
+            // Twenty-four each: four zones times page, mask, start and class filter, four bar fields,
+            // the glance, the flag format, the lap review and what this face carries at the top.
+            Assert.Equal(24, new List<string>(Contract.FacePropertyNames(Contract.ReferenceFace)).Count);
         }
 
         [Fact]

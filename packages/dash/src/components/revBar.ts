@@ -4,6 +4,7 @@
  * with the rev arc; see revSegments.ts.
  */
 import type { Item } from '../generator.ts';
+import type { Expr } from '../bind.ts';
 import { rect, snapEdges } from '../design/geometry.ts';
 import { ds } from '../tokens.ts';
 import { revLayers } from './revSegments.ts';
@@ -31,10 +32,15 @@ export interface RevBarFrame {
 export const REV_WELL_PAD_X = 6;
 export const REV_WELL_PAD_Y = 4;
 
-export function revBar(frame: RevBarFrame, prefix = 'revBar'): Item[] {
+/**
+ * @param mode What the screen drawing this bar carries at the top, as an expression. A zone face
+ * passes its own per-screen read; anything that leaves it out gets the rig-wide one.
+ */
+export function revBar(frame: RevBarFrame, prefix = 'revBar', mode?: Expr): Item[] {
   const spans = snapEdges(frame.left, frame.width, ds.shiftLights.segments, frame.gap);
   return revLayers(
     prefix,
     spans.map((span) => ({ rect: rect(span.left, frame.top, span.width, frame.height) })),
+    mode,
   );
 }

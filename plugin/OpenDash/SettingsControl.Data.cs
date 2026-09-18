@@ -1,8 +1,10 @@
-// SettingsControl.Data.cs: the Data tab -- the four settings that mean the same thing on every screen.
+// SettingsControl.Data.cs: the Data tab -- the settings that mean the same thing on every screen.
 //
 // A lap time compares against the same lap on the rim as it does on the pit wall, so these are not per
 // screen and are not on a screen's pane. They are the whole of the tab, which is the point: it is short
-// because almost nothing genuinely is global.
+// because almost nothing genuinely is global, and the rev bar left it for each face's own pane when it
+// turned out not to be -- a rim that already carries LEDs across its top and a display that does not
+// are two screens on one rig, and one switch was answering for both.
 using System.Windows;
 using System.Windows.Controls;
 
@@ -12,15 +14,6 @@ namespace OpenDashPlugin
     {
         private FrameworkElement BuildDataTab()
         {
-            // Three states in one control rather than a toggle and a second toggle under it: what the
-            // top of the face carries is one decision, and a driver whose wheel already has LEDs
-            // across it wants the third of them. Off redraws the face without the well, so the zones
-            // start where the recess did. #189.
-            var revBar = BuildSegmented(Contract.RevBarModes, new[] { "Shift lights", "RPM bar", "Off" }, Settings.RevBarMode(), value =>
-            {
-                Settings.SetRevBar(value);
-                Save();
-            });
             var position = BuildSegmented(Contract.PositionModes, new[] { "Overall", "Class" }, Settings.PositionMode, value =>
             {
                 Settings.PositionMode = value;
@@ -48,7 +41,6 @@ namespace OpenDashPlugin
             // passing it here is what keeps Install and Lights on the twenty they are drawn at.
             return Ui.VStack(0, Ui.Section(PanelDataTab.SectionTitle, PanelDataTab.RowGap,
                 Ui.Caption(PanelDataTab.SectionCaption, BodyWidth),
-                Ui.Row(PanelDataTab.RevBarTitle, PanelDataTab.RevBarCaption, revBar),
                 Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position),
                 Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta),
                 Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session),

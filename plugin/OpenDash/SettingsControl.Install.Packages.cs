@@ -20,16 +20,17 @@ namespace OpenDashPlugin
         /// were made from the package, and under ADR 0017 a package can back more than one. Dropping
         /// either would leave the row saying less than it says today.
         ///
-        /// Add here does exactly what Add on the Rig tab does, because they are one list seen from two
-        /// sides.
+        /// There is no Add here any more, and that is the point of the tab rather than an omission. A
+        /// screen is not a package: it has a name, a size and settings of its own, and adding one from a
+        /// row that knows only the package produced a screen named after its pixels with no chance to say
+        /// what it was. Both places offering it also meant a driver who had just used the wrong one had
+        /// to work out which of the two had made the thing they now wanted rid of. Adding is the Rig
+        /// tab's, which is where a screen lives; this tab says what is on disk and at what version.
         /// </remarks>
         private FrameworkElement BuildPackageSection()
         {
             var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-            var caption = Ui.Caption(
-                "One package per size, installed into SimHub DashTemplates. Adding one here makes it a screen; "
-                + "its settings are its own.",
-                BodyWidth);
+            var caption = Ui.Caption(PanelPackageRow.SectionCaption, BodyWidth);
             if (catalogue.Count == 0)
             {
                 return Ui.Section("Screens openDash can install",
@@ -52,11 +53,6 @@ namespace OpenDashPlugin
                 && PackageExtractor.IsInstalled(plugin.Installer.SimHubRoot, captured.Folder);
             var state = PanelCopy.ScreenRow(installed);
 
-            var add = Ui.OutlineButton(PanelPackageRow.Verb(uses), PanelMetrics.RowButtonHeight);
-            add.MinWidth = ButtonMinWidth;
-            add.ToolTip = "Make a screen from this package.";
-            add.Click += (sender, args) => AddScreen(captured, null);
-
             // The dot and the ink part company only where nothing is installed: the canvas draws that dot
             // in status.notInstalled and its label in text.label, which is the one pairing a table
             // carrying a single colour per state cannot say on its own.
@@ -67,7 +63,7 @@ namespace OpenDashPlugin
                 PanelPackageRow.Name(captured),
                 PanelPackageRow.Caption(captured),
                 Ui.StatusPill(dot, state.State, state.StateHex),
-                add);
+                null);
             row.ToolTip = PanelPackageRow.Tooltip(captured.Folder, uses);
             return row;
         }

@@ -89,9 +89,9 @@ describe('settings', () => {
     const props = declaredProperties();
     // Per face, not per rig: every face that ships carries its own group, so a 1920 face and an
     // 850 face beside it are configured apart instead of sharing one set of zones. Four per zone --
-    // page, mask, start and the class filter -- plus the bar's ends, the glance, the flag format and
-    // the lap review.
-    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 3;
+    // page, mask, start and the class filter -- plus the bar's ends, the glance, the flag format,
+    // the lap review and what this face carries at the top.
+    const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 4;
     // The last two terms are the lights, which are not screens but whose settings are properties for
     // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is six
     // global and eleven per matrix, the way every face carries its own group; the strips are the three
@@ -120,9 +120,10 @@ describe('settings', () => {
     // band D was allowed to name the car a blue flag is being waved for, 271 before each face was
     // given its own answer to when the lap review is shown, 279 before the companion's page
     // became the plugin's to decide, 280 before the mirror brought its fit, its gate and one
-    // packed run for each of the ten lengths a strip's centre can be, and 292 before each matrix was
-    // given its own answer to whether the digit flashes through the redline.
-    expect(props).toHaveLength(296);
+    // packed run for each of the ten lengths a strip's centre can be, 292 before each matrix was
+    // given its own answer to whether the digit flashes through the redline, and 296 before each
+    // face was given its own answer to what it carries at the top.
+    expect(props).toHaveLength(304);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');

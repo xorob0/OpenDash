@@ -206,14 +206,16 @@ namespace OpenDashPlugin
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 var m = matrix;
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Rest"), () => Settings.MatrixRest(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Flags"), () => Settings.MatrixFlags(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Pit"), () => Settings.MatrixPit(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixSpotter(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixWarnings(m));
+                // What the slot *shows*, not merely what it is set to: a slot nobody has added is dark
+                // whatever its settings still say, which is what lets a rig start with no panels at all.
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Rest"), () => Settings.MatrixShownRest(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Flags"), () => Settings.MatrixShowsFlags(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Pit"), () => Settings.MatrixShowsPit(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Spotter"), () => Settings.MatrixShowsSpotter(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Warnings"), () => Settings.MatrixShowsWarnings(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Side"), () => Settings.MatrixSide(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "CriticalOnly"), () => Settings.MatrixCriticalOnly(m));
-                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Gear"), () => Settings.MatrixGear(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "Gear"), () => Settings.MatrixShowsGear(m));
                 // Zero means "not set": the profile then applies its own default, which is per unit, so
                 // a driver in Fahrenheit who has never opened this page does not get a Celsius number.
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "OilTemp"), () => Settings.MatrixOilTemp(m) == 0 ? (int?)null : Settings.MatrixOilTemp(m));
@@ -398,6 +400,7 @@ namespace OpenDashPlugin
                     this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
                     this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
                     this.AttachDelegate(Contract.LapReviewProperty(s.Namespace), () => Settings.ScreenLapReview(s.Namespace));
+                    this.AttachDelegate(Contract.RevBarProperty(s.Namespace), () => Settings.ScreenRevBar(s.Namespace));
                 }
                 else if (s.IsCompanion)
                 {

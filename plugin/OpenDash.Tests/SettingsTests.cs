@@ -1188,7 +1188,7 @@ namespace OpenDashPlugin.Tests
             // Eight face sizes times twenty-two properties is what the plugin used to attach whatever
             // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar and
             // the blue flag detail, which every screen shares, and one group per screen the rig holds.
-            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1;
+            const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
             var shared = Contract.SharedPropertyNames().Count();
             Assert.Equal(18, shared);
             // The lights are declared whatever the rig is: openDash does not install the flag box
@@ -1621,6 +1621,126 @@ namespace OpenDashPlugin.Tests
             // set to, the other is the button that shows it.
             Assert.DoesNotContain(Contract.HoldQuickGlanceActionFor(Face), Contract.PropertyNames());
             Assert.Throws<ArgumentOutOfRangeException>(() => Contract.CycleZoneAction(Face, "E"));
+        }
+
+        /// <summary>
+        /// A matrix panel is an instance, and a new install owns none.
+        /// </summary>
+        /// <remarks>
+        /// Four numbered groups of eleven settings, one of them switched on because it was first, is a
+        /// page for hardware most people own none of. A panel exists because somebody said they have one,
+        /// the way a screen does, and what it shows is gated on that rather than on the per-slot arrays
+        /// underneath -- which keep their class defaults and are what the panel's own controls draw.
+        /// </remarks>
+        [Fact]
+        public void A_new_install_has_no_matrix_panels_and_the_box_draws_nothing()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+
+            Assert.Empty(settings.MatrixPanels());
+            foreach (var matrix in Contract.FlagBoxMatrices)
+            {
+                Assert.False(settings.MatrixAdded(matrix));
+                Assert.Equal("dark", settings.MatrixShownRest(matrix));
+                Assert.False(settings.MatrixShowsFlags(matrix));
+                Assert.False(settings.MatrixShowsPit(matrix));
+                Assert.False(settings.MatrixShowsSpotter(matrix));
+                Assert.False(settings.MatrixShowsWarnings(matrix));
+                Assert.False(settings.MatrixShowsGear(matrix));
+            }
+        }
+
+        [Fact]
+        public void A_panel_added_by_name_takes_the_first_free_slot_and_arrives_working()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+
+            Assert.Equal(1, settings.AddMatrixPanel("top left"));
+            Assert.Equal("top left", settings.MatrixName(1));
+            Assert.Equal(new[] { 1 }, settings.MatrixPanels());
+            // Working, not merely present: a panel somebody has just added is one they mean to use.
+            Assert.Equal("gear", settings.MatrixShownRest(1));
+            Assert.True(settings.MatrixShowsFlags(1));
+            Assert.True(settings.MatrixShowsPit(1));
+            Assert.True(settings.MatrixShowsSpotter(1));
+            Assert.True(settings.MatrixShowsWarnings(1));
+
+            Assert.Equal(2, settings.AddMatrixPanel("by the wheel"));
+            Assert.Equal(new[] { 1, 2 }, settings.MatrixPanels());
+            Assert.Equal(3, settings.FreeMatrixSlot());
+
+            settings.AddMatrixPanel("three");
+            settings.AddMatrixPanel("four");
+            // SimHub composes four contents and not five, so the fifth is refused rather than invented.
+            Assert.Equal(0, settings.FreeMatrixSlot());
+            Assert.Equal(0, settings.AddMatrixPanel("five"));
+        }
+
+        [Fact]
+        public void Removing_a_panel_frees_its_slot_and_leaves_it_dark()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            settings.AddMatrixPanel("top left");
+            settings.AddMatrixPanel("top right");
+
+            settings.RemoveMatrixPanel(1);
+            Assert.False(settings.MatrixAdded(1));
+            Assert.Equal("dark", settings.MatrixShownRest(1));
+            Assert.False(settings.MatrixShowsFlags(1));
+            // The slot is free again and the panel beside it is untouched.
+            Assert.Equal(1, settings.FreeMatrixSlot());
+            Assert.Equal("top right", settings.MatrixName(2));
+            Assert.True(settings.MatrixShowsFlags(2));
+
+            settings.RenameMatrixPanel(2, "  the one by the wheel  ");
+            Assert.Equal("the one by the wheel", settings.MatrixName(2));
+        }
+
+        /// <summary>
+        /// Nobody's box goes dark because the model under it changed.
+        /// </summary>
+        /// <remarks>
+        /// A file written before panels were instances names none, and every slot that was doing
+        /// something becomes a panel. On the defaults that shipped, that is matrix 1 alone; on a rig with
+        /// two boxes it is both.
+        /// </remarks>
+        [Fact]
+        public void A_settings_file_written_before_panels_were_instances_keeps_the_boxes_it_had()
+        {
+            var saved = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            saved.Normalise();
+            Assert.Equal(new[] { 1 }, saved.MatrixPanels());
+            Assert.Equal("Matrix 1", saved.MatrixName(1));
+            Assert.Equal("gear", saved.MatrixShownRest(1));
+
+            var two = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            two.FlagBoxFlags = new[] { true, true, false, false };
+            two.Normalise();
+            Assert.Equal(new[] { 1, 2 }, two.MatrixPanels());
+
+            // And a driver who had turned every panel off keeps none, which is what they meant.
+            var off = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            off.FlagBoxRest = new[] { "dark", "dark", "dark", "dark" };
+            off.FlagBoxFlags = new[] { false, false, false, false };
+            off.FlagBoxPit = new[] { false, false, false, false };
+            off.FlagBoxSpotter = new[] { false, false, false, false };
+            off.FlagBoxWarnings = new[] { false, false, false, false };
+            off.Normalise();
+            Assert.Empty(off.MatrixPanels());
+        }
+
+        /// <summary>A file that already names its panels is left alone by the migration.</summary>
+        [Fact]
+        public void Panels_a_driver_has_named_survive_a_reload()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>(), FlagBoxMatrixName = new[] { null, "by the wheel", null, null } };
+            settings.Normalise();
+            Assert.Equal(new[] { 2 }, settings.MatrixPanels());
+            Assert.Equal("by the wheel", settings.MatrixName(2));
+            Assert.False(settings.MatrixAdded(1));
         }
     }
 }
