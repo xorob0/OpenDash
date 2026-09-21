@@ -195,7 +195,7 @@ namespace OpenDashPlugin.Tests
         {
             var now = new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc);
             var service = new CarLightService(new Source { Bytes = Archive("test one") }, root);
-            var loaded = service.Load(true, now);
+            var loaded = service.Download(now);
 
             Assert.True(loaded.Ok);
             Assert.Equal(1, service.CarCount);
@@ -223,7 +223,7 @@ namespace OpenDashPlugin.Tests
         public void A_car_with_no_table_and_a_driver_who_turned_it_off_both_read_as_not_ready()
         {
             var service = new CarLightService(new Source { Bytes = Archive("test one") }, root);
-            service.Load(true, DateTime.UtcNow);
+            service.Download(DateTime.UtcNow);
 
             service.Update("a car nobody measured", "1", 6900, MirrorFit.Stretch, true, 0);
             Assert.False(service.Ready);
@@ -235,29 +235,83 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void With_the_network_switched_off_it_uses_what_is_on_disk_and_asks_for_nothing()
+        public void Startup_reads_what_is_on_disk_and_asks_for_nothing()
         {
             CarLightLibrary.Extract(Archive("test one"), root);
             var source = new Source { Failure = "should not be asked" };
             var service = new CarLightService(source, root);
 
-            var loaded = service.Load(false, DateTime.UtcNow);
+            var loaded = service.Load(DateTime.UtcNow);
             Assert.True(loaded.Ok);
             Assert.False(loaded.Fetched);
             Assert.Equal(1, service.CarCount);
-            // ADR 0012's switch covers this too: off means openDash does not reach the network at all.
+            // #366: openDash never fetches the tables on its own, so the startup path is disk and
+            // nothing else. A rig that has them keeps working offline, every start, for ever.
             Assert.Empty(source.Requested);
         }
 
         [Fact]
-        public void An_empty_folder_and_no_network_is_said_plainly_rather_than_left_blank()
+        public void A_fresh_install_has_no_tables_and_has_asked_for_none()
+        {
+            var source = new Source { Failure = "should not be asked" };
+            var service = new CarLightService(source, root);
+
+            var loaded = service.Load(DateTime.UtcNow);
+            Assert.False(loaded.Ok);
+            Assert.Equal(0, service.CarCount);
+            Assert.Empty(source.Requested);
+            // Said as a sentence rather than as a count of zero, because it is the state every rig is
+            // in until somebody presses the button, and the button is beside it.
+            Assert.Equal(PanelLights.CarTablesNone, service.Status);
+            // Nothing is stale that was never fetched: the refresh invitation is for a copy that exists.
+            Assert.False(service.Stale);
+        }
+
+        [Fact]
+        public void A_press_fetches_however_fresh_the_copy_is()
+        {
+            var now = new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc);
+            var source = new Source { Bytes = Archive("test one") };
+            var service = new CarLightService(source, root);
+
+            Assert.True(service.Download(now).Fetched);
+            // A press is a person asking, so the week MaxAge describes is not consulted. A second press
+            // a minute later asks again, which is what a button that does nothing twice would not.
+            Assert.True(service.Download(now.AddMinutes(1)).Fetched);
+            Assert.Equal(2, source.Requested.Count);
+            Assert.False(service.Stale);
+        }
+
+        [Fact]
+        public void A_download_that_does_not_answer_is_said_plainly_rather_than_left_blank()
         {
             var service = new CarLightService(new Source { Failure = "NameResolutionFailure" }, root);
-            var loaded = service.Load(true, DateTime.UtcNow);
+            var loaded = service.Download(DateTime.UtcNow);
 
             Assert.False(loaded.Ok);
             Assert.Equal(0, service.CarCount);
             Assert.Contains("NameResolutionFailure", service.Status);
+        }
+
+        [Fact]
+        public void The_button_offers_a_download_before_there_are_tables_and_a_refresh_after()
+        {
+            Assert.Equal("Download", PanelLights.CarTablesButton(0));
+            Assert.Equal("Update", PanelLights.CarTablesButton(1));
+            Assert.Equal("Update", PanelLights.CarTablesButton(85));
+        }
+
+        [Fact]
+        public void The_copy_beside_the_button_names_what_is_fetched_and_who_measured_it()
+        {
+            // The privacy argument ADR 0018 part 1 makes, said where a driver reads it rather than only
+            // in the source: one request for every car, so the car you are in is not disclosed.
+            Assert.Contains("every car at once", PanelLights.CarTablesCaption);
+            Assert.Contains("400 KB", PanelLights.CarTablesCaption);
+            // CC BY-NC-SA 4.0 asks for attribution and openDash carries none of the data, so both the
+            // licence and the project it came from are on the page for as long as the row is.
+            Assert.Contains("CC BY-NC-SA 4.0", PanelLights.CarTablesAttribution);
+            Assert.Contains(CarLightLibrary.ProjectUrl, PanelLights.CarTablesAttribution);
         }
 
         [Theory]
@@ -280,6 +334,16 @@ namespace OpenDashPlugin.Tests
             var now = new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc);
             var line = CarLightService.Describe(84, now.AddDays(-9), now, CarLightRefresh.Failed("NameResolutionFailure", 84));
             Assert.Equal("84 cars, updated 9 days ago (the last check did not answer: NameResolutionFailure)", line);
+        }
+
+        [Fact]
+        public void With_no_cars_at_all_the_line_is_the_sentence_and_the_reason()
+        {
+            var now = new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc);
+            Assert.Equal(PanelLights.CarTablesNone, CarLightService.Describe(0, null, now, null));
+            Assert.Equal(
+                PanelLights.CarTablesNone + " The download did not answer: NameResolutionFailure.",
+                CarLightService.Describe(0, null, now, CarLightRefresh.Failed("NameResolutionFailure", 0)));
         }
     }
 }

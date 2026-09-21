@@ -135,6 +135,61 @@ namespace OpenDashPlugin
             return "Added " + name + ", but its profile could not be installed into SimHub. The Install tab says why.";
         }
 
+        /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
+        public const string CarTablesTitle = "The car's own lights";
+
+        /// <summary>
+        /// What the button will do, said before it is pressed rather than after.
+        /// </summary>
+        /// <remarks>
+        /// Every clause of this is load-bearing and none of it is decoration.
+        ///
+        /// <para>The tables are somebody else's work under CC BY-NC-SA 4.0 and openDash ships none of
+        /// them (ADR 0018). What makes that work is that the copy is the user's own, and a copy a
+        /// background thread made during startup is a poor version of that; a copy made when somebody
+        /// pressed a button that had named the project, the licence, the size and the host is the whole
+        /// of it. #366.</para>
+        ///
+        /// <para>It says "every car" because that is the privacy decision ADR 0018 part 1 argued for and
+        /// the one thing a reader would otherwise get wrong: asking for the car you are in would tell a
+        /// CDN which car you are in. Until this row existed that reasoning was written down only in the
+        /// source, where no driver reads it.</para>
+        /// </remarks>
+        public const string CarTablesCaption =
+            "Measured tables for the cars other people have measured: your car's own LED colours, thresholds and gears, "
+            + "instead of openDash's three bands. Downloading asks GitHub once for every car at once — about 400 KB — "
+            + "so nothing about which car you drive leaves your machine. Afterwards every car works offline.";
+
+        /// <summary>Who measured it, and where to go and see. Shown under the row for as long as it exists.</summary>
+        public static readonly string CarTablesAttribution = CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl;
+
+        /// <summary>The state a rig is in until somebody presses the button, which is every rig on a fresh install.</summary>
+        public const string CarTablesNone = "No car light tables yet, so every car is on the lights openDash works out for itself.";
+
+        /// <summary>Said after a download that did not answer, beside whatever is already on disk.</summary>
+        public static string CarTablesFailed(string reason)
+        {
+            return "The download did not answer: " + (string.IsNullOrWhiteSpace(reason) ? "no reason given" : reason) + ".";
+        }
+
+        /// <summary>While the request is out. A press with no answer for ten seconds reads as a dead button.</summary>
+        public const string CarTablesDownloading = "Downloading the car light tables…";
+
+        /// <summary>
+        /// The label on the button: the first press is a download and every one after it is a refresh.
+        /// </summary>
+        /// <remarks>
+        /// Pure and pinned so that the pair cannot drift apart: a button that says Download beside a line
+        /// saying 85 cars is a button somebody presses expecting to be told they already have them.
+        /// </remarks>
+        public static string CarTablesButton(int cars)
+        {
+            return cars > 0 ? "Update" : "Download";
+        }
+
+        /// <summary>Said beside the button when the copy is old enough that upstream has probably moved.</summary>
+        public const string CarTablesStale = "This copy is over a week old. Nothing refetches on its own; press Update when you want a newer one.";
+
         /// <summary>The heading over the panels a driver has added.</summary>
         public const string PanelsTitle = "Your matrix panels";
 
