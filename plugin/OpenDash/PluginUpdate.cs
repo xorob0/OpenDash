@@ -65,6 +65,22 @@ namespace OpenDashPlugin
         public const string ScriptName = "opendash-swap-plugin.cmd";
 
         /// <summary>
+        /// Left beside the staged assembly to ask the swap script to start SimHub again once it is done.
+        /// </summary>
+        /// <remarks>
+        /// A file rather than a second script or an argument, because the waiter is armed the moment the
+        /// assembly is staged and the driver is asked afterwards: by the time they answer, the process
+        /// that would have carried the answer has been running for a minute. A file is something the
+        /// script can look at when it finally gets to run.
+        ///
+        /// It is consumed by the swap whatever happens, so "reopen" can never outlive the update that
+        /// asked for it. Somebody who says "later" and closes SimHub that evening gets the swap and no
+        /// surprise relaunch, which is the failure worth avoiding: an application that reopens itself
+        /// when you closed it reads as a program you cannot get rid of.
+        /// </remarks>
+        public const string ReopenName = DllName + ".reopen";
+
+        /// <summary>
         /// How long the script waits for SimHub to go before giving up, in seconds.
         /// </summary>
         /// <remarks>
@@ -84,6 +100,42 @@ namespace OpenDashPlugin
         public static string ScriptPath(string simHubRoot)
         {
             return Path.Combine(FlagBoxProfile.FolderPath(simHubRoot), ScriptName);
+        }
+
+        public static string ReopenPath(string simHubRoot)
+        {
+            return Path.Combine(FlagBoxProfile.FolderPath(simHubRoot), ReopenName);
+        }
+
+        /// <summary>SimHub's own executable, which is both what the script waits for and what it starts
+        /// again. One name, so the two can never disagree about which process this is about.</summary>
+        public const string SimHubExeName = "SimHubWPF.exe";
+
+        public static string SimHubExePath(string simHubRoot)
+        {
+            return Path.Combine(simHubRoot ?? string.Empty, SimHubExeName);
+        }
+
+        /// <summary>Asks the swap to start SimHub again when it is done, or takes the request back.
+        /// False when the file could not be written, which leaves the swap itself untouched.</summary>
+        public static bool AskToReopen(string simHubRoot, bool reopen)
+        {
+            var path = ReopenPath(simHubRoot);
+            try
+            {
+                if (!reopen)
+                {
+                    if (File.Exists(path)) File.Delete(path);
+                    return true;
+                }
+                Directory.CreateDirectory(FlagBoxProfile.FolderPath(simHubRoot));
+                File.WriteAllText(path, "Written by openDash: start SimHub again once the plugin is in place.", new UTF8Encoding(false));
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         /// <summary>The assembly SimHub loaded, which is the file the swap replaces.</summary>
@@ -182,10 +234,13 @@ namespace OpenDashPlugin
             var installed = InstalledPath(simHubRoot);
             var staged = StagedPath(simHubRoot);
             var backup = Path.Combine(FlagBoxProfile.FolderPath(simHubRoot), BackupName);
+            var reopen = ReopenPath(simHubRoot);
+            var exe = SimHubExePath(simHubRoot);
             var text = new StringBuilder();
             text.AppendLine("@echo off");
             text.AppendLine("rem Written by openDash to put a downloaded plugin in place once SimHub has closed.");
             text.AppendLine("rem It replaces " + DllName + " and keeps the one it replaced as " + BackupName + ".");
+            text.AppendLine("rem " + ReopenName + " beside it means the driver asked for SimHub to be started again.");
             text.AppendLine("setlocal");
             text.AppendLine("set /a waited=0");
             text.AppendLine(":wait");
@@ -195,8 +250,15 @@ namespace OpenDashPlugin
             text.AppendLine("if %waited% GEQ " + WaitSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture) + " goto giveup");
             text.AppendLine("goto wait");
             text.AppendLine(":swap");
+            // Read and consumed before the swap rather than after it, so that a swap which cannot happen
+            // does not leave a standing request to reopen: the next ordinary shutdown would honour it and
+            // SimHub would come back from a close the driver meant.
+            text.AppendLine("set reopen=0");
+            text.AppendLine("if exist \"" + reopen + "\" set reopen=1");
+            text.AppendLine("del \"" + reopen + "\" >nul 2>&1");
             text.AppendLine("copy /y \"" + installed + "\" \"" + backup + "\" >nul 2>&1");
             text.AppendLine("move /y \"" + staged + "\" \"" + installed + "\" >nul 2>&1 || goto giveup");
+            text.AppendLine("if \"%reopen%\"==\"1\" start \"\" \"" + exe + "\"");
             text.AppendLine("del \"%~f0\" >nul 2>&1");
             text.AppendLine("exit /b 0");
             text.AppendLine(":giveup");

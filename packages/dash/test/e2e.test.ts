@@ -66,6 +66,19 @@ interface JsonItem {
   [key: string]: Json;
 }
 
+/**
+ * How long a hook that runs a whole build is given, against bun's own default of five seconds.
+ *
+ * The hook below builds three packages, which is three and a half seconds on a quiet machine. A
+ * shared CI runner is slower than that by enough to matter: this suite failed once at 5246 ms,
+ * while the same commit passed the same job in another run, which is a margin of about 1.4 rather
+ * than a bug. Five seconds is a sensible default for a unit test and the wrong one for a build.
+ *
+ * Bounded rather than removed, so that a build which genuinely wedges still fails the job instead
+ * of holding it until the runner's own limit.
+ */
+const BUILD_HOOK_TIMEOUT = 60_000;
+
 let root: string;
 let widget: BuildResult;
 let inline: BuildResult;
@@ -79,7 +92,7 @@ beforeAll(() => {
   widget = build({ out: join(root, 'widget'), screens: [], stripShapes: [], log: (line) => log.push(line) });
   inline = build({ out: join(root, 'inline'), strategy: 'inline', screens: [], zoneFaces: [], stripShapes: [], log: () => {} });
   second = build({ out: join(root, 'second'), layouts: [], zoneFaces: [], stripShapes: [], log: () => {} });
-});
+}, BUILD_HOOK_TIMEOUT);
 afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
@@ -474,7 +487,7 @@ describe('LED profiles on disk', () => {
   let lit: BuildResult;
   beforeAll(() => {
     lit = build({ out: join(root, 'leds'), layouts: [], zoneFaces: [], screens: [], log: () => {} });
-  });
+  }, BUILD_HOOK_TIMEOUT);
 
   test('writes one .ledsprofile per strip shape, and nothing that looks like a package', () => {
     expect(lit.stripProfiles.map((p) => p.shape!.id)).toEqual(ALL_SHAPES.map((s) => s.id));

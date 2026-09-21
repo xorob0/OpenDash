@@ -56,6 +56,38 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// The plugin's own half, which says the opposite about the one point that matters.
+        /// </summary>
+        /// <remarks>
+        /// A loaded assembly cannot be replaced under a running process, so the new openDash is put in
+        /// place once SimHub closes. The sentence used to be past tense -- "was updated too; it takes
+        /// effect the next time you start SimHub" -- under a pill that had already flipped to up to date
+        /// and a version number that had already moved, and a rig read all of that as "done" and never
+        /// restarted. It says what has to happen, and the dialog asks.
+        /// </remarks>
+        [Fact]
+        public void The_plugins_own_sentence_says_SimHub_has_to_close()
+        {
+            Assert.Contains("when SimHub closes", UpdateWording.Restart);
+            Assert.DoesNotContain("does not need restarting", UpdateWording.Restart);
+            // Not past tense: the swap has not happened yet and saying it has is the whole bug.
+            Assert.DoesNotContain("was updated", UpdateWording.Restart);
+
+            var question = UpdateWording.RestartQuestion("0.3.0-rc.5");
+            Assert.Contains("0.3.0-rc.5", question);
+            Assert.Contains("Close SimHub now", question);
+            // It names the reason, because "restart to finish" reads as a demand and this reads as a fact
+            // about how programs work.
+            Assert.Contains("cannot replace its own code while it is running", question);
+            // And it survives not knowing which version it is offering.
+            Assert.Contains("openDash itself", UpdateWording.RestartQuestion(null));
+
+            Assert.Contains("SimHub", UpdateWording.RestartTitle);
+            Assert.Contains("next time you close SimHub", UpdateWording.RestartLater);
+            Assert.Contains("Close it yourself", UpdateWording.RestartFailed);
+        }
+
+        /// <summary>
         /// The sentence beside the switch. It is the author's, from design/canvas/Plugin.dc.html, and it is the
         /// only place a user is told in full what leaves their machine, so it says both halves: what is asked for,
         /// and that nothing else goes.
