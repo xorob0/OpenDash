@@ -131,11 +131,11 @@ namespace OpenDashPlugin
             AttachActions(pluginManager);
             try
             {
-                // Off the startup thread: it reads a folder and may fetch. CheckForUpdates is the
-                // user's one switch for whether openDash reaches the network at all (ADR 0012), and it
-                // covers this too -- with it off, whatever is already on disk is used and nothing is
-                // asked for.
-                CarLights.LoadInBackground(Settings.CheckForUpdates);
+                // Off the startup thread because it reads a folder, and it does no more than that:
+                // starting SimHub never fetches the tables. They arrive when the driver presses the
+                // button on the Lights tab and at no other moment (#366), which is what makes the copy
+                // on disk theirs -- see PanelLights.CarTablesCaption and ADR 0018.
+                CarLights.LoadInBackground();
             }
             catch (Exception ex)
             {

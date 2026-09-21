@@ -15,9 +15,17 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.LedCentres"/> value, in its order.</summary>
         public static readonly string[] CentreLabels = { "RPM", "Brake", "Throttle and brake", "Fuel" };
 
-        /// <summary>One label per <see cref="Contract.LedRpmStyles"/> value, in its order. The car's own
-        /// heads the list because the value does, and it is the one a driver is offered first.</summary>
-        public static readonly string[] RpmStyleLabels = { "The car's own", "Left to right", "Meet in middle", "F1" };
+        /// <summary>
+        /// One label per <see cref="Contract.LedRpmStyles"/> value, in its order. Car-specific heads the
+        /// list because the value does, and it is the one a driver is offered first.
+        /// </summary>
+        /// <remarks>
+        /// It used to read "The car's own", which is a possessive with no head noun: the reader has to
+        /// guess what it owns, and the three names beside it are patterns rather than owners, so there is
+        /// nothing to guess from. Car-specific is what Lovely Sim Racing calls these tables, so a driver
+        /// who met them there recognises the word. docs/design/voice.md keeps the rule.
+        /// </remarks>
+        public static readonly string[] RpmStyleLabels = { "Car-specific", "Left to right", "Meet in middle", "F1" };
 
         /// <summary>One label per <see cref="Contract.LedMirrorFits"/> value, in its order.</summary>
         public static readonly string[] MirrorFitLabels = { "Fill the strip", "True size" };
@@ -129,6 +137,64 @@ namespace OpenDashPlugin
         {
             return "Added " + name + ", but its profile could not be installed into SimHub. See the Install tab.";
         }
+
+        /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
+        public const string CarTablesTitle = "Car light tables";
+
+        /// <summary>
+        /// What the button will do, said before it is pressed rather than after.
+        /// </summary>
+        /// <remarks>
+        /// Every clause of this is load-bearing and none of it is decoration.
+        ///
+        /// <para>The tables are somebody else's work under CC BY-NC-SA 4.0 and openDash ships none of
+        /// them (ADR 0018). What makes that work is that the copy is the user's own, and a copy a
+        /// background thread made during startup is a poor version of that; a copy made when somebody
+        /// pressed a button that had named the project, the licence, the size and the host is the whole
+        /// of it. #366.</para>
+        ///
+        /// <para>It says "every car" because that is the privacy decision ADR 0018 part 1 argued for and
+        /// the one thing a reader would otherwise get wrong: asking for the car you are in would tell a
+        /// CDN which car you are in. Until this row existed that reasoning was written down only in the
+        /// source, where no driver reads it.</para>
+        /// </remarks>
+        public const string CarTablesCaption =
+            "Needed for the Car-specific rev light style. Every car is downloaded at once, about 400 KB, so "
+            + "nothing about which car you drive leaves your machine.";
+
+        /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
+        /// of what the tables are for, and a tooltip on the button says what the button does.</summary>
+        public const string CarTablesButtonTooltip = "Downloads the car light tables from GitHub.";
+
+        /// <summary>Who measured it, and where to go and see. Shown under the row for as long as it exists.</summary>
+        public static readonly string CarTablesAttribution = CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl;
+
+        /// <summary>The state a rig is in until somebody presses the button, which is every rig on a fresh install.</summary>
+        public const string CarTablesNone = "No car light tables yet.";
+
+        /// <summary>Said after a download that did not answer, beside whatever is already on disk.</summary>
+        public static string CarTablesFailed(string reason)
+        {
+            return "Download failed: " + (string.IsNullOrWhiteSpace(reason) ? "no reason given" : reason) + ".";
+        }
+
+        /// <summary>While the request is out. A press with no answer for ten seconds reads as a dead button.</summary>
+        public const string CarTablesDownloading = "Downloading…";
+
+        /// <summary>
+        /// The label on the button: the first press is a download and every one after it is a refresh.
+        /// </summary>
+        /// <remarks>
+        /// Pure and pinned so that the pair cannot drift apart: a button that says Download beside a line
+        /// saying 85 cars is a button somebody presses expecting to be told they already have them.
+        /// </remarks>
+        public static string CarTablesButton(int cars)
+        {
+            return cars > 0 ? "Update" : "Download";
+        }
+
+        /// <summary>Said beside the button when the copy is old enough that upstream has probably moved.</summary>
+        public const string CarTablesStale = "This copy is over a week old. Press Update for a newer one.";
 
         /// <summary>The heading over the panels a driver has added.</summary>
         public const string PanelsTitle = "Your matrix panels";

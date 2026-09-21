@@ -65,6 +65,22 @@ making a claim about it. "A car alongside lights the whole bar" puts the trigger
 expects the subject, so the sentence has to be reassembled before it can be read; "Full-strip
 spotter" is what the setting is, and the caption underneath says what it does.
 
+## The values in a control
+
+A value in a chooser is read without its label, alongside the values beside it, and it therefore has
+to be a name rather than a fragment. "The car's own" is a possessive with no head noun, so the
+reader has to work out what it owns, and the three values beside it were "Left to right", "Meet in
+middle" and "F1", which are patterns rather than owners and so give nothing to work it out from. It
+is "Car-specific" now, which is a name, and which is also what Lovely Sim Racing calls the tables
+behind it, so a driver who met them there recognises the word.
+
+Where one value needs unpacking and the others do not, the caption names it and explains that one
+rather than describing the set.
+
+> Rev light style, over ( Car-specific ) ( Left to right ) ( Meet in middle ) ( F1 )
+>
+> "Car-specific uses the shift lights measured for the car you are driving."
+
 **The audience is a sim racer, and the vocabulary that audience already uses is not jargon.**
 Spotter, redline, delta, stint, limiter and pit lane all stay, since the reader has met every one of
 them in iRacing and in SimHub before meeting it here. What gets translated is openDash's own

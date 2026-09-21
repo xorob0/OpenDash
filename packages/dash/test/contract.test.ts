@@ -384,8 +384,16 @@ describe('plugin mirror', () => {
     expect(panel).toContain('Contract.LedRpmStyles');
     expect(panel).toContain('Contract.LedMirrorFits');
     // Whose measurements they are, on the page that uses them: CC BY-NC-SA asks for attribution and
-    // a user is entitled to know whose numbers light their wheel (ADR 0018).
-    expect(panel).toContain('CarLightLibrary.Attribution');
+    // a user is entitled to know whose numbers light their wheel (ADR 0018). The words moved into
+    // PanelLights with #366 so that a net8.0 test can read them, so the tab is checked for the row
+    // and the row's copy for the licence -- one hop, and both halves pinned.
+    expect(panel).toContain('PanelLights.CarTablesAttribution');
+    const lights = pluginSource('PanelLights.cs');
+    expect(lights).toContain('CarLightLibrary.Attribution');
+    expect(lights).toContain('CarLightLibrary.ProjectUrl');
+    // The button is the whole of how the tables arrive: nothing else may fetch them (#366).
+    expect(panel).toContain('plugin.CarLights.Download(');
+    expect(pluginSource('OpenDash.cs')).toContain('CarLights.LoadInBackground();');
   });
 
   /**

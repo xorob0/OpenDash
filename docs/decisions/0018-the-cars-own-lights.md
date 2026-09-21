@@ -7,6 +7,12 @@ reason this record exists rather than a strip-only patch. Reopens
 [ADR 0009](0009-does-the-plugin-compute.md) on the terms ADR 0009 itself set out, and extends
 [ADR 0012](0012-update-checks.md) to a second host.
 
+Amended by itself on 2026-09-21 for [#366](https://github.com/xorob0/OpenDash/issues/366), and on
+one point that reaches into part 1 below: **the fetch is a button now.** Nothing about the second
+host, the one archive or the 386 KB changed, but the sentences below saying the copy is refreshed
+weekly and that the update-check switch governs it were true until that ticket and are not now. The
+amendment is at the foot of the Decision and says what replaced them.
+
 ## Context
 
 [ADR 0014](0014-the-shift-model.md) made openDash mirror the car's shift *behaviour*: the four
@@ -127,6 +133,34 @@ length and returns a colour per LED:
 `leftToRight`, `meetInMiddle` and `f1` are unchanged and are what a driver who wants one look in
 every car chooses. The new value is a fourth, `car`, and it is the default: openDash's opinion is
 that the car is right and the driver may disagree.
+
+**Amended 2026-09-21 ([#366](https://github.com/xorob0/OpenDash/issues/366)).** Part 1's fetch is
+**user-initiated**. It used to happen on its own: `LoadInBackground` ran at startup, `IsStale` decided
+a week had passed, and the archive came down gated by `Settings.CheckForUpdates`. Now a button on the
+Lights tab is the only thing that fetches, `CheckForUpdates` does not govern the tables at all, and
+starting SimHub makes no request whatever the settings say. `MaxAge` survives as a sentence rather
+than a trigger — a copy over a week old is mentioned beside the button and refetched only if the
+driver presses it.
+
+Two reasons, and the record is the place to say that the second one is the weaker of them.
+
+The plain one is that a driver could not find out why their lights were generic. `car` is the default
+style (part 5) and the fallback is deliberately total and silent (part 3): the plugin absent, the
+tables not fetched, no entry for the car, a malformed entry and a driver who chose another style all
+look identical from the profile's side. That is right for the profile and wrong for the panel, and a
+button with a car count beside it turns the commonest of the five into something a person can see.
+
+The licence one is that a copy the *user* made, having been shown the project, the licence, the size
+and the host, is a better answer to CC BY-NC-SA than a copy a background thread made on their behalf
+during startup. It does not change what the licence permits — openDash still redistributes nothing,
+which was always the load-bearing fact — and it is worth being honest that it is a strengthening of a
+position rather than the establishing of one. The thing that would actually settle openDash's use of
+this data is asking Lovely Sim Racing directly, which has not been done and is not what this
+amendment is.
+
+Both the privacy argument in part 1 and the attribution now appear on the page. Before this, "one
+archive of every car, rather than one car at a time" was reasoning a user never saw: it was in the
+source and in this record, and the panel said only that the tables followed the update check.
 
 ## Alternatives considered
 

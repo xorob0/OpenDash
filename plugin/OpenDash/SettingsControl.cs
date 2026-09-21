@@ -223,6 +223,8 @@ namespace OpenDashPlugin
             zoneMaskButtons.Clear();
             zoneMaskBoxes.Clear();
             barEndButtons.Clear();
+            carTablesButton = null;
+            carTablesLine = null;
             flagBoxLine = null;
             flagBoxButton = null;
             flagBoxCopyButton = null;
