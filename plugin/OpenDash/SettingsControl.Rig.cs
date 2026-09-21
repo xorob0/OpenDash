@@ -377,7 +377,7 @@ namespace OpenDashPlugin
             add.ToolTip = "Creates the screen and installs its dashboard.";
             add.Click += (sender, args) => AddScreen(entry, name.Text);
             var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Go back without adding anything.";
+            cancel.ToolTip = "Goes back without adding anything.";
             cancel.Click += (sender, args) => Redraw();
 
             var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
@@ -456,7 +456,7 @@ namespace OpenDashPlugin
             apply.ToolTip = "Installs this screen's dashboard at the new size.";
             apply.Click += (sender, args) => ResizeScreen(screen, chosen);
             var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Keep the current size.";
+            cancel.ToolTip = "Keeps the current size.";
             cancel.Click += (sender, args) => Redraw();
 
             bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.ResizeTitle + " of " + screen.Name,
@@ -541,7 +541,7 @@ namespace OpenDashPlugin
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Text = screen.Name,
             };
-            var save = BuildSecondaryButton("Rename", "Use this name for the screen.");
+            var save = BuildSecondaryButton("Rename", "Uses this name for the screen.");
             save.Click += (sender, args) =>
             {
                 var wanted = (name.Text ?? string.Empty).Trim();
@@ -552,7 +552,7 @@ namespace OpenDashPlugin
                 }
                 Redraw();
             };
-            var cancel = BuildSecondaryButton("Cancel", "Keep the current name.");
+            var cancel = BuildSecondaryButton("Cancel", "Keeps the current name.");
             cancel.Click += (sender, args) => Redraw();
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + screen.Name,
@@ -592,7 +592,7 @@ namespace OpenDashPlugin
                         : "Removed " + screen.Name + ", but its dashboard could not be deleted: " + result.Error,
                     result.Ok ? Theme.TextSecondary : Theme.Caution);
             };
-            var cancel = BuildSecondaryButton("Keep it", "Leave this screen alone.");
+            var cancel = BuildSecondaryButton("Keep it", "Leaves this screen alone.");
             cancel.Click += (sender, args) => Redraw();
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Remove " + screen.Name,
@@ -616,7 +616,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BackRow()
         {
-            var back = BuildSecondaryButton("Back", "Go back to your rig.");
+            var back = BuildSecondaryButton("Back", "Goes back to your rig.");
             back.Click += (sender, args) => Redraw();
             return Ui.Row(new Border(), back);
         }

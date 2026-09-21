@@ -309,7 +309,7 @@ namespace OpenDashPlugin.Tests
             var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
 
             Assert.False(outcome.Ok);
-            Assert.Contains("did not arrive as GitHub published it", outcome.Reason);
+            Assert.Contains("did not download correctly", outcome.Reason);
             Assert.Empty(outcome.Updated);
             Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
             Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
@@ -359,7 +359,7 @@ namespace OpenDashPlugin.Tests
             Assert.Empty(outcome.Updated);
             Assert.Equal(new[] { "openDash" }, outcome.HeldBack);
             Assert.Equal("{\"mine\":true}", File.ReadAllText(Path.Combine(root, "DashTemplates", "openDash", "openDash.djson")));
-            Assert.Contains("every dashboard has been edited", outcome.Line);
+            Assert.Contains("you have edited all of them", outcome.Line);
         }
 
         /// <summary>

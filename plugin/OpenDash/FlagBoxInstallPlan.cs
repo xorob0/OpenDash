@@ -236,22 +236,10 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>The label on the button, which has to say what pressing it does.</summary>
-        public static string ButtonLabel(FlagBoxPlan plan)
-        {
-            if (plan == null) return "Install into SimHub";
-            switch (plan.State)
-            {
-                case FlagBoxInstallState.Outdated: return "Update in SimHub";
-                case FlagBoxInstallState.UpToDate: return "Reinstall in SimHub";
-                default: return "Install into SimHub";
-            }
-        }
-
         /// <summary>The line beside the button. Says what is true now, not what we wish were true.</summary>
         public static string Summary(FlagBoxPlan plan, string path)
         {
-            if (plan == null) return "Flag box: not checked.";
+            if (plan == null) return "Not checked.";
             switch (plan.State)
             {
                 case FlagBoxInstallState.NotEmbedded:
@@ -279,7 +267,7 @@ namespace OpenDashPlugin
                         + (plan.InstalledVersion ?? "unknown") + " to " + (plan.EmbeddedVersion ?? "unknown")
                         + "). " + Replaces;
                 default:
-                    return "Could not install the flag box profile. See SimHub's log.";
+                    return "Install failed. See SimHub's log.";
             }
         }
     }

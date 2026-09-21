@@ -47,10 +47,10 @@ namespace OpenDashPlugin
                     return Updated.Count == 0 ? failure : failure + " " + Updated.Count + " of them were replaced before it stopped. " + UpdateWording.Reopen;
                 }
                 var line = Updated.Count == 1 ? "Updated 1 dashboard. " : Updated.Count > 1 ? "Updated " + Updated.Count + " dashboards. " : string.Empty;
-                if (Updated.Count == 0 && HeldBack.Count > 0) line = "No dashboard was replaced, because every dashboard has been edited since openDash wrote it. ";
+                if (Updated.Count == 0 && HeldBack.Count > 0) line = "No dashboard was replaced: you have edited all of them. ";
                 else if (Updated.Count == 0 && !PluginStaged) return "There was nothing to replace.";
                 else if (Updated.Count == 0) line = "The dashboards were already up to date. ";
-                if (Updated.Count > 0 && HeldBack.Count > 0) line += (HeldBack.Count == 1 ? "1 was left alone because it has been edited. " : HeldBack.Count + " were left alone because they have been edited. ");
+                if (Updated.Count > 0 && HeldBack.Count > 0) line += (HeldBack.Count == 1 ? "1 was left alone: you have edited it. " : HeldBack.Count + " were left alone: you have edited them. ");
                 if (NotCarried.Count > 0) line += (NotCarried.Count == 1 ? "1 is not in this release and was not touched. " : NotCarried.Count + " are not in this release and were not touched. ");
                 // The restart sentence replaces the reopen one rather than joining it: a plugin that is
                 // about to be swapped makes "SimHub does not need restarting" false, and of the two
@@ -179,7 +179,7 @@ namespace OpenDashPlugin
                 if (!fetched.Ok) return new UpdateOutcome { Reason = "openDash itself could not be downloaded (" + fetched.Reason + ")" };
                 if (!Digest.Matches(fetched.Bytes, pluginAsset.Digest))
                 {
-                    return new UpdateOutcome { Reason = "openDash itself did not arrive as GitHub published it, so nothing was installed" };
+                    return new UpdateOutcome { Reason = "openDash itself did not download correctly, so nothing was installed" };
                 }
                 pluginBytes = fetched.Bytes;
                 fetchedSoFar++;
@@ -192,7 +192,7 @@ namespace OpenDashPlugin
                 if (!fetched.Ok) return new UpdateOutcome { Reason = item.FolderName + " could not be downloaded (" + fetched.Reason + ")" };
                 if (!Digest.Matches(fetched.Bytes, item.Asset.Digest))
                 {
-                    return new UpdateOutcome { Reason = item.FolderName + " did not arrive as GitHub published it, so nothing was installed" };
+                    return new UpdateOutcome { Reason = item.FolderName + " did not download correctly, so nothing was installed" };
                 }
                 downloaded.Add(item.Asset.Name, fetched.Bytes);
                 fetchedSoFar++;

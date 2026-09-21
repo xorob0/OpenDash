@@ -428,7 +428,7 @@ namespace OpenDashPlugin
                     if (ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, log, force: true).Written) replaced++;
                 }
                 updateLine.Text = held > 0
-                    ? "Reinstalled " + replaced + ". " + held + " left alone because you have edited them."
+                    ? "Reinstalled " + replaced + ". " + held + " left alone: you have edited them."
                     : "Reinstalled " + replaced + (replaced == 1 ? " dashboard. " : " dashboards. ") + UpdateWording.Reopen;
                 updateLine.Visibility = Visibility.Visible;
             }

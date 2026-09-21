@@ -184,7 +184,7 @@ namespace OpenDashPlugin
         {
             var m = matrix;
             var rename = Ui.LinkButton("Rename");
-            rename.ToolTip = "Rename this panel.";
+            rename.ToolTip = "Renames this panel.";
             rename.Click += (sender, args) => ShowRenameMatrixPanel(m);
             var remove = Ui.LinkButton("Remove", Theme.Danger);
             remove.ToolTip = "Removes this panel and frees its slot.";
@@ -343,12 +343,12 @@ namespace OpenDashPlugin
         private FrameworkElement BuildLedBarActions(string ns)
         {
             var rename = Ui.LinkButton("Rename");
-            rename.ToolTip = "Rename this strip. Install it again to rename its SimHub profile too.";
+            rename.ToolTip = "Renames this strip. Install it again to rename its SimHub profile too.";
             rename.Click += (sender, args) => ShowRenameLedBar(ns);
             // "Remove" and not "Remove this bar": a group is indented inside its section and the longer
             // words were cut off at the panel's edge.
             var remove = Ui.LinkButton("Remove", Theme.Danger);
-            remove.ToolTip = "Remove this strip and its profile from SimHub.";
+            remove.ToolTip = "Removes this strip and its profile from SimHub.";
             remove.Click += (sender, args) => RemoveLedBar(ns);
             var row = Ui.Row(new Border(), Ui.HStack(12, rename, remove));
             row.HorizontalAlignment = HorizontalAlignment.Stretch;

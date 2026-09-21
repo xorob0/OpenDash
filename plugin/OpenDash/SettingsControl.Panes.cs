@@ -207,7 +207,7 @@ namespace OpenDashPlugin
         /// </summary>
         private FrameworkElement BuildBarEnd(ScreenInstance screen, string firstSlot, string secondSlot, double width)
         {
-            var button = Ui.DropButton(width, BarEndCaption(screen, firstSlot, secondSlot), secondSlot == null ? "The field this end of the bar shows" : "The two fields this end of the bar shows");
+            var button = Ui.DropButton(width, BarEndCaption(screen, firstSlot, secondSlot), secondSlot == null ? "The field at this end of the bar" : "The two fields at this end of the bar");
             barEndButtons[firstSlot] = button;
             var rows = new List<UIElement>();
             var slots = secondSlot == null ? new[] { firstSlot } : new[] { firstSlot, secondSlot };
@@ -863,7 +863,7 @@ namespace OpenDashPlugin
             {
                 var empty = box.Text.Length == 0;
                 watermark.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
-                box.ToolTip = empty ? "An http or https address; anything else is ignored." : box.Text;
+                box.ToolTip = empty ? "http or https only." : box.Text;
             };
             Action commit = () =>
             {
@@ -954,7 +954,7 @@ namespace OpenDashPlugin
                     "Tap the left or right half of the screen to move between modules. For a wheel button, "
                     + "bind SimHub's \"Next screen\" for this dashboard under Controls and events.",
                     BodyWidth),
-                Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session opens on", value =>
+                Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>
                 {
                     screen.CompanionStart = value;
                     // And force it now, so the screen in front of you moves rather than waiting for the

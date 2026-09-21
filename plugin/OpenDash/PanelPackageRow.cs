@@ -89,21 +89,19 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What the row's tooltip says: where the package is written, and how much of the rig is made of it.
+        /// What the row's tooltip says: how much of the rig is made of this package.
         /// </summary>
         /// <remarks>
-        /// The folder is here because it is what somebody reads when an install goes wrong, and because
-        /// the row's first line will stop being the folder as soon as the packages carry names of their
-        /// own. The count is here because the pill answers a different question: the pill says whether
-        /// DashTemplates has the folder, the count says how many screens were made from it, and under ADR
-        /// 0017 neither answer covers the other.
+        /// The count and not the folder. The pill beside the row already answers whether DashTemplates
+        /// holds it, and the folder is a path nobody types and nobody meets in SimHub, whose own list
+        /// shows the title; docs/design/voice.md is the rule. The count answers the other question, which
+        /// is how much of the rig is made of this package, and under ADR 0017 that can be more than one.
         /// </remarks>
-        public static string Tooltip(string folder, int uses)
+        public static string Tooltip(int uses)
         {
-            var where = "Installed into DashTemplates\\" + (folder ?? string.Empty) + ". ";
-            if (uses <= 0) return where + "Nothing on your rig uses it yet.";
-            if (uses == 1) return where + "1 screen on your rig uses it.";
-            return where + uses + " screens on your rig use it.";
+            if (uses <= 0) return "Nothing on your rig uses it yet.";
+            if (uses == 1) return "1 screen on your rig uses it.";
+            return uses + " screens on your rig use it.";
         }
 
         /// <summary>

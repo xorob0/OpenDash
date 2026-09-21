@@ -55,7 +55,7 @@ namespace OpenDashPlugin.Tests
             var plan = FlagBoxInstallPlan.Decide(Ours, V1, new List<InstalledProfile>());
             Assert.Equal(FlagBoxInstallState.NotInstalled, plan.State);
             Assert.True(plan.WouldChange);
-            Assert.Equal("Install into SimHub", FlagBoxInstallPlan.ButtonLabel(plan));
+            Assert.Equal("Install", PanelCopy.LightRow(plan.State, plan.InstalledVersion).Button);
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(plan.WouldChange);
             Assert.Equal("0.2.0-rc.1", plan.InstalledVersion);
             // Still pressable, because a user who has broken it in SimHub needs a way back.
-            Assert.Equal("Reinstall in SimHub", FlagBoxInstallPlan.ButtonLabel(plan));
+            Assert.Equal("Reinstall", PanelCopy.LightRow(plan.State, plan.InstalledVersion).Button);
         }
 
         [Fact]
@@ -77,7 +77,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(plan.WouldChange);
             Assert.Equal("0.2.0-rc.1", plan.InstalledVersion);
             Assert.Equal("0.3.0", plan.EmbeddedVersion);
-            Assert.Equal("Update in SimHub", FlagBoxInstallPlan.ButtonLabel(plan));
+            Assert.Equal("Update", PanelCopy.LightRow(plan.State, plan.InstalledVersion).Button);
         }
 
         [Fact]
@@ -149,7 +149,7 @@ namespace OpenDashPlugin.Tests
             // the copy in SimHub goes and their edits to it go with it -- and it is the press that is
             // never necessary, so it is the one that most needs saying before it is pressed.
             var upToDate = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
-            Assert.Equal("Reinstall in SimHub", FlagBoxInstallPlan.ButtonLabel(upToDate));
+            Assert.Equal("Reinstall", PanelCopy.LightRow(upToDate.State, upToDate.InstalledVersion).Button);
             var text = FlagBoxInstallPlan.Summary(upToDate, null);
             Assert.Contains("replaces", text, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("changes you made", text, StringComparison.OrdinalIgnoreCase);

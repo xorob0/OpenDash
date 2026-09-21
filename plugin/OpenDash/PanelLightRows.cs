@@ -389,7 +389,7 @@ namespace OpenDashPlugin
             switch (state)
             {
                 case FlagBoxInstallState.NotEmbedded:
-                    return "This build of openDash does not ship that profile.";
+                    return "This build of openDash ships no such profile.";
                 case FlagBoxInstallState.Unavailable:
                     return Unavailable;
                 case FlagBoxInstallState.NotInstalled:

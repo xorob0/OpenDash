@@ -64,7 +64,7 @@ namespace OpenDashPlugin
                 PanelPackageRow.Caption(captured),
                 Ui.StatusPill(dot, state.State, state.StateHex),
                 null);
-            row.ToolTip = PanelPackageRow.Tooltip(captured.Folder, uses);
+            row.ToolTip = PanelPackageRow.Tooltip(uses);
             return row;
         }
     }

@@ -114,14 +114,14 @@ namespace OpenDashPlugin.Tests
         /// <summary>The folder is the only place the panel says where a package lands, and it is what
         /// somebody reads when the install went somewhere they did not expect.</summary>
         [Fact]
-        public void The_tooltip_keeps_the_folder_and_the_count_the_pill_cannot_carry()
+        public void The_tooltip_keeps_the_count_the_pill_cannot_carry()
         {
-            Assert.Equal("Installed into DashTemplates\\openDash. Nothing on your rig uses it yet.",
-                PanelPackageRow.Tooltip("openDash", 0));
-            Assert.Equal("Installed into DashTemplates\\openDash. 1 screen on your rig uses it.",
-                PanelPackageRow.Tooltip("openDash", 1));
-            Assert.Equal("Installed into DashTemplates\\openDash 850x480. 3 screens on your rig use it.",
-                PanelPackageRow.Tooltip("openDash 850x480", 3));
+            // The folder is gone from it: the pill already answers whether DashTemplates holds the
+            // package, and a path nobody types is not something a tooltip is for. What is left is the
+            // question the pill cannot answer, which is how many screens were made from this one.
+            Assert.Equal("Nothing on your rig uses it yet.", PanelPackageRow.Tooltip(0));
+            Assert.Equal("1 screen on your rig uses it.", PanelPackageRow.Tooltip(1));
+            Assert.Equal("3 screens on your rig use it.", PanelPackageRow.Tooltip(3));
         }
 
         /// <summary>The verb says that a second screen is added rather than the first replaced. The canvas
