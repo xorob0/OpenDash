@@ -134,8 +134,7 @@ namespace OpenDashPlugin
             stripCaption = Ui.Caption(face.HasBar
                 ? "The bar does not cycle. "
                     + (face.BarFieldsPerEnd == 1 ? "One field at each end, " : "Two fields at each end, ")
-                    + "and between them the car settings your sim publishes: slip, TC, cut, bias, ABS, map and diff. "
-                    + "Settings your sim does not report are left out."
+                    + "and between them the car settings your sim publishes: slip, TC, cut, bias, ABS, map and diff."
                 : "This screen has no bar: at " + face + " there is no room for one.",
                 BodyWidth);
             return stripCaption;
@@ -596,7 +595,7 @@ namespace OpenDashPlugin
             glanceText.MaxWidth = 420;
 
             return Ui.Section("Wheel buttons on this screen",
-                Ui.Caption("Bound per screen, so a second face can stay put while the one in front of you cycles.", BodyWidth),
+                Ui.Caption("Bound per screen, so a second face can stay put while this one cycles.", BodyWidth),
                 wrap,
                 Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                     BuildGlanceSelect(screen),
@@ -974,8 +973,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildCompanionFlagRow(ScreenInstance screen)
         {
             var text = Ui.VStack(4, Ui.Body("Flags"),
-                Ui.Caption("Full screen covers the module for as long as the flag is out, which is hard to miss on "
-                    + "a screen outside your eyeline. Bar is the thin strip at the foot. Off draws none."));
+                Ui.Caption("Full screen covers the module for as long as the flag is out. Bar is the thin strip "
+                    + "at the foot. Off draws none."));
             text.MaxWidth = 420;
             var segmented = BuildSegmented(
                 Contract.CompanionFlagFormats,
@@ -991,8 +990,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallFlagRow(ScreenInstance screen)
         {
             var text = Ui.VStack(4, Ui.Body("Flags"),
-                Ui.Caption("Bar is a strip under the header, which keeps the board and the zones readable. Full "
-                    + "screen takes everything below the header, for a monitor kept as a flag panel. Off draws none."));
+                Ui.Caption("Bar is a strip under the header, which keeps the board readable. Full screen takes "
+                    + "everything below it. Off draws none."));
             text.MaxWidth = 420;
             var segmented = BuildSegmented(
                 Contract.CompanionFlagFormats,

@@ -63,12 +63,16 @@ namespace OpenDashPlugin.Tests
         /// place once SimHub closes. The sentence used to be past tense -- "was updated too; it takes
         /// effect the next time you start SimHub" -- under a pill that had already flipped to up to date
         /// and a version number that had already moved, and a rig read all of that as "done" and never
-        /// restarted. It says what has to happen, and the dialog asks.
+        /// restarted. It names the restart, and the dialog asks.
+        ///
+        /// What it does not do any more is say why the restart is needed. A user does not act on the
+        /// fact that a process cannot replace its own assembly, so the sentence names the outcome and
+        /// the action and stops; see docs/design/voice.md.
         /// </remarks>
         [Fact]
         public void The_plugins_own_sentence_says_SimHub_has_to_close()
         {
-            Assert.Contains("when SimHub closes", UpdateWording.Restart);
+            Assert.Contains("Restart SimHub", UpdateWording.Restart);
             Assert.DoesNotContain("does not need restarting", UpdateWording.Restart);
             // Not past tense: the swap has not happened yet and saying it has is the whole bug.
             Assert.DoesNotContain("was updated", UpdateWording.Restart);
@@ -76,14 +80,16 @@ namespace OpenDashPlugin.Tests
             var question = UpdateWording.RestartQuestion("0.3.0-rc.5");
             Assert.Contains("0.3.0-rc.5", question);
             Assert.Contains("Close SimHub now", question);
-            // It names the reason, because "restart to finish" reads as a demand and this reads as a fact
-            // about how programs work.
-            Assert.Contains("cannot replace its own code while it is running", question);
-            // And it survives not knowing which version it is offering.
+            // The consequence of saying no, which is the one fact that makes the dialog worth the
+            // interruption: the pill and the version have both already moved.
+            Assert.Contains("you are running the old version", question);
+            // And no account of why, in the dialog any more than in the caption.
+            Assert.DoesNotContain("cannot replace its own code", question);
+            // It survives not knowing which version it is offering.
             Assert.Contains("openDash itself", UpdateWording.RestartQuestion(null));
 
             Assert.Contains("SimHub", UpdateWording.RestartTitle);
-            Assert.Contains("next time you close SimHub", UpdateWording.RestartLater);
+            Assert.Contains("Restart SimHub", UpdateWording.RestartLater);
             Assert.Contains("Close it yourself", UpdateWording.RestartFailed);
         }
 

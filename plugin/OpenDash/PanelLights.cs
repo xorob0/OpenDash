@@ -71,8 +71,8 @@ namespace OpenDashPlugin
         /// and found nothing. Somebody reading this row has to understand that choosing is not optional.
         /// </remarks>
         public const string BarDeviceCaption =
-            "Pick the device these LEDs are on: your wheel, a button plate, or the Arduino if you wired the strip "
-            + "yourself. SimHub keeps a separate profile list per device.";
+            "Pick the device these LEDs are on: your wheel, a button plate, or the Arduino if you wired the "
+            + "strip yourself.";
 
         /// <summary>Said in place of the picker when SimHub has exactly one LED device: there is nothing
         /// to choose, and a drop-down of one is a question with one answer.</summary>
@@ -157,7 +157,7 @@ namespace OpenDashPlugin
 
         public const string PanelNameTitle = "Name";
 
-        public const string PanelNameCaption = "Shown here, so you can tell your panels apart.";
+        public const string PanelNameCaption = "Shown here, to tell your panels apart.";
 
         /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since
         /// that is the number a driver has to match on the device itself.</summary>

@@ -63,7 +63,7 @@ namespace OpenDashPlugin
 
         public const string SizeTitle = "Screen size";
 
-        public const string SizeCaption = "Pick your screen's real resolution. SimHub does not scale dashboards, so the wrong size looks wrong.";
+        public const string SizeCaption = "Pick your screen's real resolution. The wrong size will not fit your screen.";
 
         public const string OrientationTitle = "Orientation";
 
@@ -90,8 +90,7 @@ namespace OpenDashPlugin
         /// right one", which is what a driver who picked the wrong size had to do.
         /// </remarks>
         public const string ResizeCaption =
-            "Your zones, bar and buttons stay as they are, and this screen's properties keep the names they "
-            + "have, so nothing you bound to it stops working. Only the dashboard in SimHub is rewritten.";
+            "Your zones, bar and buttons stay as they are, and anything you bound to this screen keeps working.";
 
         /// <summary>
         /// The kinds the build can make a screen of, in the order the page offers them.
@@ -235,8 +234,8 @@ namespace OpenDashPlugin
         {
             if (entry == null) return string.Empty;
             return second
-                ? "This is your second " + entry.SizeLabel + ", so it gets a dashboard and settings of its own. "
-                    + "The two screens page independently."
+                ? "This is your second " + entry.SizeLabel + ". It gets settings of its own, so the two can "
+                    + "show different pages."
                 : "openDash will install its dashboard into SimHub for you.";
         }
 

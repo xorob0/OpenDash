@@ -29,8 +29,8 @@ namespace OpenDashPlugin
 
             var box = Ui.Section("The flag box",
                 Ui.Caption(
-                    "An 8x8 LED matrix beside your screen. Install its profile from the Install tab, then select "
-                        + "it on your matrix device. Profiles you made yourself are never touched."),
+                    "An 8x8 LED matrix beside your screen. Install its profile from the Install tab, then "
+                        + "select it on your matrix device."),
                 // Critical flags only, the gear and the two temperature thresholds used to sit here, one
                 // value for every panel. They belong to a panel: a rig with a box in each corner wants the
                 // catalogue on one and the gear alone on the other, which is what the group below is for.
@@ -136,7 +136,7 @@ namespace OpenDashPlugin
             var nameRow = Ui.Row(PanelLights.PanelNameTitle, PanelLights.PanelNameCaption, name);
             nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddPanel,
-                Ui.Caption("It will be " + PanelLights.PanelSlot(slot) + ". That is the content number to pick on the device itself."),
+                Ui.Caption("It will be " + PanelLights.PanelSlot(slot) + ". Pick that content number on the device itself."),
                 nameRow,
                 Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
         }
@@ -253,7 +253,7 @@ namespace OpenDashPlugin
                 return Ui.VStack(4,
                     BuildLedDeviceRow(LedTargets.All(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
                     Ui.Row("Strip centre", "What the middle of this strip shows. The LEDs at the ends are lamps and are unaffected.", centre),
-                    Ui.Row("Rev style", "The car's own mirrors the shift lights of the car you are driving. The other three are openDash's own, and also cover cars it has no lights for.", style),
+                    Ui.Row("Rev style", "The car's own mirrors the shift lights of the car you are driving. The other three are openDash's own looks.", style),
                     Ui.Row("Flag animation", "Moving flags catch the corner of your eye. Off shows each flag as a steady colour instead.",
                         BuildToggle(Settings.BarFlagAnimation(ns), on =>
                         {

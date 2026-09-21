@@ -193,7 +193,10 @@ namespace OpenDashPlugin.Tests
         public void A_resize_promises_the_settings_and_the_bindings()
         {
             Assert.Contains("stay as they are", PanelAddScreen.ResizeCaption);
-            Assert.Contains("properties keep the names", PanelAddScreen.ResizeCaption);
+            // In the user's terms rather than in the settings model's: the promise is that a binding
+            // goes on working, and the property names behind it are not something a driver acts on.
+            Assert.Contains("keeps working", PanelAddScreen.ResizeCaption);
+            Assert.DoesNotContain("properties", PanelAddScreen.ResizeCaption);
             Assert.Contains("Restart SimHub", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim"));
         }
     }

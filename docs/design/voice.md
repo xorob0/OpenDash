@@ -11,13 +11,19 @@ thing in their head.
 
 ## The governing principle
 
-> Write to the person using openDash, about what they are about to do. Not to the person who built
-> it, about why it is built that way.
+> Say what happened and what to do about it. Never say how it works.
 
-The reasoning belongs somewhere, and that somewhere is a code comment, a decision record or one of
-these design documents, all three of which are addressed to a reader who has chosen to read them.
-A caption is read by somebody who wants to change a setting and stop reading, so every clause that
-does not help them do that is a tax charged at the worst possible moment.
+Mechanism is the hardest of these to give up, because it is usually true, usually interesting to
+whoever implemented it, and always the reason the sentence was easy to write. It is nonetheless the
+first thing to cut. "openDash itself was downloaded too. It is put in place when SimHub closes"
+tells a user about an assembly swap they have no part in, where "openDash itself was downloaded too.
+Restart SimHub to finish updating" tells them the one thing they have to do. The second is shorter
+and it is also more useful, which is the pattern every rule below is a special case of.
+
+The reasoning still belongs somewhere, and that somewhere is a code comment, a decision record or
+one of these design documents, all three of which are addressed to a reader who has chosen to read
+them. A caption is read by somebody who wants to change a setting and stop reading, so every clause
+that does not help them do that is a tax charged at the worst possible moment.
 
 ## What this covers
 
@@ -31,6 +37,22 @@ written to SimHub's log, all of which are addressed to a contributor and are fre
 as argumentative as the point requires.
 
 ## The rules
+
+### Never explain how it works
+
+The strongest of these and the one most often broken, because a mechanism is what the writer has
+just been thinking about. A user does not act on a mechanism, therefore a mechanism does not appear.
+
+> "openDash itself was downloaded too. It is put in place when SimHub closes." → "openDash itself
+> was downloaded too. Restart SimHub to finish updating."
+
+> "Pick the device these LEDs are on: your wheel, a button plate, or the Arduino if you wired the
+> strip yourself. SimHub keeps a separate profile list per device." → the same sentence without the
+> second one.
+
+This applies to openDash's own internals with no exception at all. That a second screen at one size
+gets a settings group of its own is a design decision of some consequence; what a user needs from
+it is that their two screens can show different pages.
 
 ### Address the user, in the present tense
 
@@ -78,11 +100,15 @@ have no reason to.
 
 ### A technical fact earns its place by being actionable
 
-The test is whether the reader would do something differently for knowing it. That SimHub scales
-nothing is worth a clause, because it is the reason to measure the screen before answering; that
-the screen's properties keep their names through a rename is worth a clause, because somebody who
-has bound those properties is entitled to know they survive. That the car light tables are fetched
-when update checks are on changes nothing anybody does, so it went.
+The test is whether the reader would do something differently for knowing it, and it is a stricter
+test than it first looks, because a fact can be relevant, true and still not actionable. That the
+car light tables are fetched when update checks are on is all three, therefore it went. That a
+process cannot replace its own assembly is all three, therefore it went as well, from the dialog as
+much as from the caption.
+
+What survives the test is a consequence rather than a cause. A screen at the wrong size will not
+fit, which is worth a clause because it is the reason to go and measure; how SimHub comes to draw
+it that way is not, and the caption now says the first and not the second.
 
 ### Say the step openDash does not take
 
@@ -94,21 +120,22 @@ remaining step, in the order it has to be done.
 
 > "Added Rim. Restart SimHub, then assign "Rim" to this display in Dash Studio."
 
-### A dialog interrupts, so it may justify itself
+### A dialog earns its interruption with a consequence, not with a reason
 
-This is the one place the rule above is relaxed, and deliberately. A caption sits there quietly and
-is read by somebody who went looking for it, whereas a modal takes the window and demands an answer,
-so a modal that states a requirement and no reason for it reads as a demand. The restart dialog
-therefore keeps the clause explaining that a program cannot replace its own code while it is running,
-and `UpdateWordingTests` pins that clause so it cannot be tidied away by somebody applying the rule
-above without reading this one. Everything around it is still held to the ordinary budget: what
-happened, the consequence for the reader, and the question, in that order and in three short
-paragraphs.
+A modal takes the window and demands an answer, so it does owe the reader something beyond the
+demand. What it owes them is what happens if they say no, which is a fact about their rig, and not
+an account of why the software is arranged as it is, which is a fact about the software. The
+restart dialog says "until then you are running the old version", and that sentence is what makes
+the interruption worth it, since the version number and the status pill have both already moved and
+everything else on the tab reads as finished.
 
-The same fact does not then get repeated in the caption underneath, which says only what is true of
-the rig once the dialog is gone.
+The order is what happened, the consequence, then the question, and the caption underneath does not
+repeat any of it.
 
-> "openDash itself was downloaded too. It is put in place when SimHub closes."
+> "openDash 0.3.0-rc.5 is downloaded. It takes effect once you restart SimHub; until then you are
+> running the old version."
+>
+> "Close SimHub now and start it again?"
 
 ### An empty state is an instruction
 

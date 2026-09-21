@@ -179,8 +179,8 @@ namespace OpenDashPlugin
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
             var text = Ui.Caption(
-                "Earlier versions installed every dashboard openDash ships. Remove the ones you have no "
-                + "screen for to tidy SimHub's dashboard list; nothing else is touched.");
+                "Remove the dashboards you have no screen for to tidy up SimHub's dashboard list. "
+                + "Nothing else is touched.");
             var row = Ui.HStack(10, icon, text);
             row.Margin = new Thickness(0, 4, 0, 4);
             return row;
@@ -559,9 +559,7 @@ namespace OpenDashPlugin
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + screen.Name,
                 Ui.Row("Name", "Shown here and in SimHub's dashboard list.", name),
-                Ui.Caption(
-                    "Only the name changes. Its settings and anything you bound to it keep working, since its "
-                    + "properties stay OpenDash." + screen.Namespace + "*."),
+                Ui.Caption("Only the name changes. Its settings and anything you bound to it keep working."),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
         }
 
