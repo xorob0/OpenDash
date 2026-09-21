@@ -520,7 +520,11 @@ describe('LED profiles on disk', () => {
     // being a second consumer of it.
     for (const name of Object.values(SHIFT_RPM_PROPERTIES)) expect({ name, inProfile: text.includes(name) }).toMatchObject({ inProfile: false });
     expect(text).toContain('"RpmMode": 1');
-    // ...and every colour on the strip is still a token rather than a copy of one.
+    // SimHub's bar wears SimHub's own three colours, from RPMSegmentsContainer.LoadDefaultSettings():
+    // green from 70 per cent of the redline, red from 85, blue from 99. Not green, amber and red.
+    expect(text).toContain('#00FF00');
+    expect(text).toContain(';70;');
+    // ...and every colour that is openDash's own is still a token rather than a copy of one.
     expect(text).toContain(ds.purpose.shift.stage1);
     expect(text).toContain(ds.purpose.shift.stage3);
   });

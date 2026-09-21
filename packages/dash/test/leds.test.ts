@@ -653,6 +653,15 @@ describe('every generated profile', () => {
       ds.color.text.primary,
       // The off phase of a blink is a colour like any other and comes from the sheet like any other.
       ds.color.surface.base,
+      // The one exception in the build, and it is named here so that it is an exception rather than
+      // a hole: SimHub's own rev bar wears SimHub's own three colours, decompiled from
+      // RPMSegmentsContainer.LoadDefaultSettings(). SimHub publishes no colour property -- every
+      // colour in a .ledsprofile is written by whoever writes the file -- so "SimHub's own bar" can
+      // only mean these. They are a fact about SimHub like a property name, not a design choice, and
+      // they are allowed here by being listed rather than by not being looked at. #369.
+      '#00FF00',
+      '#FF0000',
+      '#0000FF',
     ]);
     for (const shape of ALL_SHAPES) {
       for (const c of walk(rpmStripProfile(shape, stableGuid(`t/${shape.id}`)).containers)) {
@@ -660,6 +669,16 @@ describe('every generated profile', () => {
           const value = (c as unknown as Record<string, unknown>)[key];
           if (typeof value !== 'string') continue;
           expect({ shape: shape.id, key, value, fromTokens: tokens.has(value) }).toMatchObject({ fromTokens: true });
+        }
+        // An RPMSegments container keeps its colours inside its segments rather than on itself, so
+        // walking the container alone missed every one of them. That was the hole this closes: the
+        // three SimHub colours above went in and nothing said so.
+        if (c.kind !== 'rpmSegments') continue;
+        for (const segment of c.segments) {
+          for (const value of [segment.color, segment.blinkColor]) {
+            if (typeof value !== 'string') continue;
+            expect({ shape: shape.id, value, fromTokens: tokens.has(value) }).toMatchObject({ fromTokens: true });
+          }
         }
       }
     }

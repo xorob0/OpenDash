@@ -52,15 +52,27 @@ const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which))
 const TRUE: Expr = 'true';
 
 /**
- * Where SimHub's own bar begins, as a percentage of the redline it works out for the car.
+ * SimHub's own default rev bar, decompiled from `RPMSegmentsContainer.LoadDefaultSettings()`.
  *
- * Fifteen points below it, which is about where a measured car's first LED sits: the BMW M4 GT4's
- * is 6450 of a 7050 redline in third, 91 per cent, and the spread over a whole grid is wider than
- * one number can be right about. This is SimHub's bar and not the car's, so it is a reasonable
- * shape rather than a measurement — the car's own bar is the other switch, and it is the one that
- * is exact.
+ * Green from 70 per cent of the redline, red from 85, blue from 99, with a blue blink over all
+ * three -- not the green, amber and red everybody assumes, and worth reading twice. The numbers
+ * are in docs/research/simhub-leds-format.md beside the rest of the format.
+ *
+ * These are literals rather than tokens, and that is the one place in the build where a colour is
+ * not `design/tokens.json`'s. It is not a design decision that escaped: SimHub publishes no colour
+ * property -- every colour in a `.ledsprofile` is written into the file by whoever writes it -- so
+ * "SimHub's own bar" can only mean the colours SimHub's own container gives itself. They are a
+ * fact about SimHub of exactly the kind the property names are, and they change when SimHub
+ * changes them and not when openDash decides something.
  */
-const SIMHUB_BAR_FLOOR = 85;
+const SIMHUB_DEFAULT_BANDS: readonly { from: number; color: string }[] = [
+  { from: 70, color: '#00FF00' },
+  { from: 85, color: '#FF0000' },
+  { from: 99, color: '#0000FF' },
+];
+
+/** The blink SimHub's own defaults give every segment. */
+const SIMHUB_DEFAULT_BLINK = '#0000FF';
 
 /**
  * SimHub's own rev bar: one `RPMSegments` container, `count` segments of one LED.
@@ -70,38 +82,39 @@ const SIMHUB_BAR_FLOOR = 85;
  * ladders times `count` -- to draw a bar SimHub draws itself from its own per-car settings.
  * `RpmMode.RedlinePercent` means each segment's `StartValue` is a percentage of the redline SimHub
  * has for the car, so the thresholds follow the car without openDash knowing anything about it,
- * and the flash at the redline is SimHub's own.
+ * and the flash at the redline is SimHub's.
  *
  * What is lost with them is real and is the trade #369 accepted: SimHub's bar fills left to right
  * and cannot meet in the middle, so a driver who wanted that look now has the car's own bar (where
  * the car has one) or a bar that fills one way. What is gained is that the ladder is SimHub's to
  * maintain, and a profile that was mostly rev containers is now mostly not.
  *
- * The colours are openDash's shift tokens, because `design/tokens.json` is the only place a colour
- * is defined and it has no SimHub-green in it. Whether this bar should carry SimHub's own plain
- * green, amber and red instead is a design-source question and is the author's -- see #369.
+ * Its three bands are SimHub's own, proportioned over the run rather than SimHub's literal 5/5/5,
+ * because a run is 4 to 25 LEDs and SimHub's default assumes fifteen. Same colours, same
+ * thresholds, same shape, on whatever hardware the driver has.
  */
 const simHubBar = (count: number): leds.LedContainer => ({
   kind: 'rpmSegments',
   description: "SimHub's own rev bar",
   rpmMode: 'redlinePercent',
   blinkDelayMs: FAST_BLINK_MS,
-  segments: Array.from({ length: count }, (_, k) => ({
-    ledCount: 1,
-    // Evenly from the floor to the redline. Rounded to a tenth: SimHub writes the value with the
-    // invariant culture and a long fraction is noise in a file somebody may open.
-    startValue: Math.round((SIMHUB_BAR_FLOOR + ((100 - SIMHUB_BAR_FLOOR) * k) / count) * 10) / 10,
-    // Thirds, the last taking the remainder -- `stageOf` on the screens, kept in step by hand
-    // because the screens count segments of a bar and this counts LEDs of a strip.
-    color: bandColor(k, count),
-  })),
+  segments: Array.from({ length: count }, (_, k) => {
+    const band = SIMHUB_DEFAULT_BANDS[Math.min(SIMHUB_DEFAULT_BANDS.length - 1, Math.floor((k * SIMHUB_DEFAULT_BANDS.length) / count))]!;
+    const next = SIMHUB_DEFAULT_BANDS[SIMHUB_DEFAULT_BANDS.indexOf(band) + 1];
+    // Spread inside the band the segment landed in, so a nine-LED run walks the same 70-to-100 as
+    // a twenty-five-LED one rather than three LEDs jumping it.
+    const width = (next ? next.from : 100) - band.from;
+    const inBand = k - SIMHUB_DEFAULT_BANDS.indexOf(band) * Math.floor(count / SIMHUB_DEFAULT_BANDS.length);
+    const per = Math.max(1, Math.floor(count / SIMHUB_DEFAULT_BANDS.length));
+    return {
+      ledCount: 1,
+      startValue: Math.round((band.from + (width * Math.min(inBand, per - 1)) / per) * 10) / 10,
+      color: band.color,
+      blinkColor: SIMHUB_DEFAULT_BLINK,
+    };
+  }),
 });
 
-/** The three bands of SimHub's bar, in openDash's tokens. See {@link simHubBar}. */
-const SIMHUB_BAR_COLORS = [ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3] as const;
-
-/** The band a segment belongs to: thirds, the last taking any remainder. */
-const bandColor = (k: number, count: number): string => SIMHUB_BAR_COLORS[Math.min(2, Math.floor((k * 3) / count))] ?? SIMHUB_BAR_COLORS[2];
 
 /**
  * The centre, as a rev bar: the car's own where the driver asked for it and the car has one, and

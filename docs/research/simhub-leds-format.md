@@ -103,6 +103,20 @@ RpmMode.RedlinePercent percent of the redline
 RpmMode.Rpms           an absolute RPM
 ```
 
+**Its own defaults, from `RPMSegmentsContainer.LoadDefaultSettings()`**, which are the nearest
+thing SimHub has to "SimHub's colours" — there is no colour property to read, every colour in a
+profile is written into the file by whoever writes the profile:
+
+```csharp
+Segments.Add(new LedSegment { LedCount = 5, NormalColor = Color.FromArgb(0, 255, 0), StartValue = 70.0, BlinkingColor = Color.Blue });
+Segments.Add(new LedSegment { LedCount = 5, NormalColor = Color.Red,                 StartValue = 85.0, BlinkingColor = Color.Blue });
+Segments.Add(new LedSegment { LedCount = 5, NormalColor = Color.Blue,                StartValue = 99.0, BlinkingColor = Color.Blue });
+RelativeToRedline = true;
+```
+
+So green, red and blue — not green, amber and red — at 70, 85 and 99 per cent of the redline, with
+a blue blink over all three. Worth knowing before assuming SimHub's bar looks like everyone else's.
+
 With `RpmMode.Rpms` a segment table *is* a car's shift-light table — but the numbers are baked
 into the profile, so a profile that must suit many cars needs either one table per car under a
 `Groups.GameCarModelGroup`, or a value that is computed at run time.
