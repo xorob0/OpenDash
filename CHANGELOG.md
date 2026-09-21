@@ -12,6 +12,61 @@ including any that the plugin does not install.
 From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
 strips, the brows and the flag box, together with a `manifest.json` listing everything published.
 
+## 0.3.0-rc.5 (2026-09-21)
+
+Two things the plugin used to do on its own, and now asks about first. One of them was reported as
+broken and was not; the other could not be told apart from broken by anybody looking at it.
+
+**The car light tables arrive when you press the button, and at no other moment.** They used to come
+down on their own: fetched at startup, refetched once a week had passed, governed by the
+update-check switch, with the reasoning about what leaves the machine living in a source comment. A
+driver never chose it and was never told it had happened. The Lights tab now carries a row for it --
+what the tables are, who measured them, that the request is for every car at once so the car you are
+in is not disclosed, that it is about 400 KB, and what the licence is -- with a button that reads
+Download until there are tables and Update afterwards. Starting SimHub makes no request whatever the
+settings say.
+
+Two reasons for the press. A driver whose lights looked generic had nothing to read and nothing to
+press, because `car` is the default style and its fallback is deliberately silent: the plugin absent,
+no table fetched, no entry for the car and a driver who chose another style all looked the same. And
+a copy you made, having been shown the project and the licence, is a better answer to CC BY-NC-SA
+than one a background thread made during startup. openDash redistributes nothing either way, which
+was always the load-bearing fact, but the position is stronger for the press.
+
+**The update asks you to close SimHub, because that is when it happens.** It was reported as the
+update not working, and it worked: the assembly was staged, the waiter was armed, and the swap
+happened correctly the next time SimHub closed. What did not happen was anybody being told. The whole
+of what said so was a caption at the foot of a long tab, in the past tense, underneath a pill that had
+already flipped to "up to date" and a version number that had already moved to the new release. Every
+visible thing said done, so the one step that still had to happen was not asked for and nobody took
+it, and the next session ran the old plugin against the new dashboards -- which is the exact failure
+the self-update exists to prevent.
+
+### Added
+
+- **A car light tables row on the Lights tab**: what the tables are, who measured them, that the
+  request covers every car at once, the size of it, and the licence, with a button that says Download
+  while the folder is empty and Update once it is not. A copy more than a week old is mentioned beside
+  the button and refetched only if you press it.
+- **A restart dialog when an update is staged**, which is SimHub's own: a program cannot replace its
+  own code while it is running, close SimHub now and start it again? Yes shuts SimHub down -- a
+  shutdown rather than a close of the main window, because SimHub can be set to go to the tray and a
+  driver who just said yes would watch it minimise -- and it comes back on the new assembly. No leaves
+  everything as it was.
+
+### Changed
+
+- **Starting SimHub fetches nothing.** The update-check setting governs plugin updates and no longer
+  governs the car light tables at all, which are now a press and only a press.
+- **The plugin section says a swap is waiting every time it is drawn**, rather than only in the moment
+  the download finished, so a restart you postponed is still asked for when you next open the tab.
+- **The empty tables folder describes itself**, which is the state every fresh install now sits in.
+
+### Fixed
+
+- **An update that had been applied stopped reading as one that had not.** See above; it is the reason
+  this candidate exists.
+
 ## 0.3.0-rc.4 (2026-09-18)
 
 The second candidate cut from rig testing, and the one to have if your LEDs are in your wheel.
