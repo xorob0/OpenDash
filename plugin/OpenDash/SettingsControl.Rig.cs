@@ -560,8 +560,8 @@ namespace OpenDashPlugin
             bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + screen.Name,
                 Ui.Row("Name", "Shown here and in SimHub's dashboard list.", name),
                 Ui.Caption(
-                    "Only the name changes. Its settings stay as they are and its properties keep the names "
-                    + "they have (OpenDash." + screen.Namespace + "*), so anything you bound to them keeps working."),
+                    "Only the name changes. Its settings and anything you bound to it keep working, since its "
+                    + "properties stay OpenDash." + screen.Namespace + "*."),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
         }
 

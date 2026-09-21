@@ -55,7 +55,7 @@ namespace OpenDashPlugin
 
         public const string BarEndsTitle = "LEDs at each end";
 
-        public const string BarEndsCaption = "These LEDs are the lamps: a car alongside, flags, warnings and the aids. Pick None if your strip is one continuous run, like a monitor brow.";
+        public const string BarEndsCaption = "These LEDs are the lamps: a car alongside, flags, warnings and the aids. Pick None for one continuous run, like a monitor brow.";
 
         /// <summary>The device row of the add flow and of every bar.</summary>
         public const string BarDeviceTitle = "Which device";
@@ -97,7 +97,7 @@ namespace OpenDashPlugin
 
         public const string BarCentreTitle = "LEDs in the middle";
 
-        public const string BarCentreCaption = "The run between the ends, which carries the rev ladder. Count the LEDs on your strip and subtract the ends; the total is below.";
+        public const string BarCentreCaption = "The run between the ends, which carries the rev ladder. Count your LEDs and subtract the ends.";
 
         /// <summary>The line under the two numbers: what they add up to and what the profile will be
         /// called. A driver counts LEDs, and this is where the two counts are checked against the total

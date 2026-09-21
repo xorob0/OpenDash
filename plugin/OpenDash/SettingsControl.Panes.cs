@@ -592,7 +592,7 @@ namespace OpenDashPlugin
             }
 
             var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
-                Ui.Caption("Hold to show one page, release to go back. Usually the relative or the track."));
+                Ui.Caption("Hold to show one page, release to return. Usually the relative or the track."));
             glanceText.MaxWidth = 420;
 
             return Ui.Section("Wheel buttons on this screen",

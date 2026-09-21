@@ -43,7 +43,7 @@ namespace OpenDashPlugin
                 Ui.Row("Low fuel warning", "Warn when the fuel left drops below this many laps. Lights the box, the fuel telltale and the pop-up.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })),
                 // Off by default, unlike the flags' own switch on the strips: movement on this box
                 // means act, and a car alongside is something you live with for half a straight.
-                Ui.Row("Animate the spotter bar", "The bar grows in from the edge instead of simply appearing. It is drawn over whatever else is on the panel either way.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
+                Ui.Row("Animate the spotter bar", "The bar grows in from the edge instead of simply appearing.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
 
             var panels = Ui.Section(PanelLights.PanelsTitle, Ui.Caption(PanelLights.PanelsCaption));
             var panelRows = (StackPanel)panels.Child;
@@ -253,7 +253,7 @@ namespace OpenDashPlugin
                 return Ui.VStack(4,
                     BuildLedDeviceRow(LedTargets.All(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
                     Ui.Row("Strip centre", "What the middle of this strip shows. The LEDs at the ends are lamps and are unaffected.", centre),
-                    Ui.Row("Rev style", "The car's own mirrors the shift lights of the car you are driving. The other three are openDash's own looks, and are also used for cars openDash has no lights for.", style),
+                    Ui.Row("Rev style", "The car's own mirrors the shift lights of the car you are driving. The other three are openDash's own, and also cover cars it has no lights for.", style),
                     Ui.Row("Flag animation", "Moving flags catch the corner of your eye. Off shows each flag as a steady colour instead.",
                         BuildToggle(Settings.BarFlagAnimation(ns), on =>
                         {
@@ -262,7 +262,7 @@ namespace OpenDashPlugin
                             Save();
                         })),
                     // Per bar, because a brow above a monitor has no ends to speak of and a rim does.
-                    Ui.Row("A car alongside lights the whole bar", "The whole strip goes amber, which is impossible to miss but does not say which side. Off lights only the LED at that end and keeps the rev ladder readable.",
+                    Ui.Row("A car alongside lights the whole bar", "The whole strip goes amber: impossible to miss, but it does not say which side. Off lights the LED at that end and keeps the rev ladder readable.",
                         BuildToggle(Settings.BarSpotterWhole(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);

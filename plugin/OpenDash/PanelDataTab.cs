@@ -46,7 +46,7 @@ namespace OpenDashPlugin
         /// So the row is on or off, and off is the one that still means something: a wheel with its own
         /// LEDs does not need the strip, and the room goes back to the zones.
         /// </remarks>
-        public const string RevBarCaption = "Mirrors the shift lights of the car you are driving, and falls back to an RPM bar for cars openDash has no lights for. Turn it off to give the space back to the zones, for example if your wheel has LEDs of its own.";
+        public const string RevBarCaption = "Mirrors the shift lights of the car you are driving, or an RPM bar where openDash has no lights for it. Turn it off if your wheel already has LEDs of its own.";
 
         public static readonly string[] RevBarValues = { Contract.RevBarShift, Contract.RevBarOff };
 
