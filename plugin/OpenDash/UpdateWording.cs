@@ -32,7 +32,7 @@ namespace OpenDashPlugin
         /// new dashboards reading properties the old plugin does not attach.
         /// </remarks>
         public const string Restart =
-            "openDash itself was downloaded too. Restart SimHub to finish updating.";
+            "openDash itself was downloaded. Restart SimHub to finish updating.";
 
         /// <summary>
         /// The dialog that asks, which is the whole of what was missing.

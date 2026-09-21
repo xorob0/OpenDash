@@ -71,7 +71,7 @@ namespace OpenDashPlugin
                 RefreshUpdateLine();
             });
 
-            checkButton = BuildSecondaryButton("Check now", "Check for a new release now instead of waiting for the daily check.");
+            checkButton = BuildSecondaryButton("Check now", "Check for a new release now.");
             checkButton.Click += (sender, args) => Check(manual: true);
 
             var right = Ui.HStack(24, checkButton, toggle);
@@ -80,7 +80,7 @@ namespace OpenDashPlugin
 
         private Button BuildUpdateButton(Border progressHost)
         {
-            var button = BuildSecondaryButton("Update", "Download the newest release and replace your installed dashboards.");
+            var button = BuildSecondaryButton("Update", "Download the newest release.");
             button.Visibility = Visibility.Collapsed;
             button.Click += (sender, args) => ApplyUpdate(progressHost);
             return button;
@@ -96,7 +96,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private Button BuildRestoreButton()
         {
-            var button = BuildSecondaryButton("Put mine back", "Restore the dashboards replaced the last time you updated over your own edits.");
+            var button = BuildSecondaryButton("Put mine back", "Restore the dashboards your last update replaced.");
             button.Visibility = Visibility.Collapsed;
             button.Click += (sender, args) => RestoreKept();
             return button;
@@ -378,7 +378,7 @@ namespace OpenDashPlugin
         {
             var button = Ui.OutlineButton(null);
             button.MinWidth = ButtonMinWidth;
-            button.ToolTip = "Install every dashboard on your rig again. Your settings are kept.";
+            button.ToolTip = "Install every dashboard on your rig again.";
             reinstallLabel = Ui.Text("Reinstall", Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
             button.Content = Ui.HStack(PanelMetrics.ButtonIconGap, Ui.Icon(PanelIcons.Refresh, Theme.TextPrimary), reinstallLabel);
             button.Click += (sender, args) => Reinstall();

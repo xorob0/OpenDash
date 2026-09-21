@@ -11,14 +11,20 @@ thing in their head.
 
 ## The governing principle
 
-> Say what happened and what to do about it. Never say how it works.
+> Say what to do. Never say how it works, and where the control already says it, say nothing.
 
-Mechanism is the hardest of these to give up, because it is usually true, usually interesting to
-whoever implemented it, and always the reason the sentence was easy to write. It is nonetheless the
-first thing to cut. "openDash itself was downloaded too. It is put in place when SimHub closes"
-tells a user about an assembly swap they have no part in, where "openDash itself was downloaded too.
-Restart SimHub to finish updating" tells them the one thing they have to do. The second is shorter
-and it is also more useful, which is the pattern every rule below is a special case of.
+Two failures hide behind the same sentence and both have to be looked for. The first is mechanism:
+"openDash itself was downloaded. It is put in place when SimHub closes" describes an assembly swap
+the user has no part in, where "Restart SimHub to finish updating" names the one thing they have to
+do. The second is the harder one, because the sentence left after the mechanism goes is usually
+accurate, usually readable, and still worth deleting: "Pick your screen's real resolution. The wrong
+size will not fit your screen" says nothing the row title and a list of resolutions have not said
+already.
+
+**The default is no caption.** A row is a title and a control, and a caption is what gets added when
+those two genuinely cannot carry something. Roughly a third of the rows on the panel now have none,
+and `Ui.Row` takes a null caption for exactly that reason. The question to ask is not "is this true
+and useful" but "would the row be worse without it", which most captions do not survive.
 
 The reasoning still belongs somewhere, and that somewhere is a code comment, a decision record or
 one of these design documents, all three of which are addressed to a reader who has chosen to read
@@ -61,16 +67,23 @@ what will happen. There is no editorial "we", and the panel does not describe it
 
 > "A switch you flip, not a time of day we guess at." → "Switch to the night brightness above."
 
-### A caption says what the control does, and stops
+### Delete the caption the control already writes
 
-One sentence is the target and two are common, the second one carrying a consequence or a next
-step. Three is the ceiling, and it is reserved for a caption introducing a whole section rather
-than a single row.
+The control shows the values, so a caption listing them is the same information twice, and a
+caption restating the title is the same information twice in a row. Both go, leaving the row as a
+title and a control.
+
+> "Which way round" + "The same screen, laid out for the way you have it mounted." → "Orientation",
+> above two buttons reading Landscape and Portrait.
+
+> "Night mode" + "Switch to the night brightness above." → "Night mode", above a switch.
+
+What is left when a caption does survive is one short sentence. Two happen, the second carrying a
+consequence or a next step, and three is the ceiling for a caption introducing a whole section.
 
 > "One answer for every light: the box, the screens' fuel telltale and the pop-up all light when
 > the laps left in the tank fall under this. Laps, not litres: litres mean nothing without the
-> car." → "Warn when the fuel left drops below this many laps. Lights the box, the fuel telltale
-> and the pop-up."
+> car." → "Warn below this many laps of fuel."
 
 ### Cut the history
 
@@ -98,17 +111,18 @@ A repository path is never shown at all. Where a build ships nothing to install,
 and says nothing further, since a user cannot open `plugin/OpenDash/Resources/README.md` and would
 have no reason to.
 
-### A technical fact earns its place by being actionable
+### A fact earns its place by being both actionable and absent from the screen
 
-The test is whether the reader would do something differently for knowing it, and it is a stricter
-test than it first looks, because a fact can be relevant, true and still not actionable. That the
-car light tables are fetched when update checks are on is all three, therefore it went. That a
-process cannot replace its own assembly is all three, therefore it went as well, from the dialog as
-much as from the caption.
+The second half of that is the one that catches most of them. That a screen at the wrong size will
+not fit is true and is a consequence rather than a mechanism, and it still went, because the row is
+titled "Screen size" over a list of resolutions and the user was never going to conclude anything
+else. The same applies to the account of what a second screen at one size gets: if the interface is
+clear, the sentence explaining it is not needed.
 
-What survives the test is a consequence rather than a cause. A screen at the wrong size will not
-fit, which is worth a clause because it is the reason to go and measure; how SimHub comes to draw
-it that way is not, and the caption now says the first and not the second.
+What survives is the fact a user could not have worked out from the screen in front of them. A name
+also appearing in SimHub's own dashboard list is one, since nothing on the panel shows SimHub's
+list. That a rename leaves settings and bindings alone is another, since nothing shows that either,
+and it is worth three words: "Only changes the name."
 
 ### Say the step openDash does not take
 
@@ -137,13 +151,16 @@ repeat any of it.
 >
 > "Close SimHub now and start it again?"
 
-### An empty state is an instruction
+### An empty state names the emptiness and points at the button
 
-A section with nothing in it says what adding one will do, rather than announcing the emptiness a
-heading or a pill has already announced.
+"No bars yet", beside a button reading "Add an LED bar", is the whole of it. What adding one will do
+is the button's job to say, and a sentence spelling it out is the caption problem again in a
+different place. The rig's own empty state is the one exception on the panel, because a rig with no
+screens is somebody's first minute with openDash and the card there is the only thing on the page.
 
-> "No bars yet. Add one and openDash installs its profile into SimHub, ready to select on your
-> device."
+> "No bars yet."
+>
+> "Add the screen your rig has and openDash installs its dashboard into SimHub."
 
 ### A failure says what happened and where to look, without blame
 
@@ -165,7 +182,9 @@ somebody who is about to go and drive.
 
 A row title names the thing being set, in sentence case: "Screen size", "Rev style", "Night mode".
 A button says what pressing it does: "Add screen", "Install it again", "Put mine back". Neither is
-phrased as a question, and a title does not repeat what its caption is about to say.
+phrased as a question. A title carrying no caption has to be the whole answer on its own, which is
+usually a matter of naming the setting rather than gesturing at it: "How big" needed a caption and
+"Screen size" does not.
 
 ## Where the words live
 

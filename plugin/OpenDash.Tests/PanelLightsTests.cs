@@ -60,10 +60,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("15 LEDs in all, as 0/15/0.", PanelLights.BarShapeNote(0, 15));
             Assert.Equal("3-9-3", PanelLights.BarShapeId(3, 9));
             Assert.Equal("0-15-0", PanelLights.BarShapeId(0, 15));
-            // The ends are what carries the lamps and the middle is what carries the revs, which is the
-            // one thing the two captions have to get the right way round.
-            Assert.Contains("lamps", PanelLights.BarEndsCaption);
-            Assert.Contains("rev ladder", PanelLights.BarCentreCaption);
+            // The one thing the two captions have to get the right way round, said in a driver's words
+            // rather than the generator's ("lamps", "the rev ladder"); docs/design/voice.md is the rule.
+            Assert.Contains("flags", PanelLights.BarEndsCaption);
+            Assert.Contains("Count your LEDs", PanelLights.BarCentreCaption);
         }
     }
 }

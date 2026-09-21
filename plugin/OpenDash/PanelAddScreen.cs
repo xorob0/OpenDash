@@ -59,19 +59,19 @@ namespace OpenDashPlugin
 
         public const string TypeTitle = "Screen type";
 
-        public const string TypeCaption = "Pick the kind of display this is.";
+        public const string TypeCaption = null;
 
         public const string SizeTitle = "Screen size";
 
-        public const string SizeCaption = "Pick your screen's real resolution. The wrong size will not fit your screen.";
+        public const string SizeCaption = null;
 
         public const string OrientationTitle = "Orientation";
 
-        public const string OrientationCaption = "How the screen is mounted.";
+        public const string OrientationCaption = null;
 
         public const string NameTitle = "Name";
 
-        public const string NameCaption = "Shown here and in SimHub's dashboard list. You can change it later.";
+        public const string NameCaption = "Also shown in SimHub's dashboard list.";
 
         /// <summary>The words on the orientation control, landscape first.</summary>
         public static readonly string[] OrientationLabels = { "Landscape", "Portrait" };
@@ -89,8 +89,7 @@ namespace OpenDashPlugin
         /// properties. That is the whole reason a resize exists rather than "remove it and add the
         /// right one", which is what a driver who picked the wrong size had to do.
         /// </remarks>
-        public const string ResizeCaption =
-            "Your zones, bar and buttons stay as they are, and anything you bound to this screen keeps working.";
+        public const string ResizeCaption = "Your settings and bindings are kept.";
 
         /// <summary>
         /// The kinds the build can make a screen of, in the order the page offers them.
@@ -234,9 +233,8 @@ namespace OpenDashPlugin
         {
             if (entry == null) return string.Empty;
             return second
-                ? "This is your second " + entry.SizeLabel + ". It gets settings of its own, so the two can "
-                    + "show different pages."
-                : "openDash will install its dashboard into SimHub for you.";
+                ? "Your second " + entry.SizeLabel + " gets settings of its own."
+                : string.Empty;
         }
 
         /// <summary>What the panel says once the screen exists, which is the two steps SimHub does not

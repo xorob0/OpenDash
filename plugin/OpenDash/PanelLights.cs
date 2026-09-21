@@ -41,21 +41,19 @@ namespace OpenDashPlugin
         /// name, a shape and settings of its own, and installing it is what puts a profile of that name
         /// into SimHub.
         /// </remarks>
-        public const string BarsCaption =
-            "RGB strips on your wheel, rim or monitor brow. Add one for each strip you have; openDash installs "
-            + "a SimHub profile under the name you give it.";
+        public const string BarsCaption = "Add one for each RGB strip you have.";
 
-        public const string NoBars = "No bars yet. Add one and openDash installs its profile into SimHub, ready to select on your device.";
+        public const string NoBars = "No bars yet.";
 
         public const string AddBar = "Add an LED bar";
 
         public const string BarNameTitle = "Name";
 
-        public const string BarNameCaption = "Shown here and in SimHub's LED profile list.";
+        public const string BarNameCaption = "Also shown in SimHub's LED profile list.";
 
         public const string BarEndsTitle = "LEDs at each end";
 
-        public const string BarEndsCaption = "These LEDs are the lamps: a car alongside, flags, warnings and the aids. Pick None for one continuous run, like a monitor brow.";
+        public const string BarEndsCaption = "These show flags, warnings and cars alongside. Pick None for one continuous run.";
 
         /// <summary>The device row of the add flow and of every bar.</summary>
         public const string BarDeviceTitle = "Which device";
@@ -70,22 +68,19 @@ namespace OpenDashPlugin
         /// saved correctly into a list the wheel does not read, and the driver went looking in the wheel
         /// and found nothing. Somebody reading this row has to understand that choosing is not optional.
         /// </remarks>
-        public const string BarDeviceCaption =
-            "Pick the device these LEDs are on: your wheel, a button plate, or the Arduino if you wired the "
-            + "strip yourself.";
+        public const string BarDeviceCaption = null;
 
         /// <summary>Said in place of the picker when SimHub has exactly one LED device: there is nothing
         /// to choose, and a drop-down of one is a question with one answer.</summary>
         public static string OneDevice(string name)
         {
-            return "Its profile goes to " + name + ", the only LED device SimHub has.";
+            return "Goes to " + name + ".";
         }
 
         /// <summary>Said when SimHub has none. The bar is still added and still configurable; what it
         /// cannot have is a profile anywhere, which is a thing about the rig and not about openDash.</summary>
         public const string NoDevices =
-            "SimHub has no device with RGB LEDs. Add your wheel or Arduino on SimHub's Devices or Arduino page "
-            + "first, then the profile has somewhere to go.";
+            "No LED device in SimHub. Add your wheel or Arduino on SimHub's Devices page first.";
 
         /// <summary>What a bar pointed at a device SimHub no longer has is shown as, so the row says what
         /// happened rather than silently reading as the first device in the list.</summary>
@@ -97,7 +92,7 @@ namespace OpenDashPlugin
 
         public const string BarCentreTitle = "LEDs in the middle";
 
-        public const string BarCentreCaption = "The run between the ends, which carries the rev ladder. Count your LEDs and subtract the ends.";
+        public const string BarCentreCaption = "Count your LEDs and subtract the ends.";
 
         /// <summary>The line under the two numbers: what they add up to and what the profile will be
         /// called. A driver counts LEDs, and this is where the two counts are checked against the total
@@ -127,7 +122,7 @@ namespace OpenDashPlugin
         public static string BarAdded(string name, string device)
         {
             var where = string.IsNullOrWhiteSpace(device) ? "your LED device" : device;
-            return "Added " + name + " and installed its profile into " + where + ". Select \"" + name + "\" on that device in SimHub to use it.";
+            return "Added " + name + ". Select \"" + name + "\" on " + where + " in SimHub to use it.";
         }
 
         public static string BarAddFailed(string name)
@@ -147,17 +142,15 @@ namespace OpenDashPlugin
         /// none of; a panel exists because somebody said they have one, and it carries the name they gave
         /// it rather than its slot number.
         /// </remarks>
-        public const string PanelsCaption =
-            "SimHub draws up to four contents on one matrix device. Add one for each panel you have and give it "
-            + "a name you will recognise, such as \"top left\" or \"by the wheel\".";
+        public const string PanelsCaption = "Add one for each panel you have. Four at most.";
 
-        public const string NoPanels = "No panels yet. Your flag box stays dark until you add one.";
+        public const string NoPanels = "No panels yet.";
 
         public const string AddPanel = "Add a matrix panel";
 
         public const string PanelNameTitle = "Name";
 
-        public const string PanelNameCaption = "Shown here, to tell your panels apart.";
+        public const string PanelNameCaption = null;
 
         /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since
         /// that is the number a driver has to match on the device itself.</summary>
@@ -169,7 +162,5 @@ namespace OpenDashPlugin
         /// <summary>The section the three rig-wide settings sit in, at the foot of the tab: they are not
         /// the flag box's, and a driver who owns a strip as well as a box sets them once.</summary>
         public const string RigWideTitle = "For every light";
-
-        public const string RigWideCaption = "These apply to every light openDash drives.";
     }
 }

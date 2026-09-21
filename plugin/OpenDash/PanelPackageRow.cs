@@ -19,9 +19,7 @@ namespace OpenDashPlugin
         /// offer none of them. Adding is the Rig tab's now, and this sentence is what sends somebody
         /// there rather than leaving them to find the other tab.
         /// </remarks>
-        public const string SectionCaption =
-            "The dashboards this build ships, and whether each one is installed into SimHub. Add a screen on the "
-            + "Rig tab to use one.";
+        public const string SectionCaption = "Add a screen on the Rig tab to use one.";
 
         /// <summary>
         /// The row's first line.

@@ -12,7 +12,7 @@ namespace OpenDashPlugin
     {
         public const string SectionTitle = "These apply to every screen";
 
-        public const string SectionCaption = "Change one of these and every screen on your rig follows.";
+        public const string SectionCaption = null;
 
         /// <summary>Between one setting and the next on this tab, which is wider than the twenty every
         /// other section on the panel is given.</summary>
@@ -46,7 +46,7 @@ namespace OpenDashPlugin
         /// So the row is on or off, and off is the one that still means something: a wheel with its own
         /// LEDs does not need the strip, and the room goes back to the zones.
         /// </remarks>
-        public const string RevBarCaption = "Mirrors the shift lights of the car you are driving, or an RPM bar where openDash has no lights for it. Turn it off if your wheel already has LEDs of its own.";
+        public const string RevBarCaption = "Turn it off if your wheel already has LEDs.";
 
         public static readonly string[] RevBarValues = { Contract.RevBarShift, Contract.RevBarOff };
 
@@ -61,7 +61,7 @@ namespace OpenDashPlugin
         /// this row reads as though Overall meant overall everywhere. It is therefore owed to the canvas
         /// rather than deleted from the code, and the docs package raises it.
         /// </remarks>
-        public const string PositionCaption = "Overall, or within your class. Individual zones can still be set to your class on their own.";
+        public const string PositionCaption = "Zones can be set to your class individually.";
 
         public const string DeltaTitle = "Delta reference";
 
@@ -73,6 +73,6 @@ namespace OpenDashPlugin
 
         public const string BlueFlagTitle = "Blue flag detail";
 
-        public const string BlueFlagCaption = "What shows beside a blue flag: nothing, the class of the car behind, or its position and class.";
+        public const string BlueFlagCaption = "What shows beside a blue flag.";
     }
 }

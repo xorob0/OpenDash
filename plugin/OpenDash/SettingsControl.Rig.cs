@@ -178,9 +178,7 @@ namespace OpenDashPlugin
         {
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption(
-                "Remove the dashboards you have no screen for to tidy up SimHub's dashboard list. "
-                + "Nothing else is touched.");
+            var text = Ui.Caption("Remove the dashboards you have no screen for to tidy up SimHub's list.");
             var row = Ui.HStack(10, icon, text);
             row.Margin = new Thickness(0, 4, 0, 4);
             return row;
@@ -206,7 +204,7 @@ namespace OpenDashPlugin
             // size once had to remove the screen and start again, which threw away the zones they had set
             // and every wheel button bound to it.
             var resize = Ui.LinkButton("Change the size");
-            resize.ToolTip = "Move this screen to another size, keeping its settings.";
+            resize.ToolTip = "Move this screen to another size.";
             resize.Click += (sender, args) => ShowResize(screen);
             // Text and not a button face, which is what the canvas draws. What keeps a quiet destructive
             // action from being an accident is the confirmation behind it rather than its own weight.
@@ -264,7 +262,7 @@ namespace OpenDashPlugin
         {
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption("This screen's dashboard is missing from SimHub. Your settings for it are kept.");
+            var text = Ui.Caption("This screen's dashboard is missing from SimHub.");
             var write = BuildSecondaryButton("Install it again", "Put this screen's dashboard back into SimHub.");
             write.Click += (sender, args) =>
             {
@@ -558,8 +556,8 @@ namespace OpenDashPlugin
             cancel.Click += (sender, args) => Redraw();
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + screen.Name,
-                Ui.Row("Name", "Shown here and in SimHub's dashboard list.", name),
-                Ui.Caption("Only the name changes. Its settings and anything you bound to it keep working."),
+                Ui.Row("Name", "Also shown in SimHub's dashboard list.", name),
+                Ui.Caption("Only changes the name."),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
         }
 
@@ -575,7 +573,7 @@ namespace OpenDashPlugin
         private void ShowRemove(ScreenInstance screen)
         {
             var bound = screen.IsFace
-                ? " Any wheel button you bound to this screen, including the zone buttons and the glance, stops working."
+                ? " Any wheel button you bound to it stops working."
                 : string.Empty;
             var remove = Ui.DestructiveButton("Remove it");
             remove.ToolTip = "Delete the screen, its settings and its dashboard.";
@@ -598,9 +596,7 @@ namespace OpenDashPlugin
             cancel.Click += (sender, args) => Redraw();
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Remove " + screen.Name,
-                Ui.Caption(
-                    "This removes the screen from your rig, deletes its dashboard from SimHub and forgets "
-                    + "its settings." + bound),
+                Ui.Caption("Deletes the screen, its dashboard and its settings." + bound),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, remove))));
         }
 

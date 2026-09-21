@@ -164,10 +164,10 @@ namespace OpenDashPlugin.Tests
         public void The_note_says_what_the_button_will_do()
         {
             var entry = Package("openDash 850x480", Contract.KindFace, 850, 480);
-            // The folder is not named: it is a path the driver never types and never sees in SimHub,
-            // whose own list shows the title instead.
-            Assert.Contains("install its dashboard into SimHub", PanelAddScreen.Note(entry, false));
-            Assert.DoesNotContain("openDash 850x480", PanelAddScreen.Note(entry, false));
+            // The ordinary case says nothing at all: a button reading "Add screen" has already said it.
+            Assert.Equal(string.Empty, PanelAddScreen.Note(entry, false));
+            // The second screen at a size is the one case worth a line, since two rims that page
+            // together is what somebody would otherwise report as a bug.
             Assert.Contains("second", PanelAddScreen.Note(entry, true));
             Assert.Contains("settings of its own", PanelAddScreen.Note(entry, true));
         }
@@ -192,10 +192,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_resize_promises_the_settings_and_the_bindings()
         {
-            Assert.Contains("stay as they are", PanelAddScreen.ResizeCaption);
-            // In the user's terms rather than in the settings model's: the promise is that a binding
-            // goes on working, and the property names behind it are not something a driver acts on.
-            Assert.Contains("keeps working", PanelAddScreen.ResizeCaption);
+            // In the user's terms rather than in the settings model's: the promise is that the rig
+            // survives a resize, and the property names behind it are not something a driver acts on.
+            Assert.Equal("Your settings and bindings are kept.", PanelAddScreen.ResizeCaption);
             Assert.DoesNotContain("properties", PanelAddScreen.ResizeCaption);
             Assert.Contains("Restart SimHub", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim"));
         }
