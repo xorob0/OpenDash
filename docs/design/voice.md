@@ -94,6 +94,22 @@ remaining step, in the order it has to be done.
 
 > "Added Rim. Restart SimHub, then assign "Rim" to this display in Dash Studio."
 
+### A dialog interrupts, so it may justify itself
+
+This is the one place the rule above is relaxed, and deliberately. A caption sits there quietly and
+is read by somebody who went looking for it, whereas a modal takes the window and demands an answer,
+so a modal that states a requirement and no reason for it reads as a demand. The restart dialog
+therefore keeps the clause explaining that a program cannot replace its own code while it is running,
+and `UpdateWordingTests` pins that clause so it cannot be tidied away by somebody applying the rule
+above without reading this one. Everything around it is still held to the ordinary budget: what
+happened, the consequence for the reader, and the question, in that order and in three short
+paragraphs.
+
+The same fact does not then get repeated in the caption underneath, which says only what is true of
+the rig once the dialog is gone.
+
+> "openDash itself was downloaded too. It is put in place when SimHub closes."
+
 ### An empty state is an instruction
 
 A section with nothing in it says what adding one will do, rather than announcing the emptiness a
