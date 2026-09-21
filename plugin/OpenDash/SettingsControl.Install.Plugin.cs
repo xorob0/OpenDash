@@ -10,6 +10,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using SimHub.Plugins.Styles;
+// Aliased rather than imported: System.Windows.Forms carries a Button of its own, and this file is
+// full of WPF ones. SHMessageBox answers with the Forms enum whatever the dialog it draws.
+using DialogResult = System.Windows.Forms.DialogResult;
 
 namespace OpenDashPlugin
 {
@@ -278,19 +282,77 @@ namespace OpenDashPlugin
                     // offering an update has to be redrawn or the button outlives the release it was offering.
                     // It runs before the outcome sentence is written because it writes the line as well.
                     RefreshUpdateLine();
-                    if (updateLine == null) return;
-                    updateLine.Text = outcome.Line;
-                    updateLine.Visibility = Visibility.Visible;
+                    if (updateLine != null)
+                    {
+                        updateLine.Text = outcome.Line;
+                        updateLine.Visibility = Visibility.Visible;
+                    }
+                    // The one thing the run cannot do for itself. Asked here rather than before the
+                    // download, because until the assembly is staged there is nothing for a restart to
+                    // put in place, and asked at all because the sentence above it was not enough: see
+                    // UpdateWording.RestartTitle.
+                    if (outcome.PluginStaged) OfferRestart(release.Version);
                 });
             }, new SimHubInstallLog(), mustFinish: true);
+        }
+
+        /// <summary>
+        /// Asks whether to close SimHub now, and closes it if the answer is yes.
+        /// </summary>
+        /// <remarks>
+        /// `async void` because it is the tail of a UI callback and there is nothing to await it; the
+        /// try/catch is what stops an unobserved exception on that path taking SimHub with it.
+        ///
+        /// The reopen is asked for before the window is closed and not after, because after is a process
+        /// that no longer exists. The swap script reads the request when it finally runs and consumes it
+        /// either way, so a driver who says no here never gets a SimHub that reopens itself later.
+        ///
+        /// `Application.Current.Shutdown()` rather than closing the main window: SimHub can be set to go
+        /// to the tray on close, and a driver who has just been asked "close SimHub now?" and said yes
+        /// would otherwise watch it minimise and nothing else happen.
+        /// </remarks>
+        private async void OfferRestart(string version)
+        {
+            var root = plugin.Installer.SimHubRoot;
+            try
+            {
+                var answer = await SHMessageBox.Show(
+                    UpdateWording.RestartQuestion(version),
+                    UpdateWording.RestartTitle,
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                var now = answer == DialogResult.Yes;
+                PluginUpdate.AskToReopen(root, now);
+                if (updateLine != null)
+                {
+                    updateLine.Text = now ? UpdateWording.RestartGoing : UpdateWording.RestartLater;
+                    updateLine.Visibility = Visibility.Visible;
+                }
+                if (!now) return;
+                Save();
+                Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Asking about the restart failed, so the plugin swap waits for an ordinary close: " + ex.Message);
+                PluginUpdate.AskToReopen(root, false);
+                if (updateLine == null) return;
+                updateLine.Text = UpdateWording.RestartFailed;
+                updateLine.Visibility = Visibility.Visible;
+            }
         }
 
         private void RefreshUpdateLine()
         {
             if (updateLine == null) return;
             var line = updateStatus.Line;
+            // A staged assembly outlives the tab, the panel and the check, so the section says so every
+            // time it is drawn rather than only in the moment the download finished. Without this, a
+            // driver who says "later" and comes back tomorrow sees a plugin section that looks entirely
+            // ordinary and is running the old plugin.
+            if (line == null && PluginUpdate.Pending(plugin.Installer.SimHubRoot)) line = UpdateWording.RestartLater;
             updateLine.Text = line ?? string.Empty;
-            updateLine.Visibility = updateStatus.IsVisible && line != null ? Visibility.Visible : Visibility.Collapsed;
+            updateLine.Visibility = line != null && (updateStatus.IsVisible || updateStatus.Line == null) ? Visibility.Visible : Visibility.Collapsed;
             if (updateButton != null)
             {
                 updateButton.Visibility = updateStatus.State == UpdateState.UpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
