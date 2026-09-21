@@ -164,7 +164,10 @@ namespace OpenDashPlugin.Tests
         public void The_note_says_what_the_button_will_do()
         {
             var entry = Package("openDash 850x480", Contract.KindFace, 850, 480);
-            Assert.Contains("openDash 850x480", PanelAddScreen.Note(entry, false));
+            // The folder is not named: it is a path the driver never types and never sees in SimHub,
+            // whose own list shows the title instead.
+            Assert.Contains("install its dashboard into SimHub", PanelAddScreen.Note(entry, false));
+            Assert.DoesNotContain("openDash 850x480", PanelAddScreen.Note(entry, false));
             Assert.Contains("second", PanelAddScreen.Note(entry, true));
             Assert.Contains("settings of its own", PanelAddScreen.Note(entry, true));
         }

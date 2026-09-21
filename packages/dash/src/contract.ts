@@ -817,7 +817,7 @@ export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 3, id: 'sectors', name: 'Sectors', description: 'The three sectors of the last lap with their deltas.', enabled: true },
   { number: 4, id: 'speedo', name: 'Speedo', description: 'Speed, RPM, redline and the shift bar.', enabled: true },
   { number: 5, id: 'fuel', name: 'Fuel', description: 'Fuel left, time left, what to add and the per-lap use.', enabled: true },
-  { number: 6, id: 'energy', name: 'Energy', description: 'Virtual energy. Le Mans Ultimate only; iRacing has none.', enabled: false },
+  { number: 6, id: 'energy', name: 'Energy', description: 'Virtual energy. Le Mans Ultimate only.', enabled: false },
   { number: 7, id: 'tyres', name: 'Tyres', description: 'Temperature, pressure, wear and compound per corner.', enabled: true },
   { number: 8, id: 'pitView', name: 'Pit view', description: 'The pit service order: fuel, tyres, repairs and tear-off.', enabled: true },
   { number: 9, id: 'carSettings', name: 'Car settings', description: 'TC, ABS, brake bias, mixture and anti-roll bars.', enabled: true },
@@ -832,7 +832,7 @@ export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 18, id: 'stint', name: 'Stint', description: 'Stint laps and time, stops and the last stop.', enabled: true },
   { number: 19, id: 'lapHistory', name: 'Lap history', description: 'Your last laps with the delta to the session best.', enabled: true },
   { number: 20, id: 'damage', name: 'Damage', description: 'Body and suspension damage. iRacing reports none.', enabled: false },
-  { number: 21, id: 'trackRivals', name: 'Track rivals', description: 'Segment comparison against the field. Not a SimHub value.', enabled: false },
+  { number: 21, id: 'trackRivals', name: 'Track rivals', description: 'How your segments compare against the field.', enabled: false },
 ];
 
 /** How many modules the companion cycles through; the header counter says "n / MODULE_COUNT". */

@@ -18,7 +18,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPluginSection()
         {
             dashboardTitle = Ui.Body("OpenDash");
-            var caption = Ui.Caption("Reinstall writes every dashboard your rig has again. Your settings are kept.");
+            var caption = Ui.Caption("Reinstall writes every dashboard on your rig again. Your settings are kept.");
             var text = Ui.VStack(4, dashboardTitle, caption);
             text.MaxWidth = 460;
             text.HorizontalAlignment = HorizontalAlignment.Left;
@@ -67,7 +67,7 @@ namespace OpenDashPlugin
                 RefreshUpdateLine();
             });
 
-            checkButton = BuildSecondaryButton("Check now", "Ask GitHub for the newest release now, without waiting for the daily check.");
+            checkButton = BuildSecondaryButton("Check now", "Check for a new release now instead of waiting for the daily check.");
             checkButton.Click += (sender, args) => Check(manual: true);
 
             var right = Ui.HStack(24, checkButton, toggle);
@@ -76,7 +76,7 @@ namespace OpenDashPlugin
 
         private Button BuildUpdateButton(Border progressHost)
         {
-            var button = BuildSecondaryButton("Update", "Download the newest release and replace the dashboards installed here.");
+            var button = BuildSecondaryButton("Update", "Download the newest release and replace your installed dashboards.");
             button.Visibility = Visibility.Collapsed;
             button.Click += (sender, args) => ApplyUpdate(progressHost);
             return button;
@@ -92,7 +92,7 @@ namespace OpenDashPlugin
         /// </remarks>
         private Button BuildRestoreButton()
         {
-            var button = BuildSecondaryButton("Put mine back", "Restore the dashboards that were replaced when you last chose to update over your own edits.");
+            var button = BuildSecondaryButton("Put mine back", "Restore the dashboards replaced the last time you updated over your own edits.");
             button.Visibility = Visibility.Collapsed;
             button.Click += (sender, args) => RestoreKept();
             return button;
@@ -121,7 +121,7 @@ namespace OpenDashPlugin
             RefreshStatus();
             if (updateLine == null) return;
             updateLine.Text = restored.Count == 0
-                ? "There was nothing of yours to put back."
+                ? "There was nothing to put back."
                 : "Put back " + (restored.Count == 1 ? "1 dashboard" : restored.Count + " dashboards") + ". " + UpdateWording.Reopen;
             updateLine.Visibility = Visibility.Visible;
             RefreshRestoreButton();
@@ -217,10 +217,9 @@ namespace OpenDashPlugin
                 // settings page is worse than a button that changes what it says.
                 confirmingEdited = true;
                 updateButton.Content = "Replace anyway";
-                updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
-                    + " changed since OpenDash wrote them: " + string.Join(", ", edited)
-                    + ". Updating replaces what is there. A copy of yours is kept beside it in DashTemplates, "
-                    + "and \"Put mine back\" restores it.";
+                updateLine.Text = "You have edited " + (edited.Count == 1 ? "1 dashboard" : edited.Count + " dashboards")
+                    + ": " + string.Join(", ", edited)
+                    + ". Updating replaces your version. A copy is kept, and \"Put mine back\" restores it.";
                 updateLine.Visibility = Visibility.Visible;
                 return;
             }
@@ -317,7 +316,7 @@ namespace OpenDashPlugin
         {
             var button = Ui.OutlineButton(null);
             button.MinWidth = ButtonMinWidth;
-            button.ToolTip = "Write every dashboard your rig has into DashTemplates again. Your settings are kept.";
+            button.ToolTip = "Install every dashboard on your rig again. Your settings are kept.";
             reinstallLabel = Ui.Text("Reinstall", Theme.SizeBody, FontWeights.Medium, Theme.TextPrimary);
             button.Content = Ui.HStack(PanelMetrics.ButtonIconGap, Ui.Icon(PanelIcons.Refresh, Theme.TextPrimary), reinstallLabel);
             button.Click += (sender, args) => Reinstall();
@@ -344,10 +343,9 @@ namespace OpenDashPlugin
             {
                 confirmingReinstall = true;
                 if (reinstallLabel != null) reinstallLabel.Text = "Replace anyway";
-                updateLine.Text = (edited.Count == 1 ? "1 dashboard has" : edited.Count + " dashboards have")
-                    + " changed since OpenDash wrote them: " + string.Join(", ", edited)
-                    + ". Reinstalling replaces what is there. A copy of yours is kept beside it in DashTemplates, "
-                    + "and \"Put mine back\" restores it.";
+                updateLine.Text = "You have edited " + (edited.Count == 1 ? "1 dashboard" : edited.Count + " dashboards")
+                    + ": " + string.Join(", ", edited)
+                    + ". Reinstalling replaces your version. A copy is kept, and \"Put mine back\" restores it.";
                 updateLine.Visibility = Visibility.Visible;
                 return;
             }
@@ -426,7 +424,7 @@ namespace OpenDashPlugin
             statusHost.Child = Ui.StatusPill(dot, status.Label(), label);
             var report = installer.HasEmbeddedPackage
                 ? (installer.Packages.Count > 0 ? installer.PackageReport() : installer.LastError)
-                : "This build of the plugin carries no dashboard package.";
+                : "This build of openDash ships no dashboards.";
             // The release's own version belongs in the tooltip when the offer is what turned the pill:
             // the pill says an update is available and the tooltip says which.
             statusHost.ToolTip = updateStatus.State == UpdateState.UpdateAvailable && updateStatus.Line != null ? $"{report}\n{updateStatus.Line}" : report;

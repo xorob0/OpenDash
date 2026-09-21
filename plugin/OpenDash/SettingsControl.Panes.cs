@@ -28,8 +28,8 @@ namespace OpenDashPlugin
             if (size == null)
             {
                 return Ui.Caption(
-                    "openDash no longer ships a face at " + screen.SizeLabel + ", so there is nothing to configure here. "
-                    + "Your settings for this screen are kept in case it comes back.",
+                    "openDash no longer ships a face at " + screen.SizeLabel + ", so there is nothing to set up here. "
+                    + "Your settings for this screen are kept.",
                     BodyWidth);
             }
             var face = size.Value;
@@ -37,7 +37,7 @@ namespace OpenDashPlugin
             var rows = new List<UIElement>
             {
                 Ui.Caption(
-                    "Pick the page a zone opens on, and how many pages its button cycles through. "
+                    "Pick the page each zone opens on and which pages its button cycles through. "
                     + "A zone with one page enabled never changes.",
                     BodyWidth),
                 BuildFacePicture(screen, face),
@@ -98,7 +98,7 @@ namespace OpenDashPlugin
             });
             var row = Ui.Row(
                 "Flags",
-                "Band D hands a flag the strip at the foot. Full screen hands it zones B, A and C together, which cannot be missed and takes the gear with it for as long as the flag is out.",
+                "Band D shows the flag in the strip at the foot. Full screen takes over zones A, B and C, including the gear, for as long as the flag is out.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
@@ -123,8 +123,7 @@ namespace OpenDashPlugin
             });
             var row = Ui.Row(
                 "Lap review",
-                "A panel over the gear for four seconds at the line: the lap you have just done, its sectors, what it was worth against "
-                + "the session best and the lap before, and the fuel it cost. Races means the sessions your sim calls Race.",
+                "Four seconds at the line: the lap you just did, its sectors, how it compares to your session best and the lap before, and the fuel it cost.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
@@ -133,11 +132,11 @@ namespace OpenDashPlugin
         private TextBlock BuildStripCaption(Contract.FaceSize face)
         {
             stripCaption = Ui.Caption(face.HasBar
-                ? "The bar does not cycle: it carries what does not change during a lap. "
+                ? "The bar does not cycle. "
                     + (face.BarFieldsPerEnd == 1 ? "One field at each end, " : "Two fields at each end, ")
-                    + "and between them the car settings your sim publishes — slip, TC, cut, bias, ABS, map and diff. "
-                    + "A setting the sim has no value for takes its cell with it rather than leaving an empty box."
-                : "This screen has no bar: at " + face + " the height is not there, so the body and band D have it instead.",
+                    + "and between them the car settings your sim publishes: slip, TC, cut, bias, ABS, map and diff. "
+                    + "Settings your sim does not report are left out."
+                : "This screen has no bar: at " + face + " there is no room for one.",
                 BodyWidth);
             return stripCaption;
         }
@@ -355,7 +354,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildClassFilterRow(ScreenInstance screen, string letter)
         {
             var toggle = BuildToggle(screen.Face.IsClassOnly(letter), on => { screen.Face.SetClassOnly(letter, on); Save(); });
-            toggle.ToolTip = "Show the leaderboard and the relative in zone " + letter + " for your own class";
+            toggle.ToolTip = "Show only your own class in zone " + letter;
             toggle.VerticalAlignment = VerticalAlignment.Center;
             toggle.HorizontalAlignment = HorizontalAlignment.Left;
             // Measured inside a vertical stack, which is not a nicety. SHToggleButton declares no size of
@@ -593,11 +592,11 @@ namespace OpenDashPlugin
             }
 
             var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
-                Ui.Caption("Hold to show one page, release to return. Usually the relative or the track."));
+                Ui.Caption("Hold to show one page, release to go back. Usually the relative or the track."));
             glanceText.MaxWidth = 420;
 
             return Ui.Section("Wheel buttons on this screen",
-                Ui.Caption("Bound per screen, so a second face can stay still while the one in front of you cycles.", BodyWidth),
+                Ui.Caption("Bound per screen, so a second face can stay put while the one in front of you cycles.", BodyWidth),
                 wrap,
                 Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                     BuildGlanceSelect(screen),
@@ -652,18 +651,18 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallPane(ScreenInstance screen)
         {
             var glanceText = Ui.VStack(4, Ui.Body("Quick glance"),
-                Ui.Caption("Hold to show one page over the zone it belongs to, release to put the zone back."));
+                Ui.Caption("Hold to show one page over its zone, release to put the zone back."));
             glanceText.MaxWidth = 420;
 
             return Ui.VStack(0,
                 Ui.Section("Where the zones are",
-                    Ui.Caption("Three pages share four data zones and one wide zone, so the letters need a picture.", BodyWidth),
+                    Ui.Caption("Three pages share four data zones and one wide zone. Here is where each one sits.", BodyWidth),
                     BuildPitWallPicture()),
                 Ui.Section("What each zone shows", Ui.VStack(PanelPitWallPlan.RowGap, BuildPitWallRows(screen))),
                 // A binding and not a wheel button: nobody drives a pit wall, so the gesture is whatever
                 // SimHub will bind, and a keyboard key beside the monitor is the likelier one.
                 Ui.Section("A page on demand",
-                    Ui.Caption("Bound per screen. A keyboard key serves as well as a wheel button here.", BodyWidth),
+                    Ui.Caption("Bound per screen. A keyboard key works as well as a wheel button here.", BodyWidth),
                     Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                         BuildPitWallGlanceSelect(screen),
                         BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true)))));
@@ -687,7 +686,7 @@ namespace OpenDashPlugin
                 screen.PitWallPage = Contract.NormalisePitWallPage(select.SelectedIndex);
                 Save();
             };
-            return Ui.Row("Page", "Which of the three this pit wall shows. It is set here and does not change while you race.", select);
+            return Ui.Row("Page", "Which page this pit wall shows. It does not change while you race.", select);
         }
 
         /// <summary>The one page the glance shows, zone and page together, as the face's own select is.</summary>
@@ -749,8 +748,8 @@ namespace OpenDashPlugin
             // One answer for the screen and not one per zone, as a face has: the four zones are widgets
             // pointed at one dashboard file per rectangle, so two zones of one column are the same file.
             var classOnly = BuildToggle(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on; Save(); });
-            classOnly.ToolTip = "Show the board, the leaderboard and the relative for your own class";
-            rows.Add(Ui.Row("My class only", "The board and the list zones show the class you are racing in rather than the whole field.", classOnly));
+            classOnly.ToolTip = "Show only your own class";
+            rows.Add(Ui.Row("My class only", "The board and the list zones show your class instead of the whole field.", classOnly));
             rows.Add(BuildPitWallFlagRow(screen));
             return rows.ToArray();
         }
@@ -909,9 +908,9 @@ namespace OpenDashPlugin
             }
             return Ui.VStack(12,
                 Ui.Caption(
-                    "A companion shows one module at a time and the header says which. Turn off what you never page to; "
-                    + "a module that is off is skipped. Energy, Damage and Track rivals are off because iRacing publishes "
-                    + "none of their data; switch them on for a sim that does.",
+                    "A companion shows one module at a time. Turn off the ones you never page to and they are "
+                    + "skipped. Energy, Damage and Track rivals are off because iRacing does not report them; "
+                    + "turn them on for a sim that does.",
                     BodyWidth),
                 grid,
                 BuildCompanionPaging(screen));
@@ -953,13 +952,13 @@ namespace OpenDashPlugin
         private FrameworkElement BuildCompanionPaging(ScreenInstance screen)
         {
             var startText = Ui.VStack(4, Ui.Body("Opens on"),
-                Ui.Caption("The module a session starts on. openDash holds it there for a few seconds while SimHub loads, then hands the paging back."));
+                Ui.Caption("The module a session starts on. It is held there for a few seconds while SimHub loads."));
             startText.MaxWidth = 420;
             return Ui.Section("Which module is up",
                 Ui.Caption(
-                    "Tap the left or right half of the screen to go back or forward through the modules you have left on. "
-                    + "To page it from a wheel button instead, bind SimHub's own \"Next screen\" for this dashboard under "
-                    + "Controls and events.",
+                    "Tap the left or right half of the screen to page through the modules you left on. To use a "
+                    + "wheel button instead, bind SimHub's own \"Next screen\" for this dashboard under Controls "
+                    + "and events.",
                     BodyWidth),
                 Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session opens on", value =>
                 {
@@ -975,8 +974,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildCompanionFlagRow(ScreenInstance screen)
         {
             var text = Ui.VStack(4, Ui.Body("Flags"),
-                Ui.Caption("Full screen takes the module for as long as the flag is out, which is what a screen out of your eyeline is good for. "
-                    + "The bar is the thin strip at the foot. Off leaves the module alone."));
+                Ui.Caption("Full screen covers the module for as long as the flag is out, which is hard to miss on "
+                    + "a screen outside your eyeline. Bar is the thin strip at the foot. Off draws none."));
             text.MaxWidth = 420;
             var segmented = BuildSegmented(
                 Contract.CompanionFlagFormats,
@@ -992,8 +991,8 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallFlagRow(ScreenInstance screen)
         {
             var text = Ui.VStack(4, Ui.Body("Flags"),
-                Ui.Caption("The bar is a strip under the header, which leaves the board and the zones readable. "
-                    + "Full screen takes everything below the header, for a monitor kept as a flag panel. Off draws none."));
+                Ui.Caption("Bar is a strip under the header, which keeps the board and the zones readable. Full "
+                    + "screen takes everything below the header, for a monitor kept as a flag panel. Off draws none."));
             text.MaxWidth = 420;
             var segmented = BuildSegmented(
                 Contract.CompanionFlagFormats,
@@ -1047,9 +1046,7 @@ namespace OpenDashPlugin
             };
             return Ui.VStack(12,
                 Ui.Caption(
-                    "The card face openDash shipped before the zones. Any card in any slot; the same card may be "
-                    + "assigned twice and the panel says so without preventing it. A face with fewer slots uses the "
-                    + "first ones.",
+                    "Put any card in any slot. A face with fewer slots uses the first ones.",
                     BodyWidth),
                 picture,
                 BuildSlotsRevBarRow(),
@@ -1076,7 +1073,7 @@ namespace OpenDashPlugin
             });
             var row = Ui.Row(
                 PanelDataTab.RevBarTitle,
-                "Shift lights, a plain arc, or off. A card face has no settings of its own, so this is the answer for every card face on the rig.",
+                "Shift lights, a plain arc, or off. This applies to every card face on your rig.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;

@@ -179,9 +179,8 @@ namespace OpenDashPlugin
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
             var text = Ui.Caption(
-                "openDash used to install every dashboard it ships, which is why there are so many here. "
-                + "Remove the ones you have no screen for: it tidies SimHub's dashboard list too, and nothing "
-                + "else is touched.");
+                "Earlier versions installed every dashboard openDash ships. Remove the ones you have no "
+                + "screen for to tidy SimHub's dashboard list; nothing else is touched.");
             var row = Ui.HStack(10, icon, text);
             row.Margin = new Thickness(0, 4, 0, 4);
             return row;
@@ -201,18 +200,18 @@ namespace OpenDashPlugin
             text.HorizontalAlignment = HorizontalAlignment.Left;
 
             var rename = Ui.LinkButton("Rename");
-            rename.ToolTip = "Change what this screen is called here and in SimHub's dashboard list.";
+            rename.ToolTip = "Rename it here and in SimHub's dashboard list.";
             rename.Click += (sender, args) => ShowRename(screen);
             // Beside Rename, because it is the same kind of correction: a driver who picked the wrong
             // size once had to remove the screen and start again, which threw away the zones they had set
             // and every wheel button bound to it.
             var resize = Ui.LinkButton("Change the size");
-            resize.ToolTip = "Move this screen to another of the sizes openDash draws for, keeping its settings.";
+            resize.ToolTip = "Move this screen to another size, keeping its settings.";
             resize.Click += (sender, args) => ShowResize(screen);
             // Text and not a button face, which is what the canvas draws. What keeps a quiet destructive
             // action from being an accident is the confirmation behind it rather than its own weight.
             var remove = Ui.LinkButton("Remove this screen", Theme.Danger);
-            remove.ToolTip = "Remove this screen, its settings and its dashboard folder.";
+            remove.ToolTip = "Delete this screen, its settings and its dashboard.";
             remove.Click += (sender, args) => ShowRemove(screen);
 
             var actions = Resizable(screen) ? Ui.HStack(12, rename, resize, remove) : Ui.HStack(12, rename, remove);
@@ -265,10 +264,8 @@ namespace OpenDashPlugin
         {
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption(
-                "This screen's dashboard is not in SimHub: " + (screen.Folder ?? "it has no folder")
-                    + " is missing. Your settings for it are kept.");
-            var write = BuildSecondaryButton("Install it again", "Write this screen's dashboard back into SimHub DashTemplates.");
+            var text = Ui.Caption("This screen's dashboard is missing from SimHub. Your settings for it are kept.");
+            var write = BuildSecondaryButton("Install it again", "Put this screen's dashboard back into SimHub.");
             write.Click += (sender, args) =>
             {
                 var result = ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, new SimHubInstallLog(), force: true);
@@ -304,8 +301,7 @@ namespace OpenDashPlugin
             if (types.Count == 0)
             {
                 bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
-                    Ui.Caption("This build of openDash carries no dashboard packages, so there is nothing to add. "
-                        + "See plugin/OpenDash/Resources/README.md."),
+                    Ui.Caption("This build of openDash ships no dashboards, so there is nothing to add."),
                     BackRow()));
                 return;
             }
@@ -383,7 +379,7 @@ namespace OpenDashPlugin
             add.ToolTip = "Create the screen and install its dashboard.";
             add.Click += (sender, args) => AddScreen(entry, name.Text);
             var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Go back to the rig without adding anything.";
+            cancel.ToolTip = "Go back without adding anything.";
             cancel.Click += (sender, args) => Redraw();
 
             var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
@@ -439,7 +435,7 @@ namespace OpenDashPlugin
             if (type == null || PanelAddScreen.Question(type) == SizeQuestion.None)
             {
                 bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.ResizeTitle,
-                    Ui.Caption("openDash carries only one " + KindLabel(screen) + ", so there is no other size to move this screen to."),
+                    Ui.Caption("openDash ships only one " + KindLabel(screen) + " size, so there is nothing to move this screen to."),
                     BackRow()));
                 return;
             }
@@ -459,10 +455,10 @@ namespace OpenDashPlugin
 
             var apply = Ui.OutlineButton("Change it", PanelMetrics.RowButtonHeight);
             apply.MinWidth = ButtonMinWidth;
-            apply.ToolTip = "Write this screen's dashboard again at the new size.";
+            apply.ToolTip = "Install this screen's dashboard at the new size.";
             apply.Click += (sender, args) => ResizeScreen(screen, chosen);
             var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Leave this screen the size it is.";
+            cancel.ToolTip = "Keep the current size.";
             cancel.Click += (sender, args) => Redraw();
 
             bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.ResizeTitle + " of " + screen.Name,
@@ -558,14 +554,14 @@ namespace OpenDashPlugin
                 }
                 Redraw();
             };
-            var cancel = BuildSecondaryButton("Cancel", "Keep the name it has.");
+            var cancel = BuildSecondaryButton("Cancel", "Keep the current name.");
             cancel.Click += (sender, args) => Redraw();
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + screen.Name,
-                Ui.Row("Name", "What this screen is called here, and what SimHub's dashboard list shows.", name),
+                Ui.Row("Name", "Shown here and in SimHub's dashboard list.", name),
                 Ui.Caption(
-                    "Only the name changes. Its settings stay as they are, and its properties keep the names they "
-                    + "have (OpenDash." + screen.Namespace + "*) so that anything you have bound to them keeps working."),
+                    "Only the name changes. Its settings stay as they are and its properties keep the names "
+                    + "they have (OpenDash." + screen.Namespace + "*), so anything you bound to them keeps working."),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
         }
 
@@ -581,10 +577,10 @@ namespace OpenDashPlugin
         private void ShowRemove(ScreenInstance screen)
         {
             var bound = screen.IsFace
-                ? " Any wheel button you bound to this screen — the zone buttons and the glance — will stop doing anything."
+                ? " Any wheel button you bound to this screen, including the zone buttons and the glance, stops working."
                 : string.Empty;
             var remove = Ui.DestructiveButton("Remove it");
-            remove.ToolTip = "Remove the screen, its settings and its folder.";
+            remove.ToolTip = "Delete the screen, its settings and its dashboard.";
             remove.Click += (sender, args) =>
             {
                 var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
@@ -597,7 +593,7 @@ namespace OpenDashPlugin
                 Announce(
                     result.Ok
                         ? "Removed " + screen.Name + ". SimHub still lists its dashboard until you restart it."
-                        : "Removed " + screen.Name + " from the rig, but its folder could not be deleted: " + result.Error,
+                        : "Removed " + screen.Name + ", but its dashboard could not be deleted: " + result.Error,
                     result.Ok ? Theme.TextSecondary : Theme.Caution);
             };
             var cancel = BuildSecondaryButton("Keep it", "Leave this screen alone.");
@@ -605,8 +601,8 @@ namespace OpenDashPlugin
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Remove " + screen.Name,
                 Ui.Caption(
-                    "This removes the screen from your rig, deletes " + (screen.Folder ?? "its folder")
-                    + " from SimHub's DashTemplates, and forgets what you had set on it." + bound),
+                    "This removes the screen from your rig, deletes its dashboard from SimHub and forgets "
+                    + "its settings." + bound),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, remove))));
         }
 
@@ -626,7 +622,7 @@ namespace OpenDashPlugin
 
         private FrameworkElement BackRow()
         {
-            var back = BuildSecondaryButton("Back", "Go back to the rig.");
+            var back = BuildSecondaryButton("Back", "Go back to your rig.");
             back.Click += (sender, args) => Redraw();
             return Ui.Row(new Border(), back);
         }

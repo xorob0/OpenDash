@@ -51,7 +51,7 @@ namespace OpenDashPlugin
             new Module(3, "sectors", "Sectors", "The three sectors of the last lap with their deltas.", true),
             new Module(4, "speedo", "Speedo", "Speed, RPM, redline and the shift bar.", true),
             new Module(5, "fuel", "Fuel", "Fuel left, time left, what to add and the per-lap use.", true),
-            new Module(6, "energy", "Energy", "Virtual energy. Le Mans Ultimate only; iRacing has none.", false),
+            new Module(6, "energy", "Energy", "Virtual energy. Le Mans Ultimate only.", false),
             new Module(7, "tyres", "Tyres", "Temperature, pressure, wear and compound per corner.", true),
             new Module(8, "pitView", "Pit view", "The pit service order: fuel, tyres, repairs and tear-off.", true),
             new Module(9, "carSettings", "Car settings", "TC, ABS, brake bias, mixture and anti-roll bars.", true),
@@ -66,7 +66,7 @@ namespace OpenDashPlugin
             new Module(18, "stint", "Stint", "Stint laps and time, stops and the last stop.", true),
             new Module(19, "lapHistory", "Lap history", "Your last laps with the delta to the session best.", true),
             new Module(20, "damage", "Damage", "Body and suspension damage. iRacing reports none.", false),
-            new Module(21, "trackRivals", "Track rivals", "Segment comparison against the field. Not a SimHub value.", false),
+            new Module(21, "trackRivals", "Track rivals", "How your segments compare against the field.", false),
         };
 
         public static bool IsValidNumber(int number) => number >= 1 && number <= Count;

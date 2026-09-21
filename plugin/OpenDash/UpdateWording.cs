@@ -71,9 +71,9 @@ namespace OpenDashPlugin
                 case UpdateState.Unreachable:
                     // Not "failed" and not "error": a rig with no network is a normal rig, and the user is not
                     // being asked to do anything about it.
-                    return "Could not reach GitHub, so there is nothing to report. You have " + Show(status.InstalledVersion) + ".";
+                    return "Could not reach GitHub. You have " + Show(status.InstalledVersion) + ".";
                 case UpdateState.Disabled:
-                    return "Update checks are off, so nothing is fetched.";
+                    return "Update checks are off.";
                 default:
                     return null;
             }

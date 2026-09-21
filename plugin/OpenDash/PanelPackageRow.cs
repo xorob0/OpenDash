@@ -20,8 +20,8 @@ namespace OpenDashPlugin
         /// there rather than leaving them to find the other tab.
         /// </remarks>
         public const string SectionCaption =
-            "One package per size, installed into SimHub DashTemplates. A package becomes a screen when you add one on "
-            + "the Rig tab, and a package can back more than one screen.";
+            "The dashboards this build ships, and whether each one is installed into SimHub. Add a screen on the "
+            + "Rig tab to use one.";
 
         /// <summary>
         /// The row's first line.

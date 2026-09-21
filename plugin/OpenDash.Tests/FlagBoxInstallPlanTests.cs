@@ -265,7 +265,7 @@ namespace OpenDashPlugin.Tests
             var installed = FlagBoxInstallPlan.Summary(FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) }), null);
             Assert.Contains("Select it", installed, StringComparison.OrdinalIgnoreCase);
             var fresh = FlagBoxInstallPlan.Summary(FlagBoxInstallPlan.Decide(Ours, V1, new List<InstalledProfile>()), null);
-            Assert.Contains("pick it", fresh, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("select it", fresh, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

@@ -88,8 +88,8 @@ namespace OpenDashPlugin
         /// <summary>The sentence a row shows when the profile is installed but the device is listing the
         /// maker's built-in profiles instead.</summary>
         public const string BuiltInModeNote =
-            "SimHub is showing your device's built-in profiles, so openDash's will not be in its list. "
-            + "Turn built-in profiles off on the device to see it.";
+            "Your device is showing its built-in profiles, so openDash's will not be listed. Turn built-in "
+            + "profiles off on the device to see it.";
 
         /// <summary>Stamped into the profile's Author by the build; how we tell ours from the user's.</summary>
         public const string Author = "openDash";
@@ -98,7 +98,7 @@ namespace OpenDashPlugin
         /// the copy in SimHub goes, and whatever the user changed in it goes with it -- so the sentence
         /// names the press rather than either verb and both branches carry it.</summary>
         public const string Replaces =
-            "Pressing the button replaces the copy in SimHub, including any changes you made to it there.";
+            "This replaces the copy in SimHub, including any changes you made to it there.";
 
         /// <summary>
         /// The version the build stamped into a profile description, or null.
@@ -255,13 +255,12 @@ namespace OpenDashPlugin
             switch (plan.State)
             {
                 case FlagBoxInstallState.NotEmbedded:
-                    return "No flag box profile is embedded in this build.";
+                    return "This build of openDash ships no flag box profile.";
                 case FlagBoxInstallState.Unavailable:
-                    return "SimHub's matrix settings are not available, so openDash cannot install the profile. "
-                        + "Import it by hand from " + (path ?? "the openDash folder") + ".";
+                    return "SimHub's matrix settings are not available. Import the profile by hand from "
+                        + (path ?? "the openDash folder") + ".";
                 case FlagBoxInstallState.NotInstalled:
-                    return "Not installed. Press the button to add it to SimHub's matrix profiles; "
-                        + "then pick it on your matrix device.";
+                    return "Not installed. Install it, then select it on your matrix device.";
                 case FlagBoxInstallState.UpToDate:
                     // Installing adds a profile; it does not switch to one. SimHub picks the current
                     // profile from its own persisted activeProfileId, so a user who presses the button
@@ -280,7 +279,7 @@ namespace OpenDashPlugin
                         + (plan.InstalledVersion ?? "unknown") + " to " + (plan.EmbeddedVersion ?? "unknown")
                         + "). " + Replaces;
                 default:
-                    return "Installing the flag box profile failed.";
+                    return "Could not install the flag box profile. See SimHub's log.";
             }
         }
     }

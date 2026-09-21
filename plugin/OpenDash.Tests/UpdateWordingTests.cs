@@ -22,7 +22,7 @@ namespace OpenDashPlugin.Tests
         {
             // A rig with no network is a normal rig. The line says what is true and asks nothing of the user.
             var line = UpdateWording.Line(Status(UpdateState.Unreachable));
-            Assert.Equal("Could not reach GitHub, so there is nothing to report. You have 0.1.0-rc.2.", line);
+            Assert.Equal("Could not reach GitHub. You have 0.1.0-rc.2.", line);
             Assert.DoesNotContain("error", line, System.StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("fail", line, System.StringComparison.OrdinalIgnoreCase);
         }
@@ -32,7 +32,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("Checking for updates…", UpdateWording.Line(Status(UpdateState.Checking)));
             Assert.Equal("You have the newest release, 0.1.0-rc.2.", UpdateWording.Line(Status(UpdateState.UpToDate)));
-            Assert.Equal("Update checks are off, so nothing is fetched.", UpdateWording.Line(Status(UpdateState.Disabled)));
+            Assert.Equal("Update checks are off.", UpdateWording.Line(Status(UpdateState.Disabled)));
             Assert.Null(UpdateWording.Line(Status(UpdateState.Idle)));
             Assert.Null(UpdateWording.Line(null));
         }

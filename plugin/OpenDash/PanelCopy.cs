@@ -41,12 +41,11 @@ namespace OpenDashPlugin
         /// <summary>The sentence under the empty rig's pill, which the pill has already said is empty.</summary>
         /// <remarks>
         /// Here rather than inline in the WPF file so that a test can hold the wording: it is the one
-        /// paragraph a new user reads before anything else on the page, and the pill above it carries the
-        /// announcement, so this explains what adding a screen does instead of repeating that there is none.
+        /// sentence a new user reads before anything else on the page, and the pill above it carries the
+        /// announcement, so this says what adding a screen does instead of repeating that there is none.
         /// </remarks>
         public const string EmptyRig =
-            "Add the one your rig actually has and openDash installs its dashboard into SimHub; "
-            + "everything else on this page is about the screens you have added.";
+            "Add the screen your rig has and openDash installs its dashboard into SimHub.";
         public const string Installing = "Installing";
         public const string Installed = "Installed";
         public const string NotInstalled = "Not installed";

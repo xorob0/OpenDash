@@ -17,7 +17,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("These apply to every screen", PanelDataTab.SectionTitle);
             Assert.Equal(
-                "A lap time means the same thing on the rim as it does on the pit wall, so these are not per screen.",
+                "Change one of these and every screen on your rig follows.",
                 PanelDataTab.SectionCaption);
         }
 
@@ -62,7 +62,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.StartsWith("Overall, or within your class.", PanelDataTab.PositionCaption, StringComparison.Ordinal);
             Assert.Contains(
-                "A zone can still be set to list your own class on its own.",
+                "Individual zones can still be set to your class on their own.",
                 PanelDataTab.PositionCaption,
                 StringComparison.Ordinal);
         }
