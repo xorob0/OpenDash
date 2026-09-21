@@ -32,7 +32,40 @@ namespace OpenDashPlugin
         /// new dashboards reading properties the old plugin does not attach.
         /// </remarks>
         public const string Restart =
-            "openDash itself was updated too; it takes effect the next time you start SimHub.";
+            "openDash itself was downloaded too. It is put in place when SimHub closes, because a program cannot replace its own code while it is running.";
+
+        /// <summary>
+        /// The dialog that asks, which is the whole of what was missing.
+        /// </summary>
+        /// <remarks>
+        /// Reported from a rig as the update not working. It worked: the assembly was staged, the waiter
+        /// was armed, and the swap happened correctly the next time SimHub closed. What did not happen
+        /// was anybody being told -- the sentence was a caption at the foot of a long tab, written in the
+        /// past tense, under a pill that had already flipped to "up to date" and a version number that
+        /// had already moved. Every visible thing said "done" and the one thing that had to happen next
+        /// was not asked for. Other SimHub plugins put up a dialog, and the request was for that.
+        /// </remarks>
+        public const string RestartTitle = "openDash needs SimHub to close";
+
+        public static string RestartQuestion(string version)
+        {
+            return "openDash " + (version ?? "itself") + " has been downloaded and is ready.\n\n"
+                + "A program cannot replace its own code while it is running, so the new openDash is put in place "
+                + "after SimHub closes. Until then you are running the old one.\n\n"
+                + "Close SimHub now and start it again?";
+        }
+
+        /// <summary>Said after the driver says yes, in the moment before the window goes.</summary>
+        public const string RestartGoing = "Closing SimHub. It starts again once openDash is in place.";
+
+        /// <summary>Said after the driver says not now, and by the panel whenever a swap is waiting.</summary>
+        public const string RestartLater =
+            "openDash is downloaded and waiting. It is put in place the next time you close SimHub; until then this is the old one.";
+
+        /// <summary>Said when SimHub could not be closed from here, which leaves the swap exactly as it
+        /// was: staged, armed, and waiting for a close the driver does themselves.</summary>
+        public const string RestartFailed =
+            "SimHub could not be closed from here. Close it yourself and openDash is put in place as it goes.";
 
         /// <summary>
         /// What the update-check setting says about itself, which is the user-facing form of ADR 0012's promise.

@@ -173,3 +173,40 @@ owns that question.
 
 Whether the twenty-four hour interval is right. It is chosen for being obviously not aggressive
 rather than from any evidence, and nothing depends on the exact figure.
+
+## Amended, 2026-09-19: the swap worked; nobody was told it had to happen
+
+The "Unresolved" above is settled: the check does look at the plugin, and openDash replaces its own
+assembly (PluginUpdate). What that amendment did not settle is the part a user has to do, and 0.3.0-rc.4
+was reported as the update simply not working.
+
+It worked. The assembly was staged, the waiter was armed, and the swap happened correctly the next time
+SimHub closed. What did not happen was anybody being told that SimHub closing is the step. The whole of
+what said so was one caption at the foot of a long tab, written in the past tense -- "openDash itself was
+updated too; it takes effect the next time you start SimHub" -- underneath a pill that had already
+flipped to **up to date** and a version number that had already moved to the new release. Everything
+visible said the update was done. The one thing that still had to happen was not asked for.
+
+**So it asks.** A dialog, which is what every other SimHub plugin does for this and what the report
+asked for by name: SimHub's own `SHMessageBox`, saying that a program cannot replace its own code while
+it is running, and offering to close SimHub now and start it again.
+
+*Yes* closes SimHub with `Application.Current.Shutdown()` -- not by closing the main window, because
+SimHub can be set to go to the tray on close and a driver who has just said yes would watch it minimise
+and nothing else happen. The already-armed waiter then does the swap it would have done anyway, and
+starts SimHub again.
+
+*The reopen is a file*, `OpenDash.dll.reopen`, beside the staged assembly. The waiter is armed the
+moment the assembly is staged, which is a minute before the driver is asked, so the answer cannot be
+carried to it as an argument -- by then the process that would have carried it has been running for a
+while. The script reads the file when it finally runs and deletes it either way, before the swap rather
+than after, so a swap that cannot happen leaves no standing request: an application that comes back from
+a close you meant is worse than one that does not come back from a close you did not.
+
+*No* leaves everything exactly as it was -- staged, armed, and waiting for an ordinary close -- and the
+plugin section says so every time it is drawn from then on, rather than only in the moment the download
+finished.
+
+Verified on the VM, whole: an older build offered the newer release, the dialog appeared, Yes closed
+SimHub, the assembly was replaced, the old one was kept as `OpenDash.dll.replaced`, and SimHub started
+again by itself with every setting and device intact.

@@ -143,6 +143,50 @@ namespace OpenDashPlugin.Tests
             Assert.True(script.IndexOf("move /y", StringComparison.Ordinal) < script.IndexOf("del \"%~f0\"", StringComparison.Ordinal));
         }
 
+        /// <summary>
+        /// The driver can ask for SimHub to come back, and the swap consumes the request either way.
+        /// </summary>
+        /// <remarks>
+        /// Consumed rather than left: a standing "reopen" outlives the update that asked for it, and the
+        /// next ordinary shutdown would honour it. An application that comes back from a close you meant
+        /// is worse than one that does not come back from a close you did not.
+        /// </remarks>
+        [Fact]
+        public void The_swap_reopens_SimHub_only_when_it_was_asked_to()
+        {
+            var script = PluginUpdate.SwapScript(root);
+            var reopen = PluginUpdate.ReopenPath(root);
+            var exe = PluginUpdate.SimHubExePath(root);
+            Assert.Equal(Path.Combine(root, "SimHubWPF.exe"), exe);
+            Assert.Equal(FlagBoxProfile.FolderPath(root), Path.GetDirectoryName(reopen));
+
+            Assert.Contains("if exist \"" + reopen + "\" set reopen=1", script);
+            Assert.Contains("del \"" + reopen + "\"", script);
+            Assert.Contains("start \"\" \"" + exe + "\"", script);
+            // Read and consumed before the swap, and the relaunch after it: a swap that fails leaves no
+            // request behind, and a relaunch never happens before the file it was asked for is in place.
+            Assert.True(script.IndexOf("del \"" + reopen + "\"", StringComparison.Ordinal) < script.IndexOf("move /y", StringComparison.Ordinal));
+            Assert.True(script.IndexOf("move /y", StringComparison.Ordinal) < script.IndexOf("start \"\"", StringComparison.Ordinal));
+        }
+
+        [Fact]
+        public void Asking_to_reopen_writes_the_marker_and_taking_it_back_removes_it()
+        {
+            Assert.False(File.Exists(PluginUpdate.ReopenPath(root)));
+
+            Assert.True(PluginUpdate.AskToReopen(root, true));
+            Assert.True(File.Exists(PluginUpdate.ReopenPath(root)));
+            // Twice is the same as once: a second update before the first has been applied must not leave
+            // two requests, and there is only one file to leave.
+            Assert.True(PluginUpdate.AskToReopen(root, true));
+            Assert.True(File.Exists(PluginUpdate.ReopenPath(root)));
+
+            Assert.True(PluginUpdate.AskToReopen(root, false));
+            Assert.False(File.Exists(PluginUpdate.ReopenPath(root)));
+            // And saying no when nothing was asked for is not an error.
+            Assert.True(PluginUpdate.AskToReopen(root, false));
+        }
+
         /// <summary>The staged assembly and the script live in openDash's own folder, not in SimHub's:
         /// PluginsData is SimHub's, and the assembly in use is the only thing openDash puts at the root.</summary>
         [Fact]
@@ -151,6 +195,7 @@ namespace OpenDashPlugin.Tests
             var folder = FlagBoxProfile.FolderPath(root);
             Assert.Equal(folder, Path.GetDirectoryName(PluginUpdate.StagedPath(root)));
             Assert.Equal(folder, Path.GetDirectoryName(PluginUpdate.ScriptPath(root)));
+            Assert.Equal(folder, Path.GetDirectoryName(PluginUpdate.ReopenPath(root)));
             Assert.Equal(Path.Combine(root, PluginUpdate.DllName), PluginUpdate.InstalledPath(root));
         }
     }
