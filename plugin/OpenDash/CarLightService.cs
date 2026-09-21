@@ -75,51 +75,75 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Reads the cache, and fetches first when it is missing or a week old.
+        /// Reads whatever is on disk, and asks for nothing.
+        ///
+        /// <para>This is the startup path and the whole of it: openDash never fetches the tables on its
+        /// own (#366). A rig that has them uses them, offline and every time; a rig that has not has no
+        /// mirror, which is the fallback every car had before the tables existed.</para>
         ///
         /// <para>Synchronous and returning what happened, the way UpdateService's entry points are, so
-        /// that every branch of it is tested. <paramref name="allowNetwork"/> is the user's update
-        /// setting: with it off, openDash uses whatever is already on disk and never reaches out.</para>
+        /// that every branch of it is tested.</para>
         /// </summary>
-        public CarLightRefresh Load(bool allowNetwork, DateTime nowUtc)
+        public CarLightRefresh Load(DateTime nowUtc)
         {
             lock (fetchLock)
             {
-                CarLightRefresh fetch = null;
-                if (allowNetwork && CarLightLibrary.IsStale(folder, nowUtc)) fetch = CarLightLibrary.Fetch(source, folder, nowUtc);
-
-                Dictionary<string, CarLightTable> loaded;
-                try
-                {
-                    loaded = CarLightLibrary.ReadFolder(folder);
-                }
-                catch (Exception e)
-                {
-                    status = "could not read the car light tables: " + e.Message;
-                    return CarLightRefresh.Failed(e.Message, cars.Count);
-                }
-
-                cars = loaded;
-                fetchedAt = CarLightLibrary.FetchedAt(folder);
-                // The car on screen may now have a table, or may have lost one.
-                lastCarId = null;
-                lastTable = null;
-
-                if (loaded.Count == 0)
-                {
-                    status = fetch != null && !fetch.Ok
-                        ? "no car light tables yet: " + fetch.Reason
-                        : "no car light tables yet";
-                    return CarLightRefresh.Failed(status, 0);
-                }
-                status = Describe(loaded.Count, fetchedAt, nowUtc, fetch);
-                return new CarLightRefresh { Ok = true, Fetched = fetch != null && fetch.Ok, Cars = loaded.Count };
+                return Read(null, nowUtc);
             }
+        }
+
+        /// <summary>
+        /// Fetches the archive because the user pressed the button, then reads what arrived.
+        ///
+        /// <para>Unconditional: a press is a person asking, so the week <see cref="CarLightLibrary.MaxAge"/>
+        /// describes is not consulted. It is what makes the copy the user's own — made when they asked
+        /// for it, from a panel that had named the project, the licence and the size (ADR 0018).</para>
+        /// </summary>
+        public CarLightRefresh Download(DateTime nowUtc)
+        {
+            lock (fetchLock)
+            {
+                return Read(CarLightLibrary.Fetch(source, folder, nowUtc), nowUtc);
+            }
+        }
+
+        /// <summary>The half both share: take the folder as it now stands and say what is in it.</summary>
+        private CarLightRefresh Read(CarLightRefresh fetch, DateTime nowUtc)
+        {
+            Dictionary<string, CarLightTable> loaded;
+            try
+            {
+                loaded = CarLightLibrary.ReadFolder(folder);
+            }
+            catch (Exception e)
+            {
+                status = "could not read the car light tables: " + e.Message;
+                return CarLightRefresh.Failed(e.Message, cars.Count);
+            }
+
+            cars = loaded;
+            fetchedAt = CarLightLibrary.FetchedAt(folder);
+            // The car on screen may now have a table, or may have lost one.
+            lastCarId = null;
+            lastTable = null;
+
+            status = Describe(loaded.Count, fetchedAt, nowUtc, fetch);
+            if (loaded.Count == 0) return CarLightRefresh.Failed(status, 0);
+            return new CarLightRefresh { Ok = true, Fetched = fetch != null && fetch.Ok, Cars = loaded.Count };
         }
 
         /// <summary>What the panel says about the tables. Pure, so the wording is pinned like UpdateWording's.</summary>
         public static string Describe(int cars, DateTime? fetchedAt, DateTime nowUtc, CarLightRefresh fetch)
         {
+            // The state a fresh install is in and stays in until somebody presses the button, so it is a
+            // sentence rather than a count of zero. A download that was tried and did not answer says so:
+            // the reason is the only thing the panel can offer a person on hotel wifi.
+            if (cars == 0)
+            {
+                return fetch != null && !fetch.Ok
+                    ? PanelLights.CarTablesNone + " " + PanelLights.CarTablesFailed(fetch.Reason)
+                    : PanelLights.CarTablesNone;
+            }
             var line = cars == 1 ? "1 car" : cars + " cars";
             if (fetchedAt == null) return line;
             var age = nowUtc - fetchedAt.Value;
@@ -139,19 +163,29 @@ namespace OpenDashPlugin
         /// The same, off the calling thread, for startup. Swallows everything: an unobserved exception
         /// on the thread pool ends the SimHub process on .NET Framework.
         /// </summary>
-        public void LoadInBackground(bool allowNetwork)
+        public void LoadInBackground()
         {
             ThreadPool.QueueUserWorkItem(delegate
             {
                 try
                 {
-                    Load(allowNetwork, DateTime.UtcNow);
+                    Load(DateTime.UtcNow);
                 }
                 catch (Exception)
                 {
                     status = "the car light tables could not be loaded";
                 }
             });
+        }
+
+        /// <summary>Whether the copy on disk is old enough to be worth offering a refresh for.</summary>
+        /// <remarks>
+        /// It decides a sentence now rather than a request. Nothing refetches on its own, so a stale copy
+        /// is a thing the panel mentions beside the button and the driver ignores if they like.
+        /// </remarks>
+        public bool Stale
+        {
+            get { return cars.Count > 0 && CarLightLibrary.IsStale(folder, DateTime.UtcNow); }
         }
 
         /// <summary>The table for a car, or null when there is none. Keyed the folded way, so spelling does not matter.</summary>

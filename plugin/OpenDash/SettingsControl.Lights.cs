@@ -22,6 +22,12 @@ namespace OpenDashPlugin
 {
     public partial class SettingsControl
     {
+        /// <summary>The car tables' button and the line under it. Dropped with the tab, like every other
+        /// control here, so a download that finishes after the tab has gone writes nowhere.</summary>
+        private Button carTablesButton;
+
+        private TextBlock carTablesLine;
+
         private FrameworkElement BuildLightsTab()
         {
             var matrices = new List<UIElement>();
@@ -52,9 +58,6 @@ namespace OpenDashPlugin
             foreach (var row in matrices) panelRows.Children.Add(row);
             panelRows.Children.Add(BuildAddMatrixRow());
 
-            // The attribution row is not decoration. The car tables are somebody else's work under
-            // CC BY-NC-SA 4.0 (ADR 0018), openDash ships none of them, and a user is entitled to know
-            // whose numbers are lighting their wheel.
             var strips = Ui.Section(PanelLights.BarsTitle, Ui.Caption(PanelLights.BarsCaption));
             var stripRows = (StackPanel)strips.Child;
             var bars = Settings.LedBarList();
@@ -64,10 +67,7 @@ namespace OpenDashPlugin
             stripRows.Children.Add(Ui.Row("Car bar size", "Only for the car's own. Fill the strip spreads the car's lights over every LED; true size draws them at their own length in the middle.",
                 BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,
                     value => { Settings.LedMirrorFit = value; Save(); })));
-            stripRows.Children.Add(Ui.Caption(
-                CarLightLibrary.Attribution + " openDash ships none of it: the tables are fetched when update checks are on, "
-                    + "and every car works offline afterwards. " + CarLightLibrary.ProjectUrl,
-                BodyWidth));
+            stripRows.Children.Add(BuildCarTablesRow());
 
             // Brightness and night mode are the rig's rather than the box's -- Contract.cs says so in their
             // names -- so they sit under everything a device owns rather than inside the first device that
@@ -79,6 +79,71 @@ namespace OpenDashPlugin
                 Ui.Row("Night mode", "A switch you flip, not a time of day we guess at.", BuildToggle(Settings.LightsNightMode, on => { Settings.LightsNightMode = on; Save(); })));
 
             return Ui.VStack(0, box, panels, strips, everyLight);
+        }
+
+        /// <summary>
+        /// The car light tables: what they are, who measured them, and the button that fetches them.
+        /// </summary>
+        /// <remarks>
+        /// A button rather than a setting, and that is the whole of #366. The tables used to arrive on
+        /// their own during startup, weekly, gated by the update-check switch -- so a driver never chose
+        /// to fetch them and was never told it had happened, and the reasoning about what is disclosed
+        /// lived in a source comment. Two things are wrong with that. The visible one is that "the car's
+        /// own" is the default bar style and its fallback is deliberately silent (ADR 0018 part 3), so a
+        /// driver whose lights look generic had nothing to read and nothing to press. The other is the
+        /// licence: openDash carries none of this data, and the copy being the user's own is what makes
+        /// that work, which is a great deal truer of a press than of a background thread.
+        ///
+        /// The attribution stays underneath either way. CC BY-NC-SA 4.0 asks for it, and a driver is
+        /// entitled to know whose numbers are lighting their wheel.
+        /// </remarks>
+        private FrameworkElement BuildCarTablesRow()
+        {
+            carTablesButton = BuildSecondaryButton(PanelLights.CarTablesButton(plugin.CarLights.CarCount), PanelLights.CarTablesCaption);
+            carTablesButton.Click += (sender, args) => DownloadCarTables();
+
+            carTablesLine = Ui.Caption(string.Empty, BodyWidth);
+            var row = Ui.Row(PanelLights.CarTablesTitle, PanelLights.CarTablesCaption, carTablesButton);
+            var attribution = Ui.Caption(PanelLights.CarTablesAttribution, BodyWidth);
+            RefreshCarTables();
+            return Ui.VStack(4, row, carTablesLine, attribution);
+        }
+
+        /// <summary>The status line and the button's label, which are one answer and so are written together.</summary>
+        private void RefreshCarTables()
+        {
+            if (carTablesLine == null) return;
+            var service = plugin.CarLights;
+            var line = service.Status;
+            // A copy old enough that upstream has probably moved is mentioned and not acted on: nothing
+            // refetches on its own any more, so the invitation is the whole of what staleness now does.
+            if (service.Stale) line += " " + PanelLights.CarTablesStale;
+            carTablesLine.Text = line;
+            if (carTablesButton != null) carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);
+        }
+
+        /// <summary>
+        /// The press: fetches, off the interface thread, and says what came back.
+        /// </summary>
+        /// <remarks>
+        /// The answer may land after the tab it was asked from has gone, which is why every control it
+        /// writes to is checked first -- the same precaution the update check takes, for the same reason.
+        /// </remarks>
+        private void DownloadCarTables()
+        {
+            if (carTablesButton == null) return;
+            carTablesButton.IsEnabled = false;
+            if (carTablesLine != null) carTablesLine.Text = PanelLights.CarTablesDownloading;
+
+            UpdateService.InBackground(() =>
+            {
+                plugin.CarLights.Download(DateTime.UtcNow);
+                Dispatcher.Invoke(() =>
+                {
+                    if (carTablesButton != null) carTablesButton.IsEnabled = true;
+                    RefreshCarTables();
+                });
+            }, new SimHubInstallLog());
         }
 
         /// <summary>

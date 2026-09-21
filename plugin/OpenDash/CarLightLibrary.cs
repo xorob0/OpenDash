@@ -11,7 +11,11 @@
 // user asks, discloses nothing about this one, and has the better failure mode besides: a car works
 // the first time it is driven, offline, in a session that never reaches the network at all.
 //
-// It costs 386 KB, once, refreshed at most weekly.
+// It costs 386 KB, once, and only when the driver asks: the tables are fetched by a button on the
+// Lights tab and by nothing else (#366). Starting SimHub never reaches out, and neither does the
+// update check, which used to carry this along with its own. A copy on disk is the user's own, made
+// when they pressed a button that had named the project, the licence, the size and the host -- which
+// is what lets openDash carry none of the data and still light a wheel with it.
 //
 // No SimHub or WPF types -- file and zip handling is fine, PackageExtractor does the same and is
 // compiled into the tests too. Nothing here throws: a car with no table is a car on the published
@@ -71,8 +75,12 @@ namespace OpenDashPlugin
         public const string StampFile = "fetched.txt";
 
         /// <summary>
-        /// How long a copy is kept before another is fetched. A week: the database gains a car every
-        /// few weeks, and nothing about a wheel's lights is urgent enough to ask more often than that.
+        /// How old a copy has to be before the panel offers a refresh. A week: the database gains a car
+        /// every few weeks, and nothing about a wheel's lights is urgent enough to mention sooner.
+        ///
+        /// <para>It decides a sentence and not a request. Nothing refetches on its own since #366, so a
+        /// copy older than this is one the Lights tab mentions beside the button; pressing is the
+        /// driver's business and a rig that never presses again keeps the cars it has.</para>
         /// </summary>
         public static readonly TimeSpan MaxAge = TimeSpan.FromDays(7);
 
@@ -200,7 +208,10 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Whether another fetch is due: never fetched, or fetched longer ago than <see cref="MaxAge"/>.</summary>
+        /// <summary>
+        /// Whether the copy is old enough to be worth mentioning: never fetched, or fetched longer ago
+        /// than <see cref="MaxAge"/>. Read by the panel, and by nothing that makes a request.
+        /// </summary>
         public static bool IsStale(string folder, DateTime nowUtc)
         {
             var fetched = FetchedAt(folder);
