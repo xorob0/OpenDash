@@ -233,9 +233,20 @@ first thing to build with it.
 
 ### The gear, underneath everything
 
-`OpenDash.FlagBoxMatrix<N>Gear` (on by default) draws the gear filling the panel when nothing else is on
-it. It is the resting state rather than a feature: every flag outranks it, and when they let go
-it comes back. Off leaves the panel dark rather than showing something else.
+`OpenDash.FlagBoxMatrix<N>Rest`, set to `gear` on the first panel and to `dark` on the other three,
+draws the gear filling the panel when nothing else is on it. It is the resting state rather than a
+feature: every flag outranks it, and when they let go it comes back. `dark` leaves the panel dark
+rather than showing something else.
+
+`OpenDash.FlagBoxMatrix<N>Gear` was a second switch over that same thing, and the panel offered
+both. The gear drew where the resting state was `gear` *and* the switch was on, so a panel resting
+dark ignored the switch and a panel resting on the gear was decided by the switch alone: one setting
+spelled twice, and a pair a driver could not tell apart. The resting state is what survives, since it
+names the decision rather than one of its answers, which is the shape `RevBar` settled for
+`ShiftLights`. The switch stays attached as its deprecated alias and `flagBoxMatrix().rest()` resolves
+through it, because [ADR 0003](../decisions/0003-plugin-settings-through-properties.md) makes a
+published property a public interface; the plugin collapses the pair into the resting state on load,
+writing the conjunction those two containers used to compute between them.
 
 The glyphs are a 5 by 7 font in source, centred in the panel, not text rendered small — the
 bundled Barlow Condensed does not exist at eight pixels, and a thin face leaves one or two pixels

@@ -130,10 +130,13 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
       formula: and(on(m.warnings()), noneRaised(pit)),
       children: stateContainers(warnings, 'Warning'),
     },
+    // Nothing above it is raised, and no more: what the panel rests *on* is the gear group's own
+    // gate. Naming the resting state here as well would put one decision in two expressions, which
+    // is the shape this rank grew out of.
     {
       kind: 'when',
       description: 'Resting',
-      formula: and(eq(m.rest(), "'gear'"), noneRaised(pit), noneRaised(warnings)),
+      formula: and(noneRaised(pit), noneRaised(warnings)),
       children: [gearGroup(matrix)],
     },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];

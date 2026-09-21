@@ -82,7 +82,6 @@ Out of the box, matrix 1 does everything and 2 to 4 are off, which is the right 
 | **Warnings** | Let low fuel, oil and water take this panel. |
 | **Mounted** | `Both`, `Left` or `Right`. |
 | **Critical flags only** | Quiet until something matters. Drops the chequer, the white, the green and the start gantry; keeps everything that means slow down or is addressed to you. |
-| **Show the gear** | Off leaves this panel dark when nothing else is on it. |
 | **Oil / Water temperature** | In **your own unit**. Leave them at 0 and openDash uses the right default for whichever unit SimHub is set to: 120 °C or 248 °F for oil, 110 °C or 230 °F for water. |
 
 **Mounted is the one to get right.** It is where the box physically is, not what you want it to
@@ -100,9 +99,13 @@ A two-box setup people build on day one: one in each corner of the monitor stand
 | **Low fuel, laps** | Laps left in the tank, not litres — litres mean nothing without knowing the car. One number for the whole rig: the box, the screens' fuel telltale and the pop-up all use it. |
 | **Spotter bar grows** | Off by default. On, the bar grows inwards from the edge instead of simply being there. |
 
-**Critical flags only**, **Show the gear** and the two temperatures used to live here, one value for
+**Critical flags only**, the gear and the two temperatures used to live here, one value for
 every panel. They belong to a panel and are now in each matrix's own group above; a setting you had
 already chosen is carried into all four panels the first time this version reads your settings.
+
+**Show the gear** is gone from the matrix group as well, since **At rest** was asking the same
+question: its `Dark` is what that switch called off. A panel whose switch you had turned off comes
+back set to `Dark`, so the box goes on showing what it showed before.
 
 ## What it shows, and in what order
 
@@ -173,7 +176,7 @@ reasoning is in [scope.md](scope.md).
 | Nothing at all, ever | The profile is not installed, or not selected on the device. Step 2. |
 | A single dim dot in the middle | The box is working and the car's ignition is off. That mark exists so this is not confused with a broken profile. |
 | Everything sideways, mirrored or shredded | Rotation or serpentine on the *device*. Step 1, not the openDash panel. |
-| The gear is dark but flags work | That matrix's **Show the gear** is off, or its **At rest** is `Dark`. |
+| The gear is dark but flags work | That matrix's **At rest** is `Dark`. |
 | A car alongside lights the wrong box | **Mounted** is set to the side you want rather than the side the box is on. |
 | The chequered flag never shows | That matrix's **Critical flags only** is on. It is not a critical flag. |
 | Far too bright at night | **Night brightness**, and turn **Night mode** on. |
