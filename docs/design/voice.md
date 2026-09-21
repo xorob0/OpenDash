@@ -199,8 +199,8 @@ switches on a matrix panel are parallel for the same reason: "Show race flags", 
 
 The caption is read on its own, without the title, by anybody scanning a page of settings, so a
 pronoun whose antecedent is in the writer's head is simply broken. "Off lights only the LED at that
-end" names no end anywhere in the row. Naming the thing costs two words: "Off lights just the end
-nearest the car."
+end" names no end anywhere in the row. Naming the thing costs a few words: "Lights the whole strip
+for a car alongside, instead of just the end nearest it."
 
 ### One word per thing, everywhere
 

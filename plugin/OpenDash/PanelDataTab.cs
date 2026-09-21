@@ -52,7 +52,7 @@ namespace OpenDashPlugin
 
         public static readonly string[] RevBarLabels = { "On", "Off" };
 
-        public const string PositionTitle = "Position shown";
+        public const string PositionTitle = "Position";
 
         /// <summary>The canvas's sentence, and a second one it does not carry.</summary>
         /// <remarks>

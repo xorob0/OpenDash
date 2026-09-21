@@ -96,7 +96,7 @@ namespace OpenDashPlugin
                 Save();
             });
             var row = Ui.Row(
-                "How flags show",
+                "Flag display",
                 "Full screen covers the zones for as long as the flag is out.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -682,7 +682,7 @@ namespace OpenDashPlugin
                 screen.PitWallPage = Contract.NormalisePitWallPage(select.SelectedIndex);
                 Save();
             };
-            return Ui.Row("Page shown", "Does not change while you race.", select);
+            return Ui.Row("Page", "Does not change while you race.", select);
         }
 
         /// <summary>The one page the glance shows, zone and page together, as the face's own select is.</summary>
@@ -949,7 +949,7 @@ namespace OpenDashPlugin
             var startText = Ui.VStack(4, Ui.Body("First module"),
                 Ui.Caption("Shown when a session starts."));
             startText.MaxWidth = 420;
-            return Ui.Section("Changing module",
+            return Ui.Section("Module paging",
                 Ui.Caption(
                     "Tap the left or right half of the screen to move between modules. For a wheel button, "
                     + "bind SimHub's \"Next screen\" for this dashboard under Controls and events.",
@@ -967,7 +967,7 @@ namespace OpenDashPlugin
         /// stand beside the wheel is for: a 12 px strip at that distance says nothing.</summary>
         private FrameworkElement BuildCompanionFlagRow(ScreenInstance screen)
         {
-            var text = Ui.VStack(4, Ui.Body("How flags show"),
+            var text = Ui.VStack(4, Ui.Body("Flag display"),
                 Ui.Caption("Full screen covers the module for as long as the flag is out. Bar is the thin "
                     + "strip at the foot."));
             text.MaxWidth = 420;
@@ -984,7 +984,7 @@ namespace OpenDashPlugin
         /// out hides the cars the yellow is about.</summary>
         private FrameworkElement BuildPitWallFlagRow(ScreenInstance screen)
         {
-            var text = Ui.VStack(4, Ui.Body("How flags show"),
+            var text = Ui.VStack(4, Ui.Body("Flag display"),
                 Ui.Caption("Bar is a strip under the header. Full screen covers everything below it."));
             text.MaxWidth = 420;
             var segmented = BuildSegmented(

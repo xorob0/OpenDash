@@ -43,7 +43,7 @@ namespace OpenDashPlugin
                 Ui.Row("Low fuel warning", "Warns when this many laps of fuel are left.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })),
                 // Off by default, unlike the flags' own switch on the strips: movement on this box
                 // means act, and a car alongside is something you live with for half a straight.
-                Ui.Row("Animate cars alongside", "The bar slides in from the edge instead of just appearing.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
+                Ui.Row("Spotter bar animation", "The bar slides in from the edge instead of just appearing.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
 
             var panels = Ui.Section(PanelLights.PanelsTitle, Ui.Caption(PanelLights.PanelsCaption));
             var panelRows = (StackPanel)panels.Child;
@@ -60,7 +60,7 @@ namespace OpenDashPlugin
             if (bars.Count == 0) stripRows.Children.Add(Ui.Caption(PanelLights.NoBars));
             foreach (var bar in bars) stripRows.Children.Add(BuildLedBarGroup(bar, bars[0]));
             stripRows.Children.Add(BuildAddLedBarRow());
-            stripRows.Children.Add(Ui.Row("Car shift light width", "Only when the rev style is The car's own. Fill the strip spreads them over every LED; true size keeps their original width.",
+            stripRows.Children.Add(Ui.Row("Car shift light width", "Only for the car's own rev light style. Fill the strip spreads them over every LED.",
                 BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,
                     value => { Settings.LedMirrorFit = value; Save(); })));
             stripRows.Children.Add(Ui.Caption(CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl, BodyWidth));
@@ -157,24 +157,24 @@ namespace OpenDashPlugin
                     Save();
                 });
                 return Ui.VStack(4,
-                    Ui.Row("When nothing is happening", null, rest),
-                    Ui.Row("Show race flags", null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; Save(); })),
-                    Ui.Row("Show pit warnings", "The limiter, the pit lane and speeding.", BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[m - 1] = on; Save(); })),
-                    Ui.Row("Show cars alongside", null, BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; Save(); })),
-                    Ui.Row("Show car warnings", "Low fuel, oil and water.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; Save(); })),
+                    Ui.Row("Idle display", null, rest),
+                    Ui.Row("Race flags", null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; Save(); })),
+                    Ui.Row("Pit status", "Limiter, pit lane and speeding.", BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[m - 1] = on; Save(); })),
+                    Ui.Row("Spotter", "Warns about cars alongside.", BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; Save(); })),
+                    Ui.Row("Car warnings", "Low fuel, oil and water.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; Save(); })),
                     // Which side the box is physically on. One to the left of the wheel lighting for a car
                     // on the right is worse than no box at all, so it is asked rather than guessed.
-                    Ui.Row("Side of the rig", "Only lights for cars on this side.", side),
+                    Ui.Row("Mounting side", "Only lights for cars on this side.", side),
                     BuildMatrixPanelActions(m),
                     // The four that moved off the tab header. They read as this panel's own rather than as
                     // the rig's, which is what they had become by sitting above every panel at once.
                     Ui.Row("Critical flags only", "Stays dark for the chequer, white, green and start gantry.", BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[m - 1] = on; Save(); })),
-                    Ui.Row("Show the gear", null, BuildToggle(Settings.MatrixGear(m), on => { Settings.FlagBoxMatrixGear[m - 1] = on; Save(); })),
+                    Ui.Row("Gear display", null, BuildToggle(Settings.MatrixGear(m), on => { Settings.FlagBoxMatrixGear[m - 1] = on; Save(); })),
                     // Per panel, because a box on the wheel and a box on a monitor stand do not want the
                     // same answer: the one at the edge of vision strobing through the redline is what a
                     // driver who already has a rev bar turns off. Off leaves the digit in the redline
                     // colour, which is still the whole of the message.
-                    Ui.Row("Flash the gear at the redline", "Off keeps it steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
+                    Ui.Row("Redline flash", "The gear blinks while you are over-revving. Off keeps it steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
                     Ui.Row("Oil temperature warning", "Warns above this. 0 uses the default (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
                     Ui.Row("Water temperature warning", "Warns above this. 0 uses the default (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
             });
@@ -251,9 +251,9 @@ namespace OpenDashPlugin
                     });
                 return Ui.VStack(4,
                     BuildLedDeviceRow(LedTargets.All(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
-                    Ui.Row("What the middle shows", "The LEDs at each end are not affected.", centre),
+                    Ui.Row("Centre display", "The LEDs at each end are not affected.", centre),
                     Ui.Row("Rev light style", "The car's own copies the real car's shift lights.", style),
-                    Ui.Row("Animate flags", "Off shows each flag as a steady colour.",
+                    Ui.Row("Flag animation", "Off shows each flag as a steady colour.",
                         BuildToggle(Settings.BarFlagAnimation(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);
@@ -261,7 +261,7 @@ namespace OpenDashPlugin
                             Save();
                         })),
                     // Per bar, because a brow above a monitor has no ends to speak of and a rim does.
-                    Ui.Row("Whole strip lights for a car alongside", "Off lights just the end nearest the car.",
+                    Ui.Row("Full-strip spotter", "Lights the whole strip for a car alongside, instead of just the end nearest it.",
                         BuildToggle(Settings.BarSpotterWhole(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);
