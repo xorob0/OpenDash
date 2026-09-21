@@ -96,8 +96,8 @@ namespace OpenDashPlugin
                 Save();
             });
             var row = Ui.Row(
-                "Flags",
-                "Full screen takes over the zones for as long as the flag is out.",
+                "How flags show",
+                "Full screen covers the zones for as long as the flag is out.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
@@ -122,7 +122,7 @@ namespace OpenDashPlugin
             });
             var row = Ui.Row(
                 "Lap review",
-                "Shows the lap you just did for four seconds at the line.",
+                "Shows the lap you just did for four seconds after the line.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
@@ -593,7 +593,7 @@ namespace OpenDashPlugin
             glanceText.MaxWidth = 420;
 
             return Ui.Section("Wheel buttons on this screen",
-                Ui.Caption("Bound per screen.", BodyWidth),
+                Ui.Caption("Each screen has its own buttons.", BodyWidth),
                 wrap,
                 Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                     BuildGlanceSelect(screen),
@@ -657,7 +657,7 @@ namespace OpenDashPlugin
                 Ui.Section("What each zone shows", Ui.VStack(PanelPitWallPlan.RowGap, BuildPitWallRows(screen))),
                 // A binding and not a wheel button: nobody drives a pit wall, so the gesture is whatever
                 // SimHub will bind, and a keyboard key beside the monitor is the likelier one.
-                Ui.Section("A page on demand",
+                Ui.Section("Buttons for this pit wall",
                     Ui.Caption("A keyboard key works as well as a wheel button.", BodyWidth),
                     Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                         BuildPitWallGlanceSelect(screen),
@@ -682,7 +682,7 @@ namespace OpenDashPlugin
                 screen.PitWallPage = Contract.NormalisePitWallPage(select.SelectedIndex);
                 Save();
             };
-            return Ui.Row("Page", "Does not change while you race.", select);
+            return Ui.Row("Page shown", "Does not change while you race.", select);
         }
 
         /// <summary>The one page the glance shows, zone and page together, as the face's own select is.</summary>
@@ -904,7 +904,7 @@ namespace OpenDashPlugin
             }
             return Ui.VStack(12,
                 Ui.Caption(
-                    "Turn off the modules you never page to and they are skipped. Energy, Damage and Track "
+                    "Turn off the modules you never use and they are skipped. Energy, Damage and Track "
                     + "rivals need a sim other than iRacing.",
                     BodyWidth),
                 grid,
@@ -946,12 +946,12 @@ namespace OpenDashPlugin
 
         private FrameworkElement BuildCompanionPaging(ScreenInstance screen)
         {
-            var startText = Ui.VStack(4, Ui.Body("Opens on"),
-                Ui.Caption("The module a session starts on."));
+            var startText = Ui.VStack(4, Ui.Body("First module"),
+                Ui.Caption("Shown when a session starts."));
             startText.MaxWidth = 420;
-            return Ui.Section("Which module is up",
+            return Ui.Section("Changing module",
                 Ui.Caption(
-                    "Tap the left or right half of the screen to page through your modules. For a wheel button, "
+                    "Tap the left or right half of the screen to move between modules. For a wheel button, "
                     + "bind SimHub's \"Next screen\" for this dashboard under Controls and events.",
                     BodyWidth),
                 Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session opens on", value =>
@@ -967,7 +967,7 @@ namespace OpenDashPlugin
         /// stand beside the wheel is for: a 12 px strip at that distance says nothing.</summary>
         private FrameworkElement BuildCompanionFlagRow(ScreenInstance screen)
         {
-            var text = Ui.VStack(4, Ui.Body("Flags"),
+            var text = Ui.VStack(4, Ui.Body("How flags show"),
                 Ui.Caption("Full screen covers the module for as long as the flag is out. Bar is the thin "
                     + "strip at the foot."));
             text.MaxWidth = 420;
@@ -984,8 +984,8 @@ namespace OpenDashPlugin
         /// out hides the cars the yellow is about.</summary>
         private FrameworkElement BuildPitWallFlagRow(ScreenInstance screen)
         {
-            var text = Ui.VStack(4, Ui.Body("Flags"),
-                Ui.Caption("Bar is a strip under the header. Full screen takes everything below it."));
+            var text = Ui.VStack(4, Ui.Body("How flags show"),
+                Ui.Caption("Bar is a strip under the header. Full screen covers everything below it."));
             text.MaxWidth = 420;
             var segmented = BuildSegmented(
                 Contract.CompanionFlagFormats,

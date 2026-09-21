@@ -29,7 +29,7 @@ namespace OpenDashPlugin
         public static readonly string[] SideLabels = { "Both", "Left", "Right" };
 
         /// <summary>The heading over the strips a driver has added.</summary>
-        public const string BarsTitle = "Your LED bars";
+        public const string BarsTitle = "Your LED strips";
 
         /// <summary>
         /// The line under it.
@@ -43,9 +43,9 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string BarsCaption = "Add one for each RGB strip you have.";
 
-        public const string NoBars = "No bars yet.";
+        public const string NoBars = "No strips yet.";
 
-        public const string AddBar = "Add an LED bar";
+        public const string AddBar = "Add an LED strip";
 
         public const string BarNameTitle = "Name";
 
@@ -56,7 +56,7 @@ namespace OpenDashPlugin
         public const string BarEndsCaption = "These show flags, warnings and cars alongside. Pick None for one continuous run.";
 
         /// <summary>The device row of the add flow and of every bar.</summary>
-        public const string BarDeviceTitle = "Which device";
+        public const string BarDeviceTitle = "LED device";
 
         /// <summary>
         /// The line under it, which has to carry a fact about SimHub rather than a preference.
@@ -161,6 +161,6 @@ namespace OpenDashPlugin
 
         /// <summary>The section the three rig-wide settings sit in, at the foot of the tab: they are not
         /// the flag box's, and a driver who owns a strip as well as a box sets them once.</summary>
-        public const string RigWideTitle = "For every light";
+        public const string RigWideTitle = "All lights";
     }
 }

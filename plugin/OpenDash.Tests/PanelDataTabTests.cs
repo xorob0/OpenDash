@@ -55,7 +55,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "none", "class", "positionClass" }, Contract.BlueFlagDetails);
             Assert.Equal("Blue flag detail", PanelDataTab.BlueFlagTitle);
             // The three values are the control's to show; the caption says only what the row is about.
-            Assert.Equal("What shows beside a blue flag.", PanelDataTab.BlueFlagCaption);
+            Assert.Equal("What shows next to a blue flag.", PanelDataTab.BlueFlagCaption);
         }
 
         [Fact]
@@ -64,7 +64,7 @@ namespace OpenDashPlugin.Tests
             // The canvas's own sentence, "Overall, or within your class", is what the segmented control
             // beside the row already says in two words. What the row keeps is the half the canvas does
             // not carry and the control cannot show: a zone overrides this on its own.
-            Assert.Equal("Zones can be set to your class individually.", PanelDataTab.PositionCaption);
+            Assert.Equal("Each zone can be set to your class on its own.", PanelDataTab.PositionCaption);
         }
     }
 }

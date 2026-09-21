@@ -46,13 +46,13 @@ namespace OpenDashPlugin
         /// So the row is on or off, and off is the one that still means something: a wheel with its own
         /// LEDs does not need the strip, and the room goes back to the zones.
         /// </remarks>
-        public const string RevBarCaption = "Turn it off if your wheel already has LEDs.";
+        public const string RevBarCaption = "Turn it off if your wheel already has its own shift lights.";
 
         public static readonly string[] RevBarValues = { Contract.RevBarShift, Contract.RevBarOff };
 
         public static readonly string[] RevBarLabels = { "On", "Off" };
 
-        public const string PositionTitle = "Position";
+        public const string PositionTitle = "Position shown";
 
         /// <summary>The canvas's sentence, and a second one it does not carry.</summary>
         /// <remarks>
@@ -61,7 +61,7 @@ namespace OpenDashPlugin
         /// this row reads as though Overall meant overall everywhere. It is therefore owed to the canvas
         /// rather than deleted from the code, and the docs package raises it.
         /// </remarks>
-        public const string PositionCaption = "Zones can be set to your class individually.";
+        public const string PositionCaption = "Each zone can be set to your class on its own.";
 
         public const string DeltaTitle = "Delta reference";
 
@@ -69,10 +69,10 @@ namespace OpenDashPlugin
 
         public const string SessionTitle = "Session progress";
 
-        public const string SessionCaption = "Auto shows laps in a lapped session and time in a timed one.";
+        public const string SessionCaption = "Auto shows laps in a lapped race and time in a timed one.";
 
         public const string BlueFlagTitle = "Blue flag detail";
 
-        public const string BlueFlagCaption = "What shows beside a blue flag.";
+        public const string BlueFlagCaption = "What shows next to a blue flag.";
     }
 }

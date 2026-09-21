@@ -178,13 +178,37 @@ says so rather than reproducing a stack trace.
 worth more than the two characters, particularly since half the sentences are read at a glance by
 somebody who is about to go and drive.
 
-### Titles are nouns and buttons are verbs
+### A title names the setting, and a switch names what being on does
 
-A row title names the thing being set, in sentence case: "Screen size", "Rev style", "Night mode".
-A button says what pressing it does: "Add screen", "Install it again", "Put mine back". Neither is
-phrased as a question. A title carrying no caption has to be the whole answer on its own, which is
-usually a matter of naming the setting rather than gesturing at it: "How big" needed a caption and
-"Screen size" does not.
+A row title names the thing being set, in sentence case: "Screen size", "Rev light style", "Night
+mode". A button says what pressing it does: "Add screen", "Install it again", "Put mine back".
+Neither is phrased as a question. A title carrying no caption has to be the whole answer on its own,
+which is usually a matter of naming the setting rather than gesturing at it: "How big" needed a
+caption and "Screen size" does not, and "At rest" needed one where "When nothing is happening" does
+not.
+
+A switch is the case worth its own sentence, because a switch reads as a claim and the claim has to
+be the thing the switch turns on, with the subject of that claim first. "A car alongside lights the
+whole bar" puts the trigger where the reader expects the subject, so the sentence has to be
+reassembled before it can be understood; "Whole strip lights for a car alongside" does not. The four
+switches on a matrix panel are parallel for the same reason: "Show race flags", "Show pit warnings",
+"Show cars alongside", "Show car warnings", where they used to be the bare nouns "Flags", "Pit",
+"Spotter" and "Warnings", none of which said whether it was a switch or a chooser.
+
+### Every "it", "that" and "them" has to point at something on the row
+
+The caption is read on its own, without the title, by anybody scanning a page of settings, so a
+pronoun whose antecedent is in the writer's head is simply broken. "Off lights only the LED at that
+end" names no end anywhere in the row. Naming the thing costs two words: "Off lights just the end
+nearest the car."
+
+### One word per thing, everywhere
+
+The LED strips were "bars" in a section heading, "strips" in the captions under it and "bars" again
+in the buttons beside them, which reads as three features. They are strips throughout now. The same
+applies to a verb: a screen is **removed**, never sometimes removed and sometimes deleted, and a
+tooltip says what the control does rather than instructing the reader to do it, so it is "Removes
+this screen" beside a control already labelled "Remove this screen".
 
 ## Where the words live
 

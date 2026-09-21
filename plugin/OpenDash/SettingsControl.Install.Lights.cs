@@ -264,8 +264,8 @@ namespace OpenDashPlugin
         {
             flagBoxLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
             flagBoxCopyButton = BuildSecondaryButton(
-                "Copy where SimHub looks",
-                "Puts a copy in Documents\\SimHub, the folder SimHub's profile import opens in.");
+                "Copy to SimHub's import folder",
+                "Puts a copy in Documents\\SimHub, where SimHub's profile import opens.");
             flagBoxCopyButton.Click += (sender, args) => CopyFlagBoxForImport();
             var block = Ui.VStack(8, flagBoxLine, Ui.HStack(12, flagBoxCopyButton, FlagBoxPathBox()));
             block.HorizontalAlignment = HorizontalAlignment.Left;

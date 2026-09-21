@@ -198,18 +198,18 @@ namespace OpenDashPlugin
             text.HorizontalAlignment = HorizontalAlignment.Left;
 
             var rename = Ui.LinkButton("Rename");
-            rename.ToolTip = "Rename it here and in SimHub's dashboard list.";
+            rename.ToolTip = "Renames it here and in SimHub's dashboard list.";
             rename.Click += (sender, args) => ShowRename(screen);
             // Beside Rename, because it is the same kind of correction: a driver who picked the wrong
             // size once had to remove the screen and start again, which threw away the zones they had set
             // and every wheel button bound to it.
             var resize = Ui.LinkButton("Change the size");
-            resize.ToolTip = "Move this screen to another size.";
+            resize.ToolTip = "Moves this screen to another size.";
             resize.Click += (sender, args) => ShowResize(screen);
             // Text and not a button face, which is what the canvas draws. What keeps a quiet destructive
             // action from being an accident is the confirmation behind it rather than its own weight.
             var remove = Ui.LinkButton("Remove this screen", Theme.Danger);
-            remove.ToolTip = "Delete this screen, its settings and its dashboard.";
+            remove.ToolTip = "Removes this screen, its settings and its dashboard.";
             remove.Click += (sender, args) => ShowRemove(screen);
 
             var actions = Resizable(screen) ? Ui.HStack(12, rename, resize, remove) : Ui.HStack(12, rename, remove);
@@ -263,7 +263,7 @@ namespace OpenDashPlugin
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
             var text = Ui.Caption("This screen's dashboard is missing from SimHub.");
-            var write = BuildSecondaryButton("Install it again", "Put this screen's dashboard back into SimHub.");
+            var write = BuildSecondaryButton("Install it again", "Puts this screen's dashboard back into SimHub.");
             write.Click += (sender, args) =>
             {
                 var result = ScreenInstaller.Write(screen, plugin.Installer.PackageSource, plugin.Installer.SimHubRoot, plugin.Installer.Record, new SimHubInstallLog(), force: true);
@@ -374,7 +374,7 @@ namespace OpenDashPlugin
 
             var add = Ui.OutlineButton(PanelAddScreen.AddButton, PanelMetrics.RowButtonHeight);
             add.MinWidth = ButtonMinWidth;
-            add.ToolTip = "Create the screen and install its dashboard.";
+            add.ToolTip = "Creates the screen and installs its dashboard.";
             add.Click += (sender, args) => AddScreen(entry, name.Text);
             var cancel = Ui.LinkButton("Cancel");
             cancel.ToolTip = "Go back without adding anything.";
@@ -453,7 +453,7 @@ namespace OpenDashPlugin
 
             var apply = Ui.OutlineButton("Change it", PanelMetrics.RowButtonHeight);
             apply.MinWidth = ButtonMinWidth;
-            apply.ToolTip = "Install this screen's dashboard at the new size.";
+            apply.ToolTip = "Installs this screen's dashboard at the new size.";
             apply.Click += (sender, args) => ResizeScreen(screen, chosen);
             var cancel = Ui.LinkButton("Cancel");
             cancel.ToolTip = "Keep the current size.";
@@ -576,7 +576,7 @@ namespace OpenDashPlugin
                 ? " Any wheel button you bound to it stops working."
                 : string.Empty;
             var remove = Ui.DestructiveButton("Remove it");
-            remove.ToolTip = "Delete the screen, its settings and its dashboard.";
+            remove.ToolTip = "Removes the screen, its settings and its dashboard.";
             remove.Click += (sender, args) =>
             {
                 var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
@@ -596,7 +596,7 @@ namespace OpenDashPlugin
             cancel.Click += (sender, args) => Redraw();
 
             bodyHost.Content = Ui.VStack(0, Ui.Section("Remove " + screen.Name,
-                Ui.Caption("Deletes the screen, its dashboard and its settings." + bound),
+                Ui.Caption("Removes the screen, its dashboard and its settings." + bound),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, remove))));
         }
 

@@ -40,10 +40,10 @@ namespace OpenDashPlugin
                 // against rc.2 has to keep the number its driver chose. It stays on the tab rather than
                 // moving with the other four: it is the rig's one answer to "am I low", read by the strip
                 // and the faces as well, and a per-box copy would be four more places to disagree.
-                Ui.Row("Low fuel warning", "Warn below this many laps of fuel.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })),
+                Ui.Row("Low fuel warning", "Warns when this many laps of fuel are left.", BuildNumberBox(Settings.FlagBoxLowFuelLaps, 0, 99, v => { Settings.FlagBoxLowFuelLaps = v; Save(); })),
                 // Off by default, unlike the flags' own switch on the strips: movement on this box
                 // means act, and a car alongside is something you live with for half a straight.
-                Ui.Row("Animate the spotter bar", null, BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
+                Ui.Row("Animate cars alongside", "The bar slides in from the edge instead of just appearing.", BuildToggle(Settings.FlagBoxSpotterAnimation, on => { Settings.FlagBoxSpotterAnimation = on; Save(); })));
 
             var panels = Ui.Section(PanelLights.PanelsTitle, Ui.Caption(PanelLights.PanelsCaption));
             var panelRows = (StackPanel)panels.Child;
@@ -60,7 +60,7 @@ namespace OpenDashPlugin
             if (bars.Count == 0) stripRows.Children.Add(Ui.Caption(PanelLights.NoBars));
             foreach (var bar in bars) stripRows.Children.Add(BuildLedBarGroup(bar, bars[0]));
             stripRows.Children.Add(BuildAddLedBarRow());
-            stripRows.Children.Add(Ui.Row("Car bar size", "Only for the car's own rev style.",
+            stripRows.Children.Add(Ui.Row("Car shift light width", "Only when the rev style is The car's own. Fill the strip spreads them over every LED; true size keeps their original width.",
                 BuildSegmented(Contract.LedMirrorFits, PanelLights.MirrorFitLabels, Settings.LedMirrorFit,
                     value => { Settings.LedMirrorFit = value; Save(); })));
             stripRows.Children.Add(Ui.Caption(CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl, BodyWidth));
@@ -103,7 +103,7 @@ namespace OpenDashPlugin
             var add = Ui.AddButton(PanelLights.AddPanel, PanelMetrics.RowButtonHeight);
             add.HorizontalAlignment = HorizontalAlignment.Left;
             add.Margin = new Thickness(0, 8, 0, 0);
-            add.ToolTip = "Add a matrix panel.";
+            add.ToolTip = "Adds a matrix panel.";
             add.Click += (sender, args) => ShowAddMatrixPanel();
             return add;
         }
@@ -157,14 +157,14 @@ namespace OpenDashPlugin
                     Save();
                 });
                 return Ui.VStack(4,
-                    Ui.Row("At rest", "What it shows when nothing else is happening.", rest),
-                    Ui.Row("Flags", null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; Save(); })),
-                    Ui.Row("Pit", "The limiter, the pit lane and speeding.", BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[m - 1] = on; Save(); })),
-                    Ui.Row("Spotter", "A car alongside.", BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; Save(); })),
-                    Ui.Row("Warnings", "Low fuel, oil and water.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; Save(); })),
+                    Ui.Row("When nothing is happening", null, rest),
+                    Ui.Row("Show race flags", null, BuildToggle(Settings.MatrixFlags(m), on => { Settings.FlagBoxFlags[m - 1] = on; Save(); })),
+                    Ui.Row("Show pit warnings", "The limiter, the pit lane and speeding.", BuildToggle(Settings.MatrixPit(m), on => { Settings.FlagBoxPit[m - 1] = on; Save(); })),
+                    Ui.Row("Show cars alongside", null, BuildToggle(Settings.MatrixSpotter(m), on => { Settings.FlagBoxSpotter[m - 1] = on; Save(); })),
+                    Ui.Row("Show car warnings", "Low fuel, oil and water.", BuildToggle(Settings.MatrixWarnings(m), on => { Settings.FlagBoxWarnings[m - 1] = on; Save(); })),
                     // Which side the box is physically on. One to the left of the wheel lighting for a car
                     // on the right is worse than no box at all, so it is asked rather than guessed.
-                    Ui.Row("Mounted", "Which side of your rig this box is on.", side),
+                    Ui.Row("Side of the rig", "Only lights for cars on this side.", side),
                     BuildMatrixPanelActions(m),
                     // The four that moved off the tab header. They read as this panel's own rather than as
                     // the rig's, which is what they had become by sitting above every panel at once.
@@ -175,8 +175,8 @@ namespace OpenDashPlugin
                     // driver who already has a rev bar turns off. Off leaves the digit in the redline
                     // colour, which is still the whole of the message.
                     Ui.Row("Flash the gear at the redline", "Off keeps it steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
-                    Ui.Row("Oil temperature", "Warn above this. 0 uses the default (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
-                    Ui.Row("Water temperature", "Warn above this. 0 uses the default (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
+                    Ui.Row("Oil temperature warning", "Warns above this. 0 uses the default (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
+                    Ui.Row("Water temperature warning", "Warns above this. 0 uses the default (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
             });
         }
         /// <summary>Renaming a panel and taking it away, at the foot of its own group.</summary>
@@ -187,7 +187,7 @@ namespace OpenDashPlugin
             rename.ToolTip = "Rename this panel.";
             rename.Click += (sender, args) => ShowRenameMatrixPanel(m);
             var remove = Ui.LinkButton("Remove", Theme.Danger);
-            remove.ToolTip = "Remove this panel. It goes dark and the slot is free again.";
+            remove.ToolTip = "Removes this panel and frees its slot.";
             remove.Click += (sender, args) =>
             {
                 Settings.RemoveMatrixPanel(m);
@@ -251,9 +251,9 @@ namespace OpenDashPlugin
                     });
                 return Ui.VStack(4,
                     BuildLedDeviceRow(LedTargets.All(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
-                    Ui.Row("Strip centre", "The LEDs at the ends are unaffected.", centre),
-                    Ui.Row("Rev style", "The car's own mirrors the car you are driving.", style),
-                    Ui.Row("Flag animation", "Off shows each flag as a steady colour.",
+                    Ui.Row("What the middle shows", "The LEDs at each end are not affected.", centre),
+                    Ui.Row("Rev light style", "The car's own copies the real car's shift lights.", style),
+                    Ui.Row("Animate flags", "Off shows each flag as a steady colour.",
                         BuildToggle(Settings.BarFlagAnimation(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);
@@ -261,7 +261,7 @@ namespace OpenDashPlugin
                             Save();
                         })),
                     // Per bar, because a brow above a monitor has no ends to speak of and a rim does.
-                    Ui.Row("A car alongside lights the whole bar", "Off lights only the LED at that end.",
+                    Ui.Row("Whole strip lights for a car alongside", "Off lights just the end nearest the car.",
                         BuildToggle(Settings.BarSpotterWhole(ns), on =>
                         {
                             var live = Settings.LedBarByNamespace(ns);
@@ -343,12 +343,12 @@ namespace OpenDashPlugin
         private FrameworkElement BuildLedBarActions(string ns)
         {
             var rename = Ui.LinkButton("Rename");
-            rename.ToolTip = "Rename this bar. Install it again to rename its SimHub profile too.";
+            rename.ToolTip = "Rename this strip. Install it again to rename its SimHub profile too.";
             rename.Click += (sender, args) => ShowRenameLedBar(ns);
             // "Remove" and not "Remove this bar": a group is indented inside its section and the longer
             // words were cut off at the panel's edge.
             var remove = Ui.LinkButton("Remove", Theme.Danger);
-            remove.ToolTip = "Remove this bar and its profile from SimHub.";
+            remove.ToolTip = "Remove this strip and its profile from SimHub.";
             remove.Click += (sender, args) => RemoveLedBar(ns);
             var row = Ui.Row(new Border(), Ui.HStack(12, rename, remove));
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -459,7 +459,7 @@ namespace OpenDashPlugin
             var add = Ui.AddButton(PanelLights.AddBar, PanelMetrics.RowButtonHeight);
             add.HorizontalAlignment = HorizontalAlignment.Left;
             add.Margin = new Thickness(0, 8, 0, 0);
-            add.ToolTip = "Add a strip and install its profile into SimHub.";
+            add.ToolTip = "Adds a strip and installs its profile into SimHub.";
             add.Click += (sender, args) => ShowAddLedBar();
             return add;
         }
@@ -607,7 +607,7 @@ namespace OpenDashPlugin
             nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + bar.Name,
                 nameRow,
-                Ui.Caption("Install the bar again to rename its profile in SimHub too."),
+                Ui.Caption("Install the strip again to rename its profile in SimHub too."),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
         }
 
