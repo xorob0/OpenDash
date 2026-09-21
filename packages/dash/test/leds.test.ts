@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
-import { MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE, ledMirrorRunName, propertyName, setting, type LedCentre } from '../src/contract.ts';
+import { DEFAULTS, MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, RETIRED_LED_CENTRE, ledMirrorRunName, propertyName, setting, type LedCentre } from '../src/contract.ts';
 import { ALL_SHAPES, GRID_SHAPES, LEGACY_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
-import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
+import { bandOf, overRev } from '../src/leds/ladder.ts';
 import { canMirror, carCentre, mirrorRun } from '../src/leds/mirror.ts';
 import {
   ALL_EFFECTS,
@@ -135,80 +135,29 @@ describe('the strip shapes', () => {
 });
 
 describe('the rev ladder and its styles', () => {
-  test('leftToRight is one rung per LED; meetInMiddle lights both ends and halves the rungs', () => {
-    const l2r = ladderOrder('leftToRight', 14);
-    expect(l2r.rungs).toBe(14);
-    expect([0, 6, 13].map(l2r.rungOf)).toEqual([0, 6, 13]);
-
-    const mid = ladderOrder('meetInMiddle', 14);
-    expect(mid.rungs).toBe(7);
-    // The outermost pair is rung 0 and the innermost pair is the last rung: they meet in the middle.
-    expect([0, 13].map(mid.rungOf)).toEqual([0, 0]);
-    expect([6, 7].map(mid.rungOf)).toEqual([6, 6]);
-    // An odd centre gives the middle LED a rung of its own rather than dropping it.
-    expect(ladderOrder('meetInMiddle', 9).rungs).toBe(5);
-    expect([0, 4, 8].map(ladderOrder('meetInMiddle', 9).rungOf)).toEqual([0, 4, 0]);
-  });
-
-  test('f1 is the same order in green and red, and keeps blue for the over-rev', () => {
-    expect(ladderOrder('f1', 14).rungOf(5)).toBe(ladderOrder('leftToRight', 14).rungOf(5));
-    // This asserted [green, red, blue] and the whole bar flashing under f1 alone, and both halves
-    // are reversed on purpose. Blue was the third band's ordinary colour, so it lit on the way up
-    // the ladder and could not also be what over-rev means; and the flash is no longer a property
-    // of a style at all, so there is nothing here to ask about it.
-    expect(ladderColors('f1')).toEqual([ds.color.good.primary, ds.color.good.primary, ds.color.danger.primary]);
-    expect(ladderColors('f1')).not.toContain(OVER_REV_COLOR);
-    expect(ladderColors('leftToRight')).toEqual([ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3]);
-  });
-
-  test('the fourteen LEDs are coloured as the sheets draw them: f1 green to the shift point, the others in thirds', () => {
-    const letters: Record<string, string> = { [ds.purpose.shift.stage1]: 'G', [ds.purpose.shift.stage2]: 'A', [ds.purpose.shift.stage3]: 'R' };
-    const drawn = (style: (typeof LED_RPM_STYLES)[number]): string => {
-      const order = ladderOrder(style, 14);
-      const colors = ladderColors(style);
-      return Array.from({ length: 14 }, (_, k) => letters[colors[bandOf(order.rungOf(k), order.rungs)]!] ?? '?').join('');
-    };
-    // leftToRight: five green, five amber, four red, so part way is GGGGGA and shift-now GGGGGAAAAAR.
-    expect(drawn('leftToRight')).toBe('GGGGGAAAAARRRR');
-    // f1: ten green and four red, so part way is six green and shift-now ten green and one red.
-    expect(drawn('f1')).toBe('GGGGGGGGGGRRRR');
-    // meetInMiddle is the same thirds read inwards from both ends.
-    expect(drawn('meetInMiddle')).toBe('GGGAARRRRAAGGG');
-  });
-
   test('the bands are thirds with the last taking the remainder', () => {
     expect([0, 4, 5, 9, 10, 13].map((r) => bandOf(r, 14))).toEqual([0, 0, 1, 1, 2, 2]);
     expect([0, 1, 2].map((r) => bandOf(r, 3))).toEqual([0, 1, 2]);
   });
 
-  test('over the blink RPM the whole bar turns one colour and flashes at 4 Hz, in every style', () => {
-    // It was the top band alone in two styles of the three, in that band's own red, and the whole
-    // bar only under f1 — where the lower bands alternated their own colour with the top band's,
-    // which reads as a bar changing colour rather than as a bar flashing.
+  test("the over-rev flash is SimHub's now, because the bar under it is", () => {
+    // openDash used to draw the flash itself, as a layer of `count` CustomStatus containers over
+    // the rungs, because the rungs were openDash's. #369 gave the bar to SimHub's own RPMSegments
+    // and the flash went with it: the container blinks on SimHub's redline at the delay written
+    // beside it, and there is nothing left for a layer to sit over.
     expect(1000 / (FAST_BLINK_MS * 2)).toBe(4);
-    const profile = profileFor('4-14-4');
-    for (const style of LED_RPM_STYLES) {
-      const group = walk(profile.containers).find((c) => c.description === `style: ${style}`)!;
-      // `car` keeps its ladders one level further down, as the fallback beside the car's own bar.
-      // That bar is not a ladder and is not this test's subject: its colours and its over-rev flash
-      // are the fetched table's rather than openDash's, so what is asserted here is the ladder the
-      // strip falls back to, which is the same tree the other three styles are.
-      const fallback = leds.childrenOf(group).find((c) => c.description?.startsWith('no table for this car'));
-      const ladders = style === 'car' ? leds.childrenOf(fallback!) : leds.childrenOf(group);
-      for (const ladder of ladders) {
-        const children = leds.childrenOf(ladder);
-        const last = children[children.length - 1]!;
-        // After the rungs, so it takes the bar from whatever they were drawing.
-        expect({ style, ladder: ladder.description, last: last.description }).toMatchObject({ last: 'over-rev' });
-        const over = leds.childrenOf(last) as Extract<leds.LedContainer, { kind: 'customStatus' }>[];
-        expect({ style, ladder: ladder.description, leds: over.length }).toMatchObject({ leds: 14 });
-        expect(new Set(over.map((c) => c.color))).toEqual(new Set([OVER_REV_COLOR]));
-        expect(new Set(over.map((c) => c.blinkColor))).toEqual(new Set([BLINK_OFF]));
-        expect(new Set(over.map((c) => c.blinkDelayMs))).toEqual(new Set([FAST_BLINK_MS]));
-        // ...and no rung under it flashes any more, because the flash is the layer.
-        const rungs = children.slice(0, -1) as Extract<leds.LedContainer, { kind: 'customStatus' }>[];
-        expect({ style, ladder: ladder.description, flashing: rungs.filter((c) => c.blinkFormula !== undefined).length }).toMatchObject({ flashing: 0 });
+    for (const shape of ALL_SHAPES) {
+      const profile = rpmStripProfile(shape, stableGuid(`t/overrev/${shape.id}`));
+      const bars = walk(profile.containers).filter((c) => c.kind === 'rpmSegments') as Extract<leds.LedContainer, { kind: 'rpmSegments' }>[];
+      // Two per run that carries revs -- the switch on, where it is the fallback behind the car's
+      // own bar, and the switch off, where it is the bar. A shape with an extra run has its pair
+      // again on that run.
+      expect({ shape: shape.id, pairs: bars.length % 2, any: bars.length > 0 }).toMatchObject({ pairs: 0, any: true });
+      for (const bar of bars) {
+        expect({ shape: shape.id, delay: bar.blinkDelayMs, mode: bar.rpmMode }).toMatchObject({ delay: FAST_BLINK_MS, mode: 'redlinePercent' });
       }
+      // And no layer of openDash's own is left behind it.
+      expect({ shape: shape.id, layers: walk(profile.containers).filter((c) => c.description === 'over-rev').length }).toMatchObject({ layers: 0 });
     }
   });
 
@@ -216,6 +165,10 @@ describe('the rev ladder and its styles', () => {
     // A flash is an instruction, and in the gear there is nothing to shift out of it asks for a
     // shift that cannot be made. The exception belongs to the flash rather than to one source of
     // thresholds, so all three carry the same negation rather than three readings of one rule.
+    //
+    // These are the screens' expressions now. #369 took openDash's ladder off the strips, so the
+    // strip's flash is SimHub's own inside its RPMSegments container and is not written here; the
+    // rev bar, the rev arc and the flag box's gear still read every one of these.
     const guard = `!(${lastGear()})`;
     const points = { first: 6000, shift: 7000, last: 7500, blink: 7800 };
     for (const [which, expression] of [
@@ -225,38 +178,25 @@ describe('the rev ladder and its styles', () => {
     ] as const) {
       expect({ which, guarded: expression.includes(guard) }).toMatchObject({ guarded: true });
     }
-    // ...and every over-rev layer the build emits is triggered by one of those three, measured
-    // gears included, so there is nowhere left for a flash without the exception on it.
-    const model = 'examplecar';
-    SHIFT_TABLE[model] = { name: 'Example', source: 'test', gears: { '3': points } };
-    try {
-      for (const shape of ALL_SHAPES) {
-        const layers = walk(rpmStripProfile(shape, stableGuid(`t/lastgear/${shape.id}`)).containers).filter((c) => c.description === 'over-rev');
-        expect({ shape: shape.id, layers: layers.length > 0 }).toMatchObject({ layers: true });
-        for (const layer of layers) {
-          const trigger = (layer as Extract<leds.LedContainer, { kind: 'conditionalGroup' }>).trigger.expression;
-          expect({ shape: shape.id, guarded: trigger.includes(guard) }).toMatchObject({ guarded: true });
-        }
-      }
-    } finally {
-      delete SHIFT_TABLE[model];
-    }
   });
 
-  test('a style decides the look and never the when: every style reads the same four thresholds', () => {
+  test('one switch chooses the bar, and the retired styles are not a gate on anything', () => {
     const text = textOf(profileFor('4-14-4'));
-    for (const style of LED_RPM_STYLES) expect({ style, present: text.includes(`style: ${style}`) }).toMatchObject({ present: true });
-    for (const name of Object.values(SHIFT_RPM_PROPERTIES)) expect({ name, present: text.includes(name) }).toMatchObject({ present: true });
+    // The switch, with the deprecated style inside its default so an rc.4 rig keeps its choice.
+    expect(text).toContain("isnull([OpenDash.LedCarRevBar], if((isnull([OpenDash.LedRpmStyle], 'car')) = ('car'), 1, 0))");
+    // And no container is gated on a style any more: there is nothing left that a style names.
+    for (const style of ['leftToRight', 'meetInMiddle', 'f1']) expect({ style, present: text.includes(`style: ${style}`) }).toMatchObject({ present: false });
   });
 
-  test('both ladders are present, so a car that publishes none still lights', () => {
+  test("a car that publishes no ladder still lights, on SimHub's own bar", () => {
     const text = textOf(profileFor('3-9-3'));
-    expect(text).toContain("the car's own shift lights");
-    expect(text).toContain("SimHub's bands, for a car that publishes no ladder");
-    // The fallback is null-safe: a bare read lights every LED when the sim is closed, because
-    // CustomStatusContainer swallows the throw and falls back to 1.0.
-    expect(text).toContain('isnull([DataCorePlugin.GameData.CarSettings_RPMShiftLight1], 0)');
-    expect(text).not.toMatch(/"Expression": "[^"]*\[DataCorePlugin\.GameData\.CarSettings_RPMShiftLight1\](?!,)/);
+    expect(text).toContain("SimHub's own rev bar");
+    // Percent of the redline SimHub works out for the car, so the thresholds follow the car
+    // without openDash reading a single shift property for them.
+    expect(text).toContain('"RpmMode": 1');
+    // openDash's own two ladders are gone from the strip with the styles they drew.
+    expect(text).not.toContain("the car's own shift lights");
+    expect(text).not.toContain('CarSettings_RPMShiftLight1');
   });
 });
 
@@ -303,24 +243,26 @@ describe("the car's own lights", () => {
     expect(mirror).toMatchObject({ clearBackgroundWhenActive: true });
   });
 
-  test('every profile carries the mirror above the two ladders, and the ladders unchanged beneath it', () => {
+  test("every profile carries the mirror above SimHub's bar, and that bar beneath it", () => {
     for (const shape of ALL_SHAPES) {
       const text = textOf(rpmStripProfile(shape, stableGuid(`t/${shape.id}`)));
       // The car's run, for this shape's centre.
       expect({ shape: shape.id, has: text.includes(propertyName(ledMirrorRunName(shape.centre))) }).toMatchObject({ has: true });
-      // And the published ladder still underneath it, because a car with no table loses nothing.
-      expect({ shape: shape.id, has: text.includes(SHIFT_RPM_PROPERTIES.first) }).toMatchObject({ has: true });
+      // And a bar underneath it, because a car with no table loses nothing -- it is SimHub's rather
+      // than openDash's since #369, which is why this no longer looks for a shift property.
+      expect({ shape: shape.id, has: text.includes("SimHub's own rev bar") }).toMatchObject({ has: true });
     }
   });
 
   test("the car's own bar is what a strip shows unless the driver says otherwise", () => {
-    // ADR 0018: openDash's opinion is that the car is right. The three openDash styles stay, for a
-    // driver who wants one look in every car -- and for every car with no table, which is what the
-    // fallback inside `car` draws.
-    expect(LED_RPM_STYLES[0]).toBe('car');
+    // ADR 0018: openDash's opinion is that the car is right. What off means changed with #369 --
+    // it was one of openDash's three looks and is SimHub's own bar now -- but the default did not.
+    expect(DEFAULTS.LedCarRevBar).toBe(true);
     const text = textOf(profileFor('4-14-4'));
-    expect(text).toContain("isnull([OpenDash.LedRpmStyle], 'car')");
-    for (const style of LED_RPM_STYLES) expect(text).toContain(`style: ${style}`);
+    expect(text).toContain("the car's own rev bar");
+    // The deprecated style survives only as the default of the switch that replaced it, so a rig
+    // that chose `car` on rc.4 still gets the car's bar with no plugin attaching the new name.
+    expect(text).toContain("isnull([OpenDash.LedCarRevBar], if((isnull([OpenDash.LedRpmStyle], 'car')) = ('car'), 1, 0))");
   });
 });
 
@@ -901,24 +843,24 @@ describe('the per-gear shift table', () => {
     expect(tabledOverRev(points)).toBe(`((${rpm}) >= (7800)) and (!(${lastGear()}))`);
   });
 
-  test('an entry reaches a profile as a gear-and-car override that composes over the derived ladder', () => {
-    // Proven by building with a stubbed table rather than by shipping a car, so that the mechanism
-    // is covered while the shipped table stays honestly empty.
+  test('no entry reaches a profile any more, because the ladder it overrode is gone', () => {
+    // This used to assert the opposite, and the change is #369 rather than a regression. The
+    // measured table drew openDash's own rungs -- one CustomStatus per LED per gear per car -- as
+    // an override composing over openDash's own ladder. Both were taken off the strips with the
+    // three styles, so an entry has nothing to override and emits nothing.
+    //
+    // The table, its schema and its validation stay: `data/shift-points.json` is the mechanism for
+    // a car openDash measures itself, and whether it should now feed the car's own bar the way the
+    // fetched tables do is a question for its own ticket rather than a thing to decide by deleting.
     const model = 'examplecar';
     SHIFT_TABLE[model] = { name: 'Example', source: 'test', gears: { '3': { first: 6000, shift: 7000, last: 7500, blink: 7800 } } };
     try {
       const text = leds.serializeProfile(rpmStripProfile(shapeById('4-14-4')!, stableGuid('t/tabled')));
-      expect(text).toContain('Example, gear 3');
-      expect(text).toContain("(isnull([DataCorePlugin.GameData.CarModel], '')) = ('examplecar')");
-      expect(text).toContain('(isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) = (3)');
-      expect(text).toContain('(7500)');
-      // It blanks what is under it, so the derived ladder does not show through the measured one.
-      expect(text).toContain('"ClearBackgroundWhenActive": true');
+      expect(text).not.toContain('Example, gear 3');
+      expect(text).not.toContain('examplecar');
     } finally {
       delete SHIFT_TABLE[model];
     }
-    // ...and with the table empty again, nothing of it remains.
-    expect(leds.serializeProfile(rpmStripProfile(shapeById('4-14-4')!, stableGuid('t/empty')))).not.toContain('examplecar');
   });
 });
 

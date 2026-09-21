@@ -221,6 +221,10 @@ namespace OpenDashPlugin
         /// set (ADR 0014). "car" is the car's whole bar, from the fetched table (ADR 0018).</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
 
+        /// <summary>The rig's answer to whether a rev bar is the car's own. Null until somebody answers
+        /// it, which is when <see cref="LedRpmStyle"/> stops deciding. #369.</summary>
+        public bool? LedCarRevBar { get; set; }
+
         /// <summary>Whether a flag on a strip moves. Off holds every flag from the frame it would have
         /// settled on and never turns one off.</summary>
         public bool LedFlagAnimation { get; set; } = Contract.DefaultLedFlagAnimation;
@@ -289,18 +293,39 @@ namespace OpenDashPlugin
             return Contract.NormaliseChoice(value, Contract.LedRpmStyles, Contract.DefaultLedRpmStyle);
         }
 
+        /// <summary>
+        /// Whether this bar's rev bar is the car's own, falling back through the style it replaced.
+        /// </summary>
+        /// <remarks>
+        /// Three places to look and they are looked at in the order a user would expect: what they set
+        /// on this bar, what they set for the rig, and -- when neither has been answered, which is every
+        /// rig upgrading from rc.4 -- whether the style they chose was "car". #369.
+        /// </remarks>
+        public bool BarCarRevBar(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            var chosen = bar == null ? LedCarRevBar : bar.CarRevBar ?? LedCarRevBar;
+            return chosen ?? BarRpmStyle(ns) == Contract.LedRpmStyleCar;
+        }
+
         /// <summary>Whether anything on the rig is asking for the car's own shift pattern, which is what
         /// decides whether the mirror is computed at all.</summary>
         public bool AnyCarLadderWanted()
         {
             var bars = LedBarList();
-            if (bars.Count == 0) return LedRpmStyle == Contract.LedRpmStyleCar;
+            if (bars.Count == 0) return RigCarRevBar();
             foreach (var bar in bars)
             {
-                if (BarRpmStyle(bar.Namespace) == Contract.LedRpmStyleCar) return true;
+                if (BarCarRevBar(bar.Namespace)) return true;
             }
             // A rig with bars may still have a face or a box reading the rig-wide answer.
-            return LedRpmStyle == Contract.LedRpmStyleCar;
+            return RigCarRevBar();
+        }
+
+        /// <summary>The rig's own answer, with the same fall back through the deprecated style.</summary>
+        public bool RigCarRevBar()
+        {
+            return LedCarRevBar ?? LedRpmStyle == Contract.LedRpmStyleCar;
         }
 
         public bool BarFlagAnimation(string ns)
@@ -342,6 +367,7 @@ namespace OpenDashPlugin
                 Namespace = FreeBarNamespace(wanted, taken),
                 Centre = LedCentre,
                 RpmStyle = LedRpmStyle,
+                CarRevBar = LedCarRevBar,
                 FlagAnimation = LedFlagAnimation,
                 Device = device,
             };

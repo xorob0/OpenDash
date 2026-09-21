@@ -39,8 +39,20 @@ namespace OpenDashPlugin
         /// <summary>What the middle of the run shows. One of <see cref="Contract.LedCentres"/>.</summary>
         public string Centre { get; set; }
 
-        /// <summary>How the rev ladder fills. One of <see cref="Contract.LedRpmStyles"/>.</summary>
+        /// <summary>How the rev ladder fills. One of <see cref="Contract.LedRpmStyles"/>. Deprecated by
+        /// <see cref="CarRevBar"/> (#369) and kept because it is what an rc.4 settings file holds.</summary>
         public string RpmStyle { get; set; }
+
+        /// <summary>
+        /// Whether this bar's rev bar is the car's own measured one, or SimHub's.
+        /// </summary>
+        /// <remarks>
+        /// Nullable, and that is what carries an rc.4 rig across: null means nobody has answered this
+        /// question on this bar, so the answer is read off <see cref="RpmStyle"/> instead, where "car"
+        /// is on and the three retired styles are off. A driver who touches the switch writes a value
+        /// here and the old style stops deciding anything.
+        /// </remarks>
+        public bool? CarRevBar { get; set; }
 
         /// <summary>Whether a flag animates on this bar or simply holds.</summary>
         public bool FlagAnimation { get; set; } = Contract.DefaultLedFlagAnimation;
@@ -116,6 +128,7 @@ namespace OpenDashPlugin
                 Shape = Shape,
                 Centre = Centre,
                 RpmStyle = RpmStyle,
+                CarRevBar = CarRevBar,
                 FlagAnimation = FlagAnimation,
                 SpotterWhole = SpotterWhole,
                 Device = Device,

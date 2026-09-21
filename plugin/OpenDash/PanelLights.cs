@@ -15,9 +15,26 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.LedCentres"/> value, in its order.</summary>
         public static readonly string[] CentreLabels = { "RPM", "Brake", "Throttle and brake", "Fuel" };
 
-        /// <summary>One label per <see cref="Contract.LedRpmStyles"/> value, in its order. The car's own
-        /// heads the list because the value does, and it is the one a driver is offered first.</summary>
+        /// <summary>One label per <see cref="Contract.LedRpmStyles"/> value, in its order. Deprecated
+        /// with the setting it labels (#369) and kept only so that a stored value still reads as words.</summary>
         public static readonly string[] RpmStyleLabels = { "The car's own", "Left to right", "Meet in middle", "F1" };
+
+        /// <summary>The switch that replaced those four labels.</summary>
+        public const string CarRevBarTitle = "The car's own rev bar";
+
+        /// <summary>
+        /// The line under it.
+        /// </summary>
+        /// <remarks>
+        /// It has to say what off is, because off is no longer "one of openDash's three looks" but
+        /// somebody else's bar: SimHub's, drawn against SimHub's own per-car redline, with SimHub's
+        /// flash. A driver who turns this off and finds their thresholds have moved should be able to
+        /// read here why. #369.
+        /// </remarks>
+        public const string CarRevBarCaption =
+            "On, the strip shows the shift lights of the car you are driving -- its LEDs, its colours, its order, its flash, "
+            + "in the gear you are in -- for a car somebody has measured. Off, and for a car nobody has, it is SimHub's own "
+            + "rev bar at SimHub's own thresholds.";
 
         /// <summary>One label per <see cref="Contract.LedMirrorFits"/> value, in its order.</summary>
         public static readonly string[] MirrorFitLabels = { "Fill the strip", "True size" };

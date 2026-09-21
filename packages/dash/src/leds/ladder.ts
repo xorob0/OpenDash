@@ -20,56 +20,14 @@ const { gt, mul, num } = ncalc;
 export type Ladder = 'mirror' | 'simhub';
 
 /**
- * Where a style puts its rungs. `rungOf` is the ladder rung physical LED `k` takes, and `rungs` is
- * how many rungs the style has — which is not the LED count for a style that lights two at a time.
- */
-export interface LadderOrder {
-  rungs: number;
-  rungOf: (k: number) => number;
-}
-
-/**
- * `leftToRight` is one rung per LED, in order. `meetInMiddle` lights both ends together and works
- * inwards, so it has half as many rungs and each lights a pair. `f1` fills left to right like the
- * first, and differs only in its colours.
- */
-export const ladderOrder = (style: LedRpmStyle, count: number): LadderOrder =>
-  style === 'meetInMiddle'
-    ? { rungs: Math.ceil(count / 2), rungOf: (k) => Math.min(k, count - 1 - k) }
-    : { rungs: count, rungOf: (k) => k };
-
-/**
- * The colour a style lights each of its three bands in, always from `design/tokens.json`.
+ * The bands survive the styles.
  *
- * `f1` is green and red rather than green, amber and red — the look of a modern formula car's
- * wheel, drawn in openDash's own palette — and it is green as far as the shift point rather than
- * through a middle band of its own, which is why the first two bands hold one colour instead of
- * the style carrying a band split of its own. On a fourteen-rung run that is green to rung 9 and
- * red from rung 10, exactly where the top band begins, so the colour still says which band the
- * engine is in.
- *
- * Blue is no band's colour in any style now: it belongs to the over-rev alone (see
- * {@link OVER_REV_COLOR}), which is what a formula wheel keeps it for and what it could not mean
- * while the top band was also drawn in it.
- *
- * None of this is a copy of any car's sequence, and could not be: the sim publishes thresholds and
- * never colour (ADR 0014), so a car's own colours belong to Car themes rather than here.
+ * `ladderOrder`, `ladderColors`, `rungLit`, `bandSpan` and `OVER_REV_COLOR` were here and are gone
+ * with #369: they drew openDash's own rev ladder on a strip, one `CustomStatus` per LED per band,
+ * and a strip's rev bar is SimHub's own `RPMSegments` now. What is left is what the screens and
+ * the flag box read -- the band a rung falls in, whether the engine is over-revving, and the two
+ * step tests the pedal and fuel bars are built from.
  */
-export const ladderColors = (style: LedRpmStyle): readonly [string, string, string] =>
-  style === 'f1'
-    ? [ds.color.good.primary, ds.color.good.primary, ds.color.danger.primary]
-    : [ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3];
-
-/**
- * What the whole bar turns over the blink RPM, in every style.
- *
- * `color.info.primary` is read directly because there is no purpose token for it: the canvas asks
- * for a `purpose.shift.blink` aliased to the same `palette.blue.200`, and `design/tokens.json` is
- * the author's file. The hex is the one the canvas draws either way; only the name is missing.
- */
-export const OVER_REV_COLOR: string = ds.color.info.primary;
-
-/** The band (0, 1, 2) a rung falls in: thirds, the last third taking any remainder. */
 export const bandOf = (rung: number, rungs: number): number => Math.min(2, Math.floor((rung * 3) / rungs));
 
 /**
@@ -77,20 +35,6 @@ export const bandOf = (rung: number, rungs: number): number => Math.min(2, Math.
  * because `rpmStrip.ts` places a measured rung in its band too, and spelled it out inline until it
  * did: one band split, read from here by everything that colours a rung or lights one.
  */
-export const bandSpan = (band: number, rungs: number): { start: number; count: number } => {
-  const indexes = Array.from({ length: rungs }, (_, i) => i);
-  return { start: indexes.findIndex((i) => bandOf(i, rungs) === band), count: indexes.filter((i) => bandOf(i, rungs) === band).length };
-};
-
-/** Whether rung `rung` of `rungs` is lit, under the chosen ladder. */
-export const rungLit = (ladder: Ladder, rung: number, rungs: number): Expr => {
-  const band = bandOf(rung, rungs);
-  const { start, count } = bandSpan(band, rungs);
-  const local = rung - start;
-  return ladder === 'mirror' ? mirrorStageLit(band, local, count) : simhubStageLit(band, local, count);
-};
-
-/** Whether the bar is over-revving, under the chosen ladder. Neither half flashes in the last gear. */
 export const overRev = (ladder: Ladder): Expr => (ladder === 'mirror' ? mirrorOverRev() : simhubOverRev());
 
 // Whether a rung flashes used to be a question asked here, and it is not one any more. Every style

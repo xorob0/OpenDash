@@ -312,17 +312,18 @@ namespace OpenDashPlugin
                         if (live != null) live.Centre = value;
                         Save();
                     });
-                var style = BuildChoice(Contract.LedRpmStyles, PanelLights.RpmStyleLabels, Settings.BarRpmStyle(ns), 220,
-                    value =>
-                    {
-                        var live = Settings.LedBarByNamespace(ns);
-                        if (live != null) live.RpmStyle = value;
-                        Save();
-                    });
+                // A switch, not a list of four. #369 took openDash's three styles out: what is left is
+                // the car's own measured bar against SimHub's, which is a yes or a no.
+                var carRevBar = BuildToggle(Settings.BarCarRevBar(ns), on =>
+                {
+                    var live = Settings.LedBarByNamespace(ns);
+                    if (live != null) live.CarRevBar = on;
+                    Save();
+                });
                 return Ui.VStack(4,
                     BuildLedDeviceRow(LedTargets.All(), Settings.BarDevice(ns), value => MoveLedBar(ns, value)),
                     Ui.Row("Strip centre", "What the middle of this strip shows. The LEDs at the ends are lamps and are not affected by it.", centre),
-                    Ui.Row("Rev style", "The car's own mirrors the shift lights in the car you are driving: its LEDs, its colours, its order, its flash, in the gear you are in. The other three are openDash's own looks, and are what a car we have no measurements for shows.", style),
+                    Ui.Row(PanelLights.CarRevBarTitle, PanelLights.CarRevBarCaption, carRevBar),
                     Ui.Row("Flag animation", "On, a flag moves, which is what the corner of your eye reads it by. Off holds every flag from the frame it would have settled on and never turns one off.",
                         BuildToggle(Settings.BarFlagAnimation(ns), on =>
                         {

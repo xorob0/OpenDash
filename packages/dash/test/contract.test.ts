@@ -22,7 +22,7 @@ import {
   LED_CENTRE_SETTING,
   LED_FLAG_ANIMATION_SETTING,
   RETIRED_LED_CENTRE,
-  LED_RPM_STYLES,
+  LED_CAR_REV_BAR_SETTING,
   LED_RPM_STYLE_SETTING,
   flagBox,
   flagBoxProperties,
@@ -107,6 +107,7 @@ describe('settings', () => {
     expect(ledProperties()).toEqual([
       'OpenDash.LedCentre',
       'OpenDash.LedRpmStyle',
+      'OpenDash.LedCarRevBar',
       'OpenDash.LedFlagAnimation',
       'OpenDash.LedMirrorFit',
       'OpenDash.LedMirrorReady',
@@ -148,7 +149,9 @@ describe('settings', () => {
     // flag, 326 before it was given the module the plugin holds it on while SimHub loads, and 327
     // before the pit wall was given the same three-way answer as the companion and the header's
     // flag readout, which did not work on a rig, was taken off the strip.
-    expect(props).toHaveLength(328);
+    // 329 with #369's LedCarRevBar, which is a property added beside the style it deprecates
+    // rather than instead of it: both are attached for a release (ADR 0003, #170).
+    expect(props).toHaveLength(329);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -352,6 +355,9 @@ describe('plugin mirror', () => {
     // Named, so that the two the plugin never attached cannot go missing again in silence.
     expect(pinnedProperties()).toContain('OpenDash.LedCentre');
     expect(pinnedProperties()).toContain('OpenDash.LedRpmStyle');
+    // The switch that replaced the four styles, and the style beside it: #369's rename keeps both
+    // attached for a release, so a rig set up against rc.4 still has the bar it chose.
+    expect(pinnedProperties()).toContain('OpenDash.LedCarRevBar');
     // And the superseded name beside the one that supersedes it, both attached: a published property
     // name is a public interface, so an rc.2 rig's threshold does not vanish with the rename.
     expect(pinnedProperties()).toContain('OpenDash.LightsLowFuelLaps');
@@ -367,7 +373,8 @@ describe('plugin mirror', () => {
     for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING]) expect(source).toContain(`public const string ${name} = "${name}";`);
     expect(source).toContain(`public const bool DefaultLedFlagAnimation = ${String(DEFAULTS.LedFlagAnimation)};`);
     expect(source).toContain(`LedCentres = ${csArray(LED_CENTRES)};`);
-    expect(source).toContain(`LedRpmStyles = ${csArray(LED_RPM_STYLES)};`);
+    expect(source).toContain(`public const string LedCarRevBar = "${LED_CAR_REV_BAR_SETTING}";`);
+    expect(source).toContain(`public const bool DefaultLedCarRevBar = ${String(DEFAULTS.LedCarRevBar)};`);
     expect(source).toContain(`public const string DefaultLedCentre = "${DEFAULTS.LedCentre}";`);
     expect(source).toContain(`public const string DefaultLedRpmStyle = "${DEFAULTS.LedRpmStyle}";`);
     // Four centres and the fifth named as retired, so that the plugin can migrate a stored rpmOnly
@@ -381,7 +388,9 @@ describe('plugin mirror', () => {
     for (const name of [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING]) expect(attach).toContain(`this.AttachDelegate(Contract.${name},`);
     const panel = panelSource();
     expect(panel).toContain('Contract.LedCentres');
-    expect(panel).toContain('Contract.LedRpmStyles');
+    // Not Contract.LedRpmStyles: #369 replaced that four-value list with a switch, and the panel
+    // draws a toggle. The list stays in Contract.cs because a stored value still has to normalise.
+    expect(panel).toContain('Settings.BarCarRevBar(');
     expect(panel).toContain('Contract.LedMirrorFits');
     // Whose measurements they are, on the page that uses them: CC BY-NC-SA asks for attribution and
     // a user is entitled to know whose numbers light their wheel (ADR 0018). The words moved into

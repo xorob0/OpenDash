@@ -235,6 +235,7 @@ namespace OpenDashPlugin
             // draw the defaults its isnull() carries.
             this.AttachDelegate(Contract.LedCentre, () => Settings.LedCentre);
             this.AttachDelegate(Contract.LedRpmStyle, () => Settings.LedRpmStyle);
+            this.AttachDelegate(Contract.LedCarRevBar, () => Settings.RigCarRevBar() ? 1 : 0);
             this.AttachDelegate(Contract.LedFlagAnimation, () => Settings.LedFlagAnimation);
             this.AttachDelegate(Contract.LedMirrorFit, () => Settings.LedMirrorFit);
             // The mirror. Ready is the gate every strip profile's car layer hangs on, and each run is
@@ -257,6 +258,7 @@ namespace OpenDashPlugin
                 var ns = bar.Namespace;
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedCentre), () => Settings.BarCentre(ns));
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedRpmStyle), () => Settings.BarRpmStyle(ns));
+                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedCarRevBar), () => Settings.BarCarRevBar(ns) ? 1 : 0);
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedFlagAnimation), () => Settings.BarFlagAnimation(ns));
                 this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedSpotterWhole), () => Settings.BarSpotterWhole(ns));
             }

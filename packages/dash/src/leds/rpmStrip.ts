@@ -27,16 +27,14 @@
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { DEFAULTS, flagBox, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
-import type { LedCentre, LedRpmStyle } from '../contract.ts';
-import { mirrorAvailable } from '../shift.ts';
-import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
+import { DEFAULTS, flagBox, LED_CENTRES, setting } from '../contract.ts';
+import type { LedCentre } from '../contract.ts';
+import { stepLit } from './ladder.ts';
 import { brake as brakeInput, fuelPercent, tankIsLow, throttle as throttleInput } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, SLOW_BLINK_MS, SPOTTER_EFFECTS, effectContainers, lampConditions, type LedEffect } from './effects.ts';
 import { ignitionIsOn } from './gates.ts';
 import { lampsOf, type EffectRole, type PlacedLamp } from './lamps.ts';
-import { SHIFT_TABLE, tabledGear, tabledOverRev, tabledStageLit } from './shiftPoints.ts';
 import { carCentre } from './mirror.ts';
 import { centreStart, deviceLength, stripLength, type StripShape } from './strip.ts';
 
@@ -44,9 +42,6 @@ const { and, eq, not, str } = ncalc;
 
 /** `isnull([OpenDash.LedCentre], 'rpm') = '<which>'`, the gate on each centre function. */
 const centreIs = (which: LedCentre): Expr => eq(setting.ledCentre(), str(which));
-
-/** `isnull([OpenDash.LedRpmStyle], 'leftToRight') = '<which>'`, the gate on each style. */
-const styleIs = (which: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(which));
 
 /**
  * The condition of a container whose group has already decided it. A `CustomStatus` must carry an
@@ -56,140 +51,84 @@ const styleIs = (which: LedRpmStyle): Expr => eq(setting.ledRpmStyle(), str(whic
  */
 const TRUE: Expr = 'true';
 
-/** The rev ladder over `count` LEDs, in one style, under one of the two ladders. */
-const rungs = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContainer[] => {
-  const order = ladderOrder(style, count);
-  const colors = ladderColors(style);
-  return Array.from({ length: count }, (_, k) => {
-    const rung = order.rungOf(k);
-    return {
-      kind: 'customStatus' as const,
-      description: `rev ${String(k + 1).padStart(2, '0')}`,
-      startPosition: k + 1,
-      ledCount: 1,
-      color: colors[bandOf(rung, order.rungs)] ?? colors[2],
-      enabledFormula: { expression: rungLit(which, rung, order.rungs) },
-    };
-  });
-};
+/**
+ * Where SimHub's own bar begins, as a percentage of the redline it works out for the car.
+ *
+ * Fifteen points below it, which is about where a measured car's first LED sits: the BMW M4 GT4's
+ * is 6450 of a 7050 redline in third, 91 per cent, and the spread over a whole grid is wider than
+ * one number can be right about. This is SimHub's bar and not the car's, so it is a reasonable
+ * shape rather than a measurement — the car's own bar is the other switch, and it is the one that
+ * is exact.
+ */
+const SIMHUB_BAR_FLOOR = 85;
 
 /**
- * Over-rev: the whole run in one colour, flashing, over whatever the rungs beneath it were drawing.
+ * SimHub's own rev bar: one `RPMSegments` container, `count` segments of one LED.
  *
- * It is a layer rather than a property of the rungs, and that is three corrections in one shape.
- * Over-rev is a state of the bar and not of its top band, so every style says it the same way and a
- * driver who changes style changes the ladder's look and not what it tells them. It is one colour —
- * {@link OVER_REV_COLOR} — rather than each rung's own, so the bar reads as having turned rather
- * than as having brightened in places. And the off phase is {@link BLINK_OFF} rather than the
- * colour itself: `StaticColorContainerBase` alternates `Color` with `BlinkingColor`, both fields
- * held one hex on a flashing rung, and the over-rev flash had therefore never flashed at all.
+ * This is the whole of what replaced `leftToRight`, `meetInMiddle` and `f1` (#369). Those were
+ * openDash emitting one `CustomStatus` per LED per band per ladder -- three styles times two
+ * ladders times `count` -- to draw a bar SimHub draws itself from its own per-car settings.
+ * `RpmMode.RedlinePercent` means each segment's `StartValue` is a percentage of the redline SimHub
+ * has for the car, so the thresholds follow the car without openDash knowing anything about it,
+ * and the flash at the redline is SimHub's own.
  *
- * `clearBackgroundWhenActive` because a bar that is over-revving is not also a ladder part way up,
- * and the rate is the catalogue's fast one, so over-rev is the same urgency on the centre that oil
- * pressure is on a lamp. The gate is the trigger alone; each LED is then unconditionally its
- * colour, which is what one LED of a bar that has all turned one colour is.
+ * What is lost with them is real and is the trade #369 accepted: SimHub's bar fills left to right
+ * and cannot meet in the middle, so a driver who wanted that look now has the car's own bar (where
+ * the car has one) or a bar that fills one way. What is gained is that the ladder is SimHub's to
+ * maintain, and a profile that was mostly rev containers is now mostly not.
+ *
+ * The colours are openDash's shift tokens, because `design/tokens.json` is the only place a colour
+ * is defined and it has no SimHub-green in it. Whether this bar should carry SimHub's own plain
+ * green, amber and red instead is a design-source question and is the author's -- see #369.
  */
-const overRevLayer = (count: number, when: Expr): leds.LedContainer => ({
-  kind: 'conditionalGroup',
-  description: 'over-rev',
-  trigger: { expression: when },
-  clearBackgroundWhenActive: true,
-  children: Array.from({ length: count }, (_, k) => ({
-    kind: 'customStatus' as const,
-    description: `over-rev ${String(k + 1).padStart(2, '0')}`,
-    startPosition: k + 1,
+const simHubBar = (count: number): leds.LedContainer => ({
+  kind: 'rpmSegments',
+  description: "SimHub's own rev bar",
+  rpmMode: 'redlinePercent',
+  blinkDelayMs: FAST_BLINK_MS,
+  segments: Array.from({ length: count }, (_, k) => ({
     ledCount: 1,
-    color: OVER_REV_COLOR,
-    enabledFormula: { expression: TRUE },
-    blinkFormula: { expression: TRUE },
-    blinkColor: BLINK_OFF,
-    blinkDelayMs: FAST_BLINK_MS,
+    // Evenly from the floor to the redline. Rounded to a tenth: SimHub writes the value with the
+    // invariant culture and a long fraction is noise in a file somebody may open.
+    startValue: Math.round((SIMHUB_BAR_FLOOR + ((100 - SIMHUB_BAR_FLOOR) * k) / count) * 10) / 10,
+    // Thirds, the last taking the remainder -- `stageOf` on the screens, kept in step by hand
+    // because the screens count segments of a bar and this counts LEDs of a strip.
+    color: bandColor(k, count),
   })),
 });
 
-/** One derived ladder: its rungs, and the over-rev layer that takes the bar from them. */
-const ladderLayers = (count: number, style: LedRpmStyle, which: Ladder): leds.LedContainer[] => [...rungs(count, style, which), overRevLayer(count, overRev(which))];
+/** The three bands of SimHub's bar, in openDash's tokens. See {@link simHubBar}. */
+const SIMHUB_BAR_COLORS = [ds.purpose.shift.stage1, ds.purpose.shift.stage2, ds.purpose.shift.stage3] as const;
+
+/** The band a segment belongs to: thirds, the last taking any remainder. */
+const bandColor = (k: number, count: number): string => SIMHUB_BAR_COLORS[Math.min(2, Math.floor((k * 3) / count))] ?? SIMHUB_BAR_COLORS[2];
 
 /**
- * The measured overrides, one `Groups.CustomConditionalGroup` per car and gear the table covers.
+ * The centre, as a rev bar: the car's own where the driver asked for it and the car has one, and
+ * SimHub's own everywhere else.
  *
- * These come *after* the two derived ladders so that they compose over them: a car in the table
- * gets its measured gear, and every other car and gear keeps the ladder iRacing publishes. That is
- * the "derived by default, table overrides" of #284, and it is why an empty table costs nothing
- * — no entries, no containers, no change to any profile.
+ * Two conditional groups rather than one tree with a condition in it, for the reason every other
+ * choice on a strip is two groups: whichever is active in SimHub's own profile editor is the one
+ * in use, which is how somebody debugging a strip finds out what they are looking at.
  *
- * A car keyed here is matched on `CarModel` rather than by a `Groups.GameCarModelGroup`, because
- * the native group keys on SimHub's own car-choice model and the table keys on the model string a
- * contributor can read off the property list.
+ * Inside the first, `carCentre` makes the second choice -- the car's measured bar where the plugin
+ * publishes one, and the same SimHub bar where it does not, which is what makes "the car's own"
+ * safe to leave on for a driver whose car nobody has measured.
  */
-const tabledOverrides = (count: number, style: LedRpmStyle): leds.LedContainer[] =>
-  Object.entries(SHIFT_TABLE).flatMap(([model, car]) =>
-    Object.entries(car.gears).map(([gear, points]) => {
-      const order = ladderOrder(style, count);
-      const colors = ladderColors(style);
-      return {
-        kind: 'conditionalGroup' as const,
-        description: `${car.name}, gear ${gear}`,
-        trigger: { expression: tabledGear(model, gear) },
-        clearBackgroundWhenActive: true,
-        children: [
-          ...Array.from({ length: count }, (_, k) => {
-            const rung = order.rungOf(k);
-            const band = bandOf(rung, order.rungs);
-            const span = bandSpan(band, order.rungs);
-            return {
-              kind: 'customStatus' as const,
-              description: `rev ${String(k + 1).padStart(2, '0')}`,
-              startPosition: k + 1,
-              ledCount: 1,
-              color: colors[band] ?? colors[2],
-              enabledFormula: { expression: tabledStageLit(points, band, rung - span.start, span.count) },
-            };
-          }),
-          // Inside the measured group rather than beside it, so that a car in the table over-revs on
-          // its own measured blink RPM and never on the one its ladder publishes.
-          overRevLayer(count, tabledOverRev(points)),
-        ],
-      };
-    }),
-  );
-
-/**
- * The centre, as the shift ladder: one conditional group per style, and inside each the two
- * ladders — exactly as the rev bar draws its `shift` state as two layers. (The bar has a third,
- * the plain RPM bar; a strip has no equivalent, because a strip that is not showing revs is
- * showing one of the other centres.) Whichever is active is the ladder the car is on, which is how
- * the strip is debugged.
- */
-const revCentre = (count: number): leds.LedContainer[] =>
-  LED_RPM_STYLES.map((style) => {
-    // `car` is the car's whole bar and is not one of the three looks: its LEDs, its colours, its
-    // order and its flash, from the table the plugin fetched (ADR 0018). Where there is no table it
-    // falls back to the ladder below, drawn the way `leftToRight` draws it -- which is the same tree
-    // the other three styles are, so the fallback is not a fourth thing to maintain.
-    const ladder: leds.LedContainer[] = [
-      {
-        kind: 'conditionalGroup' as const,
-        description: "the car's own shift lights",
-        trigger: { expression: mirrorAvailable() },
-        children: ladderLayers(count, style === 'car' ? 'leftToRight' : style, 'mirror'),
-      },
-      {
-        kind: 'conditionalGroup' as const,
-        description: "SimHub's bands, for a car that publishes no ladder",
-        trigger: { expression: not(mirrorAvailable()) },
-        children: ladderLayers(count, style === 'car' ? 'leftToRight' : style, 'simhub'),
-      },
-      // Last, so a measured gear composes over whichever ladder was derived for the car.
-      ...tabledOverrides(count, style === 'car' ? 'leftToRight' : style),
-    ];
-    return {
-      kind: 'conditionalGroup' as const,
-      description: `style: ${style}`,
-      trigger: { expression: styleIs(style) },
-      children: style === 'car' ? carCentre(count, ladder) : ladder,
-    };
-  });
+const revCentre = (count: number): leds.LedContainer[] => [
+  {
+    kind: 'conditionalGroup',
+    description: "the car's own rev bar",
+    trigger: { expression: setting.ledCarRevBar() },
+    children: carCentre(count, [simHubBar(count)]),
+  },
+  {
+    kind: 'conditionalGroup',
+    description: "SimHub's own rev bar",
+    trigger: { expression: not(setting.ledCarRevBar()) },
+    children: [simHubBar(count)],
+  },
+];
 
 /** A progressive bar of `count` LEDs in one colour, driven by a 0..100 telemetry percentage. */
 const pedalBar = (count: number, value: Expr, color: string, label: string): leds.LedContainer[] =>

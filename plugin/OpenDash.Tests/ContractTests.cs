@@ -92,7 +92,8 @@ namespace OpenDashPlugin.Tests
             // the page it shows, 325 before a companion was given its own answer to how it draws a
             // flag, and 327 before the pit wall was given the same one and the flag readout came off
             // its header.
-            Assert.Equal(328, names.Count);
+            // 329 with #369's LedCarRevBar, added beside the style it deprecates rather than instead of it.
+            Assert.Equal(329, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -430,7 +431,7 @@ namespace OpenDashPlugin.Tests
             // contract assert it by index; the mirror's runs are declared last of all, after the two
             // settings a strip profile reads, the switch on a flag's movement, and the fit and the gate.
             Assert.Equal(
-                new[] { "LedCentre", "LedRpmStyle", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" },
+                new[] { "LedCentre", "LedRpmStyle", "LedCarRevBar", "LedFlagAnimation", "LedMirrorFit" },
                 Contract.LedPropertyNames().Take(5));
             Assert.Equal(Contract.LedSpotterWhole, Contract.PropertyNames().Last());
             Assert.True(Contract.DefaultFlagBoxGear);
@@ -491,7 +492,7 @@ namespace OpenDashPlugin.Tests
             // .ledsprofile files read them through isnull(), and the plugin had neither constant,
             // delegate nor control, so every strip could only ever draw its defaults. Both suites were
             // green throughout, which is why The_two_sides_declare_the_same_properties() exists below.
-            var expected = new List<string> { "LedCentre", "LedRpmStyle", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" };
+            var expected = new List<string> { "LedCentre", "LedRpmStyle", "LedCarRevBar", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" };
             expected.AddRange(Contract.MirrorRunLengths.Select(Contract.LedMirrorRun));
             // Appended after the runs rather than beside the three it belongs with, for the reason every
             // other addition is appended: both halves of the contract pin this list in order.

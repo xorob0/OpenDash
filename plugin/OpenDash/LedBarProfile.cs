@@ -30,7 +30,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public static readonly string[] BarSettings =
         {
-            Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation, Contract.LedSpotterWhole,
+            Contract.LedCentre, Contract.LedRpmStyle, Contract.LedCarRevBar, Contract.LedFlagAnimation, Contract.LedSpotterWhole,
         };
 
         /// <summary>`LedCentre` under one bar's namespace: `RimLedCentre`.</summary>

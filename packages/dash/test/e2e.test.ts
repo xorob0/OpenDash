@@ -511,11 +511,16 @@ describe('LED profiles on disk', () => {
     }
   });
 
-  test('the strip reads the same shift thresholds the rev bar does, so the two cannot disagree', () => {
+  test("the strip's rev bar is SimHub's, and reads no shift threshold of openDash's", () => {
     const text = readFileSync(lit.stripProfiles.find((p) => p.shape?.id === '4-14-4')!.path, 'utf8');
-    // The one definition in src/shift.ts reaches both artefacts; if it ever forked, this is what says so.
-    for (const name of Object.values(SHIFT_RPM_PROPERTIES)) expect({ name, inProfile: text.includes(name) }).toMatchObject({ inProfile: true });
-    // ...and every colour on the strip is a token rather than a copy of one.
+    // This used to assert the opposite -- that the strip read the four DriverCarSL* RPMs the rev
+    // bar reads, so the two could not disagree. #369 gave the strip's bar to SimHub's own
+    // RPMSegments, which works from SimHub's per-car redline and reads none of them. The screens
+    // still read all four, and shift.ts is still their one definition; what ended is the strip
+    // being a second consumer of it.
+    for (const name of Object.values(SHIFT_RPM_PROPERTIES)) expect({ name, inProfile: text.includes(name) }).toMatchObject({ inProfile: false });
+    expect(text).toContain('"RpmMode": 1');
+    // ...and every colour on the strip is still a token rather than a copy of one.
     expect(text).toContain(ds.purpose.shift.stage1);
     expect(text).toContain(ds.purpose.shift.stage3);
   });

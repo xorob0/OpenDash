@@ -7,6 +7,11 @@ reason this record exists rather than a strip-only patch. Reopens
 [ADR 0009](0009-does-the-plugin-compute.md) on the terms ADR 0009 itself set out, and extends
 [ADR 0012](0012-update-checks.md) to a second host.
 
+Amended by itself on 2026-09-21 for [#369](https://github.com/xorob0/OpenDash/issues/369), which
+reverses part 5 below: openDash's three rev-bar styles are gone from the strips and SimHub's own
+`RPMSegments` stands where they did. The car's own bar, which is what this record is about, is
+unchanged.
+
 Amended by itself on 2026-09-21 for [#366](https://github.com/xorob0/OpenDash/issues/366), and on
 one point that reaches into part 1 below: **the fetch is a button now.** Nothing about the second
 host, the one archive or the 386 KB changed, but the sentences below saying the copy is refreshed
@@ -161,6 +166,30 @@ amendment is.
 Both the privacy argument in part 1 and the attribution now appear on the page. Before this, "one
 archive of every car, rather than one car at a time" was reasoning a user never saw: it was in the
 source and in this record, and the panel said only that the tables followed the update check.
+
+**Amended 2026-09-21 ([#369](https://github.com/xorob0/OpenDash/issues/369)).** Part 5 said "The
+three styles stay" and they have not. `leftToRight`, `meetInMiddle` and `f1` are gone from the
+strips, and a strip's rev bar is now one of two things: the car's own measured bar, exactly as this
+record describes it, or a native SimHub `RPMSegments` container. `LedRpmStyle`, whose four values
+they were, is replaced by a switch — the car's own rev bar, yes or no — and stays attached for a
+release as that switch's deprecated default.
+
+Part 5's reasoning was that the three styles were "what a driver who wants one look in every car
+chooses". That is a real want and it was answered in the wrong place: SimHub's own rev bar is one
+look in every car, it runs off SimHub's per-car redline, and it is SimHub's to maintain. openDash
+was emitting one `CustomStatus` per LED per band per ladder per style to arrive somewhere SimHub
+was already standing. The cost is that SimHub's bar fills one way and cannot meet in the middle, so
+that look survives only where a car's own bar has it.
+
+What this record is actually about is untouched: the fetched tables, the per-LED `DynamicColor`
+run, the privacy of one archive, the attribution, the fallback. Rungs 3 and 4 of the precedence in
+part 3 are no longer *drawn on a strip* — SimHub's bar stands where they did — but they are
+unchanged on every screen, which is where they were always the whole of the answer.
+
+The measured table in `data/shift-points.json` lost its emission with them: it drew openDash's rungs
+as an override over openDash's ladder, and both are gone. The file, its schema and its validation
+stay, and whether a measured car should now feed the car's own bar the way a fetched one does is a
+question left open rather than answered by deletion.
 
 ## Alternatives considered
 

@@ -73,6 +73,12 @@ namespace OpenDashPlugin
         public const string LedCentre = "LedCentre";
         public const string LedRpmStyle = "LedRpmStyle";
 
+        /// <summary>Whether a strip's rev bar is the car's own measured bar or SimHub's own
+        /// <c>RPMSegments</c>. The switch that replaced the four styles (#369); <see cref="LedRpmStyle"/>
+        /// stays attached as its deprecated alias, where "car" reads as on. Mirrors
+        /// LED_CAR_REV_BAR_SETTING in contract.ts.</summary>
+        public const string LedCarRevBar = "LedCarRevBar";
+
         /// <summary>Whether a flag on a strip moves at all. Off holds every flag from the frame it would
         /// have settled on and never turns one off, which is what a driver who finds a blinking rim
         /// distracting is asking for. Appended after the other two, which are pinned in order.</summary>
@@ -393,6 +399,10 @@ namespace OpenDashPlugin
         /// <summary>The car's own, because openDash's opinion is that the car is right. A car with no
         /// table falls back to the ladder iRacing publishes without the driver choosing anything.</summary>
         public const string DefaultLedRpmStyle = "car";
+
+        /// <summary>On, for the same reason the style defaulted to "car": openDash's opinion is that the
+        /// car is right, and a car with no table falls through to SimHub's bar without anybody choosing.</summary>
+        public const bool DefaultLedCarRevBar = true;
 
         /// <summary>What the mirror does when the car's bar and the strip are not the same length.
         /// Mirrors LED_MIRROR_FITS in contract.ts.</summary>
@@ -1552,6 +1562,7 @@ namespace OpenDashPlugin
         {
             yield return LedCentre;
             yield return LedRpmStyle;
+            yield return LedCarRevBar;
             yield return LedFlagAnimation;
             yield return LedMirrorFit;
             yield return LedMirrorReady;

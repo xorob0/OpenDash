@@ -313,6 +313,7 @@ OpenDash.FlagBoxMatrix4WaterTemp
 OpenDash.FlagBoxMatrix4GearBlink
 OpenDash.LedCentre
 OpenDash.LedRpmStyle
+OpenDash.LedCarRevBar
 OpenDash.LedFlagAnimation
 OpenDash.LedMirrorFit
 OpenDash.LedMirrorReady

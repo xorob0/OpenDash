@@ -124,6 +124,7 @@ export const DEFAULTS = {
   SessionProgress: 'auto' as SessionProgress,
   LedCentre: 'rpm' as LedCentre,
   LedRpmStyle: 'car' as LedRpmStyle,
+  LedCarRevBar: true,
   LedMirrorFit: 'stretch' as LedMirrorFit,
   LedFlagAnimation: true,
   LedSpotterWhole: false,
@@ -175,7 +176,7 @@ export function dashProperties(): string[] {
 
 /** The properties only a generated LED profile reads. ADR 0013. */
 export function ledProperties(): string[] {
-  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING, LED_MIRROR_FIT_SETTING, LED_MIRROR_READY, ...MIRROR_RUN_LENGTHS.map(ledMirrorRunName), LED_SPOTTER_WHOLE_SETTING].map(propertyName);
+  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_CAR_REV_BAR_SETTING, LED_FLAG_ANIMATION_SETTING, LED_MIRROR_FIT_SETTING, LED_MIRROR_READY, ...MIRROR_RUN_LENGTHS.map(ledMirrorRunName), LED_SPOTTER_WHOLE_SETTING].map(propertyName);
 }
 
 /** The name of the setting choosing what the middle of a strip shows. */
@@ -183,6 +184,22 @@ export const LED_CENTRE_SETTING = 'LedCentre';
 
 /** The name of the setting choosing how the rev ladder fills the strip. */
 export const LED_RPM_STYLE_SETTING = 'LedRpmStyle';
+
+/**
+ * Whether a strip's rev bar is the car's own measured bar or SimHub's.
+ *
+ * The switch that replaced the four styles (#369). `leftToRight`, `meetInMiddle` and `f1` were
+ * openDash drawing a ladder SimHub draws itself, one `CustomStatus` per LED per band per ladder;
+ * SimHub's own `RPMSegments` is that bar, maintained by SimHub, against SimHub's per-car redline.
+ * What openDash has that SimHub does not is the car's measured bar (ADR 0018), so that is what the
+ * switch is about and the rest is SimHub's.
+ *
+ * `LedRpmStyle` is not retired with it: it has shipped, ADR 0003 makes a published property a
+ * public interface and #170 is the rule that an rc user's properties do not vanish without a
+ * release of warning. It stays as the deprecated alias {@link setting.ledCarRevBar} falls back to,
+ * where `car` reads as on and the other three read as off.
+ */
+export const LED_CAR_REV_BAR_SETTING = 'LedCarRevBar';
 
 /**
  * Whether a flag on a strip moves at all.
@@ -281,8 +298,23 @@ export const setting = {
   slot: (slot: number): Expr => isnull(prop(propertyName(slotSettingName(slot))), num(defaultCardForSlot(slot))),
   /** `isnull([OpenDash.LedCentre], 'rpm')` */
   ledCentre: (): Expr => isnull(prop(propertyName(LED_CENTRE_SETTING)), str(DEFAULTS.LedCentre)),
-  /** `isnull([OpenDash.LedRpmStyle], 'car')` */
+  /** `isnull([OpenDash.LedRpmStyle], 'car')`. Deprecated; {@link setting.ledCarRevBar} is the one to read. */
   ledRpmStyle: (): Expr => isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)),
+  /**
+   * `isnull([OpenDash.LedCarRevBar], if(isnull([OpenDash.LedRpmStyle], 'car') = 'car', 1, 0))`:
+   * whether the rev bar is the car's own.
+   *
+   * Two fallbacks deep, for the reasons {@link setting.revBar} is. The inner one is the default
+   * without the plugin, which ADR 0003 requires of every read; the outer one is the deprecated
+   * alias, so a strip installed beside an rc.4 plugin -- which attaches `LedRpmStyle` and not this
+   * -- still honours the choice that user made. A user on one of the three retired styles lands on
+   * SimHub's bar, which is the nearest thing to what they asked for.
+   */
+  ledCarRevBar: (): Expr =>
+    isnull(
+      prop(propertyName(LED_CAR_REV_BAR_SETTING)),
+      iff(eq(isnull(prop(propertyName(LED_RPM_STYLE_SETTING)), str(DEFAULTS.LedRpmStyle)), str('car')), num(1), num(0)),
+    ),
   /** `isnull([OpenDash.LedFlagAnimation], true)`: whether a flag on a strip moves. */
   ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
   /** `isnull([OpenDash.LedSpotterWhole], false)`: whether a car alongside takes the whole strip. */
