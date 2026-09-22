@@ -1,6 +1,38 @@
 /** Small dashboards and packages shared by the generator tests. Not a test file. */
 
+import { deflateSync } from 'node:zlib';
 import type { Dashboard, DashPackage, EllipseItem, Item, LayerItem, RectangleItem, Screen, TextItem, WidgetItem } from '../src/model.ts';
+
+const crc32 = (bytes: Uint8Array): number => {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let i = 0; i < 8; i++) crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+};
+
+/**
+ * A valid one-colour PNG of the given size, built byte by byte so that a test asserting its width,
+ * height, length or MD5 is asserting properties of bytes it can see rather than of a vendored
+ * binary nobody reads.
+ */
+export const pngBytes = (width: number, height: number, byte = 0x7f): Uint8Array => {
+  const be32 = (n: number): number[] => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+  const chunk = (type: string, body: Uint8Array): number[] => {
+    const head = [...Buffer.from(type, 'ascii'), ...body];
+    return [...be32(body.length), ...head, ...be32(crc32(Uint8Array.from(head)))];
+  };
+  const ihdr = Uint8Array.from([...be32(width), ...be32(height), 8, 2, 0, 0, 0]);
+  // One filter byte then three bytes a pixel, which is what colour type 2 at depth 8 means.
+  const raw = Buffer.concat(Array.from({ length: height }, () => Buffer.from([0, ...Array(width * 3).fill(byte)])));
+  return Uint8Array.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ...chunk('IHDR', ihdr),
+    ...chunk('IDAT', new Uint8Array(deflateSync(raw))),
+    ...chunk('IEND', new Uint8Array(0)),
+  ]);
+};
 
 export const FONTS_DIR = new URL('../../dash/fonts/', import.meta.url).pathname;
 export const BARLOW_MEDIUM = `${FONTS_DIR}Barlow-Medium.ttf`;

@@ -40,6 +40,7 @@ import {
   leds,
   listFiles,
   PACKAGE_EXTENSION,
+  PREVIEW_EXTENSION,
   readZip,
   RESOURCES_EXTENSION,
   stableGuid,
@@ -51,6 +52,7 @@ import {
 } from '../src/generator.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import { LAYOUTS, rungOf, type Layout } from '../src/layouts/index.ts';
+import { previewFor } from '../src/previews.ts';
 import { SCREEN_PACKAGES } from '../src/screens/index.ts';
 import { ZONE_FACES, type ZoneLayout } from '../src/zones/index.ts';
 import { CARDS_FILE } from '../src/slots.ts';
@@ -105,9 +107,20 @@ const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0
  * The files of a package folder as listFiles orders them (sorted by code unit). `OFL.txt` is in
  * every one of them because every one of them ships the Barlow faces, and the licence has to
  * travel with what it licenses; see packages/dash/src/design/notices.ts.
+ *
+ * The gallery thumbnail is there when, and only when, somebody has photographed that package:
+ * a preview is a capture from the VM, not something this build can produce, so the list is asked
+ * of `previewFor` rather than assumed either way.
  */
 const expectedFiles = (folder: string, cards = true): string[] =>
-  [...FONT_FILES, FONT_LICENCE.name, ...(cards ? [CARDS_FILE, `${CARDS_FILE}.metadata`] : []), `${folder}.djson`, `${folder}.djson.metadata`].sort(byCodeUnit);
+  [
+    ...FONT_FILES,
+    FONT_LICENCE.name,
+    ...(cards ? [CARDS_FILE, `${CARDS_FILE}.metadata`] : []),
+    `${folder}.djson`,
+    `${folder}.djson.metadata`,
+    ...(previewFor(folder) === undefined ? [] : [`${folder}${PREVIEW_EXTENSION}`]),
+  ].sort(byCodeUnit);
 
 /** The reference card face, which since #169 is named for its slots rather than "OpenDash". */
 const REFERENCE_CARD_FACE = layout1920x480.folder;
@@ -324,7 +337,9 @@ describe('widget build on disk', () => {
   test('the build log names every file written', () => {
     const files = [...FOLDERS.flatMap((folder) => expectedFiles(folder).map((f) => `${folder}/${f}`)), ...FOLDERS.map(zipName), FLAG_BOX_FILE, MANIFEST_FILE];
     for (const rel of files) expect({ rel, logged: log.some((line) => line.startsWith('wrote ') && line.includes(rel)) }).toEqual({ rel, logged: true });
-    expect(log.some((line) => line.startsWith('warning '))).toBe(false);
+    // Every warning but one: a package nobody has photographed says so on every build, and the
+    // machine that can take the picture is the VM, which ADR 0008 is the record of not requiring.
+    expect(log.filter((line) => line.startsWith('warning ') && !line.startsWith('warning preview/missing'))).toEqual([]);
   });
 });
 

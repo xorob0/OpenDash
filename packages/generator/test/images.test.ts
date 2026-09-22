@@ -1,13 +1,13 @@
 /**
  * Images: describing a file, the descriptor the `.djson` carries, and the `.ressources` sidecar.
  *
- * The PNGs here are built byte by byte rather than vendored, so that the expected width, height,
- * length and MD5 are properties of bytes this file can see rather than of a binary nobody reads.
+ * The PNGs are `pngBytes` from ./fixtures.ts, built byte by byte rather than vendored, so that the
+ * expected width, height, length and MD5 are properties of bytes a reader can see rather than of a
+ * binary nobody reads.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { deflateSync } from 'node:zlib';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,37 +17,9 @@ import type { Dashboard, ImageItem } from '../src/model.ts';
 import { buildImageDescriptor, buildItemObject, buildDashboardObject, ITEM_TYPES } from '../src/serialize.ts';
 import { resourcesZip, writePackage, listFiles } from '../src/package.ts';
 import { validatePackage } from '../src/validate.ts';
-import { DECLARED, samplePackage } from './fixtures.ts';
+import { DECLARED, pngBytes as png, samplePackage } from './fixtures.ts';
 
 const OPTS = { declaredProperties: DECLARED, propertyPrefix: 'OpenDash' };
-
-/** A valid one-colour PNG of the given size, so a test can assert dimensions it chose. */
-const png = (width: number, height: number, byte = 0x7f): Uint8Array => {
-  const chunk = (type: string, body: Uint8Array): number[] => {
-    const head = [...Buffer.from(type, 'ascii'), ...body];
-    const crc = crc32(Uint8Array.from(head));
-    return [...be32(body.length), ...head, ...be32(crc)];
-  };
-  const be32 = (n: number): number[] => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
-  const ihdr = Uint8Array.from([...be32(width), ...be32(height), 8, 2, 0, 0, 0]);
-  // One filter byte then three bytes a pixel, which is what colour type 2 at depth 8 means.
-  const raw = Buffer.concat(Array.from({ length: height }, () => Buffer.from([0, ...Array(width * 3).fill(byte)])));
-  return Uint8Array.from([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    ...chunk('IHDR', ihdr),
-    ...chunk('IDAT', new Uint8Array(deflateSync(raw))),
-    ...chunk('IEND', new Uint8Array(0)),
-  ]);
-};
-
-const crc32 = (bytes: Uint8Array): number => {
-  let crc = 0xffffffff;
-  for (const byte of bytes) {
-    crc ^= byte;
-    for (let i = 0; i < 8; i++) crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-};
 
 let root: string;
 let iconPath: string;
