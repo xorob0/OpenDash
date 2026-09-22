@@ -43,9 +43,6 @@ export const slug = (folder: string): string =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
-/** The still of a package. Kept for the first site's pages until they are replaced; see captures.ts. */
-export const shotFor = (folder: string, _scenario?: string): string => `/shots/${slug(folder)}.png`;
-
 /**
  * Reading order, which is not manifest order.
  *

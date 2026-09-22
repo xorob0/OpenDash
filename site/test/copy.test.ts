@@ -26,27 +26,13 @@ function sources(dir: string): string[] {
   return out;
 }
 
-/**
- * The first site's files, exempt until each is replaced. An entry is removed in the commit that
- * rewrites the file, so the list shrinks to nothing and the rules then hold everywhere.
- */
-const LEGACY = [
-  'components/Shot.tsx',
-  'components/SectionHead.tsx',
-  'components/Reveal.tsx',
-];
-
-const isLegacy = (rel: string): boolean => LEGACY.some((l) => rel.startsWith(l));
-
-const ALL_SOURCES = ['app', 'components', 'lib']
-  .flatMap((d) => sources(path.join(site, d)))
-  .filter((f) => !isLegacy(path.relative(site, f)));
+const ALL_SOURCES = ['app', 'components', 'lib'].flatMap((d) => sources(path.join(site, d)));
 
 /** The pages that have to make the promise, in the order they are rebuilt. */
 const PROMISE_PAGES = ['app/page.tsx', 'app/compare/page.tsx', 'app/download/page.tsx'];
 
 describe('the promise', () => {
-  test.each(PROMISE_PAGES.filter((p) => existsSync(path.join(site, p)) && !isLegacy(p)))('%s says free forever', (page) => {
+  test.each(PROMISE_PAGES)('%s says free forever', (page) => {
     expect(read(page)).toContain('FREE_FOREVER');
   });
 });
