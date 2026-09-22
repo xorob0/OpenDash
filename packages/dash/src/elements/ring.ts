@@ -7,7 +7,7 @@
  * chequered ring's checks sit in, and an odd thickness needs no half-pixel rect.
  */
 import type { EllipseItem, Hex } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { squareOf, type Circle } from '../design/geometry.ts';
 import { TRANSPARENT } from '../tokens.ts';
 
@@ -18,7 +18,7 @@ export interface RingOptions {
 }
 
 export function ring(name: string, face: Circle, thickness: number, color: Hex, opts: RingOptions = {}): EllipseItem {
-  return {
+  return withMoreBindings({
     kind: 'ellipse',
     name,
     rect: squareOf(face),
@@ -26,6 +26,5 @@ export function ring(name: string, face: Circle, thickness: number, color: Hex, 
     strokeColor: color,
     strokeThickness: thickness,
     backgroundColor: TRANSPARENT,
-    ...withBindings({ Visible: opts.visibleBind, EllipseColor: opts.colorBind }),
-  };
+  }, { Visible: opts.visibleBind, EllipseColor: opts.colorBind });
 }

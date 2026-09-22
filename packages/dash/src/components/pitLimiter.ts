@@ -1,7 +1,7 @@
 /** pitLimiter: a neutral block above the gear with a centred "PIT LIMITER" label, blinking at 2 Hz while the limiter is on. */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { ds } from '../tokens.ts';
@@ -13,7 +13,7 @@ export const PIT_LIMITER_BLINK_MS = 250;
 
 export function pitLimiter(frame: Rect, prefix = 'pitLimiter'): Item[] {
   return [
-    {
+    withMoreBindings({
       kind: 'layer',
       name: prefix,
       children: [
@@ -24,7 +24,6 @@ export function pitLimiter(frame: Rect, prefix = 'pitLimiter'): Item[] {
         }),
       ],
       blink: { enabled: true, delayMs: PIT_LIMITER_BLINK_MS },
-      ...withBindings({ Visible: eq(game('PitLimiterOn'), num(1)) }),
-    },
+    }, { Visible: eq(game('PitLimiterOn'), num(1)) }),
   ];
 }

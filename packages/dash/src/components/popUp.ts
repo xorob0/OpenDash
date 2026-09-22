@@ -29,7 +29,7 @@
  */
 import type { Hex, Item, LayerItem, Rect, TextItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, roundRect } from '../design/geometry.ts';
 import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
@@ -180,7 +180,7 @@ export function popUp(frame: Rect, spec: PopUpSpec, prefix = 'popUp'): LayerItem
     // a larger one everywhere else on the face.
     children.push(popUpRun(`${name}.secondary`, spec.secondary, right, canvasYForBaseline(canvasBaseline(valueY, fit.valueFs), fs), fs, ds.color.text.secondary, undefined, width));
   }
-  return { kind: 'layer', name, children, ...withBindings({ Visible: popUpVisible(spec.id) }) };
+  return withMoreBindings({ kind: 'layer', name, children }, { Visible: popUpVisible(spec.id) });
 }
 
 /**

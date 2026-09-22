@@ -22,7 +22,7 @@
  */
 import type { HAlign, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { assetBox, imageOf, RANK_DOWN, RANK_UP } from '../design/assets.ts';
 import { rect } from '../design/geometry.ts';
@@ -297,14 +297,14 @@ function cellName(ctx: CellContext): Item[] {
   const full = ctx.width >= Math.ceil(measureText('BarlowMedium', NAME_TO_FIT, fs));
   const bind = iff(ctx.isPlayer, str('YOU'), full ? carName(ctx.idx) : driverCode(ctx.idx));
   return [
-    {
-      ...label(`${ctx.name}.name`, 'KLX', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
+    withMoreBindings(
+      label(`${ctx.name}.name`, 'KLX', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
         size: fs,
         color: ds.color.text.secondary,
         bind,
       }),
-      ...withBindings({ Text: bind, TextColor: liftBind(ctx, inkBind(ctx)) }),
-    },
+      { TextColor: liftBind(ctx, inkBind(ctx)) },
+    ),
   ];
 }
 
@@ -335,17 +335,13 @@ function cellRank(ctx: CellContext): Item[] {
   const markerBox = rect(right - countWidth - gap - RANK_MARK, ctx.top + (ctx.height - RANK_MARK) / 2, RANK_MARK, RANK_MARK);
   const colour = iff(gained, str(ds.purpose.delta.faster), str(ds.purpose.delta.slower));
   return [
-    ...([[RANK_UP, gained, 'up'], [RANK_DOWN, lost, 'down']] as const).map(([asset, visible, id]) => ({
+    ...([[RANK_UP, gained, 'up'], [RANK_DOWN, lost, 'down']] as const).map(([asset, visible, id]) => withMoreBindings({
       kind: 'image' as const,
       name: `${ctx.name}.rank.${id}`,
       image: asset.name,
       rect: assetBox(markerBox, imageOf(asset)),
-      ...withBindings({ Visible: visible }),
-    })),
-    {
-      ...band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim),
-      ...withBindings({ Visible: not(moved) }),
-    },
+    }, { Visible: visible })),
+    withMoreBindings(band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim), { Visible: not(moved) }),
     numeral(`${ctx.name}.rank.count`, '2', right - countWidth, ctx.top + (ctx.height - fs) / 2, fs, { digits: 2, specials: 0 }, {
       bind: iff(moved, fmt(abs(change), '0'), str('')),
       colorBind: colour,
@@ -359,10 +355,7 @@ function cellRank(ctx: CellContext): Item[] {
 function cellPit(ctx: CellContext): Item[] {
   const chipW = Math.min(ctx.width, chipWidth(ctx.density, 'PIT'));
   return [
-    ...cellValue(ctx, 'pit', '1', carPitCount(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor, align: 'right' }).map((item) => ({
-      ...item,
-      ...withBindings({ Text: carPitCount(ctx.idx), TextColor: inkBind(ctx), Visible: not(ctx.inPit) }),
-    })),
+    ...cellValue(ctx, 'pit', '1', carPitCount(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor, align: 'right' }).map((item) => withMoreBindings(item, { Visible: not(ctx.inPit) })),
     ...chip(`${ctx.name}.pitChip`, 'PIT', ctx.x + ctx.width - chipW, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
       inverted: true,
       visibleBind: ctx.inPit,
@@ -639,7 +632,7 @@ function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: {
   const isPlayer = carIsPlayer(idx);
   const inPit = carInPit(idx);
   const children: Item[] = [
-    { ...band(`${spec.name}.${name}.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), ...withBindings({ Visible: isPlayer }) },
+    withMoreBindings(band(`${spec.name}.${name}.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), { Visible: isPlayer }),
     // The board's rows are flush and each is closed by a rule; a list's are two apart and closed by
     // the gap. Both run the frame's full width, under the padding the cells are inset by.
     ...(board ? [rule(`${spec.name}.${name}.rule`, spec.frame.left, top + rowHeight - 1, spec.frame.width, 1)] : []),
@@ -666,7 +659,7 @@ function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: {
     );
     x += width + cellGapOf(board);
   });
-  const row: LayerItem = { kind: 'layer', name: `${spec.name}.${name}`, children, ...withBindings({ Visible: carAvailable(idx) }) };
+  const row: LayerItem = withMoreBindings({ kind: 'layer', name: `${spec.name}.${name}`, children }, { Visible: carAvailable(idx) });
   return { kind: 'layer', name: `${spec.name}.${name}s`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + rowGapOf(board), repeatLeftOffset: 0 };
 }
 
