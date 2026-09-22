@@ -49,7 +49,9 @@ export const GALLERY: Record<string, { zones: [string, string, string, string]; 
   OpenDash: { zones: ['gearSpeedRevs', 'leaderboard', 'relative', 'tyres'] },
   'OpenDash 1280x720': { zones: ['gearSpeedRevs', 'lapHistory', 'relative', 'fuel'] },
   'OpenDash 1280x480': { zones: ['gearSpeedRevs', 'lapTimes', 'opponents', 'sectors'] },
-  'OpenDash 1280x400': { zones: ['speed', 'tyres', 'leaderboard', 'stint'] },
+  // Weather rather than the stint on this band: SimHub counts a stint from a pit exit it saw, and
+  // the emulator's scripted one does not always take, which leaves a row of zeros in a photograph.
+  'OpenDash 1280x400': { zones: ['speed', 'tyres', 'leaderboard', 'weather'] },
   'OpenDash 850x480': { zones: ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel'] },
   'OpenDash 800x480': { zones: ['gearAlone', 'delta', 'radar', 'fuel'] },
   'OpenDash 800x286': { zones: ['gearSpeedRevs', 'fuel', 'sectors', 'fuel'] },
