@@ -56,6 +56,8 @@ COPY --from=oven/bun:1.4-debian /usr/local/bin/bun /usr/local/bin/bun
 COPY design ./design
 COPY packages ./packages
 COPY scripts ./scripts
+# The strip shapes the generator reads import the shift-point table, so the data is needed too.
+COPY data ./data
 COPY VERSION CHANGELOG.md package.json bun.lock bunfig.toml ./
 # content.ts imports the module catalogue from packages/dash/src/contract.ts, which resolves
 # `@opendash/generator` through the root workspace, so the root has to be installed here as well as
