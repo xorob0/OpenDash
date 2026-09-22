@@ -172,6 +172,12 @@ page in SimHub's left menu. It does not render, does not read telemetry and does
 anything; [ADR 0003](decisions/0003-plugin-settings-through-properties.md) is why, and the
 question of whether it should ever compute is open as #98.
 
+The Rig tab does now show the screen it is configuring, and that is not a reversal of the sentence
+above. The panel hosts SimHub's own renderer, handed the `.djson` under `DashTemplates` that the
+driver's screen loads, reading the properties the panel has just written; nothing about the picture
+is drawn by OpenDash. [ADR 0020](decisions/0020-the-panel-draws-what-it-configures.md) is the record,
+and it states how far the line moved and what would move it further.
+
 The settings are the shift lights, the position mode, the delta reference, the session progress
 mode, the four zones of the face (the page each shows, which pages are enabled, and the page it
 opens on), the quick glance, the bar's four end fields, twenty-one companion module switches,
@@ -191,7 +197,9 @@ belong in a pull request until the line is removed from this document.
 
 **Our own renderer.** OpenDash renders through SimHub and will continue to.
 [ADR 0001](decisions/0001-simhub-native-rendering.md) settled it, and reversing it would discard
-everything SimHub already does for DDUs, USB screens, phones and the seventeen sims it reads.
+everything SimHub already does for DDUs, USB screens, phones and the seventeen sims it reads. The
+preview in the settings panel is not an exception to this, since what draws it is SimHub's own
+renderer; a picture of a dashboard produced by any code of ours still falls under this line.
 
 **Authoring in DashStudio.** The `.djson` is build output. Anything edited in SimHub's editor is
 overwritten by the next build, and a pull request that contains a hand-edited scene graph cannot

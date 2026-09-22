@@ -60,6 +60,10 @@ namespace OpenDashPlugin
 
             var screen = Selected;
             rows.Add(BuildScreenHeader(screen));
+            // The screen itself, between the name of the thing and the controls that change it. Null
+            // when its package is not installed, which the pane below says in its own words.
+            var preview = BuildScreenPreview(screen);
+            if (preview != null) rows.Add(preview);
             // The pane takes a section of its own rather than a place inside "Your rig". Ui.Section nests
             // perfectly well -- it is a rule and a label with no indent -- but the pane already carries a
             // section of its own in the wheel buttons, and a heading that sits one level deeper than the
