@@ -72,7 +72,12 @@ export const fuel = defineModule('fuel', (ctx) => {
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
             follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
           }),
-          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(fuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
+          // Behind the consumption gate for the reason the estimate beside it is, and in the
+          // spelling `modules/stint.ts` already gives the same field: SimHub derives
+          // `Fuel_RemainingTime` from the per-lap figure, so on the out lap the range in minutes
+          // moves every frame along with it, and the row would otherwise be an estimate that says
+          // it has none next to a range that names one.
+          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: iff(fuelIsSettled(), clock(fuelTimeLeft()), str(NO_VALUE)), chars: CHARS.clock, fs: d.big }),
           fld(ctx, 'lapsLeft', 'Est. laps', {
             sample: '11.2',
             bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),

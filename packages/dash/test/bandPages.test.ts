@@ -13,9 +13,12 @@
  */
 import { describe, expect, test } from 'bun:test';
 import type { DrawableItem, Item, RectangleItem, TextItem } from '../src/generator.ts';
+import type { BandField } from '../src/zones/bandPages.ts';
 import { BAND_PAGES, BAND_PAGE_IDS, bandCorners, bandCornerWidths, bandMetrics, bandPageItems, bandPageRoom } from '../src/zones/bandPages.ts';
 import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } from '../src/zones/telltales.ts';
 import { assetNamed } from '../src/design/assets.ts';
+import { SPECIAL_CHARS } from '../src/design/metrics.ts';
+import { fuelIsSettled, NO_VALUE } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 
 const BANDS = {
@@ -220,6 +223,43 @@ describe('the fields the catalogue draws on each page', () => {
     const bind = BAND_PAGES.fuel!.find((f) => f.id === 'time')!.bind;
     expect(bind).toContain("'--:--'");
     expect(bind).not.toContain('3600');
+  });
+
+  /**
+   * #382. The pit capture of 2026-09-22 read `EST. LAPS --` beside `PER LAP 0.000` and `LAST LAP
+   * 0.000`, one row and one tank with two fields saying they had no reading and two saying the car
+   * had burned nothing, because only the estimate carried the gate. Before a crossing SimHub
+   * extrapolates the per-lap figure from the lap in progress, so the four have to answer together.
+   */
+  describe('the fuel fields a completed lap pays for', () => {
+    const GATED = ['time', 'laps', 'perLap', 'lastLap'];
+    const fieldNamed = (id: string): BandField => BAND_PAGES.fuel!.find((f) => f.id === id)!;
+
+    for (const id of GATED) {
+      test(`${id} reads the absence until a lap has been completed`, () => {
+        const { bind } = fieldNamed(id);
+        expect(bind.startsWith(`if(${fuelIsSettled()}, `)).toBe(true);
+        expect(bind.endsWith(`, '${NO_VALUE}')`)).toBe(true);
+      });
+    }
+
+    test('the absence sits in the cells each of the four is cut for, so no column moves at the first lap', () => {
+      for (const id of GATED) {
+        // `-` keeps the digit cell rather than joining the narrow set, which is why the budget is
+        // counted this way rather than by length alone.
+        const specials = [...NO_VALUE].filter((c) => SPECIAL_CHARS.includes(c)).length;
+        const { chars } = fieldNamed(id);
+        expect({ id, digits: NO_VALUE.length - specials <= chars.digits, specials: specials <= chars.specials }).toEqual({
+          id,
+          digits: true,
+          specials: true,
+        });
+      }
+    });
+
+    test('the tank and the refuel are readings of their own and stay out from behind the gate', () => {
+      for (const id of ['fuel', 'refuel']) expect({ id, gated: fieldNamed(id).bind.includes('CompletedLaps') }).toEqual({ id, gated: false });
+    });
   });
 });
 
