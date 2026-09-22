@@ -34,6 +34,18 @@ The prose below explains what the script does and is what to read when it breaks
 
 ## TL;DR for an agent
 
+**Claim the VM before anything below touches it.** There is one guest, and the MCP tools do not
+consult the lock: `click`, `type_text`, `run_in_desktop`, `simhub_start` and the rest act
+immediately, whoever else is working in there. Two sessions driving the same desktop send each
+other's clicks astray, and a dashboard photographed while somebody else is clicking comes back
+showing the wrong thing, which is #218.
+
+```bash
+bun run vm who                    # who holds it, or nobody
+bun run vm claim "what for"       # take it; refused when somebody else holds a fresh claim
+bun run vm release                # give it back, which is owed even when a run failed
+```
+
 1. Call `vm_status`. If `ssh_reachable` is false, call `vm_start` then `vm_wait_ready`.
 2. Put your build output where Windows can see it:
    `cp build/OpenDash.simhubdash /opt/winvm/shared/` (that folder is `Z:\` in Windows),
@@ -42,6 +54,7 @@ The prose below explains what the script does and is what to read when it breaks
 4. Read `simhub_logs` for binding / parse errors. Iterate.
 5. `simhub_stop` when done; `vm_stop` if nobody else needs the VM (it holds ~4.5 GB RAM
    and 2 cores while running).
+6. `bun run vm release`, so that the next session is not left waiting on a claim nobody is using.
 
 The MCP server is registered user-wide (`~/.claude.json`) **and** in this repo's
 [.mcp.json](../.mcp.json), so a fresh session in this directory has the tools without setup.

@@ -16,7 +16,7 @@ import path from 'node:path';
 import { build as buildEmulator, runningPid, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
 import { captureDashboard, guiAvailable, openDashboard, placeDashboards } from './gui.ts';
 import { BASE_FACE } from '../packages/dash/src/zones/index.ts';
-import { claim, install, readClaim, release, resolveHost, screenshot, simhubStop, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
+import { claim, claimLost, install, readClaim, release, resolveHost, screenshot, simhubStop, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
 
@@ -127,7 +127,8 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     console.error('There is one VM. Wait, or ask them to run `bun run vm release`.');
     return 1;
   }
-  const claimed = claim(host, `dev ${opts.packageName}`);
+  const mine = new Date();
+  const claimed = claim(host, `dev ${opts.packageName}`, mine);
   if (!claimed.ok) {
     console.error(claimed.stderr);
     return 1;
@@ -191,6 +192,11 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     const opened = openDashboard(host, { name: opts.packageName });
     if (!opened.ok) {
       console.error(opened.stderr);
+      // The clicking is driven over VNC, so a session that takes the claim mid-run lands its own
+      // clicks in this one's sequence. The message above then sends the reader after coordinates
+      // that were never the problem, which is why the lock is read again before giving up.
+      const lost = claimLost(readClaim(host), mine.toISOString());
+      if (lost) console.error(`${lost}; that, rather than the coordinates, is what to look at.`);
       return 1;
     }
     console.log(`      ${opened.stdout}`);

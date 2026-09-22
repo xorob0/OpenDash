@@ -1,10 +1,11 @@
 /**
  * The parts of `scripts/vm.ts` that are decidable without a VM: quoting, the CLIXML that
- * PowerShell writes over SSH, how the host is chosen, and when a claim on the VM has gone stale.
+ * PowerShell writes over SSH, how the host is chosen, when a claim on the VM has gone stale and
+ * how a run notices that its own claim changed hands.
  * Everything else in that file is a remote side effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
-import { cleanClixml, inputMapping, parseActivation, PRESS, psq, resolveHost, shq, withPluginActivated, type Claim, type PluginActivation } from './vm.ts';
+import { claimLost, cleanClixml, inputMapping, parseActivation, PRESS, psq, resolveHost, shq, withPluginActivated, type Claim, type PluginActivation } from './vm.ts';
 
 describe('quoting', () => {
   test('a shell argument survives a quote in a path', () => {
@@ -103,6 +104,44 @@ describe('when a claim on the VM has gone stale', () => {
 
   test('an unparseable date is abandoned rather than holding the VM for ever', () => {
     expect(isStale({ who: 'a', since: 'not a date', note: '' }, now)).toBe(true);
+  });
+});
+
+/**
+ * `claimLost` is what turns #218 into a sentence: the opener clicks over VNC, so a second session
+ * taking the lock mid-run moves the mouse under it, and the failure has to name that rather than
+ * the coordinates it was aiming at.
+ */
+describe('when the claim changes hands under a run', () => {
+  const mine = '2026-09-13T13:39:00.000Z';
+  const me = 'tim@laptop';
+  const now = new Date('2026-09-13T13:48:30.000Z');
+
+  test('our own lock, untouched, says nothing', () => {
+    expect(claimLost({ who: me, since: mine, note: 'shots 5x1' }, mine, me, now)).toBeNull();
+  });
+
+  test('somebody else holding it is named, with the note they left', () => {
+    const held: Claim = { who: 'root@cumulus', since: '2026-09-13T13:48:09.000Z', note: '#124 binding probe' };
+    const why = claimLost(held, mine, me, now);
+    expect(why).toContain('root@cumulus');
+    expect(why).toContain('#124 binding probe');
+  });
+
+  test('our own name over a different claim is still not our claim: re-claiming loses the run', () => {
+    // Same machine, second session. The lock says us, but the run that wrote this one no longer
+    // holds it, and the other session is driving the same guest.
+    expect(claimLost({ who: me, since: '2026-09-13T13:48:09.000Z', note: 'dev' }, mine, me, now)).not.toBeNull();
+  });
+
+  test('a lock that is simply gone is reported, since nothing was guarding the guest', () => {
+    expect(claimLost(null, mine, me, now)).toContain('gone');
+  });
+
+  test('a run that outlives the staleness threshold is not told its claim was taken', () => {
+    // Its own claim expired rather than being taken, and a batch of twenty faces can last that
+    // long; saying somebody took the VM would send the reader after a session that never existed.
+    expect(claimLost(null, '2026-09-13T11:00:00.000Z', me, now)).toBeNull();
   });
 });
 
