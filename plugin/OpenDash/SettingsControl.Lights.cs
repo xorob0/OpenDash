@@ -34,7 +34,10 @@ namespace OpenDashPlugin
             foreach (var matrix in Settings.MatrixPanels()) matrices.Add(BuildMatrixGroup(matrix));
 
             var box = Ui.Section("The flag box",
-                Ui.Caption("An 8x8 LED matrix. Install its profile from the Install tab."),
+                // It names the profile. A panel below carries the name its driver gave it and SimHub's
+                // matrix list carries this one, so a page that mentioned neither left somebody looking
+                // for their own name on SimHub's Arduino page and finding an OpenDash profile instead.
+                Ui.Caption(PanelLights.BoxCaption(FlagBoxName())),
                 // Critical flags only, the gear and the two temperature thresholds used to sit here, one
                 // value for every panel. They belong to a panel: a rig with a box in each corner wants the
                 // catalogue on one and the gear alone on the other, which is what the group below is for.
@@ -192,16 +195,25 @@ namespace OpenDashPlugin
             add.MinWidth = ButtonMinWidth;
             add.Click += (sender, args) =>
             {
-                Settings.AddMatrixPanel(name.Text);
+                var added = Settings.AddMatrixPanel(name.Text);
                 Save();
                 Redraw();
+                if (added == 0) return;
+                // Said for the reason the bar flow says its own line: adding is not the last step, and
+                // the step that is left is on SimHub's page rather than this one. Unlike a bar, nothing
+                // was installed here -- the flag box profile paints all four panels and is installed
+                // once -- so the line names that profile and says whether SimHub has it.
+                var state = SafePlan().State;
+                AnnounceLights(
+                    PanelLights.PanelAdded(Settings.MatrixName(added), added, FlagBoxName(), state),
+                    PanelLights.PanelNeedsInstall(state) ? Theme.Caution : Theme.TextSecondary);
             };
             var cancel = Ui.LinkButton("Cancel");
             cancel.Click += (sender, args) => Redraw();
             var nameRow = Ui.Row(PanelLights.PanelNameTitle, PanelLights.PanelNameCaption, name);
             nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
             bodyHost.Content = Ui.VStack(0, Ui.Section(PanelLights.AddPanel,
-                Ui.Caption("It will be " + PanelLights.PanelSlot(slot) + ". Pick that content number on the device."),
+                Ui.Caption(PanelLights.AddPanelCaption(slot, FlagBoxName())),
                 nameRow,
                 Ui.Row(new Border(), Ui.HStack(8, cancel, add))));
         }
@@ -677,6 +689,14 @@ namespace OpenDashPlugin
                 nameRow,
                 Ui.Caption("Install the strip again to rename it in SimHub."),
                 Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
+        }
+
+        /// <summary>What SimHub's own list calls OpenDash's matrix profile: the name the build stamped
+        /// into it, and the constant only when this build carries no profile to read it from. One
+        /// answer, because two places spelling it differently is the confusion this fixes.</summary>
+        private string FlagBoxName()
+        {
+            return plugin.FlagBox?.ProfileName ?? FlagBoxProfile.ProfileName;
         }
 
         /// <summary>A line at the top of the tab saying what just happened, until the next thing happens.</summary>
