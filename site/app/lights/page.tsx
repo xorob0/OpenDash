@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 /** The states the examples show, drawn by the site. */
-const EXAMPLES = [FRAMES.shift!, FRAMES.blue!, FRAMES.yellow!, FRAMES.spotterLeft!, FRAMES.limiter!, FRAMES.abs!];
+const EXAMPLES = [FRAMES.shift!, FRAMES.blue!, FRAMES.yellow!, FRAMES.spotter!, FRAMES.fuel!, FRAMES.abs!, FRAMES.limiter!];
 
 export default function Lights() {
   const panel = CAPTURES.files[panelFile('lights')];
@@ -37,7 +37,7 @@ export default function Lights() {
       >
         <div className={styles.demo}>
           <LedStrip left={3} centre={9} right={3} live led={22} gap={8} />
-          <p className={`prose ${styles.aside}`}>A 3/9/3 strip, drawn by the site: the revs climb and drop with each gear, then a blue flag, a waved yellow, a car on your left, ABS and the pit limiter.</p>
+          <p className={`prose ${styles.aside}`}>A 3/9/3 strip, drawn by the site. Each side is three single lamps, counted from the outside in: a car alongside, then flags, then your car and the aids. The pit limiter takes the whole strip.</p>
         </div>
         <div className={styles.columns}>
           <div className={styles.column}>
@@ -76,7 +76,7 @@ export default function Lights() {
             </li>
           ))}
         </ul>
-        <p className={`prose ${styles.aside}`}>Drawn by the site to show the idea. In order of what takes the sides:</p>
+        <p className={`prose ${styles.aside}`}>In order of what takes the flag lamp:</p>
         <div className={styles.priority}>
           <Priority />
         </div>

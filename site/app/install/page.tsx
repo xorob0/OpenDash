@@ -10,7 +10,7 @@ import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Install OpenDash in SimHub',
-  description: 'The plugin installs every dashboard and every LED profile in 5 steps, 1 of which everyone misses.',
+  description: 'The plugin installs every dashboard and every LED profile in four steps.',
 };
 
 const PLUGIN_ZIP = 'OpenDash-plugin.zip';
@@ -60,12 +60,6 @@ export default function Install() {
                 </>
               ),
             },
-            {
-              title: 'Unblock the DLL. This is the step everyone misses.',
-              body: 'Windows blocks downloaded files and .NET refuses to load them. Right-click the file, Properties, tick Unblock. Or in PowerShell:',
-              command: 'Unblock-File "C:\\Program Files (x86)\\SimHub\\OpenDash.dll"',
-              important: true,
-            },
             { title: 'Start SimHub and accept the plugin.', body: 'OpenDash appears in the left menu with 4 tabs: Rig, Data, Lights, Install. Every dashboard is in Dash Studio.' },
           ]}
         />
@@ -88,10 +82,12 @@ export default function Install() {
         </ul>
       </Section>
 
-      <Section id="nothing-showing" label="Trouble" title="Nothing showing?" lede="The 7 causes, most common first." wide>
+      <Section id="nothing-showing" label="Trouble" title="Nothing showing?" lede="The usual causes, most common first." wide>
         <ul className={`rows ${styles.points}`}>
           <li>
-            <strong>SimHub never mentions the plugin.</strong> The DLL is still blocked, or it is in a subfolder. Step 4.
+            <strong>SimHub never mentions the plugin.</strong> Either the DLL is in a subfolder rather than beside <code>SimHubWPF.exe</code>, or Windows
+            blocked it on the way in and .NET will not load it. Right-click the file, Properties, tick Unblock. Or in PowerShell:
+            <pre className="pre">Unblock-File &quot;C:\Program Files (x86)\SimHub\OpenDash.dll&quot;</pre>
           </li>
           <li>
             <strong>The dashboard shows defaults although you changed them.</strong> The plugin is not enabled. Check Settings, Plugins.
