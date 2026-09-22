@@ -1091,13 +1091,12 @@ namespace OpenDashPlugin.Tests
                 LedFlagAnimation = false,
             };
             source.Normalise();
-            source.FlagBoxRest[1] = "gear";
+            source.SetMatrixRest(2, "gear");
             source.FlagBoxSide[0] = "left";
             source.FlagBoxFlags[3] = true;
             // The four that moved under the matrix are set per panel, so the copy has to carry the
             // arrays rather than four scalars.
             source.FlagBoxMatrixCriticalOnly[0] = true;
-            source.FlagBoxMatrixGear[1] = false;
             source.FlagBoxMatrixOilTemp[0] = 130;
             source.FlagBoxMatrixWaterTemp[0] = 115;
 
@@ -1108,7 +1107,10 @@ namespace OpenDashPlugin.Tests
             Assert.True(copy.LightsNightMode);
             Assert.Equal(5, copy.FlagBoxLowFuelLaps);
             Assert.True(copy.MatrixCriticalOnly(1));
-            Assert.False(copy.MatrixGear(2));
+            // The deprecated switch is carried with the resting state it stands for, array and read.
+            Assert.True(copy.MatrixGear(2));
+            Assert.True(copy.FlagBoxMatrixGear[1]);
+            Assert.False(copy.MatrixGear(4));
             Assert.Equal(130, copy.MatrixOilTemp(1));
             Assert.Equal(115, copy.MatrixWaterTemp(1));
             Assert.Equal("gear", copy.MatrixRest(2));
@@ -1150,6 +1152,10 @@ namespace OpenDashPlugin.Tests
             Assert.True(settings.MatrixPit(1));
             Assert.True(settings.MatrixSpotter(1));
             Assert.True(settings.MatrixWarnings(1));
+            // The gear switch is the resting state's deprecated alias, so it says what that says: on
+            // for the panel resting on the gear and off for the three resting dark, where it decided
+            // nothing either way.
+            Assert.True(settings.MatrixGear(1));
             foreach (var matrix in new[] { 2, 3, 4 })
             {
                 Assert.Equal("dark", settings.MatrixRest(matrix));
@@ -1157,16 +1163,16 @@ namespace OpenDashPlugin.Tests
                 Assert.False(settings.MatrixPit(matrix));
                 Assert.False(settings.MatrixSpotter(matrix));
                 Assert.False(settings.MatrixWarnings(matrix));
+                Assert.False(settings.MatrixGear(matrix));
             }
             Assert.Equal(100, settings.LightsBrightness);
             Assert.True(settings.LightsNightBrightness < settings.LightsBrightness);
             Assert.False(settings.LightsNightMode);
             // Per panel since the settings a box owns moved under it, and the defaults did not move
-            // with the names: quiet off and the gear on, on every panel.
+            // with the names: quiet off, and no threshold set, on every panel.
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 Assert.False(settings.MatrixCriticalOnly(matrix));
-                Assert.True(settings.MatrixGear(matrix));
                 Assert.Equal(0, settings.MatrixOilTemp(matrix));
                 Assert.Equal(0, settings.MatrixWaterTemp(matrix));
             }
@@ -1184,6 +1190,8 @@ namespace OpenDashPlugin.Tests
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 Assert.True(settings.MatrixCriticalOnly(matrix));
+                // The gear off is carried by the resting state now, which is where that switch went.
+                Assert.Equal("dark", settings.MatrixRest(matrix));
                 Assert.False(settings.MatrixGear(matrix));
                 Assert.Equal(250, settings.MatrixOilTemp(matrix));
                 Assert.Equal(235, settings.MatrixWaterTemp(matrix));
@@ -1200,12 +1208,67 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_panel_set_since_the_move_is_not_overwritten_by_the_migration()
         {
-            var json = "{\"FlagBoxMatrixGear\":[false,true,true,true]}";
+            var json = "{\"FlagBoxMatrixCriticalOnly\":[true,false,false,false]}";
             var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
             settings.Normalise();
 
-            Assert.False(settings.MatrixGear(1));
+            Assert.True(settings.MatrixCriticalOnly(1));
+            Assert.False(settings.MatrixCriticalOnly(2));
+        }
+
+        /// <summary>
+        /// The gear switch and the resting state were one setting spelled twice, and the conjunction
+        /// the profile computed between them is what the resting state carries now.
+        /// </summary>
+        [Fact]
+        public void The_retired_gear_switch_collapses_into_the_resting_state()
+        {
+            var json = "{\"FlagBoxRest\":[\"gear\",\"gear\",\"dark\",\"dark\"],\"FlagBoxMatrixGear\":[false,true,true,false]}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            // The gear at rest with the switch off was a dark panel, and a dark panel is what it stays.
+            Assert.Equal("dark", settings.MatrixRest(1));
+            Assert.Equal("gear", settings.MatrixRest(2));
+            // On a panel already resting dark the switch decided nothing, whichever way it was set.
+            Assert.Equal("dark", settings.MatrixRest(3));
+            Assert.Equal("dark", settings.MatrixRest(4));
+            // Kept rather than cleared, unlike the legacy scalars: it is published, an LED profile of
+            // an earlier vintage still reads it, and it now says what the resting state says.
+            Assert.Equal(new[] { false, true, false, false }, settings.FlagBoxMatrixGear);
+        }
+
+        /// <summary>A switch nobody has touched is absent from the file, so it vetoes nothing.</summary>
+        [Fact]
+        public void A_panel_resting_on_the_gear_keeps_it_when_the_file_never_named_the_switch()
+        {
+            var json = "{\"FlagBoxRest\":[\"gear\",\"gear\",\"dark\",\"dark\"]}";
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            Assert.Equal("gear", settings.MatrixRest(1));
+            Assert.Equal("gear", settings.MatrixRest(2));
             Assert.True(settings.MatrixGear(2));
+        }
+
+        /// <summary>
+        /// The collapse runs on every load, so a panel put back to the gear afterwards has to survive
+        /// the next one. That is what moving the pair together buys, and reading it off the switch
+        /// alone would undo the driver's choice a restart later.
+        /// </summary>
+        [Fact]
+        public void A_resting_state_set_after_the_collapse_survives_the_next_load()
+        {
+            var settings = new OpenDashSettings { FlagBoxMatrixGear = new[] { false, false, false, false } };
+            settings.Normalise();
+            Assert.Equal("dark", settings.MatrixRest(1));
+
+            settings.SetMatrixRest(1, "gear");
+            var reloaded = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
+            reloaded.Normalise();
+
+            Assert.Equal("gear", reloaded.MatrixRest(1));
+            Assert.True(reloaded.MatrixGear(1));
         }
 
         [Fact]
