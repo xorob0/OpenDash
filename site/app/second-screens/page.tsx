@@ -4,7 +4,8 @@ import { Reveal } from '../../components/Reveal';
 import { SectionHead } from '../../components/SectionHead';
 import { Shot } from '../../components/Shot';
 import { MODULES } from '../../lib/content.generated';
-import { SECOND_SCREENS, shotFor, sizeLabel } from '../../lib/packages';
+import { shotFor, sizeLabel } from '../../lib/packages';
+import { SECOND_SCREENS } from '../../lib/faces';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {

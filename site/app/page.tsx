@@ -4,7 +4,7 @@ import { Reveal } from '../components/Reveal';
 import { SectionHead } from '../components/SectionHead';
 import { Shot } from '../components/Shot';
 import { MODULES, SIMHUB_VERSION, VERSION } from '../lib/content.generated';
-import { ORDERED } from '../lib/packages';
+import { ALL as ORDERED } from '../lib/faces';
 import styles from './page.module.css';
 
 const faces = ORDERED.filter((p) => p.kind === 'dash');

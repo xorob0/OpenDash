@@ -1,0 +1,255 @@
+{
+  "schema": 1,
+  "version": "0.2.0-rc.1",
+  "commit": "4997cbd",
+  "date": "2026-09-16",
+  "simHubVersion": "9.12.6",
+  "scenario": "green",
+  "files": {
+    "opendash-1280x400.png": {
+      "kind": "package",
+      "package": "OpenDash 1280x400",
+      "width": 1280,
+      "height": 400,
+      "scenario": "green"
+    },
+    "opendash-1280x480.png": {
+      "kind": "package",
+      "package": "OpenDash 1280x480",
+      "width": 1280,
+      "height": 480,
+      "scenario": "green"
+    },
+    "opendash-1280x720.png": {
+      "kind": "package",
+      "package": "OpenDash 1280x720",
+      "width": 1280,
+      "height": 720,
+      "scenario": "green"
+    },
+    "opendash-480-round.png": {
+      "kind": "package",
+      "package": "OpenDash 480 round",
+      "width": 480,
+      "height": 480,
+      "scenario": "green"
+    },
+    "opendash-600x686.png": {
+      "kind": "package",
+      "package": "OpenDash 600x686",
+      "width": 600,
+      "height": 686,
+      "scenario": "green"
+    },
+    "opendash-800-round.png": {
+      "kind": "package",
+      "package": "OpenDash 800 round",
+      "width": 800,
+      "height": 800,
+      "scenario": "green"
+    },
+    "opendash-800x286.png": {
+      "kind": "package",
+      "package": "OpenDash 800x286",
+      "width": 800,
+      "height": 286,
+      "scenario": "green"
+    },
+    "opendash-800x480.png": {
+      "kind": "package",
+      "package": "OpenDash 800x480",
+      "width": 800,
+      "height": 480,
+      "scenario": "green"
+    },
+    "opendash-850x480.png": {
+      "kind": "package",
+      "package": "OpenDash 850x480",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "opendash-companion-portrait.png": {
+      "kind": "package",
+      "package": "OpenDash Companion portrait",
+      "width": 480,
+      "height": 850,
+      "scenario": "green"
+    },
+    "opendash-companion.png": {
+      "kind": "package",
+      "package": "OpenDash Companion",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "opendash-pit-wall-portrait.png": {
+      "kind": "package",
+      "package": "OpenDash Pit wall portrait",
+      "width": 1080,
+      "height": 1920,
+      "scenario": "green"
+    },
+    "opendash-pit-wall.png": {
+      "kind": "package",
+      "package": "OpenDash Pit wall",
+      "width": 1920,
+      "height": 1080,
+      "scenario": "green"
+    },
+    "opendash.png": {
+      "kind": "package",
+      "package": "OpenDash",
+      "width": 1920,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-carSettings.png": {
+      "kind": "page",
+      "page": "carSettings",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-damage.png": {
+      "kind": "page",
+      "page": "damage",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-delta.png": {
+      "kind": "page",
+      "page": "delta",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-energy.png": {
+      "kind": "page",
+      "page": "energy",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-fuel.png": {
+      "kind": "page",
+      "page": "fuel",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-gear.png": {
+      "kind": "page",
+      "page": "gear",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-inputs.png": {
+      "kind": "page",
+      "page": "inputs",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-lapHistory.png": {
+      "kind": "page",
+      "page": "lapHistory",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-lapTimes.png": {
+      "kind": "page",
+      "page": "lapTimes",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-leaderboard.png": {
+      "kind": "page",
+      "page": "leaderboard",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-opponents.png": {
+      "kind": "page",
+      "page": "opponents",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-pitView.png": {
+      "kind": "page",
+      "page": "pitView",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-radar.png": {
+      "kind": "page",
+      "page": "radar",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-relative.png": {
+      "kind": "page",
+      "page": "relative",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-sectors.png": {
+      "kind": "page",
+      "page": "sectors",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-session.png": {
+      "kind": "page",
+      "page": "session",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-speedo.png": {
+      "kind": "page",
+      "page": "speedo",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-stint.png": {
+      "kind": "page",
+      "page": "stint",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-track.png": {
+      "kind": "page",
+      "page": "track",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-trackRivals.png": {
+      "kind": "page",
+      "page": "trackRivals",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    },
+    "page-tyres.png": {
+      "kind": "page",
+      "page": "tyres",
+      "width": 850,
+      "height": 480,
+      "scenario": "green"
+    }
+  }
+}

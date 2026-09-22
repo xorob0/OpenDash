@@ -4,7 +4,8 @@ import { Changelog } from '../../components/Changelog';
 import { Reveal } from '../../components/Reveal';
 import { SectionHead } from '../../components/SectionHead';
 import { DOWNLOADS, RELEASES, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
-import { NOTES, ORDERED, sizeLabel } from '../../lib/packages';
+import { NOTES, sizeLabel } from '../../lib/packages';
+import { ALL as ORDERED } from '../../lib/faces';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {

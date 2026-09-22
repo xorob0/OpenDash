@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { Reveal } from '../../components/Reveal';
 import { SectionHead } from '../../components/SectionHead';
 import { Shot } from '../../components/Shot';
-import { FACES, NOTES, ORDERED, sizeLabel, shotFor } from '../../lib/packages';
+import { NOTES, sizeLabel, shotFor } from '../../lib/packages';
+import { FACES, ALL as ORDERED } from '../../lib/faces';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
