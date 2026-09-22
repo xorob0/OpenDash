@@ -26,7 +26,7 @@ import {
 import { conditionRaised, conditionShown, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, flagCondition, type SessionFlagBit } from '../src/flags.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type Hex, type MatrixContainer, type MatrixFrame } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
-import { eitherLadder, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { carLadderAvailable, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { overRev as overRevStrip } from '../src/leds/ladder.ts';
 import { flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
@@ -74,7 +74,9 @@ const evaluateShift = (expression: string, telemetry: Record<string, number>): b
     .replace(/\bor\b/g, '||')
     .replace(/ = /g, ' === ');
   const words = js.replace(/P\("[^"]*"\)/g, '0').match(/[A-Za-z_][A-Za-z_.]*/g) ?? [];
-  const unknown = words.filter((w) => w !== 'nz' && w !== 'Math.max');
+  // `true` and `false` are the isnull() fallbacks of the panel's own switches, which read as
+  // literals once the property reads have been replaced. They are JavaScript as they stand.
+  const unknown = words.filter((w) => w !== 'nz' && w !== 'Math.max' && w !== 'true' && w !== 'false');
   if (unknown.length > 0) throw new Error(`evaluateShift does not cover ${unknown.join(', ')} in ${expression}`);
   const read = (name: string): number | null => telemetry[name] ?? null;
   const result: unknown = new Function('P', 'nz', `return (${js});`)(read, (v: number | null, d: number) => v ?? d);
@@ -520,6 +522,11 @@ describe('brightness', () => {
       'OpenDash.LightsNightMode',
       'OpenDash.LightsLowFuelLaps',
       'OpenDash.FlagBoxSpotterAnimation',
+      // Not settings at all, and so not settings silently shared: these two are one frame of
+      // telemetry read through the car's own table, and the same frame for every panel by
+      // construction. What is per panel is whether a panel reads them, which is indexed.
+      'OpenDash.CarLadderStage',
+      'OpenDash.CarLadderOverRev',
     ]);
     const text = serializeProfile(profile);
     for (const name of flagBoxProperties()) {
@@ -556,6 +563,18 @@ describe('brightness', () => {
 });
 
 describe('the gear, as the resting state', () => {
+  /** SimHub's own bands, which a car publishing no ladder of its own falls back to. */
+  const REDLINE_REACHED = 'DataCorePlugin.GameData.CarSettings_RPMRedLineReached';
+  const SHIFT_BAND_1 = 'DataCorePlugin.GameData.CarSettings_RPMShiftLight1';
+  const SHIFT_BAND_2 = 'DataCorePlugin.GameData.CarSettings_RPMShiftLight2';
+
+  /** The condition on one of the four bands of matrix 1, which is the first in the walk. */
+  const bandFormula = (id: string): string => {
+    const found = all.find((c) => c.description === `Gear ${id}`);
+    expect(found?.kind).toBe('when');
+    return found?.kind === 'when' ? String(found.formula) : '';
+  };
+
   test('every gear iRacing reports has a glyph, reverse and neutral included', () => {
     expect(GEARS).toEqual(['R', 'N', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
     for (const gear of GEARS) {
@@ -676,7 +695,12 @@ describe('the gear, as the resting state', () => {
     // The panel's own flash switch is the only thing in front of the bar's expression, and the bar's
     // is carried character for character behind it.
     const switchOn = `(${flagBoxMatrix(1).gearBlink()}) = (true)`;
-    expect(flash).toBe(`(${switchOn}) and (${bar})`);
+    // The panel's other switch chooses which threshold that is. On the car's own measured bar it is
+    // the plugin's answer; where the panel is not set to it, or nothing is publishing one, it is the
+    // bar's own expression, carried character for character behind both switches.
+    const reading = `((${flagBoxMatrix(1).gearCarLadder()}) = (true)) and (${carLadderAvailable()})`;
+    expect(flash).toBe(`(${switchOn}) and (${eitherOf(reading, carLadderOverRev(), bar)})`);
+    expect(flash).toInclude(bar);
     // And the two halves partition the band, so there is no RPM at which the digit is neither.
     expect(steady?.kind === 'when' ? String(steady.formula) : '').toBe(`!(${flash})`);
 
@@ -709,7 +733,6 @@ describe('the gear, as the resting state', () => {
     const frame = (props: Record<string, number>): Record<string, number> => ({ ...zeros, [GEAR_COUNT_PROPERTY]: 6, ...props });
     const GEAR = 'DataCorePlugin.GameRawData.Telemetry.Gear';
     const RPMS = 'DataCorePlugin.GameData.Rpms';
-    const REDLINE_REACHED = 'DataCorePlugin.GameData.CarSettings_RPMRedLineReached';
     const ladder = { [SHIFT_RPM_PROPERTIES.first]: 6000, [SHIFT_RPM_PROPERTIES.shift]: 7000, [SHIFT_RPM_PROPERTIES.last]: 7500, [SHIFT_RPM_PROPERTIES.blink]: 7800 };
 
     // The four RPMs at zero is the fallback, which is the half the guard was missing.
@@ -732,6 +755,45 @@ describe('the gear, as the resting state', () => {
     // One expression rather than three: the strip's fallback over-rev is the digit's, character
     // for character, and the bar's is pinned against the digit by the test above.
     expect(revSegmentOptions(14, 15).simhub.blinkBind).toBe(overRevStrip('simhub'));
+  });
+
+  test('the digit stops being banded when the panel says so, and does not go dark for it', () => {
+    // The switch a driver asking for the gear to stop lighting up is reaching for. What it must not
+    // do is leave the panel with no band at all: `rest` is below all of them and always raised, so
+    // turning the colours off lands there rather than nowhere.
+    //
+    // A property the frame does not carry reads as its isnull() fallback, which for either of these
+    // switches is on; 0 is how a switch turned off is written, since a switch is compared against
+    // the literal `true` rather than counted.
+    const redlining = { [REDLINE_REACHED]: 1, [SHIFT_BAND_1]: 1, [SHIFT_BAND_2]: 1 };
+    expect(evaluateShift(bandFormula('redline'), redlining)).toBe(true);
+    expect(evaluateShift(bandFormula('rest'), redlining)).toBe(false);
+
+    const off = { ...redlining, 'OpenDash.FlagBoxMatrix1GearBands': 0 };
+    for (const id of ['redline', 'stage2', 'stage1']) expect(evaluateShift(bandFormula(id), off)).toBe(false);
+    expect(evaluateShift(bandFormula('rest'), off)).toBe(true);
+  });
+
+  test("a panel set to the car's own bar is banded by the tables, and falls back without one", () => {
+    // The tables of ADR 0018, which the strips have drawn LED for LED since they arrived. A digit
+    // has one thing to colour rather than a row, so what it reads is the band the plugin worked out
+    // -- and nothing of the published ladder is in this frame, so a band raised here is raised by
+    // the table and by nothing else.
+    const STAGE = 'OpenDash.CarLadderStage';
+    expect(evaluateShift(bandFormula('stage2'), { [STAGE]: 2 })).toBe(true);
+    expect(evaluateShift(bandFormula('redline'), { [STAGE]: 2 })).toBe(false);
+    expect(evaluateShift(bandFormula('redline'), { [STAGE]: 3 })).toBe(true);
+    expect(evaluateShift(bandFormula('rest'), { [STAGE]: 0 })).toBe(true);
+
+    // -1 is a rig with no tables, or a car nobody has measured. The digit is back on the ladder the
+    // sim publishes with nothing said, which is what every car had before the tables existed.
+    expect(evaluateShift(bandFormula('rest'), { [STAGE]: -1, [REDLINE_REACHED]: 1 })).toBe(false);
+    expect(evaluateShift(bandFormula('redline'), { [STAGE]: -1, [REDLINE_REACHED]: 1 })).toBe(true);
+
+    // And a panel told not to read them ignores a table that is there.
+    const ignoring = { [STAGE]: 2, 'OpenDash.FlagBoxMatrix1GearCarLadder': 0 };
+    expect(evaluateShift(bandFormula('stage2'), ignoring)).toBe(false);
+    expect(evaluateShift(bandFormula('rest'), ignoring)).toBe(true);
   });
 
   test('the flashing glyphs are the ones under the over-rev condition', () => {

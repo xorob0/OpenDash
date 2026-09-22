@@ -62,6 +62,22 @@ namespace OpenDashPlugin
             get { return frame.Ready; }
         }
 
+        /// <summary>
+        /// How many of the car's own three shift bands the engine has entered, or -1 when no table is
+        /// being read. What the flag box's digit is coloured by when a panel is set to the car's own.
+        /// </summary>
+        public int Stage
+        {
+            get { return frame.Stage; }
+        }
+
+        /// <summary>Whether the car is past its own redline for the gear it is in. False whenever
+        /// <see cref="Stage"/> is -1, and false for the 47 cars in 85 that publish no flash.</summary>
+        public bool OverRev
+        {
+            get { return frame.OverRev; }
+        }
+
         /// <summary>The measured name of the car being mirrored, for the panel. Null when none is.</summary>
         public string CarName
         {
@@ -229,7 +245,18 @@ namespace OpenDashPlugin
                 var colors = CarLightMirror.Colors(table, gear, rpm, length, fit, clockMs);
                 runs[i] = colors == null ? Packed(CarLightMirror.Dark(length)) : Packed(colors);
             }
-            frame = new Frame { Ready = true, CarName = table.CarName, Runs = runs };
+            // The bands, for the digit on a flag box. One more lookup of a row Colors() has already
+            // found ten times this frame, and the alternative is a second entry point walking the
+            // same table.
+            var row = CarLightMirror.GearFor(table, gear);
+            frame = new Frame
+            {
+                Ready = true,
+                CarName = table.CarName,
+                Runs = runs,
+                Stage = CarLightMirror.Stage(table, gear, rpm),
+                OverRev = row != null && CarLightMirror.OverRev(table, row, rpm),
+            };
         }
 
         /// <summary>
@@ -255,6 +282,8 @@ namespace OpenDashPlugin
             public bool Ready;
             public string CarName;
             public string[] Runs;
+            public int Stage;
+            public bool OverRev;
 
             /// <summary>
             /// No mirror, shared rather than made.
@@ -263,7 +292,7 @@ namespace OpenDashPlugin
             /// sixty allocations a second for the whole time somebody is using one of OpenDash's own
             /// styles. It never changes, so there is one of it.</para>
             /// </summary>
-            public static readonly Frame None = new Frame { Ready = false, CarName = null, Runs = null };
+            public static readonly Frame None = new Frame { Ready = false, CarName = null, Runs = null, Stage = -1, OverRev = false };
 
             public static Frame Dark()
             {

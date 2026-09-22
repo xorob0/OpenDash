@@ -59,6 +59,16 @@ const litColor = (lit: Expr, color: Hex): Expr => iff(lit, str(color), str(ds.pu
 export interface ShiftBand {
   id: 'redline' | 'stage2' | 'stage1' | 'rest';
   colour: Hex;
+  /**
+   * Which of the three bands this is, counted from the bottom, or null for the resting state below
+   * all of them.
+   *
+   * The two ladders `raised` already carries are expressions, so a consumer never has to know the
+   * index. The measured tables of ADR 0018 are not: they arrive as a band number the plugin has
+   * worked out, and a consumer offering them has to be able to say which band it is asking about.
+   * That is the whole of what this is for, and the flag box's digit is its only reader.
+   */
+  stage: 0 | 1 | 2 | null;
   /** True when the engine is in this band or above it. */
   raised: Expr;
   /**
@@ -75,11 +85,11 @@ export interface ShiftBand {
 
 export function shiftBands(): ShiftBand[] {
   return [
-    { id: 'redline', colour: ds.purpose.shift.stage3, raised: stageEntered(2), blink: overRevEither() },
-    { id: 'stage2', colour: ds.purpose.shift.stage2, raised: stageEntered(1), blink: null },
-    { id: 'stage1', colour: ds.purpose.shift.stage1, raised: stageEntered(0), blink: null },
+    { id: 'redline', colour: ds.purpose.shift.stage3, stage: 2, raised: stageEntered(2), blink: overRevEither() },
+    { id: 'stage2', colour: ds.purpose.shift.stage2, stage: 1, raised: stageEntered(1), blink: null },
+    { id: 'stage1', colour: ds.purpose.shift.stage1, stage: 0, raised: stageEntered(0), blink: null },
     // Below the first band there is nothing to report, so the digit is simply readable.
-    { id: 'rest', colour: ds.color.text.primary, raised: 'true', blink: null },
+    { id: 'rest', colour: ds.color.text.primary, stage: null, raised: 'true', blink: null },
   ];
 }
 

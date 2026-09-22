@@ -267,6 +267,8 @@ OpenDash.LightsNightMode
 OpenDash.FlagBoxLowFuelLaps
 OpenDash.LightsLowFuelLaps
 OpenDash.FlagBoxSpotterAnimation
+OpenDash.CarLadderStage
+OpenDash.CarLadderOverRev
 OpenDash.FlagBoxMatrix1Rest
 OpenDash.FlagBoxMatrix1Flags
 OpenDash.FlagBoxMatrix1Pit
@@ -278,6 +280,8 @@ OpenDash.FlagBoxMatrix1Gear
 OpenDash.FlagBoxMatrix1OilTemp
 OpenDash.FlagBoxMatrix1WaterTemp
 OpenDash.FlagBoxMatrix1GearBlink
+OpenDash.FlagBoxMatrix1GearBands
+OpenDash.FlagBoxMatrix1GearCarLadder
 OpenDash.FlagBoxMatrix2Rest
 OpenDash.FlagBoxMatrix2Flags
 OpenDash.FlagBoxMatrix2Pit
@@ -289,6 +293,8 @@ OpenDash.FlagBoxMatrix2Gear
 OpenDash.FlagBoxMatrix2OilTemp
 OpenDash.FlagBoxMatrix2WaterTemp
 OpenDash.FlagBoxMatrix2GearBlink
+OpenDash.FlagBoxMatrix2GearBands
+OpenDash.FlagBoxMatrix2GearCarLadder
 OpenDash.FlagBoxMatrix3Rest
 OpenDash.FlagBoxMatrix3Flags
 OpenDash.FlagBoxMatrix3Pit
@@ -300,6 +306,8 @@ OpenDash.FlagBoxMatrix3Gear
 OpenDash.FlagBoxMatrix3OilTemp
 OpenDash.FlagBoxMatrix3WaterTemp
 OpenDash.FlagBoxMatrix3GearBlink
+OpenDash.FlagBoxMatrix3GearBands
+OpenDash.FlagBoxMatrix3GearCarLadder
 OpenDash.FlagBoxMatrix4Rest
 OpenDash.FlagBoxMatrix4Flags
 OpenDash.FlagBoxMatrix4Pit
@@ -311,6 +319,8 @@ OpenDash.FlagBoxMatrix4Gear
 OpenDash.FlagBoxMatrix4OilTemp
 OpenDash.FlagBoxMatrix4WaterTemp
 OpenDash.FlagBoxMatrix4GearBlink
+OpenDash.FlagBoxMatrix4GearBands
+OpenDash.FlagBoxMatrix4GearCarLadder
 OpenDash.LedCentre
 OpenDash.LedRpmStyle
 OpenDash.LedFlagAnimation

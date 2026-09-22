@@ -209,6 +209,15 @@ namespace OpenDashPlugin
         /// rev bar in front of them turns off, and the box on the wheel is not.</summary>
         public bool[] FlagBoxMatrixGearBlink { get; set; } = Contract.DefaultFlagBoxGearBlinks();
 
+        /// <summary>Whether this panel's digit is coloured by the shift model at all. Off leaves it in
+        /// the resting colour at any engine speed, which is the whole of what a driver asking for the
+        /// digit to stop lighting up is asking for.</summary>
+        public bool[] FlagBoxMatrixGearBands { get; set; } = Contract.EveryFlagBoxMatrix(Contract.DefaultFlagBoxGearBands);
+
+        /// <summary>Whether those colours change on the car's own measured bar rather than on the
+        /// ladder the sim publishes. The digit's half of what the strips have had since ADR 0018.</summary>
+        public bool[] FlagBoxMatrixGearCarLadder { get; set; } = Contract.EveryFlagBoxMatrix(Contract.DefaultFlagBoxGearCarLadder);
+
         /// <summary>Zero means "not set", so that the profile's own per-unit default applies. A driver in
         /// Fahrenheit who has never opened this page must not get a Celsius number.</summary>
         public int[] FlagBoxMatrixOilTemp { get; set; } = Contract.DefaultFlagBoxTemps();
@@ -256,6 +265,10 @@ namespace OpenDashPlugin
         public bool MatrixGear(int matrix) => string.Equals(MatrixRest(matrix), "gear", StringComparison.Ordinal);
 
         public bool MatrixGearBlink(int matrix) => Pick(FlagBoxMatrixGearBlink, matrix, Contract.DefaultFlagBoxGearBlink);
+
+        public bool MatrixGearBands(int matrix) => Pick(FlagBoxMatrixGearBands, matrix, Contract.DefaultFlagBoxGearBands);
+
+        public bool MatrixGearCarLadder(int matrix) => Pick(FlagBoxMatrixGearCarLadder, matrix, Contract.DefaultFlagBoxGearCarLadder);
 
         /// <summary>Sets what a panel shows at rest, and the deprecated switch with it, the way
         /// SetRevBar() sets ShiftLights: a profile still reading FlagBoxMatrix&lt;N&gt;Gear sees the
@@ -318,6 +331,22 @@ namespace OpenDashPlugin
             }
             // A rig with bars may still have a face or a box reading the rig-wide answer.
             return LedRpmStyle == Contract.LedRpmStyleCar;
+        }
+
+        /// <summary>
+        /// Whether any flag box panel wants its digit banded on the car's own measured bar.
+        ///
+        /// <para>Asked beside <see cref="AnyCarLadderWanted"/> and not folded into it, because the two
+        /// are different questions about the same tables: a rig may have no strip at all and a box on
+        /// the wheel, and the bands are published for that rig as readily as the runs are.</para>
+        /// </summary>
+        public bool AnyMatrixCarLadderWanted()
+        {
+            foreach (var matrix in MatrixPanels())
+            {
+                if (MatrixGear(matrix) && MatrixGearBands(matrix) && MatrixGearCarLadder(matrix)) return true;
+            }
+            return false;
         }
 
         public bool BarFlagAnimation(string ns)
@@ -460,6 +489,8 @@ namespace OpenDashPlugin
             FlagBoxSide[i] = Contract.DefaultFlagBoxSide;
             FlagBoxMatrixCriticalOnly[i] = Contract.DefaultFlagBoxCriticalOnly;
             FlagBoxMatrixGearBlink[i] = Contract.DefaultFlagBoxGearBlink;
+            FlagBoxMatrixGearBands[i] = Contract.DefaultFlagBoxGearBands;
+            FlagBoxMatrixGearCarLadder[i] = Contract.DefaultFlagBoxGearCarLadder;
             FlagBoxMatrixOilTemp[i] = 0;
             FlagBoxMatrixWaterTemp[i] = 0;
             return slot;
@@ -545,6 +576,8 @@ namespace OpenDashPlugin
             FlagBoxMatrixCriticalOnly = Resize(FlagBoxMatrixCriticalOnly, Contract.DefaultFlagBoxCriticalOnlys(), v => true);
             FlagBoxMatrixGear = Resize(FlagBoxMatrixGear, Contract.DefaultFlagBoxGears(), v => true);
             FlagBoxMatrixGearBlink = Resize(FlagBoxMatrixGearBlink, Contract.DefaultFlagBoxGearBlinks(), v => true);
+            FlagBoxMatrixGearBands = Resize(FlagBoxMatrixGearBands, Contract.EveryFlagBoxMatrix(Contract.DefaultFlagBoxGearBands), v => true);
+            FlagBoxMatrixGearCarLadder = Resize(FlagBoxMatrixGearCarLadder, Contract.EveryFlagBoxMatrix(Contract.DefaultFlagBoxGearCarLadder), v => true);
             FlagBoxMatrixOilTemp = Resize(FlagBoxMatrixOilTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
             FlagBoxMatrixWaterTemp = Resize(FlagBoxMatrixWaterTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
             // After the arrays are four long, so the migration has four slots to fill.
@@ -1605,6 +1638,8 @@ namespace OpenDashPlugin
             FlagBoxMatrixCriticalOnly = other.FlagBoxMatrixCriticalOnly == null ? null : (bool[])other.FlagBoxMatrixCriticalOnly.Clone();
             FlagBoxMatrixGear = other.FlagBoxMatrixGear == null ? null : (bool[])other.FlagBoxMatrixGear.Clone();
             FlagBoxMatrixGearBlink = other.FlagBoxMatrixGearBlink == null ? null : (bool[])other.FlagBoxMatrixGearBlink.Clone();
+            FlagBoxMatrixGearBands = other.FlagBoxMatrixGearBands == null ? null : (bool[])other.FlagBoxMatrixGearBands.Clone();
+            FlagBoxMatrixGearCarLadder = other.FlagBoxMatrixGearCarLadder == null ? null : (bool[])other.FlagBoxMatrixGearCarLadder.Clone();
             FlagBoxMatrixName = other.FlagBoxMatrixName == null ? null : (string[])other.FlagBoxMatrixName.Clone();
             LedBars = other.LedBars == null ? null : other.LedBars.Select(bar => bar == null ? null : bar.Copy()).ToList();
             FlagBoxMatrixOilTemp = other.FlagBoxMatrixOilTemp == null ? null : (int[])other.FlagBoxMatrixOilTemp.Clone();

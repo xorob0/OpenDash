@@ -1784,6 +1784,33 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_box_on_the_car_own_bands_keeps_the_tables_being_read_with_no_strip_on_the_rig()
+        {
+            // The gate on the whole computation is asked of the strips, and a rig may have none: a
+            // wheel with a flag box on it and no RGB anywhere is an ordinary setup, and the digit
+            // would have been banded on a frame nothing was filling.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            settings.LedRpmStyle = "leftToRight";
+
+            Assert.False(settings.AnyCarLadderWanted());
+            Assert.False(settings.AnyMatrixCarLadderWanted());
+
+            settings.AddMatrixPanel("on the wheel");
+            Assert.True(settings.AnyMatrixCarLadderWanted());
+
+            // Each of the three answers that make the question moot, one at a time.
+            settings.FlagBoxMatrixGearCarLadder[0] = false;
+            Assert.False(settings.AnyMatrixCarLadderWanted());
+            settings.FlagBoxMatrixGearCarLadder[0] = true;
+            settings.FlagBoxMatrixGearBands[0] = false;
+            Assert.False(settings.AnyMatrixCarLadderWanted());
+            settings.FlagBoxMatrixGearBands[0] = true;
+            settings.SetMatrixRest(1, "dark");
+            Assert.False(settings.AnyMatrixCarLadderWanted());
+        }
+
+        [Fact]
         public void A_panel_added_by_name_takes_the_first_free_slot_and_arrives_working()
         {
             var settings = new OpenDashSettings();
