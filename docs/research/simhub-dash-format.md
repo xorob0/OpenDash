@@ -43,8 +43,8 @@ OpenDash/
   OpenDash.djson.metadata      JSON sidecar, see below
   OpenDash.djson.ressources    a zip of the images the dashboard references (misspelt in the format itself)
   OpenDash.djson.carclasses    JSON sidecar, "[]" in every sample
-  OpenDash.djson.png           gallery preview, written by DashStudio on save
-  OpenDash.djson.00.png        per-screen previews
+  OpenDash.djson.png           gallery thumbnail, written by DashStudio on save; see below
+  OpenDash.djson.00.png        per-screen previews, written on save and read by nothing in 9.12.6
   cards.djson                  further .djson files are widgets included by the main one
   _SHFonts/                    bundled .ttf files, installed at import
   JavascriptExtensions/        optional .js files loaded into the JavaScript engine
@@ -75,6 +75,40 @@ The `.metadata` sidecar duplicates the `Metadata` object of the `.djson`:
 ```
 
 `DashboardVersion` is the field the plugin compares in order to decide whether to reinstall.
+
+### The gallery thumbnail is `<dashboard>.djson.png`, and a package has to bring its own
+
+Decompiled from 9.12.6 on 2026-09-22, which is what #410 and `packages/dash/previews/` rest on.
+
+`GraphicalDashItem.LoadPreview` is the whole of it: it takes the `.djson` path, looks for that path
+plus `.jpg`, then that path plus `.png`, and returns null when it finds neither. A null is an empty
+box in the list. Nothing derives the picture from the scene graph at list time, so a generated
+package that ships no PNG is listed blank for ever, beside hand-drawn dashboards that all have one
+because `EditorModel.Save` writes it on every save.
+
+Four facts follow from the code and decide what a package ships:
+
+- **The name is the main dashboard's.** `EditorModel.CleanDir` walks the folder and deletes any
+  `<x>.djson.png` whose base name is not the folder's own name, so a widget cannot carry a
+  thumbnail and the file cannot be called anything else.
+- **The size DashStudio writes is 300 px tall.** `ImageCapturer.SaveToPng(visual, file, 300)`
+  scales by `min(1, 300 / height)`, so the picture is the dashboard's aspect at 300 px tall.
+- **The list decodes it at 200 px wide.** `new GraphicalDashItemThumbnail(path, 200)` sets
+  `BitmapImage.DecodePixelWidth`, so anything wider than 200 is resampled down and anything
+  narrower is stretched up.
+- **A decoded thumbnail is cached on disk, keyed by the file's own write time.**
+  `Thumbnails\<md5 of full path + LastWriteTime + 200>.png`. `ZipArchiveEntry.ExtractToFile`
+  stamps the extracted file with the zip entry's timestamp, and OpenDash's zips are reproducible
+  and therefore stamp every entry with the same fixed date. Left alone, that would give every
+  release of a package the same cache key at the same path, and an update that redrew the face
+  would keep showing the picture the first install left behind. `previewMtime` in
+  `packages/generator/src/package.ts` is the answer: the thumbnail entry, alone among the entries,
+  is stamped from a hash of its own bytes, so the key moves when the picture does and not
+  otherwise.
+
+The per-screen `<dashboard>.djson.NN.png` files are written on save by the same code
+(`GetScreenShotFilename`, at 100 px tall) and are read by nothing in 9.12.6: `ScreensOverview`
+renders live. OpenDash does not ship them.
 
 ### The `.djson` is plain JSON, and modern exports carry no reference tracking
 

@@ -116,6 +116,13 @@ it forked from, compares the packages the two builds wrote, and prints the `bun 
 that captures exactly those. CI runs the same comparison on every pull request and keeps the answer
 in one comment, so a reviewer sees the reach of a change without running anything.
 
+The same list answers a second question. `packages/dash/previews/<folder>.png` is the thumbnail
+SimHub's dashboard list draws for a package, and it is a photograph of the build it was taken from,
+so a face that has been redrawn goes on showing the old one. If you have the VM, refresh the
+affected ones with `bun run previews --packages '<the same list>'` and say in the commit message
+which faces moved. If you do not, the pictures stay as they are and a maintainer retakes them; the
+build says `warning preview/missing` for a package that has none, and nothing fails.
+
 The pull request template asks for exactly this and nothing else.
 
 ## Making a change

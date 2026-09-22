@@ -18,6 +18,7 @@ import { fontsForPackage } from './dashboard.ts';
 import { assetNamed, imageOf } from './design/assets.ts';
 import { fontsForPanel } from './design/fontFiles.ts';
 import { noticesForPackage, PANEL_NOTICES } from './design/notices.ts';
+import { previewFileName, previewFor } from './previews.ts';
 import { itemsOf } from './walk.ts';
 import type { Rung } from './design/rung.ts';
 import {
@@ -455,6 +456,14 @@ export function build(opts: BuildOptions = {}): BuildResult {
     // Derived here rather than by each builder, so that a package cannot be assembled anywhere in
     // this file without the licences for what it carries.
     pkg.notices = noticesForPackage(pkg);
+    // The gallery thumbnail, which is a photograph and therefore cannot be produced by this build.
+    // A missing one costs a grey box in SimHub's list and nothing else, so it is said out loud and
+    // the build carries on: the machine that can take the picture is the Windows VM, and ADR 0008
+    // is the record of why that is not something every contributor is asked for.
+    pkg.preview = previewFor(pkg.folderName);
+    if (pkg.preview === undefined) {
+      log(`warning preview/missing ${pkg.folderName}: no packages/dash/previews/${previewFileName(pkg.folderName)}; SimHub will list it without a thumbnail (bun run previews)`);
+    }
     const written = writePackage(pkg, out);
     for (const file of written.files) log(`wrote ${relative(file)}`);
     const zipped = zipPackage(out, pkg.folderName);

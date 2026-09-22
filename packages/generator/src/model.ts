@@ -501,4 +501,10 @@ export interface DashPackage {
   fonts: string[];
   /** Licences and notices copied into the package root, for what the package redistributes. */
   notices?: NoticeFile[];
+  /**
+   * Absolute path to the PNG SimHub's dashboard list shows as this package's thumbnail, written
+   * into the package as `<folderName>.djson.png`. Absent means no thumbnail: the row draws an
+   * empty box.
+   */
+  preview?: string;
 }
