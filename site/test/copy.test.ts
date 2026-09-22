@@ -28,8 +28,11 @@ function sources(dir: string): string[] {
 
 const ALL_SOURCES = ['app', 'components', 'lib'].flatMap((d) => sources(path.join(site, d)));
 
-/** The pages that have to make the promise, in the order they are rebuilt. */
-const PROMISE_PAGES = ['app/page.tsx', 'app/compare/page.tsx', 'app/download/page.tsx'];
+/**
+ * Where the promise has to be made: the first screen, the download page, and the price row of the
+ * comparison. Not in every lede, which is how it read as a pitch.
+ */
+const PROMISE_PAGES = ['app/page.tsx', 'app/download/page.tsx', 'lib/compare.ts'];
 
 describe('the promise', () => {
   test.each(PROMISE_PAGES)('%s says free forever', (page) => {

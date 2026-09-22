@@ -6,7 +6,7 @@ import { SizeList } from '../../components/SizeList';
 import { DOWNLOADS, RELEASES, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
 import { COMPANIONS, FACES, PIT_WALLS } from '../../lib/faces';
 import { weigh } from '../../lib/packages';
-import { FREE_FOREVER, NOTHING_TO_UNLOCK, REPO_URL } from '../../lib/site';
+import { FREE_FOREVER, REPO_URL } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export default function Download() {
         ruled={false}
         id="plugin"
         title={`Download ${VERSION}`}
-        lede={`${FREE_FOREVER} ${NOTHING_TO_UNLOCK} Windows, SimHub ${SIMHUB_VERSION} or later. Built from this commit’s source by the same command CI runs.`}
+        lede={`${FREE_FOREVER} Windows, SimHub ${SIMHUB_VERSION} or later. Built from this commit’s source by the same command CI runs.`}
       >
         {preRelease ? (
           <p className={`prose ${styles.pre}`}>

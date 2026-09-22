@@ -48,7 +48,7 @@ export const PRODUCTS: Product[] = [
 
 const WORD: Record<Mark, string> = { yes: 'Included', partial: 'Partly', no: 'No', paid: 'Paid', soon: 'Coming soon', notBuilt: 'Not built', unchecked: 'Not checked' };
 const cell = (mark: Mark, text: string, extra: Partial<Cell> = {}): Cell => ({ mark, word: WORD[mark], text, ...extra });
-const unchecked = cell('unchecked', 'Their pages do not say.');
+const unchecked = cell('unchecked', '');
 
 export const ROWS: CompareRow[] = [
   {
