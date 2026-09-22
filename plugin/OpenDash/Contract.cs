@@ -249,7 +249,9 @@ namespace OpenDashPlugin
         /// <summary>Off. A switch the driver flips, not a time of day we guess at.</summary>
         public const bool DefaultLightsNightMode = false;
 
-        /// <summary>On: the gear is what the box shows when nothing is happening.</summary>
+        /// <summary>On, and it is the deprecated alias of the resting state rather than a setting of its
+        /// own. On is also what "nobody has touched this" has to look like: the collapse in Normalise()
+        /// reads the switch as a veto, and a file that never named it must veto nothing.</summary>
         public const bool DefaultFlagBoxGear = true;
 
         /// <summary>On. The digit flashing while the car is over-revving is the box's half of the shift
@@ -291,7 +293,11 @@ namespace OpenDashPlugin
 
         /// <summary>The eleven names of one matrix, in attachment order. The four that moved here from
         /// the tab, and the flash switch after them, are appended rather than interleaved because both
-        /// halves of the contract pin this list in order.</summary>
+        /// halves of the contract pin this list in order.
+        ///
+        /// "Gear" is among them although the panel no longer offers it: it says the same thing as "Rest"
+        /// and is now that setting's alias, kept attached because ADR 0003 makes a published property a
+        /// public interface and an LED profile of an earlier vintage still reads it.</summary>
         public static IEnumerable<string> FlagBoxMatrixProperties(int matrix)
         {
             yield return FlagBoxMatrixProperty(matrix, "Rest");
@@ -307,8 +313,8 @@ namespace OpenDashPlugin
             yield return FlagBoxMatrixProperty(matrix, "GearBlink");
         }
 
-        /// <summary>Critical-flags-only off on every panel, and the gear on on every panel: the defaults
-        /// do not move with the names.</summary>
+        /// <summary>Critical-flags-only off on every panel, and the gear switch on on every panel: the
+        /// defaults do not move with the names.</summary>
         public static bool[] DefaultFlagBoxCriticalOnlys()
         {
             var values = new bool[FlagBoxMatrices.Count];

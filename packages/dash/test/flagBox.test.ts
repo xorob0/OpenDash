@@ -16,9 +16,11 @@ import {
   DEFAULT_WATER_TEMP,
   flagBoxMatrix,
   flagBoxMatrixProperties,
+  flagBoxMatrixSetting,
   flagBoxProperties,
   FLAG_BOX_MATRICES,
   FLAG_BOX_MATRIX_DEFAULTS,
+  type FlagBoxMatrix,
   PROPERTY_PREFIX,
 } from '../src/contract.ts';
 import { conditionRaised, conditionShown, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, flagBit, flagCondition, type SessionFlagBit } from '../src/flags.ts';
@@ -102,6 +104,36 @@ function evaluate(expression: string, set: readonly SessionFlagBit[], criticalOn
   if (!/^[\s()!&|=01a-z]+$/.test(s)) throw new Error(`the condition holds something this cannot evaluate: ${s}`);
   // eslint-disable-next-line no-new-func
   return Boolean(new Function(`return (${s});`)());
+}
+
+/** A container's condition as text, whichever of the two shapes a formula comes in. */
+function formulaText(container: MatrixContainer | undefined): string {
+  if (!container || container.kind !== 'when') return '';
+  return typeof container.formula === 'string' ? container.formula : container.formula.expression;
+}
+
+/**
+ * What a panel rests on with its two properties attached as the named plugin would attach them,
+ * and with either of them absent standing for a plugin that does not attach it at all.
+ *
+ * Covers exactly the shape `flagBoxMatrix().rest()` emits -- one `if`, two `isnull` reads and one
+ * comparison -- and nothing wider, so a change to how that read is built fails here rather than
+ * passing wrongly.
+ */
+function restingState(matrix: FlagBoxMatrix, attached: { rest?: string; gear?: boolean }): string {
+  const js = flagBoxMatrix(matrix)
+    .rest()
+    .split(`[${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Gear')}]`)
+    .join(attached.gear === undefined ? 'null' : String(attached.gear))
+    .split(`[${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Rest')}]`)
+    .join(attached.rest === undefined ? 'null' : `'${attached.rest}'`)
+    .replace(/\bisnull\(/g, 'nz(')
+    .replace(/^if\(/, 'iff(')
+    .replace(/ = /g, ' === ');
+  if (/[[\]]/.test(js)) throw new Error(`restingState left a property unset in ${js}`);
+  const iff = (condition: boolean, whenTrue: string, whenFalse: string): string => (condition ? whenTrue : whenFalse);
+  const nz = <T,>(value: T | null, fallback: T): T => value ?? fallback;
+  return new Function('nz', 'iff', `return (${js});`)(nz, iff) as string;
 }
 
 /** Which flag the box shows with these bits raised, or undefined when it shows none. */
@@ -746,16 +778,37 @@ describe('the gear, as the resting state', () => {
     expect(evaluate(noFlagShowing(1), ['checkered'], true)).toBe(true);
   });
 
-  test('the gear switch is a contract property, and off means dark', () => {
+  test('the resting state is the only gate, and the retired switch resolves into it', () => {
+    // Two controls gated one thing. The resting state sat above the gear group and a switch of its
+    // own sat inside it, so a panel resting dark ignored the switch and a panel resting on the gear
+    // was decided by the switch alone -- one setting spelled twice. The gate is the resting state
+    // now, and the switch stays attached because ADR 0003 makes a published property a public one.
     expect(flagBoxProperties()).toContain('OpenDash.FlagBoxMatrix1Gear');
+    expect(flagBoxProperties()).toContain('OpenDash.FlagBoxMatrix1Rest');
     const text = serializeProfile(profile);
     expect(text).toInclude('isnull([OpenDash.FlagBoxMatrix1Gear], true)');
-    // Off leaves the panel dark rather than showing something else: the switch is the gear
-    // group's own condition, and there is no sibling to take its place.
     const gear = all.find((c) => c.description === 'Gear');
     expect(gear?.kind).toBe('when');
+    expect(formulaText(gear)).toBe(`(${flagBoxMatrix(1).rest()}) = ('gear')`);
+    // And it is gated there and nowhere else: the rank above names neither property.
     const resting = all.find((c) => c.description === 'Resting');
+    expect(formulaText(resting)).not.toInclude('FlagBoxMatrix1Rest');
+    expect(formulaText(resting)).not.toInclude('FlagBoxMatrix1Gear');
     expect(resting && 'children' in resting ? resting.children.map((c) => c.description) : []).toEqual(['Gear']);
+  });
+
+  test('a driver who switched the gear off against an earlier plugin still rests dark', () => {
+    // The switch is what the panel offered, so that is where an rc.5 rig's "off" is written. A
+    // package installed beside a plugin that predates the collapse reads both names, and the
+    // conjunction it reads is the one the two containers used to compute between them.
+    expect(restingState(1, { rest: 'gear', gear: true })).toBe('gear');
+    expect(restingState(1, { rest: 'gear', gear: false })).toBe('dark');
+    expect(restingState(1, { rest: 'dark', gear: true })).toBe('dark');
+    expect(restingState(1, { rest: 'dark', gear: false })).toBe('dark');
+    // And with no plugin at all, the defaults ADR 0003 requires of every read: matrix 1 rests on
+    // the gear, and the three nobody has switched on rest dark.
+    expect(restingState(1, {})).toBe('gear');
+    expect(restingState(2, {})).toBe('dark');
   });
 
   test('it is written once per matrix, and no more often than that', () => {

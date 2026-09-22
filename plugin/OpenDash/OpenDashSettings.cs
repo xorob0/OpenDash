@@ -198,6 +198,10 @@ namespace OpenDashPlugin
 
         public bool[] FlagBoxMatrixCriticalOnly { get; set; } = Contract.DefaultFlagBoxCriticalOnlys();
 
+        /// <summary>Whether the gear is this panel's resting state. Deprecated by <see cref="FlagBoxRest"/>,
+        /// kept as its alias and kept attached, because it has shipped and ADR 0003 makes a published
+        /// property a public interface. <see cref="SetMatrixRest"/> moves the two together and
+        /// Normalise() keeps them agreeing.</summary>
         public bool[] FlagBoxMatrixGear { get; set; } = Contract.DefaultFlagBoxGears();
 
         /// <summary>Whether this panel's digit flashes while the car is over-revving. Per panel, because
@@ -247,9 +251,22 @@ namespace OpenDashPlugin
 
         public bool MatrixCriticalOnly(int matrix) => Pick(FlagBoxMatrixCriticalOnly, matrix, Contract.DefaultFlagBoxCriticalOnly);
 
-        public bool MatrixGear(int matrix) => Pick(FlagBoxMatrixGear, matrix, Contract.DefaultFlagBoxGear);
+        /// <summary>The deprecated alias, answered from the resting state rather than from its own
+        /// array, so that what is attached cannot drift from the setting it stands for.</summary>
+        public bool MatrixGear(int matrix) => string.Equals(MatrixRest(matrix), "gear", StringComparison.Ordinal);
 
         public bool MatrixGearBlink(int matrix) => Pick(FlagBoxMatrixGearBlink, matrix, Contract.DefaultFlagBoxGearBlink);
+
+        /// <summary>Sets what a panel shows at rest, and the deprecated switch with it, the way
+        /// SetRevBar() sets ShiftLights: a profile still reading FlagBoxMatrix&lt;N&gt;Gear sees the
+        /// choice the driver just made, and the collapse in Normalise() reads a pair that agrees.</summary>
+        public void SetMatrixRest(int matrix, string value)
+        {
+            if (matrix < 1 || matrix > Contract.FlagBoxMatrices.Count) return;
+            if (Array.IndexOf(Contract.FlagBoxRests, value) < 0) return;
+            FlagBoxRest[matrix - 1] = value;
+            FlagBoxMatrixGear[matrix - 1] = string.Equals(value, "gear", StringComparison.Ordinal);
+        }
 
         // --- The LED bars, which are the strips as instances ------------------------------------
 
@@ -435,14 +452,13 @@ namespace OpenDashPlugin
             if (slot == 0) return 0;
             var i = slot - 1;
             FlagBoxMatrixName[i] = string.IsNullOrWhiteSpace(name) ? "Matrix " + slot : name.Trim();
-            FlagBoxRest[i] = "gear";
+            SetMatrixRest(slot, "gear");
             FlagBoxFlags[i] = true;
             FlagBoxPit[i] = true;
             FlagBoxSpotter[i] = true;
             FlagBoxWarnings[i] = true;
             FlagBoxSide[i] = Contract.DefaultFlagBoxSide;
             FlagBoxMatrixCriticalOnly[i] = Contract.DefaultFlagBoxCriticalOnly;
-            FlagBoxMatrixGear[i] = Contract.DefaultFlagBoxGear;
             FlagBoxMatrixGearBlink[i] = Contract.DefaultFlagBoxGearBlink;
             FlagBoxMatrixOilTemp[i] = 0;
             FlagBoxMatrixWaterTemp[i] = 0;
@@ -456,7 +472,7 @@ namespace OpenDashPlugin
             if (matrix < 1 || matrix > Contract.FlagBoxMatrices.Count) return;
             var i = matrix - 1;
             FlagBoxMatrixName[i] = null;
-            FlagBoxRest[i] = "dark";
+            SetMatrixRest(matrix, "dark");
             FlagBoxFlags[i] = false;
             FlagBoxPit[i] = false;
             FlagBoxSpotter[i] = false;
@@ -533,6 +549,9 @@ namespace OpenDashPlugin
             FlagBoxMatrixWaterTemp = Resize(FlagBoxMatrixWaterTemp, Contract.DefaultFlagBoxTemps(), v => v >= 0);
             // After the arrays are four long, so the migration has four slots to fill.
             MigrateFlagBoxToMatrices();
+            // After that, because a file may carry the gear switch under either spelling and the
+            // collapse has to read whichever one it ended up in.
+            CollapseFlagBoxGearIntoRest();
             // After the arrays are four long and the old scalars have been emptied into them, because
             // which panels a migrating rig keeps is read off what those panels were doing.
             NormaliseMatrixPanels();
@@ -571,6 +590,32 @@ namespace OpenDashPlugin
             FlagBoxGear = null;
             FlagBoxOilTemp = null;
             FlagBoxWaterTemp = null;
+        }
+
+        /// <summary>
+        /// Collapses the gear switch into the resting state, which is the one thing the two of them
+        /// were between them saying.
+        /// </summary>
+        /// <remarks>
+        /// The profile drew the gear where the resting state was "gear" *and* the switch was on, so a
+        /// panel resting dark ignored the switch and a panel resting on the gear was decided by the
+        /// switch alone. What goes into the resting state here is that conjunction, which is what the
+        /// driver was looking at either way; the switch is then kept agreeing with it rather than
+        /// cleared as the legacy scalars above are, because it is published and an LED profile of an
+        /// earlier vintage still reads it (ADR 0003).
+        ///
+        /// A switch nobody has touched is absent from the file and comes back on, so it vetoes
+        /// nothing: a driver who set a panel's resting state and never met the switch keeps it. And
+        /// the pass is idempotent, since every write since keeps the pair agreeing, so a file written
+        /// by this version goes through it unchanged.
+        /// </remarks>
+        private void CollapseFlagBoxGearIntoRest()
+        {
+            for (var i = 0; i < FlagBoxRest.Length; i++)
+            {
+                if (!FlagBoxMatrixGear[i]) FlagBoxRest[i] = "dark";
+                FlagBoxMatrixGear[i] = string.Equals(FlagBoxRest[i], "gear", StringComparison.Ordinal);
+            }
         }
 
         private static T[] Resize<T>(T[] values, T[] defaults, Func<T, bool> valid)

@@ -156,12 +156,17 @@ function bandChildren(band: ShiftBand, matrix: FlagBoxMatrix): MatrixContainer[]
 /**
  * The gear, banded by the shift model. The bands are ranked highest first so that exactly one
  * paints: redline, then the second band, then the first, then the resting colour.
+ *
+ * The gate is the panel's resting state, and it is the only gate the gear has. It used to be a
+ * switch of its own with the resting state above it, which made two settings out of one decision:
+ * dark ignored the switch and `gear` left the switch deciding alone. `flagBoxMatrix().rest()` is
+ * where the retired switch now resolves.
  */
 export function gearGroup(matrix: FlagBoxMatrix): MatrixContainer {
   return {
     kind: 'when',
     description: 'Gear',
-    formula: eq(flagBoxMatrix(matrix).gear(), 'true'),
+    formula: eq(flagBoxMatrix(matrix).rest(), "'gear'"),
     children: shiftBands().map((band, i, bands) => ({
       kind: 'when' as const,
       description: `Gear ${band.id}`,
