@@ -65,5 +65,72 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Flags", PanelLights.BarEndsCaption);
             Assert.Contains("Count your LEDs", PanelLights.BarCentreCaption);
         }
+
+        /// <summary>
+        /// The two name boxes look identical and answer different questions, so both have to say which.
+        /// </summary>
+        /// <remarks>
+        /// Reported from the rig: a panel was added, named, and then looked for on SimHub's Arduino page,
+        /// where the matrix list held an older OpenDash profile and nothing carrying the name just typed.
+        /// Nothing was broken -- a bar is a profile and a panel is a content number inside the one flag
+        /// box profile -- and nothing in the panel said so.
+        /// </remarks>
+        [Fact]
+        public void A_bar_name_reaches_SimHub_and_a_panel_name_does_not_and_both_say_so()
+        {
+            Assert.Contains("SimHub", PanelLights.BarNameCaption);
+            Assert.Contains("not shown in SimHub", PanelLights.PanelNameCaption);
+        }
+
+        /// <summary>The add screen and the line after the press both name the profile a driver selects on
+        /// the device, since the panel's own name is not it.</summary>
+        [Fact]
+        public void Adding_a_panel_names_the_profile_that_paints_it()
+        {
+            var caption = PanelLights.AddPanelCaption(2, "OpenDash Flag box");
+            Assert.Contains("SimHub matrix 2", caption);
+            Assert.Contains("OpenDash Flag box", caption);
+
+            var installed = PanelLights.PanelAdded("by the wheel", 2, "OpenDash Flag box", FlagBoxInstallState.UpToDate);
+            Assert.Contains("by the wheel", installed);
+            Assert.Contains("SimHub matrix 2", installed);
+            Assert.Contains("OpenDash Flag box", installed);
+            // The clause that answers the report: the list carries the profile's name, not the panel's.
+            Assert.Contains("rather than yours", installed);
+            Assert.DoesNotContain("Install tab", installed);
+
+            Assert.Equal(
+                "An 8x8 LED matrix. \"OpenDash Flag box\" is the one profile that paints every panel below;"
+                    + " install it from the Install tab.",
+                PanelLights.BoxCaption("OpenDash Flag box"));
+        }
+
+        /// <summary>
+        /// A panel added on a rig where SimHub has no profile of ours is sent to the Install tab, and
+        /// every state that is not a profile in SimHub says the same thing.
+        /// </summary>
+        /// <remarks>
+        /// Outdated counts as installed: an old copy paints the box, so the driver is told to select it
+        /// rather than told SimHub has nothing. The Install tab's own row is what offers the update.
+        /// </remarks>
+        [Theory]
+        [InlineData(FlagBoxInstallState.NotInstalled)]
+        [InlineData(FlagBoxInstallState.Unavailable)]
+        [InlineData(FlagBoxInstallState.NotEmbedded)]
+        [InlineData(FlagBoxInstallState.Failed)]
+        public void A_panel_added_without_the_profile_is_sent_to_the_Install_tab(FlagBoxInstallState state)
+        {
+            Assert.True(PanelLights.PanelNeedsInstall(state));
+            Assert.Contains("Install tab", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
+        }
+
+        [Theory]
+        [InlineData(FlagBoxInstallState.UpToDate)]
+        [InlineData(FlagBoxInstallState.Outdated)]
+        public void A_panel_added_beside_a_profile_SimHub_holds_is_told_to_select_it(FlagBoxInstallState state)
+        {
+            Assert.False(PanelLights.PanelNeedsInstall(state));
+            Assert.Contains("select", PanelLights.PanelAdded("Matrix 1", 1, "OpenDash Flag box", state));
+        }
     }
 }

@@ -68,10 +68,16 @@ machine, and what to open if you want to read what OpenDash is asking your hardw
 
 ## 3. Say which box is which
 
-SimHub composes up to **four matrix contents**, so you can run more than one box. OpenDash gives
-each one its own settings on the **Lights** page.
+SimHub composes up to **four matrix contents**, so you can run more than one box. On the **Lights**
+page, press **Add a matrix panel** for each box you own. The first is SimHub matrix 1, the next
+matrix 2, and so on; set that number as the **RGB Matrix content** on the device itself, which is
+where SimHub decides which content a box shows. A panel arrives doing everything, which is the right
+answer for one box.
 
-Out of the box, matrix 1 does everything and 2 to 4 are off, which is the right answer for one box.
+**The name you give a panel is OpenDash's own.** It labels that group of settings here and appears
+nowhere in SimHub. There is one profile — `OpenDash Flag box` — and it paints all four contents, so
+adding a panel puts nothing new in SimHub's matrix profile list: that list gained its one row in
+step 2 and gains nothing after.
 
 | Per matrix | |
 |---|---|
@@ -175,6 +181,7 @@ reasoning is in [scope.md](scope.md).
 | | |
 |---|---|
 | Nothing at all, ever | The profile is not installed, or not selected on the device. Step 2. |
+| SimHub's matrix list has no profile named after my panel | There never is one. `OpenDash Flag box` paints all four panels, and a panel's name is OpenDash's own label. Step 3. |
 | A single dim dot in the middle | The box is working and the car's ignition is off. That mark exists so this is not confused with a broken profile. |
 | Everything sideways, mirrored or shredded | Rotation or serpentine on the *device*. Step 1, not the OpenDash panel. |
 | The gear is dark but flags work | That matrix's **Idle display** is `Dark`. |
