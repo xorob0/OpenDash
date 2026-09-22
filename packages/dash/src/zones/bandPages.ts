@@ -43,9 +43,9 @@ import {
   fuel as fuelLevel,
   fuelLapsLeft,
   fuelLastLap,
+  fuelLastLapIsSettled,
   fuelIsSettled,
   fuelPerLap,
-  fuelTimeLeft,
   fuelUnit,
   incidents,
   lastLap,
@@ -56,6 +56,7 @@ import {
   NO_VALUE,
   roadTemperature,
   sectorTime,
+  settledFuelTimeLeft,
   simClock,
   windKmh,
 } from '../second/values.ts';
@@ -120,17 +121,39 @@ export interface BandField {
 
 const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), toShortTime(expr, 3));
 
-/** D1 Fuel: what a driver checks on a straight, which is why it is the default. */
+/**
+ * A reading derived from what a lap costs, drawn only once a lap has cost something.
+ *
+ * The absence is {@link NO_VALUE}, which is two digit cells and therefore inside the budget of
+ * every field on the fuel page, the narrowest of them being the four digits of `Est. laps`.
+ */
+const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VALUE));
+
+/**
+ * D1 Fuel: what a driver checks on a straight, which is why it is the default.
+ *
+ * The tank and the refuel are read off the sim directly, whereas the other four are derived from
+ * what a lap costs, so those four wait for a lap and answer together. Before the first crossing
+ * SimHub extrapolates `Fuel_LitersPerLap` from the lap in progress and every figure taken off it
+ * moves every frame; a band that gated only some of them consequently read `EST. LAPS --` beside
+ * `PER LAP 0.000` and `LAST LAP 0.000`, which is one row and one tank with two fields saying they
+ * have no reading and two saying the car has burned nothing. A driver reads 0.000 there as a broken
+ * sensor rather than as an absence. #382.
+ *
+ * Each of the four asks the question the face that draws the same property asks, so that a driver
+ * moving between the band, the fuel module and the pit wall reads one answer: the range goes
+ * through {@link settledFuelTimeLeft} and keeps the clock's own `--:--` rather than taking a second
+ * spelling of the absence, and the last lap goes through {@link fuelLastLapIsSettled}, which is the
+ * narrower question the fuel module already asked, a lap that included a refuelling stop being
+ * published as zero the way a lap that has not happened is.
+ */
 const fuel: readonly BandField[] = [
   { id: 'fuel', label: 'Fuel', sample: '15.12', bind: fmt(fuelLevel(), '0.00'), chars: { digits: 5, specials: 1 }, after: 'L', afterBind: fuelUnit(), afterWidest: 'GAL', color: ds.purpose.fuel.nominal },
-  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(fuelTimeLeft()), chars: CHARS.minutesClock },
-  // Behind the consumption gate, which is the same one the fuel module draws its own est. laps
-  // behind. SimHub publishes the remaining laps as zero before it has a per-lap figure, so an idle
-  // screen said "0.0" with the confidence of a reading rather than saying it had none.
-  { id: 'laps', label: 'Est. laps', sample: '13.1', bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)), chars: CHARS.consumption },
+  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), chars: CHARS.minutesClock },
+  { id: 'laps', label: 'Est. laps', sample: '13.1', bind: settled(fmt(fuelLapsLeft(), '0.0')), chars: CHARS.consumption },
   { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
-  { id: 'perLap', label: 'Per lap', sample: '1.432', bind: fmt(fuelPerLap(), '0.000'), chars: { digits: 5, specials: 1 } },
-  { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: fmt(fuelLastLap(), '0.000'), chars: { digits: 5, specials: 1 } },
+  { id: 'perLap', label: 'Per lap', sample: '1.432', bind: settled(fmt(fuelPerLap(), '0.000')), chars: { digits: 5, specials: 1 } },
+  { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: iff(fuelLastLapIsSettled(), fmt(fuelLastLap(), '0.000'), str(NO_VALUE)), chars: { digits: 5, specials: 1 } },
 ];
 
 /** D2 Energy. Le Mans Ultimate publishes virtual energy; iRacing does not, so this reads `--`. */

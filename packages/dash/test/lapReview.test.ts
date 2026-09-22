@@ -175,6 +175,12 @@ describe('the fields, left to right', () => {
     expect(bound('vsPrevious.value')).toContain("'PersistantTrackerPlugin.PreviousLap_') + (format(1, '00')");
     expect(bound('vsPrevious.value')).toContain('LastLapTime');
     expect(bound('fuelUsed.value')).toContain('Fuel_LastLapConsumption');
+    // Behind the same gate as the band and the fuel page (#382): a lap that never happened is
+    // published as a lap that cost nothing, and the review must not say so. The tank is ungated,
+    // being a reading of its own at every moment.
+    expect(bound('fuelUsed.value')).toMatch(/^if\(/);
+    expect(bound('fuelUsed.value')).toContain('Fuel_LitersPerLap');
+    expect(bound('fuelLeft.value')).not.toMatch(/^if\(/);
     expect(bound('fuelLeft.value')).toContain('GameData.Fuel');
     for (const name of ['fuelUsed', 'fuelLeft']) expect(String(textNamed(reference.items, `${name}.unit`).bindings?.Text?.formula)).toContain('FuelUnit');
   });
