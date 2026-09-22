@@ -3,7 +3,7 @@
  * monospaced: it is the follower and nothing follows it, so jitter does not matter.
  */
 import type { TextItem } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { textBox } from '../design/metrics.ts';
 import { roundRect } from '../design/geometry.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
@@ -16,7 +16,7 @@ export interface DenominatorOptions {
 
 export function denominator(name: string, sample: string, x: number, y: number, fs: number, width: number, opts: DenominatorOptions = {}): TextItem {
   const box = textBox(y, fs);
-  return {
+  return withMoreBindings({
     kind: 'text',
     name,
     rect: roundRect({ left: x, top: box.top, width, height: box.height }),
@@ -28,6 +28,5 @@ export function denominator(name: string, sample: string, x: number, y: number, 
     hAlign: 'left',
     vAlign: 'top',
     backgroundColor: TRANSPARENT,
-    ...withBindings({ Text: opts.bind, Visible: opts.visibleBind, Left: opts.leftBind }),
-  };
+  }, { Text: opts.bind, Visible: opts.visibleBind, Left: opts.leftBind });
 }

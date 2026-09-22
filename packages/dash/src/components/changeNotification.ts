@@ -30,7 +30,7 @@
  */
 import type { Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { assetBox, imageOf, TREND_DOWN, TREND_UP } from '../design/assets.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, roundRect } from '../design/geometry.ts';
@@ -164,15 +164,14 @@ export function changeNotification(frame: Rect, value: TrackedValue, prefix = 'n
     ...([
       [TREND_UP, isincreasing(num(CHANGE_NOTIFICATION_MS), value.read), 'up'],
       [TREND_DOWN, isdecreasing(num(CHANGE_NOTIFICATION_MS), value.read), 'down'],
-    ] as const).map(([asset, visible, id]) => ({
+    ] as const).map(([asset, visible, id]) => withMoreBindings({
       kind: 'image' as const,
       name: `${name}.trend.${id}`,
       image: asset.name,
       rect: assetBox(trend, imageOf(asset)),
-      ...withBindings({ Visible: visible }),
-    })),
+    }, { Visible: visible })),
   ];
-  return { kind: 'layer', name, children, ...withBindings({ Visible: changeNotificationVisible(value.id) }) };
+  return withMoreBindings({ kind: 'layer', name, children }, { Visible: changeNotificationVisible(value.id) });
 }
 
 /** Every watched setting's notification, over the hero of a face. */

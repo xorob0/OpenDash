@@ -28,7 +28,7 @@
  * therefore serves the portrait face, which stacks its zones, and the nano, which has no bar.
  */
 import type { Hex, Item, LayerItem, Rect, RectangleItem } from '../generator.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
@@ -231,11 +231,10 @@ const blockParts = (name: string, frame: Rect, condition: FlagCondition): Item[]
 export function flagFull(frame: Rect, prefix = 'flagFull'): LayerItem[] {
   return FLAG_CATALOGUE.map((condition) => {
     const name = `${prefix}.${condition.id}`;
-    return {
+    return withMoreBindings({
       kind: 'layer',
       name,
       children: blockParts(name, frame, condition),
-      ...withBindings({ Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) }),
-    };
+    }, { Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) });
   });
 }

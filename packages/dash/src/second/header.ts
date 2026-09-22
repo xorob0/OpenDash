@@ -10,7 +10,7 @@ import type { HAlign, Hex, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { canvasBaseline, canvasYForBaseline, cells, monoWidth } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
@@ -347,10 +347,7 @@ export function inlineGroup(name: string, parts: readonly InlinePart[], fs: numb
             }),
           );
         } else if (part.kind === 'block') {
-          items.push({
-            ...band(`${name}.${i}`, rect(cursor, Math.round(top + (fs - part.height) / 2), part.width, part.height), part.color),
-            ...withBindings({ BackgroundColor: part.colorBind, Visible: part.visibleBind }),
-          });
+          items.push(withMoreBindings(band(`${name}.${i}`, rect(cursor, Math.round(top + (fs - part.height) / 2), part.width, part.height), part.color), { BackgroundColor: part.colorBind, Visible: part.visibleBind }));
         } else {
           items.push(
             numeral(`${name}.${i}`, part.sample, cursor, top, fs, part.chars, {

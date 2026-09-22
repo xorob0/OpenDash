@@ -13,7 +13,7 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot, type FaceSize } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
@@ -268,33 +268,34 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
       // One field per end is the portrait face, where the artboard has the room for "POS" and not
       // for "POSITION".
       const text = opts.fieldsPerEnd === 1 ? (spec.short ?? spec.label) : spec.label;
-      items.push({
-        ...label(`${name}.label`, text.toUpperCase(), x, labelTop, widest, { size: labelFs, hAlign: align }),
-        ...withBindings({ Visible: visible }),
-      });
+      items.push(withMoreBindings(label(`${name}.label`, text.toUpperCase(), x, labelTop, widest, { size: labelFs, hAlign: align }), { Visible: visible }));
       // A field of the right end is drawn flush to the right of its slot, as the artboard draws it:
       // the denominator against the padding and the value one gap in front of it.
       const value = valueWidth(spec, valueSize) + boxSlack(valueSize);
       const denominator = denominatorWidth(spec, denominatorSize) + boxSlack(denominatorSize);
       const after = spec.denominator ? DENOMINATOR_GAP + denominatorWidth(spec, denominatorSize) : 0;
-      items.push({
-        ...numeral(`${name}.value`, spec.sample, align === 'left' ? x : x + widest - after - value, valueTop, valueSize, spec.chars, {
-          width: value,
-          hAlign: align,
-          ...(spec.widest === undefined ? {} : { proportional: true, widest: spec.widest }),
-        }),
-        ...withBindings({ Visible: visible, Text: spec.bind }),
-      });
+      items.push(
+        withMoreBindings(
+          numeral(`${name}.value`, spec.sample, align === 'left' ? x : x + widest - after - value, valueTop, valueSize, spec.chars, {
+            width: value,
+            hAlign: align,
+            ...(spec.widest === undefined ? {} : { proportional: true, widest: spec.widest }),
+          }),
+          { Visible: visible, Text: spec.bind },
+        ),
+      );
       if (spec.denominator) {
         const dx = align === 'left' ? x + valueWidth(spec, valueSize) + DENOMINATOR_GAP : x + widest - denominator;
-        items.push({
-          ...numeral(`${name}.denominator`, spec.denominator.sample, dx, denominatorTop, denominatorSize, spec.denominator.chars, {
-            color: ds.color.text.secondary,
-            width: denominator,
-            hAlign: align,
-          }),
-          ...withBindings({ Visible: visible, Text: spec.denominator.bind }),
-        });
+        items.push(
+          withMoreBindings(
+            numeral(`${name}.denominator`, spec.denominator.sample, dx, denominatorTop, denominatorSize, spec.denominator.chars, {
+              color: ds.color.text.secondary,
+              width: denominator,
+              hAlign: align,
+            }),
+            { Visible: visible, Text: spec.denominator.bind },
+          ),
+        );
       }
     }
   }

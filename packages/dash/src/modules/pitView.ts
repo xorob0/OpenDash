@@ -14,7 +14,7 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { WHEEL_CHANGE_TICK, assetBox, imageOf } from '../design/assets.ts';
 import { rect, roundRect } from '../design/geometry.ts';
 import { measureText } from '../design/advances.ts';
@@ -132,13 +132,12 @@ interface Option {
  */
 const tick = (name: string, box: Rect, on: Expr): Item[] => [
   band(`${name}.badge`, box, ds.color.text.primary, { visibleBind: on }),
-  {
+  withMoreBindings({
     kind: 'image',
     name: `${name}.tick`,
     image: WHEEL_CHANGE_TICK.name,
     rect: roundRect(assetBox(box, imageOf(WHEEL_CHANGE_TICK))),
-    ...withBindings({ Visible: on }),
-  },
+  }, { Visible: on }),
 ];
 
 /** An option whose state is a dash when off and the tick when on: the fast repair and the tear-off. */

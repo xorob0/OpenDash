@@ -22,7 +22,7 @@
  */
 import type { Hex, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { setting } from '../contract.ts';
 import { segment, type SegmentOptions } from '../elements/segment.ts';
 import { mirrorAvailable, mirrorOverRev, mirrorStageLit, overRevEither, simhubOverRev, simhubStageLit, stageEntered } from '../shift.ts';
@@ -167,12 +167,11 @@ export function revLayers(prefix: string, placements: readonly RevSegmentPlaceme
   // Which screen is asking. A zone face passes its own `Face<size>RevBar` read, which falls back to
   // the rig's; the round faces' arc and the speedo module pass nothing and get the rig's.
   const on = eq(mode, str('shift'));
-  const layer = (name: string, which: RevLayer, visible: Expr): LayerItem => ({
+  const layer = (name: string, which: RevLayer, visible: Expr): LayerItem => withMoreBindings({
     kind: 'layer',
     name: `${prefix}.${name}`,
     children: build(which),
-    ...withBindings({ Visible: visible }),
-  });
+  }, { Visible: visible });
 
   return [
     layer('shiftLights', 'shift', and(on, mirrorAvailable())),

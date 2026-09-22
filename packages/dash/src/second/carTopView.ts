@@ -20,7 +20,7 @@
  * corner radius.
  */
 import type { EllipseItem, Hex, Item, Rect } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { WHEEL_CHANGE_TICK, assetBox, imageOf } from '../design/assets.ts';
 import { rect, type Size } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
@@ -124,10 +124,10 @@ export function carTopView(name: string, box: Rect, opts: CarTopViewOptions): It
   const scale = box.width / VIEW.width;
   const stroke = Math.max(1, Math.round(STROKE * scale));
   const structure = ds.purpose.illustration.dim;
-  const painted = (id: string, part: Part, paint: CarPaint | undefined): Item => ({
-    ...band(`${name}.${id}`, partRect(box, part), paint?.color ?? structure, { ...radiusOf(part, scale) }),
-    ...withBindings({ BackgroundColor: paint?.bind }),
-  });
+  const painted = (id: string, part: Part, paint: CarPaint | undefined): Item =>
+    withMoreBindings(band(`${name}.${id}`, partRect(box, part), paint?.color ?? structure, { ...radiusOf(part, scale) }), {
+      BackgroundColor: paint?.bind,
+    });
   const cockpit: EllipseItem = {
     kind: 'ellipse',
     name: `${name}.cockpit`,
@@ -150,20 +150,20 @@ export function carTopView(name: string, box: Rect, opts: CarTopViewOptions): It
     const part = BLOCKS[corner];
     const block = partRect(box, part);
     const wheel = opts.wheel(corner);
-    items.push({
-      ...band(`${name}.${corner}`, block, wheel.color ?? ds.purpose.illustration.outline, { ...radiusOf(part, scale) }),
-      ...withBindings({ BackgroundColor: wheel.bind }),
-    });
+    items.push(
+      withMoreBindings(band(`${name}.${corner}`, block, wheel.color ?? ds.purpose.illustration.outline, { ...radiusOf(part, scale) }), {
+        BackgroundColor: wheel.bind,
+      }),
+    );
     // The tick is the one part of the picture no rect can draw and no font can measure, so it is
     // the badge image the tyre corners already ship, cut square inside the block it marks.
     if (wheel.tick !== undefined) {
-      items.push({
+      items.push(withMoreBindings({
         kind: 'image',
         name: `${name}.${corner}.tick`,
         image: WHEEL_CHANGE_TICK.name,
         rect: assetBox(block, imageOf(WHEEL_CHANGE_TICK)),
-        ...withBindings({ Visible: wheel.tick }),
-      });
+      }, { Visible: wheel.tick }));
     }
   }
   return items;

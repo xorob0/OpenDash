@@ -32,7 +32,7 @@
  */
 import type { Hex, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { ALERT_BAND_BORDER } from './alertBand.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
@@ -135,12 +135,11 @@ export function pitAlerts(frame: Rect, prefix = 'pitAlert'): Item[] {
   return PIT_ALERTS.map((spec) => {
     const name = `${prefix}.${spec.id}`;
     const children = pitAlertBand(name, frame, spec);
-    return {
+    return withMoreBindings({
       kind: 'layer',
       name,
       children,
       ...(spec.blinkMs === undefined ? {} : { blink: { enabled: true, delayMs: spec.blinkMs } }),
-      ...withBindings({ Visible: pitAlertVisible(spec.id) }),
-    };
+    }, { Visible: pitAlertVisible(spec.id) });
   });
 }

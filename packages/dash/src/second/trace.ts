@@ -14,7 +14,7 @@
  */
 import type { ChartItem, Hex, Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { inset as insetRect, rect, roundRect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
@@ -103,7 +103,7 @@ export const SWATCH = { width: 16, height: 2 } as const;
 const SWATCH_GAP = ds.space[2];
 const LEGEND_GAP = 20;
 
-const chartOf = (name: string, frame: Rect, series: Series, opts: TraceOptions & { points: number }): ChartItem => ({
+const chartOf = (name: string, frame: Rect, series: Series, opts: TraceOptions & { points: number }): ChartItem => withMoreBindings({
   kind: 'chart',
   name,
   rect: roundRect(frame),
@@ -113,8 +113,7 @@ const chartOf = (name: string, frame: Rect, series: Series, opts: TraceOptions &
   minimum: series.min ?? 0,
   maximum: series.max ?? 100,
   useMaximum: series.useMaximum ?? true,
-  ...withBindings({ CurrentValue: series.bind }),
-});
+}, { CurrentValue: series.bind });
 
 /**
  * The legend for a set of series, drawn on the line box at `y`.

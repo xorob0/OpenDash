@@ -7,7 +7,7 @@
  * message.
  */
 import type { Hex, Item, LayerItem } from '../generator.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { onCircle, type Circle, type Size } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { ring } from '../elements/ring.ts';
@@ -47,22 +47,20 @@ export const chequerCount = (face: Circle): number => 2 * Math.round((Math.PI * 
 export const chequerStep = (face: Circle): number => 360 / chequerCount(face);
 
 function solidRing(face: Circle, prefix: string, id: string, flag: FlagProperty, color: Hex, blink: boolean): LayerItem {
-  return {
+  return withMoreBindings({
     kind: 'layer',
     name: `${prefix}.${id}`,
     children: [ring(`${prefix}.${id}.ring`, face, ds.indicator.flagRing.width, color)],
     ...(blink ? { blink: { enabled: true, delayMs: FLAG_BLINK_MS } } : {}),
-    ...withBindings({ Visible: flagVisible(flag) }),
-  };
+  }, { Visible: flagVisible(flag) });
 }
 
 function blackRing(face: Circle, prefix: string): LayerItem {
-  return {
+  return withMoreBindings({
     kind: 'layer',
     name: `${prefix}.black`,
     children: [ring(`${prefix}.black.ring`, face, BLACK_FLAG_BORDER, ds.purpose.flag.black)],
-    ...withBindings({ Visible: flagVisible('Flag_Black') }),
-  };
+  }, { Visible: flagVisible('Flag_Black') });
 }
 
 function chequeredRing(face: Circle, prefix: string): LayerItem {
@@ -76,7 +74,7 @@ function chequeredRing(face: Circle, prefix: string): LayerItem {
     const angle = (k + 0.5) * step;
     children.push(band(`${prefix}.chequered.c${String(k).padStart(2, '0')}`, onCircle(rim, angle, CHEQUER_SIZE), ds.purpose.flag.chequer, { rotation: angle }));
   }
-  return { kind: 'layer', name: `${prefix}.chequered`, children, ...withBindings({ Visible: flagVisible('Flag_Checkered') }) };
+  return withMoreBindings({ kind: 'layer', name: `${prefix}.chequered`, children }, { Visible: flagVisible('Flag_Checkered') });
 }
 
 export function flagRing(face: Circle, prefix = 'flag'): Item[] {

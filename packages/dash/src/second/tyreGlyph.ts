@@ -17,7 +17,7 @@
  * this package ships rather than a glyph or a path.
  */
 import type { Item, Rect } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { WHEEL_CHANGE_TICK, assetBox, imageOf } from '../design/assets.ts';
 import { rect, right, roundRect, type Size } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
@@ -155,12 +155,11 @@ function changeBadge(name: string, box: Rect, corner: Corner, outer: 'left' | 'r
   const visible = tyreChangeScheduled(corner);
   return [
     band(`${name}.change`, badge, ds.color.text.secondary, { visibleBind: visible, radius: GLYPH.badgeRadius }),
-    {
+    withMoreBindings({
       kind: 'image',
       name: `${name}.change.tick`,
       image: WHEEL_CHANGE_TICK.name,
       rect: assetBox(badge, imageOf(WHEEL_CHANGE_TICK)),
-      ...withBindings({ Visible: visible }),
-    },
+    }, { Visible: visible }),
   ];
 }

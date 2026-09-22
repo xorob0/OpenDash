@@ -7,7 +7,7 @@
  */
 import type { Hex, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import type { Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { snapEdges } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
@@ -149,7 +149,7 @@ export function sectorStrip(name: string, frame: Rect, gap = 2): Item[] {
     const span = spans[i];
     if (!span) return [];
     const cell = band(`${name}.strip${sector}`, rect(span.left, frame.top, span.width, frame.height), ds.color.text.dim as Hex);
-    return [{ ...cell, bindings: { BackgroundColor: { mode: 'formula' as const, formula: sectorColour(sector) } } }];
+    return [withMoreBindings(cell, { BackgroundColor: sectorColour(sector) })];
   });
 }
 

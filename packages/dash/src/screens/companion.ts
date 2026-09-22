@@ -23,7 +23,7 @@
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { MODULE_CATALOGUE, MODULE_COUNT, secondScreen } from '../contract.ts';
 import { rect } from '../design/geometry.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { flagFull } from '../components/flagFull.ts';
 import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { MODULES } from '../modules/index.ts';
@@ -75,20 +75,18 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
     // All three formats are drawn and at most one is shown, the way the face draws both of its own:
     // a group whose Visible is false leaves its children's bindings unevaluated, so the two that are
     // not chosen cost nothing while they are not showing. `off` is simply neither group being true.
-    {
+    withMoreBindings({
       kind: 'layer',
       name: `${prefix}flag`,
       children: flagStrip(g.flags, FLAG_STRIP_STYLES.nano, `${prefix}flag`),
-      ...withBindings({ Visible: secondScreen.companionFlagFormatIs('band') }),
-    },
+    }, { Visible: secondScreen.companionFlagFormatIs('band') }),
     // Over the module rather than over the screen: the header says which page you are on and the
     // dots say how to get back, and a flag that covered them would leave somebody tapping blind.
-    {
+    withMoreBindings({
       kind: 'layer',
       name: `${prefix}flagFull`,
       children: flagFull(g.module, `${prefix}flagFull`),
-      ...withBindings({ Visible: secondScreen.companionFlagFormatIs('full') }),
-    },
+    }, { Visible: secondScreen.companionFlagFormatIs('full') }),
   ];
   return {
     name: meta.id,

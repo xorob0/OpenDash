@@ -12,7 +12,7 @@
  * the module ships off and stays in the catalogue for the sims that carry it, and a page that
  * cannot draw them is not a page those sims can switch on.
  */
-import { formula, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc, type Item } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
 import { densityOf } from '../second/density.ts';
@@ -46,7 +46,7 @@ const reading = (member: Expr, pattern: string): Expr => iff(published(member), 
  * The two are never on the screen together, so the overlap is only ever in the editor.
  */
 const insteadOfTheReadings = (items: readonly Item[]): Item[] =>
-  items.map((item) => ({ ...item, bindings: { ...item.bindings, Visible: formula(isNull(LEVEL)) } }));
+  items.map((item) => withMoreBindings(item, { Visible: isNull(LEVEL) }));
 
 export const energy = defineModule('energy', (ctx) => {
   const d = densityOf(ctx.density);

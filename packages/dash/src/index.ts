@@ -14,4 +14,4 @@ export * from './slots.ts';
 export * from './walk.ts';
 export * from './dashboard.ts';
 export { build, main, parseArgs, readVersion, validateOrThrow, BuildError, DEFAULT_OUT_DIR, MANIFEST_FILE, MANIFEST_SCHEMA_VERSION, STRATEGIES, STRATEGY_ENV, USAGE, type BuildArgs, type BuildOptions, type BuildResult, type BuiltPackage, type Manifest, type ManifestEntry } from './build.ts';
-export { formula, bindings, withBindings, type Expr } from './bind.ts';
+export { formula, withMoreBindings, type BindingSpec, type Expr } from './bind.ts';

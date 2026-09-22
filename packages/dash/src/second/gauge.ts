@@ -8,7 +8,7 @@
  * does not own to nothing.
  */
 import type { Hex, Item, LinearGaugeItem, Rect } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { rect, roundRect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { ds } from '../tokens.ts';
@@ -29,7 +29,7 @@ export interface LevelGaugeOptions {
 
 /** A horizontal level gauge filling `frame` from the left. */
 export function levelGauge(name: string, frame: Rect, valueBind: Expr, opts: LevelGaugeOptions = {}): LinearGaugeItem {
-  return {
+  return withMoreBindings({
     kind: 'linearGauge',
     name,
     rect: roundRect(frame),
@@ -40,8 +40,7 @@ export function levelGauge(name: string, frame: Rect, valueBind: Expr, opts: Lev
     minimum: opts.min ?? 0,
     maximum: opts.max ?? 100,
     value: opts.value ?? 0,
-    ...withBindings({ Value: valueBind, GaugeColor: opts.fillBind, Visible: opts.visibleBind }),
-  };
+  }, { Value: valueBind, GaugeColor: opts.fillBind, Visible: opts.visibleBind });
 }
 
 /** A vertical gauge filling `frame` from the bottom: the input bars and the tyre wear bars. */

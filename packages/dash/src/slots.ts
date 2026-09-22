@@ -6,7 +6,7 @@
  */
 import type { LayerItem, Rect, Screen, WidgetItem } from './generator.ts';
 import { ncalc } from './generator.ts';
-import { withBindings } from './bind.ts';
+import { withMoreBindings } from './bind.ts';
 import { CARDS } from './cards/index.ts';
 import { defaultCardForSlot, setting, slotSettingName } from './contract.ts';
 import { rect } from './design/geometry.ts';
@@ -46,7 +46,7 @@ export function cardScreens(layout: Layout): Screen[] {
 export function widgetSlotItems(layout: Layout): WidgetItem[] {
   return layout.slots.map((slot, i) => {
     const n = i + 1;
-    return {
+    return withMoreBindings({
       kind: 'widget',
       name: slotName(n),
       rect: { ...slot },
@@ -54,8 +54,7 @@ export function widgetSlotItems(layout: Layout): WidgetItem[] {
       initialScreenIndex: defaultCardForSlot(n),
       autoSize: true,
       backgroundColor: TRANSPARENT,
-      ...withBindings({ InitialScreenIndex: setting.slot(n) }),
-    };
+    }, { InitialScreenIndex: setting.slot(n) });
   });
 }
 
@@ -69,12 +68,11 @@ export function inlineSlotItems(layout: Layout): LayerItem[] {
       kind: 'layer',
       name,
       children: CARDS.map(
-        (card): LayerItem => ({
+        (card): LayerItem => withMoreBindings({
           kind: 'layer',
           name: `${name}.${card.id}`,
           children: card.build(slot, `${name}.${card.id}.`, rung),
-          ...withBindings({ Visible: eq(setting.slot(n), num(card.number)) }),
-        }),
+        }, { Visible: eq(setting.slot(n), num(card.number)) }),
       ),
     };
   });

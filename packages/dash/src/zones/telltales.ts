@@ -26,7 +26,7 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { flagBox } from '../contract.ts';
 import { assetBox, assetNamed, imageOf } from '../design/assets.ts';
 import { rect, roundRect } from '../design/geometry.ts';
@@ -201,13 +201,12 @@ function iconItems(lamp: Telltale, name: string, box: Rect, lit: Expr | undefine
     const asset = assetNamed(telltaleArt(lamp, state));
     if (asset === undefined) return [];
     return [
-      {
+      withMoreBindings({
         kind: 'image' as const,
         name: `${name}.${state}`,
         image: asset.name,
         rect: roundRect(assetBox(box, imageOf(asset), { maxWidth: ICON, maxHeight: ICON })),
-        ...withBindings({ Visible: visible }),
-      },
+      }, { Visible: visible }),
     ];
   });
 }

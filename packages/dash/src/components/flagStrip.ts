@@ -27,7 +27,7 @@
  * competing for the same middle would be a different drawing at every value.
  */
 import type { Item, LayerItem, Rect } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc } from '../generator.ts';
 import { ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
 import { bandRaised, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, type AlertBandSpec, type FaceFlag, type FlagCondition } from '../flags.ts';
@@ -155,12 +155,11 @@ const blueFlagParts = (name: string, frame: Rect, style: AlertBandStyle, spec: A
 const conditionLayer = (frame: Rect, style: AlertBandStyle, prefix: string, condition: FlagCondition): LayerItem => {
   const name = `${prefix}.${condition.id}`;
   const parts = condition.id === BLUE_FLAG_ID ? blueFlagParts : bandParts;
-  return {
+  return withMoreBindings({
     kind: 'layer',
     name,
     children: parts(name, frame, style, condition.band),
-    ...withBindings({ Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) }),
-  };
+  }, { Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) });
 };
 
 export function flagStrip(frame: Rect, style: AlertBandStyle = ALERT_BAND_STYLES.standard, prefix = 'flag'): Item[] {

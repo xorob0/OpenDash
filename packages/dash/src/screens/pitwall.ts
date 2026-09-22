@@ -31,7 +31,7 @@ import { airTemperature, bestLap, brake, carPosition,
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 
 const { fmt, concat, str, iff, eq, gt, num, isnull, ucase, driver, game, signed, raw } = ncalc;
 
@@ -400,18 +400,16 @@ const FLAG_BAND_HEIGHT = PIT_WALL_HEADER.height;
  */
 function flagLayers(name: string, body: Rect): Item[] {
   return [
-    {
+    withMoreBindings({
       kind: 'layer',
       name: `${name}.flag`,
       children: flagStrip(rect(body.left, body.top, body.width, FLAG_BAND_HEIGHT), FLAG_STRIP_STYLES.standard, `${name}.flag`),
-      ...withBindings({ Visible: secondScreen.pitWallFlagFormatIs('band') }),
-    },
-    {
+    }, { Visible: secondScreen.pitWallFlagFormatIs('band') }),
+    withMoreBindings({
       kind: 'layer',
       name: `${name}.flagFull`,
       children: flagFull(body, `${name}.flagFull`),
-      ...withBindings({ Visible: secondScreen.pitWallFlagFormatIs('full') }),
-    },
+    }, { Visible: secondScreen.pitWallFlagFormatIs('full') }),
   ];
 }
 
