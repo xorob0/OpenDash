@@ -1,0 +1,84 @@
+{
+  // The gallery lap, driven for a six-second clip (#379). The gallery sweeps the revs from 3000 to
+  // 8000 over six seconds and steps a gear once per sweep, which in a six-second clip is one
+  // change at an unlucky moment and a rev bar that never reaches its lights. Here the sweep runs
+  // from 5000 to 9100 over three seconds, so a clip catches two gear changes, the first within
+  // its first three seconds, and the shift lights come on and flash at the top of every sweep.
+  // Everything else is the gallery's, restated because a driver list replaces its parent's.
+  "extends": "green.json",
+  "name": "The gallery lap with a fast, high rev sweep, for the clips",
+  "yaml": { "RaceSessionLaps": "60", "RaceSessionTime": "6000.0000 sec" },
+  "variables": [
+    {"name": "SessionLapsTotal", "value": 60},
+    {"name": "SessionLapsRemain", "value": 48},
+    {"name": "SessionLapsRemainEx", "value": 48},
+    {"name": "SessionTimeTotal", "value": 6000.0},
+    {"name": "SessionTimeRemain", "value": 4820.0},
+    {"name": "FuelLevel", "value": 68.4},
+    {"name": "FuelLevelPct", "value": 0.684},
+    // The next stop's order, set while racing: four tyres, fuel and a tear-off.
+    {"name": "PitSvFlags", "value": 63, "pin": true},
+    {"name": "PitSvFuel", "value": 46.5, "pin": true},
+    {"name": "dpLFTireChange", "value": 1, "pin": true},
+    {"name": "dpRFTireChange", "value": 1, "pin": true},
+    {"name": "dpLRTireChange", "value": 1, "pin": true},
+    {"name": "dpRRTireChange", "value": 1, "pin": true},
+    {"name": "dpWindshieldTearoff", "value": 1, "pin": true},
+    {"name": "dpFuelFill", "value": 1, "pin": true},
+    // Dead reckoning: a steady forward speed under the sweeping heading below.
+    {"name": "VelocityX", "value": 52.0, "pin": true},
+    {"name": "VelocityY", "value": 0.0, "pin": true}
+  ],
+  "drivers": [
+    {"type": "rpmSweep", "min": 5000, "max": 9100, "period": 3, "slFirst": 7800, "slBlink": 9000},
+    {"type": "gearFromRpm", "minGear": 2, "maxGear": 6, "redline": 9000,
+     "speedAtRedline": [0, 85, 125, 160, 195, 235, 275]},
+    {"type": "lapTimer", "lapTime": 97.9, "jitter": 0, "trackLength": 7000},
+    {"type": "fuelBurn", "litersPerLap": 2.9, "maxLiters": 100, "kgPerLiter": 0.75},
+    {"type": "flagCycle", "period": 8},
+    {"type": "pitLimiterToggle", "period": 5},
+    {"type": "sine", "var": "SteeringWheelAngle", "min": -0.35, "max": 0.35, "period": 5},
+    {"type": "sine", "var": "Throttle", "min": 0.6, "max": 1.0, "period": 3},
+    {"type": "sine", "var": "Brake", "min": 0.0, "max": 0.35, "period": 3, "phase": 3.14159},
+    {"type": "sine", "var": "LatAccel", "min": -12, "max": 12, "period": 5},
+    {"type": "sine", "var": "LFtempCM", "min": 84.8, "max": 86.0, "period": 20},
+    // One full turn of heading per lap, so the recorded outline closes where it started.
+    {"type": "ramp", "var": "YawNorth", "min": 0, "max": 6.283185, "period": 97.9},
+    {"type": "field", "pace": 98.0, "jitter": 0.5, "resultsInterval": 5, "yamlIndent": 3,
+     "cars": [
+      {"idx": 1, "class": 2708, "lap": 13, "pct": 0.31},
+      {"idx": 2, "class": 2708, "lap": 12, "pct": 0.97},
+      {"idx": 3, "class": 2708, "lap": 13, "pct": 0.22},
+      {"idx": 4, "class": 2708, "lap": 13, "pct": 0.52},
+      {"idx": 5, "class": 2708, "lap": 13, "pct": 0.03},
+      {"idx": 6, "class": 2708, "lap": 12, "pct": 0.84},
+      {"idx": 7, "class": 2708, "lap": 13, "pct": 0.16},
+      {"idx": 8, "class": 2708, "lap": 12, "pct": 0.985, "pit": true},
+      // Nina Hartmann, about 9 m behind at the player's pace: the car in the radar's lower half.
+      {"idx": 9, "class": 2708, "lap": 13, "pct": 0.3677, "pace": 97.9, "jitter": 0},
+      {"idx": 10, "class": 2708, "lap": 12, "pct": 0.91},
+      {"idx": 11, "class": 2708, "lap": 13, "pct": 0.09},
+      {"idx": 12, "class": 2708, "lap": 13, "pct": 0.369},
+      // Isabel Moreno, a GT4 a lap down about 10 m ahead: the car in the radar's upper half.
+      {"idx": 13, "class": 2709, "lap": 12, "pct": 0.3705, "pace": 97.9, "jitter": 0},
+      {"idx": 14, "class": 2709, "lap": 12, "pct": 0.24},
+      {"idx": 15, "class": 2709, "lap": 12, "pct": 0.5},
+      {"idx": 16, "class": 2709, "lap": 12, "pct": 0.06},
+      {"idx": 17, "class": 2709, "lap": 13, "pct": 0.43},
+      {"idx": 18, "class": 2709, "lap": 11, "pct": 0.95},
+      {"idx": 19, "class": 2709, "lap": 12, "pct": 0.41},
+      {"idx": 20, "class": 2709, "lap": 11, "pct": 0.8},
+      {"idx": 21, "class": 2709, "lap": 12, "pct": 0.58},
+      {"idx": 22, "class": 2709, "lap": 11, "pct": 0.6},
+      {"idx": 23, "class": 2709, "lap": 12, "pct": 0.33},
+      {"idx": 24, "class": 2709, "lap": 12, "pct": 0.15}
+     ]}
+  ],
+  "timeline": [
+    {"at": 0, "log": "hold green from the start", "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "log": "no limiter on track", "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 4, "log": "through the pit lane, so SimHub sees a pit exit and starts the stint counters", "set": {"OnPitRoad": true}},
+    {"at": 22, "log": "out of the pit lane", "set": {"OnPitRoad": false}},
+    {"at": 20, "log": "TC 3 -> 5", "set": {"dcTractionControl": 5}, "yaml": {"TcSetting": "5 (TC)"}}
+  ]
+}
