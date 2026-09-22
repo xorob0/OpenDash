@@ -22,6 +22,7 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
+import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { cells, monoWidth, textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
@@ -43,24 +44,29 @@ import {
   fuel as fuelLevel,
   fuelLapsLeft,
   fuelLastLap,
+  fuelLastLapIsSettled,
   fuelIsSettled,
   fuelPerLap,
-  fuelTimeLeft,
   fuelUnit,
   incidents,
   lastLap,
+  listNeighbour,
   localClock,
   minutesClock,
   NO_TIME,
   NO_VALUE,
   roadTemperature,
   sectorTime,
+  settledFuelTimeLeft,
   simClock,
   windKmh,
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, aheadBehind, timespanToSeconds, toShortTime } = ncalc;
+const { fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
+
+/** D7, the one page of the band whose fields are a function of a setting rather than constants. */
+const RELATIVE_PAGE = 'relative';
 
 /** One field of a band page: a label above a value, with an optional unit after it. */
 export interface BandField {
@@ -119,17 +125,39 @@ export interface BandField {
 
 const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), toShortTime(expr, 3));
 
-/** D1 Fuel: what a driver checks on a straight, which is why it is the default. */
+/**
+ * A reading derived from what a lap costs, drawn only once a lap has cost something.
+ *
+ * The absence is {@link NO_VALUE}, which is two digit cells and therefore inside the budget of
+ * every field on the fuel page, the narrowest of them being the four digits of `Est. laps`.
+ */
+const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VALUE));
+
+/**
+ * D1 Fuel: what a driver checks on a straight, which is why it is the default.
+ *
+ * The tank and the refuel are read off the sim directly, whereas the other four are derived from
+ * what a lap costs, so those four wait for a lap and answer together. Before the first crossing
+ * SimHub extrapolates `Fuel_LitersPerLap` from the lap in progress and every figure taken off it
+ * moves every frame; a band that gated only some of them consequently read `EST. LAPS --` beside
+ * `PER LAP 0.000` and `LAST LAP 0.000`, which is one row and one tank with two fields saying they
+ * have no reading and two saying the car has burned nothing. A driver reads 0.000 there as a broken
+ * sensor rather than as an absence. #382.
+ *
+ * Each of the four asks the question the face that draws the same property asks, so that a driver
+ * moving between the band, the fuel module and the pit wall reads one answer: the range goes
+ * through {@link settledFuelTimeLeft} and keeps the clock's own `--:--` rather than taking a second
+ * spelling of the absence, and the last lap goes through {@link fuelLastLapIsSettled}, which is the
+ * narrower question the fuel module already asked, a lap that included a refuelling stop being
+ * published as zero the way a lap that has not happened is.
+ */
 const fuel: readonly BandField[] = [
   { id: 'fuel', label: 'Fuel', sample: '15.12', bind: fmt(fuelLevel(), '0.00'), chars: { digits: 5, specials: 1 }, after: 'L', afterBind: fuelUnit(), afterWidest: 'GAL', color: ds.purpose.fuel.nominal },
-  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(fuelTimeLeft()), chars: CHARS.minutesClock },
-  // Behind the consumption gate, which is the same one the fuel module draws its own est. laps
-  // behind. SimHub publishes the remaining laps as zero before it has a per-lap figure, so an idle
-  // screen said "0.0" with the confidence of a reading rather than saying it had none.
-  { id: 'laps', label: 'Est. laps', sample: '13.1', bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)), chars: CHARS.consumption },
+  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), chars: CHARS.minutesClock },
+  { id: 'laps', label: 'Est. laps', sample: '13.1', bind: settled(fmt(fuelLapsLeft(), '0.0')), chars: CHARS.consumption },
   { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
-  { id: 'perLap', label: 'Per lap', sample: '1.432', bind: fmt(fuelPerLap(), '0.000'), chars: { digits: 5, specials: 1 } },
-  { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: fmt(fuelLastLap(), '0.000'), chars: { digits: 5, specials: 1 } },
+  { id: 'perLap', label: 'Per lap', sample: '1.432', bind: settled(fmt(fuelPerLap(), '0.000')), chars: { digits: 5, specials: 1 } },
+  { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: iff(fuelLastLapIsSettled(), fmt(fuelLastLap(), '0.000'), str(NO_VALUE)), chars: { digits: 5, specials: 1 } },
 ];
 
 /** D2 Energy. Le Mans Ultimate publishes virtual energy; iRacing does not, so this reads `--`. */
@@ -207,17 +235,39 @@ const sectors: readonly BandField[] = [
  *
  * The catalogue draws a 16 by 11 country flag between the two, which nothing publishes a country
  * for; it is the same missing source as the licence badge on the opponents page.
+ *
+ * The two neighbours are the player's own class wherever the rig counts in class or the zone asks
+ * for its own class, which is the one question {@link listNeighbour} answers for every list: the
+ * rig's `PositionMode` on its own, or the zone's filter beside it when the band is built for a face
+ * that carries one.
  */
 const relativePosition = (idx: string): string => positionLabelled(idx);
 
-const relative: readonly BandField[] = [
+/**
+ * D7's three fields, built against the filter the zone is carrying.
+ *
+ * On a table "my class only" means listing fewer cars, but this page is three gaps and not a list,
+ * so what it means here is asking for the car ahead *in the player's own class*, the class-only
+ * twin of the same lookup, which is the more useful of the two readings on a multi-class grid,
+ * where the car ahead on track is often in a class the driver is not racing. The rig's own
+ * `PositionMode` asks the same of every list since #212, and {@link listNeighbour} is where the two
+ * settings meet, so the band reads the twin when either says so.
+ *
+ * A function rather than a constant, because a built formula cannot be filtered after the fact and
+ * the condition has to reach the lookup as it is written. {@link BAND_PAGES} holds the result with
+ * no zone filter, which is what every page of the catalogue is when nobody asks otherwise, and
+ * what the artboards and the second screens draw.
+ *
+ * The middle field is untouched under any filter: a driver is in his own class by construction.
+ */
+const relativeFields = (classOnly?: Expr): readonly BandField[] => [
   {
     id: 'ahead',
     label: 'P3',
-    labelBind: relativePosition(aheadBehind(num(-1))),
+    labelBind: relativePosition(listNeighbour(-1, classOnly)),
     labelWidest: 'P99',
     sample: '-1.342',
-    bind: carRelativeGap(aheadBehind(num(-1))),
+    bind: carRelativeGap(listNeighbour(-1, classOnly)),
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -234,10 +284,10 @@ const relative: readonly BandField[] = [
   {
     id: 'behind',
     label: 'P5',
-    labelBind: relativePosition(aheadBehind(num(1))),
+    labelBind: relativePosition(listNeighbour(1, classOnly)),
     labelWidest: 'P99',
     sample: '+0.722',
-    bind: carRelativeGap(aheadBehind(num(1))),
+    bind: carRelativeGap(listNeighbour(1, classOnly)),
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -275,7 +325,7 @@ export const BAND_PAGES: Record<string, readonly BandField[]> = {
   tyres,
   weather,
   sectors,
-  relative,
+  [RELATIVE_PAGE]: relativeFields(),
 };
 
 /**
@@ -291,7 +341,7 @@ interface InlinePage {
   gap: number;
 }
 
-const INLINE_PAGES: Record<string, InlinePage> = { relative: { word: 'Relative', gap: 20 } };
+const INLINE_PAGES: Record<string, InlinePage> = { [RELATIVE_PAGE]: { word: 'Relative', gap: 20 } };
 
 /**
  * What the artboards draw band D to, per band rectangle.
@@ -502,12 +552,16 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
  * importance order, and it closes over any field the game does not publish. Nothing is spread to
  * fill: a band with three fields in it is three fields in the middle, not three fields stretched
  * across 1920 px.
+ *
+ * `classOnly` is the zone's class filter, and D7 is the only page that reads it: the rest of the
+ * catalogue lists nobody to filter. A caller with no filter to pass leaves it out and gets the
+ * catalogue's own fields, which is what the artboards and the second screens draw.
  */
-export function bandPageItems(id: string, frame: Rect, prefix: string, corners = false): Item[] {
+export function bandPageItems(id: string, frame: Rect, prefix: string, corners = false, classOnly?: Expr): Item[] {
   const usable = bandPageRoom(frame, corners);
   if (id === TELLTALE_PAGE) return telltaleItems(frame, prefix, usable);
 
-  const fields = BAND_PAGES[id];
+  const fields = id === RELATIVE_PAGE && classOnly !== undefined ? relativeFields(classOnly) : BAND_PAGES[id];
   if (!fields) throw new RangeError(`band D has no page "${id}"`);
   const m = bandMetrics(frame);
   const labelFs = ds.size.label;

@@ -21,7 +21,7 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, roundRect } from '../design/geometry.ts';
 import { canvasBaseline, canvasYForBaseline, textBox } from '../design/metrics.ts';
@@ -116,7 +116,7 @@ function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { 
       if (spec.label !== undefined) {
         items.push(label(`${name}.0`, spec.label, x, canvasYForBaseline(canvasBaseline(top, fs), labelSize), labelWidth, { size: labelSize }));
       }
-      items.push({
+      items.push(withMoreBindings({
         kind: 'text',
         name: `${name}.${spec.label === undefined ? 0 : 1}`,
         rect: roundRect({ left: x + runOffset, top: box.top, width: runWidth, height: box.height }),
@@ -129,8 +129,7 @@ function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { 
         hAlign: 'left',
         vAlign: 'top',
         backgroundColor: TRANSPARENT,
-        ...withBindings({ Text: spec.bind }),
-      });
+      }, { Text: spec.bind }));
       return items;
     },
   };

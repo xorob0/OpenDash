@@ -54,14 +54,17 @@ namespace OpenDashPlugin
 
         public const string PositionTitle = "Position";
 
-        /// <summary>The canvas's sentence, and a second one it does not carry.</summary>
+        /// <summary>Two sentences the canvas does not carry, neither of which the control can show.</summary>
         /// <remarks>
-        /// The second sentence is true: every zone of a face has a class filter of its own, which
-        /// SettingsControl.Panes.cs draws and FaceSettings.SetClassOnly stores, and without the sentence
-        /// this row reads as though Overall meant overall everywhere. It is therefore owed to the canvas
-        /// rather than deleted from the code, and the docs package raises it.
+        /// The row used to say that each zone could override this, which is the one thing a zone cannot
+        /// do. Class stopped being a readout in #212: it decides who is in a list as well as how a
+        /// position is numbered, and a zone's own filter is joined to it rather than set against it, so
+        /// a zone filters a list the rig left on Overall and never the other way about. Both halves are
+        /// therefore owed to the canvas rather than deleted from the code: the first is a shipped
+        /// behaviour a driver chooses rather than discovers, and the second is the zone filter that
+        /// SettingsControl.Panes.cs draws and FaceSettings.SetClassOnly stores.
         /// </remarks>
-        public const string PositionCaption = "Each zone can override this.";
+        public const string PositionCaption = "Class also shows only your own class in lists. A zone can ask for that on its own.";
 
         public const string DeltaTitle = "Delta reference";
 

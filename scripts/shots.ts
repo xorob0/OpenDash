@@ -20,7 +20,7 @@ import path from 'node:path';
 import { build as buildEmulator, lapsCompleted, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios, waitForLaps } from './emulator.ts';
 import { provenance, writeRun, type RunCapture } from './shotsRun.ts';
 import { captureDashboard, closeDashboards, guiAvailable, openDashboard, placeDashboards } from './gui.ts';
-import { claim, install, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
+import { claim, claimLost, install, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
 
@@ -131,13 +131,15 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
     console.error('There is one VM. Wait, or ask them to run `bun run vm release`.');
     return 1;
   }
-  const claimed = claim(host, `shots ${opts.packages.length}x${opts.scenarios.length}`);
+  const mine = new Date();
+  const claimed = claim(host, `shots ${opts.packages.length}x${opts.scenarios.length}`, mine);
   if (!claimed.ok) {
     console.error(claimed.stderr);
     return 1;
   }
 
   const taken: Shot[] = [];
+  let lost: string | null = null;
   try {
     if (!status(host).stdout.includes('guest-ssh: up')) {
       console.log('starting the VM');
@@ -208,9 +210,16 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
 
         const opened = openDashboard(host, { name: packageName });
         if (!opened.ok) {
-          console.log('could not be opened');
-          taken.push({ packageName, scenario, file, ok: false, why: opened.stderr.split('\n')[0] });
+          // Opening is driven over VNC, so a session that takes the claim mid-batch lands its own
+          // clicks in this one's sequence. The lock is read again before the failure is recorded,
+          // because otherwise the reason reads as a coordinate problem that was never there.
+          lost = claimLost(readClaim(host), mine.toISOString());
+          console.log(lost ? 'could not be opened; the claim changed hands' : 'could not be opened');
+          taken.push({ packageName, scenario, file, ok: false, why: lost ?? opened.stderr.split('\n')[0] });
           index += 1;
+          // A window photographed while somebody else is clicking can come back showing another
+          // dashboard, so a batch that has lost the guest stops rather than filling the directory.
+          if (lost) break;
           continue;
         }
 
@@ -231,19 +240,24 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
         closeDashboards(host);
         index += 1;
       }
+      // Written even when the run stopped short: what was photographed is still provenance.
       writeRun(opts.outDir, run);
+      if (lost) break;
     }
 
     const good = taken.filter((s) => s.ok);
     console.log('');
     console.log(`  ${good.length} of ${taken.length} photographed into ${path.relative(repoRoot, opts.outDir)}/`);
     for (const s of taken.filter((x) => !x.ok)) console.log(`  missing  ${s.packageName} on ${s.scenario}: ${s.why ?? 'unknown'}`);
+    if (lost) console.log(`  the run stopped there: ${lost}.`);
     console.log('');
     console.log('  a capture worth showing belongs in media/<issue>/; this directory is scratch');
     return good.length === taken.length ? 0 : 1;
   } finally {
     if (!opts.keep) {
-      closeDashboards(host);
+      // Closing the windows is more clicking, which is the one thing not to do in a guest that
+      // now belongs to somebody else.
+      if (!lost) closeDashboards(host);
       stopEmulator(host);
       release(host);
     }

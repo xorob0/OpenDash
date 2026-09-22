@@ -4,7 +4,7 @@
  * available width and is top aligned so the baseline lands where the canvas line box puts it.
  */
 import type { FontWeight, HAlign, Hex, TextItem } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { textBox } from '../design/metrics.ts';
 import { roundRect } from '../design/geometry.ts';
@@ -41,7 +41,7 @@ export interface LabelOptions {
 export function label(name: string, text: string, x: number, y: number, width: number, opts: LabelOptions = {}): TextItem {
   const fs = opts.size ?? ds.size.label;
   const box = textBox(y, fs);
-  return {
+  return withMoreBindings({
     kind: 'text',
     name,
     rect: roundRect({ left: x, top: box.top, width, height: box.height }),
@@ -54,8 +54,7 @@ export function label(name: string, text: string, x: number, y: number, width: n
     vAlign: 'top',
     backgroundColor: TRANSPARENT,
     ...(opts.widest ? { widest: opts.widest } : {}),
-    ...withBindings({ Text: opts.bind, TextColor: opts.colorBind, Visible: opts.visibleBind, Left: opts.leftBind }),
-  };
+  }, { Text: opts.bind, TextColor: opts.colorBind, Visible: opts.visibleBind, Left: opts.leftBind });
 }
 
 /**

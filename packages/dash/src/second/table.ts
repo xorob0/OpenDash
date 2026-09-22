@@ -22,7 +22,7 @@
  */
 import type { HAlign, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { assetBox, imageOf, RANK_DOWN, RANK_UP } from '../design/assets.ts';
 import { rect } from '../design/geometry.ts';
@@ -34,8 +34,8 @@ import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, splitHiddenCars } from './values.ts';
+import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition,
+  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
 const { iff, str, fmt, eq, ne, num, and, not, gt, lt, abs, concat, left, ucase, isnull } = ncalc;
 
@@ -213,6 +213,12 @@ interface CellContext {
   /** True when the car is in the pit lane, which dims its row. */
   inPit: Expr;
   mode: TableMode;
+  /**
+   * The condition under which the rows of this block are the player's own class, absent on a block
+   * whose rows never are. A cell measuring a gap to a car above it asks this, so that what it
+   * counts from is on the list it is drawn in.
+   */
+  inClass?: Expr;
   /** How the column this cell belongs to is aligned. */
   align: HAlign;
 }
@@ -261,6 +267,21 @@ const inkBind = (ctx: CellContext): Expr => iff(ctx.inPit, str(ds.color.text.dim
 const liftBind = (ctx: CellContext, otherwise: Expr): Expr => iff(ctx.isPlayer, str(ds.color.text.primary), otherwise);
 
 /**
+ * A cell measured against a car above it, which has to be a car the list actually draws.
+ *
+ * Gap and Int are the two and they answer together, Int being the difference of two neighbouring
+ * Gaps: a board counting the one from the class leader while the other counted between leaderboard
+ * neighbours would draw two columns of the same quantity that do not add up. The question is the
+ * one the rows themselves are drawn by, so the three agree by construction: a table in `mode:
+ * 'class'` is one class and asks nothing, a block whose rows are always the whole field asks
+ * nothing either, and everything else carries the condition {@link rowIndexFor} carries.
+ */
+const measuredInList = (ctx: CellContext, inClass: (idx: Expr) => Expr, whole: (idx: Expr) => Expr): Expr => {
+  if (ctx.mode === 'class') return inClass(ctx.idx);
+  return ctx.inClass === undefined ? whole(ctx.idx) : iff(ctx.inClass, inClass(ctx.idx), whole(ctx.idx));
+};
+
+/**
  * A numeral cell, vertically centred in the row.
  *
  * A right-aligned cell is drawn right-aligned, which is not the same as a box whose right edge
@@ -297,14 +318,14 @@ function cellName(ctx: CellContext): Item[] {
   const full = ctx.width >= Math.ceil(measureText('BarlowMedium', NAME_TO_FIT, fs));
   const bind = iff(ctx.isPlayer, str('YOU'), full ? carName(ctx.idx) : driverCode(ctx.idx));
   return [
-    {
-      ...label(`${ctx.name}.name`, 'KLX', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
+    withMoreBindings(
+      label(`${ctx.name}.name`, 'KLX', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
         size: fs,
         color: ds.color.text.secondary,
         bind,
       }),
-      ...withBindings({ Text: bind, TextColor: liftBind(ctx, inkBind(ctx)) }),
-    },
+      { TextColor: liftBind(ctx, inkBind(ctx)) },
+    ),
   ];
 }
 
@@ -335,17 +356,13 @@ function cellRank(ctx: CellContext): Item[] {
   const markerBox = rect(right - countWidth - gap - RANK_MARK, ctx.top + (ctx.height - RANK_MARK) / 2, RANK_MARK, RANK_MARK);
   const colour = iff(gained, str(ds.purpose.delta.faster), str(ds.purpose.delta.slower));
   return [
-    ...([[RANK_UP, gained, 'up'], [RANK_DOWN, lost, 'down']] as const).map(([asset, visible, id]) => ({
+    ...([[RANK_UP, gained, 'up'], [RANK_DOWN, lost, 'down']] as const).map(([asset, visible, id]) => withMoreBindings({
       kind: 'image' as const,
       name: `${ctx.name}.rank.${id}`,
       image: asset.name,
       rect: assetBox(markerBox, imageOf(asset)),
-      ...withBindings({ Visible: visible }),
-    })),
-    {
-      ...band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim),
-      ...withBindings({ Visible: not(moved) }),
-    },
+    }, { Visible: visible })),
+    withMoreBindings(band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim), { Visible: not(moved) }),
     numeral(`${ctx.name}.rank.count`, '2', right - countWidth, ctx.top + (ctx.height - fs) / 2, fs, { digits: 2, specials: 0 }, {
       bind: iff(moved, fmt(abs(change), '0'), str('')),
       colorBind: colour,
@@ -359,10 +376,7 @@ function cellRank(ctx: CellContext): Item[] {
 function cellPit(ctx: CellContext): Item[] {
   const chipW = Math.min(ctx.width, chipWidth(ctx.density, 'PIT'));
   return [
-    ...cellValue(ctx, 'pit', '1', carPitCount(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor, align: 'right' }).map((item) => ({
-      ...item,
-      ...withBindings({ Text: carPitCount(ctx.idx), TextColor: inkBind(ctx), Visible: not(ctx.inPit) }),
-    })),
+    ...cellValue(ctx, 'pit', '1', carPitCount(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor, align: 'right' }).map((item) => withMoreBindings(item, { Visible: not(ctx.inPit) })),
     ...chip(`${ctx.name}.pitChip`, 'PIT', ctx.x + ctx.width - chipW, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
       inverted: true,
       visibleBind: ctx.inPit,
@@ -457,9 +471,9 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
           // the typographic minus `signed` substitutes, so that what Dash Studio shows at design
           // time is the glyph the bound value draws rather than .NET's hyphen.
           cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
-        : cellValue(ctx, 'gap', '+12.6', carRaceGap(ctx.idx), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
+        : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
   },
-  int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', carInterval(ctx.idx), CHARS.gap) },
+  int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', measuredInList(ctx, carClassInterval, carInterval), CHARS.gap) },
   last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
   best: {
     header: 'Best',
@@ -535,11 +549,13 @@ export interface TableSpec {
    */
   split?: number;
   /**
-   * When true, the table lists the player's own class rather than the whole field.
+   * The zone's own answer to "does this list show the player's class", where the zone has one.
    *
    * An expression, because it is a plugin setting a driver changes mid-session and the file is
    * written once. It only reaches `mode: 'full'` and `mode: 'relative'`: `mode: 'class'` is already
-   * one class and has nothing left to filter.
+   * one class and has nothing left to filter. It is not the whole condition either, the rig-wide
+   * `PositionMode` being the other half of it; {@link rowsInClass} joins the two and a table that
+   * passes nothing here still asks that one.
    */
   classOnly?: Expr;
 }
@@ -549,16 +565,18 @@ export interface TableSpec {
  *
  * SimHub has a class-only twin of each of the two lookups a table uses, so filtering to the
  * player's class is the same question asked of a different function rather than a row set built
- * somewhere else. With no `classOnly` the expression is the bare lookup it has always been, which
- * is what the companion still passes; the pit wall passes its screen's own setting, so the same
- * rows are drawn either way and only the car each one addresses moves.
+ * somewhere else: the same rows are drawn either way and only the car each one addresses moves.
+ *
+ * Two settings reach the condition and {@link rowsInClass} joins them, which is why a table with no
+ * `classOnly` of its own is still conditional. The zone's filter is the one a caller passes, and
+ * the rig's `PositionMode` is read for every table there is, the companion's included: a column of
+ * class positions drawn over the whole field numbers an order it did not sort.
  */
 function rowIndexFor(spec: TableSpec, centre: number): Expr {
   if (spec.mode === 'class') return rowIndex.inClass();
   const whole = spec.mode === 'relative' ? rowIndex.relative(centre) : rowIndex.full();
-  if (!spec.classOnly) return whole;
   const inClass = spec.mode === 'relative' ? rowIndex.relativeInClass(centre) : rowIndex.inClass();
-  return iff(spec.classOnly, inClass, whole);
+  return iff(rowsInClass(spec.classOnly), inClass, whole);
 }
 
 /**
@@ -632,14 +650,14 @@ function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { h
  * evaluates a few hundred times a tick, and the two halves of a split list differ in one thing
  * only: where they start counting.
  */
-function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: { name: string; top: number; rows: number; idx: Expr }): LayerItem {
+function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: { name: string; top: number; rows: number; idx: Expr; inClass?: Expr }): LayerItem {
   const d = densityOf(spec.density);
   const board = spec.board ?? false;
-  const { name, top, rows, idx } = block;
+  const { name, top, rows, idx, inClass } = block;
   const isPlayer = carIsPlayer(idx);
   const inPit = carInPit(idx);
   const children: Item[] = [
-    { ...band(`${spec.name}.${name}.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), ...withBindings({ Visible: isPlayer }) },
+    withMoreBindings(band(`${spec.name}.${name}.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), { Visible: isPlayer }),
     // The board's rows are flush and each is closed by a rule; a list's are two apart and closed by
     // the gap. Both run the frame's full width, under the padding the cells are inset by.
     ...(board ? [rule(`${spec.name}.${name}.rule`, spec.frame.left, top + rowHeight - 1, spec.frame.width, 1)] : []),
@@ -661,12 +679,13 @@ function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: {
         isPlayer,
         inPit,
         mode: spec.mode,
+        ...(inClass === undefined ? {} : { inClass }),
         align: COLUMNS[id].align,
       }),
     );
     x += width + cellGapOf(board);
   });
-  const row: LayerItem = { kind: 'layer', name: `${spec.name}.${name}`, children, ...withBindings({ Visible: carAvailable(idx) }) };
+  const row: LayerItem = withMoreBindings({ kind: 'layer', name: `${spec.name}.${name}`, children }, { Visible: carAvailable(idx) });
   return { kind: 'layer', name: `${spec.name}.${name}s`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight + rowGapOf(board), repeatLeftOffset: 0 };
 }
 
@@ -727,6 +746,11 @@ export function table(spec: TableSpec): Item[] {
     // The kept rows are the head of the overall leaderboard and the window below counts in the same
     // numbers; a class filter would restart both at one and the limit line would count a field the
     // rows above it are not drawn from.
+    //
+    // Which is why the rig-wide `PositionMode` is not refused here as `classOnly` is: it is a
+    // runtime setting and nothing built once can throw on it. A split list in class mode would
+    // therefore number an overall field by class, which is #212 over again; no page draws one
+    // today, and the page that first does has to answer the limit line before it answers this.
     throw new Error(`table ${spec.name}: a split list is the overall leaderboard, so it takes neither a class mode nor classOnly`);
   }
   // The limit line costs a row's worth of the body and is laid out whether or not the field is long
@@ -755,10 +779,14 @@ export function table(spec: TableSpec): Item[] {
   if (!splits) {
     // The player sits in the middle of a relative table, so the row index counts from that row.
     const idx = rowIndexFor(spec, Math.ceil(rows / 2));
-    return [...head, rowBlock(spec, widths, rowHeight, { name: 'row', top, rows, idx })];
+    return [...head, rowBlock(spec, widths, rowHeight, { name: 'row', top, rows, idx, inClass: rowsInClass(spec.classOnly) })];
   }
   // The player sits in the middle of the window, as in a relative table, so a driver reads as many
   // cars ahead as behind whatever the field does around them.
+  //
+  // Neither block carries a class condition, because neither block's rows do: both are the overall
+  // leaderboard, for the reason `rowIndex.split` records, so a gap measured from the class leader
+  // would be measured from a car the list does not draw.
   const windowRows = rows - topRows;
   const bandTop = top + topRows * (rowHeight + rowGap);
   return [

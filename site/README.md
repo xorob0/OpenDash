@@ -93,17 +93,41 @@ source and SimHub, and the comparison is complete and dated.
 
 ## Deploying
 
-The image builds everything it serves. Its first stage runs the repository's own `bun run package`,
-so the `.simhubdash` files and `OpenDash-plugin.zip` on the download page are the files this commit
-produces. The consequence is that the site can only offer one version, which is why the download
-page pairs the current build with the changelog rather than with an archive.
+[docs/deploy.md](../docs/deploy.md) is the deployment: the Dokploy application field by field, the
+first deploy, what a redeploy publishes, and the failures worth recognising. Two facts from it are
+worth having here, because both are easy to get wrong from inside this directory.
 
-**Build from the repository root, not from `site/`:**
+The image builds everything it serves. Its first stage runs the repository's own `bun run package`,
+so the `.simhubdash` files and `OpenDash-plugin.zip` on the Downloads page are the files this commit
+produces, and a redeploy is a release of the downloads as much as of the pages. **Build from the
+repository root, not from `site/`**, because that first stage needs the whole tree:
 
 ```bash
-docker build -f site/Dockerfile -t opendash-site .
-docker run -p 3000:3000 -e NEXT_PUBLIC_SITE_URL=https://your.domain opendash-site
+docker build -f site/Dockerfile --build-arg NEXT_PUBLIC_SITE_URL=https://your.domain -t opendash-site .
+docker run -p 3000:3000 opendash-site
 ```
 
-In Dokploy, set the build context to the repository root and the Dockerfile path to
-`site/Dockerfile`. Redeploy to publish a release: the image rebuilds the packages from source.
+And the canonical origin is a build argument rather than a runtime variable. Next substitutes
+`NEXT_PUBLIC_*` into its output while building, so a value given to `docker run`, or to Dokploy's
+Environment tab, is read by nothing: the site answers, and its sitemap comes back empty.
+
+### Settings
+
+| | |
+|---|---|
+| `NEXT_PUBLIC_SITE_URL` (build argument) | The canonical origin, no trailing slash. There is no default: unset, the metadata carries no absolute URL and the sitemap comes back empty rather than pointing at a domain this repository would have had to guess. |
+| `PORT` (environment) | Defaults to 3000. |
+
+## Design
+
+The design system is the dash's — `design/tokens.json` and the canvas — and most of it carries over
+unchanged: the surface ladder, Barlow and Barlow Condensed, hard edges, and separation by 1 px rules
+rather than by boxes.
+
+Two things differ, both deliberate and both explained at the top of `app/globals.css`. The type ramp
+is the site's own, because the dash's is pixels on a 480 px panel and the plugin's is 96 dpi inside
+SimHub. And motion is allowed: rule 11 holds the dash to motion that carries meaning because a face
+is read at speed, while a web page is documentation — the surface brand cyan already lives on.
+
+`design/` is not edited from code. When the build and the canvas disagree, say so rather than
+quietly changing either.

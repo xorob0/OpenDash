@@ -168,8 +168,42 @@ export const ratingK = (value: Expr): Expr => iff(gt(isnull(value, num(0)), num(
 /** The player's 1-based leaderboard index, which every per-car read of your own car goes through. */
 export const player = (): Expr => playerPosition();
 
-/** The car ahead on track (-1) or behind (1). */
+/** The car ahead on track (-1) or behind (1), taken from the whole track whoever is on it. */
 export const neighbour = (offset: number): Expr => aheadBehind(num(offset));
+
+/**
+ * Whether the rig counts positions in class rather than overall, which is `PositionMode`.
+ *
+ * One reading, because four drawings ask it: the position a row shows, the field that position is
+ * shown out of, which cars a list is drawn from, and which neighbour a relative reads.
+ */
+export const classMode = (): Expr => eq(setting.positionMode(), str('class'));
+
+/**
+ * Whether a list draws the player's own class rather than the whole field.
+ *
+ * Two settings answer it and either one on its own is enough. A zone carries its own filter, which
+ * is one rectangle of a face or one pit wall answering for itself; `PositionMode` is the rig's
+ * answer, and it filters the rows it numbers rather than only numbering them. A column of class
+ * positions over the whole field is three cars called P1 in an order that is not the order of any
+ * of the numbers, which is not a leaderboard.
+ *
+ * The converse remains two questions, deliberately: a zone filtered to one class while the rig
+ * counts overall lists that class by its overall places, which is a legitimate thing to want on a
+ * multi-class grid and is what the zone setting is for.
+ */
+export const rowsInClass = (zoneFilter?: Expr): Expr => (zoneFilter === undefined ? classMode() : ncalc.or(zoneFilter, classMode()));
+
+/**
+ * The car ahead (-1) or behind (1) on track, in the player's class wherever the list it belongs to
+ * is filtered to that class.
+ *
+ * {@link neighbour} asks the same of the whole track and is what a blue flag is about, a faster
+ * class arriving being the commonest reason for one. This is what a drawing reads when its subject
+ * is the cars a driver is actually racing.
+ */
+export const listNeighbour = (offset: number, zoneFilter?: Expr): Expr =>
+  iff(rowsInClass(zoneFilter), aheadBehindInClass(num(offset)), aheadBehind(num(offset)));
 
 /**
  * Where a split list's window opens: the first leaderboard row drawn under the limit line.
@@ -288,8 +322,7 @@ export const carClass = (idx: Expr): Expr => driver('carclass', idx);
  * prints a position asks it first. A grid of AI before the green flag has no positions at all, and
  * a column of `P0` is a row of wrong answers where an empty cell is an honest one.
  */
-export const carPosition = (idx: Expr): Expr =>
-  iff(eq(setting.positionMode(), str('class')), isnull(driver('classposition', idx), num(0)), isnull(driver('position', idx), num(0)));
+export const carPosition = (idx: Expr): Expr => iff(classMode(), isnull(driver('classposition', idx), num(0)), isnull(driver('position', idx), num(0)));
 
 /** True once the sim has actually placed this car. Positions count from one, so zero is "not yet". */
 export const hasPosition = (idx: Expr): Expr => gt(carPosition(idx), num(0));
@@ -300,8 +333,21 @@ export const positionDigits = (idx: Expr): Expr => iff(hasPosition(idx), fmt(car
 /** A position with the P the drawings prefix it with, or `P--` before the sim has placed the car. */
 export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDigits(idx));
 
-/** Places gained since the start, signed; 0 when the sim does not track it. */
-export const carRankChange = (idx: Expr): Expr => isnull(driver('positiongain', idx), num(0));
+/**
+ * Places gained since the start, signed; 0 when the sim does not track it.
+ *
+ * Counted in the field the position beside it is counted in, which is {@link carPosition}'s own
+ * question and is why the two read the same setting: a triangle counting the whole race next to a
+ * number counting one class is the pair of cells #212 is about, a place and the movement of that
+ * place answered from different fields. A car that started eighth overall and third in class and
+ * now runs fifth and first drew `P1` with three places gained beside it.
+ *
+ * SimHub publishes the twin rather than leaving it to be worked out: `PositionGainClass` is
+ * "driver's position gains in his own class since the start of the race/connection", registered
+ * beside `PositionGain` among the opponent providers of SimHub 9.12.6.
+ */
+export const carRankChange = (idx: Expr): Expr =>
+  iff(classMode(), isnull(driver('positiongainclass', idx), num(0)), isnull(driver('positiongain', idx), num(0)));
 
 /**
  * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and
@@ -317,6 +363,9 @@ export const carRankChange = (idx: Expr): Expr => isnull(driver('positiongain', 
  * and not the question. The leader is leaderboard row 1, the board being sorted by live position;
  * where either lap is missing the difference is null, the test is false, and the row falls back to
  * seconds, which is the reading that is always true.
+ *
+ * This is the reading of a list drawn from the whole field. A list drawn from one class measures to
+ * the leader of that class instead, which is {@link carClassRaceGap}.
  */
 export const carRaceGap = (idx: Expr): Expr => {
   const gap = driver('gaptoleader', idx);
@@ -333,6 +382,48 @@ export const carRaceGap = (idx: Expr): Expr => {
 };
 
 /**
+ * The same gap on a list drawn from the player's own class: `Lead` on the row it counts from, the
+ * seconds to that car on a classmate sharing its lap, and `+1L` on one that does not.
+ *
+ * The reference is the leader of the list rather than the leader of the race, because a column
+ * measured to a car that is not on it says nothing a reader can use. Where the player's class runs
+ * a lap behind the overall leader, every row of a class board measured the other way reads `+1L`
+ * and no row of it reads `Lead`, which is a column carrying no intra-class gap at all.
+ *
+ * SimHub does publish the class leader's own figures: `gaptoclassleader`, `lapstoclassleader` and
+ * `gaptoclassleadercombined` are registered beside the overall ones among the opponent providers of
+ * 9.12.6, and docs/research/simhub-dash-format.md records them. This column nevertheless builds the
+ * value as the difference of the two gaps to the overall leader, exactly as {@link carInterval}
+ * takes one between two rows, with the lap count from `currentlap`: that is the arithmetic the pit
+ * wall values test can evaluate against its model of a field today, and it is proved there against
+ * the leader of the list. Reading the three providers instead is the simplification to make, for
+ * this column and {@link carRaceGap}'s lapped case together, once that test's evaluator carries them.
+ *
+ * The word on the row the column counts from is the one thing here that follows the numbering
+ * rather than the rows. `Lead` is a claim about a place, and a zone filtered to one class while
+ * the rig counts overall draws that class by its overall places: the top row of such a list reads
+ * `P2` where the class is a lap down on another, and `Lead` beside it is two cells of one row
+ * making claims that contradict each other. {@link carPosition} is the place the row draws, so the
+ * word is shown when that place is the first and the cell is left empty otherwise, the row having
+ * nothing to measure against itself, which is what {@link carInterval} already draws in the cell
+ * beside it. A class leading the race keeps the word under either setting.
+ */
+export const carClassRaceGap = (idx: Expr): Expr => {
+  const here = driver('gaptoleader', idx);
+  const lead = driver('gaptoleader', classPosition(num(1)));
+  const lapsDown = sub(driver('currentlap', classPosition(num(1))), driver('currentlap', idx));
+  return iff(
+    eq(isnull(driver('classposition', idx), num(0)), num(1)),
+    iff(eq(carPosition(idx), num(1)), str('Lead'), str('')),
+    iff(
+      ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)),
+      str(NO_VALUE),
+      iff(gt(lapsDown, num(0)), concat(str('+'), fmt(lapsDown, '0'), str('L')), signed(sub(here, lead), '0.0')),
+    ),
+  );
+};
+
+/**
  * The gap to the player on track, signed, three decimals: a car ahead reads `−5.886` and a car
  * behind `+0.722`. The minus is the typographic one, which `signed` substitutes for the hyphen
  * .NET's formatter writes.
@@ -341,14 +432,34 @@ export const carRelativeGap = (idx: Expr): Expr =>
   iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signed(driver('relativegaptoplayer', idx), '0.000'));
 
 /**
- * The interval to the car in front: the difference of the two gaps to the leader. In class mode
- * the row above belongs to the same class only when the classes do not interleave, so the value
- * is the on-leaderboard interval either way; the leader's row is empty.
+ * The interval to the car in front on the leaderboard: the difference of the two gaps to the
+ * leader. The leader's own row is empty, there being nothing in front of it.
+ *
+ * The car in front is the row above on the list this is drawn in, so a list of one class takes
+ * {@link carClassInterval} instead. The two are one decision with the gap column beside them: Int
+ * is the difference of two neighbouring Gaps, and a board counting the one from the class leader
+ * while the other counted between leaderboard neighbours would draw two columns that do not add up.
  */
 export const carInterval = (idx: Expr): Expr => {
   const ahead = driver('gaptoleader', sub(idx, num(1)));
   const here = driver('gaptoleader', idx);
   return iff(and(gt(idx, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
+};
+
+/**
+ * The interval to the car one place ahead in the player's own class, which on a list drawn from
+ * that class is the row above.
+ *
+ * The row above is found through the class place rather than through the row number, `idx` being
+ * the only thing a cell is given: one off a car's own `classposition` and back through SimHub's
+ * class-only lookup is the car the list draws above it, whatever leaderboard rows fall between the
+ * two.
+ */
+export const carClassInterval = (idx: Expr): Expr => {
+  const place = isnull(driver('classposition', idx), num(0));
+  const ahead = driver('gaptoleader', classPosition(sub(place, num(1))));
+  const here = driver('gaptoleader', idx);
+  return iff(and(gt(place, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
 };
 
 export const carLastLap = (idx: Expr): Expr => lapTime(driver('lastlap', idx));
@@ -373,8 +484,12 @@ export const carRating = (idx: Expr): Expr => ratingK(driver('iracingirating', i
  * The car immediately behind on track, which is the one a blue flag is about.
  *
  * On track and not on the leaderboard: a blue flag is thrown for the car that is about to arrive,
- * and the car a place behind on the timing screen may be a lap away. {@link neighbour} is the same
- * reading the relative table's rows are built from.
+ * and the car a place behind on the timing screen may be a lap away.
+ *
+ * Whoever is on the track, moreover, and not whoever is in the player's class: the car about to
+ * arrive is most often a faster class, so this stays on {@link neighbour} while the lists moved to
+ * {@link listNeighbour}. The position it prints still follows `PositionMode`, as every position
+ * OpenDash draws does.
  */
 export const carBehind = (): Expr => neighbour(1);
 
@@ -426,7 +541,7 @@ export const opponentCount = (): Expr => isnull(game('OpponentsCount'), num(0));
 export const classOpponentCount = (): Expr => isnull(game('PlayerClassOpponentsCount'), num(0));
 
 /** The field size a position is shown out of, per PositionMode. */
-export const fieldSize = (): Expr => iff(eq(setting.positionMode(), str('class')), classOpponentCount(), opponentCount());
+export const fieldSize = (): Expr => iff(classMode(), classOpponentCount(), opponentCount());
 
 export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
 
@@ -477,6 +592,30 @@ export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap(
  * all has completed laps and nothing to show for them, and that is the same empty box.
  */
 export const fuelIsSettled = (): Expr => and(gt(completedLaps(), num(0)), gt(fuelPerLap(), num(0)));
+
+/**
+ * Whether the last completed lap's consumption is a reading.
+ *
+ * Two conditions rather than one, since SimHub publishes `Fuel_LastLapConsumption` as zero in two
+ * separate situations: before the first crossing, which is what {@link fuelIsSettled} answers, and
+ * after a lap that included a refuelling stop, on which the difference between the two crossings is
+ * not a consumption at all. Both of them are an absence, whereas `0.000` drawn on a face reads as a
+ * broken sensor. The band's fuel page and the fuel module draw this one property, so they ask this
+ * one question of it rather than each guarding it in a way of its own. #382.
+ */
+export const fuelLastLapIsSettled = (): Expr => and(fuelIsSettled(), gt(fuelLastLap(), num(0)));
+
+/**
+ * The fuel range in seconds, or nothing to count until a lap has said what one costs.
+ *
+ * The gate sits on the seconds rather than around the drawing, which is what keeps one field to one
+ * absence. A fuel time is drawn through {@link clock} on the modules and through
+ * {@link minutesClock} on band D, and each of those already writes a placeholder of the shape the
+ * time has when there is nothing to count; a gate wrapped around the drawing instead would answer
+ * `--` before a lap and `-:--:--` after the tank had run dry, two shapes for one absence in one
+ * box, and the shorter of the two would move the column the time sits in.
+ */
+export const settledFuelTimeLeft = (): Expr => iff(fuelIsSettled(), fuelTimeLeft(), num(0));
 
 /**
  * How long the race is expected to run, in laps.

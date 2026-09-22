@@ -1,6 +1,6 @@
 /** segment: one shift-light or rev-bar cell, radius.seg, the one rounded thing on the face. On a round face it is rotated to lie on the arc. */
 import type { Hex, Rect, RectangleItem } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { roundRect } from '../design/geometry.ts';
 import { ds } from '../tokens.ts';
 
@@ -17,7 +17,7 @@ export interface SegmentOptions {
 }
 
 export function segment(name: string, r: Rect, color: Hex, opts: SegmentOptions = {}): RectangleItem {
-  return {
+  return withMoreBindings({
     kind: 'rect',
     name,
     rect: roundRect(r),
@@ -25,6 +25,5 @@ export function segment(name: string, r: Rect, color: Hex, opts: SegmentOptions 
     backgroundColor: color,
     border: { radius: ds.radius.seg },
     ...(opts.blinkBind !== undefined ? { blink: { delayMs: opts.blinkDelayMs ?? 250 } } : {}),
-    ...withBindings({ BackgroundColor: opts.colorBind, BlinkEnabled: opts.blinkBind, Visible: opts.visibleBind }),
-  };
+  }, { BackgroundColor: opts.colorBind, BlinkEnabled: opts.blinkBind, Visible: opts.visibleBind });
 }

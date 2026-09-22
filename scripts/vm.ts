@@ -622,6 +622,24 @@ export function claim(host: Host, note = '', now = new Date()): RunResult {
   return write.ok ? { ...write, stdout: `claimed by ${me}` } : write;
 }
 
+/**
+ * Why the lock is no longer the one this run wrote, or null when it still is. Read after a step
+ * fails: a second session taking the guest moves the mouse under whatever this one is clicking, and
+ * that is a different fault from the one the step is about to report.
+ *
+ * A claim of ours that has merely gone stale is not somebody taking the VM, so a run that outlives
+ * the staleness threshold and finds no lock at all is told nothing.
+ */
+export function claimLost(held: Claim | null, since: string, me = whoAmI(), now = new Date()): string | null {
+  if (held && held.who === me && held.since === since) return null;
+  if (held) {
+    return `the VM was claimed by ${held.who} at ${held.since}${held.note ? ` (${held.note})` : ''} after this run took it, so a second session was driving the guest while this one was working`;
+  }
+  const age = (now.getTime() - Date.parse(since)) / 60_000;
+  if (!Number.isFinite(age) || age > LOCK_STALE_MINUTES) return null;
+  return 'the claim this run took is gone, so nothing was stopping a second session from driving the guest while this one was working';
+}
+
 /** Gives the lock back. Releasing a lock somebody else holds is refused rather than silent. */
 export function release(host: Host, now = new Date()): RunResult {
   const held = readClaim(host, now);

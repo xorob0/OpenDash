@@ -665,13 +665,13 @@ exports[`card snapshots card 7 fuelLaps 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+          "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
         },
         "Mode": 2
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+          "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
         },
         "Mode": 2
       }
@@ -10998,13 +10998,13 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -16978,13 +16978,13 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -22902,13 +22902,13 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -28213,13 +28213,13 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -33479,13 +33479,13 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -39309,13 +39309,13 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -45477,13 +45477,13 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -50563,13 +50563,13 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -54941,13 +54941,13 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
@@ -60025,13 +60025,13 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '-.-', format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), format(isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0), '0.0'), '--')"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) <= (0), '#33383F', if(((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1)), '#FF2D46', '#F5F7FA'))"
+                "Expression": "if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), if((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) < (1), '#FF2D46', '#F5F7FA'), '#33383F')"
               },
               "Mode": 2
             }
