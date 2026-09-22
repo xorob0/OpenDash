@@ -52,7 +52,7 @@ export default function Download() {
           )}
           <p className="prose">
             Close SimHub, unzip, copy <code>OpenDash.dll</code> next to <code>SimHubWPF.exe</code>, unblock it.{' '}
-            <Link href="/install#plugin" className="link">
+            <Link href="/install" className="link">
               The 5 steps
             </Link>
             .
@@ -60,19 +60,19 @@ export default function Download() {
         </div>
       </Section>
 
-      <Section id="packages" label="One at a time" title="1 dashboard at a time." lede="No plugin, default pages. Double-click to import. LED profiles are inside the plugin." wide>
+      <Section id="packages" label="By hand" title="1 dashboard at a time." lede="For whoever wants only 1 file. Double-click to import: default pages, no settings page, no updates. The LED profiles come with the plugin." wide>
         <div className={styles.groups}>
           <div className={styles.group}>
             <h3 className="h3">Faces</h3>
-            <SizeList packages={FACES} />
+            <SizeList packages={FACES} downloads />
           </div>
           <div className={styles.group}>
             <h3 className="h3">Companion</h3>
-            <SizeList packages={COMPANIONS} />
+            <SizeList packages={COMPANIONS} downloads />
           </div>
           <div className={styles.group}>
             <h3 className="h3">Pit wall</h3>
-            <SizeList packages={PIT_WALLS} />
+            <SizeList packages={PIT_WALLS} downloads />
           </div>
         </div>
       </Section>

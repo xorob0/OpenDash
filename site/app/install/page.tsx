@@ -3,61 +3,55 @@ import Link from 'next/link';
 import { Actions, Primary, Secondary } from '../../components/Buttons';
 import { Section } from '../../components/Section';
 import { Steps } from '../../components/Steps';
-import { SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
+import { DOWNLOADS, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
+import { weigh } from '../../lib/packages';
 import { SIMHUB_URL } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Install OpenDash in SimHub',
-  description: '2 routes, 5 steps, and the unblock step everyone misses.',
+  description: 'The plugin installs every dashboard and every LED profile in 5 steps, 1 of which everyone misses.',
 };
 
+const PLUGIN_ZIP = 'OpenDash-plugin.zip';
+
 export default function Install() {
+  const plugin = DOWNLOADS.find((d) => d.file === PLUGIN_ZIP);
+
   return (
     <>
       <Section
         level={1}
         ruled={false}
-        id="dashboard"
+        id="plugin"
         label="Install"
-        title="5 steps, and 1 that everyone misses."
+        title="Install the plugin."
         lede={
           <>
-            Windows and{' '}
+            1 file installs all 14 dashboards and 63 LED profiles, and adds an OpenDash page to SimHub where every setting lives. You need Windows and{' '}
             <a href={SIMHUB_URL} className="link" rel="noopener">
               SimHub
             </a>{' '}
-            {SIMHUB_VERSION} or later. 2 routes: 1 dashboard file, or the plugin with all 14 inside it.
+            {SIMHUB_VERSION} or later.
           </>
         }
         wide
       >
-        <h2 className="h3">Route 1: 1 dashboard, no plugin</h2>
-        <p className={`prose ${styles.under}`}>The default pages and layout, and no settings. Enough to see it on your screen.</p>
-        <Steps
-          steps={[
-            {
-              title: 'Download the file for your screen.',
-              body: (
-                <>
-                  <Link href="/screens#faces" className="link">
-                    Find your size
-                  </Link>
-                  . 850 × 480 is the base size.
-                </>
-              ),
-            },
-            { title: 'Double-click it.', body: 'SimHub imports the .simhubdash. Nothing else is needed.' },
-            { title: 'Assign it to a display in Dash Studio.', body: 'A DDU, a USB screen, or a phone on the network. Like any other dashboard.' },
-          ]}
-        />
-      </Section>
-
-      <Section id="plugin" label="Route 2" title="The plugin, with everything." lede="1 download with all 14 dashboards and 63 LED profiles inside it, and a settings page in SimHub." wide>
+        <div className={styles.get}>
+          {plugin ? (
+            <Actions>
+              <Primary href={`/downloads/${PLUGIN_ZIP}`} download>
+                Download {PLUGIN_ZIP} <span className={`num ${styles.weight}`}>{weigh(plugin.bytes)}</span>
+              </Primary>
+            </Actions>
+          ) : (
+            <p className="prose">The plugin zip is not in this build. The download page says why.</p>
+          )}
+        </div>
         <Steps
           steps={[
             { title: 'Close SimHub.', body: 'Fully closed, not in the tray.' },
-            { title: 'Unzip OpenDash-plugin.zip.', body: `It carries all 14 dashboards and 63 LED profiles. Version ${VERSION}.` },
+            { title: `Unzip ${PLUGIN_ZIP}.`, body: `Version ${VERSION}. It carries every dashboard and every LED profile.` },
             {
               title: 'Copy OpenDash.dll next to SimHubWPF.exe.',
               body: (
@@ -72,27 +66,21 @@ export default function Install() {
               command: 'Unblock-File "C:\\Program Files (x86)\\SimHub\\OpenDash.dll"',
               important: true,
             },
-            { title: 'Start SimHub and accept the plugin.', body: 'OpenDash appears in the left menu with 4 tabs: Rig, Data, Lights, Install.' },
+            { title: 'Start SimHub and accept the plugin.', body: 'OpenDash appears in the left menu with 4 tabs: Rig, Data, Lights, Install. Every dashboard is in Dash Studio.' },
           ]}
         />
-        <div className={styles.actions}>
-          <Actions>
-            <Primary href="/download">Download {VERSION}</Primary>
-            <Secondary href="/screens#faces">Find your screen</Secondary>
-          </Actions>
-        </div>
       </Section>
 
       <Section id="after" label="After installing" title="Make it yours." lede="Nothing has to be configured to work. The plugin is where you change what each screen shows." wide>
         <ul className={`rows ${styles.points}`}>
           <li>
+            <strong>Assign a dashboard to a display in Dash Studio.</strong> A DDU, a USB screen, or a phone on the network, like any other dashboard.
+          </li>
+          <li>
             <strong>Add your screen on the Rig tab.</strong> Pick the size, choose the pages for each zone, bind the wheel buttons.
           </li>
           <li>
             <strong>Every screen keeps its own settings.</strong> A face on the wheel and a face beside it are set up apart.
-          </li>
-          <li>
-            <strong>Settings are SimHub properties.</strong> Other dashboards and LED profiles can read them. A change applies at once.
           </li>
           <li>
             <strong>Updates.</strong> The plugin checks GitHub once a day, sends nothing about you, and can be switched off. Updating is 1 click, then restart SimHub.
@@ -124,6 +112,24 @@ export default function Install() {
             <strong>A wheel button does nothing.</strong> Bind the action of the screen you are looking at. Each screen has its own.
           </li>
         </ul>
+      </Section>
+
+      <Section
+        id="manual"
+        label="By hand"
+        title="Or install 1 dashboard by hand."
+        lede="If you really want only 1 file: double-click a .simhubdash and SimHub imports it. You get the default pages and layout, no settings page and no updates. The plugin is the better experience."
+        wide
+      >
+        <Actions>
+          <Secondary href="/download#packages">The files, one by one</Secondary>
+        </Actions>
+        <p className={`prose ${styles.after}`}>
+          <Link href="/screens#faces" className="link">
+            Find your size first
+          </Link>
+          .
+        </p>
       </Section>
     </>
   );

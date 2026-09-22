@@ -49,8 +49,9 @@ const SHARE_UNC = '\\\\host.lan\\Data';
 export const UNTRACED_SCENARIOS: readonly string[] = [
   // flagbox drives lights, not a dashboard.
   'flagbox',
-  // gallery exists to be photographed for the website; nothing replays it.
+  // gallery exists to be photographed for the website, and clip to be filmed; nothing replays them.
   'gallery',
+  'clip',
 ];
 
 /** Every scenario a run may name. */

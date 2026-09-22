@@ -97,7 +97,7 @@
   color: var(--purpose-ui-accent);
 }
 
-.download {
+.install {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -111,12 +111,13 @@
   transition: background var(--fast) var(--ease);
 }
 
-.download:hover {
+.install:hover {
   background: var(--color-brand-tint);
 }
 
-.weight {
-  opacity: 0.8;
+
+.file {
+  font-size: var(--size-small);
 }
 
 .notBuilt {

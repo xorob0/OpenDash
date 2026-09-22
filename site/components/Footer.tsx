@@ -4,7 +4,7 @@
  */
 import Link from 'next/link';
 import { VERSION } from '../lib/content.generated';
-import { CAR_DATA_CREDIT, CAR_DATA_URL, DOWNLOAD, NAV, NO_TRACKING, REPO_URL, SITE_NAME } from '../lib/site';
+import { CAR_DATA_CREDIT, CAR_DATA_URL, INSTALL, NAV, NO_TRACKING, REPO_URL, SITE_NAME } from '../lib/site';
 import { Wordmark } from './Wordmark';
 import styles from './Footer.module.css';
 
@@ -14,7 +14,7 @@ export function Footer() {
       <div className={`page ${styles.grid}`}>
         <div className={styles.brand}>
           <Wordmark size={20} />
-          <p className={styles.line}>SimHub dashboards for iRacing. Free, forever. MIT.</p>
+          <p className={styles.line}>Free dashboards for SimHub, built for iRacing first. MIT.</p>
           <p className={`num ${styles.version}`}>{VERSION}</p>
         </div>
 
@@ -29,8 +29,8 @@ export function Footer() {
               </li>
             ))}
             <li>
-              <Link href={DOWNLOAD.href} className={styles.navLink}>
-                {DOWNLOAD.label}
+              <Link href={INSTALL.href} className={styles.navLink}>
+                {INSTALL.label}
               </Link>
             </li>
             <li>

@@ -20,7 +20,7 @@
  * broken image: the panel pictures arrive with the reshoot, and a page may ship before them.
  */
 import Image from 'next/image';
-import { CAPTURES, hasCapture, longDate } from '../lib/captures';
+import { hasCapture } from '../lib/captures';
 import { PANNABLE_ASPECT } from './frame';
 import styles from './Capture.module.css';
 
@@ -60,19 +60,5 @@ export function Capture({ file, alt, width, height, caption, round, priority, si
       </div>
       {caption ? <figcaption className={styles.caption}>{caption}</figcaption> : null}
     </figure>
-  );
-}
-
-/**
- * The provenance line a gallery shows once: which version the pictures are from, and a warning
- * when that is not the version being served.
- */
-export function CaptureNote({ served }: { served: string }) {
-  const stale = CAPTURES.version !== '' && CAPTURES.version !== served;
-  return (
-    <p className={styles.note}>
-      Every picture is the package itself, rendered by SimHub on a green-flag lap at Spa. Captured from {CAPTURES.version || 'an unknown version'} on{' '}
-      {longDate(CAPTURES.date)}.{stale ? ` The download is ${served}.` : ''}
-    </p>
   );
 }

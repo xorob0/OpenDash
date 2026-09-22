@@ -15,3 +15,15 @@
   color: var(--color-text-primary);
   font-weight: 600;
 }
+
+.get {
+  margin-bottom: var(--space-6);
+}
+
+.weight {
+  opacity: 0.8;
+}
+
+.after {
+  margin-top: var(--space-4);
+}

@@ -8,16 +8,17 @@
  * from the same virtual canvas, so a 1920 x 480 strip is four times the width of a 480 round and
  * the same height, which is the whole comparison a reader is making.
  *
- * Selecting a size shows its capture at its own pixel width and one download link for exactly that
- * file. The selection is written to the URL hash, so a link can point at a size. Without
- * JavaScript the default is rendered by the server and the ruled list under the picker on the
- * Screens page carries every download.
+ * Selecting a size shows its capture at its own pixel width. The way in is the plugin, which
+ * installs every size; the single file is there for whoever wants only that one. The selection is
+ * written to the URL hash, so a link can point at a size. Without JavaScript the default is
+ * rendered by the server and the ruled list under the picker on the Screens page lists every size.
  */
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import type { PickerFace } from '../lib/faces';
 import { sizeLabel, weigh } from '../lib/packages';
+import { INSTALL } from '../lib/site';
 import frame from './Capture.module.css';
 import styles from './ScreenPicker.module.css';
 
@@ -75,7 +76,6 @@ export function ScreenPicker({ faces, initial }: ScreenPickerProps) {
               onKeyDown={(e) => onKeyDown(e, i)}
             >
               <span className={`num ${styles.size}`}>{sizeLabel(f)}</span>
-              {f.emphasis ? <span className={styles.tag}>{f.emphasis}</span> : null}
             </button>
           );
         })}
@@ -100,22 +100,25 @@ export function ScreenPicker({ faces, initial }: ScreenPickerProps) {
         <div className={styles.about}>
           <p className={`h3 ${styles.name}`}>
             <span className="num">{sizeLabel(face)}</span>
-            {face.emphasis ? <span className={styles.emph}>{face.emphasis === 'base' ? 'The base size' : 'The large size'}</span> : null}
           </p>
-          {face.what ? <p className="prose">{face.what}</p> : null}
+          <p className="prose">Install the plugin and every size comes with it, this one included.</p>
           <p className={styles.get}>
-            {face.bytes !== undefined ? (
-              <a href={`/downloads/${face.file}`} download className={styles.download}>
-                Download {face.file} <span className={`num ${styles.weight}`}>{weigh(face.bytes)}</span>
-              </a>
-            ) : (
-              <span className={styles.notBuilt}>Not in this build</span>
-            )}
-          </p>
-          <p className="prose">
-            <Link href="/download#plugin" className="link">
-              Or install all 14 with the plugin
+            <Link href={INSTALL.href} className={styles.install}>
+              {INSTALL.label} the plugin
             </Link>
+          </p>
+          <p className={`prose ${styles.file}`}>
+            {face.bytes !== undefined ? (
+              <>
+                Or just this file:{' '}
+                <a href={`/downloads/${face.file}`} download className="link">
+                  {face.file} <span className="num">{weigh(face.bytes)}</span>
+                </a>
+                . Default pages, no settings, no updates.
+              </>
+            ) : (
+              <span className={styles.notBuilt}>The single file is not in this build.</span>
+            )}
           </p>
         </div>
       </div>

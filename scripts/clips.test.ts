@@ -9,8 +9,8 @@ import { CLIP_PACKAGES, clipSlug, fpsFor, frozen, measuredFps, mp4Args, parseArg
 import { parseRecordReport } from './gui.ts';
 
 describe('the arguments', () => {
-  test('default to the three clips the site shows, on gallery, six seconds, auto rate', () => {
-    expect(parseArgs([])).toMatchObject({ packages: [...CLIP_PACKAGES], scenario: 'gallery', seconds: 6, fps: 'auto', preroll: 1, encodeOnly: false });
+  test('default to the three clips the site shows, on the clip scenario, six seconds, auto rate', () => {
+    expect(parseArgs([])).toMatchObject({ packages: [...CLIP_PACKAGES], scenario: 'clip', seconds: 6, fps: 'auto', preroll: 1, encodeOnly: false });
   });
 
   test('take a package list and a numeric rate', () => {

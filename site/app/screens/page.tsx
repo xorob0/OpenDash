@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Anatomy } from '../../components/Anatomy';
-import { Capture, CaptureNote } from '../../components/Capture';
+import { Actions, Primary, Secondary } from '../../components/Buttons';
+import { Capture } from '../../components/Capture';
 import { Clip } from '../../components/Clip';
 import { ScreenPicker } from '../../components/ScreenPicker';
 import { Section } from '../../components/Section';
@@ -9,15 +10,15 @@ import { SizeList } from '../../components/SizeList';
 import { anatomyParts } from '../../lib/anatomy';
 import { packageFile, stillFor } from '../../lib/captures';
 import { clipFor } from '../../lib/clips';
-import { HERO_FACE, VERSION } from '../../lib/content.generated';
+import { HERO_FACE } from '../../lib/content.generated';
 import { ALL, BASE_FACE, LARGE_FACE, byFolder, pickerFaces } from '../../lib/faces';
 import { sizeLabel } from '../../lib/packages';
-import { REPO_URL, issueUrl } from '../../lib/site';
+import { INSTALL, REPO_URL, issueUrl } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Screens and sizes',
-  description: '10 face sizes from 1920 × 480 to a 480 round, 2 companions and 2 pit walls. Pick your screen and download that file.',
+  description: '10 face sizes from 1920 × 480 to a 480 round, 2 companions and 2 pit walls. Pick your screen and see it.',
 };
 
 export default function Screens() {
@@ -39,18 +40,21 @@ export default function Screens() {
         id="faces"
         label="Screens"
         title="Every screen on the rig."
-        lede="10 faces for the wheel or the dash, 2 companions, 2 pit walls. Each is drawn for its exact pixels, never scaled."
+        lede="10 faces for the wheel or the dash, 2 companions, 2 pit walls. Each is laid out for its screen, never scaled. The plugin installs all of them."
         wide
       >
         <h2 className="h3">Find your face size</h2>
-        <p className={`prose ${styles.under}`}>10 face sizes, drawn to scale. Pick yours to see it and download that file. If nothing matches, take the nearest shape. 850 × 480 is the base size.</p>
+        <p className={`prose ${styles.under}`}>10 face sizes, drawn to scale. Pick yours to see it. If nothing matches, take the nearest shape.</p>
         <div className={styles.picker}>
           <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
         </div>
         <h2 className={`h3 ${styles.listHead}`}>All 14 screens</h2>
         <SizeList packages={ALL} />
-        <div className={styles.note}>
-          <CaptureNote served={VERSION} />
+        <div className={styles.actions}>
+          <Actions>
+            <Primary href={INSTALL.href}>{INSTALL.label} the plugin</Primary>
+            <Secondary href="/download#packages">The files, one by one</Secondary>
+          </Actions>
         </div>
       </Section>
 
@@ -62,14 +66,14 @@ export default function Screens() {
 
       <Section
         id="fit"
-        label="Fit"
-        title="A page is laid out, never scaled."
-        lede="The same page in the base face and in the large one. The base stacks it; the large tabulates it. A page sheds rows before it shrinks numerals. Every text is measured against its box in tests, so nothing clips."
+        label="Sizes"
+        title="Made for a wide range of screens."
+        lede="From a 1920 × 480 strip to a 480 round, and the phone and the pit wall besides. Each size is laid out for its own pixels: a small screen keeps what matters, a large one shows more."
         wide
       >
         <div className={styles.pair}>
-          {base ? <Capture file={packageFile(base.folder)} alt={`The ${sizeLabel(base)} face`} width={base.width} height={base.height} caption={`${sizeLabel(base)}, the base size`} /> : null}
-          {large ? <Capture file={packageFile(large.folder)} alt={`The ${sizeLabel(large)} face`} width={large.width} height={large.height} caption={`${sizeLabel(large)}, the large size`} /> : null}
+          {base ? <Capture file={packageFile(base.folder)} alt={`The ${sizeLabel(base)} face`} width={base.width} height={base.height} caption={sizeLabel(base)} /> : null}
+          {large ? <Capture file={packageFile(large.folder)} alt={`The ${sizeLabel(large)} face`} width={large.width} height={large.height} caption={sizeLabel(large)} /> : null}
         </div>
       </Section>
 
@@ -83,13 +87,13 @@ export default function Screens() {
         <div className={styles.pair}>
           {companion ? (
             companionClip ? (
-              <Clip clip={companionClip} alt="The companion, running" caption={`${sizeLabel(companion)}, landscape`} />
+              <Clip clip={companionClip} alt="The companion, running" caption="Landscape" />
             ) : (
-              <Capture file={packageFile(companion.folder)} alt="The companion showing lap times" width={companion.width} height={companion.height} caption={`${sizeLabel(companion)}, landscape`} />
+              <Capture file={packageFile(companion.folder)} alt="The companion showing lap times" width={companion.width} height={companion.height} caption="Landscape" />
             )
           ) : null}
           {companionPortrait ? (
-            <Capture file={packageFile(companionPortrait.folder)} alt="The portrait companion" width={companionPortrait.width} height={companionPortrait.height} caption={`${sizeLabel(companionPortrait)}, portrait`} />
+            <Capture file={packageFile(companionPortrait.folder)} alt="The portrait companion" width={companionPortrait.width} height={companionPortrait.height} caption="Portrait" />
           ) : null}
         </div>
       </Section>
@@ -98,19 +102,19 @@ export default function Screens() {
         id="pit-wall"
         label="Pit wall"
         title="The pit wall."
-        lede="A 1920 × 1080 screen for whoever is not driving. 3 pages: Race, Tower and Telemetry. 4 data zones, each showing 1 of 11 pages, plus a web view for any address. The portrait 1080 × 1920 fits it in 1 page."
+        lede="A screen for whoever is not driving. 3 pages: Race, Tower and Telemetry. 4 data zones, each showing 1 of 11 pages, plus a web view for any address. A portrait version fits it in 1 page."
         wide
       >
         <div className={styles.pitWalls}>
           {pitWall ? (
             pitWallClip ? (
-              <Clip clip={pitWallClip} alt="The pit wall's race page, running" caption={`${sizeLabel(pitWall)}, the race page`} />
+              <Clip clip={pitWallClip} alt="The pit wall's race page, running" caption="The race page" />
             ) : (
-              <Capture file={packageFile(pitWall.folder)} alt="The pit wall's race page" width={pitWall.width} height={pitWall.height} caption={`${sizeLabel(pitWall)}, the race page`} />
+              <Capture file={packageFile(pitWall.folder)} alt="The pit wall's race page" width={pitWall.width} height={pitWall.height} caption="The race page" />
             )
           ) : null}
           {pitWallPortrait ? (
-            <Capture file={packageFile(pitWallPortrait.folder)} alt="The portrait pit wall" width={pitWallPortrait.width} height={pitWallPortrait.height} caption={`${sizeLabel(pitWallPortrait)}, portrait`} scale={0.5} />
+            <Capture file={packageFile(pitWallPortrait.folder)} alt="The portrait pit wall" width={pitWallPortrait.width} height={pitWallPortrait.height} caption="Portrait" scale={0.5} />
           ) : null}
         </div>
       </Section>
@@ -153,8 +157,8 @@ export default function Screens() {
         wide
       >
         <p className="prose">
-          <Link href="/install" className="link">
-            How to install a face
+          <Link href={INSTALL.href} className="link">
+            How to install
           </Link>
         </p>
       </Section>
