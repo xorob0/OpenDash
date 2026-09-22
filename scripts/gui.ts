@@ -561,6 +561,162 @@ foreach ($h in [OpenDashWindows]::Visible()) {
 }
 
 /** Brings a file out of the share to a local path, directly or over SSH. */
+/** What one recording produced, parsed from the recorder's report line. */
+export interface Recording {
+  width: number;
+  height: number;
+  frames: number;
+  dropped: number;
+  /** Frames per second actually achieved, from the recorder's clock. */
+  measuredFps: number;
+  captureMeanMs: number;
+  captureMaxMs: number;
+}
+
+export interface RecordOptions {
+  /** Seconds to keep. */
+  seconds: number;
+  fps: number;
+  /** Seconds recorded before the kept span and discarded by the encoder: PrintWindow's first calls are slow. */
+  preroll: number;
+  /** Where frames.raw and frames.ticks land. */
+  localDir: string;
+}
+
+const REPORT = /^recorded (\d+) frames (\d+) dropped ([\d.]+) fps mean ([\d.]+) ms max ([\d.]+) ms (\d+)x(\d+)$/;
+
+/** `recorded 140 frames 0 dropped 19.94 fps mean 9.8 ms max 21.0 ms 850x480` as numbers. */
+export function parseRecordReport(text: string): Recording {
+  const line = text
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => l.startsWith('recorded '));
+  const m = line ? REPORT.exec(line) : null;
+  if (!m) throw new Error(`no recording report in: ${text.trim().split('\n').slice(-3).join(' | ') || '(nothing)'}`);
+  return {
+    frames: Number(m[1]),
+    dropped: Number(m[2]),
+    measuredFps: Number(m[3]),
+    captureMeanMs: Number(m[4]),
+    captureMaxMs: Number(m[5]),
+    width: Number(m[6]),
+    height: Number(m[7]),
+  };
+}
+
+/**
+ * Records one dash window as raw frames, at its own size, for a clip.
+ *
+ * The same `PrintWindow` as a still, called on a fixed cadence from a C# loop inside the desktop
+ * session. Frames are copied out of the bitmap as raw BGRA into one file on the guest's own disk
+ * by a writer thread; a PNG per frame would cost ten times the capture itself and could not keep
+ * 20 fps. A bounded queue means a disk stall drops frames rather than shifting the clock, and every
+ * written frame's timestamp goes to a `.ticks` file, so the encoder can be told the rate that was
+ * actually achieved. The first `preroll` seconds are recorded too and skipped when encoding.
+ *
+ * Refuses a window that hangs off the screen, for the same reason as captureDashboard: the part
+ * off screen comes back cut. `placeDashboards` first.
+ */
+export function recordDashboard(host: Host, name: string, opts: RecordOptions): RunResult & { recording?: Recording } {
+  const tag = `opendash_clip_${Math.round(Date.now())}`;
+  const guestRaw = `\\\\host.lan\\Data\\${tag}.raw`;
+  const guestTicks = `\\\\host.lan\\Data\\${tag}.ticks`;
+  const total = Math.round(opts.fps * (opts.seconds + opts.preroll));
+  const script = `${WINDOW_HELPER}
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -TypeDefinition @'
+using System; using System.Collections.Concurrent; using System.Diagnostics; using System.Drawing; using System.Drawing.Imaging; using System.Globalization; using System.IO; using System.Runtime.InteropServices; using System.Text; using System.Threading;
+public class OpenDashClip {
+  [DllImport("user32.dll")] static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
+  [DllImport("winmm.dll")] static extern uint timeBeginPeriod(uint ms);
+  [DllImport("winmm.dll")] static extern uint timeEndPeriod(uint ms);
+  public static string Record(IntPtr h, int w, int hgt, int fps, int total, string path) {
+    int frameBytes = w * hgt * 4, written = 0, dropped = 0;
+    long interval = Stopwatch.Frequency / fps, costSum = 0, costMax = 0;
+    var queue = new BlockingCollection<byte[]>(24);
+    var pool = new ConcurrentBag<byte[]>();
+    var ticks = new StringBuilder();
+    var writer = new Thread(() => {
+      using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
+        foreach (var buf in queue.GetConsumingEnumerable()) { fs.Write(buf, 0, frameBytes); written++; pool.Add(buf); }
+    });
+    writer.Start();
+    var bmp = new Bitmap(w, hgt, PixelFormat.Format32bppArgb);
+    var g = Graphics.FromImage(bmp);
+    var sw = Stopwatch.StartNew();
+    timeBeginPeriod(1);
+    try {
+      for (int i = 0; i < total; i++) {
+        long due = i * interval, wait = due - sw.ElapsedTicks;
+        if (wait > 2 * Stopwatch.Frequency / 1000) Thread.Sleep((int)(wait * 1000 / Stopwatch.Frequency) - 1);
+        while (sw.ElapsedTicks < due) Thread.SpinWait(20);
+        long t0 = sw.ElapsedTicks;
+        IntPtr hdc = g.GetHdc(); PrintWindow(h, hdc, 2); g.ReleaseHdc(hdc);
+        byte[] buf; if (!pool.TryTake(out buf)) buf = new byte[frameBytes];
+        var d = bmp.LockBits(new Rectangle(0, 0, w, hgt), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        Marshal.Copy(d.Scan0, buf, 0, frameBytes); bmp.UnlockBits(d);
+        long cost = sw.ElapsedTicks - t0; costSum += cost; if (cost > costMax) costMax = cost;
+        if (queue.TryAdd(buf)) ticks.Append((t0 * 1000.0 / Stopwatch.Frequency).ToString("0.000", CultureInfo.InvariantCulture)).Append('\\n'); else { dropped++; pool.Add(buf); }
+        long late = (sw.ElapsedTicks - due) / interval; if (late > 1) { i += (int)(late - 1); dropped += (int)(late - 1); }
+      }
+    } finally { timeEndPeriod(1); queue.CompleteAdding(); writer.Join(); g.Dispose(); bmp.Dispose(); }
+    File.WriteAllText(path + ".ticks", ticks.ToString());
+    double s = sw.ElapsedTicks / (double)Stopwatch.Frequency, ms = 1000.0 / Stopwatch.Frequency;
+    return string.Format(CultureInfo.InvariantCulture, "recorded {0} frames {1} dropped {2:0.00} fps mean {3:0.0} ms max {4:0.0} ms {5}x{6}",
+      written, dropped, written / s, costSum * ms / Math.Max(1, written), costMax * ms, w, hgt);
+  }
+}
+'@ -ReferencedAssemblies System.Drawing
+$target = ${psq(`${name} (WPF Renderer)`)}
+Get-ChildItem (Join-Path $env:TEMP 'opendash_clip_*') -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+foreach ($h in [OpenDashWindows]::Visible()) {
+  if ([OpenDashWindows]::Title($h) -ne $target) { continue }
+  $r = [OpenDashWindows]::Rect($h)
+  $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+  if ($r[0] -lt 0 -or $r[1] -lt 0 -or ($r[0] + $r[2]) -gt $screen.Width -or ($r[1] + $r[3]) -gt $screen.Height) {
+    "off-screen $($r[0]),$($r[1]) $($r[2])x$($r[3]) on $($screen.Width)x$($screen.Height)"
+    exit
+  }
+  $local = Join-Path $env:TEMP ${psq(`${tag}.raw`)}
+  $report = [OpenDashClip]::Record($h, $r[2], $r[3], ${opts.fps}, ${total}, $local)
+  # Written to local disk and then copied: the share is slow to write frame by frame, and GDI+ is
+  # not involved here, but a 200 MB stream to a UNC path still stalls the queue.
+  Copy-Item $local ${psq(guestRaw)} -Force
+  Copy-Item "$local.ticks" ${psq(guestTicks)} -Force
+  Remove-Item $local, "$local.ticks" -Force -ErrorAction SilentlyContinue
+  $report
+  exit
+}
+"no window titled $target"`;
+  const ran = inDesktopScript(host, script, opts.seconds + opts.preroll + 240);
+  if (!ran.ok) return ran;
+  let recording: Recording;
+  try {
+    recording = parseRecordReport(ran.stdout);
+  } catch (e) {
+    return { ok: false, code: 1, stdout: '', stderr: (e as Error).message };
+  }
+  mkdirSync(opts.localDir, { recursive: true });
+  const rawHost = `${WINVM_DIR}/shared/${tag}.raw`;
+  const ticksHost = `${WINVM_DIR}/shared/${tag}.ticks`;
+  const rawLocal = path.join(opts.localDir, 'frames.raw');
+  const ticksLocal = path.join(opts.localDir, 'frames.ticks');
+  // Moved rather than copied when the host is this machine: the raw file is hundreds of megabytes
+  // and the share is on the same disk.
+  const fetched = host.local
+    ? onHost(host, `mv -f '${rawHost}' '${rawLocal}' && mv -f '${ticksHost}' '${ticksLocal}'`, 300_000)
+    : (() => {
+        const a = fetchFromShare(host, rawHost, rawLocal);
+        if (!a.ok) return a;
+        const b = fetchFromShare(host, ticksHost, ticksLocal);
+        onHost(host, `rm -f '${rawHost}' '${ticksHost}'`, 30_000);
+        return b;
+      })();
+  if (!fetched.ok) return fetched;
+  return { ok: true, code: 0, stdout: ran.stdout.trim(), stderr: '', recording };
+}
+
 function fetchFromShare(host: Host, remotePath: string, localPath: string): RunResult {
   mkdirSync(path.dirname(path.resolve(localPath)), { recursive: true });
   if (host.local) return onHost(host, `cp '${remotePath}' '${localPath}'`);

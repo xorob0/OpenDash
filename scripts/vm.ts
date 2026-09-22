@@ -314,7 +314,12 @@ Get-ChildItem (Join-Path $dt 'OpenDash*\\_SHFonts\\*.ttf') -ErrorAction Silently
  * one failure mode nobody notices: the plugin loads, the panel works, and the dashboard it installs
  * is last week's. Pass `--no-build` when the DLL is known to be current.
  */
-export function installPlugin(host: Host, build = true): RunResult {
+/**
+ * Package, install and activate the plugin, then restart SimHub. `menu` puts the OpenDash page in
+ * SimHub's left menu, which is where a person finds it and where a screenshot of the panel needs
+ * it; the default keeps it off, as a fresh activation would.
+ */
+export function installPlugin(host: Host, build = true, menu = false): RunResult {
   const dll = path.join(repoRoot, 'plugin/OpenDash/bin/Release/net48/OpenDash.dll');
   if (build || !existsSync(dll)) {
     const packaged = spawnSync('bash', ['scripts/package.sh'], { cwd: repoRoot, encoding: 'utf8', timeout: 900_000 });
@@ -336,7 +341,7 @@ Unblock-File -LiteralPath $dest -ErrorAction SilentlyContinue
     180,
   );
   if (!copy.ok) return copy;
-  const activated = activatePlugin(host, OPENDASH_PLUGIN_CLASS);
+  const activated = activatePlugin(host, OPENDASH_PLUGIN_CLASS, menu);
   if (!activated.ok) return activated;
   const started = simhubStart(host);
   return { ...copy, stdout: `${copy.stdout}\n${started.stdout}` };
@@ -637,7 +642,8 @@ const USAGE = `vm: drive the Windows test VM and its SimHub.
 
   bun run vm install [package...]   expand built packages into DashTemplates, restart SimHub
                                     names are globs over build/, e.g. 'OpenDash', 'OpenDash 8*'
-  bun run vm plugin [--no-build]    package, install OpenDash.dll, restart SimHub
+  bun run vm plugin [--no-build] [--menu]
+                                    package, install OpenDash.dll, restart SimHub; --menu puts its page in the left menu
                                     packaging is what embeds the current dashboards in the plugin
 
   bun run vm logs [n]               tail SimHub's log
@@ -684,7 +690,7 @@ export async function main(argv: readonly string[]): Promise<void> {
     case 'install':
       return report(install(host, rest));
     case 'plugin':
-      return report(installPlugin(host, !rest.includes('--no-build')));
+      return report(installPlugin(host, !rest.includes('--no-build'), rest.includes('--menu')));
     case 'logs':
       return report(simhubLogs(host, Number(rest[0] ?? 80)));
     case 'shot': {
