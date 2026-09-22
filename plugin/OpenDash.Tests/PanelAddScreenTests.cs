@@ -187,16 +187,85 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("OpenDash 850x480", line);
         }
 
-        /// <summary>A resize keeps everything but the pixels, which is the only reason to offer one
-        /// rather than "remove it and add the right one".</summary>
+        /// <summary>An edit keeps everything but the name and the pixels, which is the only reason to
+        /// offer one rather than "remove it and add the right one".</summary>
         [Fact]
-        public void A_resize_promises_the_settings_and_the_bindings()
+        public void An_edit_promises_the_settings_and_the_bindings()
         {
             // In the user's terms rather than in the settings model's: the promise is that the rig
-            // survives a resize, and the property names behind it are not something a driver acts on.
-            Assert.Equal("Your settings and bindings are kept.", PanelAddScreen.ResizeCaption);
-            Assert.DoesNotContain("properties", PanelAddScreen.ResizeCaption);
+            // survives an edit, and the property names behind it are not something a driver acts on.
+            Assert.Equal("Your settings and bindings are kept.", PanelAddScreen.EditCaption);
+            Assert.DoesNotContain("properties", PanelAddScreen.EditCaption);
             Assert.Contains("Restart SimHub", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim"));
+        }
+
+        /// <summary>
+        /// What Save does, from the two answers the panel holds.
+        /// </summary>
+        /// <remarks>
+        /// The case worth pinning is the middle one: a name on its own is not a no-op, because SimHub
+        /// lists a dashboard under its title and a rename that stopped at the card left the screen listed
+        /// under the name the driver had just stopped using.
+        /// </remarks>
+        [Fact]
+        public void Saving_an_edit_does_only_what_was_changed()
+        {
+            Assert.Equal(ScreenEdit.None, PanelAddScreen.Edit("Rim", "Rim", false));
+            Assert.Equal(ScreenEdit.Rename, PanelAddScreen.Edit("Rim", "Wheel", false));
+            Assert.Equal(ScreenEdit.Resize, PanelAddScreen.Edit("Rim", "Rim", true));
+
+            // A size that moved decides on its own: the folder is written from the other package and the
+            // name goes into it on the way, so there is never a rename left to do separately.
+            Assert.Equal(ScreenEdit.Resize, PanelAddScreen.Edit("Rim", "Wheel", true));
+
+            // Surrounding space is not a new name, and an empty box is somebody who cleared it and
+            // thought better of it rather than a request to call the screen nothing.
+            Assert.Equal(ScreenEdit.None, PanelAddScreen.Edit("Rim", "  Rim  ", false));
+            Assert.Equal(ScreenEdit.None, PanelAddScreen.Edit("Rim", "   ", false));
+            Assert.Equal(ScreenEdit.None, PanelAddScreen.Edit("Rim", null, false));
+            Assert.Equal(ScreenEdit.Rename, PanelAddScreen.Edit("Rim", "  Wheel  ", false));
+
+            // Case alone is a rename: SimHub prints the title, and "rim" is not what "Rim" looks like.
+            Assert.Equal(ScreenEdit.Rename, PanelAddScreen.Edit("Rim", "rim", false));
+        }
+
+        /// <summary>
+        /// The three lines the edit panel can leave behind, each naming what the driver is now waiting for.
+        /// </summary>
+        /// <remarks>
+        /// SimHub reads its dashboard list once, at startup, so a name that has just reached the disk is
+        /// not yet a name in Dash Studio. Saying so is the difference between a rename that looks broken
+        /// and one that is merely pending.
+        /// </remarks>
+        [Fact]
+        public void What_is_said_after_an_edit_names_the_restart()
+        {
+            var renamed = PanelAddScreen.Renamed("Wheel");
+            Assert.Contains("Wheel", renamed);
+            Assert.Contains("Restart SimHub", renamed);
+
+            var reinstalled = PanelAddScreen.Reinstalled("Rim");
+            Assert.Contains("Rim", reinstalled);
+            Assert.Contains("Restart SimHub", reinstalled);
+
+            // A failure names the screen and the reason, and claims nothing about restarting.
+            Assert.Contains("disk full", PanelAddScreen.ReinstallFailed("Rim", "disk full"));
+            Assert.DoesNotContain("Restart SimHub", PanelAddScreen.ReinstallFailed("Rim", "disk full"));
+            // A rename whose dashboard could not be written did happen: the card says Wheel, and the
+            // line has to admit the half that did not land rather than report a plain failure.
+            Assert.Contains("Renamed", PanelAddScreen.RenameFailed("Wheel", "disk full"));
+            Assert.Contains("disk full", PanelAddScreen.RenameFailed("Wheel", "disk full"));
+        }
+
+        /// <summary>The reinstall says what it costs, and says more when there is something to lose.</summary>
+        [Fact]
+        public void The_reinstall_says_what_it_replaces()
+        {
+            Assert.DoesNotContain("edited", PanelAddScreen.ReinstallCaption);
+            // The Install tab's own promise, in the same words, because it is the same copy and the same
+            // button that puts it back.
+            Assert.Contains("a copy is kept", PanelAddScreen.ReinstallEditedCaption);
+            Assert.Contains("Put mine back", PanelAddScreen.ReinstallEditedCaption);
         }
     }
 }
