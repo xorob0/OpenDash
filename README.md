@@ -222,6 +222,7 @@ docs/
   second-screens.md    The companion and the pit wall, and what they deliberately do not show
   flag-box.md          The 8x8 LED matrix: setting it up, what it shows, and what it will not
   architecture.md      How source becomes a .simhubdash, and how a setting reaches it
+  deploy.md            Putting the website on Dokploy, and what a redeploy publishes
   decisions/           Architecture decision records
   research/            Format notes verified against SimHub 9.12.6, SDK notes, competitor analysis
   design/              Brand and visual direction
