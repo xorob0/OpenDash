@@ -63,6 +63,7 @@ describe('the recorder’s report', () => {
   test('the measured rate comes from the timestamps', () => {
     const ticks = Array.from({ length: 21 }, (_, i) => (i * 50).toFixed(3)).join('\n');
     expect(measuredFps(ticks)).toBeCloseTo(20, 5);
+    expect(measuredFps(`${ticks}\n`)).toBeCloseTo(20, 5);
     expect(measuredFps('')).toBe(0);
   });
 });

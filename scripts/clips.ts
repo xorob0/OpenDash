@@ -84,9 +84,12 @@ export const fpsFor = (size: { width: number; height: number }): number => (size
 
 /** Frames per second actually achieved, from the timestamps of the frames that were written. */
 export function measuredFps(ticksText: string): number {
+  // A blank line is not a timestamp: Number('') is 0, which once read as a frame at the start.
   const t = ticksText
     .split('\n')
-    .map((l) => Number(l.trim()))
+    .map((l) => l.trim())
+    .filter((l) => l !== '')
+    .map(Number)
     .filter((n) => Number.isFinite(n));
   if (t.length < 2) return 0;
   return ((t.length - 1) * 1000) / (t[t.length - 1]! - t[0]!);
