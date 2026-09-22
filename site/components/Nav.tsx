@@ -1,14 +1,17 @@
 'use client';
 
 /**
- * The header. It sits at the top of the page and sticks, and it gains its rule only once the page
- * has been scrolled — an unscrolled page has nothing above the header to separate it from, and a
- * rule drawn across the top of a hero is a line through a photograph.
+ * The header. It sticks to the top and gains its rule only once the page has been scrolled: an
+ * unscrolled page has nothing above the header to separate it from, and a rule drawn across the
+ * top of a hero is a line through a photograph.
+ *
+ * The repository is linked here as well as in the footer. A visitor deciding whether this is a
+ * real project looks for the source before they look for anything else.
  */
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { NAV } from '../lib/site';
+import { DOWNLOAD, NAV, REPO_URL } from '../lib/site';
 import { Wordmark } from './Wordmark';
 import styles from './Nav.module.css';
 
@@ -27,6 +30,8 @@ export function Nav() {
   // A route change has to close the menu; the panel is not unmounted by navigation on its own.
   useEffect(() => setOpen(false), [pathname]);
 
+  const current = (href: string) => (pathname === href || pathname.startsWith(`${href}/`) ? 'page' : undefined);
+
   return (
     <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
       <div className={`page ${styles.bar}`}>
@@ -36,20 +41,18 @@ export function Nav() {
 
         <nav className={styles.links} aria-label="Primary">
           {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={styles.link}
-              aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
-            >
+            <Link key={item.href} href={item.href} className={styles.link} aria-current={current(item.href)}>
               {item.label}
             </Link>
           ))}
+          <a href={REPO_URL} className={styles.link} rel="noopener">
+            GitHub
+          </a>
         </nav>
 
         <div className={styles.end}>
-          <Link href="/download" className={styles.cta}>
-            Download
+          <Link href={DOWNLOAD.href} className={styles.cta} aria-current={current(DOWNLOAD.href)}>
+            {DOWNLOAD.label}
           </Link>
           <button
             className={styles.toggle}
@@ -63,15 +66,18 @@ export function Nav() {
         </div>
       </div>
 
-      <div id="menu" className={styles.menu} data-open={open || undefined} hidden={!open}>
+      <div id="menu" className={styles.menu} hidden={!open}>
         <div className="page">
           {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className={styles.menuLink}>
+            <Link key={item.href} href={item.href} className={styles.menuLink} aria-current={current(item.href)}>
               {item.label}
             </Link>
           ))}
-          <Link href="/download" className={styles.menuLink}>
-            Download
+          <a href={REPO_URL} className={styles.menuLink} rel="noopener">
+            GitHub
+          </a>
+          <Link href={DOWNLOAD.href} className={`${styles.menuLink} ${styles.menuCta}`}>
+            {DOWNLOAD.label}
           </Link>
         </div>
       </div>
