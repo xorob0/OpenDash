@@ -29,6 +29,8 @@ bun run dev --scenario flagbox                # walk every state the flag box dr
 | [`bun run emulator`](../scripts/emulator.ts) | the telemetry: `start <scenario> [--follow]`, `stop`, `status`, `tail` |
 | [`scripts/gui.ts`](../scripts/gui.ts) | the clicking, which is how a dashboard gets opened |
 | [`bun run record`](../scripts/record.ts) | the telemetry traces: one recording of a scenario, committed under `traces/` |
+| [`bun run shots`](../scripts/shots.ts) | several packages photographed on one claim, into `build/shots/` |
+| [`bun run previews`](../scripts/previews.ts) | the same captures, scaled and committed as the thumbnails SimHub's dashboard list draws |
 
 [testing-vm.md](testing-vm.md) describes the VM itself and is what to read when something in it
 breaks.

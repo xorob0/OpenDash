@@ -9,7 +9,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync,
 import { basename, join, resolve } from 'node:path';
 import { unzipSync, zipSync, type ZipOptions } from 'fflate';
 import type { Dashboard, DashPackage } from './model.ts';
-import { md5Hex } from './images.ts';
+import { md5Hex, pngSize } from './images.ts';
 import { serializeDashboard, serializeMetadata } from './serialize.ts';
 
 export const FONTS_DIR = '_SHFonts';
@@ -17,6 +17,16 @@ export const PACKAGE_EXTENSION = '.simhubdash';
 export const METADATA_EXTENSION = '.djson.metadata';
 /** SimHub's own spelling, missing an `s`. It is the file name on disk and cannot be corrected. */
 export const RESOURCES_EXTENSION = '.djson.ressources';
+/**
+ * The thumbnail SimHub's dashboard list draws for a package.
+ *
+ * `GraphicalDashItem.LoadPreview` looks for `<djson path>.jpg` and then `<djson path>.png`, and
+ * shows an empty box when it finds neither; DashStudio writes the `.png` on every save, which is
+ * why a hand-made dashboard has one and a generated one did not. `EditorModel.CleanDir` deletes
+ * any `<x>.djson.png` whose base name is not the folder's own, so the file belongs to the main
+ * dashboard and a widget cannot carry one.
+ */
+export const PREVIEW_EXTENSION = '.djson.png';
 
 /**
  * Timestamp stamped on every zip entry. Zip stores local date/time fields, so a Date built
@@ -74,6 +84,14 @@ export const writePackage = (pkg: DashPackage, outDir: string, opts: WritePackag
     copyFileSync(notice.path, target);
     files.push(target);
   }
+  if (pkg.preview !== undefined) {
+    // Read rather than copied blind: the one thing SimHub asks of this file is that it decode, and
+    // a JPEG or a text file under a .png name is a thumbnail that silently fails to appear.
+    pngSize(new Uint8Array(readFileSync(pkg.preview)), pkg.preview);
+    const target = join(folder, `${pkg.folderName}${PREVIEW_EXTENSION}`);
+    copyFileSync(pkg.preview, target);
+    files.push(target);
+  }
   return { folder, files };
 };
 
@@ -125,12 +143,41 @@ export interface ZipPackageOptions {
   level?: ZipOptions['level'];
 }
 
-/** `zipSync` input for a folder: `<folderName>/<relative path>` keys in sorted order, fixed mtime. */
+/**
+ * The timestamp a thumbnail is stamped with: a function of its own bytes, and of nothing else.
+ *
+ * Every other entry carries {@link ZIP_MTIME}, because a reproducible zip is one where the same
+ * sources give the same bytes. The thumbnail cannot, and the reason is SimHub's thumbnail cache:
+ * `GraphicalDashItemThumbnail` keys a decoded copy under
+ * `Thumbnails\<md5 of full path + LastWriteTime + 200>.png`, and `ZipArchiveEntry.ExtractToFile`
+ * stamps the extracted file with the entry's time. A fixed time would therefore give every release
+ * of a package the same cache key at the same path, and an update that redraws the face would go on
+ * showing the picture the first install left behind, for ever.
+ *
+ * So the stamp moves when, and only when, the picture does. Same picture, same bytes, same cached
+ * thumbnail; new picture, new key, and SimHub decodes it again. The components are derived one at a
+ * time and the Date is built from local fields, because that is what zip stores and what keeps the
+ * archive identical in every time zone.
+ */
+export const previewMtime = (bytes: Uint8Array): Date => {
+  const digest = md5Hex(bytes);
+  const part = (at: number, of: number): number => parseInt(digest.slice(at, at + 4), 16) % of;
+  // Day 1..28 and an even second, so that no derived value can be a date zip cannot store or a
+  // second it would round away.
+  return new Date(ZIP_MTIME.getFullYear(), part(0, 12), 1 + part(4, 28), part(8, 24), part(12, 60), 2 * part(16, 30));
+};
+
+/**
+ * `zipSync` input for a folder: `<folderName>/<relative path>` keys in sorted order, fixed mtime
+ * everywhere but the thumbnail, which is stamped from its own bytes; see {@link previewMtime}.
+ */
 export const zipEntries = (folder: string, folderName: string, opts: ZipPackageOptions = {}): Record<string, [Uint8Array, ZipOptions]> => {
-  const entryOptions: ZipOptions = { mtime: opts.mtime ?? ZIP_MTIME, level: opts.level ?? 6 };
+  const mtime = opts.mtime ?? ZIP_MTIME;
+  const level = opts.level ?? 6;
   const entries: Record<string, [Uint8Array, ZipOptions]> = {};
   for (const rel of listFiles(folder)) {
-    entries[`${folderName}/${rel}`] = [new Uint8Array(readFileSync(join(folder, rel))), entryOptions];
+    const bytes = new Uint8Array(readFileSync(join(folder, rel)));
+    entries[`${folderName}/${rel}`] = [bytes, { mtime: rel.endsWith(PREVIEW_EXTENSION) ? previewMtime(bytes) : mtime, level }];
   }
   return entries;
 };

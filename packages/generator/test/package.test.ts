@@ -1,12 +1,12 @@
 /** writePackage and zipPackage: on-disk layout, sidecars, fonts, and a reproducible zip. */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FONTS_DIR, PACKAGE_EXTENSION, ZIP_MTIME, listFiles, readZip, writePackage, zipEntries, zipPackage } from '../src/package.ts';
+import { FONTS_DIR, PACKAGE_EXTENSION, PREVIEW_EXTENSION, ZIP_MTIME, listFiles, previewMtime, readZip, writePackage, zipEntries, zipPackage } from '../src/package.ts';
 import { buildMetadataObject, serializeDashboard } from '../src/serialize.ts';
-import { samplePackage } from './fixtures.ts';
+import { pngBytes, samplePackage } from './fixtures.ts';
 
 let root: string;
 beforeAll(() => {
@@ -81,6 +81,30 @@ describe('writePackage', () => {
     const { folder } = writePackage(pkg, join(root, 'nofonts'));
     expect(existsSync(join(folder, FONTS_DIR))).toBe(false);
   });
+
+  test('a preview is written as <folder>.djson.png, whatever the source file was called', () => {
+    const out = join(root, 'preview');
+    const source = join(root, 'a-photograph-of-a-dash.png');
+    const bytes = pngBytes(531, 300);
+    writeFileSync(source, bytes);
+    const pkg = samplePackage();
+    pkg.preview = source;
+    const { folder, files } = writePackage(pkg, out);
+    // SimHub looks for the thumbnail beside the .djson under the main dashboard's own name, and
+    // EditorModel.CleanDir deletes one filed under any other; the source name is not part of it.
+    expect(listFiles(folder)).toContain(`OpenDash${PREVIEW_EXTENSION}`);
+    expect(files).toContain(join(folder, `OpenDash${PREVIEW_EXTENSION}`));
+    expect(Buffer.compare(readFileSync(join(folder, `OpenDash${PREVIEW_EXTENSION}`)), Buffer.from(bytes))).toBe(0);
+  });
+
+  test('a preview that is not a PNG is refused rather than installed as a thumbnail that never draws', () => {
+    const out = join(root, 'preview-bad');
+    const lying = join(root, 'lying.png');
+    writeFileSync(lying, 'this is not a picture');
+    const pkg = samplePackage();
+    pkg.preview = lying;
+    expect(() => writePackage(pkg, out)).toThrow(/is not a PNG/);
+  });
 });
 
 describe('zipPackage', () => {
@@ -144,6 +168,58 @@ describe('zipPackage', () => {
       i += 29 + nameLength;
     }
     expect(headers).toBe(6);
+  });
+
+  test('the thumbnail is stamped from its own bytes, so an update does not hit SimHub\'s cache', () => {
+    // SimHub caches a decoded thumbnail under an MD5 of the file's path, its last write time and
+    // 200. Extraction stamps the file with the zip entry's time, so a fixed one would give every
+    // release the same key at the same path and a redrawn face would keep showing the old picture.
+    const dosDate = (d: Date): number => ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    const dosTime = (d: Date): number => (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+
+    const stampOf = (entries: Record<string, [Uint8Array, { mtime?: string | number | Date }]>, entry: string): Date => {
+      const mtime = entries[entry]?.[1].mtime;
+      if (!(mtime instanceof Date)) throw new Error(`${entry} carries no Date mtime`);
+      return mtime;
+    };
+
+    const withPreview = (dir: string, bytes: Uint8Array): Record<string, [Uint8Array, { mtime?: string | number | Date }]> => {
+      const pkg = samplePackage();
+      pkg.preview = join(root, dir, 'source.png');
+      mkdirSync(join(root, dir), { recursive: true });
+      writeFileSync(pkg.preview, bytes);
+      writePackage(pkg, join(root, dir, 'out'));
+      return zipEntries(join(root, dir, 'out', 'OpenDash'), 'OpenDash');
+    };
+
+    const first = pngBytes(20, 12, 0x30);
+    const second = pngBytes(20, 12, 0x31);
+    const entry = `OpenDash/OpenDash${PREVIEW_EXTENSION}`;
+    const a = withPreview('stamp-a', first);
+    const b = withPreview('stamp-b', first);
+    const c = withPreview('stamp-c', second);
+
+    // Same picture, same stamp, wherever and whenever it was built: the archive stays reproducible.
+    expect(stampOf(a, entry)).toEqual(stampOf(b, entry));
+    expect(stampOf(a, entry)).toEqual(previewMtime(first));
+    // A different picture, a different stamp, which is the whole point. Compared as zip stores it,
+    // since a difference finer than two seconds would not survive the archive.
+    const moved = dosDate(stampOf(c, entry)) !== dosDate(stampOf(a, entry)) || dosTime(stampOf(c, entry)) !== dosTime(stampOf(a, entry));
+    expect(moved).toBe(true);
+    // And nothing else moved.
+    expect(stampOf(a, 'OpenDash/OpenDash.djson')).toBe(ZIP_MTIME);
+    expect(stampOf(c, 'OpenDash/OpenDash.djson')).toBe(ZIP_MTIME);
+  });
+
+  test('previewMtime lands on a date and a second that zip can store', () => {
+    for (let i = 0; i < 64; i++) {
+      const when = previewMtime(pngBytes(4, 4, i));
+      expect(when.getFullYear()).toBe(ZIP_MTIME.getFullYear());
+      expect(when.getDate()).toBeGreaterThanOrEqual(1);
+      expect(when.getDate()).toBeLessThanOrEqual(28);
+      // Zip keeps seconds in two-second steps, so an odd one would not survive the round trip.
+      expect(when.getSeconds() % 2).toBe(0);
+    }
   });
 
   test('a custom mtime and level are honoured', () => {
