@@ -146,6 +146,7 @@
 {"p":"OpenDash.Face1280x400ZoneCClassOnly","v":null}
 {"p":"OpenDash.Face1280x400ZoneCPages","v":null}
 {"p":"OpenDash.Face1280x400ZoneD","v":null}
+{"p":"OpenDash.Face1280x400ZoneDClassOnly","v":null}
 {"p":"OpenDash.Face1280x480BarLeft1","v":null}
 {"p":"OpenDash.Face1280x480BarLeft2","v":null}
 {"p":"OpenDash.Face1280x480BarRight1","v":null}
@@ -161,6 +162,7 @@
 {"p":"OpenDash.Face1280x480ZoneCClassOnly","v":null}
 {"p":"OpenDash.Face1280x480ZoneCPages","v":null}
 {"p":"OpenDash.Face1280x480ZoneD","v":null}
+{"p":"OpenDash.Face1280x480ZoneDClassOnly","v":null}
 {"p":"OpenDash.Face1280x720BarLeft1","v":null}
 {"p":"OpenDash.Face1280x720BarLeft2","v":null}
 {"p":"OpenDash.Face1280x720BarRight1","v":null}
@@ -176,6 +178,7 @@
 {"p":"OpenDash.Face1280x720ZoneCClassOnly","v":null}
 {"p":"OpenDash.Face1280x720ZoneCPages","v":null}
 {"p":"OpenDash.Face1280x720ZoneD","v":null}
+{"p":"OpenDash.Face1280x720ZoneDClassOnly","v":null}
 {"p":"OpenDash.Face1920x480BarLeft1","v":null}
 {"p":"OpenDash.Face1920x480BarLeft2","v":null}
 {"p":"OpenDash.Face1920x480BarRight1","v":null}
@@ -191,6 +194,7 @@
 {"p":"OpenDash.Face1920x480ZoneCClassOnly","v":null}
 {"p":"OpenDash.Face1920x480ZoneCPages","v":null}
 {"p":"OpenDash.Face1920x480ZoneD","v":null}
+{"p":"OpenDash.Face1920x480ZoneDClassOnly","v":null}
 {"p":"OpenDash.Face600x686BarLeft1","v":null}
 {"p":"OpenDash.Face600x686BarRight1","v":null}
 {"p":"OpenDash.Face600x686FlagFormat","v":null}
@@ -204,6 +208,7 @@
 {"p":"OpenDash.Face600x686ZoneCClassOnly","v":null}
 {"p":"OpenDash.Face600x686ZoneCPages","v":null}
 {"p":"OpenDash.Face600x686ZoneD","v":null}
+{"p":"OpenDash.Face600x686ZoneDClassOnly","v":null}
 {"p":"OpenDash.Face800x286FlagFormat","v":null}
 {"p":"OpenDash.Face800x286LapReview","v":null}
 {"p":"OpenDash.Face800x286RevBar","v":null}
@@ -215,6 +220,7 @@
 {"p":"OpenDash.Face800x286ZoneCClassOnly","v":null}
 {"p":"OpenDash.Face800x286ZoneCPages","v":null}
 {"p":"OpenDash.Face800x286ZoneD","v":null}
+{"p":"OpenDash.Face800x286ZoneDClassOnly","v":null}
 {"p":"OpenDash.Face800x480BarLeft1","v":null}
 {"p":"OpenDash.Face800x480BarLeft2","v":null}
 {"p":"OpenDash.Face800x480BarRight1","v":null}
@@ -230,6 +236,7 @@
 {"p":"OpenDash.Face800x480ZoneCClassOnly","v":null}
 {"p":"OpenDash.Face800x480ZoneCPages","v":null}
 {"p":"OpenDash.Face800x480ZoneD","v":null}
+{"p":"OpenDash.Face800x480ZoneDClassOnly","v":null}
 {"p":"OpenDash.Face850x480BarLeft1","v":0}
 {"p":"OpenDash.Face850x480BarLeft2","v":1}
 {"p":"OpenDash.Face850x480BarRight1","v":5}
@@ -245,6 +252,7 @@
 {"p":"OpenDash.Face850x480ZoneCClassOnly","v":false}
 {"p":"OpenDash.Face850x480ZoneCPages","v":2097151}
 {"p":"OpenDash.Face850x480ZoneD","v":0}
+{"p":"OpenDash.Face850x480ZoneDClassOnly","v":null}
 {"p":"OpenDash.FlagBoxLowFuelLaps","v":2}
 {"p":"OpenDash.LightsLowFuelLaps","v":2}
 {"p":"OpenDash.PitWallClassOnly","v":null}
