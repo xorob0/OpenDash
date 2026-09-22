@@ -1,12 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Anatomy } from '../../components/Anatomy';
-import { Actions, Primary, Secondary } from '../../components/Buttons';
 import { Capture } from '../../components/Capture';
 import { Clip } from '../../components/Clip';
 import { ScreenPicker } from '../../components/ScreenPicker';
 import { Section } from '../../components/Section';
-import { SizeList } from '../../components/SizeList';
 import { anatomyParts } from '../../lib/anatomy';
 import { packageFile, stillFor } from '../../lib/captures';
 import { clipFor } from '../../lib/clips';
@@ -40,22 +38,10 @@ export default function Screens() {
         id="faces"
         label="Screens"
         title="Every screen on the rig."
-        lede="10 faces for the wheel or the dash, 2 companions, 2 pit walls. Each is laid out for its screen, never scaled. The plugin installs all of them."
+        lede="10 faces for the wheel or the dash, 2 companions, 2 pit walls, all in the plugin. Drawn to scale below: pick one to watch it run."
         wide
       >
-        <h2 className="h3">Find your face size</h2>
-        <p className={`prose ${styles.under}`}>10 face sizes, drawn to scale. Pick yours to see it. If nothing matches, take the nearest shape.</p>
-        <div className={styles.picker}>
-          <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
-        </div>
-        <h2 className={`h3 ${styles.listHead}`}>All 14 screens</h2>
-        <SizeList packages={ALL} />
-        <div className={styles.actions}>
-          <Actions>
-            <Primary href={INSTALL.href}>{INSTALL.label} the plugin</Primary>
-            <Secondary href="/download#packages">The files, one by one</Secondary>
-          </Actions>
-        </div>
+        <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
       </Section>
 
       <Section id="anatomy" label="Anatomy" title="1 face, 5 parts." lede="Every rectangular face has the same 5 parts. Hover or tap a part." wide>

@@ -11,34 +11,34 @@
   height: auto;
 }
 
-/* Unlit is the dash's dim ink, lit is the functional palette: the colours a strip means by. */
+/* Unlit is the dash's dim ink; a lit LED takes the token the profile lights it with. */
 .led {
   fill: var(--color-text-dim);
   transition: fill 60ms linear;
 }
 
-.green {
+.good {
   fill: var(--color-good-primary);
 }
 
-.amber {
+.caution {
   fill: var(--color-caution-primary);
 }
 
-.red {
-  fill: var(--color-danger-primary);
+.danger {
+  fill: var(--purpose-fuel-low);
 }
 
-.blue {
-  fill: var(--color-info-primary);
+.info {
+  fill: var(--purpose-flag-blue);
 }
 
 .yellow {
-  fill: var(--color-caution-primary);
+  fill: var(--purpose-flag-yellow);
 }
 
 .white {
-  fill: var(--color-text-primary);
+  fill: var(--purpose-pitLimiter);
 }
 
 .caption {

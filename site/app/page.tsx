@@ -16,7 +16,7 @@ import { CLAIMED_SIM, DIFFERENTIATORS, FREE_FOREVER, FREE_HEADLINE, INSTALL, NOT
 import styles from './page.module.css';
 
 /** The states the lights teaser shows, drawn by the site. */
-const TEASER = [FRAMES.revs!, FRAMES.blue!, FRAMES.spotterLeft!];
+const TEASER = [FRAMES.shift!, FRAMES.yellow!, FRAMES.spotter!];
 
 export default function Home() {
   const hero = BASE_FACE;
@@ -70,7 +70,7 @@ export default function Home() {
         </div>
       </section>
 
-      <Section id="screen" label="Screens" title="Find your screen." lede="10 face sizes, drawn to scale. Pick yours to see it. If nothing matches, take the nearest shape." wide>
+      <Section id="screen" label="Screens" title="Find your screen." lede="10 faces, drawn to scale and showing what they draw. Pick one to watch it run. If nothing matches your panel, take the nearest shape." wide>
         <ScreenPicker faces={faces} initial={hero?.slug ?? faces[0]?.slug ?? ''} />
         <p className={`prose ${styles.more}`}>
           <Link href="/screens" className="link">
