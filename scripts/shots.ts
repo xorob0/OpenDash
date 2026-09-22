@@ -17,7 +17,8 @@
  */
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { build as buildEmulator, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
+import { build as buildEmulator, lapsCompleted, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios, waitForLaps } from './emulator.ts';
+import { provenance, writeRun, type RunCapture } from './shotsRun.ts';
 import { captureDashboard, closeDashboards, guiAvailable, openDashboard, placeDashboards } from './gui.ts';
 import { claim, install, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
@@ -40,6 +41,12 @@ export interface ShotsOptions {
   outDir: string;
   noBuild: boolean;
   keep: boolean;
+  /**
+   * Laps to let the emulator complete before the first picture. SimHub fills its last-lap columns,
+   * fuel averages, stint counters and recorded track map on laps it has observed, so a capture
+   * taken before the first one carries blanks that read as bugs. Two is enough for all of them.
+   */
+  warmLaps: number;
 }
 
 const list = (value: string | undefined): string[] | undefined =>
@@ -58,6 +65,7 @@ export function parseArgs(argv: readonly string[]): ShotsOptions | { help: true 
     outDir: flagValue('out') ?? path.join(repoRoot, 'build/shots'),
     noBuild: argv.includes('--no-build'),
     keep: argv.includes('--keep'),
+    warmLaps: Number(flagValue('warm-laps') ?? 2),
   };
 }
 
@@ -84,6 +92,10 @@ const USAGE = `shots: photograph every package on one claim of the VM.
   --out        where the PNGs go; default build/shots
   --no-build   skip the dashboard build, when only the scenario changed
   --keep       leave the emulator running and the VM claimed when this returns
+  --warm-laps  laps to let the emulator complete before the first picture; default 2
+
+Every run writes run.json beside its pictures: version, commit, scenario, and the laps SimHub had
+seen at each capture. site/scripts/sync-shots.ts reads it.
 
 It claims the VM once for the whole batch, installs every package in one pass so SimHub restarts
 once, and restarts the emulator once per scenario. A reviewed capture belongs in media/<issue>/;
@@ -184,6 +196,11 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
       // SimHub takes a moment to notice the reconnection; a dash opened before it does draws its
       // defaults, which is a photograph of nothing.
       sleep(6);
+      if (opts.warmLaps > 0) {
+        console.log(`  letting ${opts.warmLaps} lap${opts.warmLaps > 1 ? 's' : ''} go by first`);
+        if (!waitForLaps(host, opts.warmLaps)) console.error('  the laps did not come; photographing anyway, so look at the last-lap columns');
+      }
+      const run = { ...provenance(scenario), captures: {} as Record<string, RunCapture> };
 
       for (const packageName of opts.packages) {
         const file = path.join(opts.outDir, shotName(index, packageName, scenario));
@@ -205,12 +222,16 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
         const captured = captureDashboard(host, packageName, file);
         taken.push({ packageName, scenario, file, ok: captured.ok, why: captured.ok ? undefined : captured.stderr.split('\n')[0] });
         console.log(captured.ok ? 'photographed' : `capture failed (${captured.stderr.split('\n')[0]})`);
+        if (captured.ok && size) {
+          run.captures[path.basename(file)] = { kind: 'package', package: packageName, width: size.width, height: size.height, lapsSeen: lapsCompleted(host) };
+        }
 
         // Closed before the next one opens. Ten dash windows rendering at once on two cores is
         // what makes a later capture come back half-drawn.
         closeDashboards(host);
         index += 1;
       }
+      writeRun(opts.outDir, run);
     }
 
     const good = taken.filter((s) => s.ok);
