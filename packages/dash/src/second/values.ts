@@ -390,10 +390,14 @@ export const carRaceGap = (idx: Expr): Expr => {
  * a lap behind the overall leader, every row of a class board measured the other way reads `+1L`
  * and no row of it reads `Lead`, which is a column carrying no intra-class gap at all.
  *
- * SimHub publishes no gap to a class leader, so the value is the difference of the two gaps it does
- * publish, exactly as {@link carInterval} takes one between two rows, and the lap count is built
- * here rather than taken from `gaptoleadercombined`, which is combined with the overall leader and
- * has no class twin.
+ * SimHub does publish the class leader's own figures: `gaptoclassleader`, `lapstoclassleader` and
+ * `gaptoclassleadercombined` are registered beside the overall ones among the opponent providers of
+ * 9.12.6, and docs/research/simhub-dash-format.md records them. This column nevertheless builds the
+ * value as the difference of the two gaps to the overall leader, exactly as {@link carInterval}
+ * takes one between two rows, with the lap count from `currentlap`: that is the arithmetic the pit
+ * wall values test can evaluate against its model of a field today, and it is proved there against
+ * the leader of the list. Reading the three providers instead is the simplification to make, for
+ * this column and {@link carRaceGap}'s lapped case together, once that test's evaluator carries them.
  *
  * The word on the row the column counts from is the one thing here that follows the numbering
  * rather than the rows. `Lead` is a claim about a place, and a zone filtered to one class while

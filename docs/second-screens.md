@@ -152,9 +152,12 @@ The Gap and the Int columns move with the rows, because both are measured agains
 row and that car has to be one the list draws. On a filtered list the Gap is to the leader of the
 player's class and the Int is to the row above it on the list rather than to whatever car the
 leaderboard puts in between. Measured the other way a class running a lap behind the overall leader
-reads `+1L` on every row and `Lead` on none, which is a column carrying no gap at all. SimHub
-publishes neither figure for a class, so both are differences of the two gaps to the overall leader
-that it does publish.
+reads `+1L` on every row and `Lead` on none, which is a column carrying no gap at all. SimHub does
+publish a gap to the class leader, as `gaptoclassleader`, `lapstoclassleader` and
+`gaptoclassleadercombined`; both columns are nevertheless built today as differences of the two
+gaps to the overall leader, which is the arithmetic the pit wall values test evaluates against its
+model of a field, and reading SimHub's own three is the simplification recorded against
+`carClassRaceGap` in `second/values.ts`.
 
 The word on the row a Gap column counts from is the one cell of the two that follows the numbering
 instead, `Lead` being a claim about a place rather than a measurement. A zone filtered to one class

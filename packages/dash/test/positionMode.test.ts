@@ -262,11 +262,13 @@ describe('the pages that list two cars straddle the player', () => {
   }
 });
 
-describe('the reading a card draws answers the same setting', () => {
-  test('the rig-wide mode is one property, read by one expression', () => {
+describe('the rig-wide mode is one property', () => {
+  test('read by one expression, which the position of every row goes through', () => {
     // `cards/position.ts` draws the player's own place and the field it is out of, which is one car
-    // and not a list: there are no rows to filter, so class mode there is the readout it always was.
-    // What matters is that it is the same question, asked of the same property.
+    // and not a list: there are no rows to filter, so class mode there is the readout it always was,
+    // and it keeps a predicate of its own that the card snapshots pin. What is asserted here is the
+    // list side: one property, read through one expression, which is what every row's place goes
+    // through.
     expect(setting.positionMode()).toContain('OpenDash.PositionMode');
     expect(carPosition(player())).toContain(setting.positionMode());
   });
