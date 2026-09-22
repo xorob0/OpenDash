@@ -56,6 +56,11 @@ COPY --from=oven/bun:1.4-debian /usr/local/bin/bun /usr/local/bin/bun
 COPY design ./design
 COPY packages ./packages
 COPY scripts ./scripts
+# The one file packages/dash reads from outside packages/: leds/shiftPoints.ts imports
+# data/shift-points.json, and site/test/content.test.ts imports the strip shapes that reach it.
+# site/tsconfig.json excludes scripts/ but not test/, so `next build` type-checks that chain and
+# fails on a JSON module this stage does not have, which is how it broke the first real deploy.
+COPY data ./data
 COPY VERSION CHANGELOG.md package.json bun.lock bunfig.toml ./
 # content.ts imports the module catalogue from packages/dash/src/contract.ts, which resolves
 # `@opendash/generator` through the root workspace, so the root has to be installed here as well as
