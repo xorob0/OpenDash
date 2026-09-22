@@ -12,6 +12,79 @@ including any that the plugin does not install.
 From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
 strips, the brows and the flag box, together with a `manifest.json` listing everything published.
 
+## 0.3.0-rc.6 (2026-09-22)
+
+The candidate that answers one question per row. A review of the whole product on 22 September,
+driven on the test rig the way a sim racer would drive it, found readings that were right about the
+property they read and wrong about the question they were answering. This release closes the ones
+that mattered most, and it ships a panel that talks to a driver and a name spelled the same way
+everywhere.
+
+**A list counted in class is a list of that class.** With the position mode set to class, a
+leaderboard listed the whole field in overall order and numbered it by class position, which on a
+multi-class grid is three cars called P1 in an order that is the order of none of the numbers. The
+mode now filters the rows it numbers, everywhere a list is drawn: the leaderboard, the relative and
+the opponents page on a face's zones, on the companion and on the pit wall, and band D's relative
+page. A zone's own "My class only" adds to the rig's setting rather than overriding it, so one class
+counted by its overall places remains a thing a zone can ask for, and the cells of a row answer the
+question the row is drawn by: the places gained count within the class, the gap on a class list is
+measured to the leader of that list and the interval to the row above it, and Lead appears only
+where the place the row draws is first.
+
+**A fuel figure waits for a lap, everywhere it is drawn.** In the pit box band D read PER LAP 0.000
+and LAST LAP 0.000 beside EST. LAPS --, one tank with two fields saying they had no reading and two
+saying the car had burned nothing, because only the estimate waited for a completed lap. The four
+now wait together, the last lap's consumption also for a lap that cost something, since SimHub
+publishes zero for a lap that included a stop; the fuel page, the fuel-laps card and the lap
+review's fuel used wait with them; and the fuel page's low-fuel red no longer paints a full tank at
+an idle screen, where the unpublished estimate read as zero and zero is under a lap.
+
+**The panel talks to a driver.** Roughly ninety-five strings across the four tabs were rewritten on
+one pattern: the reasoning behind a control goes, the mechanism goes, the project's own vocabulary
+goes, and what the reader has to act on stays. A third of the rows carry no caption at all, and the
+labels read as a specification sheet writes them: Centre display, Idle display, Mounting side, Rev
+light style, Flag display. The rules are written down in `docs/design/voice.md`.
+
+### Added
+
+- **Band D's relative follows the class filter.** Its page is three gaps rather than a list, so
+  "My class only" there asks for the car ahead and the car behind in your own class, which on a
+  multi-class grid is often not the car ahead on track. The panel offers the switch on the band
+  strip, beside the ones zones B and C already carry, and the band reads the class-only cars
+  whenever the switch or the rig's class mode says so.
+- **The plugin's entry in SimHub's left menu carries the logo**, which it did not before, and the
+  mark itself is redrawn as the face's own layout: a strip top and bottom with three zones between
+  them, the middle one wider because the gear is. The needle went because, five rows under SimHub's
+  own Dash Studio entry, a gauge with a needle read as a second copy of a neighbour.
+
+### Changed
+
+- **The name is OpenDash, with a capital O, everywhere the product writes it**: the dashboard
+  titles in Dash Studio, the folders under `DashTemplates`, the LED profiles and their author, and
+  the plugin's own strings. On Windows the folders are the same folders, since the file system does
+  not distinguish the case, so an installed rig updates in place. The font family stays
+  `openDash Display`, being a key rather than a word.
+- **A matrix panel's Idle display is the one control over what it shows at rest.** It had two,
+  Idle display choosing Dark or Gear and a Show the gear switch, and the profile gated the gear on
+  both, so with the display on Dark the switch decided nothing and with it on Gear the switch
+  decided alone. The switch's row is gone; a panel whose switch was off comes back set to Dark, and
+  `FlagBoxMatrix<N>Gear` stays attached as the alias, so that a dashboard written against it still
+  reads.
+
+### Fixed
+
+- **A leaderboard in class mode numbered rows it had not filtered.** See above.
+- **Band D's fuel page said 0.000 beside --.** See above; it is the reading the review started from.
+- **The fuel page painted a full tank red before the first lap**, and the lap review reported a
+  lap that cost nothing before any lap had been driven.
+
+### Development
+
+- **Binding an item adds to what it already binds.** `withBindings`, whose spread over an element
+  replaced every binding the element had built for itself, is gone, and `withMoreBindings` folds
+  new targets in and throws on a target bound in two places. Fifty-three call sites moved and every
+  built package is byte-identical, so nothing on a screen changes.
+
 ## 0.3.0-rc.5 (2026-09-21)
 
 Two things the plugin used to do on its own, and now asks about first. One of them was reported as
