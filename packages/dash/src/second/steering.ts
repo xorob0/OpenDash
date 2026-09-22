@@ -52,9 +52,9 @@ const cos = (a: Expr): Expr => `cos(${a})`;
  */
 function markOnCircle(name: string, face: Circle, size: number, color: Hex, angle: Expr): RectangleItem {
   return withMoreBindings(band(name, onCircle(face, 0, { width: size, height: size }), color), {
-      Left: add(num(face.cx - size / 2), mul(num(face.r), sin(angle))),
-      Top: sub(num(face.cy - size / 2), mul(num(face.r), cos(angle))),
-    });
+    Left: add(num(face.cx - size / 2), mul(num(face.r), sin(angle))),
+    Top: sub(num(face.cy - size / 2), mul(num(face.r), cos(angle))),
+  });
 }
 
 /**

@@ -25,6 +25,8 @@
  * two other cases, both of which start from an element that already binds something.
  */
 import { describe, expect, test } from 'bun:test';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { formula, withMoreBindings } from '../src/bind.ts';
 import { label } from '../src/elements/label.ts';
 
@@ -71,5 +73,31 @@ describe('withMoreBindings', () => {
     expect(() => withMoreBindings(drawn, { Text: 'somethingElse' })).toThrow(
       'lap.delta: Text is bound in two places; one of them has to stop binding it.',
     );
+  });
+
+  test('a literal handed to it is still checked for properties the item does not have', () => {
+    // The helper is typed by the item's kind rather than by a free type parameter, because a
+    // parameter inferred from a literal is the literal's own type and a misspelt property then
+    // compiles and is dropped by the serialiser. `bun run typecheck` fails if the line below stops
+    // being an error, which is the whole of what this test asserts.
+    const layer = withMoreBindings(
+      // @ts-expect-error `repetitons` is not a property of a layer, and the helper must not let it through.
+      { kind: 'layer', name: 'probe', children: [], repetitons: 3 },
+      { Visible: 'shown' },
+    );
+    expect(layer.name).toBe('probe');
+  });
+
+  test('no file under src writes an item’s bindings by hand', () => {
+    // Deleting `withBindings` closed the spread; this closes the other spelling of the same trap, a
+    // `bindings:` key written into an item, which two files had carried unnoticed until the sweep.
+    const root = path.resolve(import.meta.dir, '../src');
+    const written: string[] = [];
+    for (const file of readdirSync(root, { recursive: true }) as string[]) {
+      if (!file.endsWith('.ts') || file === 'bind.ts') continue;
+      const source = readFileSync(path.join(root, file), 'utf8');
+      if (/\bbindings:\s/.test(source)) written.push(file);
+    }
+    expect(written).toEqual([]);
   });
 });

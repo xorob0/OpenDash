@@ -35,8 +35,17 @@ export const bindings = (spec: BindingSpec): Bindings | undefined => {
  * property is the ambiguity this helper exists to end, and last-write-wins would keep the silence
  * and merely move it somewhere harder to see; a throw fires while the package is being built, names
  * the item and the target, and so reaches a developer rather than a driver.
+ *
+ * The item is typed by its `kind` rather than as a free `T extends Item`, and the difference is not
+ * cosmetic. A type parameter inferred from an object literal is the literal's own type, so the
+ * literal is never checked for a property the item does not have: `repetitons: 3` on a layer would
+ * have compiled and been dropped by the serialiser, which is a silent wrongness of exactly the
+ * family this helper exists to end. Inferring the kind instead instantiates the parameter to the
+ * one item type of that kind, and a literal passed to it is checked against that type the way it
+ * would be in a plain `return { ... }`; the test file holds a `@ts-expect-error` on a misspelt
+ * property so that this cannot regress unnoticed.
  */
-export const withMoreBindings = <T extends Item>(item: T, spec: BindingSpec): T => {
+export const withMoreBindings = <K extends Item['kind']>(item: Extract<Item, { kind: K }>, spec: BindingSpec): Extract<Item, { kind: K }> => {
   const added = bindings(spec);
   if (added === undefined) return { ...item };
   const existing = item.bindings;
