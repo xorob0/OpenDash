@@ -216,6 +216,9 @@ namespace OpenDashPlugin
         /// control that is no longer on screen and read as having done something.</summary>
         private void ForgetTabControls()
         {
+            // The preview holds SimHub's renderer rather than a control we made, so it is let go rather
+            // than forgotten: a tab that is not on screen must not still be drawing a dashboard.
+            DropPreview();
             faceWarningText = null;
             faceWarningRow = null;
             zoneSelects.Clear();

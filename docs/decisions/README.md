@@ -24,6 +24,7 @@ the thing that is wrong when the two disagree.
 | 0014 | [The shift model is the car's own](0014-the-shift-model.md) | iRacing publishes the car's shift-light RPMs and SimHub ignores them; one definition drives the bar, the arc, the flag box and the strip. Amends 0004 |
 | 0017 | [A screen is an instance](0017-a-screen-is-an-instance.md) | A rig is any number of named screens in any mix of sizes; the namespace is allocated once and the installer rewrites it into the copy. Amends 0003 and narrows 0011 |
 | 0018 | [The car's own lights, from a table OpenDash does not carry](0018-the-cars-own-lights.md) | The pattern and the colours are mirrored too, from a table the plugin fetches and OpenDash never ships. Amends 0014, reopens 0009, extends 0012 |
+| 0020 | [The panel draws what it configures](0020-the-panel-draws-what-it-configures.md) | The Rig tab hosts SimHub's own renderer, so the preview is the dashboard rather than a picture of one. Amends 0003, leaves 0001 standing, owes 0008 no fidelity check |
 
 ## Reserved
 
@@ -44,6 +45,7 @@ body still naming the old number is amended rather than rewritten, which is why 
 | 0010 | Where alert priority is decided | #107 |
 | 0015 | What a car theme is, and the scope line it has to move | #193 |
 | 0016 | How several hundred themed packages reach the user | #197 |
+| 0019 | A renderer in the browser, and what it owes | #395 |
 
 And once more on 2026-09-16, between two branches rather than two tickets: this record and "A
 screen is an instance" were both written as 0017, neither knowing about the other, and the lights
