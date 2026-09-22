@@ -460,6 +460,17 @@ describe('module expressions', () => {
     return item;
   };
 
+  test('the fuel page paints nothing low until a lap has said what one costs (#382)', () => {
+    // `Fuel_RemainingLaps` is zero before the first crossing and zero is under a lap, so the level
+    // and the estimate beside it were red on a full tank at an idle screen, next to the `--` the
+    // estimate draws for itself. The gate the estimate reads is the gate the colour reads.
+    for (const name of ['level.value', 'lapsLeft.value']) {
+      const colour = formulaOf(moduleItem('fuel', name), 'TextColor');
+      expect(colour).toContain('Fuel_LitersPerLap');
+      expect(colour).toContain('Fuel_RemainingLaps');
+    }
+  });
+
   test('the delta draws its sign as U+2212, in the value and at the left end of the scale', () => {
     const value = moduleItem('delta', 'delta.value');
     expect(formulaOf(value, 'Text')).toMatch(/^replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)$/);

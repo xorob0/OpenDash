@@ -237,6 +237,13 @@ describe('the fields the catalogue draws on each page', () => {
     const ABSENT = { time: '--:--', laps: NO_VALUE, perLap: NO_VALUE, lastLap: NO_VALUE } as const;
     const fieldNamed = (id: string): BandField => BAND_PAGES.fuel!.find((f) => f.id === id)!;
 
+    test('the fuel page is pinned as it is emitted, gates and all', () => {
+      // The assertions below hold each gate on its own; the snapshot holds the page whole, so a
+      // gate that moves, a field that reorders or an absence that changes its spelling shows up as
+      // a diff to be read rather than as a test that still passes around it.
+      expect(bandPageItems('fuel', BANDS['1920x480'], '', true)).toMatchSnapshot();
+    });
+
     for (const id of ['laps', 'perLap']) {
       test(`${id} reads the absence until a lap has been completed`, () => {
         const { bind } = fieldNamed(id);

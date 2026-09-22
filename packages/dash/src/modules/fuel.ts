@@ -35,10 +35,16 @@ import {
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 
-const { fmt, iff, gt, lt, num, str, eq } = ncalc;
+const { and, fmt, iff, gt, lt, num, str, eq } = ncalc;
 
-/** Below a lap of fuel the level reads as low, which is the dash card's rule too. */
-const lowFuel = () => lt(fuelLapsLeft(), num(1));
+/**
+ * Below a lap of fuel the level reads as low, which is the dash card's rule too, and only once a
+ * lap has said what one costs. `fuelLapsLeft` reads the unpublished estimate as zero and zero is
+ * under a lap, so before the first crossing a full tank, the bar under it and the `--` the estimate
+ * draws for itself were all painted in the low-fuel red, on the row this page had just been brought
+ * to one answer on (#382).
+ */
+const lowFuel = () => and(fuelIsSettled(), lt(fuelLapsLeft(), num(1)));
 
 const consumption = (value: string, guard: string) => ({ sample: '2.84', bind: iff(guard, fmt(value, '0.00'), str(NO_VALUE)), chars: CHARS.consumption });
 
