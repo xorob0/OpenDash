@@ -12,7 +12,7 @@
  * the numbers in the table, and the strip draws whatever they say.
  *
  * The screens do not read this yet, and that is a gap rather than a shape: the rev bar and the rev
- * arc still draw openDash's tokens at the published ladder's thresholds, so a strip and a face in
+ * arc still draw OpenDash's tokens at the published ladder's thresholds, so a strip and a face in
  * one rig now disagree about a car the table covers. #353 decides what a screen should do with a
  * car's colours; the mechanism is the property below either way.
  *

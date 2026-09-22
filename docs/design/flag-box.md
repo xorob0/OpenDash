@@ -5,7 +5,7 @@ The 8x8 matrix profile is built from the same ordered catalogue the face ranks f
 `packages/dash/src/leds/glyphs.ts`. This file is the other half of that code: which conditions
 have a glyph, which do not, and why.
 
-[ADR 0013](decisions/0013-lighting-hardware.md) is why openDash lights a box at all.
+[ADR 0013](decisions/0013-lighting-hardware.md) is why OpenDash lights a box at all.
 [simhub-leds-format.md](../research/simhub-leds-format.md) is the file format.
 
 ## The rule
@@ -326,7 +326,7 @@ SimHub without a rebuild.
 
 ## What is not drawn, and why
 
-Everything a comparable flag box draws that openDash does not, and, since band D reads this same
+Everything a comparable flag box draws that OpenDash does not, and, since band D reads this same
 list, everything the canvas's alert catalogue numbers that no surface raises. Each line is a thing
 somebody will ask for; the answer is that iRacing does not publish it, not that it was forgotten.
 

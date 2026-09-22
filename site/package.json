@@ -2,7 +2,7 @@
   "name": "@opendash/site",
   "private": true,
   "version": "0.0.0",
-  "description": "The openDash showcase website: what the dashes look like, which screens they fit, and where to download them.",
+  "description": "The OpenDash showcase website: what the dashes look like, which screens they fit, and where to download them.",
   "license": "MIT",
   "scripts": {
     "generate": "bun scripts/tokens.ts && bun scripts/content.ts && bun scripts/fonts.ts",

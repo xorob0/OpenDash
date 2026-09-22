@@ -54,7 +54,7 @@ namespace OpenDashPlugin
 
         private CarLightService carLights;
 
-        /// <summary>Monotonic milliseconds for the over-rev flash, which is the only thing openDash times.</summary>
+        /// <summary>Monotonic milliseconds for the over-rev flash, which is the only thing OpenDash times.</summary>
         private readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
 
         /// <summary>The embedded profile as JSON, which the lights page installs into SimHub.</summary>
@@ -174,7 +174,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// A rig migrated from a settings file written before ADR 0017 takes its sizes from the folder
-        /// names, and "openDash Companion", "openDash Pit wall" and the round faces carry none, so those
+        /// names, and "OpenDash Companion", "OpenDash Pit wall" and the round faces carry none, so those
         /// screens arrived at 0 x 0 and their cards said so. The packages know: the size is in each
         /// one's .djson.metadata. Matched on the folder, because that is the one thing a migrated screen
         /// certainly has.
@@ -263,7 +263,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// One frame of the car's own bar. The only telemetry openDash reads, and the only thing it
+        /// One frame of the car's own bar. The only telemetry OpenDash reads, and the only thing it
         /// computes (ADR 0018).
         ///
         /// <para>It is called at SimHub's data rate, so it does the least it can: with the mirror off

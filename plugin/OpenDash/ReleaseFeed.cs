@@ -21,7 +21,7 @@ namespace OpenDashPlugin
     public sealed class ReleaseAsset
     {
         /// <summary>The name GitHub published, which is not the name on disk: every space becomes a period, so
-        /// "openDash Pit wall.simhubdash" is published as "OpenDash.Pit.wall.simhubdash".</summary>
+        /// "OpenDash Pit wall.simhubdash" is published as "OpenDash.Pit.wall.simhubdash".</summary>
         public string Name { get; set; }
 
         /// <summary>Answers 302 to a signed URL on another host that expires within the hour, so it is followed

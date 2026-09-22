@@ -30,7 +30,7 @@ export default function Home() {
           </h1>
 
           <p className={`prose ${styles.lede}`}>
-            openDash is not one dashboard. It is the face on your wheel, the phone or tablet beside
+            OpenDash is not one dashboard. It is the face on your wheel, the phone or tablet beside
             it, and a pit wall screen for whoever is not driving — {faces.length} sizes from a{' '}
             <span className="num">1920 × 480</span> ultrawide down to a{' '}
             <span className="num">480 px</span> round DDU, and one SimHub plugin that installs all of
@@ -50,7 +50,7 @@ export default function Home() {
         <div className={`page ${styles.heroShot}`}>
           <Shot
             src="/shots/opendash-green.png"
-            alt="The openDash face at 1920 by 480: rev bar, the bar of settled values, lap times, the gear, the relative, and the fuel band"
+            alt="The OpenDash face at 1920 by 480: rev bar, the bar of settled values, lap times, the gear, the relative, and the fuel band"
             width={1920}
             height={480}
             priority
@@ -132,7 +132,7 @@ export default function Home() {
             <Reveal delay={0} className={styles.kind}>
               <Shot
                 src="/shots/opendash-850x480-green.png"
-                alt="The openDash face at 850 by 480, the base size"
+                alt="The OpenDash face at 850 by 480, the base size"
                 width={850}
                 height={480}
                 sizes="(min-width: 62rem) 40rem, 100vw"
@@ -148,7 +148,7 @@ export default function Home() {
             <Reveal delay={90} className={styles.kind}>
               <Shot
                 src="/shots/opendash-companion-green.png"
-                alt="The openDash companion at 850 by 480, showing one module at a time"
+                alt="The OpenDash companion at 850 by 480, showing one module at a time"
                 width={850}
                 height={480}
                 sizes="(min-width: 62rem) 40rem, 100vw"
@@ -164,7 +164,7 @@ export default function Home() {
             <Reveal delay={180} className={styles.kind}>
               <Shot
                 src="/shots/opendash-pit-wall-green.png"
-                alt="The openDash pit wall at 1920 by 1080, showing the whole field"
+                alt="The OpenDash pit wall at 1920 by 1080, showing the whole field"
                 width={1920}
                 height={1080}
                 sizes="(min-width: 62rem) 40rem, 100vw"
@@ -233,7 +233,7 @@ export default function Home() {
           </Reveal>
           <Reveal delay={60} className={styles.closeBody}>
             <p className="prose">
-              Every package carries a default layout by itself, so the shortest way to see openDash
+              Every package carries a default layout by itself, so the shortest way to see OpenDash
               on a display is to double-click one file. The plugin is what makes that layout yours —
               and it exposes its settings as SimHub properties, so your other dashboards and LED
               profiles can read them too.

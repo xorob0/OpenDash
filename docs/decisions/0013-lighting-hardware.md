@@ -1,4 +1,4 @@
-# ADR 0013: openDash lights hardware, and the flag box is where it starts
+# ADR 0013: OpenDash lights hardware, and the flag box is where it starts
 
 **Date:** 2026-09-13
 **Status:** Accepted. Adds a fourth kind of artefact to "What ships" in [scope.md](../scope.md)
@@ -7,14 +7,14 @@ and is the record [#276](https://github.com/xorob0/OpenDash/issues/276) asked fo
 
 ## Context
 
-openDash ships fourteen packages and a plugin, and every one of them is a screen. Nothing in the
+OpenDash ships fourteen packages and a plugin, and every one of them is a screen. Nothing in the
 refusal list forbids shipping something else: the list covers our own renderer, DashStudio
 authoring, computed telemetry, theming, idle screens, licensing, user telemetry, Lovely's design
 and sims other than iRacing, and an LED profile is none of those. But "What ships" says three
 kinds of screen, and that sentence is the product. It has to gain a clause before a
 `.ledsprofile` lands in `build/`, for the same reason the zone face changed this document first.
 
-The case for doing it at all is that openDash already owns the content. The flag colours are in
+The case for doing it at all is that OpenDash already owns the content. The flag colours are in
 `design/tokens.json`, decided once and deliberately — `purpose.flag.yellow` is not `caution`
 amber because the two sit side by side on a yellow-flag lap, `flag.black` is drawn outlined
 because black on black is nothing, `flag.debris` is yellow with danger stripes. The alert
@@ -35,7 +35,7 @@ driven natively by SimHub. It is the cheapest piece of sim hardware a dashboard 
 meaningfully light up.
 
 Daniel Newman Racing ships twelve profiles across RPM strips, wheels, button boxes, brows, matrix
-flag boxes and ambient lighting. openDash starts with one of those six and says so. The rest —
+flag boxes and ambient lighting. OpenDash starts with one of those six and says so. The rest —
 the strips, the brows, the wheel buttons, the ambient lighting — are real and are on the backlog,
 and this record does not claim them. Each one is a different device with a different container
 vocabulary, and the honest position is that we have shipped none of them.
@@ -71,7 +71,7 @@ That is enough on its own — a write we cannot sequence against is a write that
 other profiles — but the consent argument would decide it even if the file were safe. A profile
 attaches to a device the user owns and paints it. Silently changing what somebody's hardware does,
 because they installed a dashboard, is a larger liberty than installing a dashboard, and
-[ADR 0012](0012-update-checks.md) already argues that openDash asks rather than assumes.
+[ADR 0012](0012-update-checks.md) already argues that OpenDash asks rather than assumes.
 
 So:
 
@@ -85,12 +85,12 @@ So:
 * Updating is the same act. The plugin refreshes the extracted file and says the version changed;
   it does not reach into SimHub's settings to update a profile in place.
 
-The cost is a manual step openDash does not impose anywhere else, and it is a real cost: some
+The cost is a manual step OpenDash does not impose anywhere else, and it is a real cost: some
 people will never take it, and the box will sit dark for them. That is accepted. The alternative
 was writing into a file SimHub owns, on hardware the user did not ask us to touch.
 
 This is narrower than [#198](https://github.com/xorob0/OpenDash/issues/198), which turns the installer
-into a picker for themed packages. A picker chooses among things openDash installs; the profile is
+into a picker for themed packages. A picker chooses among things OpenDash installs; the profile is
 not one of them, so it does not appear in the picker and #198 does not need amending.
 
 ### A profile works without the plugin
@@ -139,7 +139,7 @@ matrix profiles the way it has one for dashboards. The reasoning above is about 
 exists today, and it would be worth reopening rather than inheriting if that changes.
 
 **Whether a plugin-supplied effect is better than a generated profile.** SimHub's LED SDK lets a
-plugin register its own container, which would put openDash's drawing code in C# and make the
+plugin register its own container, which would put OpenDash's drawing code in C# and make the
 profile a thin reference to it. It is rejected for now because the profile then only works where
 the plugin is installed, which contradicts the rule above — but it is the obvious answer if the
 generated tree ever gets too large to read.
@@ -166,7 +166,7 @@ PluginManager.GetInstance()                     // PluginManager.cs:1274, public
 driver.SaveSettings()                           // RGBMatrixDriver.cs:312, public
 ```
 
-No reflection, no internals, and **openDash never opens the settings file**. It hands SimHub a
+No reflection, no internals, and **OpenDash never opens the settings file**. It hands SimHub a
 profile object; SimHub serialises its own in-memory collection to its own file, exactly as it does
 when the user imports one through its UI. The clobbering problem does not arise, because there is no
 second writer.
@@ -195,9 +195,9 @@ presses itself.
 **The file is still written.** Extraction to `SimHub/OpenDash/` stays, for three reasons: it is the
 fallback when the matrix driver cannot be reached (an older SimHub, or the serial dash plugin absent),
 it is what a user copies to a second machine, and it is what somebody inspects when they want to see
-what openDash is asking their hardware to do.
+what OpenDash is asking their hardware to do.
 
-**The strongest argument against this amendment** is that it puts openDash inside another plugin's
+**The strongest argument against this amendment** is that it puts OpenDash inside another plugin's
 object graph, which is a larger surface to break on a SimHub update than a file whose format we had
 already reverse-engineered. That is true. It is mitigated by every call being null-checked and
 wrapped, by the failure mode being "the button says SimHub's matrix settings are not available, here
@@ -209,12 +209,12 @@ is the file" rather than an exception, and by the file path remaining the docume
 constructs its driver, and written at four call sites — teardown, `Dispose`, and two unrelated
 Arduino text-screen handlers. So the original ADR overstated the mechanism as well as drawing the
 wrong conclusion from it. The real failure of a file merge would not have been losing the user's
-profiles; it would have been openDash's write being silently reverted at the next teardown. The
+profiles; it would have been OpenDash's write being silently reverted at the next teardown. The
 in-process route avoids both, because SimHub stays the only writer.
 
 *Installing is not selecting.* `AddProfile` appends to the list. Which profile is live comes from
 SimHub's own persisted `activeProfileId`, so after installing, the box still runs whatever it was
-running. The panel and the guide both say to pick it on the device; openDash does not switch it,
+running. The panel and the guide both say to pick it on the device; OpenDash does not switch it,
 because which profile a user's hardware runs is theirs to choose.
 
 ## Amended, 2026-09-18: there is no such thing as "SimHub's LED profiles"
@@ -255,7 +255,7 @@ went. It is a statement about the past rather than a default anybody chose; a ne
 picker offered, which is the one LED device when there is one and a choice when there is not.
 
 **What this does not fix.** The flag box matrix has the same shape of problem: `LedModuleSettings`
-carries a `MatrixDriver` as well, so a matrix built into a wheel is a list openDash still cannot
+carries a `MatrixDriver` as well, so a matrix built into a wheel is a list OpenDash still cannot
 reach, and the Install tab's matrix row still means the Arduino's. It is not the reported bug and
 the machinery here is what it will be built on. [#363](https://github.com/xorob0/OpenDash/issues/363).
 

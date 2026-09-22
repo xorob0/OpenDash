@@ -34,7 +34,7 @@ namespace OpenDashPlugin
 
         public int Height { get; set; }
 
-        /// <summary>The folder under DashTemplates this screen owns, e.g. "openDash 1280x480" or "openDash Rim".</summary>
+        /// <summary>The folder under DashTemplates this screen owns, e.g. "OpenDash 1280x480" or "OpenDash Rim".</summary>
         public string Folder { get; set; }
 
         /// <summary>The embedded package this screen was made from, so it can be written again.</summary>

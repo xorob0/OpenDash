@@ -24,7 +24,7 @@ const HERO_WIDTH = 382;
 const CONTENT_WIDTH = GRID_WIDTH + RULE + HERO_WIDTH + RULE + GRID_WIDTH;
 
 export const layout1280x400: Layout = flankedLayout({
-  folder: 'openDash slots 1280x400',
+  folder: 'OpenDash slots 1280x400',
   width: WIDTH,
   height: HEIGHT,
   revBar: { left: REV_BAR_MARGIN, top: REV_BAR.top, width: WIDTH - 2 * REV_BAR_MARGIN, height: REV_BAR.height, gap: 6 },

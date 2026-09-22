@@ -125,7 +125,7 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       # The dash artifact is rooted at build/ (its paths share that ancestor), so it lands as
-      # build/openDash.simhubdash. The plugin artifact is rooted at the repository, so downloading
+      # build/OpenDash.simhubdash. The plugin artifact is rooted at the repository, so downloading
       # it into the workspace restores build/OpenDash-plugin.zip.
       - name: Download dashboard packages
         uses: actions/download-artifact@v4

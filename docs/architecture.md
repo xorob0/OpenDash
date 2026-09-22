@@ -2,7 +2,7 @@
 
 > **Two faces are built, and this describes the older one.** Since 0.2.0 the eight rectangular
 > sizes are zone faces and carry the shipped names; what is described below is the twelve-slot
-> path, which still builds and now produces the two round faces and the `openDash slots <size>`
+> path, which still builds and now produces the two round faces and the `OpenDash slots <size>`
 > packages beside them. The zone model is the settled design
 > ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)): five parts,
 > a catalogue and a wheel button per zone, and a page laid out for the shape of its box.
@@ -28,14 +28,14 @@ packages/dash/fonts/*.ttf ────────┤
                         packages/generator
               typed node model, binding helpers, validator, serialiser
                                   v
-                  build/openDash/openDash.djson        main dashboard
-                  build/openDash/cards.djson           one screen per card
-                  build/openDash/*.djson.metadata
-                  build/openDash/_SHFonts/
-                  build/openDash Companion/            21 screens, one per module
-                  build/openDash Pit wall/             3 pages and their zone dashboards
+                  build/OpenDash/OpenDash.djson        main dashboard
+                  build/OpenDash/cards.djson           one screen per card
+                  build/OpenDash/*.djson.metadata
+                  build/OpenDash/_SHFonts/
+                  build/OpenDash Companion/            21 screens, one per module
+                  build/OpenDash Pit wall/             3 pages and their zone dashboards
                                   v
-                  zip  -->  build/openDash.simhubdash
+                  zip  -->  build/OpenDash.simhubdash
                                   |
                  +----------------+----------------+
                  v                                 v
@@ -98,7 +98,7 @@ to the source.
 A .NET Framework 4.8 class library named `OpenDash`, implementing `IPlugin` and
 `IWPFSettingsV2`. It is code-only WPF and builds with the .NET SDK on any platform, which is
 [ADR 0005](decisions/0005-plugin-builds-on-linux.md). On `Init` it reads its settings, compares the version of the embedded
-dashboard with the one installed under `DashTemplates/openDash/`, extracts the embedded package
+dashboard with the one installed under `DashTemplates/OpenDash/`, extracts the embedded package
 when the installed one is missing or older, and attaches one property per setting. The settings
 panel is a WPF control built from SimHub's own styles. The plugin renders nothing and does not
 implement `DataUpdate`. Details in
@@ -178,7 +178,7 @@ with the .NET SDK against the assemblies committed in `plugin/lib/` and uploads 
 SimHub, so visual review remains a human step: the reviewer installs the artifact on a SimHub
 machine, or the author attaches a screenshot from the VM.
 
-On a tag, a release workflow attaches `openDash.simhubdash` and `OpenDash-plugin.zip` to the
+On a tag, a release workflow attaches `OpenDash.simhubdash` and `OpenDash-plugin.zip` to the
 GitHub release. The dashboard version in the `.metadata` sidecar, the plugin assembly version
 and the tag are the same string.
 

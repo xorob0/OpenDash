@@ -51,7 +51,7 @@ namespace OpenDashPlugin
         /// <param name="productVersion">The plugin's version. The header says what the software is, never who runs it.</param>
         public ReleaseClient(string productVersion)
         {
-            userAgent = "openDash/" + (string.IsNullOrWhiteSpace(productVersion) ? "0.0.0" : productVersion.Trim());
+            userAgent = "OpenDash/" + (string.IsNullOrWhiteSpace(productVersion) ? "0.0.0" : productVersion.Trim());
         }
 
         /// <summary>The User-Agent every request carries, which is the whole of what OpenDash discloses about itself.</summary>

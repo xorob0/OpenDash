@@ -231,7 +231,7 @@ describe('several conditions raised at once', () => {
 
   test('the green is the flag SimHub limits, so band D is not green for a whole race', () => {
     // iRacing holds the `green` bit for the entire green-flag stint, where the green flag is an
-    // event the canvas gives three seconds. SimHub's GreenLimiter is the only clock openDash has.
+    // event the canvas gives three seconds. SimHub's GreenLimiter is the only clock OpenDash has.
     expect(shown(['green'])).toBeUndefined();
     expect(shown(['green'], ['Flag_Green'])).toBe('green');
     // And it yields to anything above it, limiter or no limiter.

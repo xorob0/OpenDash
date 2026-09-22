@@ -30,7 +30,7 @@ Two reasons for the press. A driver whose lights looked generic had nothing to r
 press, because `car` is the default style and its fallback is deliberately silent: the plugin absent,
 no table fetched, no entry for the car and a driver who chose another style all looked the same. And
 a copy you made, having been shown the project and the licence, is a better answer to CC BY-NC-SA
-than one a background thread made during startup. openDash redistributes nothing either way, which
+than one a background thread made during startup. OpenDash redistributes nothing either way, which
 was always the load-bearing fact, but the position is stronger for the press.
 
 **The update asks you to close SimHub, because that is when it happens.** It was reported as the
@@ -73,7 +73,7 @@ The second candidate cut from rig testing, and the one to have if your LEDs are 
 
 **An LED profile now goes to the device you say, because there is no shared list to go to.** SimHub
 keeps one profile list per LED device, in that device's own file, and a profile in one is invisible
-in every other. openDash installed into the Arduino RGB LEDs device whatever the strip was, so a bar
+in every other. OpenDash installed into the Arduino RGB LEDs device whatever the strip was, so a bar
 added for a wheel was parsed, added, saved and verified correctly -- into a list the wheel does not
 read. Every part of the install worked; what was wrong was upstream of it. A bar now names its
 device and the panel asks: one device on the rig and it simply says where the profile went, several
@@ -87,7 +87,7 @@ most wanted for. It is now the companion's three-way setting, off / bar / full s
 the full catalogue, with the bar directly under the header and the full flag over the body.
 
 **Tapping a companion changes the module.** SimHub's only touch gesture walks the screens whose
-expression is true, and openDash was leaving exactly one of the twenty-one enabled, so a tap had
+expression is true, and OpenDash was leaving exactly one of the twenty-one enabled, so a tap had
 nowhere to go. SimHub owns the paging now, which also makes its own per-dashboard "Next screen"
 work on a wheel button.
 
@@ -105,13 +105,13 @@ though they were coming apart.
   is watching *because* of the flag, so covering them at the moment a yellow comes out hides the
   cars the yellow is about.
 - **"Opens on" is back on the companion.** SimHub moves off a screen that stops being enabled, so
-  leaving one module enabled for a few seconds after SimHub loads still selects it; openDash just
+  leaving one module enabled for a few seconds after SimHub loads still selects it; OpenDash just
   cannot do that on every frame without breaking the tap. The held glance needs the same trick twice
   and does not come back yet; see [#362](https://github.com/xorob0/OpenDash/issues/362).
 
 ### Changed
 
-- **Add a screen opens on 850 x 480**, which is what most screens running openDash are, rather than
+- **Add a screen opens on 850 x 480**, which is what most screens running OpenDash are, rather than
   on whichever size came first in the catalogue.
 - **The pit wall's two clocks name themselves first**, as every other group on the strip does. They
   were the one group written the other way round -- `14:32 LOCAL 15:07 SIM` -- so which was the wall
@@ -147,7 +147,7 @@ about the property it read and wrong about the question it was answering.
 `AvailableProfiles`, which is not a collection but a computed property: it is the saved list
 normally, and the *device maker's built-in list* whenever the device ships built-in profiles and you
 have them switched on. A Fanatec wheel ships them. So on such a rig the profile was appended to the
-maker's list, never written to disk, and gone at the next start -- while openDash's own check, which
+maker's list, never written to disk, and gone at the next start -- while OpenDash's own check, which
 reads the saved list, could not find it either and told you the install had failed. If you have a
 Fanatec wheel this is the release to have.
 
@@ -158,7 +158,7 @@ read that caption, decided it was not for them, installed the plain 3/9/3 and go
 the middle of the wheel with half the flag LEDs lit. It is `3/9/3 Fanatec` now, and the order is
 confirmed against a working profile from a rig with the wheel rather than inferred.
 
-**The Update button updates openDash itself.** It replaced the dashboards and left the plugin alone,
+**The Update button updates OpenDash itself.** It replaced the dashboards and left the plugin alone,
 so pressing it gave you packages from the new release and a plugin from the old one -- and because a
 package's bindings are literals and the plugin is what attaches the properties behind them, the half
 that moved read names the half that did not had never heard of. That fails silently, as a field
@@ -176,7 +176,7 @@ product names that asked you to find your wheel in somebody else's list.
   device-named shapes that fall outside the grid are kept, so nothing installed disappears.
 - **A car alongside can light the whole bar**, per bar rather than per rig: a brow above a monitor
   has no ends to speak of and a rim does.
-- **openDash updates itself.** The Update button now fetches the plugin as well as the dashboards.
+- **OpenDash updates itself.** The Update button now fetches the plugin as well as the dashboards.
   A loaded assembly cannot overwrite itself, so the new one is staged beside it and a detached
   process puts it in place once SimHub has closed, keeping the one it replaced. It is armed the
   moment the file is staged, so it survives a crash or a kill and not only a tidy shutdown.
@@ -195,7 +195,7 @@ product names that asked you to find your wheel in somebody else's list.
 ### Changed
 
 - **The rev bar is on or off.** "Shift lights" and "RPM bar" were offered as if they were tastes,
-  and they are not: where openDash has a table for the car it draws that car's own lights, and where
+  and they are not: where OpenDash has a table for the car it draws that car's own lights, and where
   it has none it draws an RPM bar that ends in shift lights, which is what almost every car does.
   A stored "RPM bar" loads as the one behaviour; "off" still gives the strip's room back to the
   zones, which is what a wheel with LEDs of its own wants.
@@ -226,7 +226,7 @@ product names that asked you to find your wheel in somebody else's list.
   driver-adjustable control, which is a narrower question than whether the car has the system, so a
   car with fixed traction control showed no TC cell at all.
 - **The plugin's own status no longer reads "not installed" on a healthy rig.** It was the worst of
-  every package openDash embeds, and since a screen is something you add, the sizes nobody added are
+  every package OpenDash embeds, and since a screen is something you add, the sizes nobody added are
   never written. It reads your rig now.
 - **An update is offered again when the plugin is behind its dashboards.** The check read only the
   dashboards' version, so the state every machine is in between staging a new plugin and restarting
@@ -267,7 +267,7 @@ remaining rather than saying that it had no estimate.
   finally be told to show different things in their middles, to fill their ladders differently and to
   animate a flag or to hold it. Removing the bar takes the profile back out. What is the rig's stays
   the rig's, which is brightness, night mode, the low-fuel threshold and the car's own shift pattern.
-  A rig starts with no bars, because a profile paints hardware somebody owns and openDash does not
+  A rig starts with no bars, because a profile paints hardware somebody owns and OpenDash does not
   guess at what that is ([ADR 0013](docs/decisions/0013-lighting-hardware.md)).
 - **A matrix panel is an instance as well.** Four numbered groups of eleven settings, one of them
   switched on because it happened to be first, is a page for hardware most people own none of. Add
@@ -312,7 +312,7 @@ remaining rather than saying that it had no estimate.
   nor a size. Installing happens where the screen or the bar is.
 - **The shape list opens on a wheel** rather than on "0/10/0", which is a bare run nobody owns: it was
   sorted by id where the canvas's own row order opens on the wheels. The name box opens on a name of
-  ours in the same way, so the row it installs into SimHub's LED profile list reads as openDash's
+  ours in the same way, so the row it installs into SimHub's LED profile list reads as OpenDash's
   rather than as a bare geometry among everybody else's profiles.
 
 ### Fixed
@@ -472,12 +472,12 @@ same one, and it says what happens to the face you have installed.
   order they light in, and how fast it flashes, in the gear you are in. A Porsche Cup fills from
   both ends inwards, a Next Gen stock car runs green to amber to red, a W13 finishes on a block of
   five blue, and none of that is a setting: it is the car. `Rev style` is a drop-down now, with
-  `The car's own` as the default and openDash's three looks — left to right, meet in middle, F1 —
+  `The car's own` as the default and OpenDash's three looks — left to right, meet in middle, F1 —
   beside it for anyone who would rather have one look in every car.
   - iRacing publishes no part of this. It publishes four RPMs per car and nothing about colour,
     order, LED count or the gear, so the pattern comes from a measured table: the open
     [Lovely Car Data](https://github.com/Lovely-Sim-Racing/lovely-car-data) project, by Lovely Sim
-    Racing, ATSR and Gomez Sim Industries, under CC BY-NC-SA 4.0. openDash ships none of it and
+    Racing, ATSR and Gomez Sim Industries, under CC BY-NC-SA 4.0. OpenDash ships none of it and
     **fetches it once**, as one archive of every car rather than one car at a time, so nothing about
     which car you are driving leaves your machine. Everything after that works offline. Turning
     update checks off turns this off too.
@@ -513,13 +513,13 @@ same one, and it says what happens to the face you have installed.
   exception, so a digit, a rev segment and an LED on a strip change colour and begin flashing on the
   same frame for the same reason.
   [ADR 0014](docs/decisions/0014-the-shift-model.md) is the whole of the reasoning, including why
-  openDash mirrors thresholds and never colour.
+  OpenDash mirrors thresholds and never colour.
 - **Which ladder your car is on is visible.** The shift state is drawn as two layers,
   `revBar.shiftLights` and `revBar.shiftLightsSimHub`, and whichever is visible in Dash Studio is
   the one in use, so a car that lights oddly can be diagnosed without reading an expression. The
   plain RPM bar is the third layer and is unchanged; `off` is still not a layer. Nothing moved on
   the face and no setting gained a value.
-- **openDash lights RGB strips as well as the flag box.** The build now writes a `.ledsprofile` for
+- **OpenDash lights RGB strips as well as the flag box.** The build now writes a `.ledsprofile` for
   nineteen strip shapes beside the flag box's — wheel rims from 3/9/3 to 5/10/5, bare runs of eight
   to sixteen, and brows of nine to twenty-five — and every release carries them. Import one through
   SimHub's own LED profile import and pick it on your device; a strip wired from the far end has a
@@ -537,7 +537,7 @@ same one, and it says what happens to the face you have installed.
 - **A car whose shift point moves with the gear can be given a table.** `data/shift-points.json`
   overrides the published ladder for a named car, gear by gear, and a gear left out of an entry
   falls back to what the sim publishes for the car as a whole. It ships **empty**, which is
-  deliberate rather than unfinished: openDash does not carry measurements it has not made, and an
+  deliberate rather than unfinished: OpenDash does not carry measurements it has not made, and an
   invented number puts a shift light in the wrong place with total confidence. What ships is the
   mechanism, its validator and the rules for contributing an entry, so a car somebody has actually
   measured can arrive as a reviewable pull request. A car that is not in the table gets the ladder
@@ -566,7 +566,7 @@ same one, and it says what happens to the face you have installed.
 
 ### Known
 
-- **No profile openDash generates has yet been imported into a real SimHub**, and no strip, brow or
+- **No profile OpenDash generates has yet been imported into a real SimHub**, and no strip, brow or
   matrix has been lit by one. They are generated against the format read out of the decompiled
   9.12.6 assemblies, their pictures are checked by tests and the whole catalogue can be driven in
   the emulator, so for the moment "it parses" is a claim about Json.NET rather than about SimHub.
@@ -594,14 +594,14 @@ of the protection.
 Nothing you have set is lost. A face's zones, bar and glance are stored against its screen size
 rather than against the package that carried the name, so a zone face configured in 0.1.0-rc.4
 comes up configured, and what rc.3 carried comes up on the 1920 x 480 face. The twelve-slot faces
-are still built and published as `openDash slots <size>.simhubdash`, and installing one by hand
+are still built and published as `OpenDash slots <size>.simhubdash`, and installing one by hand
 puts the old face back under a name of its own, beside the new one rather than over it.
 
 ### Changed
 
-- **The zone faces take the shipped names.** `openDash zones 1920x480` is now `openDash` and its
+- **The zone faces take the shipped names.** `OpenDash zones 1920x480` is now `OpenDash` and its
   seven rectangular siblings follow, so the face the plugin installs at each rectangular size is
-  the zone face. The twelve-slot faces they replace are renamed `openDash slots <size>`. They are
+  the zone face. The twelve-slot faces they replace are renamed `OpenDash slots <size>`. They are
   still built and still published, so that the two can be compared on a rig, but the plugin no
   longer embeds them and so no longer installs them. The two round faces are untouched and keep
   their names.
@@ -614,21 +614,21 @@ puts the old face back under a name of its own, beside the new one rather than o
 
 ### Added
 
-- **The flag box: openDash now lights an 8x8 LED matrix.** A profile for the printed WS2812b box a
+- **The flag box: OpenDash now lights an 8x8 LED matrix.** A profile for the printed WS2812b box a
   lot of people have beside the screen, built by the same build as the dashboards and embedded in
   the same plugin. It shows the flag that is out, the pit state, a car alongside, low fuel, oil and
   water, and the gear underneath all of it — one picture at a time, ranked the way the face ranks
   the same conditions, coloured from the same tokens.
 
   **Installing it is one button.** Open the OpenDash page, scroll to **Lights**, press
-  **Install into SimHub**, then pick the profile on your matrix device. openDash adds it through
+  **Install into SimHub**, then pick the profile on your matrix device. OpenDash adds it through
   SimHub's own matrix-profile API, so SimHub writes its own settings and nothing of yours is
-  touched — openDash only ever recognises its own profile. It **never installs on its own**: a
+  touched — OpenDash only ever recognises its own profile. It **never installs on its own**: a
   profile paints hardware you own, so it is asked about once rather than assumed.
 
-  When openDash updates, the button offers **Update in SimHub**. Updating replaces the copy in
+  When OpenDash updates, the button offers **Update in SimHub**. Updating replaces the copy in
   SimHub, including any changes you made to it there, so copy it under a new name first if you have
-  customised it. The profile is also written to `SimHub\OpenDash\openDash Flag box.ledsprofile`,
+  customised it. The profile is also written to `SimHub\OpenDash\OpenDash Flag box.ledsprofile`,
   shown under the button, as the fallback when SimHub's matrix settings cannot be reached and as the
   thing you copy to a second machine.
 
@@ -646,7 +646,7 @@ puts the old face back under a name of its own, beside the new one rather than o
 
 - The round faces are still the twelve-slot design, because what a round face does with zones is
   not decided. They are the only face at their size, so a user who has one keeps getting one.
-- **No 8x8 matrix has ever been plugged into openDash's test machine.** The flag box profile is
+- **No 8x8 matrix has ever been plugged into OpenDash's test machine.** The flag box profile is
   generated against the format read out of SimHub's own assemblies, its pictures are checked by
   tests and rendered into `build/flag-box.svg`, and the whole catalogue can be driven in the
   emulator — but nobody has yet watched it run on a real panel. If you own one, saying what it
@@ -724,7 +724,7 @@ section above.
 
 ## 0.1.0-rc.3 (2026-09-12)
 
-The candidate that fixes the font. Every numeral openDash draws has been drawn in the wrong face
+The candidate that fixes the font. Every numeral OpenDash draws has been drawn in the wrong face
 since the first build, and on this one it is right, so the whole dashboard looks narrower and
 better spaced than it did on rc.2. Alongside that, the plugin panel is rebuilt around the face
 rather than around a list, a wheel button can be bound without leaving the page, and eight zone
@@ -739,7 +739,7 @@ did before.
 - **The dashboard was never drawn in Barlow Condensed.** WPF reads the width word out of a family
   name and files the condensed faces under "Barlow" as a stretch, so a request for
   "Barlow Condensed" reached a face about a fifth wider than the design, on the dash face, on both
-  second screens and in the plugin's own settings panel. openDash now ships that face under a name
+  second screens and in the plugin's own settings panel. OpenDash now ships that face under a name
   carrying no width word, so nothing is folded. Every value is the width the layouts were measured
   for, and the gear on the 480 round face is back to the 260 the design asks for after having been
   cut to 228 to survive the wrong font.
@@ -753,7 +753,7 @@ did before.
 - **Every rectangular face is the same five parts**: a rev bar, a bar of settled values, three
   zones across the body and a band along the foot. Each zone holds one page at a time out of its
   own catalogue, so a face is configured by choosing pages rather than by filling twelve slots.
-  Eight of these are published here as `openDash zones <size>.simhubdash` for anyone who wants to
+  Eight of these are published here as `OpenDash zones <size>.simhubdash` for anyone who wants to
   look at one. They are **not** installed by the plugin and do not replace anything: the face you
   have stays the face you have until they take the shipped names.
 - **A wheel button can be bound from the panel.** Five actions: one that advances each zone to its
@@ -813,11 +813,11 @@ The first pre-release, and the first build that installs itself.
   serves every size.
 - Twenty-one companion modules and four pit wall zones, each of which shrinks or drops a field
   rather than drawing outside the box it was given.
-- The SimHub plugin, which extracts the embedded dashboards on load, adds an "openDash" page to
+- The SimHub plugin, which extracts the embedded dashboards on load, adds an "OpenDash" page to
   SimHub's left menu, and exposes each slot and mode as an `OpenDash.*` property. It compares the
   embedded version against the installed one to decide whether to reinstall.
 - `packages/generator`, a typed model of SimHub's scene graph with the NCalc helpers, the
-  serialiser, the validator and the package writer. It knows nothing about openDash.
+  serialiser, the validator and the package writer. It knows nothing about OpenDash.
 - Text fitting as a test rather than a hope. SimHub hands every text box to WPF, which silently
   clips whatever does not fit, so every text of every package is measured against its box using
   advances read from the bundled fonts.

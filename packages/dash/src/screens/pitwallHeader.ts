@@ -69,7 +69,7 @@ export function wordmark(name: string, x: number, top: number, fs: number): { it
   // Each half is measured in its own weight: "Dash" set in Bold is wider than the same letters in
   // any other face, and a box measured from the wrong one loses its last letter.
   //
-  // The two halves are the only text openDash draws in a weight WPF may have to synthesise, since
+  // The two halves are the only text OpenDash draws in a weight WPF may have to synthesise, since
   // a SimHub install can be missing a face the package ships. The boxes are therefore a quarter
   // wider than the measurement, which costs nothing (they are transparent, left aligned, and the
   // layout uses the measured width) and leaves no way for the wordmark to lose a letter.

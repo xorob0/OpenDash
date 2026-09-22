@@ -90,7 +90,7 @@ One class, `OpenDash`, implementing `IPlugin` and `IWPFSettingsV2`. It does not 
 `IDataPlugin`, and if it ever needs `DataUpdate()` that is a sign scope has crept.
 
 On `Init` it reads the settings, then compares the `DashboardVersion` in the embedded package's
-`.metadata` with the one under `DashTemplates/openDash/`, and extracts the embedded
+`.metadata` with the one under `DashTemplates/OpenDash/`, and extracts the embedded
 `.simhubdash` when the installed one is missing or older. The package is an embedded resource
 produced by the dash build and copied into the plugin project by CI, so that the plugin and the
 dashboard of one release are always the same bytes. It then attaches one property per setting.

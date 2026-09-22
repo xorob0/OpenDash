@@ -333,7 +333,7 @@ namespace OpenDashPlugin
 
         // Focus and hover
         //
-        // A control openDash templates itself keeps none of what WPF and SimHub draw around a control:
+        // A control OpenDash templates itself keeps none of what WPF and SimHub draw around a control:
         // the bare Border below is the whole of the drop button and the card, so the ring a keyboard
         // needs and the answer a pointer expects are drawn here or nowhere.
 
@@ -371,7 +371,7 @@ namespace OpenDashPlugin
 
         /// <summary>The pointer's answer on such a control: the outline lightens to ui.accentHover, the
         /// one state the canvas gives the accent. SimHub's own styles bring a hover of their own, so this
-        /// goes on the controls openDash draws and on none of theirs.</summary>
+        /// goes on the controls OpenDash draws and on none of theirs.</summary>
         private static Trigger HoverOutline()
         {
             var over = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
@@ -397,7 +397,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A TextBox is given a template as well, because Control has no CornerRadius and WPF's own
         /// template has none to bind. A ComboBox keeps SimHub's: the template that would round its box
-        /// supplies the list under it too, and half a replacement would leave the box openDash's and the
+        /// supplies the list under it too, and half a replacement would leave the box OpenDash's and the
         /// list SimHub's. That corner is therefore recorded as SimHub's rather than approximated here.
         /// </remarks>
         public static void Field(Control control, double height = Theme.ControlHeight)

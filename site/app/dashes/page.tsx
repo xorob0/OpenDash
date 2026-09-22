@@ -9,7 +9,7 @@ import styles from './page.module.css';
 export const metadata: Metadata = {
   title: 'Every dash, and the screen it fits',
   description:
-    'Ten openDash faces from 1920 by 480 down to a 480 px round DDU, photographed through SimHub’s own renderer, with the table of which one to take for your display.',
+    'Ten OpenDash faces from 1920 by 480 down to a 480 px round DDU, photographed through SimHub’s own renderer, with the table of which one to take for your display.',
 };
 
 export default function Dashes() {
@@ -113,7 +113,7 @@ export default function Dashes() {
                 </div>
                 <Shot
                   src={shotFor(p.folder)}
-                  alt={`The openDash face at ${sizeLabel(p)}, rendering live telemetry in SimHub`}
+                  alt={`The OpenDash face at ${sizeLabel(p)}, rendering live telemetry in SimHub`}
                   width={p.width}
                   height={p.height}
                   round={p.round}

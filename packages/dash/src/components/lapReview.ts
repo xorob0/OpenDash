@@ -119,7 +119,7 @@ export const lapReviewAtTheLine = (): Expr =>
 /**
  * Whether this face wants the review in the session being driven.
  *
- * `Race` is the one session name openDash can match with certainty and is the string the pit wall
+ * `Race` is the one session name OpenDash can match with certainty and is the string the pit wall
  * header already writes beside the session, so the comparison goes through `sessionType()` rather
  * than through a second spelling of the same property. `contract.ts` carries the setting and this
  * file carries what it is compared against, because the telemetry cannot be imported there without

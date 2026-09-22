@@ -1,7 +1,7 @@
 /**
  * The font files a package ships, renamed so that SimHub can actually find them.
  *
- * openDash draws its numerals in Barlow Condensed and, until this existed, SimHub drew them in
+ * OpenDash draws its numerals in Barlow Condensed and, until this existed, SimHub drew them in
  * Barlow. WPF does not treat "Barlow Condensed" as a family: it reads the width out of the name,
  * folds the condensed faces into "Barlow" as a stretch, and a `.djson` has only `Font` and
  * `FontWeight` with nothing to ask a stretch for. The request therefore fell through to a
@@ -11,7 +11,7 @@
  * So the bundled files are renamed to a family with no width word in it, and the dashboard asks
  * for that. The vendored files under `fonts/` stay exactly as they were downloaded; the renaming
  * happens here, on the way into a package, so that what the repository holds is still upstream
- * Barlow and what ships is openDash's own build of it.
+ * Barlow and what ships is OpenDash's own build of it.
  *
  * This is Barlow. The SIL Open Font License permits the modification and requires that it travel
  * with the licence, which `fonts/OFL.txt` does; the Barlow copyright declares no Reserved Font

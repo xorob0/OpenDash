@@ -1,5 +1,5 @@
 /**
- * Builds `openDash Probe`, a throwaway package that answers one question per row: does SimHub
+ * Builds `OpenDash Probe`, a throwaway package that answers one question per row: does SimHub
  * apply a binding to this property? Each row draws a literal that reads FAIL and binds a constant
  * that reads PASS, so the answer needs no telemetry, no plugin and no running sim.
  *
@@ -11,7 +11,7 @@
  * appears only in its log.
  *
  *   bun tools/binding-probe/probe.ts build
- *   bun run vm install 'openDash Probe'
+ *   bun run vm install 'OpenDash Probe'
  *
  * See tools/binding-probe/README.md for the rows and docs/decisions/0011-personalisation.md for
  * what the answers settled.
@@ -29,7 +29,7 @@ const PASS: Hex = '#00D96A';
 const FAIL: Hex = '#FF2D46';
 const RAMP_END: Hex = '#2E7BFF';
 const GREY: Hex = '#8A9099';
-const NAME = 'openDash Probe';
+const NAME = 'OpenDash Probe';
 
 /** One row per question: a grey question on the left, the subject on the right. */
 const ROW_H = 58;

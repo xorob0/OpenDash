@@ -1,5 +1,5 @@
 /**
- * The mechanism behind every zone openDash draws: a dashboard whose screens are the pages of one
+ * The mechanism behind every zone OpenDash draws: a dashboard whose screens are the pages of one
  * catalogue, and a widget that shows one of them, its screen index bound to a plugin property.
  *
  * Change the property and the widget switches screen. A wheel button that increments it is

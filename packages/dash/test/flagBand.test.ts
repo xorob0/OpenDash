@@ -32,14 +32,14 @@ const GROUND = '#0A0B0D';
 
 /** The tile each artboard quotes, which is the band's height. */
 const TILE: Record<string, number> = {
-  openDash: 60,
-  'openDash 1280x480': 60,
-  'openDash 1280x400': 54,
-  'openDash 850x480': 60,
-  'openDash 800x480': 60,
-  'openDash 1280x720': 60,
-  'openDash 800x286': 58,
-  'openDash 600x686': 56,
+  OpenDash: 60,
+  'OpenDash 1280x480': 60,
+  'OpenDash 1280x400': 54,
+  'OpenDash 850x480': 60,
+  'OpenDash 800x480': 60,
+  'OpenDash 1280x720': 60,
+  'OpenDash 800x286': 58,
+  'OpenDash 600x686': 56,
 };
 
 /**

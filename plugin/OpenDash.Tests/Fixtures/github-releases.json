@@ -13,86 +13,86 @@
         "digest": "sha256:54e28f90a0f6cee70bc28e0c06b536392abc06a501729fe597ce5b41b59fade7"
       },
       {
-        "name": "openDash.1280x400.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.1280x400.simhubdash",
+        "name": "OpenDash.1280x400.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.1280x400.simhubdash",
         "size": 175012,
         "digest": "sha256:98f8e0d48646ea3d7880585ebcfeb4eaabc965a801b9617d120aed990e873c30"
       },
       {
-        "name": "openDash.1280x480.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.1280x480.simhubdash",
+        "name": "OpenDash.1280x480.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.1280x480.simhubdash",
         "size": 174302,
         "digest": "sha256:99094eb02b099ec91a23b2bf28c09559b2cbabea476a14b5e1146d6bce99eeba"
       },
       {
-        "name": "openDash.1280x720.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.1280x720.simhubdash",
+        "name": "OpenDash.1280x720.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.1280x720.simhubdash",
         "size": 174604,
         "digest": "sha256:1b7e5929a1dafa289a80d20dd3c9c89265b768fceec1e09baecbb8965464abc1"
       },
       {
-        "name": "openDash.480.round.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.480.round.simhubdash",
+        "name": "OpenDash.480.round.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.480.round.simhubdash",
         "size": 171722,
         "digest": "sha256:c214212230ad9f46e07dbdeb5254c967b91fb581ee0b2a0af6bcb077e84ddb84"
       },
       {
-        "name": "openDash.600x686.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.600x686.simhubdash",
+        "name": "OpenDash.600x686.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.600x686.simhubdash",
         "size": 172493,
         "digest": "sha256:6eb9fa3f0b8bec79550c60152e3d68484c4a32eef5514b3694fea0fa2cc81a61"
       },
       {
-        "name": "openDash.800.round.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.800.round.simhubdash",
+        "name": "OpenDash.800.round.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.800.round.simhubdash",
         "size": 172008,
         "digest": "sha256:31060ef0d4b13d7bbc95c1824f56b8cd5ec25cf3f5ae765627344cbe0b6b00e2"
       },
       {
-        "name": "openDash.800x286.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.800x286.simhubdash",
+        "name": "OpenDash.800x286.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.800x286.simhubdash",
         "size": 176173,
         "digest": "sha256:e951560ec1d9f82f1ab8d2abc959c97c6b78335cdd003e59657c30268ddc200d"
       },
       {
-        "name": "openDash.800x480.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.800x480.simhubdash",
+        "name": "OpenDash.800x480.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.800x480.simhubdash",
         "size": 172969,
         "digest": "sha256:5370cb0ec16f87cb6b9fab6d14e45835f325ab9738895743e2e9e8f2d914d191"
       },
       {
-        "name": "openDash.850x480.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.850x480.simhubdash",
+        "name": "OpenDash.850x480.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.850x480.simhubdash",
         "size": 173092,
         "digest": "sha256:576a0e732352fcf203cd44e5da940a017a1d536e454fb20cb3e23d18fb7a33bd"
       },
       {
-        "name": "openDash.Companion.portrait.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.Companion.portrait.simhubdash",
+        "name": "OpenDash.Companion.portrait.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.Companion.portrait.simhubdash",
         "size": 314024,
         "digest": "sha256:ab82118c16aa6da6eb6a955a81339508020ddc8ed5476ecc851672d2dad891fd"
       },
       {
-        "name": "openDash.Companion.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.Companion.simhubdash",
+        "name": "OpenDash.Companion.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.Companion.simhubdash",
         "size": 335288,
         "digest": "sha256:7b9816c00eec6aeacb3afa59e334871f72392e5c84f9a756905e2ac2dd261618"
       },
       {
-        "name": "openDash.Pit.wall.portrait.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.Pit.wall.portrait.simhubdash",
+        "name": "OpenDash.Pit.wall.portrait.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.Pit.wall.portrait.simhubdash",
         "size": 236624,
         "digest": "sha256:5030632cbbac3868d89b8aa3a9d654d3b7002cbb59a46a4fdaee2367fc28d061"
       },
       {
-        "name": "openDash.Pit.wall.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.Pit.wall.simhubdash",
+        "name": "OpenDash.Pit.wall.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.Pit.wall.simhubdash",
         "size": 293146,
         "digest": "sha256:0af66e1ea26a2920bd6b50731929c33262ab2062ac0665d4b61f23eb0a8a5728"
       },
       {
-        "name": "openDash.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/openDash.simhubdash",
+        "name": "OpenDash.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.2/OpenDash.simhubdash",
         "size": 175580,
         "digest": "sha256:79854daa8f81971df485fbff2cae56609f3408ea2628427a319ae8b29c7d7990"
       }
@@ -112,86 +112,86 @@
         "digest": "sha256:8e3f34242d2b018f2b4848262888b9e4dca357b3e73ee4f0db216e9ec06a80a7"
       },
       {
-        "name": "openDash.1280x400.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.1280x400.simhubdash",
+        "name": "OpenDash.1280x400.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.1280x400.simhubdash",
         "size": 175013,
         "digest": "sha256:39aee00198203630b42ee2b52cef848405530b8af0ebeda66057ce1974baa8f3"
       },
       {
-        "name": "openDash.1280x480.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.1280x480.simhubdash",
+        "name": "OpenDash.1280x480.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.1280x480.simhubdash",
         "size": 174301,
         "digest": "sha256:8d61b79b1320a879cbe048afbe03f897d7a6a361b9ed6ef80c6fc720ec01eb19"
       },
       {
-        "name": "openDash.1280x720.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.1280x720.simhubdash",
+        "name": "OpenDash.1280x720.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.1280x720.simhubdash",
         "size": 174604,
         "digest": "sha256:8d5a37d51237dc055d050792dcecaa3972d82c3d8370da81d086cbb489b73b58"
       },
       {
-        "name": "openDash.480.round.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.480.round.simhubdash",
+        "name": "OpenDash.480.round.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.480.round.simhubdash",
         "size": 171722,
         "digest": "sha256:8b7ef5ee16e3de7ddabd752bf5db9d061ea9342dc3adfb2db147bace45619130"
       },
       {
-        "name": "openDash.600x686.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.600x686.simhubdash",
+        "name": "OpenDash.600x686.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.600x686.simhubdash",
         "size": 172493,
         "digest": "sha256:82f81ab43cc64ce97a09a7edc5cce44fd4711f35cfec36ea39ea1152f82bb871"
       },
       {
-        "name": "openDash.800.round.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.800.round.simhubdash",
+        "name": "OpenDash.800.round.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.800.round.simhubdash",
         "size": 172007,
         "digest": "sha256:b01c92e6dbe0158109967b9c7520b35fae2eb26164714e1e9f63924b1f8c06af"
       },
       {
-        "name": "openDash.800x286.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.800x286.simhubdash",
+        "name": "OpenDash.800x286.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.800x286.simhubdash",
         "size": 176173,
         "digest": "sha256:1c6647e3ca4577a8c33916ee0005304589030a131c7694142532f8828f9ac35e"
       },
       {
-        "name": "openDash.800x480.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.800x480.simhubdash",
+        "name": "OpenDash.800x480.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.800x480.simhubdash",
         "size": 172969,
         "digest": "sha256:421f0b016fb92ffcebc7ba57ed9f9086c003ca97749698c7244f2569620cb7d1"
       },
       {
-        "name": "openDash.850x480.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.850x480.simhubdash",
+        "name": "OpenDash.850x480.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.850x480.simhubdash",
         "size": 173093,
         "digest": "sha256:bed56387b1d3e604d56b84698e4d8aadc9d5a7d30212d602cd876030241c19ab"
       },
       {
-        "name": "openDash.Companion.portrait.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.Companion.portrait.simhubdash",
+        "name": "OpenDash.Companion.portrait.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.Companion.portrait.simhubdash",
         "size": 314023,
         "digest": "sha256:a841ed8380f73547fcb39a682c8ed4e4828d85f91be3e6b162444f55139022d5"
       },
       {
-        "name": "openDash.Companion.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.Companion.simhubdash",
+        "name": "OpenDash.Companion.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.Companion.simhubdash",
         "size": 335288,
         "digest": "sha256:6121b80ce62482a21cb3852a6c1a31d363059da6fb6b97fef0814ce5dbf71794"
       },
       {
-        "name": "openDash.Pit.wall.portrait.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.Pit.wall.portrait.simhubdash",
+        "name": "OpenDash.Pit.wall.portrait.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.Pit.wall.portrait.simhubdash",
         "size": 236624,
         "digest": "sha256:de9607ed52173842053a728b4ca72bf9da7e878af19fae5ff469c17883f2bf72"
       },
       {
-        "name": "openDash.Pit.wall.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.Pit.wall.simhubdash",
+        "name": "OpenDash.Pit.wall.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.Pit.wall.simhubdash",
         "size": 293148,
         "digest": "sha256:836b0a8dade7da17ff3a53313f8a6944712ca58961fc60571b43dacf95c2c5bc"
       },
       {
-        "name": "openDash.simhubdash",
-        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/openDash.simhubdash",
+        "name": "OpenDash.simhubdash",
+        "browser_download_url": "https://github.com/xorob0/OpenDash/releases/download/v0.1.0-rc.1/OpenDash.simhubdash",
         "size": 175580,
         "digest": "sha256:2aa59af404c218bed907659df05b014a6491b4f0e20e8e62c0c4537d76d0d33a"
       }

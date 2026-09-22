@@ -214,7 +214,7 @@ export interface RecordOptions {
   hz: number;
   frames: number;
   warmUpSeconds: number;
-  /** Skip building and installing the openDash plugin, when the VM already carries a current one. */
+  /** Skip building and installing the OpenDash plugin, when the VM already carries a current one. */
   noBuild: boolean;
   /** Leave the recorder installed and the claim held, for recording again without the setup. */
   keep: boolean;
@@ -407,11 +407,11 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
       }
     }
 
-    // The openDash plugin publishes every [OpenDash.*] property a face reads, so the trace is only
+    // The OpenDash plugin publishes every [OpenDash.*] property a face reads, so the trace is only
     // complete with a current one installed. Building it also builds the packages the list is
     // derived from, which is why it comes before the properties are computed.
     if (!opts.noBuild) {
-      console.log('installing the openDash plugin, which is where the [OpenDash.*] defaults come from');
+      console.log('installing the OpenDash plugin, which is where the [OpenDash.*] defaults come from');
       const plugin = installPlugin(host);
       if (!plugin.ok) {
         console.error(plugin.stderr || plugin.stdout);
@@ -479,7 +479,7 @@ const USAGE = `record: turn an emulator scenario into a committed telemetry trac
   --frames      how many frames; default ${DEFAULT_FRAMES}, which is ${DEFAULT_FRAMES / DEFAULT_HZ} seconds
   --warm-up     seconds of telemetry to let pass before the first frame; default ${DEFAULT_WARM_UP_SECONDS},
                 which is what SimHub's computed fuel averages need before they stop reading zero
-  --no-build    do not rebuild and reinstall the openDash plugin
+  --no-build    do not rebuild and reinstall the OpenDash plugin
   --keep        leave the recorder installed and the VM claimed
 
 It claims the VM, installs a recorder plugin into SimHub, runs each scenario past it once and

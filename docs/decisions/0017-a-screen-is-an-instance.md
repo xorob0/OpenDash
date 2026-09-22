@@ -20,12 +20,12 @@ exotic one.
 The reason it does not reach is worth stating exactly, because it decides what a fix can be.
 
 **A package carries its property names as literals.** The generator resolves every binding at build
-time, so `openDash 1280x480` ships with the string `OpenDash.Face1280x480ZoneA` written into it. The
+time, so `OpenDash 1280x480` ships with the string `OpenDash.Face1280x480ZoneA` written into it. The
 built package on 2026-09-13 contains **716 such occurrences** across its four `.djson` files:
 
 | file | occurrences of `OpenDash.Face1280x480…` |
 |---|---|
-| `openDash 1280x480.djson` | 460 |
+| `OpenDash 1280x480.djson` | 460 |
 | `zoneface-module-469x320.djson` | 128 |
 | `zoneface-module-469x361.djson` | 128 |
 
@@ -44,7 +44,7 @@ writes it, what the namespace is called, and what the user is asked.
 
 ## What was decided against
 
-**Variant packages, built and shipped per slot.** Emit `openDash 1280x480 (screen 1)` through
+**Variant packages, built and shipped per slot.** Emit `OpenDash 1280x480 (screen 1)` through
 `(screen 4)`, each reading `Face1280x480S1…` and so on. It needs no new machinery at all, and it is
 rejected for the reason [ADR 0011](0011-personalisation.md) already rejected variant packages: four
 slots across eight face sizes is thirty-two packages before a single theme or typeface exists, which
@@ -75,13 +75,13 @@ them, in any mix of sizes, including several of the same size.**
 A screen's namespace is what its properties and its wheel-button actions are called.
 
 **The first screen at a size takes that size's stock namespace and the stock folder.** Adding a
-1280x480 when the rig has none gives `Face1280x480` and the folder `openDash 1280x480`, and the
+1280x480 when the rig has none gives `Face1280x480` and the folder `OpenDash 1280x480`, and the
 package is extracted byte for byte as it is embedded. This is the whole of today's behaviour, and it
 is deliberate that the common rig — one screen per size — produces exactly the files it produces
 now.
 
 **A second screen at a size gets a namespace slugged from its name, and a folder of its own.** Name
-it "Rim" and it is `OpenDash.RimZoneA`, in `DashTemplates/openDash Rim`, with those 716 tokens
+it "Rim" and it is `OpenDash.RimZoneA`, in `DashTemplates/OpenDash Rim`, with those 716 tokens
 rewritten on the way in.
 
 A slug is the name's letters and digits, in the name's own case, with everything else dropped. It is
@@ -135,7 +135,7 @@ everything; the panel is a list of what they added rather than a catalogue of wh
 
 Two screens of a size are finally distinguishable **in SimHub**, not only in our panel, because the
 folder and the title carry the name. That was a real problem that nobody had written down: the
-dashboard picker showed one `openDash 1280x480` and the user guessed.
+dashboard picker showed one `OpenDash 1280x480` and the user guessed.
 
 The wheel-button actions become per instance for the same reason the properties do, so a second face
 can sit still while the one in front of the driver cycles.

@@ -30,7 +30,7 @@ export function Nav() {
   return (
     <header className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}>
       <div className={`page ${styles.bar}`}>
-        <Link href="/" className={styles.home} aria-label="openDash, home">
+        <Link href="/" className={styles.home} aria-label="OpenDash, home">
           <Wordmark size={22} />
         </Link>
 

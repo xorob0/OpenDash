@@ -432,7 +432,7 @@ namespace OpenDashPlugin
             if (type == null || PanelAddScreen.Question(type) == SizeQuestion.None)
             {
                 bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.ResizeTitle,
-                    Ui.Caption("openDash ships only one " + KindLabel(screen) + " size, so there is nothing to move this screen to."),
+                    Ui.Caption("OpenDash ships only one " + KindLabel(screen) + " size, so there is nothing to move this screen to."),
                     BackRow()));
                 return;
             }

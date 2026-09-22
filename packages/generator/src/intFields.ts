@@ -25,7 +25,7 @@ type Value = string | number | boolean | null | Value[] | { [key: string]: Value
  * Every field name that is an `int` on every class that declares it.
  *
  * Sorted, so that adding one is a one-line diff. `ZIndex`, `RenderingSkip` and `InitialScreenIndex`
- * are the ones openDash writes most often; the rest are here because the cost of carrying a name
+ * are the ones OpenDash writes most often; the rest are here because the cost of carrying a name
  * we never write is nothing and the cost of missing one is a blank dashboard.
  */
 export const SIMHUB_INT_FIELDS: ReadonlySet<string> = new Set([

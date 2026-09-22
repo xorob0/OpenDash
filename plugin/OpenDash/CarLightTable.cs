@@ -1,7 +1,7 @@
 // CarLightTable.cs: one car's own LED bar, as measured, and the reader that survives the files.
 //
 // The schema is Lovely Car Data's v2.0.0, written down in docs/research/iracing-led-patterns.md and
-// fetched rather than carried: ADR 0018 says why openDash ships none of it. This file knows the
+// fetched rather than carried: ADR 0018 says why OpenDash ships none of it. This file knows the
 // shape and nothing about where the bytes came from, so CarLightStore can be tested without a
 // socket and this can be tested without either.
 //
@@ -41,7 +41,7 @@ namespace OpenDashPlugin
     ///
     /// <para>There is no pattern field and there is deliberately none. Left to right is ascending
     /// thresholds, meet in the middle is symmetric ones, a block is a run that shares a threshold and
-    /// a gap is a transparent colour -- so the whole vocabulary is these numbers, and openDash needs
+    /// a gap is a transparent colour -- so the whole vocabulary is these numbers, and OpenDash needs
     /// no case for any of it.</para>
     /// </summary>
     public sealed class CarLightTable
@@ -76,9 +76,9 @@ namespace OpenDashPlugin
         /// Reads one car file, or returns null if it is not one.
         ///
         /// Everything that would make the bar a guess is a refusal: a missing id, no LEDs, a colour
-        /// list that does not match the LED count, a gear row that does not. A car openDash refuses
+        /// list that does not match the LED count, a gear row that does not. A car OpenDash refuses
         /// falls back to the ladder iRacing publishes, so the cost of being strict here is that a
-        /// driver sees the lights openDash drew last month rather than a bar assembled out of
+        /// driver sees the lights OpenDash drew last month rather than a bar assembled out of
         /// mismatched halves.
         /// </summary>
         public static CarLightTable Parse(string json)

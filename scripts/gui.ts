@@ -41,7 +41,7 @@ const CONTENT = { searchX: 0.522, rowX: 0.383 } as const;
  * holding the dashboards recently opened, and it appears only when one of them matches what is in
  * the search box, so the list starts 221 px lower in some searches and not others. It went
  * unnoticed for as long as every search was a package's full name, which no other dashboard
- * matches; the face is now called plainly "openDash", every other package name begins with it, and
+ * matches; the face is now called plainly "OpenDash", every other package name begins with it, and
  * the band turned up.
  *
  * Which is why the second attempt is an offset and not a repeat, and why `maximiseSimHub` below has
@@ -409,7 +409,7 @@ export interface OpenOptions {
   /**
    * Row of the package in the list filtered by `filter`, counting from zero. Typing a package's
    * full name narrows the list to it, so this is 0 for every package but the one called plainly
-   * "openDash", whose name is a prefix of every other and which SimHub lists first anyway.
+   * "OpenDash", whose name is a prefix of every other and which SimHub lists first anyway.
    */
   index?: number;
   /** What to type into the search box; defaults to the name. */

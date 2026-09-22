@@ -91,7 +91,7 @@ namespace OpenDashPlugin.Tests
             var written = CarLightLibrary.Extract(Archive("test one", "test two"), root);
             Assert.Equal(2, written);
             var files = Directory.GetFiles(root).Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal).ToArray();
-            // openDash supports one sim, so it keeps one sim's files: 340 KB rather than a megabyte.
+            // OpenDash supports one sim, so it keeps one sim's files: 340 KB rather than a megabyte.
             Assert.Equal(new[] { "test-one.json", "test-two.json" }, files);
         }
 
@@ -245,7 +245,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(loaded.Ok);
             Assert.False(loaded.Fetched);
             Assert.Equal(1, service.CarCount);
-            // #366: openDash never fetches the tables on its own, so the startup path is disk and
+            // #366: OpenDash never fetches the tables on its own, so the startup path is disk and
             // nothing else. A rig that has them keeps working offline, every start, for ever.
             Assert.Empty(source.Requested);
         }
@@ -310,7 +310,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("400 KB", PanelLights.CarTablesCaption);
             // And what the tables are for, which is the one setting that cannot work without them.
             Assert.Contains("Car-specific", PanelLights.CarTablesCaption);
-            // CC BY-NC-SA 4.0 asks for attribution and openDash carries none of the data, so both the
+            // CC BY-NC-SA 4.0 asks for attribution and OpenDash carries none of the data, so both the
             // licence and the project it came from are on the page for as long as the row is.
             Assert.Contains("CC BY-NC-SA 4.0", PanelLights.CarTablesAttribution);
             Assert.Contains(CarLightLibrary.ProjectUrl, PanelLights.CarTablesAttribution);

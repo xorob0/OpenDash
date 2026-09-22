@@ -49,8 +49,8 @@ export interface CompanionSize {
 
 /** The two companion packages: the tablet in landscape and the phone stood on end. */
 export const COMPANION_SIZES: readonly CompanionSize[] = [
-  { folder: 'openDash Companion', width: 850, height: 480, description: '850 x 480, 21 modules' },
-  { folder: 'openDash Companion portrait', width: 480, height: 850, description: '480 x 850, 21 modules' },
+  { folder: 'OpenDash Companion', width: 850, height: 480, description: '850 x 480, 21 modules' },
+  { folder: 'OpenDash Companion portrait', width: 480, height: 850, description: '480 x 850, 21 modules' },
 ];
 
 /** Where each part of a companion screen goes. */
@@ -101,7 +101,7 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
     // **This is what makes tapping the screen work.** SimHub's only touch gesture on a dashboard is
     // `ProcessSimpleTouch`, which maps a tap on the left or right half to the previous or next
     // screen -- and `Dashboard.SelectNextScreen` walks `GetActiveScreens()`, which keeps only the
-    // screens whose expression is true. While openDash enabled exactly one of the twenty-one, that
+    // screens whose expression is true. While OpenDash enabled exactly one of the twenty-one, that
     // list had one member and next and previous were both no-ops: tapping a companion did nothing at
     // all, which is what a rig reported.
     //

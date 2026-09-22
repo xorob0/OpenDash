@@ -35,29 +35,29 @@ describe('reading the arguments', () => {
 
 describe('comparing two builds', () => {
   test('a package whose bytes are the same did not move', () => {
-    const one = digestOf({ openDash: 'aaa' });
-    expect(compare(one, one)).toMatchObject({ changed: [], added: [], removed: [], unchanged: ['openDash'] });
+    const one = digestOf({ OpenDash: 'aaa' });
+    expect(compare(one, one)).toMatchObject({ changed: [], added: [], removed: [], unchanged: ['OpenDash'] });
   });
 
   test('different bytes under the same name are a change', () => {
-    const comparison = compare(digestOf({ openDash: 'aaa' }), digestOf({ openDash: 'bbb' }));
-    expect(comparison).toMatchObject({ changed: ['openDash'], added: [], removed: [], unchanged: [] });
+    const comparison = compare(digestOf({ OpenDash: 'aaa' }), digestOf({ OpenDash: 'bbb' }));
+    expect(comparison).toMatchObject({ changed: ['OpenDash'], added: [], removed: [], unchanged: [] });
   });
 
   test('a name the base does not have is new, not changed', () => {
-    const comparison = compare(digestOf({ openDash: 'aaa' }), digestOf({ openDash: 'aaa', 'openDash 800 round': 'ccc' }));
-    expect(comparison).toMatchObject({ added: ['openDash 800 round'], changed: [], unchanged: ['openDash'] });
+    const comparison = compare(digestOf({ OpenDash: 'aaa' }), digestOf({ OpenDash: 'aaa', 'OpenDash 800 round': 'ccc' }));
+    expect(comparison).toMatchObject({ added: ['OpenDash 800 round'], changed: [], unchanged: ['OpenDash'] });
   });
 
   test('a name the branch no longer builds is removed', () => {
-    const comparison = compare(digestOf({ openDash: 'aaa', 'openDash 480 round': 'bbb' }), digestOf({ openDash: 'aaa' }));
-    expect(comparison).toMatchObject({ removed: ['openDash 480 round'], changed: [], added: [] });
+    const comparison = compare(digestOf({ OpenDash: 'aaa', 'OpenDash 480 round': 'bbb' }), digestOf({ OpenDash: 'aaa' }));
+    expect(comparison).toMatchObject({ removed: ['OpenDash 480 round'], changed: [], added: [] });
   });
 
   test('one card reaching many faces is many changed packages', () => {
-    const before = digestOf({ openDash: 'a', 'openDash 800x480': 'b', 'openDash Pit wall': 'c' });
-    const after = digestOf({ openDash: 'a2', 'openDash 800x480': 'b2', 'openDash Pit wall': 'c' });
-    expect(compare(before, after)).toMatchObject({ changed: ['openDash', 'openDash 800x480'], unchanged: ['openDash Pit wall'] });
+    const before = digestOf({ OpenDash: 'a', 'OpenDash 800x480': 'b', 'OpenDash Pit wall': 'c' });
+    const after = digestOf({ OpenDash: 'a2', 'OpenDash 800x480': 'b2', 'OpenDash Pit wall': 'c' });
+    expect(compare(before, after)).toMatchObject({ changed: ['OpenDash', 'OpenDash 800x480'], unchanged: ['OpenDash Pit wall'] });
   });
 
   test('the lists are sorted, so the same change reads the same twice', () => {
@@ -68,21 +68,21 @@ describe('comparing two builds', () => {
 });
 
 describe('what the report says', () => {
-  const nothing = { added: [], removed: [], changed: [], unchanged: ['openDash'] };
+  const nothing = { added: [], removed: [], changed: [], unchanged: ['OpenDash'] };
 
   test('a branch that moves no package output says nothing at all', () => {
     expect(report(nothing, 'abc1234567890')).toBe('');
   });
 
   test('a report carries the marker that lets CI find its own comment', () => {
-    expect(report({ ...nothing, changed: ['openDash'] }, 'abc1234567890')).toContain(COMMENT_MARKER);
+    expect(report({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890')).toContain(COMMENT_MARKER);
   });
 
   test('every package that moved is named', () => {
-    const body = report({ added: ['openDash 800 round'], removed: ['openDash 480 round'], changed: ['openDash'], unchanged: [] }, 'abc1234567890');
-    expect(body).toContain('`openDash`');
-    expect(body).toContain('`openDash 800 round` (new)');
-    expect(body).toContain('`openDash 480 round` (removed)');
+    const body = report({ added: ['OpenDash 800 round'], removed: ['OpenDash 480 round'], changed: ['OpenDash'], unchanged: [] }, 'abc1234567890');
+    expect(body).toContain('`OpenDash`');
+    expect(body).toContain('`OpenDash 800 round` (new)');
+    expect(body).toContain('`OpenDash 480 round` (removed)');
   });
 
   test('the heading counts everything that moved', () => {
@@ -90,23 +90,23 @@ describe('what the report says', () => {
   });
 
   test('one package is not pluralised', () => {
-    expect(report({ ...nothing, changed: ['openDash'] }, 'abc1234567890')).toContain('1 package to look at');
+    expect(report({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890')).toContain('1 package to look at');
   });
 
   test('the capture command offers exactly what moved', () => {
-    const body = report({ added: ['openDash 800 round'], removed: [], changed: ['openDash'], unchanged: ['openDash Pit wall'] }, 'abc1234567890');
-    expect(body).toContain("bun run shots --packages 'openDash,openDash 800 round'");
-    expect(body).not.toContain('openDash Pit wall');
+    const body = report({ added: ['OpenDash 800 round'], removed: [], changed: ['OpenDash'], unchanged: ['OpenDash Pit wall'] }, 'abc1234567890');
+    expect(body).toContain("bun run shots --packages 'OpenDash,OpenDash 800 round'");
+    expect(body).not.toContain('OpenDash Pit wall');
   });
 
   test('a package the branch removed is not offered to the VM, which could not open it', () => {
-    const body = report({ added: [], removed: ['openDash 480 round'], changed: [], unchanged: [] }, 'abc1234567890');
-    expect(body).toContain('`openDash 480 round` (removed)');
+    const body = report({ added: [], removed: ['OpenDash 480 round'], changed: [], unchanged: [] }, 'abc1234567890');
+    expect(body).toContain('`OpenDash 480 round` (removed)');
     expect(body).not.toContain('bun run shots');
   });
 
   test('the base is named, so a stale comment can be recognised', () => {
-    expect(report({ ...nothing, changed: ['openDash'] }, 'abc1234567890fff')).toContain('abc123456789');
+    expect(report({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890fff')).toContain('abc123456789');
   });
 });
 
@@ -121,8 +121,8 @@ describe('reading a build from disk', () => {
   };
 
   test('every package the manifest names is hashed', () => {
-    const digests = digest(buildDir({ openDash: 'one', 'openDash 800x480': 'two' }));
-    expect([...digests.keys()].sort()).toEqual(['openDash', 'openDash 800x480']);
+    const digests = digest(buildDir({ OpenDash: 'one', 'OpenDash 800x480': 'two' }));
+    expect([...digests.keys()].sort()).toEqual(['OpenDash', 'OpenDash 800x480']);
   });
 
   test('the same bytes hash the same and different bytes do not', () => {
@@ -133,7 +133,7 @@ describe('reading a build from disk', () => {
 
   test('a zip the manifest names but the build did not write is an error, not a silent absence', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'affected-'));
-    writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ packages: [{ folder: 'openDash', file: 'openDash.simhubdash' }] }));
+    writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ packages: [{ folder: 'OpenDash', file: 'OpenDash.simhubdash' }] }));
     expect(() => digest(dir)).toThrow();
   });
 

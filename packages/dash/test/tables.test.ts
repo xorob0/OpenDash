@@ -38,7 +38,7 @@ const flat = (items: readonly Item[]): Item[] => items.flatMap((i) => [...walkIt
  * stopped producing; they passed, which is what a literal copied out of a build does until the
  * build moves under it.
  */
-const COMPANION_PAGE = contentRect(companionGeometry(COMPANION_SIZES.find((s) => s.folder === 'openDash Companion')!).module, 'companion');
+const COMPANION_PAGE = contentRect(companionGeometry(COMPANION_SIZES.find((s) => s.folder === 'OpenDash Companion')!).module, 'companion');
 
 
 /** The one stamped row definition, and how many copies of it the table asks SimHub for. */

@@ -1,7 +1,7 @@
 // CarLightLibrary.cs: getting the measured tables onto the user's machine, and finding one by car.
 //
-// ADR 0018 decided openDash carries none of this data: it is CC BY-NC-SA 4.0, this repository is
-// MIT, and data/shift-points.json says openDash does not ship measurements it has not made. So the
+// ADR 0018 decided OpenDash carries none of this data: it is CC BY-NC-SA 4.0, this repository is
+// MIT, and data/shift-points.json says OpenDash does not ship measurements it has not made. So the
 // tables are fetched, once, and everything after that is local.
 //
 // **The whole set is fetched in one request rather than one car at a time**, and that is a privacy
@@ -15,7 +15,7 @@
 // Lights tab and by nothing else (#366). Starting SimHub never reaches out, and neither does the
 // update check, which used to carry this along with its own. A copy on disk is the user's own, made
 // when they pressed a button that had named the project, the licence, the size and the host -- which
-// is what lets openDash carry none of the data and still light a wheel with it.
+// is what lets OpenDash carry none of the data and still light a wheel with it.
 //
 // No SimHub or WPF types -- file and zip handling is fine, PackageExtractor does the same and is
 // compiled into the tests too. Nothing here throws: a car with no table is a car on the published
@@ -84,7 +84,7 @@ namespace OpenDashPlugin
         /// </summary>
         public static readonly TimeSpan MaxAge = TimeSpan.FromDays(7);
 
-        /// <summary>Only iRacing's, out of the ten games the archive carries. openDash supports one sim.</summary>
+        /// <summary>Only iRacing's, out of the ten games the archive carries. OpenDash supports one sim.</summary>
         private const string ArchiveFolder = "data/iracing/";
 
         public static string FolderPath(string simHubRoot)

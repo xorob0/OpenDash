@@ -8,7 +8,7 @@ is the user-facing guide that ships in the plugin zip.
 
 The plugin embeds the dashboard packages that `bun run build` writes, one `.simhubdash` per screen
 size, so build the dash first and copy them into `OpenDash/Resources/` (gitignored; see
-`OpenDash/Resources/README.md`). The file names carry spaces (`openDash 1280x480.simhubdash`);
+`OpenDash/Resources/README.md`). The file names carry spaces (`OpenDash 1280x480.simhubdash`);
 MSBuild keeps them in the resource name and the installer never parses that name:
 
 ```
@@ -33,7 +33,7 @@ The files without SimHub or WPF dependencies (`Contract.cs`, `Cards.cs`, `OpenDa
 `Theme.cs`, `Versioning.cs`, `Installation.cs`, `PackageExtractor.cs`,
 `DashboardInstaller.Core.cs`) are compiled into the test project directly; keep them free of
 SimHub and WPF types. The installer tests run the whole install against a temporary SimHub root
-with synthetic packages. One test reads `build/openDash.simhubdash` and is skipped until the dash
+with synthetic packages. One test reads `build/OpenDash.simhubdash` and is skipped until the dash
 has been built.
 
 ## Package

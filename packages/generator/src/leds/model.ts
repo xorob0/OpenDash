@@ -1,5 +1,5 @@
 /**
- * SimHub's RGB LED profile, as a typed model. Nothing here knows about openDash.
+ * SimHub's RGB LED profile, as a typed model. Nothing here knows about OpenDash.
  *
  * A `.ledsprofile` is one `SimHub.Plugins.DataPlugins.RGBDriver.Settings.Profile` serialised with
  * Newtonsoft at `Formatting.Indented` — plain JSON, no compression, no `$type` graph. The format
@@ -149,7 +149,7 @@ export interface LedCustomStatus extends LedContainerBase {
  * than throwing. That is the door a per-car pattern comes through (ADR 0018): one container per
  * LED, one property per LED, and nothing in the profile that knows what a car is.
  *
- * It carries SimHub's blink fields too, and openDash writes none of them: a mirror blinks at the
+ * It carries SimHub's blink fields too, and OpenDash writes none of them: a mirror blinks at the
  * car's own interval, which is a number the profile does not have and the plugin does.
  */
 export interface LedDynamicColor extends LedContainerBase {

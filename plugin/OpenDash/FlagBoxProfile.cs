@@ -3,7 +3,7 @@
 // This is not the installer -- FlagBoxInstaller.cs is, and it hands the profile to SimHub's own API
 // rather than writing SimHub's settings file. What this does is keep a copy on disk, which is the
 // fallback when SimHub's matrix settings cannot be reached, the thing a user copies to a second
-// machine, and the thing somebody opens to read what openDash is asking their hardware to do.
+// machine, and the thing somebody opens to read what OpenDash is asking their hardware to do.
 //
 // It still never writes PluginsData/Common/ArduinoRGBMatrixSettings.json: that file belongs to
 // SimHub's RGBMatrixDriver, which rewrites it whenever anything changes. See the amendment to
@@ -75,18 +75,18 @@ namespace OpenDashPlugin
         /// One contract in two halves with FLAG_BOX_PROFILE_NAME in packages/dash/src/leds/profile.ts,
         /// the way the version marker is one with flagBoxVersion(); a rename on either side has to move
         /// both, and FlagBoxInstallPlanTests reads the built file to see that it did.</summary>
-        public const string ProfileName = "openDash Flag box";
+        public const string ProfileName = "OpenDash Flag box";
 
         /// <summary>The file the build writes and the plugin embeds, and the only one of the embedded
         /// profiles that is the flag box.</summary>
         public const string FileName = ProfileName + ProfileExtension;
 
         /// <summary>The prefix every profile file name carries, the flag box's and every strip's alike.
-        /// It is what makes "openDash 4-14-4" a shape id of ours rather than a file somebody dropped in.</summary>
-        public const string FilePrefix = "openDash ";
+        /// It is what makes "OpenDash 4-14-4" a shape id of ours rather than a file somebody dropped in.</summary>
+        public const string FilePrefix = "OpenDash ";
 
         /// <summary>The file a strip or brow shape is written under. The other half of rpmStripFileName()
-        /// in packages/dash/src/leds/rpmStrip.ts, which spells it `openDash ${shape.id}`; the shape ids
+        /// in packages/dash/src/leds/rpmStrip.ts, which spells it `OpenDash ${shape.id}`; the shape ids
         /// themselves stay in STRIP_SHAPES and BROW_SHAPES and are never copied here.</summary>
         public static string StripFileName(string shapeId)
         {
@@ -100,7 +100,7 @@ namespace OpenDashPlugin
         /// The grid is sixty-three shapes and a profile is a third of a megabyte of NCalc, four fifths
         /// of it the same conditions written out once per LED; embedded raw that is twenty megabytes of
         /// assembly for files nobody reads. Gzip takes it to five hundred kilobytes, and the file name
-        /// does not change with it -- the resource is still `openDash 3-9-3.ledsprofile`, so every name,
+        /// does not change with it -- the resource is still `OpenDash 3-9-3.ledsprofile`, so every name,
         /// every selection and every shape id is what it was, and only the reading of the bytes knows.
         ///
         /// Sniffed rather than declared, so a Resources folder filled by hand with plain files works
@@ -137,7 +137,7 @@ namespace OpenDashPlugin
         public const string FolderName = "OpenDash";
 
         /// <summary>SimHub's settings file for matrix profiles. Named here only so the panel can say what
-        /// openDash does not touch; nothing anywhere in the plugin opens it.</summary>
+        /// OpenDash does not touch; nothing anywhere in the plugin opens it.</summary>
         public const string SimHubMatrixSettings = @"PluginsData\Common\ArduinoRGBMatrixSettings.json";
 
         public static string FolderPath(string simHubRoot)
@@ -159,8 +159,8 @@ namespace OpenDashPlugin
         ///
         /// Found by <see cref="FileName"/> rather than by position. An exact spelling wins; a
         /// case-only variant is accepted only when nothing spells it exactly, which is the trap a
-        /// case-insensitive filesystem sets -- copying "openDash Flag box.ledsprofile" over an older
-        /// "openDash flag box.ledsprofile" replaces the bytes on Windows and keeps the old casing, so
+        /// case-insensitive filesystem sets -- copying "OpenDash Flag box.ledsprofile" over an older
+        /// "OpenDash flag box.ledsprofile" replaces the bytes on Windows and keeps the old casing, so
         /// an exact-only match would embed the profile and then fail to find it.
         /// </summary>
         public static string ResourceName(Assembly assembly)
@@ -236,7 +236,7 @@ namespace OpenDashPlugin
 
         /// <summary>The file name a resource is written under: everything after the last ".Resources."
         /// part. MSBuild names an embedded resource "&lt;RootNamespace&gt;.&lt;folder&gt;.&lt;file name&gt;", turning only the
-        /// folder part into an identifier, so the file name keeps its spaces and "openDash Flag box.ledsprofile"
+        /// folder part into an identifier, so the file name keeps its spaces and "OpenDash Flag box.ledsprofile"
         /// survives the round trip. DashboardInstaller.Core.cs relies on the same naming.</summary>
         public static string FileNameOf(string resourceName)
         {
@@ -252,7 +252,7 @@ namespace OpenDashPlugin
             return FieldOf(json, "Description");
         }
 
-        /// <summary>The profile's Author, which the build stamps with "openDash".</summary>
+        /// <summary>The profile's Author, which the build stamps with "OpenDash".</summary>
         public static string AuthorOf(string json)
         {
             return FieldOf(json, "Author");

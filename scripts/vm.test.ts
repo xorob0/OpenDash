@@ -12,7 +12,7 @@ describe('quoting', () => {
   });
 
   test('a shell argument survives a space', () => {
-    expect(shq('/opt/winvm/shared/openDash 1280x480.simhubdash')).toBe(`'/opt/winvm/shared/openDash 1280x480.simhubdash'`);
+    expect(shq('/opt/winvm/shared/OpenDash 1280x480.simhubdash')).toBe(`'/opt/winvm/shared/OpenDash 1280x480.simhubdash'`);
   });
 
   test('a PowerShell string doubles its quotes', () => {

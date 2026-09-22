@@ -31,12 +31,12 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_row_names_the_package_and_captions_it_with_the_size()
         {
-            var named = Package("openDash 850x480", Contract.KindFace, 850, 480);
+            var named = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
             Assert.Equal("Rim", PanelPackageRow.Name(named));
             Assert.Equal("850 × 480", PanelPackageRow.Caption(named));
 
-            var unnamed = Package("openDash 1280x720", Contract.KindFace, 1280, 720);
-            Assert.Equal("openDash 1280x720", PanelPackageRow.Name(unnamed));
+            var unnamed = Package("OpenDash 1280x720", Contract.KindFace, 1280, 720);
+            Assert.Equal("OpenDash 1280x720", PanelPackageRow.Name(unnamed));
             Assert.Equal("1280 × 720", PanelPackageRow.Caption(unnamed));
         }
 
@@ -47,17 +47,17 @@ namespace OpenDashPlugin.Tests
         {
             // The round face is the one package whose caption the design writes itself, so it reads
             // "480 round" rather than its kind and its pixels; the kind is carried by that word.
-            Assert.Equal("480 round", PanelPackageRow.Caption(Package("openDash 480 round", Contract.KindSlots, 480, 480)));
-            Assert.Equal("slots · 800 × 800", PanelPackageRow.Caption(Package("openDash 800 round", Contract.KindSlots, 800, 800)));
-            Assert.Equal("1920 × 1080", PanelPackageRow.Caption(Package("openDash Pit wall", Contract.KindPitWall, 1920, 1080)));
+            Assert.Equal("480 round", PanelPackageRow.Caption(Package("OpenDash 480 round", Contract.KindSlots, 480, 480)));
+            Assert.Equal("slots · 800 × 800", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 800, 800)));
+            Assert.Equal("1920 × 1080", PanelPackageRow.Caption(Package("OpenDash Pit wall", Contract.KindPitWall, 1920, 1080)));
         }
 
         /// <summary>"0 × 0" is worse than nothing for a package whose size could not be read.</summary>
         [Fact]
         public void A_package_with_no_readable_size_shows_no_size()
         {
-            Assert.Equal(string.Empty, PanelPackageRow.Caption(Package("openDash Companion", Contract.KindCompanion, 0, 0)));
-            Assert.Equal("slots", PanelPackageRow.Caption(Package("openDash 800 round", Contract.KindSlots, 0, 0)));
+            Assert.Equal(string.Empty, PanelPackageRow.Caption(Package("OpenDash Companion", Contract.KindCompanion, 0, 0)));
+            Assert.Equal("slots", PanelPackageRow.Caption(Package("OpenDash 800 round", Contract.KindSlots, 0, 0)));
             Assert.Equal(string.Empty, PanelPackageRow.Caption(null));
             Assert.Equal(string.Empty, PanelPackageRow.Name(null));
         }
@@ -68,8 +68,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_screen_counts_against_the_package_it_was_made_from()
         {
-            var face = Package("openDash 850x480", Contract.KindFace, 850, 480);
-            var companion = Package("openDash Companion", Contract.KindCompanion, 850, 480);
+            var face = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
+            var companion = Package("OpenDash Companion", Contract.KindCompanion, 850, 480);
             var rig = new List<ScreenInstance>
             {
                 Screen(Contract.KindFace, 850, 480, face.Package),
@@ -86,8 +86,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Two_packages_of_one_kind_at_one_size_do_not_share_a_count()
         {
-            var first = Package("openDash 850x480", Contract.KindFace, 850, 480, "first");
-            var second = Package("openDash Rim", Contract.KindFace, 850, 480, "second");
+            var first = Package("OpenDash 850x480", Contract.KindFace, 850, 480, "first");
+            var second = Package("OpenDash Rim", Contract.KindFace, 850, 480, "second");
             var rig = new List<ScreenInstance> { Screen(Contract.KindFace, 850, 480, "second") };
 
             Assert.Equal(0, PanelPackageRow.Uses(first, rig));
@@ -99,7 +99,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_screen_saved_before_the_package_was_recorded_falls_back_to_kind_and_size()
         {
-            var face = Package("openDash 850x480", Contract.KindFace, 850, 480);
+            var face = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
             var rig = new List<ScreenInstance>
             {
                 Screen(Contract.KindFace, 850, 480, null),

@@ -1,4 +1,4 @@
-// PluginIcon.cs: the 32x32 icon SimHub shows beside "openDash" in its left menu: the cyan segment mark of
+// PluginIcon.cs: the 32x32 icon SimHub shows beside "OpenDash" in its left menu: the cyan segment mark of
 // the wordmark, drawn with System.Drawing and handed to SimHub's ToIcon(). Null when drawing fails.
 using System;
 using System.Drawing;

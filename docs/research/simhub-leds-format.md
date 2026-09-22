@@ -9,7 +9,7 @@ matrix half was read from the 9.12.6 `RGBMatrixDriver` assemblies, `ProfilesComm
 `WoteverCommon.JsonExtensions`; it has not yet been round-tripped through a real matrix.
 
 SimHub's LED profiles are as undocumented as its dashboards. This is what the format is, what
-drives it, and the one fact that decides how openDash should approach it:
+drives it, and the one fact that decides how OpenDash should approach it:
 **SimHub never reads the shift-light values that iRacing publishes for the car.**
 
 There are two of these formats, not one. A strip is the `RGBDriver`; an 8x8 flag box is the
@@ -151,8 +151,8 @@ anything, `PluginManager.GetInstance().GetPropertyValue(...)` included. The comm
 asks that effects use the `LedsGameData` argument where they can, so that the test-data panel
 keeps working.
 
-This is the second way openDash could drive LEDs, and it has the obvious cost: the effect only
-exists where the openDash plugin is installed, and the profile is not portable without it.
+This is the second way OpenDash could drive LEDs, and it has the obvious cost: the effect only
+exists where the OpenDash plugin is installed, and the profile is not portable without it.
 
 ## iRacing publishes the car's own shift lights, and SimHub ignores them
 
@@ -170,7 +170,7 @@ LED bar use:
 
 They are typed `double` on `iRacingSDK.SessionData._DriverInfo`, so in an expression they are
 `DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM`, the nested raw-data path
-openDash already uses for `WeekendInfo.WeekendOptions.IncidentLimit`.
+OpenDash already uses for `WeekendInfo.WeekendOptions.IncidentLimit`.
 
 Scanning all 323 assemblies of a 9.12.6 install for `DriverCarSLFirstRPM` finds it twice: in
 `iRacingSDK.dll`, which declares it, and in an **embedded sample-data resource** inside
@@ -191,13 +191,13 @@ by SimHub from its own per-car settings (`GameSettings.Car.CarSettings`: `MaxRpm
 through `SetAutoGearRedline`), seeded from the redline and otherwise from defaults the user
 tunes. They are not the car's lights. They are SimHub's idea of them.
 
-## What this means for openDash
+## What this means for OpenDash
 
 Every competitor solves the gap the same way: Daniel Newman Racing's RPM profiles carry
 hand-tuned segment tables, often per gear, for 88 iRacing cars and several hundred more across
 six other sims, keyed by car model. That is the only way to do it for seven sims.
 
-openDash supports one sim, and that sim publishes the answer. One `ScriptedContent` container, or
+OpenDash supports one sim, and that sim publishes the answer. One `ScriptedContent` container, or
 one plugin-provided effect, reading the four `DriverCarSL*` values, mirrors the car the driver is
 actually sitting in — every car, including one released this morning, with no table to maintain.
 The same four values can drive the rev bar and the rev arc on screen, so the strip and the screen
@@ -205,7 +205,7 @@ light at the same instant for the same reason.
 
 What the sim does **not** publish is colour. There is no per-car LED colour sequence in the
 session string, so a mirror is a mirror of *behaviour*: when the first light comes on, when it
-says shift, when it blinks. Colours stay openDash's tokens, and a car's own colour sequence
+says shift, when it blinks. Colours stay OpenDash's tokens, and a car's own colour sequence
 belongs to the Car themes project, not here.
 
 ## The matrix is a second driver, not a second device
@@ -216,7 +216,7 @@ JSON converter and its own settings file. The two share `ProfilesCommon`, `Anima
 `ExpressionValue` and the `.ledsprofile` extension, and share almost nothing else. A profile
 written for one will not load into the other: the container vocabularies do not overlap.
 
-openDash's flag box is the matrix driver, so the rest of this file is about it.
+OpenDash's flag box is the matrix driver, so the rest of this file is about it.
 
 ```
 SimHub/PluginsData/Common/ArduinoRGBMatrixSettings.json   a matrix on an Arduino, D6
@@ -230,7 +230,7 @@ underneath a running SimHub is overwritten.
 The commercial **iFlag** from SYM Projects is a registered device rather than a bare Arduino
 (`SymProjectsIFlagDevice` constructs `new RGBMatrixDriver(settings, DeviceKind.Matrix8x8, allowMultileResults: false)`),
 and keeps its profiles inside its own device settings blob. Same profile format, different file.
-A printed box on an Arduino is the Arduino path and is what openDash targets.
+A printed box on an Arduino is the Arduino path and is what OpenDash targets.
 
 ### `ContainerType` is spelt differently here, and this is the trap
 
@@ -344,7 +344,7 @@ false, and `CurrentResultMatrixCount` reports how many the current profile actua
 so rotation is applied by the device rather than chosen in the profile. Serpentine wiring appears
 nowhere in SimHub's managed code at all: it is a firmware and device-settings concern, decided by
 the corner the data cable enters. Neither belongs in a generated profile, and neither belongs in
-openDash's settings panel.
+OpenDash's settings panel.
 
 ### The condition door is the same `ExpressionValue` the dashboards use
 
@@ -364,7 +364,7 @@ the box through one property and one expression language.
 `BrightnessGroupContainer` adds an integer `Brightness` percent; `ConditionnalGroupContainer`
 adds `ClearBackgroundWhenActive`, omitted when false.
 
-### What this means for openDash
+### What this means for OpenDash
 
 A matrix profile is generatable, on the same terms as a `.djson` and with the same tools. It is
 plain indented JSON — `JsonExtensions.ToJsonFile(profile, path, preserveReferences: false)` is

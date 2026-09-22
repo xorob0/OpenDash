@@ -78,8 +78,8 @@ changed.
 
 - **Dashboard only.** Double-click the `.simhubdash` for your screen; SimHub imports it. You get
   the default layout and the default modes, and no settings page. Nothing else is needed, so this
-  is the shortest way to see OpenDash on a display. `openDash 850x480` is the base size and the one
-  to take if nothing matches your display exactly; `openDash 1280x480` is the large one.
+  is the shortest way to see OpenDash on a display. `OpenDash 850x480` is the base size and the one
+  to take if nothing matches your display exactly; `OpenDash 1280x480` is the large one.
 - **Dashboard and plugin.** `OpenDash-plugin.zip` is the only file to download, since the fourteen
   dashboards it installs are embedded in it. Close SimHub, unzip the archive and copy `OpenDash.dll`
   into
@@ -183,7 +183,7 @@ No Windows machine is needed to build either.
 ```bash
 bun install
 bun run check          # typecheck and tests
-bun run build          # build/openDash.simhubdash, build/openDash/ and build/manifest.json
+bun run build          # build/OpenDash.simhubdash, build/OpenDash/ and build/manifest.json
 ```
 
 ```bash

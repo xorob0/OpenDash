@@ -22,11 +22,11 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
    asks to restart, restart it.
 5. "OpenDash" now appears in SimHub's left menu. Open it: the Dashboard section at the bottom
    should say "OpenDash <version> · 14 dashboards" and "Up to date", which means every dashboard
-   was extracted into its own folder under `DashTemplates` on that start (`openDash`,
-   `openDash 1280x480` and so on, see Sizes below).
+   was extracted into its own folder under `DashTemplates` on that start (`OpenDash`,
+   `OpenDash 1280x480` and so on, see Sizes below).
 6. Assign a dashboard to a display. Pick the size that matches the display from the Sizes table;
    OpenDash is a normal SimHub dashboard from here on: in Dash Studio the sizes are listed as
-   "openDash", "openDash 1280x480" and so on, and you open one in a window, send it to a USB or
+   "OpenDash", "OpenDash 1280x480" and so on, and you open one in a window, send it to a USB or
    HDMI display, or point a phone or tablet at it exactly like any other dashboard. Nothing in
    the plugin launches it; that is SimHub's job.
 
@@ -63,16 +63,16 @@ than the same thing larger.
 
 | Dashboard | Screen | |
 |---|---|---|
-| openDash | 1920 x 480 | the reference face |
-| openDash 1280x480 | 1280 x 480 | **the large size** |
-| openDash 1280x400 | 1280 x 400 | a shorter body, the same zones |
-| openDash 1280x720 | 1280 x 720 | the tall body lets zone C list the field |
-| openDash 850x480 | 850 x 480 | **the base size**: narrower zones, fewer cells in the car settings |
-| openDash 800x480 | 800 x 480 | |
-| openDash 800x286 | 800 x 286 | no bar: the height is not there |
-| openDash 600x686 | 600 x 686 | portrait, zone A above B above C, one bar field per end |
-| openDash 480 round | 480 x 480, round | still the twelve-slot face; see below |
-| openDash 800 round | 800 x 800, round | still the twelve-slot face; see below |
+| OpenDash | 1920 x 480 | the reference face |
+| OpenDash 1280x480 | 1280 x 480 | **the large size** |
+| OpenDash 1280x400 | 1280 x 400 | a shorter body, the same zones |
+| OpenDash 1280x720 | 1280 x 720 | the tall body lets zone C list the field |
+| OpenDash 850x480 | 850 x 480 | **the base size**: narrower zones, fewer cells in the car settings |
+| OpenDash 800x480 | 800 x 480 | |
+| OpenDash 800x286 | 800 x 286 | no bar: the height is not there |
+| OpenDash 600x686 | 600 x 686 | portrait, zone A above B above C, one bar field per end |
+| OpenDash 480 round | 480 x 480, round | still the twelve-slot face; see below |
+| OpenDash 800 round | 800 x 800, round | still the twelve-slot face; see below |
 
 Take the one that matches your display. If nothing matches exactly, **850 x 480 is the base
 size** and the one to try first: it is the common wheel-mounted DDU, and it is the tightest face
@@ -85,10 +85,10 @@ Four more dashboards are not faces for the wheel but second screens, described b
 
 | Dashboard | Screen | What it is |
 |---|---|---|
-| openDash Companion | 850 x 480 | one module at a time, paged from a wheel button |
-| openDash Companion portrait | 480 x 850 | the same, for a phone stood on end |
-| openDash Pit wall | 1920 x 1080 | three pages for someone who is not driving |
-| openDash Pit wall portrait | 1080 x 1920 | the same in one page, for a screen on its side |
+| OpenDash Companion | 850 x 480 | one module at a time, paged from a wheel button |
+| OpenDash Companion portrait | 480 x 850 | the same, for a phone stood on end |
+| OpenDash Pit wall | 1920 x 1080 | three pages for someone who is not driving |
+| OpenDash Pit wall portrait | 1080 x 1920 | the same in one page, for a screen on its side |
 
 **The two round faces are still the twelve-slot design.** What a round face should do with zones
 is not decided, so they were left as they were rather than changed badly. Of the dashboards the
@@ -155,24 +155,24 @@ that is not there.
 ## The flag box
 
 If you have an **8x8 LED matrix** on an Arduino — the printed box a lot of people have beside the
-screen — openDash drives it too: the flag that is out, the gear, the pit state, a car alongside,
+screen — OpenDash drives it too: the flag that is out, the gear, the pit state, a car alongside,
 and the warnings you would otherwise miss.
 
 Install it from the OpenDash page under **Lights**: press **Install into SimHub**, then pick the
 profile on your matrix device. The button says what it will do before you press it, and the line
 beside it says what SimHub holds now.
 
-**openDash never installs it on its own.** A profile paints hardware you own, so it is asked about
+**OpenDash never installs it on its own.** A profile paints hardware you own, so it is asked about
 once rather than assumed. It also only ever recognises its own profile, so one you made yourself is
-never touched. When openDash updates, the button offers **Update in SimHub** — and updating replaces
+never touched. When OpenDash updates, the button offers **Update in SimHub** — and updating replaces
 the copy in SimHub, including any changes you made to it there.
 
-If the button is greyed out, SimHub's matrix settings could not be reached. openDash also writes the
-profile to `SimHub\OpenDash\openDash Flag box.ledsprofile`, shown under the button, which you can
+If the button is greyed out, SimHub's matrix settings could not be reached. OpenDash also writes the
+profile to `SimHub\OpenDash\OpenDash Flag box.ledsprofile`, shown under the button, which you can
 import through SimHub's own profile import.
 
 Before any of that, set the matrix's **rotation** and **serpentine** on the device in SimHub. Those
-belong to SimHub rather than to openDash, because the right values depend on which corner your data
+belong to SimHub rather than to OpenDash, because the right values depend on which corner your data
 cable enters — and if they are wrong, the picture comes out sideways or shredded and the profile
 looks broken when it is not.
 
@@ -227,8 +227,8 @@ dashboard or an LED profile written against it still reads.
 Close SimHub, replace `OpenDash.dll` with the new one, unblock it and start SimHub. When the
 dashboards embedded in the new plugin are newer than the installed ones, the plugin replaces
 each `DashTemplates\<name>` folder on that start and keeps the previous folder as
-`DashTemplates\<name>_backup.zip` (for example `openDash_backup.zip` and
-`openDash 1280x480_backup.zip`).
+`DashTemplates\<name>_backup.zip` (for example `OpenDash_backup.zip` and
+`OpenDash 1280x480_backup.zip`).
 
 A dashboard you have edited in Dash Studio is **not** replaced silently. The plugin notices that
 the folder no longer holds what it wrote, leaves it alone and says so; pressing Reinstall a second
@@ -242,14 +242,14 @@ fetched at all. Nothing is ever installed without being asked for.
 
 **Coming from 0.1.x.** The face changed: what was twelve fixed slots is now four zones you cycle
 with a wheel button, under the same dashboard names. Your old face is still published with each
-release as `openDash slots <size>.simhubdash`, so you can install one by hand if you prefer it.
+release as `OpenDash slots <size>.simhubdash`, so you can install one by hand if you prefer it.
 Your slot settings are not lost; they still drive the two round faces.
 
 ## Uninstall
 
 Close SimHub, delete `OpenDash.dll` from the SimHub folder and, if you want the dashboards gone
-too, delete the folders of the Sizes table under `DashTemplates` (`openDash`,
-`openDash 1280x480` and the rest, plus their `_backup.zip` files). The settings file named above
+too, delete the folders of the Sizes table under `DashTemplates` (`OpenDash`,
+`OpenDash 1280x480` and the rest, plus their `_backup.zip` files). The settings file named above
 can be deleted as well. The fonts copied into `DashFonts` (Barlow) are harmless and shared with
 other dashboards.
 

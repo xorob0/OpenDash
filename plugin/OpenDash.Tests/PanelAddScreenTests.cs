@@ -27,9 +27,9 @@ namespace OpenDashPlugin.Tests
         {
             var faces = new ScreenType(Contract.KindFace, "Dash face", "caption", new[]
             {
-                Package("openDash", Contract.KindFace, 1920, 480),
-                Package("openDash 850x480", Contract.KindFace, 850, 480),
-                Package("openDash 800x480", Contract.KindFace, 800, 480),
+                Package("OpenDash", Contract.KindFace, 1920, 480),
+                Package("OpenDash 850x480", Contract.KindFace, 850, 480),
+                Package("OpenDash 800x480", Contract.KindFace, 800, 480),
             });
             var offered = PanelAddScreen.Offered(faces);
             var index = PanelAddScreen.PreferredIndex(faces);
@@ -39,8 +39,8 @@ namespace OpenDashPlugin.Tests
             // A type that does not offer it keeps the first entry, which is every type but the face.
             var companions = new ScreenType(Contract.KindCompanion, "Companion", "caption", new[]
             {
-                Package("openDash Companion", Contract.KindCompanion, 850, 480),
-                Package("openDash Companion portrait", Contract.KindCompanion, 480, 850),
+                Package("OpenDash Companion", Contract.KindCompanion, 850, 480),
+                Package("OpenDash Companion portrait", Contract.KindCompanion, 480, 850),
             });
             Assert.InRange(PanelAddScreen.PreferredIndex(companions), 0, PanelAddScreen.Offered(companions).Count - 1);
 
@@ -67,16 +67,16 @@ namespace OpenDashPlugin.Tests
         {
             return new List<PackageEntry>
             {
-                Package("openDash", Contract.KindFace, 1920, 480),
-                Package("openDash 1280x720", Contract.KindFace, 1280, 720),
-                Package("openDash 1280x480", Contract.KindFace, 1280, 480),
-                Package("openDash 850x480", Contract.KindFace, 850, 480),
-                Package("openDash Companion", Contract.KindCompanion, 850, 480),
-                Package("openDash Companion portrait", Contract.KindCompanion, 480, 850),
-                Package("openDash Pit wall", Contract.KindPitWall, 1920, 1080),
-                Package("openDash Pit wall portrait", Contract.KindPitWall, 1080, 1920),
-                Package("openDash 800 round", Contract.KindSlots, 800, 800),
-                Package("openDash 480 round", Contract.KindSlots, 480, 480),
+                Package("OpenDash", Contract.KindFace, 1920, 480),
+                Package("OpenDash 1280x720", Contract.KindFace, 1280, 720),
+                Package("OpenDash 1280x480", Contract.KindFace, 1280, 480),
+                Package("OpenDash 850x480", Contract.KindFace, 850, 480),
+                Package("OpenDash Companion", Contract.KindCompanion, 850, 480),
+                Package("OpenDash Companion portrait", Contract.KindCompanion, 480, 850),
+                Package("OpenDash Pit wall", Contract.KindPitWall, 1920, 1080),
+                Package("OpenDash Pit wall portrait", Contract.KindPitWall, 1080, 1920),
+                Package("OpenDash 800 round", Contract.KindSlots, 800, 800),
+                Package("OpenDash 480 round", Contract.KindSlots, 480, 480),
             };
         }
 
@@ -119,7 +119,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(SizeQuestion.Size, PanelAddScreen.Question(of[Contract.KindSlots]));
 
             // And a build carrying one companion asks nothing at all about it.
-            var one = PanelAddScreen.Types(Catalogue().Where(e => e.Folder != "openDash Companion portrait").ToList())
+            var one = PanelAddScreen.Types(Catalogue().Where(e => e.Folder != "OpenDash Companion portrait").ToList())
                 .First(t => t.Kind == Contract.KindCompanion);
             Assert.Equal(SizeQuestion.None, PanelAddScreen.Question(one));
         }
@@ -129,7 +129,7 @@ namespace OpenDashPlugin.Tests
         {
             var pitWall = PanelAddScreen.Types(Catalogue()).First(t => t.Kind == Contract.KindPitWall);
             var offered = PanelAddScreen.Offered(pitWall);
-            Assert.Equal(new[] { "openDash Pit wall", "openDash Pit wall portrait" }, offered.Select(e => e.Folder));
+            Assert.Equal(new[] { "OpenDash Pit wall", "OpenDash Pit wall portrait" }, offered.Select(e => e.Folder));
             Assert.Equal("Landscape", PanelAddScreen.SizeLabel(pitWall, offered[0], 0));
             Assert.Equal("Portrait", PanelAddScreen.SizeLabel(pitWall, offered[1], 1));
             // Which is the whole point: nobody has to work out that 1080 × 1920 is the same pit wall.
@@ -153,8 +153,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_name_is_filled_in_with_the_package_the_design_names_or_with_its_size()
         {
-            Assert.Equal("Rim", PanelAddScreen.DefaultName(Package("openDash 850x480", Contract.KindFace, 850, 480)));
-            Assert.Equal("1280 × 720", PanelAddScreen.DefaultName(Package("openDash 1280x720", Contract.KindFace, 1280, 720)));
+            Assert.Equal("Rim", PanelAddScreen.DefaultName(Package("OpenDash 850x480", Contract.KindFace, 850, 480)));
+            Assert.Equal("1280 × 720", PanelAddScreen.DefaultName(Package("OpenDash 1280x720", Contract.KindFace, 1280, 720)));
             Assert.Equal(string.Empty, PanelAddScreen.DefaultName(null));
         }
 
@@ -163,7 +163,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_note_says_what_the_button_will_do()
         {
-            var entry = Package("openDash 850x480", Contract.KindFace, 850, 480);
+            var entry = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
             // The ordinary case says nothing at all: a button reading "Add screen" has already said it.
             Assert.Equal(string.Empty, PanelAddScreen.Note(entry, false));
             // The second screen at a size is the one case worth a line, since two rims that page
@@ -184,7 +184,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Restart SimHub", line);
             Assert.Contains("Dash Studio", line);
             Assert.Contains("\"Rim\"", line);
-            Assert.DoesNotContain("openDash 850x480", line);
+            Assert.DoesNotContain("OpenDash 850x480", line);
         }
 
         /// <summary>A resize keeps everything but the pixels, which is the only reason to offer one

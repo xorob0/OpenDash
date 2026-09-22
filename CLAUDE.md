@@ -64,7 +64,7 @@ before guessing at a property name or a default.
 
 ```bash
 bun run dev                      # cold VM to a dash rendering live telemetry, ~2.5 min
-bun run dev 'openDash Pit wall' --scenario notc
+bun run dev 'OpenDash Pit wall' --scenario notc
 ```
 
 [docs/dev-loop.md](docs/dev-loop.md) is the whole loop on one page and is the place to start. It

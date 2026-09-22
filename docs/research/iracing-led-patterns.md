@@ -45,7 +45,7 @@ four RPMs is a mirror of one gear of that car at best.
 | [Lovely Car Data](https://github.com/Lovely-Sim-Racing/lovely-car-data) | 85 iRacing cars, per gear, per LED, per colour. CC BY-NC-SA 4.0 | Plain JSON per car, keyed on the car's iRacing CarPath |
 | [ShiftLines / kapps](https://github.com/shinev01/rpm-lights-iracing-kapps), ATSR Hub EVO | consume Lovely | A sync script pulls from upstream and bundles a snapshot |
 | Fanatec App | "preloaded with precise LED patterns for a great number of popular cars" | Closed. Same idea, unreadable |
-| Everything else | none | Falls back to the four RPMs, which is where openDash is today |
+| Everything else | none | Falls back to the four RPMs, which is where OpenDash is today |
 
 Two things follow. The first is that a measured table is not a shortcut somebody took; it is the
 only known way. The second is that **the pattern vocabulary is not a list of styles to implement.**
@@ -74,7 +74,7 @@ Counted over the 85 cars, taking each car's most-used gear:
 - The blink interval is 0 for **47** cars — they do not flash at all — and 50 to 500 ms for the rest,
   most often 250 ms.
 
-So openDash does not need a `meetInMiddle` code path, a `blocks` code path and a `oneAtATime` code
+So OpenDash does not need a `meetInMiddle` code path, a `blocks` code path and a `oneAtATime` code
 path. It needs one renderer over a table, and the pattern is data. The three styles the strip
 already offers stay as what they are: a driver's preference, for a car with no table and for a
 driver who wants one look in every car.
@@ -121,9 +121,9 @@ Facts a parser has to survive, each checked across all 85 files:
   measures it, and the fallback is what every other car gets.
 
 **Licence.** CC BY-NC-SA 4.0. This repository is MIT, and `data/shift-points.json` says in its own
-`$meta` that openDash does not carry measurements it has not made. Both are reasons not to vendor a
+`$meta` that OpenDash does not carry measurements it has not made. Both are reasons not to vendor a
 copy, and [ADR 0018](../decisions/0018-the-cars-own-lights.md) records what is done instead: the
-plugin fetches it onto the user's machine and openDash ships none of it.
+plugin fetches it onto the user's machine and OpenDash ships none of it.
 
 ## Where it can go, inside SimHub
 
@@ -202,5 +202,5 @@ On the VM, 2026-09-16, against SimHub 9.12.6 and the emulator on the `race` scen
   mirror owns its whole run, so nothing currently depends on the answer.
 - How `BlinkExtensions.IsBlinking` phases its blink across containers — irrelevant while the blink
   is computed by the plugin, and load-bearing the moment it is not.
-- The tables themselves. They are somebody else's measurements, and openDash tests its renderer
+- The tables themselves. They are somebody else's measurements, and OpenDash tests its renderer
   against synthetic fixtures rather than pinning numbers it did not take.

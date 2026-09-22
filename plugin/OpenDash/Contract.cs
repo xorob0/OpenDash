@@ -25,7 +25,7 @@ namespace OpenDashPlugin
         public const string PitWallFlagFormat = "PitWallFlagFormat";
 
         /// <summary>The lights. Not a screen, but their settings are properties for the same reason the
-        /// screens' are (ADR 0003); ADR 0013 is why openDash lights a box at all.
+        /// screens' are (ADR 0003); ADR 0013 is why OpenDash lights a box at all.
         ///
         /// Named Lights* rather than FlagBox* on purpose: a driver who owns a flag box probably owns
         /// other lights, and "how bright, and is it night" is one answer for a rig rather than one per
@@ -34,7 +34,7 @@ namespace OpenDashPlugin
         public const string LightsNightBrightness = "LightsNightBrightness";
         public const string LightsNightMode = "LightsNightMode";
 
-        /// <summary>How few laps of fuel is low, for every light openDash drives rather than for the box
+        /// <summary>How few laps of fuel is low, for every light OpenDash drives rather than for the box
         /// alone: one threshold answers "am I low" for the strip, the rev bar and the box, and three
         /// copies of it would be three places to disagree. FlagBoxLowFuelLaps is its deprecated alias
         /// and stays attached, because a published property name is a public interface (ADR 0003) and
@@ -66,7 +66,7 @@ namespace OpenDashPlugin
         /// how its rev ladder fills. Named Led* rather than Strip* because the family they configure is
         /// the LED strip driver's, which is what SimHub calls it.
         ///
-        /// Not per device, unlike the flag box's matrix groups. openDash generates one profile per strip
+        /// Not per device, unlike the flag box's matrix groups. OpenDash generates one profile per strip
         /// shape rather than per box, a driver selects the one that matches the hardware, and every
         /// shape reads the same two names; a per-device group would be a group per LED count, which is
         /// a number rather than a thing somebody owns.</summary>
@@ -98,7 +98,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Retired rather than removed, because it has shipped and a settings file naming it must keep
         /// loading (#170). What changed is that it is no longer offered: the bar has one right behaviour
-        /// -- the car's own lights where openDash has a table, SimHub's bands where it has none, which
+        /// -- the car's own lights where OpenDash has a table, SimHub's bands where it has none, which
         /// is an RPM bar ending in shift lights -- and offering the plain bar beside it asked a driver
         /// to choose between a right answer and a worse one. <see cref="MigrateRevBar"/> moves a stored
         /// `rpm` onto `shift`; until it runs, this list is what keeps the value legal.
@@ -274,7 +274,7 @@ namespace OpenDashPlugin
         ///
         /// Rotation and serpentine wiring are deliberately absent: they are SimHub device settings decided
         /// by the corner the data cable enters, and a second place to set them is a second place to
-        /// disagree. Presets are absent too -- openDash has no store, and a setting *is* a property.</summary>
+        /// disagree. Presets are absent too -- OpenDash has no store, and a setting *is* a property.</summary>
         public static readonly IReadOnlyList<int> FlagBoxMatrices = new[] { 1, 2, 3, 4 };
 
         /// <summary>What a matrix shows when nothing has taken it over.</summary>
@@ -390,13 +390,13 @@ namespace OpenDashPlugin
         /// <summary>The revs, with brake on the sides. What the hardware makers put there.</summary>
         public const string DefaultLedCentre = "rpm";
 
-        /// <summary>How the rev ladder fills the strip. The three openDash styles decide the look and
+        /// <summary>How the rev ladder fills the strip. The three OpenDash styles decide the look and
         /// never the when: the thresholds are the car's own either way (ADR 0014). "car" is not one of
         /// those -- it is the car's own bar, from the fetched table (ADR 0018). Mirrors LED_RPM_STYLES
         /// in contract.ts.</summary>
         public static readonly string[] LedRpmStyles = { "car", "leftToRight", "meetInMiddle", "f1" };
 
-        /// <summary>The car's own, because openDash's opinion is that the car is right. A car with no
+        /// <summary>The car's own, because OpenDash's opinion is that the car is right. A car with no
         /// table falls back to the ladder iRacing publishes without the driver choosing anything.</summary>
         public const string DefaultLedRpmStyle = "car";
 
@@ -569,7 +569,7 @@ namespace OpenDashPlugin
         /// The size the Add a screen dialog opens on: 850 x 480.
         /// </summary>
         /// <remarks>
-        /// What openDash is tested on and what most of the screens running it actually are. The dialog
+        /// What OpenDash is tested on and what most of the screens running it actually are. The dialog
         /// used to open on whichever size came first in the catalogue, which is the 1920 x 480 -- the
         /// widest, the one the artboards lead with, and not the one most people have. A driver whose
         /// screen is something else still has to say so, which the caption already asks of them.
@@ -827,7 +827,7 @@ namespace OpenDashPlugin
         /// LAP_REVIEW_MODES in contract.ts.
         /// </summary>
         /// <remarks>
-        /// Three values and not the canvas's four. "Race" is the one session name openDash can match
+        /// Three values and not the canvas's four. "Race" is the one session name OpenDash can match
         /// with certainty; a "practice" value would have to match a set of spellings -- lone, open,
         /// offline testing, warmup -- that no committed trace carries, and a value that silently
         /// never matches is worse than one that is not offered.
@@ -1310,7 +1310,7 @@ namespace OpenDashPlugin
 
         /// <summary>Every action one companion registers, in registration order.</summary>
         /// <summary>
-        /// None. A companion is paged by SimHub, not by openDash.
+        /// None. A companion is paged by SimHub, not by OpenDash.
         /// </summary>
         /// <remarks>
         /// There were two -- next module, and hold for a glance -- and both moved `CompanionPage`,
@@ -1517,7 +1517,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The lights, which belong to the rig rather than to any screen: brightness and night
-        /// mode for every light openDash drives, then the flag box's own settings and one group per
+        /// mode for every light OpenDash drives, then the flag box's own settings and one group per
         /// matrix, then the strips'. They come after the screens so that this list and contract.ts
         /// agree end to end.
         ///
@@ -1528,7 +1528,7 @@ namespace OpenDashPlugin
         /// two functions whose results it concatenates, which is a spelling and not a category.
         ///
         /// A rig with no matrix and no strip still declares all of them, unlike a screen it does not
-        /// have: openDash installs neither profile by itself (ADR 0013), so there is nothing to detect,
+        /// have: OpenDash installs neither profile by itself (ADR 0013), so there is nothing to detect,
         /// and sixty-one names is not the hundred and thirty-six that made the screens worth
         /// narrowing. (Thirteen, this said before the matrices had a group each, thirty-four before
         /// the four settings a box owns moved under it, and forty-nine before the mirror brought its

@@ -13,19 +13,19 @@ const MANIFEST = path.resolve(import.meta.dir, '../build/manifest.json');
 
 describe('reading the arguments', () => {
   test('nothing means the base face and a race', () => {
-    expect(parseArgs([])).toMatchObject({ packageName: 'openDash 850x480', scenario: 'race', noBuild: false, keep: false });
+    expect(parseArgs([])).toMatchObject({ packageName: 'OpenDash 850x480', scenario: 'race', noBuild: false, keep: false });
   });
 
   test('a package name is positional', () => {
-    expect(parseArgs(['openDash Pit wall'])).toMatchObject({ packageName: 'openDash Pit wall', scenario: 'race' });
+    expect(parseArgs(['OpenDash Pit wall'])).toMatchObject({ packageName: 'OpenDash Pit wall', scenario: 'race' });
   });
 
   test('a scenario is a flag, and does not become the package', () => {
-    expect(parseArgs(['--scenario', 'notc'])).toMatchObject({ packageName: 'openDash 850x480', scenario: 'notc' });
+    expect(parseArgs(['--scenario', 'notc'])).toMatchObject({ packageName: 'OpenDash 850x480', scenario: 'notc' });
   });
 
   test('the two together', () => {
-    expect(parseArgs(['openDash 850x480', '--scenario', 'notc'])).toMatchObject({ packageName: 'openDash 850x480', scenario: 'notc' });
+    expect(parseArgs(['OpenDash 850x480', '--scenario', 'notc'])).toMatchObject({ packageName: 'OpenDash 850x480', scenario: 'notc' });
   });
 
   test('a scenario may be written with an equals sign', () => {
@@ -37,7 +37,7 @@ describe('reading the arguments', () => {
   });
 
   test('help wins over everything else', () => {
-    expect(parseArgs(['openDash', '--help'])).toEqual({ help: true });
+    expect(parseArgs(['OpenDash', '--help'])).toEqual({ help: true });
   });
 });
 
@@ -67,6 +67,6 @@ describe('the size a dash window is given', () => {
   });
 
   test('a package that does not exist has no size', () => {
-    expect(packageSize('openDash 1x1')).toBeUndefined();
+    expect(packageSize('OpenDash 1x1')).toBeUndefined();
   });
 });

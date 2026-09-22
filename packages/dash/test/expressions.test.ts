@@ -249,7 +249,7 @@ describe('second-screen values', () => {
     const strip = leds.serializeProfile(rpmStripProfile(shapeById('4-14-4')!, stableGuid('t/ignition')));
     expect(strip).toContain(ignitionIsOn());
     // Defaulted to on, which is the reverse of the convention: a sim that publishes no ignition
-    // must not have every light openDash drives blacked out for the whole of a session.
+    // must not have every light OpenDash drives blacked out for the whole of a session.
     expect(ignitionIsOn()).toContain(`isnull(${values.ignitionOn()}, 1)`);
     expect(ignitionIsOff()).toContain(`isnull(${values.ignitionOn()}, 1)`);
   });

@@ -129,7 +129,7 @@ namespace OpenDashPlugin
                     return true;
                 }
                 Directory.CreateDirectory(FlagBoxProfile.FolderPath(simHubRoot));
-                File.WriteAllText(path, "Written by openDash: start SimHub again once the plugin is in place.", new UTF8Encoding(false));
+                File.WriteAllText(path, "Written by OpenDash: start SimHub again once the plugin is in place.", new UTF8Encoding(false));
                 return true;
             }
             catch (Exception)
@@ -238,7 +238,7 @@ namespace OpenDashPlugin
             var exe = SimHubExePath(simHubRoot);
             var text = new StringBuilder();
             text.AppendLine("@echo off");
-            text.AppendLine("rem Written by openDash to put a downloaded plugin in place once SimHub has closed.");
+            text.AppendLine("rem Written by OpenDash to put a downloaded plugin in place once SimHub has closed.");
             text.AppendLine("rem It replaces " + DllName + " and keeps the one it replaced as " + BackupName + ".");
             text.AppendLine("rem " + ReopenName + " beside it means the driver asked for SimHub to be started again.");
             text.AppendLine("setlocal");

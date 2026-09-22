@@ -12,7 +12,7 @@
  *     `StartPositionX`/`StartPositionY`. A group that writes the leaf spelling lands at the origin
  *     without complaining.
  *   - Siblings compose painter's-algorithm: `MultiMatrixResult.Merge` runs in list order, so the
- *     LATER sibling paints over the earlier one. Every group openDash emits has mutually exclusive
+ *     LATER sibling paints over the earlier one. Every group OpenDash emits has mutually exclusive
  *     children, so order does not decide anything here — but it would if that ever stopped being
  *     true, and the opposite assumption is the natural one to make.
  */
@@ -27,7 +27,7 @@ import { propertyReferences, type ValidationIssue, type ValidationResult } from 
 export const PROFILE_EXTENSION = '.ledsprofile';
 
 /**
- * `DeviceKind`, a [Flags] enum in SimHub. Only the values openDash can target are here;
+ * `DeviceKind`, a [Flags] enum in SimHub. Only the values OpenDash can target are here;
  * `DeviceMetadata` spells the sizes rows-by-columns, so Matrix8x8 is 8 rows of 8.
  */
 export const DEVICE_KIND = {
@@ -77,7 +77,7 @@ export interface MatrixContainerBase {
   id?: string;
 }
 
-/** A hand-drawn picture or animation: the only container openDash draws its own glyphs with. */
+/** A hand-drawn picture or animation: the only container OpenDash draws its own glyphs with. */
 export interface AnimationContainer extends MatrixContainerBase {
   kind: 'animation';
   frames: readonly MatrixFrame[];

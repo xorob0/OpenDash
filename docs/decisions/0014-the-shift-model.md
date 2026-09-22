@@ -46,12 +46,12 @@ This matters beyond the screen. The LED work of [ADR 0013](0013-lighting-hardwar
 model too, and if the strip and the face each pick their own, a rig will show two different answers
 to the same question. Every competitor closes that gap with hand-tuned per-car segment tables —
 Daniel Newman Racing carries them for 88 iRacing cars and several hundred more across six other
-sims — because that is what supporting seven sims costs. openDash supports one, and that one
+sims — because that is what supporting seven sims costs. OpenDash supports one, and that one
 answers the question itself.
 
 ## Decision
 
-**openDash's shift model is the four RPMs the sim publishes for the car, and SimHub's bands are
+**OpenDash's shift model is the four RPMs the sim publishes for the car, and SimHub's bands are
 the fallback for a car that publishes none. One definition, read by the rev bar, the rev arc and
 every generated LED profile.**
 
@@ -91,7 +91,7 @@ Studio is the one in use, which is how somebody debugging a car finds out which 
 without reading an expression. It costs nothing at runtime: the hidden layer is not drawn.
 
 **One ladder per car, and the last gear is the exception.** iRacing publishes one set of four RPMs
-for the car, not one per gear, and that is what the car's own lights show — so openDash shows the
+for the car, not one per gear, and that is what the car's own lights show — so OpenDash shows the
 same, with no per-gear offset and no table of cars in this repository. The one place a single
 ladder is plainly wrong is the last gear, where there is nothing to shift into: a flashing bar is
 an instruction that cannot be followed. So **in the last gear the top band stays lit but stops
@@ -106,7 +106,7 @@ count above zero.
 
 This is where a hand-measured table beats the mirror: in a car whose power band moves with the
 ratio, the useful upshift is not the same in second as in fifth, and Daniel Newman Racing measures
-shift points per gear for six hundred cars. **This record first said openDash "does not, and will
+shift points per gear for six hundred cars. **This record first said OpenDash "does not, and will
 not" carry such a table. That was reversed the same day — see the amendment at the end.**
 
 **Thresholds are mirrored; colour never is.** The sim publishes when a light comes on and no
@@ -188,7 +188,7 @@ defensible and the current choice mirrors what the sim itself does.
 The paragraph above refused a per-car table outright. That is reversed, and it is recorded here
 rather than in a new record because it changes one clause of this one.
 
-**What changed.** openDash now carries `data/shift-points.json`, a per-car, per-gear table that
+**What changed.** OpenDash now carries `data/shift-points.json`, a per-car, per-gear table that
 **overrides** the derived ladder where an entry exists. Everything else stands: a car not in the
 table gets iRacing's own four RPMs exactly as before, and the table is empty on the day it ships.
 
@@ -217,7 +217,7 @@ and gear the table covers, composed over the derived ladder, so an empty table c
 no entries, no containers, no change to any profile. **Two of those four rungs are built; the
 second is not, and the first is built on the strips alone. The correction below says which.**
 
-**The table ships empty, and that is the honest state rather than an unfinished one.** openDash does
+**The table ships empty, and that is the honest state rather than an unfinished one.** OpenDash does
 not carry measurements it has not made. A competitor's tables are theirs and will not be copied, and
 inventing numbers would put a shift light in the wrong place with total confidence, which is worse
 than not having one. What ships is the mechanism, the schema, the validator and the contribution
@@ -226,7 +226,7 @@ rules: an entry needs a traceable `source` and needs `first <= shift <= last <= 
 
 **What this costs.** The thing the original refusal protected — that a car released this morning
 mirrors correctly with no table, no release and nobody measuring anything — is still true for every
-car not in the table, which is every car today. What is given up is the claim that openDash *never*
+car not in the table, which is every car today. What is given up is the claim that OpenDash *never*
 needs one. It does, for a minority of cars, and the table is bounded by what somebody has actually
 driven and written down.
 
@@ -264,7 +264,7 @@ exactly the kind this record exists to prevent. That is fixed: `redlineRpm` in
 and falls back to `CarSettings_CurrentGearRedLineRPM` only where it does not — because rung 4 is two
 band *progress* values and a `RedLineReached` flag, and has no RPM to print. So the property is
 still emitted, as the fallback half of one shared definition, in two of the twenty-two packages a
-clean `bun run build` writes: `openDash.simhubdash` and `openDash Companion.simhubdash`, the two
+clean `bun run build` writes: `OpenDash.simhubdash` and `OpenDash Companion.simhubdash`, the two
 that give the speedo page a `wide` box. The other shapes do not carry it at all, because
 `modules/shedding.ts` makes the Redline field the first thing that page drops. It is never gated on `CarSettings_RPMRedLinePerGearOverride`, so it is never per gear,
 which is the whole of what rung 2 would have added. `simhubRedlineRpm` in `shift.ts` is its one

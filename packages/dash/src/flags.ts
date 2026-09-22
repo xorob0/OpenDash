@@ -133,7 +133,7 @@ export interface FlagCondition {
    * Only the green flag has one. iRacing sets `green` for the whole green-flag stint, whereas the
    * green flag is an event the canvas gives three seconds; SimHub passes `Flag_Green` through a
    * `GreenLimiter` and reports it only shortly after the flag is raised, which is the only clock
-   * openDash has. A band covers a page the driver is reading, so it takes the limited reading; the
+   * OpenDash has. A band covers a page the driver is reading, so it takes the limited reading; the
    * 8x8 box, whose green costs nothing while it is lit, keeps the bit. Without this, band D would
    * be a solid green bar over the fuel page for an entire race.
    */
@@ -144,7 +144,7 @@ export interface FlagCondition {
 
 /**
  * Highest priority first, in the numbering the canvas's alert catalogue gives, whose entries
- * openDash can raise are 3 RedFlag, 4 Disqualified, 5 BlackFurled, 6 BlackFlag, 7 SafetyCar,
+ * OpenDash can raise are 3 RedFlag, 4 Disqualified, 5 BlackFurled, 6 BlackFlag, 7 SafetyCar,
  * 11 YellowFlag, 16 WhiteLastLap, 18 Meatball, 19 Debris, 20 BlueFlag, 21 GreenFlag,
  * 22 GreenSet/GreenReady and 23 ChequeredFlag. The waved yellow sits where the canvas puts its
  * 9 DoubleYellow and 10 YellowSector, which iRacing does not publish.
