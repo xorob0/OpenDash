@@ -5,9 +5,10 @@
 // System.Drawing, which reads as a placeholder at 32 px rather than as a logo.
 //
 // SimHub paints the icon in the menu's own foreground and keeps only the alpha, so the mark arrives white
-// whatever Ui.Mark fills it with, and the needle is a hole rather than a second colour precisely because
-// the even-odd rule cuts it out of the housing. Anything drawn here has to survive being reduced to a
-// silhouette. Null when rendering fails, which leaves the entry without an icon rather than unloadable.
+// whatever Ui.Mark fills it with, and its separations read at all because the even-odd rule cuts them out
+// of the housing rather than drawing them in a second colour. Anything drawn here has to survive being
+// reduced to a silhouette, and the menu draws it at 24 px, which is the size MarkTests holds the mark to.
+// Null when rendering fails, which leaves the entry without an icon rather than unloadable.
 using System;
 using System.Windows;
 using System.Windows.Media;
