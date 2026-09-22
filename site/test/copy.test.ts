@@ -31,13 +31,10 @@ function sources(dir: string): string[] {
  * rewrites the file, so the list shrinks to nothing and the rules then hold everywhere.
  */
 const LEGACY = [
-  'app/dashes/',
   'app/modules/',
-  'app/second-screens/',
   'app/flag-box/',
   'app/install/',
   'app/download/',
-  'components/Anatomy.tsx',
   'components/Shot.tsx',
   'components/SectionHead.tsx',
   'components/Reveal.tsx',
