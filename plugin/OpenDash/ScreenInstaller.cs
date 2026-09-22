@@ -59,7 +59,7 @@ namespace OpenDashPlugin
             var name = PackageNameFor(screen, packages, log);
             if (name == null)
             {
-                result.Error = "This build of openDash carries no package for a " + screen.SizeLabel + " " + screen.Kind + ".";
+                result.Error = "This build ships no package for a " + screen.SizeLabel + " " + screen.Kind + ".";
                 return result;
             }
 

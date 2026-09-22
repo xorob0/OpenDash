@@ -15,10 +15,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_section_says_what_the_canvas_says()
         {
+            // The heading is the whole of what the section has to say, so it carries no caption
+            // restating it; docs/design/voice.md is the rule.
             Assert.Equal("These apply to every screen", PanelDataTab.SectionTitle);
-            Assert.Equal(
-                "A lap time means the same thing on the rim as it does on the pit wall, so these are not per screen.",
-                PanelDataTab.SectionCaption);
+            Assert.Null(PanelDataTab.SectionCaption);
         }
 
         [Fact]
@@ -54,17 +54,17 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(new[] { "none", "class", "positionClass" }, Contract.BlueFlagDetails);
             Assert.Equal("Blue flag detail", PanelDataTab.BlueFlagTitle);
-            Assert.Contains("the car behind", PanelDataTab.BlueFlagCaption, StringComparison.Ordinal);
+            // The three values are the control's to show; the caption says only what the row is about.
+            Assert.Equal("What shows next to a blue flag.", PanelDataTab.BlueFlagCaption);
         }
 
         [Fact]
         public void The_position_row_keeps_the_sentence_the_canvas_does_not_carry()
         {
-            Assert.StartsWith("Overall, or within your class.", PanelDataTab.PositionCaption, StringComparison.Ordinal);
-            Assert.Contains(
-                "A zone can still be set to list your own class on its own.",
-                PanelDataTab.PositionCaption,
-                StringComparison.Ordinal);
+            // The canvas's own sentence, "Overall, or within your class", is what the segmented control
+            // beside the row already says in two words. What the row keeps is the half the canvas does
+            // not carry and the control cannot show: a zone overrides this on its own.
+            Assert.Equal("Each zone can override this.", PanelDataTab.PositionCaption);
         }
     }
 }

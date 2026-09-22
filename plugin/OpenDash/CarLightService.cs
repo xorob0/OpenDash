@@ -155,7 +155,7 @@ namespace OpenDashPlugin
                 : (int)age.TotalDays + " days ago";
             line += ", updated " + when;
             // A failed refresh does not hide the copy that is working; it explains why it is not newer.
-            if (fetch != null && !fetch.Ok) line += " (the last check did not answer: " + fetch.Reason + ")";
+            if (fetch != null && !fetch.Ok) line += " (last download failed: " + fetch.Reason + ")";
             return line;
         }
 

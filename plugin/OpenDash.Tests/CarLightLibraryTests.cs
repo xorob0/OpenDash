@@ -306,8 +306,10 @@ namespace OpenDashPlugin.Tests
         {
             // The privacy argument ADR 0018 part 1 makes, said where a driver reads it rather than only
             // in the source: one request for every car, so the car you are in is not disclosed.
-            Assert.Contains("every car at once", PanelLights.CarTablesCaption);
+            Assert.Contains("Every car is downloaded at once", PanelLights.CarTablesCaption);
             Assert.Contains("400 KB", PanelLights.CarTablesCaption);
+            // And what the tables are for, which is the one setting that cannot work without them.
+            Assert.Contains("Car-specific", PanelLights.CarTablesCaption);
             // CC BY-NC-SA 4.0 asks for attribution and openDash carries none of the data, so both the
             // licence and the project it came from are on the page for as long as the row is.
             Assert.Contains("CC BY-NC-SA 4.0", PanelLights.CarTablesAttribution);
@@ -333,7 +335,7 @@ namespace OpenDashPlugin.Tests
         {
             var now = new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc);
             var line = CarLightService.Describe(84, now.AddDays(-9), now, CarLightRefresh.Failed("NameResolutionFailure", 84));
-            Assert.Equal("84 cars, updated 9 days ago (the last check did not answer: NameResolutionFailure)", line);
+            Assert.Equal("84 cars, updated 9 days ago (last download failed: NameResolutionFailure)", line);
         }
 
         [Fact]
@@ -342,7 +344,7 @@ namespace OpenDashPlugin.Tests
             var now = new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc);
             Assert.Equal(PanelLights.CarTablesNone, CarLightService.Describe(0, null, now, null));
             Assert.Equal(
-                PanelLights.CarTablesNone + " The download did not answer: NameResolutionFailure.",
+                PanelLights.CarTablesNone + " Download failed: NameResolutionFailure.",
                 CarLightService.Describe(0, null, now, CarLightRefresh.Failed("NameResolutionFailure", 0)));
         }
     }

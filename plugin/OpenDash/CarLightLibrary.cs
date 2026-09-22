@@ -63,7 +63,7 @@ namespace OpenDashPlugin
         /// Who measured all this. Shown on the lights page, and not decoration: CC BY-NC-SA 4.0 asks
         /// for attribution, and a user is entitled to know whose numbers are lighting their wheel.
         /// </summary>
-        public const string Attribution = "Car light tables from the Lovely Car Data project, by Lovely Sim Racing, ATSR and Gomez Sim Industries, under CC BY-NC-SA 4.0.";
+        public const string Attribution = "Shift lights come from Lovely Car Data, by Lovely Sim Racing, ATSR and Gomez Sim Industries, under CC BY-NC-SA 4.0.";
 
         /// <summary>Where the attribution points.</summary>
         public const string ProjectUrl = "https://github.com/Lovely-Sim-Racing/lovely-car-data";

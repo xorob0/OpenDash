@@ -40,7 +40,6 @@ namespace OpenDashPlugin
             // A gap of this tab's own rather than the section default: PanelDataTab.RowGap says why, and
             // passing it here is what keeps Install and Lights on the twenty they are drawn at.
             return Ui.VStack(0, Ui.Section(PanelDataTab.SectionTitle, PanelDataTab.RowGap,
-                Ui.Caption(PanelDataTab.SectionCaption, BodyWidth),
                 Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position),
                 Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta),
                 Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session),

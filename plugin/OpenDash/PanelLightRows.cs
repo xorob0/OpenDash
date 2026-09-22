@@ -137,8 +137,7 @@ namespace OpenDashPlugin
 
         /// <summary>A build that embedded no profile at all has no rows to draw, and says why rather than
         /// leaving the heading over nothing.</summary>
-        public const string NoProfiles =
-            "This build of openDash carries no light profiles. See plugin/OpenDash/Resources/README.md.";
+        public const string NoProfiles = "This build ships no light profiles.";
 
         /// <summary>
         /// What a strip row says when SimHub's LED driver cannot be reached.
@@ -149,8 +148,7 @@ namespace OpenDashPlugin
         /// strip row would send a driver looking for a file that was never written. A state rather than an
         /// error, because nothing the driver does about it is here.
         /// </remarks>
-        public const string Unavailable =
-            "SimHub's LED settings are not available, so openDash cannot install a strip profile.";
+        public const string Unavailable = "SimHub's LED settings are not available.";
 
         /// <summary>The id suffixes a wiring adds, which `wheel(..., { reversed: true })` and `fanatec(...)`
         /// in packages/dash/src/leds/strip.ts spell. A suffix this does not know is not guessed at: the shape
@@ -391,14 +389,14 @@ namespace OpenDashPlugin
             switch (state)
             {
                 case FlagBoxInstallState.NotEmbedded:
-                    return "No such profile is embedded in this build.";
+                    return "This build ships no such profile.";
                 case FlagBoxInstallState.Unavailable:
                     return Unavailable;
                 case FlagBoxInstallState.NotInstalled:
                     return (one ? "Not installed." : "At least one of these " + Word(members) + " is not installed.")
-                        + " Press the button to add "
+                        + " Install "
                         + (one ? "it" : "them all")
-                        + " to SimHub's LED profiles; then pick "
+                        + ", then select "
                         + (one ? "it" : "the one for your strip")
                         + " on your device.";
                 case FlagBoxInstallState.UpToDate:
@@ -413,7 +411,7 @@ namespace OpenDashPlugin
                     return (one ? "A newer profile is available." : "A newer profile is available for at least one of these " + Word(members) + ".")
                         + " " + FlagBoxInstallPlan.Replaces;
                 default:
-                    return "Installing failed. SimHub's log says why.";
+                    return "Install failed. See SimHub's log.";
             }
         }
     }

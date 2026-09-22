@@ -15,9 +15,17 @@ namespace OpenDashPlugin
         /// <summary>One label per <see cref="Contract.LedCentres"/> value, in its order.</summary>
         public static readonly string[] CentreLabels = { "RPM", "Brake", "Throttle and brake", "Fuel" };
 
-        /// <summary>One label per <see cref="Contract.LedRpmStyles"/> value, in its order. The car's own
-        /// heads the list because the value does, and it is the one a driver is offered first.</summary>
-        public static readonly string[] RpmStyleLabels = { "The car's own", "Left to right", "Meet in middle", "F1" };
+        /// <summary>
+        /// One label per <see cref="Contract.LedRpmStyles"/> value, in its order. Car-specific heads the
+        /// list because the value does, and it is the one a driver is offered first.
+        /// </summary>
+        /// <remarks>
+        /// It used to read "The car's own", which is a possessive with no head noun: the reader has to
+        /// guess what it owns, and the three names beside it are patterns rather than owners, so there is
+        /// nothing to guess from. Car-specific is what Lovely Sim Racing calls these tables, so a driver
+        /// who met them there recognises the word. docs/design/voice.md keeps the rule.
+        /// </remarks>
+        public static readonly string[] RpmStyleLabels = { "Car-specific", "Left to right", "Meet in middle", "F1" };
 
         /// <summary>One label per <see cref="Contract.LedMirrorFits"/> value, in its order.</summary>
         public static readonly string[] MirrorFitLabels = { "Fill the strip", "True size" };
@@ -29,7 +37,7 @@ namespace OpenDashPlugin
         public static readonly string[] SideLabels = { "Both", "Left", "Right" };
 
         /// <summary>The heading over the strips a driver has added.</summary>
-        public const string BarsTitle = "Your LED bars";
+        public const string BarsTitle = "Your LED strips";
 
         /// <summary>
         /// The line under it.
@@ -41,24 +49,22 @@ namespace OpenDashPlugin
         /// name, a shape and settings of its own, and installing it is what puts a profile of that name
         /// into SimHub.
         /// </remarks>
-        public const string BarsCaption =
-            "An RGB strip on the wheel, the rim or above the monitor. Add one for each strip you have and give it a name; "
-            + "openDash installs a profile under that name, and the settings under it are that bar's alone.";
+        public const string BarsCaption = "Add one for each RGB strip you have.";
 
-        public const string NoBars = "No bars yet. Add one and openDash installs its profile into SimHub, ready to pick on the device.";
+        public const string NoBars = "No strips yet.";
 
-        public const string AddBar = "Add an LED bar";
+        public const string AddBar = "Add an LED strip";
 
-        public const string BarNameTitle = "Call it";
+        public const string BarNameTitle = "Name";
 
-        public const string BarNameCaption = "Yours. It names the group here and the profile in SimHub's own LED profile list.";
+        public const string BarNameCaption = "Also shown in SimHub's LED profile list.";
 
         public const string BarEndsTitle = "LEDs at each end";
 
-        public const string BarEndsCaption = "The group at each end of the strip, which carries the lamps: a car alongside, the flags, your car's own warnings and the aids. None means the whole strip is one run, which is what a brow above a monitor is.";
+        public const string BarEndsCaption = "Flags, warnings and cars alongside. Pick None for one continuous run.";
 
         /// <summary>The device row of the add flow and of every bar.</summary>
-        public const string BarDeviceTitle = "Which device";
+        public const string BarDeviceTitle = "LED device";
 
         /// <summary>
         /// The line under it, which has to carry a fact about SimHub rather than a preference.
@@ -70,26 +76,22 @@ namespace OpenDashPlugin
         /// saved correctly into a list the wheel does not read, and the driver went looking in the wheel
         /// and found nothing. Somebody reading this row has to understand that choosing is not optional.
         /// </remarks>
-        public const string BarDeviceCaption =
-            "Where the profile goes. Each device in SimHub keeps its own LED profiles, so pick the one these LEDs are on -- "
-            + "a wheel, a button plate, or the Arduino if you wired the strip yourself.";
+        public const string BarDeviceCaption = null;
 
         /// <summary>Said in place of the picker when SimHub has exactly one LED device: there is nothing
         /// to choose, and a drop-down of one is a question with one answer.</summary>
         public static string OneDevice(string name)
         {
-            return "Its profile goes to " + name + ", which is the only device SimHub has LEDs for.";
+            return "Goes to " + name + ".";
         }
 
         /// <summary>Said when SimHub has none. The bar is still added and still configurable; what it
         /// cannot have is a profile anywhere, which is a thing about the rig and not about openDash.</summary>
-        public const string NoDevices =
-            "SimHub has no device with RGB LEDs. Add your wheel or your Arduino under SimHub's own Devices or Arduino page first, "
-            + "then add the bar and its profile has somewhere to go.";
+        public const string NoDevices = "No LED device in SimHub. Add your wheel or Arduino there first.";
 
         /// <summary>What a bar pointed at a device SimHub no longer has is shown as, so the row says what
         /// happened rather than silently reading as the first device in the list.</summary>
-        public const string DeviceGone = "The device it was on (not on this rig now)";
+        public const string DeviceGone = "The device it was on (no longer on this rig)";
 
         /// <summary>Said beside a device that SimHub is not talking to. A profile installs into it all the
         /// same -- the profile list is SimHub's, not the hardware's -- so this is a note and not a bar.</summary>
@@ -97,7 +99,7 @@ namespace OpenDashPlugin
 
         public const string BarCentreTitle = "LEDs in the middle";
 
-        public const string BarCentreCaption = "The run between them, which carries the rev ladder. Count the LEDs on your strip and take the ends off; the line below says what that adds up to.";
+        public const string BarCentreCaption = "Count your LEDs and subtract the ends.";
 
         /// <summary>The line under the two numbers: what they add up to and what the profile will be
         /// called. A driver counts LEDs, and this is where the two counts are checked against the total
@@ -127,16 +129,16 @@ namespace OpenDashPlugin
         public static string BarAdded(string name, string device)
         {
             var where = string.IsNullOrWhiteSpace(device) ? "your LED device" : device;
-            return "Added " + name + " and installed its profile into " + where + ". Open it in SimHub and select \"" + name + "\" on it.";
+            return "Added " + name + ". Select \"" + name + "\" on " + where + " in SimHub to use it.";
         }
 
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed into SimHub. The Install tab says why.";
+            return "Added " + name + ", but its profile could not be installed. See the Install tab.";
         }
 
         /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
-        public const string CarTablesTitle = "The car's own lights";
+        public const string CarTablesTitle = "Car light tables";
 
         /// <summary>
         /// What the button will do, said before it is pressed rather than after.
@@ -156,24 +158,27 @@ namespace OpenDashPlugin
         /// source, where no driver reads it.</para>
         /// </remarks>
         public const string CarTablesCaption =
-            "Measured tables for the cars other people have measured: your car's own LED colours, thresholds and gears, "
-            + "instead of openDash's three bands. Downloading asks GitHub once for every car at once — about 400 KB — "
-            + "so nothing about which car you drive leaves your machine. Afterwards every car works offline.";
+            "Needed for the Car-specific rev light style. Every car is downloaded at once, about 400 KB, "
+            + "so your car is never disclosed.";
+
+        /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
+        /// of what the tables are for, and a tooltip on the button says what the button does.</summary>
+        public const string CarTablesButtonTooltip = "Downloads the car light tables.";
 
         /// <summary>Who measured it, and where to go and see. Shown under the row for as long as it exists.</summary>
         public static readonly string CarTablesAttribution = CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl;
 
         /// <summary>The state a rig is in until somebody presses the button, which is every rig on a fresh install.</summary>
-        public const string CarTablesNone = "No car light tables yet, so every car is on the lights openDash works out for itself.";
+        public const string CarTablesNone = "No car light tables yet.";
 
         /// <summary>Said after a download that did not answer, beside whatever is already on disk.</summary>
         public static string CarTablesFailed(string reason)
         {
-            return "The download did not answer: " + (string.IsNullOrWhiteSpace(reason) ? "no reason given" : reason) + ".";
+            return "Download failed: " + (string.IsNullOrWhiteSpace(reason) ? "no reason given" : reason) + ".";
         }
 
         /// <summary>While the request is out. A press with no answer for ten seconds reads as a dead button.</summary>
-        public const string CarTablesDownloading = "Downloading the car light tables…";
+        public const string CarTablesDownloading = "Downloading…";
 
         /// <summary>
         /// The label on the button: the first press is a download and every one after it is a refresh.
@@ -188,7 +193,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Said beside the button when the copy is old enough that upstream has probably moved.</summary>
-        public const string CarTablesStale = "This copy is over a week old. Nothing refetches on its own; press Update when you want a newer one.";
+        public const string CarTablesStale = "Over a week old. Press Update for a newer copy.";
 
         /// <summary>The heading over the panels a driver has added.</summary>
         public const string PanelsTitle = "Your matrix panels";
@@ -202,17 +207,15 @@ namespace OpenDashPlugin
         /// none of; a panel exists because somebody said they have one, and it carries the name they gave
         /// it rather than its slot number.
         /// </remarks>
-        public const string PanelsCaption =
-            "SimHub composes up to four contents onto one matrix device. Add one for each panel you actually have, and "
-            + "give it a name you will recognise — \"top left\", \"by the wheel\".";
+        public const string PanelsCaption = "Add one for each panel you have. Four at most.";
 
-        public const string NoPanels = "No panels yet. The flag box profile is installed and will draw nothing until you add one.";
+        public const string NoPanels = "No panels yet.";
 
         public const string AddPanel = "Add a matrix panel";
 
-        public const string PanelNameTitle = "Call it";
+        public const string PanelNameTitle = "Name";
 
-        public const string PanelNameCaption = "Yours. It names the group here; the panel itself is whichever of SimHub's four contents this is.";
+        public const string PanelNameCaption = null;
 
         /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since
         /// that is the number a driver has to match on the device itself.</summary>
@@ -223,8 +226,6 @@ namespace OpenDashPlugin
 
         /// <summary>The section the three rig-wide settings sit in, at the foot of the tab: they are not
         /// the flag box's, and a driver who owns a strip as well as a box sets them once.</summary>
-        public const string RigWideTitle = "For every light";
-
-        public const string RigWideCaption = "Brightness is one answer for the rig.";
+        public const string RigWideTitle = "All lights";
     }
 }

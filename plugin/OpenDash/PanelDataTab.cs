@@ -12,7 +12,7 @@ namespace OpenDashPlugin
     {
         public const string SectionTitle = "These apply to every screen";
 
-        public const string SectionCaption = "A lap time means the same thing on the rim as it does on the pit wall, so these are not per screen.";
+        public const string SectionCaption = null;
 
         /// <summary>Between one setting and the next on this tab, which is wider than the twenty every
         /// other section on the panel is given.</summary>
@@ -30,7 +30,7 @@ namespace OpenDashPlugin
         /// tab. They stay here because this file is where the panel's copy a test can hold lives, and
         /// because the row read exactly the same when it was rig-wide -- what changed is who it answers
         /// for, not what it says.</summary>
-        public const string RevBarTitle = "The rev bar";
+        public const string RevBarTitle = "Revbar";
 
         /// <summary>
         /// Two answers, not three.
@@ -46,7 +46,7 @@ namespace OpenDashPlugin
         /// So the row is on or off, and off is the one that still means something: a wheel with its own
         /// LEDs does not need the strip, and the room goes back to the zones.
         /// </remarks>
-        public const string RevBarCaption = "On, it mirrors the lights in the car you are driving, or draws an RPM bar that ends in shift lights where openDash has no table for that car. Off gives its room back to the zones, which is what a wheel with LEDs of its own wants.";
+        public const string RevBarCaption = "Turn off if your wheel has its own shift lights.";
 
         public static readonly string[] RevBarValues = { Contract.RevBarShift, Contract.RevBarOff };
 
@@ -61,7 +61,7 @@ namespace OpenDashPlugin
         /// this row reads as though Overall meant overall everywhere. It is therefore owed to the canvas
         /// rather than deleted from the code, and the docs package raises it.
         /// </remarks>
-        public const string PositionCaption = "Overall, or within your class. A zone can still be set to list your own class on its own.";
+        public const string PositionCaption = "Each zone can override this.";
 
         public const string DeltaTitle = "Delta reference";
 
@@ -69,10 +69,10 @@ namespace OpenDashPlugin
 
         public const string SessionTitle = "Session progress";
 
-        public const string SessionCaption = "Auto shows laps when the session declares a lap count, time otherwise.";
+        public const string SessionCaption = "Auto picks laps or time to suit the session.";
 
         public const string BlueFlagTitle = "Blue flag detail";
 
-        public const string BlueFlagCaption = "What the band says beside the blue: nothing, the class of the car behind, or its position and class.";
+        public const string BlueFlagCaption = "What shows next to a blue flag.";
     }
 }
