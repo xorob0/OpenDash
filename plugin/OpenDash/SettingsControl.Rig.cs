@@ -196,22 +196,20 @@ namespace OpenDashPlugin
             var text = Ui.VStack(4, title, facts, origin);
             text.HorizontalAlignment = HorizontalAlignment.Left;
 
-            var rename = Ui.LinkButton("Rename");
-            rename.ToolTip = "Renames it here and in SimHub's dashboard list.";
-            rename.Click += (sender, args) => ShowRename(screen);
-            // Beside Rename, because it is the same kind of correction: a driver who picked the wrong
-            // size once had to remove the screen and start again, which threw away the zones they had set
-            // and every wheel button bound to it.
-            var resize = Ui.LinkButton("Change the size");
-            resize.ToolTip = "Moves this screen to another size.";
-            resize.Click += (sender, args) => ShowResize(screen);
+            // One link and not three. Renaming, resizing and writing the dashboard again are the same
+            // errand -- a screen that is not the one the driver meant -- and splitting them left the
+            // third with nowhere to live at all, so a rig whose dashboards had been overwritten had no
+            // press that put them back.
+            var edit = Ui.LinkButton("Edit");
+            edit.ToolTip = "Change this screen's name or size, or install its dashboard again.";
+            edit.Click += (sender, args) => ShowEdit(screen);
             // Text and not a button face, which is what the canvas draws. What keeps a quiet destructive
             // action from being an accident is the confirmation behind it rather than its own weight.
             var remove = Ui.LinkButton("Remove this screen", Theme.Danger);
             remove.ToolTip = "Removes this screen, its settings and its dashboard.";
             remove.Click += (sender, args) => ShowRemove(screen);
 
-            var actions = Resizable(screen) ? Ui.HStack(12, rename, resize, remove) : Ui.HStack(12, rename, remove);
+            var actions = Ui.HStack(12, edit, remove);
             var rows = new List<UIElement> { Ui.Row(text, actions) };
             if (!Installed(screen)) rows.Add(BuildMissingFolder(screen));
             var stack = Ui.VStack(10, rows.ToArray());
@@ -224,23 +222,6 @@ namespace OpenDashPlugin
                 BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),
                 Child = stack,
             };
-        }
-
-        /// <summary>Whether this build carries another size for this kind of screen, which is the only
-        /// case where offering to change it would lead anywhere.</summary>
-        private bool Resizable(ScreenInstance screen)
-        {
-            try
-            {
-                var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-                var type = PanelAddScreen.Types(catalogue).FirstOrDefault(t => string.Equals(t.Kind, screen.Kind, StringComparison.Ordinal));
-                return type != null && PanelAddScreen.Question(type) != SizeQuestion.None;
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not read the packages to see whether " + screen.Name + " has another size: " + ex.Message);
-                return false;
-            }
         }
 
         /// <summary>The two facts the canvas puts under a screen's name, in the order it puts them. Drawn
@@ -282,7 +263,7 @@ namespace OpenDashPlugin
             return BuildFacePane(screen);
         }
 
-        // --- Adding, renaming and removing ------------------------------------------------------
+        // --- Adding, editing and removing --------------------------------------------------------
 
         /// <summary>
         /// The add panel, in place rather than in a dialog.
@@ -417,51 +398,188 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Changing the size of a screen that is already on the rig.
+        /// The one panel for a screen that is already on the rig: its name, its size, and its dashboard.
         /// </summary>
         /// <remarks>
-        /// A driver who picked the wrong size had to remove the screen and add another, which threw away
-        /// their zones and left every wheel button bound to it pointing at nothing. The namespace is
-        /// frozen at creation (ADR 0017) and this does not move it either, so the settings and the
-        /// bindings survive and only the folder in DashTemplates is rewritten.
+        /// Three corrections that used to be two panels and one missing button. A driver who picked the
+        /// wrong size had to remove the screen and add another, which threw away their zones and left
+        /// every wheel button bound to it pointing at nothing; a driver whose dashboard had been
+        /// overwritten -- which is what an update of the stock folder does -- had no press at all that
+        /// wrote it again, only the Install tab's Reinstall, which does the whole rig.
+        ///
+        /// The namespace is frozen at creation (ADR 0017) and none of the three moves it, so the
+        /// settings and the bindings survive all of them and only the folder in DashTemplates is written.
         /// </remarks>
-        private void ShowResize(ScreenInstance screen)
+        private void ShowEdit(ScreenInstance screen)
         {
+            var name = new TextBox
+            {
+                Width = 280,
+                Height = Theme.ControlHeightSm,
+                FontSize = Theme.SizeLabel,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Text = screen.Name,
+            };
+
+            // The size question is asked only where this build has another size to offer, which is the
+            // same rule the add panel follows; a kind that ships one package draws no row at all rather
+            // than a control with one answer in it.
             var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
             var type = PanelAddScreen.Types(catalogue).FirstOrDefault(t => string.Equals(t.Kind, screen.Kind, StringComparison.Ordinal));
-            if (type == null || PanelAddScreen.Question(type) == SizeQuestion.None)
+            var question = type == null ? SizeQuestion.None : PanelAddScreen.Question(type);
+            FrameworkElement sizeRow = null;
+            PackageEntry chosen = null;
+            if (question != SizeQuestion.None)
             {
-                bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.ResizeTitle,
-                    Ui.Caption("OpenDash ships only one " + KindLabel(screen) + " size, so there is nothing to move this screen to."),
-                    BackRow()));
-                return;
+                var offered = PanelAddScreen.Offered(type);
+                var current = offered.FirstOrDefault(e => e.Width == screen.Width && e.Height == screen.Height) ?? offered[0];
+                chosen = current;
+                // Opened on the size the screen already is, so the control says what it is before it is
+                // used to say what it should be.
+                var opensOn = 0;
+                for (var i = 0; i < offered.Count; i++)
+                {
+                    if (ReferenceEquals(offered[i], current)) opensOn = i;
+                }
+                sizeRow = BuildSizeRow(type, offered, question, opensOn, e => chosen = e);
             }
 
-            var offered = PanelAddScreen.Offered(type);
-            var current = offered.FirstOrDefault(e => e.Width == screen.Width && e.Height == screen.Height) ?? offered[0];
-            var chosen = current;
-            var question = PanelAddScreen.Question(type);
-            // Opened on the size the screen already is, so the control says what it is before it is used
-            // to say what it should be.
-            var opensOn = 0;
-            for (var i = 0; i < offered.Count; i++)
-            {
-                if (ReferenceEquals(offered[i], current)) opensOn = i;
-            }
-            var row = BuildSizeRow(type, offered, question, opensOn, e => chosen = e);
+            var edited = Edited(screen);
+            var reinstall = Ui.OutlineButton(PanelAddScreen.ReinstallButton, PanelMetrics.RowButtonHeight);
+            reinstall.MinWidth = ButtonMinWidth;
+            reinstall.ToolTip = "Writes this screen's dashboard into SimHub again.";
+            reinstall.Click += (sender, args) => ReinstallScreen(screen);
+            var reinstallRow = Ui.Row(
+                PanelAddScreen.ReinstallTitle,
+                edited ? PanelAddScreen.ReinstallEditedCaption : PanelAddScreen.ReinstallCaption,
+                reinstall);
+            reinstallRow.HorizontalAlignment = HorizontalAlignment.Stretch;
 
-            var apply = Ui.OutlineButton("Change it", PanelMetrics.RowButtonHeight);
-            apply.MinWidth = ButtonMinWidth;
-            apply.ToolTip = "Installs this screen's dashboard at the new size.";
-            apply.Click += (sender, args) => ResizeScreen(screen, chosen);
+            var save = Ui.OutlineButton(PanelAddScreen.SaveButton, PanelMetrics.RowButtonHeight);
+            save.MinWidth = ButtonMinWidth;
+            save.ToolTip = "Applies the name and the size, and writes the dashboard.";
+            save.Click += (sender, args) => SaveEdit(screen, name.Text, chosen);
             var cancel = Ui.LinkButton("Cancel");
-            cancel.ToolTip = "Keeps the current size.";
+            cancel.ToolTip = "Goes back without changing anything.";
             cancel.Click += (sender, args) => Redraw();
 
-            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.ResizeTitle + " of " + screen.Name,
-                row,
-                Ui.Caption(PanelAddScreen.ResizeCaption),
-                Ui.Row(new Border(), Ui.HStack(8, cancel, apply))));
+            var nameRow = Ui.Row(PanelAddScreen.NameTitle, PanelAddScreen.NameCaption, name);
+            nameRow.HorizontalAlignment = HorizontalAlignment.Stretch;
+
+            var rows = new List<UIElement> { nameRow };
+            if (sizeRow != null) rows.Add(sizeRow);
+            rows.Add(Ui.Caption(PanelAddScreen.EditCaption));
+            rows.Add(reinstallRow);
+            rows.Add(Ui.Row(new Border(), Ui.HStack(8, cancel, save)));
+
+            bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.EditTitle + " " + screen.Name, rows.ToArray()));
+        }
+
+        /// <summary>
+        /// Whether this screen's folder no longer matches what OpenDash last wrote into it.
+        /// </summary>
+        /// <remarks>
+        /// Which is to say, whether somebody has opened it in Dash Studio and saved. The Install tab asks
+        /// before replacing one of those and keeps the copy under a name no later install claims; one
+        /// screen's reinstall costs the same thing, so it says so and keeps the copy the same way. A
+        /// folder we cannot fingerprint reads as unedited: the alternative is warning everybody whose
+        /// disk we could not read about work they may not have done.
+        /// </remarks>
+        private bool Edited(ScreenInstance screen)
+        {
+            try
+            {
+                if (screen.Folder == null || plugin.Installer.Record == null) return false;
+                var recorded = plugin.Installer.Record.Get(screen.Folder);
+                if (recorded == null) return false;
+                var now = FolderFingerprint.Of(PackageExtractor.InstalledFolder(plugin.Installer.SimHubRoot, screen.Folder));
+                return now != null && !string.Equals(now, recorded, StringComparison.Ordinal);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not tell whether " + screen.Folder + " has been edited: " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>Applies whichever of the two answers was changed, and writes the dashboard when
+        /// either was: SimHub lists a dashboard under its title, so a rename that stopped at the card
+        /// left the screen listed under the name the driver had just stopped using.</summary>
+        private void SaveEdit(ScreenInstance screen, string wanted, PackageEntry entry)
+        {
+            var sizeChanged = entry != null && (entry.Width != screen.Width || entry.Height != screen.Height);
+            switch (PanelAddScreen.Edit(screen.Name, wanted, sizeChanged))
+            {
+                case ScreenEdit.Resize:
+                    // The name first, so the folder ResizeScreen writes is titled with it rather than
+                    // with the name the screen is about to stop having.
+                    RenameScreen(screen, wanted);
+                    ResizeScreen(screen, entry);
+                    return;
+                case ScreenEdit.Rename:
+                    RenameScreen(screen, wanted);
+                    Save();
+                    var result = ScreenInstaller.Write(
+                        screen,
+                        plugin.Installer.PackageSource,
+                        plugin.Installer.SimHubRoot,
+                        plugin.Installer.Record,
+                        new SimHubInstallLog(),
+                        force: true,
+                        holdsAuthoredWork: Edited(screen));
+                    Save();
+                    plugin.Installer.Refresh();
+                    selected = screen.Namespace;
+                    Redraw();
+                    Announce(
+                        result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name, result.Error),
+                        result.Ok ? Theme.TextSecondary : Theme.Caution);
+                    return;
+                default:
+                    Redraw();
+                    return;
+            }
+        }
+
+        /// <summary>Takes the name from the box, kept distinct from every other screen's. An empty box
+        /// keeps the name it had, which is what PanelAddScreen.Edit has already decided.</summary>
+        private void RenameScreen(ScreenInstance screen, string wanted)
+        {
+            var trimmed = (wanted ?? string.Empty).Trim();
+            if (trimmed.Length == 0 || string.Equals(trimmed, screen.Name, StringComparison.Ordinal)) return;
+            screen.Name = PackageCatalogue.UniqueName(
+                trimmed,
+                Settings.RigScreens().Where(s => !ReferenceEquals(s, screen)).Select(s => s.Name));
+        }
+
+        /// <summary>
+        /// Writes this one screen's dashboard again, at the name and size it already has.
+        /// </summary>
+        /// <remarks>
+        /// The repair for a dashboard that is there but wrong: overwritten by an update, edited by
+        /// accident, or listed in SimHub under a name that is no longer the screen's. The Install tab's
+        /// Reinstall does the whole rig and is the wrong instrument for one screen; the "Install it
+        /// again" button on the card is the same press but appears only once the folder has gone.
+        /// </remarks>
+        private void ReinstallScreen(ScreenInstance screen)
+        {
+            var result = ScreenInstaller.Write(
+                screen,
+                plugin.Installer.PackageSource,
+                plugin.Installer.SimHubRoot,
+                plugin.Installer.Record,
+                new SimHubInstallLog(),
+                force: true,
+                holdsAuthoredWork: Edited(screen));
+            Save();
+            plugin.Installer.Wanted = Settings.RigScreens().Select(s => s.Folder).Where(folder => folder != null).ToList();
+            plugin.Installer.Refresh();
+            selected = screen.Namespace;
+            Redraw();
+            Announce(
+                result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error),
+                result.Ok ? Theme.TextSecondary : Theme.Caution);
         }
 
         private void ResizeScreen(ScreenInstance screen, PackageEntry entry)
@@ -527,37 +645,6 @@ namespace OpenDashPlugin
                 ? PanelAddScreen.Added(screen.Name, screen.Name)
                 : PanelAddScreen.AddFailed(screen.Name, result.Error);
             Announce(line, result.Ok ? Theme.TextSecondary : Theme.Caution);
-        }
-
-        private void ShowRename(ScreenInstance screen)
-        {
-            var name = new TextBox
-            {
-                Width = 280,
-                Height = Theme.ControlHeightSm,
-                FontSize = Theme.SizeLabel,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Text = screen.Name,
-            };
-            var save = BuildSecondaryButton("Rename", "Uses this name for the screen.");
-            save.Click += (sender, args) =>
-            {
-                var wanted = (name.Text ?? string.Empty).Trim();
-                if (wanted.Length > 0)
-                {
-                    screen.Name = PackageCatalogue.UniqueName(wanted, Settings.RigScreens().Where(s => !ReferenceEquals(s, screen)).Select(s => s.Name));
-                    Save();
-                }
-                Redraw();
-            };
-            var cancel = BuildSecondaryButton("Cancel", "Keeps the current name.");
-            cancel.Click += (sender, args) => Redraw();
-
-            bodyHost.Content = Ui.VStack(0, Ui.Section("Rename " + screen.Name,
-                Ui.Row("Name", "Also shown in SimHub's dashboard list.", name),
-                Ui.Caption("Only changes the name."),
-                Ui.Row(new Border(), Ui.HStack(8, cancel, save))));
         }
 
         /// <summary>

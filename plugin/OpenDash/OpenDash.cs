@@ -156,6 +156,12 @@ namespace OpenDashPlugin
         /// package writes, so it is written here -- once, when it is missing. A folder somebody deleted
         /// comes back on the next start, which is the same promise the stock ones have always made; the
         /// panel offers the same thing on a button for a user who does not want to restart to get it.
+        ///
+        /// Then every screen's name goes back into the dashboard SimHub lists, stock ones included. The
+        /// installer above has just written the stock folders from their packages, which carries the
+        /// package's own title with it, so a screen the driver renamed left SimHub's list under the name
+        /// they knew it by at every single update. Cheap where nothing moved: Retitle compares before it
+        /// writes and does nothing to a folder whose title is already the screen's.
         /// </remarks>
         private void WriteScreenFolders()
         {
@@ -163,9 +169,16 @@ namespace OpenDashPlugin
             RepairScreenSizes(log);
             foreach (var screen in Settings.RigScreens())
             {
-                if (screen.IsStock) continue;
-                var result = ScreenInstaller.Write(screen, Installer.PackageSource, Installer.SimHubRoot, Installer.Record, log);
-                if (!result.Ok) Log.Warn("The screen " + screen.Name + " has no folder: " + result.Error);
+                if (!screen.IsStock)
+                {
+                    var result = ScreenInstaller.Write(screen, Installer.PackageSource, Installer.SimHubRoot, Installer.Record, log);
+                    if (!result.Ok)
+                    {
+                        Log.Warn("The screen " + screen.Name + " has no folder: " + result.Error);
+                        continue;
+                    }
+                }
+                ScreenInstaller.Retitle(screen, Installer.SimHubRoot, Installer.Record, log);
             }
         }
 

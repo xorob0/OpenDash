@@ -1,4 +1,5 @@
-// PanelAddScreen.cs: what "add a screen" asks for, in the order it asks.
+// PanelAddScreen.cs: what "add a screen" asks for, in the order it asks -- and what "edit a screen"
+// asks once it is on the rig, which is the same two questions over again plus the dashboard itself.
 //
 // Apart from the WPF file for the reason PanelCopy.cs is apart from Widgets.cs: the panel is net48 and
 // the net8.0 test project cannot compile a line of it, so the questions, their wording and the rule
@@ -53,6 +54,21 @@ namespace OpenDashPlugin
         Size,
     }
 
+    /// <summary>What pressing Save on the edit panel amounts to.</summary>
+    public enum ScreenEdit
+    {
+        /// <summary>Nothing was answered differently, so nothing is written.</summary>
+        None,
+
+        /// <summary>
+        /// The name alone -- which still writes the dashboard, because SimHub lists one by its title.
+        /// </summary>
+        Rename,
+
+        /// <summary>The size, which writes the screen from another package and carries the name into it.</summary>
+        Resize,
+    }
+
     public static class PanelAddScreen
     {
         public const string SectionTitle = "Add a screen";
@@ -78,18 +94,48 @@ namespace OpenDashPlugin
 
         public const string AddButton = "Add screen";
 
-        public const string ResizeTitle = "Change the size";
-
         /// <summary>
-        /// What a resize keeps, which is everything but the pixels.
+        /// The one place a screen already on the rig is changed.
         /// </summary>
         /// <remarks>
-        /// The namespace is frozen at creation (ADR 0017) and a resize does not move it either, so a
-        /// wheel button bound to this screen goes on working and so does anything bound to its
-        /// properties. That is the whole reason a resize exists rather than "remove it and add the
+        /// It was two links, Rename and "Change the size", which is two panels for one thought: a driver
+        /// who has just found their screen listed under the wrong name is usually about to find it the
+        /// wrong size as well, and neither link offered the third thing they came for, which is writing
+        /// the dashboard again.
+        /// </remarks>
+        public const string EditTitle = "Edit";
+
+        /// <summary>
+        /// What an edit keeps, which is everything but the name and the pixels.
+        /// </summary>
+        /// <remarks>
+        /// The namespace is frozen at creation (ADR 0017) and neither a rename nor a resize moves it, so
+        /// a wheel button bound to this screen goes on working and so does anything bound to its
+        /// properties. That is the whole reason this panel exists rather than "remove it and add the
         /// right one", which is what a driver who picked the wrong size had to do.
         /// </remarks>
-        public const string ResizeCaption = "Your settings and bindings are kept.";
+        public const string EditCaption = "Your settings and bindings are kept.";
+
+        public const string SaveButton = "Save";
+
+        /// <summary>The title of the row the reinstall sits on: it acts on the dashboard rather than on
+        /// either of the answers above it.</summary>
+        public const string ReinstallTitle = "Dashboard";
+
+        public const string ReinstallCaption = "Writes this screen's dashboard into SimHub again, at the name and size above.";
+
+        public const string ReinstallButton = "Reinstall";
+
+        /// <summary>
+        /// What the caption says instead once this screen's folder has been edited.
+        /// </summary>
+        /// <remarks>
+        /// The Install tab asks before it replaces authored work and keeps the copy under a name no
+        /// later install claims. A reinstall of one screen costs exactly the same thing, so it says the
+        /// same thing and keeps the copy the same way; "Put mine back" on the Install tab is what
+        /// restores it.
+        /// </remarks>
+        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on the Install tab restores it.";
 
         /// <summary>
         /// The kinds the build can make a screen of, in the order the page offers them.
@@ -257,6 +303,53 @@ namespace OpenDashPlugin
         public static string ResizeFailed(string name, string error)
         {
             return "Could not resize " + name + ": " + error;
+        }
+
+        /// <summary>
+        /// What an edit amounts to, from the two answers the panel is holding.
+        /// </summary>
+        /// <remarks>
+        /// A size that moved decides on its own, because the folder is written from the other package and
+        /// the name goes into it on the way: there is never a rename left to do separately. A name box
+        /// left empty is not a request to call the screen nothing, it is somebody who cleared it and
+        /// thought better of it, so it reads as no change rather than as an error to report back.
+        /// </remarks>
+        public static ScreenEdit Edit(string name, string wanted, bool sizeChanged)
+        {
+            if (sizeChanged) return ScreenEdit.Resize;
+            var trimmed = (wanted ?? string.Empty).Trim();
+            if (trimmed.Length == 0) return ScreenEdit.None;
+            return string.Equals(trimmed, (name ?? string.Empty).Trim(), StringComparison.Ordinal)
+                ? ScreenEdit.None
+                : ScreenEdit.Rename;
+        }
+
+        /// <summary>
+        /// What a rename says, which is that it reached SimHub and when SimHub will read it.
+        /// </summary>
+        /// <remarks>
+        /// A rename used to change the card and nothing else, while its own tooltip promised SimHub's
+        /// dashboard list as well. It writes the dashboard now, so the promise is kept -- but SimHub
+        /// reads that list once, at startup, so the line has to say what the driver is waiting for.
+        /// </remarks>
+        public static string Renamed(string title)
+        {
+            return "Renamed to " + title + ". Restart SimHub to see the new name in Dash Studio.";
+        }
+
+        public static string RenameFailed(string name, string error)
+        {
+            return "Renamed " + name + ", but its dashboard could not be written: " + error;
+        }
+
+        public static string Reinstalled(string name)
+        {
+            return "Installed " + name + "'s dashboard again. Restart SimHub to load it.";
+        }
+
+        public static string ReinstallFailed(string name, string error)
+        {
+            return "Could not install " + name + "'s dashboard: " + error;
         }
     }
 }

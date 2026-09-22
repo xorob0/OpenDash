@@ -384,6 +384,45 @@ namespace OpenDashPlugin.Tests
             }
         }
 
+        /// <summary>
+        /// The name a driver gave a stock screen goes back over the title its package carries.
+        /// </summary>
+        /// <remarks>
+        /// Reported from a rig: after an update, the screens were listed in SimHub under names their
+        /// owner had never chosen, which from the outside looks exactly like the dashboards having
+        /// disappeared. A stock screen's folder is a package's own and is installed byte for byte, so
+        /// every update handed SimHub the package's title again. The name lives in the settings file,
+        /// so it is simply written back afterwards.
+        /// </remarks>
+        [Fact]
+        public void A_stock_screen_keeps_the_name_its_owner_gave_it()
+        {
+            // Installed as the stock screen is: no ScreenTarget at all, so the package's own title is
+            // what SimHub would list.
+            PackageExtractor.Install(Instanceable("OpenDash 1280x480", "Face1280x480"), root, null);
+            var folder = Templates("OpenDash 1280x480");
+            var metadata = Path.Combine(folder, "OpenDash 1280x480.djson.metadata");
+            var main = Path.Combine(folder, "OpenDash 1280x480.djson");
+            Assert.Contains("\"Title\":\"OpenDash 1280x480\"", File.ReadAllText(metadata));
+
+            Assert.True(PackageExtractor.Retitle(root, "OpenDash 1280x480", "Main dash", null));
+            // Both places SimHub reads one: the sidecar the dashboard list shows, and the copy inside
+            // the .djson that Dash Studio shows once it is open.
+            Assert.Contains("\"Title\":\"Main dash\"", File.ReadAllText(metadata));
+            Assert.Contains("\"Title\":\"Main dash\"", File.ReadAllText(main));
+            // And nothing else moved: the bindings are the package's own, because the folder is.
+            Assert.Contains("[OpenDash.Face1280x480ZoneA]", File.ReadAllText(main));
+
+            // Asked for again, it writes nothing. This runs over every screen on every start, and the
+            // caller fingerprints whatever it touches, so "no change" has to mean no write.
+            Assert.False(PackageExtractor.Retitle(root, "OpenDash 1280x480", "Main dash", null));
+
+            // Nothing to do where there is no folder, no name, or no screen of that name.
+            Assert.False(PackageExtractor.Retitle(root, "OpenDash Rim", "Rim", null));
+            Assert.False(PackageExtractor.Retitle(root, "OpenDash 1280x480", "  ", null));
+            Assert.False(PackageExtractor.Retitle(root, null, "Main dash", null));
+        }
+
         [Fact]
         public void The_stock_screen_is_written_byte_for_byte()
         {

@@ -39,13 +39,20 @@ namespace OpenDashPlugin
         /// package, or an instanced folder would read as somebody's own work on the very next start and
         /// the update path would refuse to touch it for ever.
         /// </remarks>
+        /// <param name="holdsAuthoredWork">
+        /// True when the folder about to be replaced is one somebody has edited, so the copy set aside
+        /// outlives the next install rather than being reclaimed by it. The panel passes what its own
+        /// fingerprint check found; the startup path, which only ever writes a folder that is missing,
+        /// has nothing to replace and leaves it false.
+        /// </param>
         public static ScreenInstallResult Write(
             ScreenInstance screen,
             IPackageSource packages,
             string simHubRoot,
             IFolderRecord record,
             IInstallLog log,
-            bool force = false)
+            bool force = false,
+            bool holdsAuthoredWork = false)
         {
             log = log ?? NullInstallLog.Instance;
             var result = new ScreenInstallResult { Folder = screen?.Folder };
@@ -67,7 +74,7 @@ namespace OpenDashPlugin
             {
                 using (var package = packages.Open(name))
                 {
-                    PackageExtractor.Install(package, simHubRoot, log, false, new PackageExtractor.ScreenTarget
+                    PackageExtractor.Install(package, simHubRoot, log, holdsAuthoredWork, new PackageExtractor.ScreenTarget
                     {
                         Folder = screen.Folder,
                         Title = screen.Name,
@@ -88,6 +95,52 @@ namespace OpenDashPlugin
                 log.Error("Writing the screen " + screen.Name + " failed: " + ex);
             }
             return result;
+        }
+
+        /// <summary>
+        /// Writes the screen's name into the dashboard SimHub already has, and remembers what it wrote.
+        /// </summary>
+        /// <remarks>
+        /// The repair for the one thing Write does not own: a stock screen's folder belongs to a package
+        /// and DashboardInstaller writes it byte for byte, title and all, so every update replaced the
+        /// driver's name for that screen with the package's and the screen left SimHub's dashboard list
+        /// under a name its owner had never chosen. This runs after the installer has had its turn and
+        /// puts the name back, over a folder that is otherwise exactly what was shipped.
+        ///
+        /// Only over a folder we can vouch for, which is what makes it safe to run on every start. A
+        /// folder whose fingerprint has moved holds somebody's own work -- their own title, quite
+        /// possibly -- and editing one string of it and then recording the result as ours would turn
+        /// "ask before replacing your work" into replacing it silently at the next update. There is
+        /// nothing to repair there in any case: the reinstall on the Edit panel writes the whole folder.
+        /// </remarks>
+        /// <returns>Whether the title on disk changed.</returns>
+        public static bool Retitle(ScreenInstance screen, string simHubRoot, IFolderRecord record, IInstallLog log)
+        {
+            log = log ?? NullInstallLog.Instance;
+            if (screen == null || string.IsNullOrEmpty(screen.Folder)) return false;
+            try
+            {
+                var folder = PackageExtractor.InstalledFolder(simHubRoot, screen.Folder);
+                var recorded = record == null ? null : record.Get(screen.Folder);
+                // Null on either side is "we cannot vouch for this", which is the same bias
+                // PackageStatus.Edited takes and for the same reason.
+                if (recorded == null || !string.Equals(recorded, FolderFingerprint.Of(folder), StringComparison.Ordinal))
+                {
+                    return false;
+                }
+                if (!PackageExtractor.Retitle(simHubRoot, screen.Folder, screen.Name, log)) return false;
+                // Recorded again, because the fingerprint taken at install is of the package's title.
+                // Leaving it would make every renamed screen read as somebody's own work from the next
+                // start on, and the update path would hold it back for ever rather than ask.
+                record.Set(screen.Folder, FolderFingerprint.Of(folder));
+                log.Info("Listed " + screen.Folder + " under " + screen.Name + " again.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                log.Warn("Could not write the name " + screen.Name + " into " + screen.Folder + ": " + ex.Message);
+                return false;
+            }
         }
 
         /// <summary>

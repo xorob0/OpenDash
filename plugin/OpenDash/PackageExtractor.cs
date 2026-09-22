@@ -154,8 +154,10 @@ namespace OpenDashPlugin
         /// because reserialising a scene graph through a JSON library we do not control is how
         /// formatting, number precision and property order quietly change underneath SimHub.
         /// </remarks>
-        private static void WriteTitle(string folder, string folderName, string title, IInstallLog log)
+        /// <returns>Whether either file actually changed.</returns>
+        private static bool WriteTitle(string folder, string folderName, string title, IInstallLog log)
         {
+            var changed = false;
             foreach (var name in new[] { folderName + MetadataExtension, folderName + DashExtension })
             {
                 var path = Path.Combine(folder, name);
@@ -167,8 +169,39 @@ namespace OpenDashPlugin
                     log.Warn("No Title in " + name + "; SimHub will list this screen under its folder name.");
                     continue;
                 }
+                // Compared rather than written blind, because Retitle runs over every screen on every
+                // start and the caller re-fingerprints whatever this touches. A write that changes
+                // nothing would still be a folder to hash again, on a rig, at startup.
+                if (string.Equals(replaced, text, StringComparison.Ordinal)) continue;
                 File.WriteAllText(path, replaced);
+                changed = true;
             }
+            return changed;
+        }
+
+        /// <summary>
+        /// Puts a screen's name back into the dashboard already installed under a folder.
+        /// </summary>
+        /// <remarks>
+        /// A stock screen's folder is a package's own and is written byte for byte, so it carries the
+        /// title the design gave the package. A driver who renamed one got that title back at the next
+        /// update or reinstall, and their screen left SimHub's dashboard list under the name they knew
+        /// it by -- which looks exactly like the dashboard disappearing. The name lives in the settings
+        /// file, so it can simply be written again afterwards, over a folder that is otherwise the
+        /// package's own.
+        ///
+        /// The caller records the folder again when this returns true: the fingerprint taken at install
+        /// is of the package's title, and leaving it would make every renamed screen read as somebody's
+        /// own work and be held back from every future update.
+        /// </remarks>
+        /// <returns>Whether the folder was there and its title changed.</returns>
+        public static bool Retitle(string simHubRoot, string folderName, string title, IInstallLog log)
+        {
+            log = log ?? NullInstallLog.Instance;
+            if (string.IsNullOrWhiteSpace(folderName) || string.IsNullOrWhiteSpace(title)) return false;
+            var folder = InstalledFolder(simHubRoot, folderName);
+            if (!Directory.Exists(folder)) return false;
+            return WriteTitle(folder, folderName, title, log);
         }
 
         /// <summary>Replaces the first JSON string value after a key, or null when the key is not there.</summary>
