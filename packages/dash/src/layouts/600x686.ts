@@ -33,7 +33,7 @@ const PIT_LIMITER = { width: 272, height: ds.indicator.pitLimiter.height, topIns
 const slots = grid(GRID, COLS, ROWS, SLOT, RULE);
 
 export const layout600x686: Layout = {
-  folder: 'openDash slots 600x686',
+  folder: 'OpenDash slots 600x686',
   description: layoutDescription('rect', WIDTH, HEIGHT, slots.length),
   width: WIDTH,
   height: HEIGHT,

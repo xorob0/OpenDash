@@ -23,7 +23,7 @@ SimHub, runs each scenario past it once and writes the file here. `--frames`, `-
 going to be committed, since a trace recorded at a different rate is not comparable with the
 others.
 
-It installs the openDash plugin before it records anything, because every `[OpenDash.*]` property a
+It installs the OpenDash plugin before it records anything, because every `[OpenDash.*]` property a
 face reads is published by that plugin, and a trace recorded without it would be missing a third of
 its columns.
 

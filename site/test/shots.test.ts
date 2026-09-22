@@ -17,7 +17,7 @@ import { MODULE_CATALOGUE } from '../../packages/dash/src/contract.ts';
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const shots = path.join(repoRoot, 'site', 'public', 'shots');
 
-/** `openDash 1280x480` -> `opendash-1280x480`, which is what sync-shots names a capture. */
+/** `OpenDash 1280x480` -> `opendash-1280x480`, which is what sync-shots names a capture. */
 const slug = (folder: string): string =>
   folder.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -47,7 +47,7 @@ describe('package captures', () => {
     const manifest = (await Bun.file(manifestPath).json()) as { packages: { folder: string }[] };
     // The superseded card faces are built for comparison on a rig and never shown, so they are
     // never photographed either; lib/packages.ts filters them out of every listing.
-    const shipped = manifest.packages.filter((p) => !p.folder.startsWith('openDash slots '));
+    const shipped = manifest.packages.filter((p) => !p.folder.startsWith('OpenDash slots '));
     expect(shipped.length).toBeGreaterThan(0);
     for (const pkg of shipped) {
       expect(existsSync(path.join(shots, `${slug(pkg.folder)}-green.png`))).toBe(true);

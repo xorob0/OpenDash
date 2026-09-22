@@ -40,12 +40,12 @@ export type LedCentre = 'rpm' | 'brake' | 'throttleBrake' | 'fuel';
 /**
  * How the rev ladder fills the strip.
  *
- * The three openDash styles decide the *look*, never the *when*: the thresholds are the car's own
+ * The three OpenDash styles decide the *look*, never the *when*: the thresholds are the car's own
  * either way (ADR 0014), and a style only chooses which LED takes which rung and what colour it is.
  *
  * `car` is not one of those. It is the car's own bar -- its LEDs, its colours, its order, its
  * flash, in the gear it is in -- from a table the plugin fetches (ADR 0018), and it is the default
- * because openDash's opinion is that the car is right. A car with no table, or a rig with no
+ * because OpenDash's opinion is that the car is right. A car with no table, or a rig with no
  * plugin, falls back to the ladder iRacing publishes, drawn `leftToRight`.
  */
 export type LedRpmStyle = 'car' | 'leftToRight' | 'meetInMiddle' | 'f1';
@@ -221,7 +221,7 @@ export const LED_SPOTTER_WHOLE_SETTING = 'LedSpotterWhole';
  * driver has asked for it, and the sim is in a gear it can draw. The one gate the mirror layer of
  * every strip profile hangs on, and false for all five of the ways there can be no mirror -- no
  * plugin, no tables fetched, no entry for the car, an entry that would not read, or a driver who
- * chose one of openDash's own styles.
+ * chose one of OpenDash's own styles.
  */
 export const LED_MIRROR_READY = 'LedMirrorReady';
 
@@ -561,7 +561,7 @@ export const revBarSettingName = (face: FaceSize): string => `${facePrefix(face)
  * in the driver's hands wants it on the one and certainly not on the other.
  *
  * Three values and not the canvas's four. `off`, `race` and `all` are answerable from
- * `SessionTypeName`, which iRacing publishes as `Race` for the one session type openDash can name
+ * `SessionTypeName`, which iRacing publishes as `Race` for the one session type OpenDash can name
  * with certainty; a `practice` value would have to match a set of spellings -- lone, open, offline
  * testing, warmup -- that no committed trace carries, and a value that silently never matches is
  * worse than a value that is not offered. The absent one is recorded in the report rather than
@@ -642,7 +642,7 @@ export function zoneProperties(): string[] {
  * Bit `i` of a zone's mask, as arithmetic rather than as a bitwise operator.
  *
  * NCalc's grammar has `>>` and `&`, and `(mask >> i) & 1` would be half the characters. It is not
- * used because nothing in openDash has ever evaluated one on the VM, and an expression SimHub
+ * used because nothing in OpenDash has ever evaluated one on the VM, and an expression SimHub
  * cannot evaluate does not fail: it draws the empty string. That is the `left([Class], 4)` bug
  * that shipped for months and is why `ncalcFunctions.ts` exists. `truncate(x / n) % 2` is the same
  * question in three things the packages already rely on everywhere.
@@ -874,7 +874,7 @@ export const COMPANION_PAGE_SETTING = 'CompanionPage';
  * **Nothing on a companion reads the page any more, and that is deliberate.**
  *
  * SimHub's only touch gesture on a dashboard maps a tap to the previous or next *screen*, and its
- * navigation walks the screens whose expression is true. While openDash enabled exactly one of the
+ * navigation walks the screens whose expression is true. While OpenDash enabled exactly one of the
  * twenty-one, that list had one member and a tap did nothing at all. So the rotation alone decides
  * which screens exist and SimHub decides which of them is up.
  *
@@ -888,7 +888,7 @@ export const COMPANION_PAGE_IS_UNREAD = true;
 /**
  * `CompanionOpenOn`: the module to force, or -1 for none. The start module, recovered.
  *
- * **openDash can still choose a screen; it just cannot choose it twice.** SimHub re-evaluates every
+ * **OpenDash can still choose a screen; it just cannot choose it twice.** SimHub re-evaluates every
  * screen's expression each frame and moves off one that has stopped being enabled -- the mechanism
  * the companion ran on before, and the reason the old gate worked at all. So leaving exactly one
  * module enabled still forces SimHub onto it. The plugin holds this at the start module for a few
@@ -897,7 +897,7 @@ export const COMPANION_PAGE_IS_UNREAD = true;
  *
  * What it does *not* recover is the held glance, and the difference is memory rather than control.
  * Going to a module is one forced selection; coming back is a second one, to whichever module the
- * driver had been on -- and now that SimHub owns the paging, openDash does not know what that is.
+ * driver had been on -- and now that SimHub owns the paging, OpenDash does not know what that is.
  * SimHub publishes no property naming the selected screen. Its own navigation stack does know, and
  * `Dashboard.GotoScreen` uses it, but that method is internal. #362.
  */
@@ -1231,7 +1231,7 @@ export const secondScreen = {
  * decided by the corner the data cable enters, and duplicating them would produce two places that
  * disagree. The guide documents them instead.
  *
- * Presets are not here either. openDash has no store: a setting *is* a SimHub property, which is
+ * Presets are not here either. OpenDash has no store: a setting *is* a SimHub property, which is
  * what makes it readable by anything and changeable while driving. A preset is a set of values with
  * a name, which is a different feature with its own storage, its own migration and its own failure
  * when a property is added.
@@ -1346,7 +1346,7 @@ export const flagBoxMatrixProperties = (matrix: FlagBoxMatrix): string[] =>
 /**
  * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a
  * flag box probably owns other lights, and "how bright are my lights and is it night" is one
- * answer for a rig rather than one per device. If openDash ever ships a second profile it reads
+ * answer for a rig rather than one per device. If OpenDash ever ships a second profile it reads
  * these same three properties; naming them per device now would mean renaming a public interface
  * later, which ADR 0003 says a property name is.
  */
@@ -1355,7 +1355,7 @@ export const LIGHTS_NIGHT_BRIGHTNESS_SETTING = 'LightsNightBrightness';
 export const LIGHTS_NIGHT_MODE_SETTING = 'LightsNightMode';
 
 /**
- * How few laps of fuel is low, for every light openDash drives rather than for the box alone.
+ * How few laps of fuel is low, for every light OpenDash drives rather than for the box alone.
  *
  * Named `Lights*` for the reason the three above are: one threshold answers "am I low" for the
  * strip, the rev bar and the box, and three copies of it would be three places to disagree.

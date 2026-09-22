@@ -5,15 +5,15 @@ alongside, and the warnings you would otherwise miss. This page takes you from a
 anti-static bag to a box showing flags.
 
 [design/flag-box.md](design/flag-box.md) is what every picture means and why.
-[ADR 0013](decisions/0013-lighting-hardware.md) is why openDash ships one at all.
+[ADR 0013](decisions/0013-lighting-hardware.md) is why OpenDash ships one at all.
 
 ## What you need
 
 An **8x8 WS2812b matrix** on an Arduino — 64 addressable LEDs on one data pin, wired to **D6**.
 These are sold ready made by several small makers and printed by plenty of people from the free
-models. SimHub drives them natively; openDash only supplies what they show.
+models. SimHub drives them natively; OpenDash only supplies what they show.
 
-You also need SimHub itself, and openDash's plugin if you want to change any of the settings from
+You also need SimHub itself, and OpenDash's plugin if you want to change any of the settings from
 the panel. The profile works without the plugin: every setting it reads has a default built in.
 
 ## 1. Add the device in SimHub, and set its position first
@@ -29,7 +29,7 @@ In SimHub, open **Arduino / RGB LEDs** and add your matrix. Then set, on the dev
 | **Serpentine** | Alternate rows run backwards. A chequered flag comes out as diagonal stripes and the gear looks shredded. |
 
 Which values are right depends on **the corner your data cable enters**, which is a fact about
-your box and not about the profile. That is why openDash does not have rotation or serpentine on
+your box and not about the profile. That is why OpenDash does not have rotation or serpentine on
 its own settings page: two places to set them would be two places to disagree, and SimHub's are the
 ones the hardware actually obeys.
 
@@ -40,35 +40,35 @@ wrong, nothing below will be right.
 
 Open SimHub's left menu, find **OpenDash**, scroll to **Lights**, and press **Install into SimHub**.
 
-That adds openDash's profile to SimHub's matrix profiles. Then pick it on your matrix device, the
-same way you would pick any profile. It never touches a profile you made yourself: openDash only
+That adds OpenDash's profile to SimHub's matrix profiles. Then pick it on your matrix device, the
+same way you would pick any profile. It never touches a profile you made yourself: OpenDash only
 recognises its own, by the id it stamps into it.
 
 The button says what it will do before you press it — *Install*, *Update*, or *Reinstall* — and the
-line beside it says what SimHub holds now. **openDash never installs it on its own.** A profile
+line beside it says what SimHub holds now. **OpenDash never installs it on its own.** A profile
 paints hardware you own, and that is a thing to be asked about rather than assumed; the reasoning is
 in [ADR 0013](decisions/0013-lighting-hardware.md).
 
-When openDash updates, the button offers **Update in SimHub**. Updating replaces the copy in SimHub,
-**including any changes you made to it there** — openDash cannot tell an edited copy from an
+When OpenDash updates, the button offers **Update in SimHub**. Updating replaces the copy in SimHub,
+**including any changes you made to it there** — OpenDash cannot tell an edited copy from an
 untouched one, so if you have customised it in SimHub's LED editor, copy it under a new name first.
 
 ### If the button is greyed out
 
 It says why beside it. The usual cause is that SimHub's matrix settings could not be reached — an
-older SimHub, or the serial dash plugin not loaded. openDash also writes the profile to a file:
+older SimHub, or the serial dash plugin not loaded. OpenDash also writes the profile to a file:
 
 ```
-SimHub\OpenDash\openDash Flag box.ledsprofile
+SimHub\OpenDash\OpenDash Flag box.ledsprofile
 ```
 
 The path is shown under the button. Import that file through SimHub's own profile import on your
 matrix device, and everything below works the same way. That file is also what you copy to a second
-machine, and what to open if you want to read what openDash is asking your hardware to do.
+machine, and what to open if you want to read what OpenDash is asking your hardware to do.
 
 ## 3. Say which box is which
 
-SimHub composes up to **four matrix contents**, so you can run more than one box. openDash gives
+SimHub composes up to **four matrix contents**, so you can run more than one box. OpenDash gives
 each one its own settings on the **Lights** page.
 
 Out of the box, matrix 1 does everything and 2 to 4 are off, which is the right answer for one box.
@@ -82,7 +82,7 @@ Out of the box, matrix 1 does everything and 2 to 4 are off, which is the right 
 | **Car warnings** | Let low fuel, oil and water take this panel. |
 | **Mounting side** | `Both`, `Left` or `Right`. |
 | **Critical flags only** | Quiet until something matters. Drops the chequer, the white, the green and the start gantry; keeps everything that means slow down or is addressed to you. |
-| **Oil / Water temperature warning** | In **your own unit**. Leave them at 0 and openDash uses the right default for whichever unit SimHub is set to: 120 °C or 248 °F for oil, 110 °C or 230 °F for water. |
+| **Oil / Water temperature warning** | In **your own unit**. Leave them at 0 and OpenDash uses the right default for whichever unit SimHub is set to: 120 °C or 248 °F for oil, 110 °C or 230 °F for water. |
 
 **Mounting side is the one to get right.** It is where the box physically is, not what you want it to
 show. A box on the left of your wheel that lights for a car on your *right* is worse than no box at
@@ -96,7 +96,7 @@ A two-box setup people build on day one: one in each corner of the monitor stand
 
 | | |
 |---|---|
-| **Brightness** / **Night brightness** / **Night mode** | These are for the whole rig, not just this box. Sixty-four LEDs at full output beside a wheel in a dark room is genuinely too bright; night mode is a switch you flip, not a time of day openDash guesses at. |
+| **Brightness** / **Night brightness** / **Night mode** | These are for the whole rig, not just this box. Sixty-four LEDs at full output beside a wheel in a dark room is genuinely too bright; night mode is a switch you flip, not a time of day OpenDash guesses at. |
 | **Low fuel warning** | Laps left in the tank, not litres — litres mean nothing without knowing the car. One number for the whole rig: the box, the screens' fuel telltale and the pop-up all use it. |
 | **Spotter bar animation** | Off by default. On, the bar grows inwards from the edge instead of simply being there. |
 
@@ -159,15 +159,15 @@ for; the honest answer is that the data is not there, not that it was forgotten.
 | Virtual safety car | iRacing has no VSC. The full-course caution is drawn and is a different thing. |
 | White for a slow car | iRacing's white flag is the last lap and nothing else. |
 | Incident, penalty, drive through, stop and go | None is a flag in the data. iRacing says them with the black flag and with text; the box shows the black flag. |
-| A countdown to your pit box | The most loved thing on any flag box, and iRacing publishes no distance to your own stall. Working one out from track position is a calculation openDash refuses to do until a decision record says otherwise. |
+| A countdown to your pit box | The most loved thing on any flag box, and iRacing publishes no distance to your own stall. Working one out from track position is a calculation OpenDash refuses to do until a decision record says otherwise. |
 | Ten to go, five to go, one lap to green | Published, but session information rather than flags. The screen has the room to say them in words; drawing a numeral here would fight the gear. |
-| Two cars on one side | iRacing distinguishes it; SimHub folds it away before openDash sees it. Three spotter states ship rather than a fourth faked. |
+| Two cars on one side | iRacing distinguishes it; SimHub folds it away before OpenDash sees it. Three spotter states ship rather than a fourth faked. |
 
 **No acknowledgement of a warning.** A low fuel light stays until you have fuel. That is
 deliberate: it sits *below* the flags and cannot hide one, which is the version of this feature
 that matters.
 
-**No themes, no presets, no custom idle picture.** openDash ships one opinionated look; the
+**No themes, no presets, no custom idle picture.** OpenDash ships one opinionated look; the
 reasoning is in [scope.md](scope.md).
 
 ## If it looks wrong
@@ -176,7 +176,7 @@ reasoning is in [scope.md](scope.md).
 |---|---|
 | Nothing at all, ever | The profile is not installed, or not selected on the device. Step 2. |
 | A single dim dot in the middle | The box is working and the car's ignition is off. That mark exists so this is not confused with a broken profile. |
-| Everything sideways, mirrored or shredded | Rotation or serpentine on the *device*. Step 1, not the openDash panel. |
+| Everything sideways, mirrored or shredded | Rotation or serpentine on the *device*. Step 1, not the OpenDash panel. |
 | The gear is dark but flags work | That matrix's **Idle display** is `Dark`. |
 | A car alongside lights the wrong box | **Mounting side** is set to the side you want rather than the side the box is on. |
 | The chequered flag never shows | That matrix's **Critical flags only** is on. It is not a critical flag. |
@@ -184,7 +184,7 @@ reasoning is in [scope.md](scope.md).
 
 ## Honesty about what has been checked
 
-No 8x8 panel is plugged into openDash's test machine, and CI owns no hardware.
+No 8x8 panel is plugged into OpenDash's test machine, and CI owns no hardware.
 [scope.md](scope.md)'s definition of done states that exception rather than leaving it implied.
 Every picture on this page is checked by tests and rendered into `build/flag-box.svg`, and the
 whole catalogue can be driven in the emulator — but **the profile has not yet been watched running

@@ -172,7 +172,7 @@ namespace OpenDashPlugin
         /// the mirror a generated profile could not do: <c>RPMSegments</c> blinks on SimHub's redline
         /// at a delay baked into the file, and the cars that flash at all do it at one of five
         /// different speeds. 47 of the 85 do not flash, and say so with a zero — for them this is
-        /// false at any RPM, because a flash the car never gives is a warning openDash invented.</para>
+        /// false at any RPM, because a flash the car never gives is a warning OpenDash invented.</para>
         /// </summary>
         public static bool OverRev(CarLightTable table, CarLightGear row, double rpm)
         {

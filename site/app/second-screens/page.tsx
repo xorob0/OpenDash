@@ -52,7 +52,7 @@ export default function SecondScreens() {
               <Reveal key={p.folder} delay={i * 80} className={styles.item}>
                 <Shot
                   src={shotFor(p.folder)}
-                  alt={`The openDash companion at ${sizeLabel(p)}`}
+                  alt={`The OpenDash companion at ${sizeLabel(p)}`}
                   width={p.width}
                   height={p.height}
                   caption={`${p.folder} · ${sizeLabel(p)}`}
@@ -98,7 +98,7 @@ export default function SecondScreens() {
               <Reveal key={p.folder} delay={i * 80} className={styles.item}>
                 <Shot
                   src={shotFor(p.folder)}
-                  alt={`The openDash pit wall at ${sizeLabel(p)}`}
+                  alt={`The OpenDash pit wall at ${sizeLabel(p)}`}
                   width={p.width}
                   height={p.height}
                   caption={`${p.folder} · ${sizeLabel(p)}`}
@@ -120,7 +120,7 @@ export default function SecondScreens() {
               than drawing zeros, which is the only version of those pages worth having.
             </p>
             <p>
-              openDash is tested against iRacing. The telemetry is SimHub’s, so other sims will very
+              OpenDash is tested against iRacing. The telemetry is SimHub’s, so other sims will very
               probably work — but iRacing is the one it claims.
             </p>
           </SectionHead>

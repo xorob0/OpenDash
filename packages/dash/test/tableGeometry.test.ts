@@ -37,7 +37,7 @@ const CELL_GAP = 0;
  * stopped producing; they passed, which is what a literal copied out of a build does until the
  * build moves under it.
  */
-const COMPANION_PAGE = contentRect(companionGeometry(COMPANION_SIZES.find((s) => s.folder === 'openDash Companion')!).module, 'companion');
+const COMPANION_PAGE = contentRect(companionGeometry(COMPANION_SIZES.find((s) => s.folder === 'OpenDash Companion')!).module, 'companion');
 
 
 interface Board {

@@ -13,8 +13,8 @@ describe('reading the arguments', () => {
   });
 
   test('packages and scenarios are comma separated lists', () => {
-    expect(parseArgs(['--packages', 'openDash,openDash 850x480', '--scenarios', 'green,yellow'])).toMatchObject({
-      packages: ['openDash', 'openDash 850x480'],
+    expect(parseArgs(['--packages', 'OpenDash,OpenDash 850x480', '--scenarios', 'green,yellow'])).toMatchObject({
+      packages: ['OpenDash', 'OpenDash 850x480'],
       scenarios: ['green', 'yellow'],
     });
   });
@@ -37,7 +37,7 @@ describe('reading the arguments', () => {
   });
 
   test('help wins over everything else', () => {
-    expect(parseArgs(['--packages', 'openDash', '--help'])).toEqual({ help: true });
+    expect(parseArgs(['--packages', 'OpenDash', '--help'])).toEqual({ help: true });
   });
 });
 
@@ -52,10 +52,10 @@ describe('which packages a bare run walks', () => {
   });
 
   test('the zone face is among them, under the name it now ships as', () => {
-    // Since #169 the zone face is plain "openDash"; the card face it replaced says "slots", and
+    // Since #169 the zone face is plain "OpenDash"; the card face it replaced says "slots", and
     // both are captured while the two are being compared.
-    expect(FACES).toContain('openDash');
-    expect(FACES).toContain('openDash slots 1920x480');
+    expect(FACES).toContain('OpenDash');
+    expect(FACES).toContain('OpenDash slots 1920x480');
   });
 
   test('every one of them is a package the opener knows how to click', () => {
@@ -65,16 +65,16 @@ describe('which packages a bare run walks', () => {
 
 describe('what a capture is called', () => {
   test('numbered, so a listing reads in the order the loop ran', () => {
-    expect(shotName(1, 'openDash', 'green')).toBe('01-opendash-green.png');
-    expect(shotName(12, 'openDash', 'green')).toBe('12-opendash-green.png');
+    expect(shotName(1, 'OpenDash', 'green')).toBe('01-opendash-green.png');
+    expect(shotName(12, 'OpenDash', 'green')).toBe('12-opendash-green.png');
   });
 
   test('the package and the scenario are in the name, so a file needs no caption', () => {
-    expect(shotName(4, 'openDash 850x480', 'yellow')).toBe('04-opendash-850x480-yellow.png');
+    expect(shotName(4, 'OpenDash 850x480', 'yellow')).toBe('04-opendash-850x480-yellow.png');
   });
 
   test('a name with spaces and a round size still makes one path segment', () => {
-    expect(shotName(9, 'openDash 480 round', 'pit')).toBe('09-opendash-480-round-pit.png');
+    expect(shotName(9, 'OpenDash 480 round', 'pit')).toBe('09-opendash-480-round-pit.png');
   });
 
   test('every face produces a distinct file name in one scenario', () => {

@@ -17,13 +17,13 @@ import {
 } from '../src/serialize.ts';
 import { dashboard, ellipse, label, layer, numeral, rect, samplePackage, screen, widget } from './fixtures.ts';
 
-const CTX = { packageName: 'openDash' };
+const CTX = { packageName: 'OpenDash' };
 
 const COMMON_TAIL = ['Left', 'Top', 'Width', 'Height', 'Visible', 'BackgroundColor', 'BorderStyle', 'Id', 'Name', 'RenderingSkip', 'MinimumRefreshIntervalMS'];
 
 describe('document shape', () => {
   test('top-level keys follow the SimHub 9.12 order', () => {
-    const doc = buildDashboardObject(dashboard('openDash', [screen('Main', [rect('r')])]), CTX);
+    const doc = buildDashboardObject(dashboard('OpenDash', [screen('Main', [rect('r')])]), CTX);
     expect(Object.keys(doc)).toEqual([
       'Version', 'Id', 'BaseHeight', 'BaseWidth', 'BackgroundColor', 'Screens', 'SnapToGrid', 'HideLabels', 'ShowForeground',
       'ForegroundOpacity', 'ShowBackground', 'BackgroundOpacity', 'ShowBoundingRectangles', 'GridSize', 'Images', 'Metadata',
@@ -43,7 +43,7 @@ describe('document shape', () => {
   });
 
   test('screen keys follow the SimHub 9.12 order and roles default to true', () => {
-    const d = dashboard('openDash', [screen('Main', [rect('r')])]);
+    const d = dashboard('OpenDash', [screen('Main', [rect('r')])]);
     const s = buildScreenObject(d.screens[0]!, d, CTX);
     expect(Object.keys(s)).toEqual([
       'RenderingSkip', 'Name', 'InGameScreen', 'IdleScreen', 'PitScreen', 'ScreenId', 'AllowOverlays', 'IsForegroundLayer',
@@ -61,7 +61,7 @@ describe('document shape', () => {
   });
 
   test('screen roles, enabled expression and background can be set', () => {
-    const d = dashboard('openDash', [screen('Idle', [rect('r')], { inGame: false, idle: true, pit: false, enabledExpression: '[X] = 1', backgroundColor: '#000000' })]);
+    const d = dashboard('OpenDash', [screen('Idle', [rect('r')], { inGame: false, idle: true, pit: false, enabledExpression: '[X] = 1', backgroundColor: '#000000' })]);
     const s = buildScreenObject(d.screens[0]!, d, CTX);
     expect(s.InGameScreen).toBe(false);
     expect(s.PitScreen).toBe(false);
@@ -70,7 +70,7 @@ describe('document shape', () => {
   });
 
   test('serializeDashboard is 2-space indented JSON of the object', () => {
-    const d = dashboard('openDash', [screen('Main', [rect('r')])]);
+    const d = dashboard('OpenDash', [screen('Main', [rect('r')])]);
     const text = serializeDashboard(d, CTX);
     expect(text.startsWith('{\n  "Version": 2,\n  "Id": "')).toBe(true);
     expect(JSON.parse(text)).toEqual(buildDashboardObject(d, CTX));
@@ -79,11 +79,11 @@ describe('document shape', () => {
 
 describe('metadata', () => {
   test('has every field of the sidecar with the screen roles as indexes', () => {
-    const d = dashboard('openDash', [
+    const d = dashboard('OpenDash', [
       screen('A', [rect('r')], { inGame: true, idle: false, pit: true }),
       screen('B', [rect('r')], { inGame: false, idle: true, pit: false }),
       screen('C', [rect('r')]),
-    ], { metadata: { title: 'openDash', author: 'openDash contributors', version: '0.1.0', simHubVersion: '9.12.6', description: 'd', category: 'Race', mainPreviewIndex: 2 } });
+    ], { metadata: { title: 'OpenDash', author: 'OpenDash contributors', version: '0.1.0', simHubVersion: '9.12.6', description: 'd', category: 'Race', mainPreviewIndex: 2 } });
     const m = buildMetadataObject(d);
     expect(Object.keys(m)).toEqual([
       'SimHubVersion', 'Category', 'Title', 'Description', 'Author', 'Width', 'Height', 'DashboardVersion', 'ScreenCount',
@@ -91,7 +91,7 @@ describe('metadata', () => {
       'MetadataVersion', 'EnableOnDashboardMessaging', 'PreferredTouchMode',
     ]);
     expect(m).toMatchObject({
-      SimHubVersion: '9.12.6', Category: 'Race', Title: 'openDash', Description: 'd', Author: 'openDash contributors',
+      SimHubVersion: '9.12.6', Category: 'Race', Title: 'OpenDash', Description: 'd', Author: 'OpenDash contributors',
       Width: 1920, Height: 480, DashboardVersion: '0.1.0', ScreenCount: 3,
       InGameScreensIndexs: [0, 2], IdleScreensIndexs: [1, 2], PitScreensIndexs: [0, 2],
       MainPreviewIndex: 2, IsOverlay: false, OverlaySizeWarning: true, MetadataVersion: 2, EnableOnDashboardMessaging: false, PreferredTouchMode: 0,
@@ -99,14 +99,14 @@ describe('metadata', () => {
   });
 
   test('optional fields are null and the preview index defaults to 0', () => {
-    const m = buildMetadataObject(dashboard('openDash', [screen('Main', [rect('r')])]));
+    const m = buildMetadataObject(dashboard('OpenDash', [screen('Main', [rect('r')])]));
     expect(m.Category).toBeNull();
     expect(m.Description).toBeNull();
     expect(m.MainPreviewIndex).toBe(0);
   });
 
   test('the sidecar equals the Metadata key of the document', () => {
-    const d = dashboard('openDash', [screen('Main', [rect('r')])]);
+    const d = dashboard('OpenDash', [screen('Main', [rect('r')])]);
     expect(JSON.parse(serializeMetadata(d))).toEqual(buildDashboardObject(d, CTX).Metadata);
   });
 });
@@ -294,7 +294,7 @@ describe('defaults are omitted', () => {
 
 describe('colours', () => {
   test('#RRGGBB becomes #FFRRGGBB everywhere', () => {
-    const d = dashboard('openDash', [screen('Main', [
+    const d = dashboard('OpenDash', [screen('Main', [
       label('t', 'X', { textColor: '#33d9f2', backgroundColor: '#0a0b0d', border: { color: '#ffffff', top: 1 } }),
     ], { backgroundColor: '#14161a' })], { backgroundColor: '#060708' });
     const doc = buildDashboardObject(d, CTX);
@@ -363,32 +363,32 @@ describe('bindings', () => {
 
 describe('stable ids', () => {
   test('dashboard, screen and item ids derive from their paths', () => {
-    const d = dashboard('openDash', [screen('Main', [rect('rule'), layer('L', [rect('inner')])])]);
+    const d = dashboard('OpenDash', [screen('Main', [rect('rule'), layer('L', [rect('inner')])])]);
     const doc = buildDashboardObject(d, CTX);
-    expect(doc.Id).toBe(stableGuid('openDash/openDash'));
+    expect(doc.Id).toBe(stableGuid('OpenDash/OpenDash'));
     const s = (doc.Screens as Record<string, unknown>[])[0]!;
-    expect(s.ScreenId).toBe(stableGuid('openDash/openDash/Main'));
+    expect(s.ScreenId).toBe(stableGuid('OpenDash/OpenDash/Main'));
     const items = s.Items as Record<string, unknown>[];
-    expect(items[0]!.Id).toBe(stableGuid('openDash/openDash/Main/rule'));
-    expect(items[1]!.Id).toBe(stableGuid('openDash/openDash/Main/L'));
-    expect((items[1]!.Childrens as Record<string, unknown>[])[0]!.Id).toBe(stableGuid('openDash/openDash/Main/L/inner'));
+    expect(items[0]!.Id).toBe(stableGuid('OpenDash/OpenDash/Main/rule'));
+    expect(items[1]!.Id).toBe(stableGuid('OpenDash/OpenDash/Main/L'));
+    expect((items[1]!.Childrens as Record<string, unknown>[])[0]!.Id).toBe(stableGuid('OpenDash/OpenDash/Main/L/inner'));
   });
 
   test('the package name is part of the path', () => {
-    const d = dashboard('openDash', [screen('Main', [rect('r')])]);
+    const d = dashboard('OpenDash', [screen('Main', [rect('r')])]);
     expect(buildDashboardObject(d, { packageName: 'a' }).Id).not.toBe(buildDashboardObject(d, { packageName: 'b' }).Id);
   });
 
   test('explicit ids are kept and children of an explicitly identified layer still derive from the path', () => {
     const id = '0123abcd-0123-4123-8123-0123456789ab';
-    const d = dashboard('openDash', [screen('Main', [layer('L', [rect('c')], { id })], { id })], { id });
+    const d = dashboard('OpenDash', [screen('Main', [layer('L', [rect('c')], { id })], { id })], { id });
     const doc = buildDashboardObject(d, CTX);
     expect(doc.Id).toBe(id);
     const s = (doc.Screens as Record<string, unknown>[])[0]!;
     expect(s.ScreenId).toBe(id);
     const l = (s.Items as Record<string, unknown>[])[0]!;
     expect(l.Id).toBe(id);
-    expect((l.Childrens as Record<string, unknown>[])[0]!.Id).toBe(stableGuid('openDash/openDash/Main/L/c'));
+    expect((l.Childrens as Record<string, unknown>[])[0]!.Id).toBe(stableGuid('OpenDash/OpenDash/Main/L/c'));
   });
 
   test('two serialisations are byte-identical', () => {

@@ -1,4 +1,4 @@
-// SettingsControl.Install.Lights.cs: the "Lights openDash can install" section of the Install tab -- one
+// SettingsControl.Install.Lights.cs: the "Lights OpenDash can install" section of the Install tab -- one
 // row per light profile the build carries, in the shape the canvas gives it.
 //
 // Lifted out of SettingsControl.Install.cs beside the package rows and the plugin's own section, so the
@@ -30,7 +30,7 @@ namespace OpenDashPlugin
         private Button flagBoxCopyButton;
         private TextBox flagBoxPath;
 
-        private const string LightsSectionLabel = "Lights openDash can install";
+        private const string LightsSectionLabel = "Lights OpenDash can install";
 
         private FrameworkElement BuildLightsSection()
         {
@@ -86,7 +86,7 @@ namespace OpenDashPlugin
                 {
                     flagBoxButton = button;
                     flagBoxButton.ToolTip =
-                        "Adds openDash's profile. Your own profiles are never changed.";
+                        "Adds OpenDash's profile. Your own profiles are never changed.";
                 });
         }
 
@@ -255,7 +255,7 @@ namespace OpenDashPlugin
         /// there is something to import when the matrix driver cannot be reached, so it could not go with
         /// the sentence it used to sit beside. It is under the rows rather than in one because the canvas
         /// draws a row as a name, a state and one button, and because it answers for the flag box alone:
-        /// no strip profile is ever written to the openDash folder.
+        /// no strip profile is ever written to the OpenDash folder.
         ///
         /// Built only in the state that needs it, rather than built and hidden, so that a section with
         /// nothing to fall back to does not carry the gap of a block nobody can see.
@@ -289,7 +289,7 @@ namespace OpenDashPlugin
                 Width = 320,
                 IsReadOnly = true,
                 Text = plugin.FlagBox?.Path ?? string.Empty,
-                ToolTip = "Where openDash left the profile.",
+                ToolTip = "Where OpenDash left the profile.",
             };
             // The kit's field chrome, so a path that is read rather than typed still reads as the same
             // shape as the number boxes on the other tabs, and carries the ring a keyboard needs.

@@ -61,7 +61,7 @@ namespace OpenDashPlugin.Tests
         /// The plugin's own half, which says the opposite about the one point that matters.
         /// </summary>
         /// <remarks>
-        /// A loaded assembly cannot be replaced under a running process, so the new openDash is put in
+        /// A loaded assembly cannot be replaced under a running process, so the new OpenDash is put in
         /// place once SimHub closes. The sentence used to be past tense -- "was updated too; it takes
         /// effect the next time you start SimHub" -- under a pill that had already flipped to up to date
         /// and a version number that had already moved, and a rig read all of that as "done" and never
@@ -88,7 +88,7 @@ namespace OpenDashPlugin.Tests
             // And no account of why, in the dialog any more than in the caption.
             Assert.DoesNotContain("cannot replace its own code", question);
             // It survives not knowing which version it is offering.
-            Assert.Contains("openDash itself", UpdateWording.RestartQuestion(null));
+            Assert.Contains("OpenDash itself", UpdateWording.RestartQuestion(null));
 
             Assert.Contains("SimHub", UpdateWording.RestartTitle);
             Assert.Contains("Restart SimHub", UpdateWording.RestartLater);

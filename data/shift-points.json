@@ -10,7 +10,7 @@
       "first <= shift <= last <= blink, all in RPM. The build refuses an entry that is not ordered, so a typo fails the check rather than a race.",
       "A car that is not here is not broken: it gets the ladder iRacing publishes for it, which is right for most cars."
     ],
-    "empty": "There are no entries yet, and that is deliberate rather than unfinished. openDash does not carry measurements it has not made: a competitor's tables are theirs, and inventing numbers would put a shift light in the wrong place with total confidence. The mechanism ships so that a measured car can be added as a reviewable pull request."
+    "empty": "There are no entries yet, and that is deliberate rather than unfinished. OpenDash does not carry measurements it has not made: a competitor's tables are theirs, and inventing numbers would put a shift light in the wrong place with total confidence. The mechanism ships so that a measured car can be added as a reviewable pull request."
   },
   "cars": {}
 }

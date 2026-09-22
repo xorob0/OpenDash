@@ -1,6 +1,6 @@
 // LedTargets.cs: every set of RGB LEDs SimHub can install a profile into, and how to save each one.
 //
-// **This file exists because "install" meant one device and said "SimHub".** openDash installed strip
+// **This file exists because "install" meant one device and said "SimHub".** OpenDash installed strip
 // profiles into `SerialDashPlugin.Settings.RGBLedsDriver`, which is `new RGBLedsDriver(
 // "PluginsData\Common\ArduinoRGBLedsSettings.json")` -- the Arduino RGB LEDs device and nothing else.
 // A wheel with LEDs in its rim is not that device. It is a `LedModuleDevice` under SimHub's Devices

@@ -86,7 +86,7 @@ They carry the `readability-pass` label.
 | XOR-40 | [#91](https://github.com/xorob0/OpenDash/issues/91) | Canceled | Cards: tyre wear and brake temperatures |
 | XOR-41 | [#92](https://github.com/xorob0/OpenDash/issues/92) | Canceled | Cards: inputs, car settings, DRS or push to pass |
 | XOR-42 | [#93](https://github.com/xorob0/OpenDash/issues/93) | Canceled | Cards: weather and clock |
-| XOR-43 | [#94](https://github.com/xorob0/OpenDash/issues/94) | Canceled | Cards that need openDash to compute: fuel calculator, stint, energy, damage |
+| XOR-43 | [#94](https://github.com/xorob0/OpenDash/issues/94) | Canceled | Cards that need OpenDash to compute: fuel calculator, stint, energy, damage |
 | XOR-44 | [#95](https://github.com/xorob0/OpenDash/issues/95) | Canceled | Card: launch, for the start and the pit exit |
 | XOR-45 | [#96](https://github.com/xorob0/OpenDash/issues/96) | Backlog | The rev bar in its well, and spotter indicators at its ends |
 | XOR-46 | [#97](https://github.com/xorob0/OpenDash/issues/97) | Canceled | Slot presets: a named layout per discipline, and per car |
@@ -124,7 +124,7 @@ They carry the `readability-pass` label.
 | XOR-78 | [#129](https://github.com/xorob0/OpenDash/issues/129) | Backlog | Colour vision: presets that work, and meaning that is not only colour |
 | XOR-79 | [#130](https://github.com/xorob0/OpenDash/issues/130) | Backlog | Rewrite the brand document as the default, not the law |
 | XOR-80 | [#131](https://github.com/xorob0/OpenDash/issues/131) | Backlog | Advanced: edit any token, at whichever layer you mean it |
-| XOR-81 | [#132](https://github.com/xorob0/OpenDash/issues/132) | Backlog | Build your own openDash: a token set through CI |
+| XOR-81 | [#132](https://github.com/xorob0/OpenDash/issues/132) | Backlog | Build your own OpenDash: a token set through CI |
 | XOR-82 | [#133](https://github.com/xorob0/OpenDash/issues/133) | Done | Pit wall header: a bound label is boxed from its sample, so the real value clips |
 | XOR-83 | [#134](https://github.com/xorob0/OpenDash/issues/134) | Done | ncalc.left() is not a SimHub function, so the chips draw nothing |
 | XOR-84 | [#135](https://github.com/xorob0/OpenDash/issues/135) | Done | The settings contract gains zones, and keeps its slots until the cards go |
@@ -161,7 +161,7 @@ They carry the `readability-pass` label.
 | XOR-115 | [#166](https://github.com/xorob0/OpenDash/issues/166) | Done | SimHub cannot draw an SVG, so the generator needs an image item |
 | XOR-116 | [#167](https://github.com/xorob0/OpenDash/issues/167) | Backlog | Four tickets need to show something for three seconds, and the format gives only blink |
 | XOR-117 | [#168](https://github.com/xorob0/OpenDash/issues/168) | Done | Every rectangular face is the same five parts |
-| XOR-118 | [#169](https://github.com/xorob0/OpenDash/issues/169) | Done | The zone face takes the name openDash |
+| XOR-118 | [#169](https://github.com/xorob0/OpenDash/issues/169) | Done | The zone face takes the name OpenDash |
 | XOR-119 | [#170](https://github.com/xorob0/OpenDash/issues/170) | Backlog | An rc.2 user's twelve slot properties cannot vanish without a release of warning |
 | XOR-120 | [#171](https://github.com/xorob0/OpenDash/issues/171) | Backlog | Scenarios for behaviour, not for photographs: wet, endurance, the start and the edges |
 | XOR-121 | [#172](https://github.com/xorob0/OpenDash/issues/172) | Backlog | A driver name longer than its column has nowhere to go |
@@ -177,9 +177,9 @@ They carry the `readability-pass` label.
 | XOR-131 | [#182](https://github.com/xorob0/OpenDash/issues/182) | Done | Two update tests would still pass if the all-or-nothing guarantee were removed |
 | XOR-132 | [#183](https://github.com/xorob0/OpenDash/issues/183) | Done | A background-thread test races its own assertion and can go red for no reason |
 | XOR-133 | [#184](https://github.com/xorob0/OpenDash/issues/184) | Done | A stale plugin/OpenDash/Resources makes dotnet test fail after every branch switch |
-| XOR-134 | [#185](https://github.com/xorob0/OpenDash/issues/185) | Done | The product is called OpenDash, and half the repository calls it openDash |
+| XOR-134 | [#185](https://github.com/xorob0/OpenDash/issues/185) | Done | The product is called OpenDash, and half the repository calls it OpenDash |
 | XOR-135 | [#186](https://github.com/xorob0/OpenDash/issues/186) | Done | The README is written for a contributor, and the person deciding whether to install sees no screenshots |
-| XOR-136 | [#187](https://github.com/xorob0/OpenDash/issues/187) | Done | openDash has a wordmark and no logo |
+| XOR-136 | [#187](https://github.com/xorob0/OpenDash/issues/187) | Done | OpenDash has a wordmark and no logo |
 | XOR-137 | [#188](https://github.com/xorob0/OpenDash/issues/188) | Backlog | Touch: a tap on a zone cycles it, on the face, the pit wall and the companion |
 | XOR-138 | [#189](https://github.com/xorob0/OpenDash/issues/189) | Backlog | The rev bar off entirely, and a top of the face that does not look cropped |
 | XOR-139 | [#190](https://github.com/xorob0/OpenDash/issues/190) | Backlog | `bun run shots` says it captures ten faces and captures eighteen |
@@ -268,7 +268,7 @@ They carry the `readability-pass` label.
 | XOR-222 | [#273](https://github.com/xorob0/OpenDash/issues/273) | Backlog | Northeast Dirt Modifieds theme: gauges and dials, and the rock screen |
 | XOR-223 | [#274](https://github.com/xorob0/OpenDash/issues/274) | Backlog | Dirt Micro Sprint theme: the smallest instrument panel on dirt |
 | XOR-224 | [#275](https://github.com/xorob0/OpenDash/issues/275) | Done | The .ledsprofile format, reverse-engineered far enough to generate one |
-| XOR-225 | [#276](https://github.com/xorob0/OpenDash/issues/276) | Done | ADR 0013: openDash lights hardware, and the flag box is where it starts |
+| XOR-225 | [#276](https://github.com/xorob0/OpenDash/issues/276) | Done | ADR 0013: OpenDash lights hardware, and the flag box is where it starts |
 | XOR-226 | [#277](https://github.com/xorob0/OpenDash/issues/277) | Done | The flag box package: one 8x8 profile, built from source and installed like a dash |
 | XOR-227 | [#278](https://github.com/xorob0/OpenDash/issues/278) | Done | The flag catalogue, drawn sixty-four pixels at a time |
 | XOR-228 | [#279](https://github.com/xorob0/OpenDash/issues/279) | Backlog | The gear on the matrix, with the shift model as its colour |
@@ -294,7 +294,7 @@ They carry the `readability-pass` label.
 | XOR-248 | [#299](https://github.com/xorob0/OpenDash/issues/299) | In Progress | The lights page in the panel: brightness, night mode, and what each strip shows |
 | XOR-249 | [#300](https://github.com/xorob0/OpenDash/issues/300) | Backlog | Out of the car: the idle animation and the engine start |
 | XOR-250 | [#301](https://github.com/xorob0/OpenDash/issues/301) | Backlog | Seeing the lights without owning the hardware |
-| XOR-251 | [#302](https://github.com/xorob0/OpenDash/issues/302) | Duplicate | Scope: openDash ships lights as well as screens |
+| XOR-251 | [#302](https://github.com/xorob0/OpenDash/issues/302) | Duplicate | Scope: OpenDash ships lights as well as screens |
 | XOR-252 | [#303](https://github.com/xorob0/OpenDash/issues/303) | Backlog | bun run dev cannot open a dashboard, because SimHub does not stay up |
 | XOR-253 | [#304](https://github.com/xorob0/OpenDash/issues/304) | Backlog | main is red: the unreadable-folder test asserts the old spelling of the name |
 | XOR-254 | [#305](https://github.com/xorob0/OpenDash/issues/305) | Backlog | Nothing says which Bun the lockfile needs, and CI floats on the newest |

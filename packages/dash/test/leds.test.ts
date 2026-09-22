@@ -1,8 +1,8 @@
 /**
- * The LED profiles openDash generates: the strip shapes, the rev ladder and its styles, and the
+ * The LED profiles OpenDash generates: the strip shapes, the rev ladder and its styles, and the
  * effect catalogue. The rule under most of this is that a light which cannot come on is worse than
  * one that is absent — a dark LED reads as "not happening" rather than "not known" — so several of
- * these tests exist to prove openDash refuses to draw something rather than to prove it draws it.
+ * these tests exist to prove OpenDash refuses to draw something rather than to prove it draws it.
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
@@ -191,7 +191,7 @@ describe('the rev ladder and its styles', () => {
       const group = walk(profile.containers).find((c) => c.description === `style: ${style}`)!;
       // `car` keeps its ladders one level further down, as the fallback beside the car's own bar.
       // That bar is not a ladder and is not this test's subject: its colours and its over-rev flash
-      // are the fetched table's rather than openDash's, so what is asserted here is the ladder the
+      // are the fetched table's rather than OpenDash's, so what is asserted here is the ladder the
       // strip falls back to, which is the same tree the other three styles are.
       const fallback = leds.childrenOf(group).find((c) => c.description?.startsWith('no table for this car'));
       const ladders = style === 'car' ? leds.childrenOf(fallback!) : leds.childrenOf(group);
@@ -314,7 +314,7 @@ describe("the car's own lights", () => {
   });
 
   test("the car's own bar is what a strip shows unless the driver says otherwise", () => {
-    // ADR 0018: openDash's opinion is that the car is right. The three openDash styles stay, for a
+    // ADR 0018: OpenDash's opinion is that the car is right. The three OpenDash styles stay, for a
     // driver who wants one look in every car -- and for every car with no table, which is what the
     // fallback inside `car` draws.
     expect(LED_RPM_STYLES[0]).toBe('car');
@@ -674,7 +674,7 @@ describe('every generated profile', () => {
 
   test('obeys the rig brightness, which the flag box had to itself until now', () => {
     // LightsBrightness, LightsNightBrightness and LightsNightMode are captioned "for every light
-    // openDash drives", and a wheel strip and a brow read none of the three: the composed expression
+    // OpenDash drives", and a wheel strip and a brow read none of the three: the composed expression
     // had one reader, the matrix. The assertion is against contract.ts rather than against a copy of
     // what it is believed to emit, so the strip and the box cannot come to hold two brightnesses.
     for (const shape of ALL_SHAPES) {
@@ -847,23 +847,23 @@ describe('every generated profile', () => {
     // Four functions and no fifth: rpmOnly was retired into rpm, so nothing gates on it any more.
     expect(text).not.toContain(RETIRED_LED_CENTRE);
     // Ids are stableGuid of a path, so a rebuild never churns them and SimHub never sees a duplicate.
-    const ids = ALL_SHAPES.map((s) => rpmStripProfile(s, stableGuid(`openDash/leds/${s.id}`)).profileId);
+    const ids = ALL_SHAPES.map((s) => rpmStripProfile(s, stableGuid(`OpenDash/leds/${s.id}`)).profileId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(rpmStripProfile(shapeById('3-9-3')!, stableGuid('openDash/leds/3-9-3')).profileId).toBe(stableGuid('openDash/leds/3-9-3'));
+    expect(rpmStripProfile(shapeById('3-9-3')!, stableGuid('OpenDash/leds/3-9-3')).profileId).toBe(stableGuid('OpenDash/leds/3-9-3'));
   });
 
   test('names itself after the shape, in the form SimHub lists', () => {
-    expect(rpmStripProfileName(shapeById('4-14-4')!)).toBe('openDash 4/14/4');
+    expect(rpmStripProfileName(shapeById('4-14-4')!)).toBe('OpenDash 4/14/4');
     // A brow is a bare run and is named as one: 0/25/0, which is the whole of what it is.
-    expect(rpmStripProfileName(shapeById('0-25-0')!)).toBe('openDash 0/25/0');
-    expect(rpmStripFileName(shapeById('4-14-4')!)).toBe('openDash 4-14-4');
+    expect(rpmStripProfileName(shapeById('0-25-0')!)).toBe('OpenDash 0/25/0');
+    expect(rpmStripFileName(shapeById('4-14-4')!)).toBe('OpenDash 4-14-4');
   });
 });
 
 describe('the per-gear shift table', () => {
   test('the shipped table is valid, and being empty is a legitimate state', () => {
     expect(validateShiftTable()).toEqual([]);
-    // Empty is deliberate: openDash does not carry measurements it has not made, and a competitor's
+    // Empty is deliberate: OpenDash does not carry measurements it has not made, and a competitor's
     // tables are theirs. The mechanism ships so a measured car can arrive as a pull request.
     expect(Object.keys(SHIFT_TABLE)).toEqual([]);
   });

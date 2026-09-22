@@ -9,14 +9,14 @@ import styles from './page.module.css';
 export const metadata: Metadata = {
   title: 'The twenty-one pages',
   description:
-    'Lap times, delta, sectors, speedo, fuel, tyres, pit view, car settings, inputs, session, radar, track, leaderboard, relative, opponents, gear, stint and lap history — the pages every openDash zone can show, and the companion shows one at a time.',
+    'Lap times, delta, sectors, speedo, fuel, tyres, pit view, car settings, inputs, session, radar, track, leaderboard, relative, opponents, gear, stint and lap history — the pages every OpenDash zone can show, and the companion shows one at a time.',
 };
 
 /** Why a module that ships off ships off. Three of them, and each has a different reason. */
 const OFF_REASON: Record<string, string> = {
   energy: 'Virtual energy is a Le Mans Ultimate value. iRacing publishes none, so the page would draw zeros.',
   damage: 'iRacing reports no per-panel damage over the SDK, so there is nothing for the drawing to colour.',
-  trackRivals: 'Segment-by-segment comparison against the field is not a SimHub value; it would have to be computed from a history openDash does not keep.',
+  trackRivals: 'Segment-by-segment comparison against the field is not a SimHub value; it would have to be computed from a history OpenDash does not keep.',
 };
 
 export default function Modules() {
@@ -48,7 +48,7 @@ export default function Modules() {
               <Reveal key={m.id} delay={Math.min(i % 3, 3) * 70} className={styles.card}>
                 <Shot
                   src={`/shots/module-${m.id}.png`}
-                  alt={`The ${m.name} module on the openDash companion`}
+                  alt={`The ${m.name} module on the OpenDash companion`}
                   width={850}
                   height={480}
                   sizes="(min-width: 75rem) 26rem, (min-width: 48rem) 40vw, 100vw"

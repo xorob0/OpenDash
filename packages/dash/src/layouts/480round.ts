@@ -18,7 +18,7 @@ import { roundLayout } from './round.ts';
 const SIZE = 480;
 
 export const layout480round: Layout = roundLayout({
-  folder: 'openDash 480 round',
+  folder: 'OpenDash 480 round',
   size: SIZE,
   revArc: { r: 206, segment: { width: 22, height: 14 } },
   // The gap between the two slots, not the whole disc, so that the gear component can tell

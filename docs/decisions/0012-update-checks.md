@@ -12,12 +12,12 @@ a record stating exactly what is sent and how it is switched off. It also says t
 falling under one of those lines is declined however well it is written, so this record comes
 before the code rather than beside it.
 
-The refusal is worth reversing. A user installs openDash once and then never learns that anything
+The refusal is worth reversing. A user installs OpenDash once and then never learns that anything
 improved, because there is no installer, no account and no channel back to them. Both comparable
 dashboards solve this inside the plugin, and it costs no server of ours, since the releases are
 already on GitHub.
 
-Reversing it is nonetheless the first thing openDash does that touches the network at all, and it
+Reversing it is nonetheless the first thing OpenDash does that touches the network at all, and it
 sits directly against a stronger line in the same document: nothing leaves the user's machine. That
 line is about telemetry rather than about HTTP, but the distinction is exactly the kind a user
 feels lied to by if it is never written down.
@@ -42,7 +42,7 @@ pull requests whose shape this repository does not control; #76 replaced it with
 before that change still carries the generated summary, so a consumer must not assume either
 shape.
 
-**Asset names contain spaces**, for instance `openDash Pit wall portrait.simhubdash`, and GitHub
+**Asset names contain spaces**, for instance `OpenDash Pit wall portrait.simhubdash`, and GitHub
 rewrites them on upload. A consumer must match on what the API reports rather than on the name on
 disk.
 
@@ -63,8 +63,8 @@ answers in about a third of a second with roughly 55 KB for two releases, and an
 full.
 
 **Two details of the release assets that an implementation will otherwise get wrong.** GitHub
-rewrites every space in an asset name to a period on upload, so `openDash Pit wall
-portrait.simhubdash` is published as `openDash.Pit.wall.portrait.simhubdash`. Mapping a package
+rewrites every space in an asset name to a period on upload, so `OpenDash Pit wall
+portrait.simhubdash` is published as `OpenDash.Pit.wall.portrait.simhubdash`. Mapping a package
 folder to its asset is therefore a forward substitution and is unambiguous; reversing it is not, so
 the lookup only ever goes forwards. The folder name *inside* the zip keeps its spaces, so what the
 installer reads out of the package is unaffected. Moreover `browser_download_url` answers 302 to a
@@ -81,7 +81,7 @@ SimHub calls `Init` on.
 
 ## Decision
 
-**openDash asks GitHub what the newest release is, sends nothing about the user, never installs
+**OpenDash asks GitHub what the newest release is, sends nothing about the user, never installs
 anything without being told to, and can be switched off before it ever asks.**
 
 Point by point, because the point of this record is that each is written down.
@@ -90,7 +90,7 @@ Point by point, because the point of this record is that each is written down.
 `https://api.github.com/repos/xorob0/OpenDash/releases`, the list endpoint rather than
 `releases/latest`, which does not answer while every release is a pre-release. The response gives
 the tag, the body and the asset download URLs, which is everything both the check and the one-click
-update need. There is no openDash server, and there will not be one for this.
+update need. There is no OpenDash server, and there will not be one for this.
 
 A user running a stable version is not offered a pre-release. A user already running a pre-release
 is, since they have opted into that by installing one.
@@ -98,7 +98,7 @@ is, since they have opted into that by installing one.
 **What is sent.** Nothing beyond what an HTTPS request unavoidably carries: the user's IP address,
 reaching GitHub and not us. No identifier, no installation id, no machine fingerprint, no usage
 counting, no error reporting. The mandatory `User-Agent` names the product and its version,
-`openDash/<version>`, because the API rejects a request without one; it says what the software is
+`OpenDash/<version>`, because the API rejects a request without one; it says what the software is
 and nothing about who is running it. Nothing is logged anywhere but the user's own SimHub log.
 
 This is the whole of it, and it is deliberately small enough to state in one sentence in the panel.
@@ -120,7 +120,7 @@ change at all in the panel, which goes on showing the installed version. No dial
 retry, no wall of exceptions, and above all no delay to SimHub's start, since the request never
 runs on the thread that starts it. A rig with no network is a normal rig rather than an error.
 
-**Whether openDash installs by itself.** It does not, ever. The check reports, and a person
+**Whether OpenDash installs by itself.** It does not, ever. The check reports, and a person
 chooses. This is the line that matters most for something a driver relies on mid-season, and it is
 why #157 is a button rather than a background updater. An update applied without asking is
 indistinguishable, from the seat, from the dashboard breaking.
@@ -137,14 +137,14 @@ fetches per-user rather than per-release, is a new decision and not an extension
 
 **A rate limit that bites.** The anonymous GitHub API allows sixty requests an hour per address,
 which one check a day per user cannot approach. A shared address behind a large NAT could, and the
-answer would be caching a static file rather than an openDash server.
+answer would be caching a static file rather than an OpenDash server.
 
 ## Consequences
 
 ### Good
 
 #82 and #157 become writable, and with them the cheapest distribution improvement available:
-a user who already has openDash installed is exactly the user a dashboard manager does not help.
+a user who already has OpenDash installed is exactly the user a dashboard manager does not help.
 The promise that a `.simhubdash` is a complete product on its own is untouched, since a package
 still installs and renders with no plugin and no network.
 
@@ -153,7 +153,7 @@ defensible rather than merely convenient.
 
 ### Bad
 
-openDash now has a network path, and with it a class of failure it did not have: a hung socket, a
+OpenDash now has a network path, and with it a class of failure it did not have: a hung socket, a
 proxy that intercepts TLS, a corporate network that blocks GitHub. Each has to fail quietly, and
 quiet failure is harder to write and easier to get wrong than a loud one.
 
@@ -176,13 +176,13 @@ rather than from any evidence, and nothing depends on the exact figure.
 
 ## Amended, 2026-09-19: the swap worked; nobody was told it had to happen
 
-The "Unresolved" above is settled: the check does look at the plugin, and openDash replaces its own
+The "Unresolved" above is settled: the check does look at the plugin, and OpenDash replaces its own
 assembly (PluginUpdate). What that amendment did not settle is the part a user has to do, and 0.3.0-rc.4
 was reported as the update simply not working.
 
 It worked. The assembly was staged, the waiter was armed, and the swap happened correctly the next time
 SimHub closed. What did not happen was anybody being told that SimHub closing is the step. The whole of
-what said so was one caption at the foot of a long tab, written in the past tense -- "openDash itself was
+what said so was one caption at the foot of a long tab, written in the past tense -- "OpenDash itself was
 updated too; it takes effect the next time you start SimHub" -- underneath a pill that had already
 flipped to **up to date** and a version number that had already moved to the new release. Everything
 visible said the update was done. The one thing that still had to happen was not asked for.

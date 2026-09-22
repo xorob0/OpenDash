@@ -87,7 +87,7 @@ namespace OpenDashPlugin
         /// lived in a source comment. Two things are wrong with that. The visible one is that "the car's
         /// own" is the default bar style and its fallback is deliberately silent (ADR 0018 part 3), so a
         /// driver whose lights look generic had nothing to read and nothing to press. The other is the
-        /// licence: openDash carries none of this data, and the copy being the user's own is what makes
+        /// licence: OpenDash carries none of this data, and the copy being the user's own is what makes
         /// that work, which is a great deal truer of a press than of a background thread.
         ///
         /// The attribution stays underneath either way. CC BY-NC-SA 4.0 asks for it, and a driver is

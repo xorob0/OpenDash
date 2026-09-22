@@ -53,7 +53,7 @@ export interface AssetSource {
  * them, so the source arrives with its files and its licence in one commit and not before.
  */
 export const ASSET_SOURCES = {
-  openDash: { who: 'the openDash authors', licence: 'MIT' },
+  OpenDash: { who: 'the OpenDash authors', licence: 'MIT' },
 } as const satisfies Record<string, AssetSource>;
 
 export type AssetSourceId = keyof typeof ASSET_SOURCES;
@@ -80,7 +80,7 @@ export interface DashAsset {
  * in because an image item cannot be tinted, and the file covers the whole badge square so that
  * the item takes the badge's rect exactly.
  */
-export const WHEEL_CHANGE_TICK: DashAsset = { name: 'wheel-change-tick', file: 'wheel-change-tick.png', source: 'openDash' };
+export const WHEEL_CHANGE_TICK: DashAsset = { name: 'wheel-change-tick', file: 'wheel-change-tick.png', source: 'OpenDash' };
 
 /**
  * The two marks of a table's rank column: a car that has gained places, and one that has lost them.
@@ -96,8 +96,8 @@ export const WHEEL_CHANGE_TICK: DashAsset = { name: 'wheel-change-tick', file: '
  * rank column, and an image is stretched to its rect, so four times the drawn size is what keeps
  * the diagonals clean on a panel a pit wall scales.
  */
-export const RANK_UP: DashAsset = { name: 'rank-up', file: 'rank-up.png', source: 'openDash' };
-export const RANK_DOWN: DashAsset = { name: 'rank-down', file: 'rank-down.png', source: 'openDash' };
+export const RANK_UP: DashAsset = { name: 'rank-up', file: 'rank-up.png', source: 'OpenDash' };
+export const RANK_DOWN: DashAsset = { name: 'rank-down', file: 'rank-down.png', source: 'OpenDash' };
 
 /**
  * The two marks of a change notification: the setting the driver has just moved went up, or it went
@@ -112,8 +112,8 @@ export const RANK_DOWN: DashAsset = { name: 'rank-down', file: 'rank-down.png', 
  * Rendered at 56, which is the 14 px the notification draws them at times the four the rank marks
  * are rendered at.
  */
-export const TREND_UP: DashAsset = { name: 'trend-up', file: 'trend-up.png', source: 'openDash' };
-export const TREND_DOWN: DashAsset = { name: 'trend-down', file: 'trend-down.png', source: 'openDash' };
+export const TREND_UP: DashAsset = { name: 'trend-up', file: 'trend-up.png', source: 'OpenDash' };
+export const TREND_DOWN: DashAsset = { name: 'trend-down', file: 'trend-down.png', source: 'OpenDash' };
 
 /** Every asset a package may carry. */
 export const ASSETS: readonly DashAsset[] = [WHEEL_CHANGE_TICK, RANK_UP, RANK_DOWN, TREND_UP, TREND_DOWN];

@@ -109,7 +109,7 @@ const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0
 const expectedFiles = (folder: string, cards = true): string[] =>
   [...FONT_FILES, FONT_LICENCE.name, ...(cards ? [CARDS_FILE, `${CARDS_FILE}.metadata`] : []), `${folder}.djson`, `${folder}.djson.metadata`].sort(byCodeUnit);
 
-/** The reference card face, which since #169 is named for its slots rather than "openDash". */
+/** The reference card face, which since #169 is named for its slots rather than "OpenDash". */
 const REFERENCE_CARD_FACE = layout1920x480.folder;
 const EXPECTED_FILES = expectedFiles(REFERENCE_CARD_FACE);
 const FOLDERS = LAYOUTS.map((l) => l.folder);
@@ -204,37 +204,37 @@ describe('widget build on disk', () => {
     // Written out rather than derived, because a rename is exactly what this should catch. Since
     // #169 the card faces carry "slots" in their names and the zone faces carry the shipped ones;
     // the two round faces keep theirs, having no zone equivalent while #145 is undecided.
-    expect((manifest.packages as JsonItem[])[0]).toEqual({ folder: 'openDash slots 1920x480', kind: 'dash', width: 1920, height: 480, slots: 12, rung: 'L', file: 'openDash slots 1920x480.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash slots 850x480', kind: 'dash', width: 850, height: 480, slots: 6, rung: 'M', file: 'openDash slots 850x480.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 480 round', kind: 'dash', width: 480, height: 480, slots: 2, rung: 'S', file: 'openDash 480 round.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash slots 1280x480', kind: 'dash', width: 1280, height: 480, slots: 8, rung: 'M', file: 'openDash slots 1280x480.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash slots 1280x400', kind: 'dash', width: 1280, height: 400, slots: 8, rung: 'M', file: 'openDash slots 1280x400.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash slots 800x480', kind: 'dash', width: 800, height: 480, slots: 6, rung: 'M', file: 'openDash slots 800x480.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash slots 1280x720', kind: 'dash', width: 1280, height: 720, slots: 12, rung: 'M', file: 'openDash slots 1280x720.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash slots 800x286', kind: 'dash', width: 800, height: 286, slots: 4, rung: 'M', file: 'openDash slots 800x286.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash slots 600x686', kind: 'dash', width: 600, height: 686, slots: 6, rung: 'M', file: 'openDash slots 600x686.simhubdash' });
-    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'openDash 800 round', kind: 'dash', width: 800, height: 800, slots: 6, rung: 'M', file: 'openDash 800 round.simhubdash' });
+    expect((manifest.packages as JsonItem[])[0]).toEqual({ folder: 'OpenDash slots 1920x480', kind: 'dash', width: 1920, height: 480, slots: 12, rung: 'L', file: 'OpenDash slots 1920x480.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash slots 850x480', kind: 'dash', width: 850, height: 480, slots: 6, rung: 'M', file: 'OpenDash slots 850x480.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash 480 round', kind: 'dash', width: 480, height: 480, slots: 2, rung: 'S', file: 'OpenDash 480 round.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash slots 1280x480', kind: 'dash', width: 1280, height: 480, slots: 8, rung: 'M', file: 'OpenDash slots 1280x480.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash slots 1280x400', kind: 'dash', width: 1280, height: 400, slots: 8, rung: 'M', file: 'OpenDash slots 1280x400.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash slots 800x480', kind: 'dash', width: 800, height: 480, slots: 6, rung: 'M', file: 'OpenDash slots 800x480.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash slots 1280x720', kind: 'dash', width: 1280, height: 720, slots: 12, rung: 'M', file: 'OpenDash slots 1280x720.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash slots 800x286', kind: 'dash', width: 800, height: 286, slots: 4, rung: 'M', file: 'OpenDash slots 800x286.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash slots 600x686', kind: 'dash', width: 600, height: 686, slots: 6, rung: 'M', file: 'OpenDash slots 600x686.simhubdash' });
+    expect(manifest.packages as JsonItem[]).toContainEqual({ folder: 'OpenDash 800 round', kind: 'dash', width: 800, height: 800, slots: 6, rung: 'M', file: 'OpenDash 800 round.simhubdash' });
     expect((manifest.packages as JsonItem[]).map((p) => p.folder)).toEqual([
-      'openDash slots 1920x480',
-      'openDash slots 1280x480',
-      'openDash slots 1280x400',
-      'openDash slots 850x480',
-      'openDash slots 800x480',
-      'openDash slots 1280x720',
-      'openDash slots 800x286',
-      'openDash slots 600x686',
-      'openDash 480 round',
-      'openDash 800 round',
+      'OpenDash slots 1920x480',
+      'OpenDash slots 1280x480',
+      'OpenDash slots 1280x400',
+      'OpenDash slots 850x480',
+      'OpenDash slots 800x480',
+      'OpenDash slots 1280x720',
+      'OpenDash slots 800x286',
+      'OpenDash slots 600x686',
+      'OpenDash 480 round',
+      'OpenDash 800 round',
       // The zone faces follow the card faces in the manifest, in the same order LAYOUTS lists them,
       // so the two halves read alike for as long as both exist. They are the ones a user installs.
-      'openDash',
-      'openDash 1280x480',
-      'openDash 1280x400',
-      'openDash 850x480',
-      'openDash 800x480',
-      'openDash 1280x720',
-      'openDash 800x286',
-      'openDash 600x686',
+      'OpenDash',
+      'OpenDash 1280x480',
+      'OpenDash 1280x400',
+      'OpenDash 850x480',
+      'OpenDash 800x480',
+      'OpenDash 1280x720',
+      'OpenDash 800x286',
+      'OpenDash 600x686',
     ]);
     expect((manifest.packages as JsonItem[]).map((p) => p.folder).slice(10)).toEqual(ZONE_FACES.map((f) => f.folder));
     expect(manifest).toEqual(widget.manifest as unknown as JsonItem);
@@ -315,10 +315,10 @@ describe('widget build on disk', () => {
     }
     // The reference card face, which the zone face has taken the plain name from.
     expect(readJson(join(widget.out, REFERENCE_CARD_FACE, `${REFERENCE_CARD_FACE}.djson.metadata`))).toMatchObject({ Title: REFERENCE_CARD_FACE, Description: '1920 x 480, 12 slots', Width: 1920, Height: 480 });
-    // And the zone face now under it, which is what a user installing "openDash" gets.
-    expect(readJson(join(widget.out, 'openDash', 'openDash.djson.metadata'))).toMatchObject({ Title: 'openDash', Width: 1920, Height: 480 });
-    expect(readJson(join(widget.out, 'openDash 480 round', 'openDash 480 round.djson.metadata'))).toMatchObject({ Description: '2 slots, round', Width: 480, Height: 480 });
-    expect(readJson(join(widget.out, 'openDash 800 round', 'openDash 800 round.djson.metadata'))).toMatchObject({ Description: '6 slots, round', Width: 800, Height: 800 });
+    // And the zone face now under it, which is what a user installing "OpenDash" gets.
+    expect(readJson(join(widget.out, 'OpenDash', 'OpenDash.djson.metadata'))).toMatchObject({ Title: 'OpenDash', Width: 1920, Height: 480 });
+    expect(readJson(join(widget.out, 'OpenDash 480 round', 'OpenDash 480 round.djson.metadata'))).toMatchObject({ Description: '2 slots, round', Width: 480, Height: 480 });
+    expect(readJson(join(widget.out, 'OpenDash 800 round', 'OpenDash 800 round.djson.metadata'))).toMatchObject({ Description: '6 slots, round', Width: 800, Height: 800 });
   });
 
   test('the build log names every file written', () => {
@@ -368,7 +368,7 @@ describe('the emitted JSON', () => {
 
   test('the round faces write ellipses and rotated rectangles; Rotation follows Height and is never 0; the rectangular faces write neither', () => {
     const round = LAYOUTS.filter((l) => l.shape === 'round');
-    expect(round.map((l) => l.folder)).toEqual(['openDash 480 round', 'openDash 800 round']);
+    expect(round.map((l) => l.folder)).toEqual(['OpenDash 480 round', 'OpenDash 800 round']);
     for (const layout of round) {
       const doc = readJson(join(widget.out, layout.folder, `${layout.folder}.djson`));
       const items = itemsOfDocument(doc);
@@ -579,7 +579,7 @@ describe('second screens on disk', () => {
       expect(entry.slots).toBe(0);
       expect(Object.keys(entry)).toEqual(['folder', 'kind', 'width', 'height', 'slots', 'file']);
     }
-    expect(entries[0]).toEqual({ folder: 'openDash Companion', kind: 'companion', width: 850, height: 480, slots: 0, file: 'openDash Companion.simhubdash' });
+    expect(entries[0]).toEqual({ folder: 'OpenDash Companion', kind: 'companion', width: 850, height: 480, slots: 0, file: 'OpenDash Companion.simhubdash' });
   });
 
   test('every written .djson names its types first and normalises its colours', () => {
@@ -641,7 +641,7 @@ describe('the faces a package draws', () => {
     // The flag band writes its name in the artboards' 700. The round faces name no flag, drawing
     // the ring instead, and the nano's card face draws no label at all, so those three keep the
     // three the tokens name.
-    const NO_FLAG_NAME = ['openDash 480 round', 'openDash 800 round', 'openDash slots 800x286'];
+    const NO_FLAG_NAME = ['OpenDash 480 round', 'OpenDash 800 round', 'OpenDash slots 800x286'];
     for (const folder of [...FOLDERS, ...ZONE_FOLDERS]) {
       const expected = NO_FLAG_NAME.includes(folder) ? face : [...face, `${ds.font.label} Bold`].sort();
       expect([folder, drawn(join(widget.out, folder))]).toEqual([folder, expected]);
@@ -846,7 +846,7 @@ describe('what a released plugin embeds', () => {
   const attrs = /<EmbeddedResource\s+Include="Resources\/\*\.simhubdash"([^>]*)\/>/.exec(csproj)?.[1] ?? '';
   const exclusion = /Exclude="([^"]+)"/.exec(attrs)?.[1] ?? '';
 
-  /** A package folder matches an MSBuild glob of the `openDash slots *` shape. */
+  /** A package folder matches an MSBuild glob of the `OpenDash slots *` shape. */
   const excludedBy = (pattern: string, folder: string): boolean =>
     new RegExp(`^${pattern.replace('Resources/', '').replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`).test(`${folder}.simhubdash`);
 
@@ -876,6 +876,6 @@ describe('what a released plugin embeds', () => {
     // release, which is the shape of the bug this replaced.
     const script = readFileSync(join(import.meta.dir, '..', '..', '..', 'scripts', 'package.sh'), 'utf8');
     expect(script).toContain('cp build/*.simhubdash plugin/OpenDash/Resources/');
-    expect(script).not.toMatch(/^\s*case .*openDash slots/m);
+    expect(script).not.toMatch(/^\s*case .*OpenDash slots/m);
   });
 });

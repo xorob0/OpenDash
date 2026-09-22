@@ -32,7 +32,7 @@ namespace OpenDashPlugin
         /// new dashboards reading properties the old plugin does not attach.
         /// </remarks>
         public const string Restart =
-            "openDash itself was downloaded. Restart SimHub to finish updating.";
+            "OpenDash itself was downloaded. Restart SimHub to finish updating.";
 
         /// <summary>
         /// The dialog that asks, which is the whole of what was missing.
@@ -49,16 +49,16 @@ namespace OpenDashPlugin
 
         public static string RestartQuestion(string version)
         {
-            return "openDash " + (version ?? "itself") + " is downloaded, but until you restart SimHub "
+            return "OpenDash " + (version ?? "itself") + " is downloaded, but until you restart SimHub "
                 + "you are running the old version.\n\n"
                 + "Close SimHub now and start it again?";
         }
 
         /// <summary>Said after the driver says yes, in the moment before the window goes.</summary>
-        public const string RestartGoing = "Closing SimHub. It starts again with the new openDash.";
+        public const string RestartGoing = "Closing SimHub. It starts again with the new OpenDash.";
 
         /// <summary>Said after the driver says not now, and by the panel whenever a swap is waiting.</summary>
-        public const string RestartLater = "openDash is downloaded. Restart SimHub to finish updating.";
+        public const string RestartLater = "OpenDash is downloaded. Restart SimHub to finish updating.";
 
         /// <summary>Said when SimHub could not be closed from here, which leaves the swap exactly as it
         /// was: staged, armed, and waiting for a close the driver does themselves.</summary>

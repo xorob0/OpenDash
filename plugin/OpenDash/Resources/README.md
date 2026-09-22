@@ -14,9 +14,9 @@ should do unasked. [ADR 0013](../../../docs/decisions/0013-lighting-hardware.md)
 
 The extension is shared by SimHub's two lighting families, so most of the profiles here are not the
 flag box: one is the 8x8 matrix and the rest are the RPM strips, one per hardware shape. The flag
-box is picked out by its file name, `openDash Flag box.ledsprofile`, which is `FlagBoxProfile.FileName`
+box is picked out by its file name, `OpenDash Flag box.ledsprofile`, which is `FlagBoxProfile.FileName`
 in the plugin and `FLAG_BOX_PROFILE_NAME` in `packages/dash/src/leds/profile.ts`. Nothing may pick it
-out by sort order: `openDash 0-10-0.ledsprofile` sorts first, and taking that one would hand SimHub's
+out by sort order: `OpenDash 0-10-0.ledsprofile` sorts first, and taking that one would hand SimHub's
 matrix driver a ten-LED strip.
 
 `fonts/` is build output too, and for the same reason. The settings panel draws in the faces the

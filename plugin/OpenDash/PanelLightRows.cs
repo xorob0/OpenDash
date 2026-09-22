@@ -37,7 +37,7 @@ namespace OpenDashPlugin
         /// <summary>The generator's own id, "4-14-4" or "brow-9", from the resource's file name.</summary>
         public string ShapeId { get; private set; }
 
-        /// <summary>The profile's Name field, "openDash 4/14/4". Null when it could not be read.</summary>
+        /// <summary>The profile's Name field, "OpenDash 4/14/4". Null when it could not be read.</summary>
         public string ProfileName { get; private set; }
     }
 
@@ -130,7 +130,7 @@ namespace OpenDashPlugin
     {
         /// <summary>The section's own sentence, which is the rule ADR 0013's amendment records and the
         /// reason nothing is written to SimHub until a button is pressed.</summary>
-        public const string SectionCaption = "openDash never installs a profile on its own.";
+        public const string SectionCaption = "OpenDash never installs a profile on its own.";
 
         /// <summary>What the flag box row is under its name. The profile's own Name carries the name.</summary>
         public const string FlagBoxCaption = "8 × 8 matrix";
@@ -143,7 +143,7 @@ namespace OpenDashPlugin
         /// What a strip row says when SimHub's LED driver cannot be reached.
         /// </summary>
         /// <remarks>
-        /// Not <see cref="FlagBoxInstallPlan.Summary"/>, which offers the file in the openDash folder: the
+        /// Not <see cref="FlagBoxInstallPlan.Summary"/>, which offers the file in the OpenDash folder: the
         /// only profile ever written there is the flag box (FlagBoxProfile.Extract), so that sentence over a
         /// strip row would send a driver looking for a file that was never written. A state rather than an
         /// error, because nothing the driver does about it is here.
@@ -263,7 +263,7 @@ namespace OpenDashPlugin
             return count == 1 ? "strip, " + each : "strips, " + each;
         }
 
-        /// <summary>A group of lengths, named by its two ends: "openDash brow 9 … 25".</summary>
+        /// <summary>A group of lengths, named by its two ends: "OpenDash brow 9 … 25".</summary>
         private static LightRowPlan Range(IList<KeyValuePair<LightProfile, LightShape>> group, string one, string many)
         {
             var labels = group.Select(Label).ToList();
@@ -381,7 +381,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A grouped row reads as its worst member (FlagBoxInstallPlan.Combine), so the plural wording says
         /// "at least one of these" rather than claiming anything about the rest. The flag box keeps
-        /// FlagBoxInstallPlan.Summary, which is written about the one profile openDash also writes to disk.
+        /// FlagBoxInstallPlan.Summary, which is written about the one profile OpenDash also writes to disk.
         /// </remarks>
         public static string Tooltip(int members, FlagBoxInstallState state, string installedVersion)
         {

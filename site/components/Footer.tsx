@@ -47,7 +47,7 @@ export function Footer() {
             Licence 2.0.
           </p>
           <p className={styles.fine}>
-            SimHub is by SimHub / Wotever. openDash is not affiliated with it, with iRacing, or with
+            SimHub is by SimHub / Wotever. OpenDash is not affiliated with it, with iRacing, or with
             any sim.
           </p>
         </div>

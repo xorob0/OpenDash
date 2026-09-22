@@ -8,7 +8,7 @@
     <OutputType>Library</OutputType>
     <AssemblyName>OpenDashTraceRecorder</AssemblyName>
     <RootNamespace>OpenDashTraceRecorder</RootNamespace>
-    <Description>Records SimHub's property values frame by frame, for the openDash telemetry traces.</Description>
+    <Description>Records SimHub's property values frame by frame, for the OpenDash telemetry traces.</Description>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <Deterministic>true</Deterministic>

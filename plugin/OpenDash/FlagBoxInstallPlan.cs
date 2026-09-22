@@ -16,11 +16,11 @@ namespace OpenDashPlugin
         NotEmbedded,
         /// <summary>SimHub's matrix settings could not be reached; the file is on disk to import by hand.</summary>
         Unavailable,
-        /// <summary>SimHub has no openDash profile.</summary>
+        /// <summary>SimHub has no OpenDash profile.</summary>
         NotInstalled,
         /// <summary>SimHub has this exact version of it.</summary>
         UpToDate,
-        /// <summary>SimHub has an older openDash profile.</summary>
+        /// <summary>SimHub has an older OpenDash profile.</summary>
         Outdated,
         /// <summary>Installing failed; the message says why.</summary>
         Failed,
@@ -33,7 +33,7 @@ namespace OpenDashPlugin
 
         public string Name { get; set; }
 
-        /// <summary>The profile's Description, which carries the openDash version when we wrote it.</summary>
+        /// <summary>The profile's Description, which carries the OpenDash version when we wrote it.</summary>
         public string Description { get; set; }
     }
 
@@ -77,7 +77,7 @@ namespace OpenDashPlugin
         /// A state, not a failure. The install is correct either way -- the profile goes where SimHub
         /// saves it -- but while this is on, the device's own dropdown lists `BuiltInProfiles` and ours
         /// is not among them, so a driver is told they have installed something they cannot find. The
-        /// switch is the user's and openDash does not touch it (`UseBuiltInProfiles` has a private
+        /// switch is the user's and OpenDash does not touch it (`UseBuiltInProfiles` has a private
         /// setter in any case); what it can do is say which switch it is.
         /// </remarks>
         public static bool BuiltInModeOf(bool hasBuiltIn, bool useBuiltIn)
@@ -88,10 +88,10 @@ namespace OpenDashPlugin
         /// <summary>The sentence a row shows when the profile is installed but the device is listing the
         /// maker's built-in profiles instead.</summary>
         public const string BuiltInModeNote =
-            "Turn off built-in profiles on your device, or openDash's will not be listed.";
+            "Turn off built-in profiles on your device, or OpenDash's will not be listed.";
 
         /// <summary>Stamped into the profile's Author by the build; how we tell ours from the user's.</summary>
-        public const string Author = "openDash";
+        public const string Author = "OpenDash";
 
         /// <summary>The warning both presses owe the user. Update and Reinstall cost the same thing --
         /// the copy in SimHub goes, and whatever the user changed in it goes with it -- so the sentence
@@ -106,7 +106,7 @@ namespace OpenDashPlugin
         public static string VersionOf(string description)
         {
             if (string.IsNullOrEmpty(description)) return null;
-            const string marker = "Built by openDash ";
+            const string marker = "Built by OpenDash ";
             int at = description.IndexOf(marker, StringComparison.Ordinal);
             if (at < 0) return null;
             int start = at + marker.Length;
@@ -244,7 +244,7 @@ namespace OpenDashPlugin
                     return "This build ships no flag box profile.";
                 case FlagBoxInstallState.Unavailable:
                     return "SimHub's matrix settings are not available. Import it by hand from "
-                        + (path ?? "the openDash folder") + ".";
+                        + (path ?? "the OpenDash folder") + ".";
                 case FlagBoxInstallState.NotInstalled:
                     return "Not installed. Install it, then select it on your device.";
                 case FlagBoxInstallState.UpToDate:

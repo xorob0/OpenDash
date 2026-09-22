@@ -1,7 +1,7 @@
 /**
  * The per-gear shift table, and where it sits among the places a ladder can come from.
  *
- * ADR 0014 settled that openDash mirrors the car rather than carrying a table, and #284 amended
+ * ADR 0014 settled that OpenDash mirrors the car rather than carrying a table, and #284 amended
  * it: derived by default, a table overriding where one exists. This module is the table half.
  *
  * **The precedence, highest first, and what of it is built.** This is a description of the code as
@@ -21,7 +21,7 @@
  *      of a rung somebody may add, and is dead until something does.
  *
  *      `CarSettings_CurrentGearRedLineRPM` is a different matter and **does** appear in the build —
- *      in `openDash.simhubdash` and `openDash Companion.simhubdash`, the two packages that draw the
+ *      in `OpenDash.simhubdash` and `OpenDash Companion.simhubdash`, the two packages that draw the
  *      speedo page at a `wide` box and so keep its Redline field. `simhubRedlineRpm` in
  *      `../shift.ts` is its one body, and `redlineRpm` there prints it as the fallback for a car
  *      that publishes no ladder of its own. That is rung 4's world, not this rung: it is read as a

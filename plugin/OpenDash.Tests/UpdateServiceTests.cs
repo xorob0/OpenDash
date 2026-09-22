@@ -13,7 +13,7 @@ namespace OpenDashPlugin.Tests
     public class UpdateServiceTests : IDisposable
     {
         /// <summary>A second dashboard, so that a plan can carry two items and a failure can be put on the later one.</summary>
-        private const string SmallFolder = "openDash 1280x480";
+        private const string SmallFolder = "OpenDash 1280x480";
 
         private readonly string root;
 
@@ -147,7 +147,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_real_answer_concludes_and_moves_the_clock()
         {
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash") };
             long ticks = 0;
             var now = new DateTime(2026, 9, 12, 12, 0, 0, DateTimeKind.Utc);
             var service = new UpdateService(fetcher);
@@ -264,10 +264,10 @@ namespace OpenDashPlugin.Tests
         public void An_update_replaces_what_is_installed_and_says_to_reopen()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("0.1.0", record, "openDash");
+            var installer = Installed("0.1.0", record, "OpenDash");
 
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
-            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash") };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -275,8 +275,8 @@ namespace OpenDashPlugin.Tests
             var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
 
             Assert.True(outcome.Ok);
-            Assert.Equal(new[] { "openDash" }, outcome.Updated);
-            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Equal(new[] { "OpenDash" }, outcome.Updated);
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.Contains("Close and reopen the dashboard", outcome.Line);
             Assert.DoesNotContain("restart SimHub", outcome.Line);
         }
@@ -290,18 +290,18 @@ namespace OpenDashPlugin.Tests
         public void Bytes_that_are_not_what_GitHub_published_install_nothing()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("0.1.0", record, "openDash", SmallFolder);
+            var installer = Installed("0.1.0", record, "OpenDash", SmallFolder);
 
             var fetcher = new Fetcher
             {
                 // The first asset publishes no digest, which is accepted; the second publishes one nothing matches.
                 Listing = "[{\"tag_name\":\"v0.2.0\",\"assets\":["
-                    + "{\"name\":\"openDash.simhubdash\",\"browser_download_url\":\"https://example.invalid/openDash\"},"
-                    + "{\"name\":\"openDash.1280x480.simhubdash\",\"browser_download_url\":\"https://example.invalid/openDash.1280x480\",\"digest\":\"sha256:"
+                    + "{\"name\":\"OpenDash.simhubdash\",\"browser_download_url\":\"https://example.invalid/OpenDash\"},"
+                    + "{\"name\":\"OpenDash.1280x480.simhubdash\",\"browser_download_url\":\"https://example.invalid/OpenDash.1280x480\",\"digest\":\"sha256:"
                     + new string('0', 64) + "\"}]}]",
             };
-            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
-            fetcher.Assets["https://example.invalid/openDash.1280x480"] = SyntheticPackage.Zip(SmallFolder, "0.2.0").ToArray();
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
+            fetcher.Assets["https://example.invalid/OpenDash.1280x480"] = SyntheticPackage.Zip(SmallFolder, "0.2.0").ToArray();
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -311,7 +311,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(outcome.Ok);
             Assert.Contains("did not download correctly", outcome.Reason);
             Assert.Empty(outcome.Updated);
-            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
         }
 
@@ -322,9 +322,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_download_that_fails_leaves_the_machine_as_it_was()
         {
-            var installer = Installed("0.1.0", new MemoryFolderRecord(), "openDash", SmallFolder);
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash", SmallFolder) };
-            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash", SmallFolder) };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
             // Nothing is registered for the second, so its download is the one that fails.
             long ticks = 0;
             var service = new UpdateService(fetcher);
@@ -335,7 +335,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(outcome.Ok);
             Assert.Contains("could not be downloaded", outcome.Reason);
             Assert.Empty(outcome.Updated);
-            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
         }
 
@@ -343,11 +343,11 @@ namespace OpenDashPlugin.Tests
         public void A_dashboard_somebody_edited_is_left_alone_and_counted()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("0.1.0", record, "openDash");
-            File.WriteAllText(Path.Combine(root, "DashTemplates", "openDash", "openDash.djson"), "{\"mine\":true}");
+            var installer = Installed("0.1.0", record, "OpenDash");
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson"), "{\"mine\":true}");
 
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
-            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash") };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -357,8 +357,8 @@ namespace OpenDashPlugin.Tests
 
             Assert.True(outcome.Ok);
             Assert.Empty(outcome.Updated);
-            Assert.Equal(new[] { "openDash" }, outcome.HeldBack);
-            Assert.Equal("{\"mine\":true}", File.ReadAllText(Path.Combine(root, "DashTemplates", "openDash", "openDash.djson")));
+            Assert.Equal(new[] { "OpenDash" }, outcome.HeldBack);
+            Assert.Equal("{\"mine\":true}", File.ReadAllText(Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson")));
             Assert.Contains("you have edited all of them", outcome.Line);
         }
 
@@ -370,11 +370,11 @@ namespace OpenDashPlugin.Tests
         public void A_package_that_could_not_be_installed_makes_the_whole_update_a_failure()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("0.1.0", record, "openDash");
+            var installer = Installed("0.1.0", record, "OpenDash");
 
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash") };
             // Bytes that are not a package at all: the install of this one fails while the run completes.
-            fetcher.Assets["https://example.invalid/openDash"] = Encoding.UTF8.GetBytes("not a zip");
+            fetcher.Assets["https://example.invalid/OpenDash"] = Encoding.UTF8.GetBytes("not a zip");
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -382,10 +382,10 @@ namespace OpenDashPlugin.Tests
             var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
 
             Assert.False(outcome.Ok);
-            Assert.Equal(new[] { "openDash" }, outcome.Failed);
+            Assert.Equal(new[] { "OpenDash" }, outcome.Failed);
             Assert.Empty(outcome.Updated);
             Assert.Contains("did not finish", outcome.Line);
-            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
         }
 
         [Fact]
@@ -394,13 +394,13 @@ namespace OpenDashPlugin.Tests
             // Two packages the plugin carries, of which the release publishes one. The build makes twenty-two and
             // v0.1.0-rc.2 published fourteen, so this is the ordinary case rather than a contrived one.
             var source = new DownloadedPackageSource()
-                .Add("openDash.simhubdash", SyntheticPackage.Zip("openDash", "0.1.0").ToArray())
-                .Add("openDash zones 1920x480.simhubdash", SyntheticPackage.Zip("openDash zones 1920x480", "0.1.0").ToArray());
+                .Add("OpenDash.simhubdash", SyntheticPackage.Zip("OpenDash", "0.1.0").ToArray())
+                .Add("OpenDash zones 1920x480.simhubdash", SyntheticPackage.Zip("OpenDash zones 1920x480", "0.1.0").ToArray());
             var installer = new DashboardInstaller(root, null, source, new MemoryFolderRecord());
             installer.EnsureInstalled(false);
 
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
-            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash") };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -420,11 +420,11 @@ namespace OpenDashPlugin.Tests
         public void Applying_reports_a_run_that_starts_at_nothing_and_ends_at_everything()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("0.1.0", record, "openDash", SmallFolder);
+            var installer = Installed("0.1.0", record, "OpenDash", SmallFolder);
 
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash", SmallFolder) };
-            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
-            fetcher.Assets["https://example.invalid/openDash.1280x480"] = SyntheticPackage.Zip(SmallFolder, "0.2.0").ToArray();
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash", SmallFolder) };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
+            fetcher.Assets["https://example.invalid/OpenDash.1280x480"] = SyntheticPackage.Zip(SmallFolder, "0.2.0").ToArray();
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -447,10 +447,10 @@ namespace OpenDashPlugin.Tests
         public void A_run_the_bar_is_not_watched_for_is_applied_exactly_as_one_that_is()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installed("0.1.0", record, "openDash");
+            var installer = Installed("0.1.0", record, "OpenDash");
 
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "openDash") };
-            fetcher.Assets["https://example.invalid/openDash"] = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash") };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
             long ticks = 0;
             var service = new UpdateService(fetcher);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
@@ -461,8 +461,8 @@ namespace OpenDashPlugin.Tests
                 progress: _ => throw new InvalidOperationException("the panel has gone"));
 
             Assert.True(outcome.Ok);
-            Assert.Equal(new[] { "openDash" }, outcome.Updated);
-            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Equal(new[] { "OpenDash" }, outcome.Updated);
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
         }
 
         /// <summary>

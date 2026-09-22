@@ -37,11 +37,11 @@ Two related facts, both verified:
 - A bare boolean is fine. `ParseValueOrDefault` has `if (obj is bool) return ((bool)obj) ? 1 : 0;`,
   so a formula does **not** need wrapping in `if(…, 1, 0)`.
 - **`CustomStatus` does not test `GameRunning` and every native `Status.*` container does.** So a
-  profile built from `CustomStatus` lights up with the sim closed unless something gates it. openDash
+  profile built from `CustomStatus` lights up with the sim closed unless something gates it. OpenDash
   wraps each profile in one native `Groups.GameRunningGroup` rather than adding the term to every
   formula.
 
-## What openDash draws
+## What OpenDash draws
 
 | Effect | Property | Notes |
 |---|---|---|
@@ -91,7 +91,7 @@ asserts nothing.**
 
 | Effect | Property | What iRacing does |
 |---|---|---|
-| TC intervening | `GameData.TCActive` | `GD_TCActive()` is `[NotAvailable] return 0`. openDash's TC light is steady on `TCLevel` and blinks on `TCActive`, so on iRacing it is a steady light that never blinks |
+| TC intervening | `GameData.TCActive` | `GD_TCActive()` is `[NotAvailable] return 0`. OpenDash's TC light is steady on `TCLevel` and blinks on `TCActive`, so on iRacing it is a steady light that never blinks |
 | Turn indicators | `GameData.TurnIndicatorLeft` / `Right` | Both `[NotAvailable] return 0` — **hard zero, not null**, so `isnull()` cannot tell "off" from "not published" |
 | ERS charge, and KERS with it | `GameData.ERSPercent` | The reader overrides neither `GD_ERSMax` nor `GD_ERSStored`, so it is always 0. SimHub has no `KERS` member at all and normalises every hybrid store into this percentage |
 
@@ -130,7 +130,7 @@ vary with the gear. That is the only derived per-gear source that exists, and it
 a person typed the numbers in.
 
 So per-gear shift points can come from exactly two places: SimHub's table when the user has filled
-it, or a table openDash carries. Both are used — see ADR 0014.
+it, or a table OpenDash carries. Both are used — see ADR 0014.
 
 ## Things that are published but useless on iRacing
 

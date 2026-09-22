@@ -22,7 +22,7 @@ namespace OpenDashTraceRecorder
 {
     [PluginName("OpenDash trace recorder")]
     [PluginAuthor("OpenDash contributors")]
-    [PluginDescription("Development tool: records SimHub's property values to a file for the openDash telemetry traces.")]
+    [PluginDescription("Development tool: records SimHub's property values to a file for the OpenDash telemetry traces.")]
     public class TraceRecorderPlugin : IPlugin, IDataPlugin
     {
         /// <summary>The request, beside this DLL. No request means the plugin does nothing at all.</summary>
@@ -49,7 +49,7 @@ namespace OpenDashTraceRecorder
         public void Init(PluginManager pluginManager)
         {
             // SimHub's own directory, which is where a plugin DLL is dropped and where the
-            // caller leaves the request. The same idiom the openDash plugin uses to find SimHub.
+            // caller leaves the request. The same idiom the OpenDash plugin uses to find SimHub.
             var requestFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, RequestFileName);
             if (!File.Exists(requestFile))
             {

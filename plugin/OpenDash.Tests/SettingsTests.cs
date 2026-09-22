@@ -69,7 +69,7 @@ namespace OpenDashPlugin.Tests
         /// </summary>
         /// <remarks>
         /// Retired rather than removed, because the value has shipped. What it meant -- a bar that fills
-        /// with the revs and nothing more -- is the worse half of a choice openDash should not have been
+        /// with the revs and nothing more -- is the worse half of a choice OpenDash should not have been
         /// offering: where there is a table the bar is the car's own lights, and where there is not it is
         /// SimHub's bands, which is an RPM bar that ends in shift lights.
         /// </remarks>
@@ -872,7 +872,7 @@ namespace OpenDashPlugin.Tests
             // zones, which before ADR 0017 was not expressible at all.
             var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
             settings.Normalise();
-            var entry = new PackageEntry { Package = "p", Folder = "openDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            var entry = new PackageEntry { Package = "p", Folder = "OpenDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
             var main = settings.AddScreen(entry, "Main dash");
             var rim = settings.AddScreen(entry, "Rim");
             settings.Rig.Add(Screen(Contract.KindCompanion, 850, 480));
@@ -898,7 +898,7 @@ namespace OpenDashPlugin.Tests
             // The names and the folders survive, which is what makes the two 1280x480 screens tellable
             // apart in SimHub's own dashboard list.
             Assert.Equal("Main dash", read.ScreenByNamespace("Face1280x480").Name);
-            Assert.Equal("openDash Rim", read.ScreenByNamespace("Rim").Folder);
+            Assert.Equal("OpenDash Rim", read.ScreenByNamespace("Rim").Folder);
             Assert.Equal(4, read.RigScreens().Count);
         }
 
@@ -910,7 +910,7 @@ namespace OpenDashPlugin.Tests
             var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
             settings.Normalise();
             var rim = Contract.FaceSizes[3];
-            var entry = new PackageEntry { Package = "p", Folder = "openDash 850x480", Kind = Contract.KindFace, Width = rim.Width, Height = rim.Height };
+            var entry = new PackageEntry { Package = "p", Folder = "OpenDash 850x480", Kind = Contract.KindFace, Width = rim.Width, Height = rim.Height };
 
             var added = settings.AddScreen(entry, null);
             settings.Normalise();
@@ -1291,7 +1291,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_lights_are_declared_whatever_the_rig_is()
         {
-            // Unlike a screen the rig has not got. There is nothing to detect -- openDash does not
+            // Unlike a screen the rig has not got. There is nothing to detect -- OpenDash does not
             // install the profile (ADR 0013) -- and it is a fixed handful of names.
             var settings = new OpenDashSettings { Screens = new List<string>() };
             settings.Normalise();
@@ -1308,7 +1308,7 @@ namespace OpenDashPlugin.Tests
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
             var shared = Contract.SharedPropertyNames().Count();
             Assert.Equal(18, shared);
-            // The lights are declared whatever the rig is: openDash does not install the flag box
+            // The lights are declared whatever the rig is: OpenDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and it is a fixed handful of names
             // rather than the hundred and thirty-six that made the screens worth narrowing.
             var lights = Contract.LightsPropertyNames().Count();
@@ -1362,7 +1362,7 @@ namespace OpenDashPlugin.Tests
             // cycling a zone on one moved the same zone on the other.
             var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
             settings.Normalise();
-            var entry = new PackageEntry { Package = "p", Folder = "openDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            var entry = new PackageEntry { Package = "p", Folder = "OpenDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
 
             var main = settings.AddScreen(entry, "Main dash");
             var rim = settings.AddScreen(entry, "Rim");
@@ -1371,12 +1371,12 @@ namespace OpenDashPlugin.Tests
             // The first takes the stock namespace and the stock folder, so its package is the embedded
             // one byte for byte and nothing about today's rigs changes.
             Assert.Equal("Face1280x480", main.Namespace);
-            Assert.Equal("openDash 1280x480", main.Folder);
+            Assert.Equal("OpenDash 1280x480", main.Folder);
             Assert.True(main.IsStock);
 
             // The second gets its own of both.
             Assert.Equal("Rim", rim.Namespace);
-            Assert.Equal("openDash Rim", rim.Folder);
+            Assert.Equal("OpenDash Rim", rim.Folder);
             Assert.False(rim.IsStock);
 
             main.Face.SetStart("B", 3);
@@ -1410,8 +1410,8 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
             settings.Normalise();
-            var rim = new PackageEntry { Package = "rim", Folder = "openDash 850x480", Kind = Contract.KindFace, Width = 850, Height = 480 };
-            var phone = new PackageEntry { Package = "companion", Folder = "openDash Companion", Kind = Contract.KindCompanion, Width = 850, Height = 480 };
+            var rim = new PackageEntry { Package = "rim", Folder = "OpenDash 850x480", Kind = Contract.KindFace, Width = 850, Height = 480 };
+            var phone = new PackageEntry { Package = "companion", Folder = "OpenDash Companion", Kind = Contract.KindCompanion, Width = 850, Height = 480 };
             Assert.Equal("Rim", rim.DisplayName);
             Assert.Equal("Phone", phone.DisplayName);
 
@@ -1437,16 +1437,16 @@ namespace OpenDashPlugin.Tests
             // re-pointed one would break whatever had been bound to it with no diagnostic.
             var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
             settings.Normalise();
-            var entry = new PackageEntry { Package = "p", Folder = "openDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            var entry = new PackageEntry { Package = "p", Folder = "OpenDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
             settings.AddScreen(entry, "First");
             var screen = settings.AddScreen(entry, "Main dash");
             Assert.Equal("MainDash", screen.Namespace);
-            Assert.Equal("openDash Main dash", screen.Folder);
+            Assert.Equal("OpenDash Main dash", screen.Folder);
 
             screen.Name = "Rim";
             settings.Normalise();
             Assert.Equal("MainDash", screen.Namespace);
-            Assert.Equal("openDash Main dash", screen.Folder);
+            Assert.Equal("OpenDash Main dash", screen.Folder);
             Assert.Equal("Rim", screen.Name);
         }
 
@@ -1498,9 +1498,9 @@ namespace OpenDashPlugin.Tests
             {
                 FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    { "openDash 1280x480", "a" },
-                    { "openDash Companion", "b" },
-                    { "openDash Pit wall", "c" },
+                    { "OpenDash 1280x480", "a" },
+                    { "OpenDash Companion", "b" },
+                    { "OpenDash Pit wall", "c" },
                 },
                 Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal)
                 {

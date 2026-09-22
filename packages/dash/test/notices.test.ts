@@ -3,7 +3,7 @@
  *
  * A `.simhubdash` leaves this machine carrying five Barlow faces, which the SIL Open Font Licence
  * permits only when its notice travels with them. That the notice is present is therefore not a
- * tidiness check: a package without it is a package openDash has no right to publish.
+ * tidiness check: a package without it is a package OpenDash has no right to publish.
  */
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -68,8 +68,8 @@ describe('images', () => {
     expect(() => noticesForPackage(carrying(stranger))).toThrow(/no licence is registered/);
   });
 
-  test("a package carrying openDash's own artwork owes nothing beyond the font licence", () => {
-    expect(NOTICES_BY_SOURCE.openDash).toEqual([]);
+  test("a package carrying OpenDash's own artwork owes nothing beyond the font licence", () => {
+    expect(NOTICES_BY_SOURCE.OpenDash).toEqual([]);
     expect(noticesForPackage(carrying(imageOf(WHEEL_CHANGE_TICK)))).toEqual([FONT_LICENCE]);
   });
 
@@ -77,14 +77,14 @@ describe('images', () => {
     for (const notices of Object.values(NOTICES_BY_SOURCE)) for (const notice of notices) expect(existsSync(notice.path)).toBe(true);
   });
 
-  test("a source that owes nothing is openDash's own work, and nobody else's", () => {
+  test("a source that owes nothing is OpenDash's own work, and nobody else's", () => {
     // The empty list is a real answer for artwork the project made and publishes itself, and a
     // licence breach for anything taken from elsewhere. Which of the two it is has to be read off
     // the source rather than assumed, or the day somebody registers a source and leaves its notices
     // empty is the day a release ships somebody else's drawing with nothing attached to it.
     for (const [id, source] of Object.entries(ASSET_SOURCES) as [AssetSourceId, AssetSource][]) {
       if (NOTICES_BY_SOURCE[id].length > 0) continue;
-      expect([id, source.who, source.licence]).toEqual([id, 'the openDash authors', 'MIT']);
+      expect([id, source.who, source.licence]).toEqual([id, 'the OpenDash authors', 'MIT']);
     }
   });
 });

@@ -43,7 +43,7 @@ namespace OpenDashPlugin.Tests
             // order and the row order must not depend on it.
             return ids
                 .OrderBy(id => id, StringComparer.Ordinal)
-                .Select(id => new LightProfile(id, "openDash " + PanelLightRows.Label(new LightProfile(id, null))))
+                .Select(id => new LightProfile(id, "OpenDash " + PanelLightRows.Label(new LightProfile(id, null))))
                 .ToList();
         }
 
@@ -54,16 +54,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(
                 new[]
                 {
-                    "openDash 4/14/4",
-                    "openDash 4/14/4 reversed",
-                    "openDash 3/9/3 Fanatec",
-                    "openDash 3/10/3",
-                    "openDash 0/4/0 … 0/25/0",
-                    "openDash 1/4/1 … 1/12/1",
-                    "openDash 2/4/2 … 2/12/2",
-                    "openDash 3/4/3 … 3/12/3",
-                    "openDash 4/4/4 … 4/12/4",
-                    "openDash 5/10/5",
+                    "OpenDash 4/14/4",
+                    "OpenDash 4/14/4 reversed",
+                    "OpenDash 3/9/3 Fanatec",
+                    "OpenDash 3/10/3",
+                    "OpenDash 0/4/0 … 0/25/0",
+                    "OpenDash 1/4/1 … 1/12/1",
+                    "OpenDash 2/4/2 … 2/12/2",
+                    "OpenDash 3/4/3 … 3/12/3",
+                    "OpenDash 4/4/4 … 4/12/4",
+                    "OpenDash 5/10/5",
                 },
                 rows.Select(r => r.Name));
             Assert.Equal(
@@ -97,8 +97,8 @@ namespace OpenDashPlugin.Tests
         {
             // The name is read off the members rather than written down, so a length added to strip.ts
             // moves the end of the range instead of leaving it a length short.
-            var rows = PanelLightRows.Rows(FullBuild().Concat(new[] { new LightProfile("0-30-0", "openDash 0/30/0") }));
-            Assert.Contains(rows, r => r.Name == "openDash 0/4/0 … 0/30/0" && r.Caption == "bare runs and brows, 23 lengths");
+            var rows = PanelLightRows.Rows(FullBuild().Concat(new[] { new LightProfile("0-30-0", "OpenDash 0/30/0") }));
+            Assert.Contains(rows, r => r.Name == "OpenDash 0/4/0 … 0/30/0" && r.Caption == "bare runs and brows, 23 lengths");
         }
 
         [Fact]
@@ -110,16 +110,16 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain(rows, r => r.ShapeIds.Contains("4-14-4"));
             Assert.DoesNotContain(rows, r => r.Caption.StartsWith("brow", StringComparison.Ordinal));
             // The reversed 4/14/4 keeps its own row: it is a second profile, not a second name for one.
-            Assert.Contains(rows, r => r.Name == "openDash 4/14/4 reversed");
+            Assert.Contains(rows, r => r.Name == "OpenDash 4/14/4 reversed");
         }
 
         [Fact]
         public void One_profile_alone_is_a_row_and_not_a_range()
         {
             // What the test project's own resources are, and what a partial artifact would be. A range of
-            // one would read "openDash 0/10/0 … 0/10/0", and "bare runs, one lengths" is not English.
-            var rows = PanelLightRows.Rows(new[] { new LightProfile("0-10-0", "openDash 0/10/0") });
-            Assert.Equal("openDash 0/10/0", Assert.Single(rows).Name);
+            // one would read "OpenDash 0/10/0 … 0/10/0", and "bare runs, one lengths" is not English.
+            var rows = PanelLightRows.Rows(new[] { new LightProfile("0-10-0", "OpenDash 0/10/0") });
+            Assert.Equal("OpenDash 0/10/0", Assert.Single(rows).Name);
             Assert.Equal("bare run", rows[0].Caption);
         }
 
@@ -128,26 +128,26 @@ namespace OpenDashPlugin.Tests
         {
             // rpmStripProfileName() wrote it and FlagBoxProfile.ProfileNameOf read it back, so a rename
             // there arrives here without an edit.
-            var renamed = PanelLightRows.Rows(new[] { new LightProfile("4-14-4", "openDash the wide one") });
-            Assert.Equal("openDash the wide one", Assert.Single(renamed).Name);
+            var renamed = PanelLightRows.Rows(new[] { new LightProfile("4-14-4", "OpenDash the wide one") });
+            Assert.Equal("OpenDash the wide one", Assert.Single(renamed).Name);
 
             // And when the Name cannot be read at all, the id is spelled the way the generator spells it
             // rather than shown raw.
             var unnamed = PanelLightRows.Rows(new[] { new LightProfile("4-14-4", null), new LightProfile("brow-9", null) });
-            Assert.Equal(new[] { "openDash 4/14/4", "openDash brow 9" }, unnamed.Select(r => r.Name));
+            Assert.Equal(new[] { "OpenDash 4/14/4", "OpenDash brow 9" }, unnamed.Select(r => r.Name));
         }
 
         [Fact]
         public void An_id_that_cannot_be_read_gets_its_own_row_rather_than_a_guess()
         {
-            Assert.Null(LightShape.Parse("openDash"));
+            Assert.Null(LightShape.Parse("OpenDash"));
             Assert.Null(LightShape.Parse("4-14"));
             Assert.Null(LightShape.Parse("4-x-4"));
             Assert.Null(LightShape.Parse("brow-x"));
             Assert.Null(LightShape.Parse("-1-9-1"));
 
-            var rows = PanelLightRows.Rows(new[] { new LightProfile("something-else", "openDash something else") });
-            Assert.Equal("openDash something else", Assert.Single(rows).Name);
+            var rows = PanelLightRows.Rows(new[] { new LightProfile("something-else", "OpenDash something else") });
+            Assert.Equal("OpenDash something else", Assert.Single(rows).Name);
             Assert.Equal("strip", rows[0].Caption);
         }
 
@@ -188,13 +188,13 @@ namespace OpenDashPlugin.Tests
         public void An_unreachable_driver_does_not_promise_a_file_that_was_never_written()
         {
             // The whole reason a strip row has a tooltip of its own. FlagBoxInstallPlan.Summary offers the
-            // copy in the openDash folder, and FlagBoxProfile.Extract writes only the flag box there, so
+            // copy in the OpenDash folder, and FlagBoxProfile.Extract writes only the flag box there, so
             // that sentence over a strip row sends a driver looking for a file nothing ever created.
             var strip = PanelLightRows.Tooltip(5, FlagBoxInstallState.Unavailable, null);
             Assert.Equal(PanelLightRows.Unavailable, strip);
-            Assert.DoesNotContain("openDash folder", strip, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("OpenDash folder", strip, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("by hand", strip, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("openDash folder", FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, null), StringComparison.Ordinal);
+            Assert.Contains("OpenDash folder", FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, null), StringComparison.Ordinal);
         }
 
         [Fact]
@@ -346,9 +346,9 @@ namespace OpenDashPlugin.Tests
 
             var rows = PanelLightRows.Rows(ids.Select(id => new LightProfile(id, null)));
             Assert.Equal(3, rows.Count);
-            Assert.Equal("openDash 0/4/0 … 0/25/0", rows[0].Name);
+            Assert.Equal("OpenDash 0/4/0 … 0/25/0", rows[0].Name);
             Assert.Equal("bare runs and brows, 22 lengths", rows[0].Caption);
-            Assert.Equal("openDash 1/4/1 … 1/12/1", rows[1].Name);
+            Assert.Equal("OpenDash 1/4/1 … 1/12/1", rows[1].Name);
             Assert.Equal("strips, one LED at each end, nine lengths", rows[1].Caption);
             Assert.Equal("strips, two LEDs at each end, nine lengths", rows[2].Caption);
             // Every shape is in exactly one row, which is what stops a profile being offered twice or
@@ -378,16 +378,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(
                 new[]
                 {
-                    "openDash 4/14/4",
-                    "openDash 4/14/4 reversed",
-                    "openDash 3/9/3 Fanatec",
-                    "openDash 3/10/3",
-                    "openDash 0/4/0 … 0/25/0",
-                    "openDash 1/4/1 … 1/12/1",
-                    "openDash 2/4/2 … 2/12/2",
-                    "openDash 3/4/3 … 3/12/3",
-                    "openDash 4/4/4 … 4/12/4",
-                    "openDash 5/10/5",
+                    "OpenDash 4/14/4",
+                    "OpenDash 4/14/4 reversed",
+                    "OpenDash 3/9/3 Fanatec",
+                    "OpenDash 3/10/3",
+                    "OpenDash 0/4/0 … 0/25/0",
+                    "OpenDash 1/4/1 … 1/12/1",
+                    "OpenDash 2/4/2 … 2/12/2",
+                    "OpenDash 3/4/3 … 3/12/3",
+                    "OpenDash 4/4/4 … 4/12/4",
+                    "OpenDash 5/10/5",
                 },
                 rows.Select(r => r.Name));
             // Sixty-two: five sides of nine centres and thirteen longer bare runs, less the one the

@@ -8,7 +8,7 @@
  */
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
 
-export const SITE_NAME = 'openDash';
+export const SITE_NAME = 'OpenDash';
 export const SITE_TAGLINE = 'An open-source sim racing dashboard for SimHub.';
 
 /** The top-level pages, in the order the nav lists them. */

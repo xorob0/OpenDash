@@ -1,10 +1,10 @@
 /**
- * Typed model of the subset of SimHub's DashStudio scene graph that openDash emits.
+ * Typed model of the subset of SimHub's DashStudio scene graph that OpenDash emits.
  *
  * The property names mirror SimHub 9.12's own classes (verified against the decompiled
  * SimHub.Plugins.dll and against real exports): DrawableItem, TextItem, RectangleItem, EllipseItem,
  * Layer, WidgetItem, Dashboard, Screen and DashboardMetadata. The serialiser in ./serialize.ts turns
- * this model into the JSON SimHub reads. Nothing in this file knows about openDash.
+ * this model into the JSON SimHub reads. Nothing in this file knows about OpenDash.
  */
 
 /** A colour in `#RRGGBB` or `#AARRGGBB` form. The serialiser always writes `#AARRGGBB`. */
@@ -352,7 +352,7 @@ export interface StaticMapItem extends ItemBase {
   minimumTrackWidth?: number;
   minimumTrackBorderWidth?: number;
   mapShadow?: boolean;
-  /** True paints the dots from the car-class colours; openDash keeps the map achromatic. */
+  /** True paints the dots from the car-class colours; OpenDash keeps the map achromatic. */
   overrideColorsWithCarClassColors?: boolean;
   /** True labels a dot with the class position instead of the overall one. */
   displayPerClassPosition?: boolean;
@@ -373,7 +373,7 @@ export interface WebPageItem extends ItemBase {
 /**
  * A raster image from the dashboard's own `Images` list (SimHub's `ImageItem`).
  *
- * `AutoSize` sizes the item from the image and its scale; openDash always wants a fixed box, so
+ * `AutoSize` sizes the item from the image and its scale; OpenDash always wants a fixed box, so
  * the serialiser writes `AutoSize` false and the rect is what is drawn. The image is referenced
  * by the name of an {@link ImageAsset} on the same dashboard, never by a file path: a path would
  * be `ImageFromFileItem`, which reads from the user's disk and cannot be shipped.
@@ -387,7 +387,7 @@ export interface ImageItem extends ItemBase {
 
 /**
  * Embeds another `.djson` of the same package. `initialScreenIndex` selects which of its screens
- * is shown and can be bound, which is how openDash slots switch cards.
+ * is shown and can be bound, which is how OpenDash slots switch cards.
  */
 export interface WidgetItem extends ItemBase {
   kind: 'widget';
@@ -493,7 +493,7 @@ export interface Dashboard {
 
 /** Everything that goes into one `<folder>/` and therefore one `.simhubdash`. */
 export interface DashPackage {
-  /** Folder name and name of the main dashboard, e.g. "openDash". */
+  /** Folder name and name of the main dashboard, e.g. "OpenDash". */
   folderName: string;
   /** The first dashboard must have `name === folderName`. The others are widgets. */
   dashboards: Dashboard[];

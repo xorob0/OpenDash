@@ -8,7 +8,7 @@ import styles from './page.module.css';
 export const metadata: Metadata = {
   title: 'Install',
   description:
-    'How to put openDash into SimHub: the one-file dashboard route, the plugin route, why unblocking the DLL matters, and what to do when SimHub does not mention the plugin at all.',
+    'How to put OpenDash into SimHub: the one-file dashboard route, the plugin route, why unblocking the DLL matters, and what to do when SimHub does not mention the plugin at all.',
 };
 
 export default function Install() {
@@ -24,7 +24,7 @@ export default function Install() {
             </p>
             <p>
               The step that fails silently is unblocking the DLL. It is the second route’s step 4,
-              and if you skip it SimHub either reports a loading error or never mentions openDash at
+              and if you skip it SimHub either reports a loading error or never mentions OpenDash at
               all.
             </p>
           </SectionHead>
@@ -36,7 +36,7 @@ export default function Install() {
         <div className="page">
           <SectionHead label="Route one" title={<>Just the dashboard.</>}>
             <p>
-              The shortest way to see openDash on a display. You get the default layout and the
+              The shortest way to see OpenDash on a display. You get the default layout and the
               default pages, and no settings page — which is enough to decide whether you want the
               rest.
             </p>
@@ -87,7 +87,7 @@ export default function Install() {
           <SectionHead label="Route two" title={<>The plugin, and everything with it.</>}>
             <p>
               One download that carries every dashboard inside it, extracts them all, and adds an
-              openDash page to SimHub’s left menu where the settings live. Copying a file by hand is
+              OpenDash page to SimHub’s left menu where the settings live. Copying a file by hand is
               how SimHub loads any third-party plugin.
             </p>
           </SectionHead>
@@ -150,7 +150,7 @@ export default function Install() {
                   <h3 className="h3">Start SimHub and accept the plugin</h3>
                   <p className="prose">
                     SimHub asks once. The plugin then extracts all the dashboards and adds an
-                    <strong> openDash</strong> page to the left menu.
+                    <strong> OpenDash</strong> page to the left menu.
                   </p>
                 </div>
               </li>
@@ -164,7 +164,7 @@ export default function Install() {
         <div className="page">
           <SectionHead label="After" title={<>Making it yours.</>}>
             <p>
-              Nothing has to be configured for openDash to work — every package carries a default
+              Nothing has to be configured for OpenDash to work — every package carries a default
               layout by itself. The plugin is what makes that layout yours.
             </p>
           </SectionHead>

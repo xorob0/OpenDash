@@ -17,7 +17,7 @@ import { roundLayout } from './round.ts';
 const SIZE = 800;
 
 export const layout800round: Layout = roundLayout({
-  folder: 'openDash 800 round',
+  folder: 'OpenDash 800 round',
   size: SIZE,
   revArc: { r: 352, segment: { width: 30, height: 18 } },
   // Two fifths of the gear, not the 0.42 the three zone sheets draw: this artboard sets 104 px

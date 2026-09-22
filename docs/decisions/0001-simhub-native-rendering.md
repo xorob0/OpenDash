@@ -5,7 +5,7 @@
 
 ## Context
 
-Two architectures were viable for an openDash MVP.
+Two architectures were viable for an OpenDash MVP.
 
 Path A, SimHub native: ship a `.simhubdash` rendered by SimHub's DashStudio engine, which is
 what every existing dashboard does, including both competitors.

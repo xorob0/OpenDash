@@ -114,7 +114,7 @@ describe('the panel the artboard draws', () => {
     const when = String(reviewOf(reference.items).bindings?.Visible?.formula);
     expect(when).toContain(`OpenDash.${lapReviewSettingName(face)}`);
     for (const other of FACE_SIZES.filter((f) => f !== face)) expect(when).not.toContain(`OpenDash.${lapReviewSettingName(other)}`);
-    // `all` in every session, `race` only in the one session name SimHub publishes that openDash
+    // `all` in every session, `race` only in the one session name SimHub publishes that OpenDash
     // can match, which is the string the pit wall header already writes beside the session.
     expect(lapReviewWanted(face)).toContain(zoneSetting.lapReviewIs(face, 'all'));
     expect(lapReviewWanted(face)).toContain(zoneSetting.lapReviewIs(face, 'race'));

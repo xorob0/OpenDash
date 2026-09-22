@@ -60,12 +60,12 @@ const weightOfFile = (file: string): string | undefined => {
 /**
  * The words WPF reads out of a family name and files as a stretch rather than as part of the
  * family. `FontStretches` in PresentationCore is where the list comes from; only the ones that can
- * plausibly appear in a face openDash would ship are here, and "Condensed" is the one that cost us
+ * plausibly appear in a face OpenDash would ship are here, and "Condensed" is the one that cost us
  * a release.
  */
 const WIDTH_WORDS = ['Condensed', 'Narrow', 'Compressed', 'Extended', 'Expanded', 'Wide', 'SemiCondensed', 'UltraCondensed', 'ExtraCondensed'] as const;
 
-describe('no family openDash asks for can be folded again', () => {
+describe('no family OpenDash asks for can be folded again', () => {
   // This is the guard rather than a description of today's names. The bug was not that the family
   // was called "Barlow Condensed"; it was that nothing in the repository would have noticed if a
   // family with a width word in it were asked for again, and a .djson has no way to ask for a

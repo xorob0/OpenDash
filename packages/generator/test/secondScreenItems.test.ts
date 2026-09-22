@@ -10,7 +10,7 @@ import { ITEM_TYPES, buildItemObject, DEFAULT_REPEAT_TOP_OFFSET } from '../src/s
 import { validatePackage } from '../src/validate.ts';
 import { dashboard, rect, samplePackage, screen } from './fixtures.ts';
 
-const PATH = 'openDash/openDash/Main';
+const PATH = 'OpenDash/OpenDash/Main';
 const build = (item: Item): Record<string, unknown> => buildItemObject(item, PATH) as Record<string, unknown>;
 
 const chart = (over: Partial<ChartItem> = {}): ChartItem => ({
@@ -174,7 +174,7 @@ describe('a repeated layer', () => {
 
 describe('validation of the new kinds', () => {
   const validateItems = (items: Item[]) =>
-    validatePackage({ ...samplePackage(), dashboards: [dashboard('openDash', [screen('Main', items)])] }, { declaredProperties: ['OpenDash.WebViewUrl'], propertyPrefix: 'OpenDash' });
+    validatePackage({ ...samplePackage(), dashboards: [dashboard('OpenDash', [screen('Main', items)])] }, { declaredProperties: ['OpenDash.WebViewUrl'], propertyPrefix: 'OpenDash' });
 
   test('a package holding every new kind is valid', () => {
     const result = validateItems([chart(), gauge(), radar(), map(), web()]);

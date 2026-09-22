@@ -1,6 +1,6 @@
 // CarLightService.cs: the tables in memory, the car on screen, and the strings the profile reads.
 //
-// This is the part ADR 0018 reopened ADR 0009 for. It is the only place in openDash that computes
+// This is the part ADR 0018 reopened ADR 0009 for. It is the only place in OpenDash that computes
 // from telemetry, and it computes exactly one thing: what colour each LED of a strip should be, for
 // the car the driver is sitting in, in the gear they are in, right now. There is no SimHub property
 // to derive that from, no expression that could hold an 85-car table, and no NCalc clock to flash
@@ -77,7 +77,7 @@ namespace OpenDashPlugin
         /// <summary>
         /// Reads whatever is on disk, and asks for nothing.
         ///
-        /// <para>This is the startup path and the whole of it: openDash never fetches the tables on its
+        /// <para>This is the startup path and the whole of it: OpenDash never fetches the tables on its
         /// own (#366). A rig that has them uses them, offline and every time; a rig that has not has no
         /// mirror, which is the fallback every car had before the tables existed.</para>
         ///
@@ -260,7 +260,7 @@ namespace OpenDashPlugin
             /// No mirror, shared rather than made.
             ///
             /// <para>It is returned on every frame the mirror is off, which at SimHub's data rate is
-            /// sixty allocations a second for the whole time somebody is using one of openDash's own
+            /// sixty allocations a second for the whole time somebody is using one of OpenDash's own
             /// styles. It never changes, so there is one of it.</para>
             /// </summary>
             public static readonly Frame None = new Frame { Ready = false, CarName = null, Runs = null };

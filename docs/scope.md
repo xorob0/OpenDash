@@ -11,7 +11,7 @@ contributor or an agent should read first, and the one that has to be amended wh
 > **The face has been rebuilt.** The zone model described below is the settled design
 > ([ADR 0006](decisions/0006-the-zone-face.md), [design/zones.md](design/zones.md)), and since
 > 0.2.0-rc.1 it is what the names in the table below install: the eight rectangular faces are zone
-> faces, and the twelve-slot ones they replaced are published as `openDash slots <size>` for anyone
+> faces, and the twelve-slot ones they replaced are published as `OpenDash slots <size>` for anyone
 > who wants the old design back. The two round faces are still the card model, because what a round
 > face does with zones is not decided (#145).
 >
@@ -75,16 +75,16 @@ decided and are noted below.
 
 | Package | Size | |
 |---|---|---|
-| `openDash` | 1920 x 480 | the reference face |
-| `openDash 1280x480` | 1280 x 480 | **the large size** |
-| `openDash 1280x400` | 1280 x 400 | a shorter body, the same zones |
-| `openDash 1280x720` | 1280 x 720 | the tall body lets zone C list the field |
-| `openDash 850x480` | 850 x 480 | **the base size**: narrow zones, five settings in the bar |
-| `openDash 800x480` | 800 x 480 | derived from 850 x 480 |
-| `openDash 800x286` | 800 x 286 | no bar: the height is not there |
-| `openDash 600x686` | 600 x 686 | portrait, A over B over C |
-| `openDash 800 round` | 800 x 800 | still on the card model; see below |
-| `openDash 480 round` | 480 x 480 | still on the card model; see below |
+| `OpenDash` | 1920 x 480 | the reference face |
+| `OpenDash 1280x480` | 1280 x 480 | **the large size** |
+| `OpenDash 1280x400` | 1280 x 400 | a shorter body, the same zones |
+| `OpenDash 1280x720` | 1280 x 720 | the tall body lets zone C list the field |
+| `OpenDash 850x480` | 850 x 480 | **the base size**: narrow zones, five settings in the bar |
+| `OpenDash 800x480` | 800 x 480 | derived from 850 x 480 |
+| `OpenDash 800x286` | 800 x 286 | no bar: the height is not there |
+| `OpenDash 600x686` | 600 x 686 | portrait, A over B over C |
+| `OpenDash 800 round` | 800 x 800 | still on the card model; see below |
+| `OpenDash 480 round` | 480 x 480 | still on the card model; see below |
 
 **The base size is 850 x 480 and the large size is 1280 x 480.** They are the pair anything that
 has to pick a face picks: the size `bun run dev` opens when no package is named, the two the
@@ -97,7 +97,7 @@ likely to own, and because the pair together shows what one capture cannot: the 
 274 x 328 zone and in a 469 x 320 one, stacked in the first and tabulated in the second, laid out
 for its box rather than scaled into it.
 
-`openDash` at 1920 x 480 stays **the reference face**, and that is a different job from being the
+`OpenDash` at 1920 x 480 stays **the reference face**, and that is a different job from being the
 base. It is the widest artboard, the one [design/zones.md](design/zones.md) tabulates every other
 size after, and the face the plugin's pre-face settings migrate into, which is why the code and the
 canvas keep calling it that. None of that makes it the size to reach for when one face has to stand
@@ -106,7 +106,7 @@ for the product, and it is not one many people own.
 **The package folders keep the small o**, and that is deliberate rather than an oversight. The
 product is OpenDash, and everything a person reads says so; a folder name is a path on somebody's
 disk, and Windows file names are case-insensitive but case-preserving, so renaming
-`DashTemplates/openDash` to `DashTemplates/OpenDash` is not a rename the installer or SimHub would
+`DashTemplates/OpenDash` to `DashTemplates/OpenDash` is not a rename the installer or SimHub would
 notice as one. A user could end up with either spelling depending on what created the folder, and a
 user with both would see two entries in Dash Studio. The cost of the inconsistency is one reader
 raising an eyebrow; the cost of the rename is somebody's dashboard list.
@@ -154,7 +154,7 @@ out, the gear, the pit state, a car alongside and the warnings a driver would ot
 each as a 64-pixel picture, ranked in the same order the face ranks them and coloured from the
 same `purpose.flag.*` tokens.
 
-One profile ships, `openDash Flag box.ledsprofile`, built by `bun run build` like everything else
+One profile ships, `OpenDash Flag box.ledsprofile`, built by `bun run build` like everything else
 and embedded in the plugin like everything else. It is the one artefact **the plugin does not
 install by itself**: a profile paints hardware somebody owns, which is a thing to be asked about
 rather than assumed. The Lights page has a button that adds it to SimHub's own matrix profiles

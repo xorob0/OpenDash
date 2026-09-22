@@ -174,7 +174,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The preferred face where this type offers it, and the first entry otherwise. A dialog that
         /// opened on whatever happened to be first in the catalogue offered the 1920 x 480 to everybody,
-        /// and the size most of these screens actually are is the 850 x 480: it is what openDash is
+        /// and the size most of these screens actually are is the 850 x 480: it is what OpenDash is
         /// tested on and what its users own. A driver whose screen is something else still has to say
         /// so, which the caption already asks them to do.
         /// </remarks>

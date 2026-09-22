@@ -71,7 +71,7 @@ COPY --from=artifacts /repo/build /repo/build
 # the same reason, and a file on disk that no page links to is a download waiting to be guessed at.
 RUN mkdir -p site/public/downloads \
  && cp /repo/build/*.simhubdash site/public/downloads/ \
- && rm -f 'site/public/downloads/openDash slots '*.simhubdash \
+ && rm -f 'site/public/downloads/OpenDash slots '*.simhubdash \
  && cp /repo/build/OpenDash-plugin.zip site/public/downloads/ \
  && cp /repo/build/flag-box.svg site/public/flag-box.svg
 

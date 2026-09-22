@@ -41,11 +41,11 @@ describe('hero snapshot', () => {
 describe('dashboard snapshots', () => {
   const { main, cards } = buildLayout(layout1920x480, { version: VERSION });
 
-  test('openDash.djson', () => {
+  test('OpenDash.djson', () => {
     expect(serializeDashboard(main, ctx)).toMatchSnapshot();
   });
 
-  test('openDash.djson.metadata', () => {
+  test('OpenDash.djson.metadata', () => {
     expect(serializeMetadata(main)).toMatchSnapshot();
   });
 

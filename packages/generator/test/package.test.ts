@@ -21,14 +21,14 @@ describe('writePackage', () => {
     const out = join(root, 'write');
     const pkg = samplePackage();
     const written = writePackage(pkg, out);
-    expect(written.folder).toBe(join(out, 'openDash'));
+    expect(written.folder).toBe(join(out, 'OpenDash'));
     expect(listFiles(written.folder)).toEqual([
+      'OpenDash.djson',
+      'OpenDash.djson.metadata',
       `${FONTS_DIR}/Barlow-Medium.ttf`,
       `${FONTS_DIR}/BarlowCondensed-SemiBold.ttf`,
       'cards.djson',
       'cards.djson.metadata',
-      'openDash.djson',
-      'openDash.djson.metadata',
     ]);
     expect(written.files).toHaveLength(6);
     expect(written.files.every((f) => existsSync(f))).toBe(true);
@@ -38,10 +38,10 @@ describe('writePackage', () => {
     const out = join(root, 'contents');
     const pkg = samplePackage();
     const { folder } = writePackage(pkg, out);
-    const main = readFileSync(join(folder, 'openDash.djson'), 'utf8');
-    expect(main).toBe(serializeDashboard(pkg.dashboards[0]!, { packageName: 'openDash' }));
+    const main = readFileSync(join(folder, 'OpenDash.djson'), 'utf8');
+    expect(main).toBe(serializeDashboard(pkg.dashboards[0]!, { packageName: 'OpenDash' }));
     const parsed = JSON.parse(main) as { Metadata: unknown };
-    const sidecar = JSON.parse(readFileSync(join(folder, 'openDash.djson.metadata'), 'utf8'));
+    const sidecar = JSON.parse(readFileSync(join(folder, 'OpenDash.djson.metadata'), 'utf8'));
     expect(sidecar).toEqual(parsed.Metadata);
     expect(sidecar).toEqual(buildMetadataObject(pkg.dashboards[0]!));
     expect(sidecar.Width).toBe(1920);
@@ -87,31 +87,31 @@ describe('zipPackage', () => {
   test('produces <folder>.simhubdash whose entries are prefixed with the folder and sorted', () => {
     const out = join(root, 'zip');
     writePackage(samplePackage(), out);
-    const zipped = zipPackage(out, 'openDash');
-    expect(zipped.path).toBe(join(out, `openDash${PACKAGE_EXTENSION}`));
+    const zipped = zipPackage(out, 'OpenDash');
+    expect(zipped.path).toBe(join(out, `OpenDash${PACKAGE_EXTENSION}`));
     expect(existsSync(zipped.path)).toBe(true);
     expect(zipped.entries).toEqual([
-      'openDash/_SHFonts/Barlow-Medium.ttf',
-      'openDash/_SHFonts/BarlowCondensed-SemiBold.ttf',
-      'openDash/cards.djson',
-      'openDash/cards.djson.metadata',
-      'openDash/openDash.djson',
-      'openDash/openDash.djson.metadata',
+      'OpenDash/OpenDash.djson',
+      'OpenDash/OpenDash.djson.metadata',
+      'OpenDash/_SHFonts/Barlow-Medium.ttf',
+      'OpenDash/_SHFonts/BarlowCondensed-SemiBold.ttf',
+      'OpenDash/cards.djson',
+      'OpenDash/cards.djson.metadata',
     ]);
-    expect(zipped.entries).toContain('openDash/openDash.djson');
+    expect(zipped.entries).toContain('OpenDash/OpenDash.djson');
     expect(Buffer.compare(readFileSync(zipped.path), zipped.bytes)).toBe(0);
   });
 
   test('the archive round-trips and contains the written files', () => {
     const out = join(root, 'roundtrip');
     const { folder } = writePackage(samplePackage(), out);
-    const zipped = zipPackage(out, 'openDash');
+    const zipped = zipPackage(out, 'OpenDash');
     const unzipped = readZip(zipped.bytes);
     expect(Object.keys(unzipped).sort()).toEqual([...zipped.entries].sort());
-    expect(Object.keys(unzipped).every((e) => e.startsWith('openDash/'))).toBe(true);
-    expect(new TextDecoder().decode(unzipped['openDash/openDash.djson'])).toBe(readFileSync(join(folder, 'openDash.djson'), 'utf8'));
-    expect(JSON.parse(new TextDecoder().decode(unzipped['openDash/openDash.djson.metadata'])).DashboardVersion).toBe('0.1.0');
-    expect(Buffer.compare(Buffer.from(unzipped['openDash/_SHFonts/Barlow-Medium.ttf']!), readFileSync(join(folder, FONTS_DIR, 'Barlow-Medium.ttf')))).toBe(0);
+    expect(Object.keys(unzipped).every((e) => e.startsWith('OpenDash/'))).toBe(true);
+    expect(new TextDecoder().decode(unzipped['OpenDash/OpenDash.djson'])).toBe(readFileSync(join(folder, 'OpenDash.djson'), 'utf8'));
+    expect(JSON.parse(new TextDecoder().decode(unzipped['OpenDash/OpenDash.djson.metadata'])).DashboardVersion).toBe('0.1.0');
+    expect(Buffer.compare(Buffer.from(unzipped['OpenDash/_SHFonts/Barlow-Medium.ttf']!), readFileSync(join(folder, FONTS_DIR, 'Barlow-Medium.ttf')))).toBe(0);
   });
 
   test('is reproducible: two builds in different directories are byte-identical', () => {
@@ -119,15 +119,15 @@ describe('zipPackage', () => {
     const b = join(root, 'repro-b');
     writePackage(samplePackage(), a);
     writePackage(samplePackage(), b);
-    const za = zipPackage(a, 'openDash');
-    const zb = zipPackage(b, 'openDash');
+    const za = zipPackage(a, 'OpenDash');
+    const zb = zipPackage(b, 'OpenDash');
     expect(Buffer.compare(za.bytes, zb.bytes)).toBe(0);
   });
 
   test('every entry carries the fixed timestamp', () => {
     const out = join(root, 'mtime');
     writePackage(samplePackage(), out);
-    const { bytes } = zipPackage(out, 'openDash');
+    const { bytes } = zipPackage(out, 'OpenDash');
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     // Expected DOS fields for ZIP_MTIME: time 00:00:00, date 2000-01-01.
     const dosTime = (ZIP_MTIME.getHours() << 11) | (ZIP_MTIME.getMinutes() << 5) | (ZIP_MTIME.getSeconds() >> 1);
@@ -149,31 +149,31 @@ describe('zipPackage', () => {
   test('a custom mtime and level are honoured', () => {
     const out = join(root, 'custom');
     writePackage(samplePackage(), out);
-    const dflt = zipPackage(out, 'openDash');
-    const other = zipPackage(out, 'openDash', { mtime: new Date(2010, 5, 15, 12, 0, 0), level: 0 });
+    const dflt = zipPackage(out, 'OpenDash');
+    const other = zipPackage(out, 'OpenDash', { mtime: new Date(2010, 5, 15, 12, 0, 0), level: 0 });
     expect(Buffer.compare(dflt.bytes, other.bytes)).not.toBe(0);
     expect(Object.keys(readZip(other.bytes))).toEqual(dflt.entries);
   });
 
   test('refuses a folder that is missing or has no <folder>.djson', () => {
-    expect(() => zipPackage(join(root, 'nope'), 'openDash')).toThrow(/not a directory/);
+    expect(() => zipPackage(join(root, 'nope'), 'OpenDash')).toThrow(/not a directory/);
     const out = join(root, 'nomain');
     const pkg = samplePackage();
     pkg.dashboards.shift();
     writePackage(pkg, out);
-    expect(() => zipPackage(out, 'openDash')).toThrow(/no openDash\.djson/);
+    expect(() => zipPackage(out, 'OpenDash')).toThrow(/no OpenDash\.djson/);
   });
 
   test('zipEntries uses the folder name given, not the directory name', () => {
     const out = join(root, 'entries');
     const { folder } = writePackage(samplePackage(), out);
     expect(Object.keys(zipEntries(folder, 'Renamed'))).toEqual([
+      'Renamed/OpenDash.djson',
+      'Renamed/OpenDash.djson.metadata',
       'Renamed/_SHFonts/Barlow-Medium.ttf',
       'Renamed/_SHFonts/BarlowCondensed-SemiBold.ttf',
       'Renamed/cards.djson',
       'Renamed/cards.djson.metadata',
-      'Renamed/openDash.djson',
-      'Renamed/openDash.djson.metadata',
     ]);
   });
 });

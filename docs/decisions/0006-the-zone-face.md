@@ -6,7 +6,7 @@
 
 ## Context
 
-openDash shipped 0.1.0-rc.2 with a face built from **twelve equal slots**: a hero zone holding the
+OpenDash shipped 0.1.0-rc.2 with a face built from **twelve equal slots**: a hero zone holding the
 gear, and beside it a grid of identical rectangles into which the plugin dropped one of thirteen
 cards. Every slot was the same size so that every card fitted every slot, a face declared its own
 slot count, and a smaller screen simply exposed fewer slots.
@@ -100,7 +100,7 @@ uniform-size problem and it still answers the wrong question: it makes the arran
 rather than making it changeable at speed.
 
 **Leave the face alone and put the catalogue on the second screens only.** That is where it is
-today, and it means the dash in front of the driver is the least capable surface openDash ships,
+today, and it means the dash in front of the driver is the least capable surface OpenDash ships,
 which is the wrong way round.
 
 ## Consequences

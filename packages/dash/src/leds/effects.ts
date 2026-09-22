@@ -535,7 +535,7 @@ export const DROPPED: readonly { effect: string; property: string; reason: strin
   {
     effect: 'ERS charge, and KERS with it',
     property: 'DataCorePlugin.GameData.ERSPercent',
-    reason: 'A store that empties is a bar rather than a lamp, and one LED can say neither how much is left nor how fast it is going. The iRacing reader moreover overrides neither GD_ERSMax nor GD_ERSStored, so it would be dark on the only sim openDash is tested against. SimHub models no KERS of its own and folds every hybrid store into this one percentage, so KERS goes with it.',
+    reason: 'A store that empties is a bar rather than a lamp, and one LED can say neither how much is left nor how fast it is going. The iRacing reader moreover overrides neither GD_ERSMax nor GD_ERSStored, so it would be dark on the only sim OpenDash is tested against. SimHub models no KERS of its own and folds every hybrid store into this one percentage, so KERS goes with it.',
   },
   {
     effect: 'Headlight flash',

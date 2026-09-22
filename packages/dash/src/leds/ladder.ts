@@ -42,7 +42,7 @@ export const ladderOrder = (style: LedRpmStyle, count: number): LadderOrder =>
  * The colour a style lights each of its three bands in, always from `design/tokens.json`.
  *
  * `f1` is green and red rather than green, amber and red — the look of a modern formula car's
- * wheel, drawn in openDash's own palette — and it is green as far as the shift point rather than
+ * wheel, drawn in OpenDash's own palette — and it is green as far as the shift point rather than
  * through a middle band of its own, which is why the first two bands hold one colour instead of
  * the style carrying a band split of its own. On a fourteen-rung run that is green to rung 9 and
  * red from rung 10, exactly where the top band begins, so the colour still says which band the

@@ -1,4 +1,4 @@
-# ADR 0018: The car's own lights, from a table openDash does not carry
+# ADR 0018: The car's own lights, from a table OpenDash does not carry
 
 **Date:** 2026-09-16
 **Status:** Accepted. Amends [ADR 0014](0014-the-shift-model.md), which stands: its two ladders are
@@ -15,7 +15,7 @@ amendment is at the foot of the Decision and says what replaced them.
 
 ## Context
 
-[ADR 0014](0014-the-shift-model.md) made openDash mirror the car's shift *behaviour*: the four
+[ADR 0014](0014-the-shift-model.md) made OpenDash mirror the car's shift *behaviour*: the four
 `DriverCarSL*` RPMs iRacing publishes and SimHub ignores. It was explicit about the half it could
 not do — "what the sim does not publish is colour… a mirror is a mirror of behaviour" — and sent
 colour to the Car themes project.
@@ -30,10 +30,10 @@ Getting the other half right runs into four standing refusals at once, which is 
 record and not a ticket:
 
 - **[ADR 0009](0009-does-the-plugin-compute.md): the plugin does not compute.**
-- **`data/shift-points.json`**: openDash does not carry measurements it has not made, and
+- **`data/shift-points.json`**: OpenDash does not carry measurements it has not made, and
   "copied from another product" is explicitly not an acceptable source.
 - **[ADR 0012](0012-update-checks.md)**: the network is GitHub releases, and nothing else.
-- **[ADR 0014](0014-the-shift-model.md)**: colour is openDash's tokens, not the car's.
+- **[ADR 0014](0014-the-shift-model.md)**: colour is OpenDash's tokens, not the car's.
 
 ## Investigation
 
@@ -44,7 +44,7 @@ decide this record.
 Newman Racing carries 600+ cars measured per gear behind a membership; the Fanatec App carries its
 own closed set; [Lovely Car Data](https://github.com/Lovely-Sim-Racing/lovely-car-data) carries 85
 iRacing cars in the open under CC BY-NC-SA 4.0. Everyone else falls back to the four RPMs, which is
-where openDash is. A measured table is not a shortcut somebody took: it is the only known way.
+where OpenDash is. A measured table is not a shortcut somebody took: it is the only known way.
 
 **The whole vocabulary is one data shape.** A threshold and a colour per LED, plus a blink colour
 and interval, express left-to-right, meet-in-the-middle, blocks, one-at-a-time, all-red,
@@ -61,16 +61,16 @@ redline rather than the table's, and its blink interval is a constant in the fil
 
 ## Decision
 
-**openDash mirrors the car's own bar — thresholds, colours, blink and gear — where a table for that
+**OpenDash mirrors the car's own bar — thresholds, colours, blink and gear — where a table for that
 car exists, and mirrors its behaviour exactly as before where one does not.**
 
 Five parts, each of which is the answer to one of the refusals above.
 
-### 1. openDash carries no table. The plugin fetches one.
+### 1. OpenDash carries no table. The plugin fetches one.
 
 The data is CC BY-NC-SA 4.0 and this repository is MIT; vendoring it would put non-commercial
 share-alike numbers into an MIT tree and into every generated profile, and it would break the rule
-`data/shift-points.json` states about measurements openDash has not made. So openDash ships none of
+`data/shift-points.json` states about measurements OpenDash has not made. So OpenDash ships none of
 it. The plugin fetches it onto the user's machine instead, caches it under its own folder, and
 credits Lovely Sim Racing in the lights panel.
 
@@ -81,12 +81,12 @@ release, and the numbers stay the upstream's to correct.
 car the driver just got into, and it is the wrong one: it would tell a CDN which car this user is
 driving and when, every time they tried a new one. That is a session detail leaving the machine,
 which is the line [ADR 0012](0012-update-checks.md) exists to keep, and no amount of "it is only a
-car name" makes it a thing openDash should send. One archive asks the question every other user
+car name" makes it a thing OpenDash should send. One archive asks the question every other user
 asks and discloses nothing about this one. It also fails better: a car works the first time it is
 driven, offline, in a session that never reaches the network at all. It costs 386 KB, once,
 refreshed at most weekly, and the user's existing update-check switch governs it.
 
-`data/shift-points.json` is unchanged and keeps its own purpose — a car **openDash itself** has
+`data/shift-points.json` is unchanged and keeps its own purpose — a car **OpenDash itself** has
 measured, contributed as a reviewable pull request.
 
 ### 2. The plugin computes, for this and for nothing else yet.
@@ -99,7 +99,7 @@ is not in SimHub.
 
 What ADR 0009 was defending — that a package alone is a complete product — survives intact, and
 that is the test applied here rather than the letter of the rule. **The profile without the plugin
-is not broken; it is the profile openDash ships today.** The mirror is one more rung on top of a
+is not broken; it is the profile OpenDash ships today.** The mirror is one more rung on top of a
 ladder that already falls back twice.
 
 ### 3. The precedence, top to bottom
@@ -112,7 +112,7 @@ Extending the list in `leds/shiftPoints.ts`, which is the file that has to stay 
 4. SimHub's bands, for a car that publishes nothing. Unchanged, everywhere.
 
 A car falls to rung 3 for any of: the plugin absent, the table not fetched yet, no entry for the
-car, a malformed entry, or the driver preferring one of openDash's own styles. All five look the
+car, a malformed entry, or the driver preferring one of OpenDash's own styles. All five look the
 same from the profile's side — one property is false — which is what keeps the failure quiet and
 the fallback total.
 
@@ -131,7 +131,7 @@ length and returns a colour per LED:
 ### 5. The three styles stay
 
 `leftToRight`, `meetInMiddle` and `f1` are unchanged and are what a driver who wants one look in
-every car chooses. The new value is a fourth, `car`, and it is the default: openDash's opinion is
+every car chooses. The new value is a fourth, `car`, and it is the default: OpenDash's opinion is
 that the car is right and the driver may disagree.
 
 **Amended 2026-09-21 ([#366](https://github.com/xorob0/OpenDash/issues/366)).** Part 1's fetch is
@@ -152,9 +152,9 @@ button with a car count beside it turns the commonest of the five into something
 
 The licence one is that a copy the *user* made, having been shown the project, the licence, the size
 and the host, is a better answer to CC BY-NC-SA than a copy a background thread made on their behalf
-during startup. It does not change what the licence permits — openDash still redistributes nothing,
+during startup. It does not change what the licence permits — OpenDash still redistributes nothing,
 which was always the load-bearing fact — and it is worth being honest that it is a strengthening of a
-position rather than the establishing of one. The thing that would actually settle openDash's use of
+position rather than the establishing of one. The thing that would actually settle OpenDash's use of
 this data is asking Lovely Sim Racing directly, which has not been done and is not what this
 amendment is.
 
@@ -167,8 +167,8 @@ source and in this record, and the panel said only that the tables followed the 
 **Bake the tables into the profiles at build time.** One `RPMSegments` per car and gear under a
 `CarId` group; deduplicating identical gears takes 755 gear rows to 258, which is a few hundred KB
 per profile and one comparison per car per frame — genuinely viable, and it would need no plugin.
-Rejected because it cannot be reconciled with part 1: a table openDash does not carry cannot be
-baked into a file openDash builds. It is also frozen at release, and it cannot blink at the car's
+Rejected because it cannot be reconciled with part 1: a table OpenDash does not carry cannot be
+baked into a file OpenDash builds. It is also frozen at release, and it cannot blink at the car's
 interval.
 
 **One `ScriptedContent` per run, with the table as embedded Javascript.** One container instead of
@@ -189,9 +189,9 @@ and watch its bar. The mechanism for it already exists and stays.
 ### Good
 
 A driver sees their own car's lights, in the car's colours, at the car's RPMs, in the car's gear —
-on a strip, a brow or a button box openDash has never heard of, because the renderer is a function
+on a strip, a brow or a button box OpenDash has never heard of, because the renderer is a function
 of the run length. The pattern vocabulary needs no code: adding a car is upstream's business, and
-openDash learns it without a release. And the taxonomy that looked like six features is one
+OpenDash learns it without a release. And the taxonomy that looked like six features is one
 renderer and a table.
 
 ### Bad
@@ -204,12 +204,12 @@ from the Lovely Car Data repository, on the same terms — nothing about the use
 switchable off, and a failure is silent and falls back. The promise is unchanged; the list of hosts
 grew by one and this record is where that is written down.
 
-**openDash depends on an upstream it does not control.** Coverage is partial (85 cars), the schema
+**OpenDash depends on an upstream it does not control.** Coverage is partial (85 cars), the schema
 can move (it is versioned `v2.0.0`), and one of the 85 files is already malformed. The parser
-skips what it cannot read rather than throwing, and a car openDash cannot parse is a car on rung 3.
+skips what it cannot read rather than throwing, and a car OpenDash cannot parse is a car on rung 3.
 
 **The strip and the screen now disagree about colour.** The strip mirrors the car's palette; the rev
-bar and the rev arc still draw openDash's tokens at openDash's thresholds. This is the divergence
+bar and the rev arc still draw OpenDash's tokens at OpenDash's thresholds. This is the divergence
 `shiftPoints.ts` warns about, arriving for real, and it is the first thing to close
 ([#353](https://github.com/xorob0/OpenDash/issues/353)): the same computation that fills a strip can
 fill a bar, and rung 1 should not stay strips-only for long.
@@ -217,7 +217,7 @@ fill a bar, and rung 1 should not stay strips-only for long.
 ### Unresolved
 
 Whether the rev bar should adopt the car's colours at all, or whether a screen is a place where
-openDash's palette should win and only the *timing* should mirror. That is a design question rather
+OpenDash's palette should win and only the *timing* should mirror. That is a design question rather
 than a mechanical one, and it is the reason rung 1 is deliberately strips-only in this record
 instead of being pushed through `shift.ts` where the screens would have picked it up for free.
 [#353](https://github.com/xorob0/OpenDash/issues/353) is where it is decided, and it lists the three

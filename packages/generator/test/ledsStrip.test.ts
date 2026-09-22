@@ -13,7 +13,7 @@ import { leds, stableGuid } from '../src/index.ts';
 const ID = stableGuid('test/leds/profile');
 
 const profile = (containers: leds.LedContainer[], extra: Partial<leds.LedProfile> = {}): leds.LedProfile => ({
-  name: 'openDash strip',
+  name: 'OpenDash strip',
   profileId: ID,
   containers,
   ...extra,
@@ -190,7 +190,7 @@ describe('validation, which exists because every one of these fails silently', (
     const r = leds.validateProfile(nested(12, 1, 6), { ledCount: 16 });
     expect(codes(r)).toEqual(['leds/off-strip']);
     expect(r.errors[0]!.message).toBe('covers LEDs 12..17 of a 16-LED strip; the last 1 would not be drawn');
-    expect(r.errors[0]!.path).toBe('openDash strip/Base.Group[0]/StaticColor[0]');
+    expect(r.errors[0]!.path).toBe('OpenDash strip/Base.Group[0]/StaticColor[0]');
   });
 
   test('a remap group renumbers rather than offsets, so its children start from 1 again', () => {
@@ -212,7 +212,7 @@ describe('validation, which exists because every one of these fails silently', (
   test('an animation pixel is checked too, since sixty-four of them is where a typo hides', () => {
     const r = leds.validateProfile(profile([{ kind: 'animation', rows: 8, columns: 8, frames: [{ pixels: [['#0F0']], durationMs: 500 }] }]));
     expect(codes(r)).toEqual(['leds/color']);
-    expect(r.errors[0]!.path).toBe('openDash strip/Animation[0]#Frames[0].0,0');
+    expect(r.errors[0]!.path).toBe('OpenDash strip/Animation[0]#Frames[0].0,0');
   });
 
   test('a mis-arity or unknown NCalc call is an error: SimHub evaluates either to nothing', () => {
@@ -255,9 +255,9 @@ describe('writing', () => {
     const b = mkdtempSync(join(tmpdir(), 'leds-b-'));
     try {
       const p = profile([{ kind: 'staticColor', ledCount: 3, color: '#00D96A' }]);
-      const pathA = leds.writeLedsProfile(p, a, 'openDash strip');
-      const pathB = leds.writeLedsProfile(p, b, 'openDash strip');
-      expect(pathA.endsWith('openDash strip.ledsprofile')).toBe(true);
+      const pathA = leds.writeLedsProfile(p, a, 'OpenDash strip');
+      const pathB = leds.writeLedsProfile(p, b, 'OpenDash strip');
+      expect(pathA.endsWith('OpenDash strip.ledsprofile')).toBe(true);
       expect(readFileSync(pathA, 'utf8')).toBe(readFileSync(pathB, 'utf8'));
     } finally {
       rmSync(a, { recursive: true, force: true });
