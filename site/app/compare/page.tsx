@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 };
 
 const LEGEND = [
-  ['yes', 'Shipped'],
-  ['partial', 'Partly'],
+  ['yes', 'Free, included or compatible'],
+  ['partial', 'With a condition'],
   ['paid', 'Paid'],
   ['soon', 'Coming soon, with the issue'],
   ['notBuilt', 'Not built, with the reason'],

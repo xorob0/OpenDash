@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "version": "0.3.0-rc.5",
-  "commit": "b2b199b",
+  "version": "0.3.0-rc.6",
+  "commit": "3720e1e",
   "simHubVersion": "9.12.6",
   "clips": [
     {
@@ -12,18 +12,18 @@
       "height": 480,
       "fps": 20,
       "seconds": 6,
-      "frames": 139,
-      "dropped": 1,
-      "takenAt": "2026-09-22T17:22:43.994Z",
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T18:16:03.501Z",
       "files": {
         "webm": "opendash-850x480.webm",
         "mp4": "opendash-850x480.mp4",
         "poster": "opendash-850x480.png"
       },
       "bytes": {
-        "webm": 77555,
-        "mp4": 92036,
-        "poster": 55189
+        "webm": 80267,
+        "mp4": 93094,
+        "poster": 53868
       }
     },
     {
@@ -34,18 +34,18 @@
       "height": 480,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T17:23:55.749Z",
+      "frames": 139,
+      "dropped": 1,
+      "takenAt": "2026-09-22T18:17:15.787Z",
       "files": {
         "webm": "opendash-companion.webm",
         "mp4": "opendash-companion.mp4",
         "poster": "opendash-companion.png"
       },
       "bytes": {
-        "webm": 34533,
-        "mp4": 39269,
-        "poster": 31865
+        "webm": 34609,
+        "mp4": 39502,
+        "poster": 31782
       }
     },
     {
@@ -56,18 +56,18 @@
       "height": 1080,
       "fps": 15,
       "seconds": 6,
-      "frames": 105,
-      "dropped": 0,
-      "takenAt": "2026-09-22T17:25:08.523Z",
+      "frames": 104,
+      "dropped": 1,
+      "takenAt": "2026-09-22T18:18:29.679Z",
       "files": {
         "webm": "opendash-pit-wall.webm",
         "mp4": "opendash-pit-wall.mp4",
         "poster": "opendash-pit-wall.png"
       },
       "bytes": {
-        "webm": 219733,
-        "mp4": 261360,
-        "poster": 235140
+        "webm": 220298,
+        "mp4": 261035,
+        "poster": 233220
       }
     }
   ]

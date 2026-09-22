@@ -15,6 +15,8 @@ export type Mark = 'yes' | 'partial' | 'no' | 'paid' | 'soon' | 'notBuilt' | 'un
 
 export interface Cell {
   mark: Mark;
+  /** The word in the cell: Free, Included, Compatible, Paid, Coming soon, Not built, Not checked. */
+  word: string;
   text: string;
   /** The issues a coming feature is scheduled under. Required when the mark is `soon`. */
   issues?: number[];
@@ -44,7 +46,8 @@ export const PRODUCTS: Product[] = [
   { id: 'dnr', name: 'Daniel Newman Racing', short: 'DNR', asOf: CHECKED_ON },
 ];
 
-const cell = (mark: Mark, text: string, extra: Partial<Cell> = {}): Cell => ({ mark, text, ...extra });
+const WORD: Record<Mark, string> = { yes: 'Included', partial: 'Partly', no: 'No', paid: 'Paid', soon: 'Coming soon', notBuilt: 'Not built', unchecked: 'Not checked' };
+const cell = (mark: Mark, text: string, extra: Partial<Cell> = {}): Cell => ({ mark, word: WORD[mark], text, ...extra });
 const unchecked = cell('unchecked', 'Their pages do not say.');
 
 export const ROWS: CompareRow[] = [
@@ -52,16 +55,16 @@ export const ROWS: CompareRow[] = [
     id: 'sims',
     label: 'Sims',
     cells: {
-      opendash: cell('partial', 'iRacing, tested. Other sims may work and are not claimed.'),
-      lovely: cell('yes', '12 sims natively, and any sim SimHub reads.'),
-      dnr: cell('yes', '7 sims with measured car data, and any sim SimHub reads.'),
+      opendash: cell('partial', 'iRacing, tested. Other sims may work and are not claimed.', { word: 'iRacing' }),
+      lovely: cell('yes', '12 sims natively, and any sim SimHub reads.', { word: 'Compatible' }),
+      dnr: cell('yes', '7 sims with measured car data, and any sim SimHub reads.', { word: 'Compatible' }),
     },
   },
   {
     id: 'price',
     label: 'Price',
     cells: {
-      opendash: cell('yes', `${FREE_FOREVER} ${NOTHING_TO_UNLOCK}`),
+      opendash: cell('yes', `${FREE_FOREVER} ${NOTHING_TO_UNLOCK}`, { word: 'Free' }),
       lovely: cell('paid', 'Free tier limited to 3 modules per side and no pit wall. Starter €1 a month, Pro €3, Gold €9.'),
       dnr: cell('paid', 'Dashboards free as shipped. Changing anything starts at Pit Crew, £3 a month. Team Driver £6, Team Principal £9, all before VAT.'),
     },
@@ -70,18 +73,18 @@ export const ROWS: CompareRow[] = [
     id: 'licence',
     label: 'Licence',
     cells: {
-      opendash: cell('yes', 'MIT. Use it, change it, redistribute it.'),
-      lovely: cell('partial', 'A licence key, on at most 2 PCs. No refunds. Source published, reuse of the design forbidden.'),
-      dnr: cell('partial', '1 PC per plan, 2 on Team Principal.'),
+      opendash: cell('yes', 'MIT. Use it, change it, redistribute it.', { word: 'MIT' }),
+      lovely: cell('partial', 'A licence key, on at most 2 PCs. No refunds. Source published, reuse of the design forbidden.', { word: 'Restricted' }),
+      dnr: cell('partial', '1 PC per plan, 2 on Team Principal.', { word: 'Restricted' }),
     },
   },
   {
     id: 'accounts',
     label: 'Activation and accounts',
     cells: {
-      opendash: cell('yes', 'None.'),
-      lovely: cell('partial', 'A licence key for the paid tiers.'),
-      dnr: cell('partial', 'A membership for anything beyond the shipped dashboards.'),
+      opendash: cell('yes', 'None.', { word: 'None' }),
+      lovely: cell('partial', 'A licence key for the paid tiers.', { word: 'Licence key' }),
+      dnr: cell('partial', 'A membership for anything beyond the shipped dashboards.', { word: 'Membership' }),
     },
   },
   {
@@ -97,7 +100,7 @@ export const ROWS: CompareRow[] = [
     id: 'noPlugin',
     label: 'Works without the plugin',
     cells: {
-      opendash: cell('yes', 'Yes. Every dashboard carries its own defaults.'),
+      opendash: cell('yes', 'Yes. Every dashboard carries its own defaults.', { word: 'Yes' }),
       lovely: cell('no', 'The dashboards cannot run without the Lovely Plugin, in their own words.'),
       dnr: cell('no', 'The plugin is part of the install; running without it is not described.'),
     },
@@ -124,7 +127,7 @@ export const ROWS: CompareRow[] = [
     id: 'leds',
     label: 'LED profiles and per-car shift lights',
     cells: {
-      opendash: cell('yes', '62 strip shapes, free. The car’s own lights from the open Lovely Car Data table, fetched by the plugin.'),
+      opendash: cell('yes', '62 strip shapes. The car’s own lights from the open Lovely Car Data table, fetched by the plugin.', { word: 'Free' }),
       lovely: unchecked,
       dnr: cell('paid', 'Every LED profile needs a membership. Shift points measured for over 600 cars.'),
     },
@@ -133,7 +136,7 @@ export const ROWS: CompareRow[] = [
     id: 'flagBox',
     label: 'Flag box, 8 × 8 matrix',
     cells: {
-      opendash: cell('yes', '69 glyphs, generated. Flags, pit states, warnings, the gear and the spotter.'),
+      opendash: cell('yes', '69 glyphs, generated. Flags, pit states, warnings, the gear and the spotter.', { word: 'Free' }),
       lovely: unchecked,
       dnr: cell('paid', 'Matrix profiles on Team Driver, £6 a month.'),
     },
@@ -250,7 +253,7 @@ export const ROWS: CompareRow[] = [
     id: 'source',
     label: 'Buildable from source',
     cells: {
-      opendash: cell('yes', 'Yes. TypeScript and design tokens, 1 command.'),
+      opendash: cell('yes', 'Yes. TypeScript and design tokens, 1 command.', { word: 'Yes' }),
       lovely: cell('no', 'Source published, reuse forbidden.'),
       dnr: cell('no', 'Closed.'),
     },
@@ -259,7 +262,7 @@ export const ROWS: CompareRow[] = [
     id: 'privacy',
     label: 'What leaves your machine',
     cells: {
-      opendash: cell('yes', 'An optional daily update check to GitHub. Nothing else.'),
+      opendash: cell('yes', 'An optional daily update check to GitHub. Nothing else.', { word: 'Nothing' }),
       lovely: unchecked,
       dnr: unchecked,
     },
@@ -268,9 +271,9 @@ export const ROWS: CompareRow[] = [
     id: 'community',
     label: 'Community',
     cells: {
-      opendash: cell('partial', 'GitHub issues. No Discord.'),
-      lovely: cell('yes', 'A Discord of about 18,000.'),
-      dnr: cell('yes', 'A Discord of about 7,800.'),
+      opendash: cell('partial', 'GitHub issues. No Discord.', { word: 'GitHub' }),
+      lovely: cell('yes', 'A Discord of about 18,000.', { word: 'Discord' }),
+      dnr: cell('yes', 'A Discord of about 7,800.', { word: 'Discord' }),
     },
   },
 ];

@@ -6,22 +6,12 @@ import type { Cell } from '../lib/compare';
 import { SCOPE_URL, issueUrl } from '../lib/site';
 import styles from './Mark.module.css';
 
-const WORD: Record<Cell['mark'], string> = {
-  yes: 'Shipped',
-  partial: 'Partly',
-  no: 'No',
-  paid: 'Paid',
-  soon: 'Coming soon',
-  notBuilt: 'Not built',
-  unchecked: 'Not checked',
-};
-
 export function Mark({ cell }: { cell: Cell }) {
   return (
     <div className={styles.cell}>
       <p className={styles.head}>
         <span className={`${styles.square} ${styles[cell.mark]}`} aria-hidden="true" />
-        <span className={styles.word}>{WORD[cell.mark]}</span>
+        <span className={styles.word}>{cell.word}</span>
       </p>
       <p className={styles.text}>{cell.text}</p>
       {cell.issues && cell.issues.length > 0 ? (

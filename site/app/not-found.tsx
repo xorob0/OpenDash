@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { DOWNLOAD, NAV } from '../lib/site';
+import { INSTALL, NAV } from '../lib/site';
 
 export default function NotFound() {
   return (
@@ -22,8 +22,8 @@ export default function NotFound() {
             </li>
           ))}
           <li>
-            <Link href={DOWNLOAD.href} className="link">
-              {DOWNLOAD.label}
+            <Link href={INSTALL.href} className="link">
+              {INSTALL.label}
             </Link>
           </li>
         </ul>

@@ -12,7 +12,7 @@ export const alt = 'OpenDash: free SimHub dashboards for iRacing';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-const MARK = 'M1,27 L1,20 A15,15 0 0 1 31,20 L31,27 Z M14.173,17.621 L23.388,10.544 L18.751,21.197 A3,3 0 1 1 14.173,17.621 Z';
+const MARK = 'M1,27 L1,5 L31,5 L31,27 Z M1,11 L1,8.5 L31,8.5 L31,11 Z M1,24.5 L1,22 L31,22 L31,24.5 Z M8.25,22 L8.25,11 L10.75,11 L10.75,22 Z M21.25,22 L21.25,11 L23.75,11 L23.75,22 Z';
 
 export default function Image() {
   const fonts = path.join(process.cwd(), '..', 'packages', 'dash', 'fonts');
