@@ -423,6 +423,42 @@ namespace OpenDashPlugin.Tests
             Assert.False(PackageExtractor.Retitle(root, null, "Main dash", null));
         }
 
+        /// <summary>
+        /// A folder whose spelling differs from the package's only in case still installs.
+        /// </summary>
+        /// <remarks>
+        /// A rig upgraded across #374 carries its folders spelled "openDash 850x480" in the settings
+        /// while the package's own is "OpenDash 850x480". Windows treats those as one path, so
+        /// Directory.Move compares them without case and throws "Source and destination path must be
+        /// different" rather than renaming -- which is what the Edit panel's reinstall did on the first
+        /// rig it met, the press that is meant to be the repair failing on exactly the rigs that need it.
+        ///
+        /// The assertion is the same on either filesystem; only Windows takes the two-step path inside,
+        /// so this is a regression pin here and the real check was driven on the VM.
+        /// </remarks>
+        [Fact]
+        public void A_folder_spelled_differently_only_in_case_still_installs()
+        {
+            var target = new PackageExtractor.ScreenTarget
+            {
+                Folder = "opendash 1280x480",
+                Title = "Main dash",
+                FromNamespace = "Face1280x480",
+                ToNamespace = "Face1280x480",
+            };
+            var result = PackageExtractor.Install(Instanceable("OpenDash 1280x480", "Face1280x480"), root, null, false, target);
+            Assert.Equal("opendash 1280x480", result.FolderName);
+
+            // SimHub finds a dashboard as <folder>/<folder>.djson, so the spelling the screen asked for
+            // has to be the spelling of both.
+            var folder = Templates("opendash 1280x480");
+            Assert.True(File.Exists(Path.Combine(folder, "opendash 1280x480.djson")));
+            Assert.True(File.Exists(Path.Combine(folder, "opendash 1280x480.djson.metadata")));
+            Assert.Contains("\"Title\":\"Main dash\"", File.ReadAllText(Path.Combine(folder, "opendash 1280x480.djson.metadata")));
+            // And nothing is left behind under the name it went through to get there.
+            Assert.Empty(Directory.GetFiles(folder, "*.case*"));
+        }
+
         [Fact]
         public void The_stock_screen_is_written_byte_for_byte()
         {
