@@ -31,7 +31,6 @@ function sources(dir: string): string[] {
  * rewrites the file, so the list shrinks to nothing and the rules then hold everywhere.
  */
 const LEGACY = [
-  'app/flag-box/',
   'app/install/',
   'app/download/',
   'components/Shot.tsx',

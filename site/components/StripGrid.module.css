@@ -1,0 +1,99 @@
+.wrap {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.scroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-text-dim) transparent;
+}
+
+.table {
+  border-collapse: collapse;
+  min-width: 56rem;
+  width: 100%;
+}
+
+.table caption {
+  caption-side: top;
+  text-align: left;
+  padding-bottom: var(--space-3);
+}
+
+.corner,
+.head {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-surface-raised);
+}
+
+.cell {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-surface-raised);
+  vertical-align: middle;
+}
+
+.shape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.shapeLabel {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+}
+
+.groups {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.runs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.run {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.legacy {
+  margin-top: var(--space-2);
+}
+
+.legacyRow {
+  display: grid;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+}
+
+.devices {
+  color: var(--color-text-secondary);
+  font-size: var(--size-small);
+}
+
+@media (min-width: 62rem) {
+  .groups {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .legacyRow {
+    grid-template-columns: auto 6rem 1fr;
+  }
+}

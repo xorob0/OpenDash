@@ -1,0 +1,36 @@
+.wrap {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.list {
+  max-width: var(--measure);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr auto;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.n {
+  color: var(--color-text-secondary);
+}
+
+.name {
+  color: var(--color-text-primary);
+}
+
+.tag {
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.spotter {
+  font-size: var(--size-small);
+}
