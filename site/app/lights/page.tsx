@@ -105,7 +105,7 @@ export default function Lights() {
         id="tab"
         label="The Lights tab"
         title="Everything above, on 1 tab."
-        lede="Brightness and night brightness for the whole rig, a low fuel warning in laps, the car tables, a strip per device with its shape, and up to 4 matrices with what each one shows."
+        lede="The flag box and up to 4 matrix panels, a low fuel warning in laps, a strip per device with its centre display and rev light style, the car light tables with their update button, and brightness, night brightness and night mode for every light."
         wide
       >
         <Capture file={panelFile('lights')} alt="The plugin’s Lights tab in SimHub" width={panel?.width ?? 1200} height={panel?.height ?? 1300} caption="The Lights tab" scale={1} />

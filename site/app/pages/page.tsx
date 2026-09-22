@@ -37,6 +37,7 @@ export default function Pages() {
         <PageGrid pages={on} />
         <div className={styles.note}>
           <CaptureNote served={VERSION} />
+          <p className={`prose ${styles.aside}`}>The track page’s outline is what SimHub recorded from the emulator’s lap. On a rig it is the circuit.</p>
         </div>
       </Section>
 
