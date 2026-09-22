@@ -102,11 +102,12 @@ function syncPanel(tab: string, source: string): number {
   const name = `panel-${tab}.png`;
   copyFileSync(source, path.join(outDir, name));
   const size = pngSize(source);
-  const run = provenance(null);
   const sidecar = readSidecar();
   const files = { [name]: toEntry({ kind: 'panel', panel: tab, ...size, lapsSeen: null }, null) };
-  // A panel picture does not restate which scenario the dashboards were shot on.
-  writeFileSync(sidecarPath, `${JSON.stringify(merge(sidecar, { ...run, scenario: sidecar.scenario }, files), null, 2)}\n`);
+  // A panel picture joins the run the dashboards were shot in; it does not restamp the sidecar's
+  // version, commit or date, which are the run's. A sidecar with no run yet takes the tree's.
+  const run = sidecar.version ? sidecar : { ...provenance(null), scenario: sidecar.scenario };
+  writeFileSync(sidecarPath, `${JSON.stringify(merge(sidecar, run, files), null, 2)}\n`);
   console.log(`${source} -> shots/${name} (${size.width}x${size.height})`);
   return 0;
 }

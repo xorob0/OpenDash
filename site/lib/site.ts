@@ -17,7 +17,7 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 
 export const SITE_NAME = 'OpenDash';
 /** The product, as the mark spells it. */
 export const WORDMARK = 'openDash';
-export const SITE_TAGLINE = 'Free SimHub dashboards for iRacing.';
+export const SITE_TAGLINE = 'Free dashboards for SimHub, built for iRacing first.';
 
 export const REPO_URL = 'https://github.com/xorob0/OpenDash';
 export const issueUrl = (n: number): string => `${REPO_URL}/issues/${n}`;
@@ -45,22 +45,22 @@ export const NO_TRACKING = 'No analytics, no cookies. This site records nothing 
 export const CAR_DATA_CREDIT =
   'Car light data: Lovely Car Data, by Lovely Sim Racing, ATSR and Gomez Sim Industries, CC BY-NC-SA 4.0. Fetched by the plugin, never bundled.';
 
-/** The three things neither competitor offers, stated on the first screen. */
+/** The three reasons on the first screen. */
 export const DIFFERENTIATORS = [
   {
-    id: 'source',
-    title: 'Generated from source, under MIT.',
-    body: 'Every dashboard is built from TypeScript and design tokens. A new size or feature is a pull request, not a paid pack.',
+    id: 'free',
+    title: 'Free and open source, under MIT.',
+    body: 'No tier, no key, no PC limit. The source is on GitHub, and a new size or feature is a pull request.',
   },
   {
     id: 'lights',
-    title: 'Your car’s own shift lights.',
-    body: 'Colours, order and per-gear thresholds from open data, on any LED strip.',
+    title: 'LEDs and matrix panels.',
+    body: 'Shift lights in your car’s own colours and order, flags and the spotter on the sides, and an 8 × 8 flag box. 62 strip shapes, all included.',
   },
   {
-    id: 'plugin',
-    title: 'Works without the plugin.',
-    body: 'Every dashboard carries its own defaults. Double-click 1 file and drive. The plugin adds settings and updates.',
+    id: 'design',
+    title: 'Modern design and features.',
+    body: 'A dashboard laid out for each screen, 21 pages a wheel button cycles, a phone companion and a pit wall.',
   },
 ] as const;
 
@@ -70,7 +70,9 @@ export const NAV = [
   { href: '/pages', label: 'Pages' },
   { href: '/lights', label: 'Lights' },
   { href: '/compare', label: 'Compare' },
-  { href: '/install', label: 'Install' },
+  { href: '/download', label: 'Download' },
 ] as const;
 
+/** The call to action: the plugin is the way in, and the install page is where it starts. */
+export const INSTALL = { href: '/install', label: 'Install' } as const;
 export const DOWNLOAD = { href: '/download', label: 'Download' } as const;

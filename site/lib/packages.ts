@@ -1,40 +1,14 @@
 /**
- * The editorial layer over the generated package list, and the helpers that name a package.
+ * The helpers that name and order a package.
  *
  * `content.generated.ts` says which packages exist and how big each one is, because that is a fact
- * the build already knows. What a size is *for* is not in any build output. It is the sentence a
- * reader needs in order to pick one, so it lives here, keyed by folder. A package with no note
- * still renders: the note is a help, not a requirement.
+ * the build already knows; this file names them and orders them for a reader.
  *
  * Nothing here imports the generated content, so the tests under `test/` can use `slug` and
  * `inReadingOrder` from the repository root without the generators having run. The lists that do
  * depend on the build are in `faces.ts`.
  */
 import type { SitePackage } from '../scripts/content';
-
-export interface PackageNote {
-  /** What it is, in a sentence or two. */
-  what: string;
-  /** Set on the two sizes a first-time reader should be steered towards. */
-  emphasis?: 'base' | 'large';
-}
-
-export const NOTES: Record<string, PackageNote> = {
-  OpenDash: { what: 'The reference face, 1920 px wide. Every other size is this layout, redrawn.' },
-  'OpenDash 1280x480': { what: 'A wide DDU. Driver rows carry the car number and the class.', emphasis: 'large' },
-  'OpenDash 1280x400': { what: 'The wide DDU with a shorter body.' },
-  'OpenDash 1280x720': { what: 'A tall body. Zone C lists 18 drivers.' },
-  'OpenDash 850x480': { what: 'The common wheel DDU. All 5 parts.', emphasis: 'base' },
-  'OpenDash 800x480': { what: 'The 850 face, 25 px narrower on each side.' },
-  'OpenDash 800x286': { what: 'The nano. No bar, the fuel page, no driver list.' },
-  'OpenDash 600x686': { what: 'Portrait. Zone A above B above C.' },
-  'OpenDash 480 round': { what: 'A round or square 480 DDU. Still the old 12-slot design.' },
-  'OpenDash 800 round': { what: 'The larger round DDU. Still the old 12-slot design.' },
-  'OpenDash Companion': { what: 'A phone or tablet beside the wheel. 1 page at a time.' },
-  'OpenDash Companion portrait': { what: 'The same, for a phone stood on end.' },
-  'OpenDash Pit wall': { what: '3 pages for whoever is not driving.' },
-  'OpenDash Pit wall portrait': { what: 'The same in 1 page, for a screen on its side.' },
-};
 
 /** `OpenDash 1280x480` -> `opendash-1280x480`: the name of its capture, its clip and its picker id. */
 export const slug = (folder: string): string =>
