@@ -27,10 +27,16 @@ namespace OpenDashPlugin
             return Path.Combine(simHubRoot, DashTemplates, folderName);
         }
 
+        /// <summary>DashTemplates/<folder>/<folder>.djson, the file SimHub loads a dashboard from.</summary>
+        public static string InstalledDashboard(string simHubRoot, string folderName)
+        {
+            return Path.Combine(InstalledFolder(simHubRoot, folderName), folderName + DashExtension);
+        }
+
         /// <summary>True when DashTemplates/<folder>/<folder>.djson exists.</summary>
         public static bool IsInstalled(string simHubRoot, string folderName)
         {
-            return File.Exists(Path.Combine(InstalledFolder(simHubRoot, folderName), folderName + DashExtension));
+            return File.Exists(InstalledDashboard(simHubRoot, folderName));
         }
 
         /// <summary>DashTemplates/<folder>/<folder>.djson.metadata, the sidecar that carries DashboardVersion.</summary>
