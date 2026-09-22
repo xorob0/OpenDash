@@ -27,7 +27,7 @@ following. The field names are Dokploy's own.
 |---|---|---|
 | Build | Build Type | `Dockerfile` |
 | Build | Dockerfile Path | `site/Dockerfile` |
-| Build | Docker Context Path | `.` |
+| Build | Docker Context Path | `.`, typed in rather than left to the placeholder |
 | Build | Docker Build Stage | leave empty |
 | Environment | Build Time Arguments | `NEXT_PUBLIC_SITE_URL=https://your.domain` |
 | Domains | Host | `your.domain` |
@@ -38,6 +38,21 @@ The context is the repository root and not `site/`, because the stages that buil
 run the site's generators read `packages/`, `design/`, `scripts/`, `plugin/`, `VERSION` and
 `CHANGELOG.md`, none of which live under `site/`. A context set to `site/` fails on the first
 `COPY`.
+
+**Type the dot.** Dokploy shows `Path of your docker context (default: .)` in that field as grey
+placeholder text, which reads exactly like a value already in place, and it is not one. An empty
+field is stored as the empty string, and the builder treats the empty string as no answer at all:
+
+```js
+const defaultContextPath =
+  dockerFilePath.substring(0, dockerFilePath.lastIndexOf("/") + 1) || ".";
+const dockerContextPath = getDockerContextPath(application) || defaultContextPath;
+```
+
+The fallback is therefore the directory holding the Dockerfile, which here is `site/`, and not the
+repository root the placeholder promises. A value that is typed, on the other hand, is joined to
+the clone root rather than to the Dockerfile, so `.` means the repository. Both lines are from
+Dokploy 0.29; should a later version make the placeholder true, typing the dot remains correct.
 
 ### The origin is a build argument, not an environment variable
 
@@ -104,7 +119,11 @@ branch you are willing to hand to a driver.
 variable rather than as a build argument, or it was set before the domain changed and the
 application has not been rebuilt since. Move it to Build Time Arguments and rebuild.
 
-**The first `COPY` fails.** The Docker Context Path is `site/` rather than `.`.
+**The build fails on a `COPY` with `"/site": not found`,** along with `/packages`, `/design`,
+`/plugin` and most of the rest of the tree. The context is `site/` rather than the repository root,
+which is what an empty Docker Context Path gives you. The other tell is in the log a few lines
+earlier: `load .dockerignore` transferring two bytes means it found none, and the repository's own
+`.dockerignore` is at the root. Type `.` into the field and redeploy.
 
 **The site answers with no styling and no pictures.** The static and public folders did not reach
 the runtime stage. Next leaves them out of the standalone output deliberately, expecting a CDN, and
