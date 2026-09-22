@@ -285,7 +285,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The mark: the dash, a housing under a half circle with a tachometer needle swept up and to the right.
+        /// The mark: the face's own layout, two full width strips with three zones between them.
         /// </summary>
         /// <remarks>
         /// The geometry is MarkShape.PathData, which is the SVG's own `d` string rather than a transcription of it,
@@ -295,7 +295,7 @@ namespace OpenDashPlugin
         /// did not. Change the SVG first.
         ///
         /// "F0" is the path mini-language's even-odd fill rule, which is what the SVG spells as
-        /// fill-rule="evenodd": it is what makes the needle a hole in the housing rather than a second shape on
+        /// fill-rule="evenodd": it is what makes each separation a hole in the housing rather than a line drawn on
         /// top of it, so the mark carries one brush and works on any ground. RenderTransform rather than Stretch,
         /// because Stretch fits the ink's bounds and would quietly drop the box's padding.
         /// </remarks>

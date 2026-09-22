@@ -25,7 +25,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>Every point the path actually moves to or draws to, which is not every number in it: an arc
-        /// carries its radii and its flags in front of its endpoint.</summary>
+        /// carries its radii and its flags in front of its endpoint. The mark draws no arcs any more, but the
+        /// reader stays arc-aware so that a curve reintroduced by accident is measured rather than skipped.</summary>
         static IEnumerable<(double X, double Y)> Points(string d)
         {
             var tokens = Regex.Matches(d, @"[MLAZ]|-?\d*\.?\d+").Cast<Match>().Select(m => m.Value).ToList();
@@ -47,6 +48,10 @@ namespace OpenDashPlugin.Tests
             }
         }
 
+        /// <summary>The points of the nth subpath, counting the housing as zero.</summary>
+        static (double X, double Y)[] Subpath(int index) =>
+            Points(MarkShape.PathData).Skip(4 * index).Take(4).ToArray();
+
         [Fact]
         public void The_panel_draws_the_path_the_svg_declares()
         {
@@ -55,14 +60,14 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_needle_is_a_hole_in_the_housing_rather_than_a_second_shape()
+        public void The_separations_are_holes_in_the_housing_rather_than_lines_over_it()
         {
-            // One subpath for the housing, one for the needle, and the even-odd rule between them. This is what
-            // lets the mark carry a single brush and sit on any ground: the needle is whatever is behind it.
-            // Ui.Mark asks for the same rule as "F0", which is the path mini-language's spelling of it.
+            // One subpath for the housing and one for each of the four separations, with the even-odd rule between
+            // them. This is what lets the mark carry a single brush and sit on any ground: a separation is whatever
+            // is behind it. Ui.Mark asks for the same rule as "F0", the path mini-language's spelling of it.
             Assert.Contains(@"fill-rule=""evenodd""", Svg());
-            Assert.Equal(2, MarkShape.PathData.Count(c => c == 'M'));
-            Assert.Equal(2, MarkShape.PathData.Count(c => c == 'Z'));
+            Assert.Equal(5, MarkShape.PathData.Count(c => c == 'M'));
+            Assert.Equal(5, MarkShape.PathData.Count(c => c == 'Z'));
         }
 
         [Fact]
@@ -86,68 +91,100 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_top_is_one_half_circle_and_the_bottom_is_square()
+        public void Every_corner_is_square()
         {
-            // A half circle, not two rounded corners: the radius is exactly half the width, so one arc spans the
-            // whole of it. Anything less leaves a flat run across the top and the silhouette stops reading as a
-            // dash. The floor keeps radius.none, which is what the brand says race dashes are.
-            Assert.Equal(MarkShape.HousingWidth / 2, MarkShape.HousingRadius);
-            Assert.True(MarkShape.HousingHeight > MarkShape.HousingRadius,
-                "the half circle needs a straight side under it to sit on");
+            // radius.none throughout. The mark this replaced spent the one curve the brand allows itself on a half
+            // circle over the top; a layout has no use for it, and an arc here would be the shape drifting back
+            // towards the instrument it stopped being.
+            Assert.DoesNotContain('A', MarkShape.PathData);
 
+            var right = MarkShape.HousingX + MarkShape.HousingWidth;
             var bottom = MarkShape.HousingY + MarkShape.HousingHeight;
-            var corners = Points(MarkShape.PathData).Take(4).ToArray();
-            Assert.Contains(corners, p => p.X == MarkShape.HousingX && p.Y == bottom);
-            Assert.Contains(corners, p => p.X == MarkShape.HousingX + MarkShape.HousingWidth && p.Y == bottom);
+            var corners = Subpath(0);
+            foreach (var expected in new[]
+                     {
+                         (X: MarkShape.HousingX, Y: MarkShape.HousingY),
+                         (X: right, Y: MarkShape.HousingY),
+                         (X: MarkShape.HousingX, Y: bottom),
+                         (X: right, Y: bottom),
+                     })
+            {
+                Assert.Contains(corners, p => p.X == expected.X && p.Y == expected.Y);
+            }
         }
 
         [Fact]
-        public void The_needle_pivots_at_the_centre_the_roof_is_drawn_from()
+        public void The_bands_run_the_full_width_and_only_the_middle_is_divided()
         {
-            // The hub and the half circle share a centre, so the point aims at the arc wherever it is swept to.
-            // It is also the only pivot that lets the needle be turned without redrawing anything else.
-            Assert.Equal(MarkShape.HousingX + MarkShape.HousingWidth / 2, MarkShape.PivotX);
-            Assert.Equal(MarkShape.HousingY + MarkShape.HousingRadius, MarkShape.PivotY);
+            // This is the face's own structure rather than a grid: the header and the footer are uninterrupted,
+            // and the three zones exist between them. A vertical slot that ran the whole height would draw three
+            // columns of a table instead.
+            var right = MarkShape.HousingX + MarkShape.HousingWidth;
+            foreach (var band in new[] { Subpath(1), Subpath(2) })
+            {
+                Assert.All(band, p => Assert.True(p.X == MarkShape.HousingX || p.X == right,
+                    "a band separation stops at " + p.X + " rather than running the full width"));
+            }
+
+            foreach (var column in new[] { Subpath(3), Subpath(4) })
+            {
+                Assert.All(column, p => Assert.True(p.Y == MarkShape.MiddleTop || p.Y == MarkShape.MiddleBottom,
+                    "a column separation reaches " + p.Y + ", which is outside the middle band"));
+            }
         }
 
         [Fact]
-        public void The_needle_is_a_needle_and_it_points_up_and_to_the_right()
+        public void The_gear_zone_is_the_widest_of_the_three()
         {
-            // Up and to the right is a tachometer under load, which is the only state worth drawing. Between 30
-            // and 75 degrees: flatter reads as idle, steeper as a exclamation mark rather than a needle.
-            Assert.InRange(MarkShape.SweepDegrees, 30, 75);
-            // Longer than the hub it leaves, or it is a blob with a spike rather than a needle.
-            Assert.True(MarkShape.NeedleLength > 3 * MarkShape.HubRadius,
-                "the needle is " + MarkShape.NeedleLength + " long off a hub of " + MarkShape.HubRadius);
+            // Hierarchy through size, which is the rule the face itself keeps: the gear is 260 px against 15 px
+            // labels. Three equal columns would be a grid and would say nothing about what the dash is for.
+            Assert.True(MarkShape.CentreWidth > MarkShape.SideWidth,
+                "the centre zone is " + MarkShape.CentreWidth + " against " + MarkShape.SideWidth + " either side");
+
+            // The header carries the rev bar and the session row, the footer one row of fuel figures.
+            Assert.True(MarkShape.HeaderHeight > MarkShape.FooterHeight,
+                "the header is " + MarkShape.HeaderHeight + " and the footer " + MarkShape.FooterHeight);
         }
 
         [Fact]
-        public void Nothing_in_it_merges_or_disappears_at_sixteen_pixels()
+        public void Nothing_in_it_merges_or_disappears_at_twenty_four_pixels()
         {
-            // The mark is shown at 16 px in a browser tab, where one unit is half a pixel. Two ways it can die
-            // there, and the needle is what puts both in play: the hub can close up, and the point can touch the
-            // housing and stop being a point. The needle's own taper is the one thing exempt -- it is meant to
-            // reach nothing, and it is read from the body behind it.
-            var px = 16.0 / MarkShape.Box;
-            Assert.True(2 * MarkShape.HubRadius * px >= 2, "the hub is " + 2 * MarkShape.HubRadius + " units across and closes at 16 px");
-
-            var clearance = MarkShape.HousingRadius - MarkShape.NeedleLength;
-            Assert.True(clearance * px >= 1, "the point is " + clearance + " units off the arc and merges with it at 16 px");
-
-            var belowHub = MarkShape.HousingY + MarkShape.HousingHeight - (MarkShape.PivotY + MarkShape.HubRadius);
-            Assert.True(belowHub * px >= 1, "the hub is " + belowHub + " units off the floor and merges with it at 16 px");
+            // The mark this replaced was held to 16 px, because a browser tab draws it there. A layout cannot meet
+            // that and it was adopted knowing so: at half a pixel per unit the five zones close up and it reads as
+            // a striped rectangle. 24 px is what it is held to instead, which is the size SimHub's left menu draws
+            // it at, and at three quarters of a pixel per unit nothing here may fall under one and a half.
+            var px = 24.0 / MarkShape.Box;
+            foreach (var (name, units) in new (string, double)[]
+                     {
+                         ("the gap between zones", MarkShape.Gap),
+                         ("the header", MarkShape.HeaderHeight),
+                         ("the footer", MarkShape.FooterHeight),
+                         ("a side zone", MarkShape.SideWidth),
+                         ("the gear zone", MarkShape.CentreWidth),
+                         ("the middle band", MarkShape.MiddleBottom - MarkShape.MiddleTop),
+                     })
+            {
+                Assert.True(units * px >= 1.5, name + " is " + units + " units and draws at " + units * px + " px");
+            }
         }
 
         [Fact]
-        public void The_point_the_path_draws_is_the_one_the_constants_describe()
+        public void The_slots_the_path_draws_are_the_ones_the_constants_describe()
         {
             // The path is written out rather than generated, so this is what keeps the numbers in it honest: the
-            // tip is the constants' own sweep and length, taken off the pivot.
-            var a = MarkShape.SweepDegrees * Math.PI / 180;
-            var expected = (X: MarkShape.PivotX + MarkShape.NeedleLength * Math.Cos(a),
-                            Y: MarkShape.PivotY - MarkShape.NeedleLength * Math.Sin(a));
-            var drawn = Points(MarkShape.PathData).Skip(4).ToArray();
-            Assert.Contains(drawn, p => Math.Abs(p.X - expected.X) < 0.01 && Math.Abs(p.Y - expected.Y) < 0.01);
+            // four separations are the constants' own widths, taken off the housing's edges.
+            Assert.Equal(new[] { MarkShape.HousingY + MarkShape.HeaderHeight, MarkShape.MiddleTop },
+                Subpath(1).Select(p => p.Y).Distinct().OrderBy(y => y).ToArray());
+            Assert.Equal(new[] { MarkShape.MiddleBottom, MarkShape.HousingY + MarkShape.HousingHeight - MarkShape.FooterHeight },
+                Subpath(2).Select(p => p.Y).Distinct().OrderBy(y => y).ToArray());
+
+            var left = MarkShape.HousingX + MarkShape.SideWidth;
+            Assert.Equal(new[] { left, left + MarkShape.Gap },
+                Subpath(3).Select(p => p.X).Distinct().OrderBy(x => x).ToArray());
+
+            var rightSlot = left + MarkShape.Gap + MarkShape.CentreWidth;
+            Assert.Equal(new[] { rightSlot, rightSlot + MarkShape.Gap },
+                Subpath(4).Select(p => p.X).Distinct().OrderBy(x => x).ToArray());
         }
 
         [Fact]

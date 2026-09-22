@@ -65,7 +65,7 @@ namespace OpenDashPlugin
 
         public string LeftMenuTitle => "OpenDash";
 
-        public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create(this));
+        public ImageSource PictureIcon => icon ?? (icon = PluginIcon.Create());
 
         /// <summary>The plugin version, which is the VERSION file: "0.1.0".</summary>
         public static string Version

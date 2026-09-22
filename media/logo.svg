@@ -1,39 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="OpenDash">
   <title>OpenDash</title>
   <!--
-    The mark is the dash itself: a housing wider than it is tall, square across the bottom and
-    closed over the top by a half circle, with a tachometer needle swept up and to the right in it.
+    The mark is the face's own layout: a full width strip across the top, a full width strip across
+    the bottom, and three zones between them. It is what an OpenDash face looks like from far enough
+    away to stop reading the values, and it is the structure docs/design/brand.md describes as zones
+    separated by rules rather than by boxes or cards.
 
-    The top is a true half circle rather than a pair of rounded corners: its radius is 15, which is
-    exactly half the housing's 30 width, so the arc spans the whole width in one sweep and the
-    straight sides are the 7 units left under it. One arc, not three segments.
+    It replaced a dash housing with a tachometer needle in it. The needle was the problem rather than
+    the housing: SimHub's own Dash Studio entry sits five rows above OpenDash in the same left menu and
+    is drawn as a gauge with a needle cut out of it, so the mark was reading as a second copy of a
+    neighbour in the one place most people meet it. Inverting it, an outlined bezel with a solid needle
+    inside, lands on Dash Studio exactly rather than away from it, which was measured against a
+    screenshot before this was drawn. A layout is the one thing no round instrument can be.
 
-    It is one shape with one hole. The housing is the outer subpath, the needle the inner one, and
-    `fill-rule="evenodd"` cuts the second out of the first, so the needle is the background showing
-    through rather than a second colour. That is what lets the mark sit on the near-black panel and
-    on the README's white without being drawn twice.
+    Every edge is square. This mark spends none of the one curve the brand allowed itself, so it is
+    radius.none throughout, which is the form rule the rest of the product already keeps.
 
-    The needle is a real needle rather than a wedge: a round hub of radius 3 at the pivot, and two
-    lines running from the hub's own tangent points out to a single point. Tangents, so the blade
-    leaves the hub smoothly instead of stepping off it, which is the difference between a needle and
-    a comma at 24 px. It pivots at 16,20, which is the half circle's own centre, so the needle and
-    the roof share a centre of curvature and the point always aims at the arc.
+    The separations are gaps rather than lines, so the mark stays one shape with holes: the housing is
+    the first subpath and the four slots are the others, and `fill-rule="evenodd"` cuts them out. That
+    is what keeps it to one brush and lets it sit on the near-black panel and on the README's white
+    without being drawn twice.
 
-    The sizes are held by what survives a browser tab at 16 px, where one unit is half a pixel. The
-    hub is 6 units across, the housing 22 units tall, the point stands 3 units clear of the arc and
-    the hub 4 units clear of the floor, so nothing merges with the housing at that size. The needle
-    tapers to nothing on purpose, which is the one place the four-unit floor does not apply: a taper
-    is read from the body behind it.
+    The vertical slots run through the middle band only, because the header and the footer are full
+    width on the face and it is the middle that is divided.
 
-    Square across the bottom is `radius.none`; the half circle is the one curve the brand allows
-    itself, and it is what makes the silhouette a dash rather than a box.
+    The proportions are the face stylised rather than the face measured, and the two departures are
+    deliberate. On the 850 x 480 face the rules are one pixel wide and the three columns are near
+    enough equal thirds; here the gaps are 2.5 units so that they survive being drawn at 24 px, and the
+    middle column is 10.5 against 7.25 so that the gear zone is legibly the dominant one, which is what
+    it is on the face. The header is thicker than the footer, as it is on the face.
+
+    It does not survive 16 px. At half a pixel per unit the five zones close up and the mark reads as a
+    striped rectangle, so the browser tab is the one place it is weaker than what it replaced. That is
+    the cost of an arrangement over a silhouette, it was decided knowingly, and it is why the test
+    below holds the mark to 24 px rather than to 16.
 
     The single colour is design/tokens.json's purpose.ui.accent, which Theme.Accent mirrors. A mark
-    with a hex of its own would be a second palette; anything that draws this in another colour
-    should set `fill` on the path rather than edit the geometry.
+    with a hex of its own would be a second palette; anything that draws this in another colour should
+    set `fill` on the path rather than edit the geometry.
 
-    The path is MarkShape.PathData in the plugin, character for character, and MarkTests compares
-    the two. Change this file first.
+    The path is MarkShape.PathData in the plugin, character for character, and MarkTests compares the
+    two. Change this file first.
   -->
-  <path fill="#33D9F2" fill-rule="evenodd" d="M1,27 L1,20 A15,15 0 0 1 31,20 L31,27 Z M14.173,17.621 L23.388,10.544 L18.751,21.197 A3,3 0 1 1 14.173,17.621 Z" />
+  <path fill="#33D9F2" fill-rule="evenodd" d="M1,27 L1,5 L31,5 L31,27 Z M1,11 L1,8.5 L31,8.5 L31,11 Z M1,24.5 L1,22 L31,22 L31,24.5 Z M8.25,22 L8.25,11 L10.75,11 L10.75,22 Z M21.25,22 L21.25,11 L23.75,11 L23.75,22 Z" />
 </svg>
