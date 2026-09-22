@@ -154,6 +154,44 @@ namespace OpenDashPlugin
             return placement;
         }
 
+        /// <summary>
+        /// How many of the car's own three shift bands the engine has entered: 0 below the first LED,
+        /// then 1, 2 and 3 for the thirds of the bar. -1 when this car and gear have nothing to say,
+        /// which is the caller's signal to fall back to the ladder the sim publishes.
+        ///
+        /// <para>Thirds of the bar rather than thirds of the rev range, because that is what the rev
+        /// bar's own three colours are: <c>stageOf</c> in components/revSegments.ts splits fifteen
+        /// segments the same way, and a digit banded on one rule beside a bar banded on another is two
+        /// answers to one question. Counted as LEDs lit rather than by index, so a bar that fills from
+        /// both ends inwards bands exactly as one that fills left to right does.</para>
+        ///
+        /// <para>A threshold of zero is left out of the count entirely. It means lit from idle, which
+        /// is how the files spell an LED that is not part of the ladder -- a marker, or the unlit half
+        /// of a gap -- and counting those would put a stationary car two thirds of the way up its own
+        /// bar.</para>
+        /// </summary>
+        public static int Stage(CarLightTable table, string gear, double rpm)
+        {
+            if (table == null) return -1;
+            var row = GearFor(table, gear);
+            if (row == null || row.Thresholds == null || row.Thresholds.Length != table.LedCount) return -1;
+            var ladder = 0;
+            var lit = 0;
+            foreach (var threshold in row.Thresholds)
+            {
+                if (threshold <= 0) continue;
+                ladder++;
+                // The same comparison the bar draws with, so a band is entered on the frame its first
+                // LED lights and not one either side of it.
+                if (rpm > threshold) lit++;
+            }
+            if (ladder == 0) return -1;
+            if (lit == 0) return 0;
+            // Rounded up, so that one LED of nine is the first band rather than none of them.
+            var stage = (lit * 3 + ladder - 1) / ladder;
+            return stage > 3 ? 3 : stage;
+        }
+
         /// <summary>The LED that lights last in this gear, which is the one a single lamp has to be.</summary>
         private static int Last(CarLightGear row)
         {

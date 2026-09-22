@@ -211,6 +211,11 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.FlagBoxLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
             this.AttachDelegate(Contract.LightsLowFuelLaps, () => Settings.FlagBoxLowFuelLaps);
             this.AttachDelegate(Contract.FlagBoxSpotterAnimation, () => Settings.FlagBoxSpotterAnimation);
+            // The bands of the car's own measured bar, which the digit on a panel set to it reads.
+            // Filled by the same DataUpdate that fills the strips' runs, and -1 whenever there is no
+            // table behind them -- a rig with none, a car with no row, or nothing on the rig asking.
+            this.AttachDelegate(Contract.CarLadderStage, () => CarLights.Stage);
+            this.AttachDelegate(Contract.CarLadderOverRev, () => CarLights.OverRev);
             foreach (var matrix in Contract.FlagBoxMatrices)
             {
                 var m = matrix;
@@ -229,6 +234,8 @@ namespace OpenDashPlugin
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "OilTemp"), () => Settings.MatrixOilTemp(m) == 0 ? (int?)null : Settings.MatrixOilTemp(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "WaterTemp"), () => Settings.MatrixWaterTemp(m) == 0 ? (int?)null : Settings.MatrixWaterTemp(m));
                 this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "GearBlink"), () => Settings.MatrixGearBlink(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "GearBands"), () => Settings.MatrixGearBands(m));
+                this.AttachDelegate(Contract.FlagBoxMatrixProperty(m, "GearCarLadder"), () => Settings.MatrixGearCarLadder(m));
             }
             // The strips, last, in the order Contract.LightsPropertyNames() declares them. Every
             // generated .ledsprofile reads these, so a strip with none of them attached can only ever
@@ -295,7 +302,8 @@ namespace OpenDashPlugin
                 // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no
                 // opinion falls back to: the mirror is one computation feeding every strip, so gating it
                 // on one setting would leave a second bar set to the car's own reading a run nothing fills.
-                var on = data != null && data.GameRunning && telemetry != null && Settings.AnyCarLadderWanted();
+                var on = data != null && data.GameRunning && telemetry != null
+                    && (Settings.AnyCarLadderWanted() || Settings.AnyMatrixCarLadderWanted());
                 CarLights.Update(
                     on ? telemetry.CarId : null,
                     on ? telemetry.Gear : null,

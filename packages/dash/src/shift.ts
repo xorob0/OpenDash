@@ -13,6 +13,12 @@
  * set of thresholds, `simhub` (ADR 0004's behaviour, unchanged) when it does not. Which one is in
  * use is visible as which layer is visible — see `revSegments.ts`.
  *
+ * There is a third, and it is the one exception to everything said above: the measured tables of
+ * ADR 0018, whose bands arrive already computed because 85 files of per-gear thresholds are not
+ * something an expression can read. It is offered to the flag box's digit alone and only when that
+ * panel is set to it, and it falls back to the two above; see `carLadderStageEntered` at the foot
+ * of this file.
+ *
  * Two ways to ask. Something that lights a row of segments asks per segment, with
  * `mirrorStageLit` / `simhubStageLit` and the choice made structurally as two layers. Something
  * with a single thing to colour asks `stageEntered` and `overRevEither`, and something with a
@@ -22,6 +28,7 @@
  */
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
+import { CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, propertyName } from './contract.ts';
 
 const { prop, game, raw, gt, ge, eq, mul, sub, num, isnull, and, or, not, max, iff } = ncalc;
 
@@ -221,3 +228,40 @@ const band = (which: 1 | 2): Expr => isnull(game(`CarSettings_RPMShiftLight${whi
 
 /** Redline reached, under SimHub's own bands. The flash of ADR 0004. */
 export const simhubRedline = (): Expr => eq(isnull(game('CarSettings_RPMRedLineReached'), num(0)), num(1));
+
+/**
+ * The car's own measured bar, as the plugin publishes it: which of its three bands the engine is
+ * in, and whether it is past that gear's redline.
+ *
+ * A third ladder, and the only one that is not an expression. The thresholds are 85 files of them
+ * (ADR 0018), one row per gear, so there is nothing an NCalc string could read and the arithmetic
+ * is the plugin's; what arrives here is its answer. `-1` is the absence of one — no tables on the
+ * rig, no table for this car, or nothing on the rig asking for them — and it is what makes the
+ * fallback the same fallback everything else has, which is {@link stageEntered}.
+ *
+ * It is deliberately *not* folded into {@link eitherLadder}. The rev bar, the arc and the strips
+ * draw the car's whole bar rather than its bands, which they already do from the same tables by
+ * mirroring it LED for LED; the bands are what something with a single thing to colour needs, and
+ * the flag box's digit is the one surface asking.
+ */
+const carLadderStage = (): Expr => isnull(prop(propertyName(CAR_LADDER_STAGE)), num(-1));
+
+/** Whether the car's own bands are being published this frame, which is the gate on reading them. */
+export const carLadderAvailable = (): Expr => ge(carLadderStage(), num(0));
+
+/** Whether the engine has entered band `stage` (0, 1, 2) of the car's own bar. */
+export const carLadderStageEntered = (stage: number): Expr => ge(carLadderStage(), num(stage + 1));
+
+/**
+ * Over-rev on the car's own redline for the gear it is in — a separate threshold from the top band
+ * here as everywhere, and with the same exception on it: never in the last gear, where a flash asks
+ * for a shift that does not exist.
+ *
+ * The 47 measured cars in 85 that publish no flash at all report false at any RPM, because the
+ * plugin answers this from the same `OverRev` the strips mirror: a flash the car never gives is a
+ * warning OpenDash invented.
+ */
+export const carLadderOverRev = (): Expr => and(eq(isnull(prop(propertyName(CAR_LADDER_OVER_REV)), 'false'), 'true'), not(lastGear()));
+
+/** `a` where `wanted` holds and `b` where it does not, for two ladders answering one question. */
+export const eitherOf = (wanted: Expr, a: Expr, b: Expr): Expr => or(and(wanted, a), and(not(wanted), b));

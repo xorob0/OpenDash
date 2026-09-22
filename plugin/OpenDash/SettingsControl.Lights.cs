@@ -242,7 +242,14 @@ namespace OpenDashPlugin
                     // same answer: the one at the edge of vision strobing through the redline is what a
                     // driver who already has a rev bar turns off. Off leaves the digit in the redline
                     // colour, which is still the whole of the message.
+                    // Above the flash, because it decides whether there is a band to flash on. A driver
+                    // with a rev bar in front of them may want the panel to say the gear and nothing
+                    // else; off leaves the digit in one colour at any engine speed.
+                    Ui.Row("Shift colours", "Off keeps the gear one colour as the revs rise.", BuildToggle(Settings.MatrixGearBands(m), on => { Settings.FlagBoxMatrixGearBands[m - 1] = on; Save(); })),
                     Ui.Row("Redline flash", "Off keeps the gear steady and red.", BuildToggle(Settings.MatrixGearBlink(m), on => { Settings.FlagBoxMatrixGearBlink[m - 1] = on; Save(); })),
+                    // The same answer the strips give, offered here because the digit is the one other
+                    // thing on the rig those tables can colour.
+                    Ui.Row("Car-specific thresholds", "Colours change where this car's own lights do. Falls back when it has no table.", BuildToggle(Settings.MatrixGearCarLadder(m), on => { Settings.FlagBoxMatrixGearCarLadder[m - 1] = on; Save(); })),
                     Ui.Row("Oil temperature warning", "Warns above this. 0 uses the default (120 C, 248 F).", BuildNumberBox(Settings.MatrixOilTemp(m), 0, 999, v => { Settings.FlagBoxMatrixOilTemp[m - 1] = v; Save(); })),
                     Ui.Row("Water temperature warning", "Warns above this. 0 uses the default (110 C, 230 F).", BuildNumberBox(Settings.MatrixWaterTemp(m), 0, 999, v => { Settings.FlagBoxMatrixWaterTemp[m - 1] = v; Save(); })));
             });

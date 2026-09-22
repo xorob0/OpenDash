@@ -259,6 +259,15 @@ namespace OpenDashPlugin
         /// the loudest part of it if this defaulted off.</summary>
         public const bool DefaultFlagBoxGearBlink = true;
 
+        /// <summary>On: the digit is coloured by the shift model, which is what makes it worth looking
+        /// at rather than a readout of something the driver's own hand just did.</summary>
+        public const bool DefaultFlagBoxGearBands = true;
+
+        /// <summary>On, as <see cref="DefaultLedRpmStyle"/> is: where somebody has measured the car,
+        /// that is the better description of it, and a rig with no tables falls back without being
+        /// told.</summary>
+        public const bool DefaultFlagBoxGearCarLadder = true;
+
         public const int DefaultFlagBoxLowFuelLaps = 2;
 
         /// <summary>120 C and 110 C, and their equivalents, so a default is right in whatever unit is set.
@@ -291,7 +300,7 @@ namespace OpenDashPlugin
             return "FlagBoxMatrix" + matrix + name;
         }
 
-        /// <summary>The eleven names of one matrix, in attachment order. The four that moved here from
+        /// <summary>The thirteen names of one matrix, in attachment order. The four that moved here from
         /// the tab, and the flash switch after them, are appended rather than interleaved because both
         /// halves of the contract pin this list in order.
         ///
@@ -311,6 +320,8 @@ namespace OpenDashPlugin
             yield return FlagBoxMatrixProperty(matrix, "OilTemp");
             yield return FlagBoxMatrixProperty(matrix, "WaterTemp");
             yield return FlagBoxMatrixProperty(matrix, "GearBlink");
+            yield return FlagBoxMatrixProperty(matrix, "GearBands");
+            yield return FlagBoxMatrixProperty(matrix, "GearCarLadder");
         }
 
         /// <summary>Critical-flags-only off on every panel, and the gear switch on on every panel: the
@@ -333,6 +344,16 @@ namespace OpenDashPlugin
         {
             var values = new bool[FlagBoxMatrices.Count];
             for (var i = 0; i < values.Length; i++) values[i] = DefaultFlagBoxGearBlink;
+            return values;
+        }
+
+        /// <summary>One value on every panel, for a default that does not vary by panel. The three
+        /// above predate it and are left as they are; the plural of "GearBands" is "GearBands", which
+        /// is what made a named method per setting stop working.</summary>
+        public static bool[] EveryFlagBoxMatrix(bool value)
+        {
+            var values = new bool[FlagBoxMatrices.Count];
+            for (var i = 0; i < values.Length; i++) values[i] = value;
             return values;
         }
 
@@ -415,6 +436,14 @@ namespace OpenDashPlugin
         /// <summary>Whether the plugin is publishing a mirrored bar this frame. Computed, not chosen:
         /// it is the one gate the mirror layer of every strip profile hangs on.</summary>
         public const string LedMirrorReady = "LedMirrorReady";
+
+        /// <summary>How many of the car's own three shift bands the engine has entered this frame, or
+        /// -1 when no table is being read. Computed, not chosen, for the same reason the runs above
+        /// are: the thresholds are a table per gear and no expression can hold one.</summary>
+        public const string CarLadderStage = "CarLadderStage";
+
+        /// <summary>Whether the car is past its own redline for the gear it is in.</summary>
+        public const string CarLadderOverRev = "CarLadderOverRev";
 
         public const string LedMirrorFit = "LedMirrorFit";
 
@@ -1544,6 +1573,9 @@ namespace OpenDashPlugin
             // the group and is never inserted into it.
             yield return LightsLowFuelLaps;
             yield return FlagBoxSpotterAnimation;
+            // Computed rather than chosen, and read by the digit on a panel set to the car's own bar.
+            yield return CarLadderStage;
+            yield return CarLadderOverRev;
             foreach (var matrix in FlagBoxMatrices)
             {
                 foreach (var name in FlagBoxMatrixProperties(matrix)) yield return name;

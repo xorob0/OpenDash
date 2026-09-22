@@ -82,6 +82,9 @@ Out of the box, matrix 1 does everything and 2 to 4 are off, which is the right 
 | **Car warnings** | Let low fuel, oil and water take this panel. |
 | **Mounting side** | `Both`, `Left` or `Right`. |
 | **Critical flags only** | Quiet until something matters. Drops the chequer, the white, the green and the start gantry; keeps everything that means slow down or is addressed to you. |
+| **Shift colours** | On, the gear changes colour as the revs rise, the same three bands the rev bar climbs. Off, it stays one colour at any engine speed, which is what to reach for if you have a rev bar in front of you and want the box to say the gear and nothing else. |
+| **Redline flash** | On, the digit flashes while you are over-revving. Off leaves it steady and red, so nothing is lost but the strobe. |
+| **Car-specific thresholds** | On, the colours change where this car's own shift lights do, from the **Car light tables** you can download further down this page. A car with no table, or a rig that has never fetched them, falls back to the ladder the sim publishes and nothing is said about it. |
 | **Oil / Water temperature warning** | In **your own unit**. Leave them at 0 and OpenDash uses the right default for whichever unit SimHub is set to: 120 °C or 248 °F for oil, 110 °C or 230 °F for water. |
 
 **Mounting side is the one to get right.** It is where the box physically is, not what you want it to

@@ -271,6 +271,30 @@ is now entered on the car's own ladder where the car publishes one and on SimHub
 does not ([ADR 0014](../decisions/0014-the-shift-model.md)). The digit, a rev segment and an LED on
 a strip therefore change colour on the same frame for the same reason, and flash on the same one.
 
+**Two switches sit over that colour, and they ask different questions.**
+`OpenDash.FlagBoxMatrix<N>GearBands` decides whether the digit is banded at all. Off, it stays in
+the resting colour at any engine speed, which is what a driver with a rev bar in front of them is
+asking for when they ask the panel to stop lighting up: the gear becomes a readout of the gear and
+nothing besides. The flash goes with it, since a band that is never entered cannot flash, and so
+this is the switch above `GearBlink` rather than a second spelling of it.
+
+`OpenDash.FlagBoxMatrix<N>GearCarLadder` decides where the bands come from, and it is the digit's
+half of what the strips have had since [ADR 0018](../decisions/0018-car-light-tables.md): the
+measured tables, where the rig has fetched them and the car has a row in them. It is on by default
+for the reason the strips' own `car` style is, namely that somebody who has sat in the car and
+written down when each light comes on has described it better than four published numbers can.
+Moreover, a rig whose strip is banded on one ladder and whose digit is banded on another would be
+two answers to one question.
+
+A table is a row of thresholds per gear rather than a ladder of four RPMs, so the bands cannot be
+an expression and the plugin computes them: `CarLightMirror.Stage` counts how many of that gear's
+LEDs are lit and reports the third of the bar the count falls in, which is the same rule
+`stageOf` applies to the rev bar's fifteen segments. It is published as
+`OpenDash.CarLadderStage`, with `-1` standing for the absence of an answer, and the digit falls
+back through it to the ladder the sim publishes without anybody being told. The over-rev is
+published beside it as `OpenDash.CarLadderOverRev`, and it is the table's own redline for the gear
+the car is in, which is a threshold of its own here as everywhere.
+
 There is no gear colour theme. Theming is refused in [scope.md](../scope.md) until ADR 0011 says
 otherwise, and the argument there — two states a driver cannot tell apart is a bug whoever chose
 the colours — is at its strongest on a device whose entire vocabulary is colour.
