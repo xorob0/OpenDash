@@ -12,10 +12,11 @@
 #
 # Build from the REPOSITORY ROOT, not from site/, because stages 1 and 2 need the whole tree:
 #
-#   docker build -f site/Dockerfile -t opendash-site .
-#   docker run -p 3000:3000 -e NEXT_PUBLIC_SITE_URL=https://example.com opendash-site
+#   docker build -f site/Dockerfile --build-arg NEXT_PUBLIC_SITE_URL=https://example.com -t opendash-site .
+#   docker run -p 3000:3000 opendash-site
 #
-# Dokploy: set the build context to the repository root and the Dockerfile path to site/Dockerfile.
+# The origin is a build argument and not a runtime variable, for the reason given at the step that
+# consumes it. docs/deploy.md is the deployment itself, Dokploy field by field.
 
 # ---------------------------------------------------------------- 1. everything the site hands out
 # `bun run package` is the repository's own release command: it builds every .simhubdash and LED
@@ -83,6 +84,17 @@ RUN bun install --frozen-lockfile
 # tokens.css from design/tokens.json, content.generated.ts from the manifest and the changelog, and
 # the woff2 faces from the vendored TTFs. All three are gitignored, so the image has to make them.
 RUN bun run generate
+# Next substitutes every NEXT_PUBLIC_* variable into the output as it builds rather than reading it
+# when the server starts, so the canonical origin has to be given here. Passing it to `docker run`,
+# or to Dokploy's Environment tab, sets a variable nothing reads: the site answers, and its sitemap
+# comes back empty. In Dokploy it belongs in Build Time Arguments. The ARG sits immediately before
+# the step that needs it so that changing the domain rebuilds this layer and no earlier one.
+#
+# The empty default is the documented degradation rather than an oversight: with no origin the
+# metadata carries no absolute URL and the sitemap is empty, which lib/site.ts prefers to guessing
+# at a domain.
+ARG NEXT_PUBLIC_SITE_URL=""
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 # Under node rather than bun: next build is the one step where the difference has bitten before,
 # and the runtime stage is node anyway, so building on the same engine keeps them honest.
 RUN node node_modules/.bin/next build
@@ -114,4 +126,12 @@ RUN mkdir -p .next/cache && chown -R node:node .next
 
 USER node
 EXPOSE 3000
+
+# Without this the orchestrator has only the existence of the process to go on, and the process
+# exists about a second before Next answers anything; a rolling update would hand readers over to a
+# container that is not serving yet. node:22-slim carries neither curl nor wget, so the probe is
+# node's own fetch against the home page, which is prerendered and costs a file read.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 CMD ["node", "server.js"]

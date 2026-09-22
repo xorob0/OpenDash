@@ -62,28 +62,30 @@ capture.
 
 ## Deploying
 
+[docs/deploy.md](../docs/deploy.md) is the deployment: the Dokploy application field by field, the
+first deploy, what a redeploy publishes, and the failures worth recognising. Two facts from it are
+worth having here, because both are easy to get wrong from inside this directory.
+
 The image builds everything it serves. Its first stage runs the repository's own `bun run package`,
 so the `.simhubdash` files and `OpenDash-plugin.zip` on the Downloads page are the files this commit
-produces — there is no second place holding an artifact that can go stale, and no token to keep.
-The consequence is that the site can only offer one version, which is why Downloads pairs the
-current build with the changelog rather than with an archive.
-
-**Build from the repository root, not from `site/`:**
+produces, and a redeploy is a release of the downloads as much as of the pages. **Build from the
+repository root, not from `site/`**, because that first stage needs the whole tree:
 
 ```bash
-docker build -f site/Dockerfile -t opendash-site .
-docker run -p 3000:3000 -e NEXT_PUBLIC_SITE_URL=https://your.domain opendash-site
+docker build -f site/Dockerfile --build-arg NEXT_PUBLIC_SITE_URL=https://your.domain -t opendash-site .
+docker run -p 3000:3000 opendash-site
 ```
 
-In Dokploy, set the build context to the repository root and the Dockerfile path to
-`site/Dockerfile`. Redeploy to publish a release: the image rebuilds the packages from source.
+And the canonical origin is a build argument rather than a runtime variable. Next substitutes
+`NEXT_PUBLIC_*` into its output while building, so a value given to `docker run`, or to Dokploy's
+Environment tab, is read by nothing: the site answers, and its sitemap comes back empty.
 
-### Environment
+### Settings
 
-| Variable | |
+| | |
 |---|---|
-| `NEXT_PUBLIC_SITE_URL` | The canonical origin, no trailing slash. There is no default — unset, the metadata carries no absolute URL and the sitemap comes back empty rather than pointing at a domain this repository would have had to guess. |
-| `PORT` | Defaults to 3000. |
+| `NEXT_PUBLIC_SITE_URL` (build argument) | The canonical origin, no trailing slash. There is no default: unset, the metadata carries no absolute URL and the sitemap comes back empty rather than pointing at a domain this repository would have had to guess. |
+| `PORT` (environment) | Defaults to 3000. |
 
 ## Design
 
