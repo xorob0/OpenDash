@@ -1,8 +1,8 @@
 // PanelDataTabTests.cs: the Data tab's copy and its one spacing of its own.
 //
-// The Position row carries a sentence the canvas does not, which is a decision and not an oversight; a
-// later reader comparing the tab against the canvas would otherwise delete it as a difference. Pinning it
-// here is what makes the deletion fail rather than pass quietly.
+// The Position row carries two sentences the canvas does not, which is a decision and not an oversight; a
+// later reader comparing the tab against the canvas would otherwise delete them as a difference. Pinning
+// them here is what makes the deletion fail rather than pass quietly.
 using System;
 using System.IO;
 using System.Linq;
@@ -59,12 +59,16 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_position_row_keeps_the_sentence_the_canvas_does_not_carry()
+        public void The_position_row_keeps_the_sentences_the_canvas_does_not_carry()
         {
             // The canvas's own sentence, "Overall, or within your class", is what the segmented control
-            // beside the row already says in two words. What the row keeps is the half the canvas does
-            // not carry and the control cannot show: a zone overrides this on its own.
-            Assert.Equal("Each zone can override this.", PanelDataTab.PositionCaption);
+            // beside the row already says in two words. What the row keeps is what the canvas does not
+            // carry and the control cannot show: that Class filters the lists as well as numbering them
+            // since #212, and that a zone can ask for the same filter without the rig doing so. The
+            // row used to promise an override instead, which is the direction the two settings do not
+            // run in; pinning the words here is what makes a quiet return to that fail.
+            Assert.Equal("Class also shows only your own class in lists. A zone can ask for that on its own.", PanelDataTab.PositionCaption);
+            Assert.DoesNotContain("override", PanelDataTab.PositionCaption);
         }
     }
 }

@@ -17,7 +17,7 @@
  * Where this file finally lives is #151's question, along with the rest of what `second/` holds.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from './generator.ts';
-import { withBindings, type Expr } from './bind.ts';
+import { withMoreBindings, type Expr } from './bind.ts';
 import type { Size } from './design/geometry.ts';
 import { ds } from './tokens.ts';
 
@@ -75,7 +75,7 @@ export interface PagedWidgetSpec {
  * nothing is ever scaled down.
  */
 export function pagedWidget(spec: PagedWidgetSpec): WidgetItem {
-  return {
+  return withMoreBindings({
     kind: 'widget',
     name: spec.name,
     rect: { ...spec.rect },
@@ -83,8 +83,7 @@ export function pagedWidget(spec: PagedWidgetSpec): WidgetItem {
     initialScreenIndex: spec.initialScreenIndex,
     autoSize: true,
     ...(spec.backgroundColor ? { backgroundColor: spec.backgroundColor } : {}),
-    ...withBindings({ InitialScreenIndex: spec.page }),
-  };
+  }, { InitialScreenIndex: spec.page });
 }
 
 /** One screen of a paged dashboard: a page named after itself, drawn from the items given. */

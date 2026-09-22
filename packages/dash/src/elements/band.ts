@@ -1,6 +1,6 @@
 /** band: a full-width flag or indicator rectangle, square-cornered unless a drawing asks otherwise, optionally outlined; also the hard-edged check of a chequered flag, rotated on a ring. */
 import type { Hex, Rect, RectangleItem } from '../generator.ts';
-import { formula, withBindings, type Expr } from '../bind.ts';
+import { formula, withMoreBindings, type Expr } from '../bind.ts';
 import { roundRect } from '../design/geometry.ts';
 
 export interface BandOptions {
@@ -24,13 +24,12 @@ export function band(name: string, r: Rect, color: Hex, opts: BandOptions = {}):
           ...(opts.radius === undefined ? {} : { radius: opts.radius }),
         }
       : undefined;
-  return {
+  return withMoreBindings({
     kind: 'rect',
     name,
     rect: roundRect(r),
     ...(opts.rotation ? { rotation: opts.rotation } : {}),
     backgroundColor: color,
     ...(border ? { border } : {}),
-    ...withBindings({ Visible: opts.visibleBind }),
-  };
+  }, { Visible: opts.visibleBind });
 }

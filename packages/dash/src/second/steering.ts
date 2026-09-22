@@ -18,7 +18,7 @@
  */
 import type { Hex, Item, RectangleItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { onCircle, type Circle, type Rect } from '../design/geometry.ts';
 import { textBox } from '../design/metrics.ts';
@@ -51,13 +51,10 @@ const cos = (a: Expr): Expr => `cos(${a})`;
  * Dash Studio shows against a sim that is not running.
  */
 function markOnCircle(name: string, face: Circle, size: number, color: Hex, angle: Expr): RectangleItem {
-  return {
-    ...band(name, onCircle(face, 0, { width: size, height: size }), color),
-    ...withBindings({
-      Left: add(num(face.cx - size / 2), mul(num(face.r), sin(angle))),
-      Top: sub(num(face.cy - size / 2), mul(num(face.r), cos(angle))),
-    }),
-  };
+  return withMoreBindings(band(name, onCircle(face, 0, { width: size, height: size }), color), {
+    Left: add(num(face.cx - size / 2), mul(num(face.r), sin(angle))),
+    Top: sub(num(face.cy - size / 2), mul(num(face.r), cos(angle))),
+  });
 }
 
 /**

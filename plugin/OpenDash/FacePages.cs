@@ -66,12 +66,13 @@ namespace OpenDashPlugin
         /// Whether a zone's catalogue holds a page the class filter changes, which is what decides
         /// whether the panel offers the control at all.
         ///
-        /// Zones B and C: the leaderboard and the relative are the two pages that list other cars as
-        /// a table, and both are in the module catalogue. Band D: its own relative page, D7, is three
-        /// gaps rather than a list, so the filter cannot mean listing fewer cars and means asking for
-        /// the car ahead in the player's own class instead -- the same setting read a different way,
-        /// and on a multi-class grid the more useful of the two, since the car ahead on track is
-        /// often in a class the driver is not racing. Zone A lists nobody and is offered nothing.
+        /// Zones B and C: the leaderboard, the relative and the opponents page are the three that
+        /// draw other cars out of a list, and all three are in the module catalogue. Band D: its own
+        /// relative page, D7, is three gaps rather than a list, so the filter cannot mean listing
+        /// fewer cars and means asking for the car ahead in the player's own class instead -- the
+        /// same setting read a different way, and on a multi-class grid the more useful of the two,
+        /// since the car ahead on track is often in a class the driver is not racing. Zone A lists
+        /// nobody and is offered nothing.
         /// </summary>
         public static bool OffersClassFilter(string letter)
         {

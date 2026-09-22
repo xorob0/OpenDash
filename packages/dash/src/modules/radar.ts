@@ -25,7 +25,7 @@
  * `docs/second-screens.md` records these, and what the item would need to do better.
  */
 import { ncalc } from '../generator.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { assetBox } from '../design/assets.ts';
 import { rect, type Rect, type Size } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
@@ -107,9 +107,6 @@ export const radar = defineModule('radar', (ctx) => {
   );
   grid.push(band(`${ctx.prefix}centre`, rect(Math.round(plot.left + plot.width / 2), plot.top, 1, plot.height), ds.color.surface.raised));
   const you = band(`${ctx.prefix}you`, assetBox(plot, CAR, { maxWidth: CAR.width, maxHeight: CAR.height }), ds.color.text.primary);
-  const side = (id: 'left' | 'right', x: number): Item => ({
-    ...band(`${ctx.prefix}${id}`, rect(x, blockTop, spotter, blockHeight), ds.color.text.dim),
-    ...withBindings({ BackgroundColor: iff(spotterOn(id === 'left' ? 'Left' : 'Right'), str(ds.purpose.delta.slower), str(ds.color.text.dim)) }),
-  });
+  const side = (id: 'left' | 'right', x: number): Item => withMoreBindings(band(`${ctx.prefix}${id}`, rect(x, blockTop, spotter, blockHeight), ds.color.text.dim), { BackgroundColor: iff(spotterOn(id === 'left' ? 'Left' : 'Right'), str(ds.purpose.delta.slower), str(ds.color.text.dim)) });
   return [side('left', ctx.frame.left), ...grid, item, you, side('right', ctx.frame.left + ctx.frame.width - spotter)];
 });

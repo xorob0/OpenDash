@@ -22,22 +22,29 @@ import {
   fuel as fuelLevel,
   fuelLapsLeft,
   fuelLastLap,
+  fuelLastLapIsSettled,
   fuelPercent,
   fuelIsSettled,
   fuelPerLap,
   fuelThisLap,
-  fuelTimeLeft,
   fuelToAdd,
   fuelUnit,
   NO_VALUE,
+  settledFuelTimeLeft,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 
-const { fmt, iff, gt, lt, num, str, eq } = ncalc;
+const { and, fmt, iff, gt, lt, num, str, eq } = ncalc;
 
-/** Below a lap of fuel the level reads as low, which is the dash card's rule too. */
-const lowFuel = () => lt(fuelLapsLeft(), num(1));
+/**
+ * Below a lap of fuel the level reads as low, which is the dash card's rule too, and only once a
+ * lap has said what one costs. `fuelLapsLeft` reads the unpublished estimate as zero and zero is
+ * under a lap, so before the first crossing a full tank, the bar under it and the `--` the estimate
+ * draws for itself were all painted in the low-fuel red, on the row this page had just been brought
+ * to one answer on (#382).
+ */
+const lowFuel = () => and(fuelIsSettled(), lt(fuelLapsLeft(), num(1)));
 
 const consumption = (value: string, guard: string) => ({ sample: '2.84', bind: iff(guard, fmt(value, '0.00'), str(NO_VALUE)), chars: CHARS.consumption });
 
@@ -72,7 +79,12 @@ export const fuel = defineModule('fuel', (ctx) => {
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
             follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
           }),
-          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(fuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
+          // Behind the consumption gate for the reason the estimate beside it is: SimHub derives
+          // `Fuel_RemainingTime` from the per-lap figure, so on the out lap the range moves every
+          // frame along with it, and the row would otherwise be an estimate saying it has none
+          // beside a range naming one. The gate is on the seconds rather than around the drawing,
+          // so the absence keeps the clock's own shape and the field has one spelling of nothing.
+          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
           fld(ctx, 'lapsLeft', 'Est. laps', {
             sample: '11.2',
             bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),
@@ -93,7 +105,7 @@ export const fuel = defineModule('fuel', (ctx) => {
             color: ds.color.caution.primary,
           }),
           fld(ctx, 'average', 'Per lap', { ...consumption(fuelPerLap(), fuelIsSettled()), fs: d.mid }),
-          fld(ctx, 'lastLap', 'Last lap', { ...consumption(fuelLastLap(), gt(fuelLastLap(), num(0))), fs: d.mid }),
+          fld(ctx, 'lastLap', 'Last lap', { ...consumption(fuelLastLap(), fuelLastLapIsSettled()), fs: d.mid }),
           fld(ctx, 'thisLap', 'This lap', { ...consumption(fuelThisLap(), gt(fuelThisLap(), num(0))), fs: d.mid }),
         ],
         ctx,

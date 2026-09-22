@@ -13,7 +13,7 @@
  */
 import type { Item, LayerItem, Monospace } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { boxSlack, cells, monoWidth, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
@@ -120,7 +120,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
         ]
       : []),
   ];
-  const row: LayerItem = { kind: 'layer', name: `${ctx.prefix}row`, children, ...withBindings({ Visible: hasTime(time) }) };
+  const row: LayerItem = withMoreBindings({ kind: 'layer', name: `${ctx.prefix}row`, children }, { Visible: hasTime(time) });
   const heading = (name: string, text: string, left: number, width: number, hAlign?: 'right'): Item =>
     label(`${ctx.prefix}head.${name}`, text, left, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, width, { size: d.labelSm, hAlign });
   return [
