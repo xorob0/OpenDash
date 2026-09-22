@@ -2,10 +2,12 @@
  * Module 14, Leaderboard: the order of the race, overall or in the player's class. The row set fits
  * the box, so the same module is seven rows on a companion page and four in a short zone.
  *
- * Two different settings say "class" here and they are not the same question. `PositionMode` is
- * which number a position column shows; a zone's `classOnly` is who is in the list at all. A zone
- * set to one class and counting overall positions is a legitimate thing to want on a multi-class
- * grid, which is why neither implies the other.
+ * Two settings say "class" here and since #212 they meet, in one direction. `PositionMode` is the
+ * rig's own and it filters the rows it numbers, a column of class positions drawn over the whole
+ * field having numbered an order it did not sort. A zone's `classOnly` is that zone asking for the
+ * filter on its own, which a rig counting overall still allows: one class listed by its overall
+ * places is a legitimate thing to want on a multi-class grid. A list is therefore filtered when
+ * either of the two says so, and `rowsInClass` in `second/values.ts` is where they are joined.
  *
  * Columns drop as the box narrows, in the order `shedding.ts` declares: the lap times go first,
  * then the chip and the number. The gap outlives both, because a leaderboard without a gap is a

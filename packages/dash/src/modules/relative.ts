@@ -6,8 +6,9 @@
  * The row count is made odd so that "the middle" is a row and not a line between two.
  *
  * A zone may ask for the player's own class, which on a relative is the cars a driver is actually
- * racing rather than the ones they are about to be lapped by. The companion and the pit wall ask
- * for nobody in particular and get the whole track, as they always have.
+ * racing rather than the ones they are about to be lapped by. The rig's `PositionMode` asks the
+ * same of every relative there is, so a page passing no filter of its own, the companion's and the
+ * pit wall's among them, still draws one class wherever the rig counts in class.
  */
 import { rowsThatFit, table, tableRowHeight, type ColumnId } from '../second/table.ts';
 import { drawsHeader, fittingColumns } from './leaderboard.ts';

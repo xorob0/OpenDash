@@ -126,6 +126,61 @@ Rows are one continuous list in leaderboard order with a class chip on each. Sim
 per-class rows only for the player's own class, so a block per class would be a picture of data
 that is not there.
 
+#### What `class` means on a list page
+
+`OpenDash.PositionMode` set to `class` filters the rows as well as numbering them. Every page that
+lists other cars therefore lists the player's own class: the leaderboard, the relative and the
+opponents page, on a face zone as on the companion and on the pit wall, and band D's relative
+alongside them. One could think that the mode is a readout setting and that the field should stay
+visible under class numbers. In reality a column of class positions over the whole field draws
+three cars called P1 in an order that is not the order of any of the numbers, which is not a
+leaderboard; the numbers a column shows and the cars it shows them against are one question and
+are answered together.
+
+A zone carries a filter of its own, which is a different question and stays one. `ZoneBClassOnly`,
+`ZoneCClassOnly` and the pit wall's `PitWallClassOnly` say who is in the list without saying how
+they are numbered, so a zone filtered to one class while the rig counts overall lists that class by
+its overall places, which on a multi-class grid is a legitimate thing to want. A list is filtered
+when either answer is yes, and `rowsInClass` in `second/values.ts` is where the two meet.
+
+The filter is a lookup swap rather than a row set built somewhere else: SimHub has a class-only
+twin of each of the two functions a table addresses its rows through, so the same rows are drawn
+either way and only the car each one carries moves. The rows a short class leaves over are hidden
+by the "is there a car on this row" test above rather than drawn empty.
+
+The Gap and the Int columns move with the rows, because both are measured against a car above the
+row and that car has to be one the list draws. On a filtered list the Gap is to the leader of the
+player's class and the Int is to the row above it on the list rather than to whatever car the
+leaderboard puts in between. Measured the other way a class running a lap behind the overall leader
+reads `+1L` on every row and `Lead` on none, which is a column carrying no gap at all. SimHub does
+publish a gap to the class leader, as `gaptoclassleader`, `lapstoclassleader` and
+`gaptoclassleadercombined`; both columns are nevertheless built today as differences of the two
+gaps to the overall leader, which is the arithmetic the pit wall values test evaluates against its
+model of a field, and reading SimHub's own three is the simplification recorded against
+`carClassRaceGap` in `second/values.ts`.
+
+The word on the row a Gap column counts from is the one cell of the two that follows the numbering
+instead, `Lead` being a claim about a place rather than a measurement. A zone filtered to one class
+while the rig counts overall heads such a list with a row reading `P3`, and `Lead` beside it would
+be two cells of a single row disagreeing about where the car is; that cell is therefore left empty
+there, as the Int cell of the same row already is, and it carries the word wherever the place the
+row draws is the first. A class that leads the race keeps it under either setting.
+
+The ± column follows the numbering for the same reason, a places-gained figure being the movement
+of the place the column beside it shows. Counting in class it reads SimHub's `PositionGainClass`
+instead of its `PositionGain`, so that a car which has climbed three places overall and one within
+its own class does not draw the one figure against the other number.
+
+The round faces read the same setting from `cards/position.ts` and are unaffected, there being no
+rows on a card to filter: the position and the count it is shown out of are both in class, which is
+the reading that setting has always given.
+
+`packages/dash/test/positionMode.test.ts` holds the two to each other. It evaluates the formulas
+the build writes against a six-car, three-class grid and reads the position column downwards, and
+it reads the race board's own ± cell beside it on a grid whose starting order is not its running
+order. The Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`,
+against a board whose class is interleaved with another and a lap behind it.
+
 ## What is not drawn, and why
 
 Nothing here is a placeholder for work that is pending. Each is a value the sim does not publish.
