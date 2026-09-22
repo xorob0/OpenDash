@@ -53,9 +53,9 @@ export function StripGrid() {
       <div className={styles.groups}>
         <div className={styles.group}>
           <h3 className="h3">Bare runs</h3>
-          <p className="prose">Nothing at the ends. A brow, or a strip along the top of a monitor.</p>
+          <p className="prose">Nothing at the ends: 4 to 25 LEDs in a row. A brow, or a strip along the top of a monitor.</p>
           <ul className={styles.runs}>
-            {BARE.filter((s) => s.centre > 12).map((s) => (
+            {BARE.map((s) => (
               <li key={s.id} className={styles.run}>
                 <StripGlyph left={0} centre={s.centre} right={0} led={6} gap={2} title={`${s.centre} LEDs`} />
                 <span className={`num ${styles.shapeLabel}`}>{s.centre}</span>
