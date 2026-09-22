@@ -68,13 +68,16 @@ namespace OpenDashPlugin.Tests
             // every zone of every pit wall page, the page it opens on and the page it is showing,
             // the URL, the pit wall's class filter, its flag format, and the flag box.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1;
-            // Six global flag box settings and eleven per matrix, the way every face carries its own
+            // Eight global flag box names and thirteen per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
             // only, the gear and the two temperature thresholds moved under the matrix that owns them,
             // and the switch on the spotter bar's movement joined the rig's own names; the eleventh is
-            // the switch on the digit's redline flash, which is a panel's own for the same reason.
+            // the switch on the digit's redline flash, which is a panel's own for the same reason, and
+            // the two after it are whether the digit is banded at all and which ladder bands it. Six
+            // of the eight globals are settings; the other two are the car's own bands, which the
+            // plugin computes because a table of thresholds per gear is not a thing a profile reads.
             Assert.Equal(
-                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 6 + Contract.FlagBoxMatrices.Count * 11 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 8 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -90,9 +93,11 @@ namespace OpenDashPlugin.Tests
             // run for every centre the grid reaches, and 317 before a pit wall zone belonged to a page:
             // four zones and a wide one became twelve, and the pit wall gained the page it opens on and
             // the page it shows, 325 before a companion was given its own answer to how it draws a
-            // flag, and 327 before the pit wall was given the same one and the flag readout came off
-            // its header.
-            Assert.Equal(328, names.Count);
+            // flag, 327 before the pit wall was given the same one and the flag readout came off
+            // its header, and 328 before each matrix was given its own answer to whether the digit is
+            // banded at all and to which ladder bands it, which is eight names, and the car's own
+            // bands had to be published for the digit to read.
+            Assert.Equal(338, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -416,7 +421,7 @@ namespace OpenDashPlugin.Tests
             // (ADR 0013); declared at all because a profile reads them, and an undeclared read fails
             // the dash build. The strips follow the matrices, so the flag box's last name is the last
             // before them rather than the last of all.
-            Assert.Equal("FlagBoxMatrix4GearBlink", Contract.PropertyNames().Except(Contract.LedPropertyNames()).Last());
+            Assert.Equal("FlagBoxMatrix4GearCarLadder", Contract.PropertyNames().Except(Contract.LedPropertyNames()).Last());
             // One threshold for the strip, the rev bar and the box, under the Lights* name; the box's
             // own name stays attached as its deprecated alias, which is what a profile of the rc.2
             // vintage reads and what the contract's second isnull() falls back to.

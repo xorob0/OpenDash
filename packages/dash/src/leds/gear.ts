@@ -22,14 +22,23 @@
  * property the single function was for. What it does mean is that a digit and a rev segment and an
  * LED on a strip all change colour on the same frame for the same reason.
  *
+ * **Two switches sit over that colour**, and they are not the same question. `GearBands` decides
+ * whether the digit is banded at all: off, it stays in the resting colour at any engine speed, for
+ * the driver who wants the panel to report the gear and leave the shifting to the bar in front of
+ * them. `GearCarLadder` decides where the bands come from, and is the digit's half of what the
+ * strips have had since ADR 0018 -- the measured tables, where the rig has them and the car has a
+ * row, and the published ladder where either is missing.
+ *
  * **The flash is a threshold of its own, not a property of the top band**, and reading it as one was
  * the defect #284's review found here. `ShiftBand.blink` now carries the over-rev expression the
  * rev bar and the strip flash on — `max(Blink, Last)`, and never in the last gear — and the digit
  * reads that rather than flashing the moment the top band is entered.
  */
+import type { Expr } from '../bind.ts';
 import { shiftBands, type ShiftBand } from '../components/revSegments.ts';
 import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type Hex, type MatrixContainer } from '../generator.ts';
+import { carLadderAvailable, carLadderOverRev, carLadderStageEntered, eitherOf } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
 
@@ -142,15 +151,48 @@ function gearsAtBand(band: ShiftBand, flashing: boolean): MatrixContainer[] {
  * is the matrix's way of saying what `blinkBind` says on a screen segment.
  */
 function bandChildren(band: ShiftBand, matrix: FlagBoxMatrix): MatrixContainer[] {
-  if (band.blink === null) return gearsAtBand(band, false);
+  const blink = bandBlink(band, matrix);
+  if (blink === null) return gearsAtBand(band, false);
   // The panel's own switch is folded into the condition rather than made a group above it: the two
   // branches have to stay exhaustive, or a driver who turns the flash off gets a dark panel at the
   // moment the engine is screaming, which is worse than either answer.
-  const flashing = and(eq(flagBoxMatrix(matrix).gearBlink(), 'true'), band.blink);
+  const flashing = and(eq(flagBoxMatrix(matrix).gearBlink(), 'true'), blink);
   return [
     { kind: 'when', description: `Gear ${band.id} over-rev`, formula: flashing, children: gearsAtBand(band, true) },
     { kind: 'when', description: `Gear ${band.id} steady`, formula: not(flashing), children: gearsAtBand(band, false) },
   ];
+}
+
+/**
+ * Whether this panel is reading the car's own measured bar this frame: set to it, and something
+ * publishing it.
+ *
+ * Both halves matter and neither is enough. A driver who has never fetched the tables has the
+ * setting on and nothing behind it, and a driver in a car nobody has measured has the tables and no
+ * row; in both the answer is the published ladder, arrived at without anybody being told.
+ */
+const readingCarLadder = (matrix: FlagBoxMatrix): Expr => and(eq(flagBoxMatrix(matrix).gearCarLadder(), 'true'), carLadderAvailable());
+
+/**
+ * When this band is entered, on whichever ladder the panel is reading -- and never, when the panel
+ * has been told not to colour the digit at all.
+ *
+ * The switch is folded in here rather than wrapped around the whole group for the reason the flash
+ * is: `gearGroup` ranks the bands by taking the first whose `raised` holds, `rest` is always
+ * raised, and so a band that can never be entered leaves the digit in the resting colour without
+ * anything else having to know. A group above would have had to carry a second copy of the eleven
+ * glyphs to say the same thing.
+ */
+function bandRaised(band: ShiftBand, matrix: FlagBoxMatrix): Expr {
+  if (band.stage === null) return band.raised;
+  const ladder = eitherOf(readingCarLadder(matrix), carLadderStageEntered(band.stage), band.raised);
+  return and(eq(flagBoxMatrix(matrix).gearBands(), 'true'), ladder);
+}
+
+/** The band's flash, on the same ladder. The resting bands have none on either. */
+function bandBlink(band: ShiftBand, matrix: FlagBoxMatrix): Expr | null {
+  if (band.blink === null) return null;
+  return eitherOf(readingCarLadder(matrix), carLadderOverRev(), band.blink);
 }
 
 /**
@@ -170,7 +212,7 @@ export function gearGroup(matrix: FlagBoxMatrix): MatrixContainer {
     children: shiftBands().map((band, i, bands) => ({
       kind: 'when' as const,
       description: `Gear ${band.id}`,
-      formula: and(...bands.slice(0, i).map((higher) => not(higher.raised)), band.raised),
+      formula: and(...bands.slice(0, i).map((higher) => not(bandRaised(higher, matrix))), bandRaised(band, matrix)),
       children: bandChildren(band, matrix),
     })),
   };

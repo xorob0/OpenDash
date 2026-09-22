@@ -228,6 +228,41 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void The_bands_are_thirds_of_the_car_own_bar_however_that_bar_fills()
+        {
+            // What the flag box's digit is coloured by. Six LEDs at 1000 apart: two per band, so the
+            // first band is entered at the first light and the third at the fifth.
+            var table = Parsed(LeftToRight);
+            Assert.Equal(0, CarLightMirror.Stage(table, "1", 500));
+            Assert.Equal(1, CarLightMirror.Stage(table, "1", 1500));
+            Assert.Equal(1, CarLightMirror.Stage(table, "1", 2500));
+            Assert.Equal(2, CarLightMirror.Stage(table, "1", 3500));
+            Assert.Equal(3, CarLightMirror.Stage(table, "1", 5500));
+            // The gear's own row, not the first one: second gear's bar is a thousand higher
+            // throughout, so the same RPM is a band lower in it.
+            Assert.Equal(2, CarLightMirror.Stage(table, "2", 5500));
+            Assert.Equal(3, CarLightMirror.Stage(table, "1", 5500));
+
+            // A bar that fills from both ends inwards bands exactly as one that fills left to right:
+            // the count is of LEDs lit rather than of indices passed. Eight LEDs, 1000 to 4000 and
+            // back down, so 1500 has the outer pair lit and 3500 has six of the eight.
+            var symmetric = Parsed(MeetInMiddle);
+            Assert.Equal(1, CarLightMirror.Stage(symmetric, "1", 1500));
+            Assert.Equal(3, CarLightMirror.Stage(symmetric, "1", 3500));
+
+            // A threshold of zero is an LED lit from idle rather than a rung of the ladder, and
+            // counting it would put a stationary car a third of the way up its own bar.
+            var gapped = Parsed(BlocksWithGap);
+            Assert.Equal(0, CarLightMirror.Stage(gapped, "1", 100));
+            Assert.Equal(2, CarLightMirror.Stage(gapped, "1", 3500));
+            Assert.Equal(3, CarLightMirror.Stage(gapped, "1", 5500));
+
+            // No table and no answer are the same -1, which is what sends the digit back to the
+            // ladder the sim publishes.
+            Assert.Equal(-1, CarLightMirror.Stage(null, "1", 5000));
+        }
+
+        [Fact]
         public void No_table_and_no_gear_are_both_a_null_rather_than_a_dark_bar()
         {
             // The difference matters: null falls back to the published ladder, and a dark bar would

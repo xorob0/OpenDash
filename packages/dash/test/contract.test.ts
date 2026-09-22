@@ -96,14 +96,16 @@ describe('settings', () => {
     // the lap review and what this face carries at the top.
     const perFace = FACE_ZONE_LETTERS.length * 4 + BAR_SLOTS.length + 4;
     // The last two terms are the lights, which are not screens but whose settings are properties for
-    // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is six
-    // global and eleven per matrix, the way every face carries its own group; the strips are the three
+    // the same reason: ADR 0003, and ADR 0013 for why they are here at all. The flag box is eight
+    // global and thirteen per matrix, the way every face carries its own group; the strips are the three
     // that decide what a strip shows, then the mirror -- its fit, the gate that says there is a bar
     // to draw, and one packed run per length a centre can be -- and the switch that hands a car
     // alongside the whole strip. It was nine and six until the
     // four settings a box owns -- critical flags only, the gear and the two temperatures -- moved
     // under the matrix that owns them.
-    expect(flagBoxProperties()).toHaveLength(6 + FLAG_BOX_MATRICES.length * 11);
+    // Six of the eight globals are settings; the other two are the car's own bands, computed by the
+    // plugin because a table of thresholds per gear is not something an expression can read.
+    expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 13);
     expect(ledProperties()).toEqual([
       'OpenDash.LedCentre',
       'OpenDash.LedRpmStyle',
@@ -147,8 +149,10 @@ describe('settings', () => {
     // gained the page it shows, 325 before a companion was given its own answer to how it draws a
     // flag, 326 before it was given the module the plugin holds it on while SimHub loads, and 327
     // before the pit wall was given the same three-way answer as the companion and the header's
-    // flag readout, which did not work on a rig, was taken off the strip.
-    expect(props).toHaveLength(328);
+    // flag readout, which did not work on a rig, was taken off the strip, and 328 before each matrix
+    // was given its own answer to whether the digit is banded at all and to which ladder bands it,
+    // which is eight names, and the car's own bands had to be published for the digit to read.
+    expect(props).toHaveLength(338);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');

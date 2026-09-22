@@ -197,6 +197,18 @@ export const LED_RPM_STYLE_SETTING = 'LedRpmStyle';
  */
 export const LED_FLAG_ANIMATION_SETTING = 'LedFlagAnimation';
 
+/**
+ * The band the car's own measured bar puts the engine in, and whether it is past that gear's
+ * redline: the flag box's digit on the tables of ADR 0018.
+ *
+ * Computed by the plugin and not chosen by anybody, because the thresholds are 85 files of them,
+ * one row per gear, and no expression can read a table. `shift.ts` is where they are read and says
+ * what the numbers mean; they are named here because every property name OpenDash publishes is.
+ */
+export const CAR_LADDER_STAGE = 'CarLadderStage';
+
+export const CAR_LADDER_OVER_REV = 'CarLadderOverRev';
+
 /** The name of the setting choosing how a car's bar is fitted to a strip that is a different length. */
 export const LED_MIRROR_FIT_SETTING = 'LedMirrorFit';
 
@@ -1331,17 +1343,39 @@ export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
      * off. Off leaves the digit in the redline colour, which is still the whole of the message.
      */
     gearBlink: (): Expr => read('GearBlink', String(DEFAULT_FLAG_BOX_GEAR_BLINK)),
+    /**
+     * Whether this panel's digit takes the shift colours at all.
+     *
+     * Off leaves it in the resting colour at any engine speed, which is the whole of what a driver
+     * asking for the digit to stop lighting up is asking for: the gear is then a readout of the
+     * gear and nothing else. The flash goes with it, because a band that is never entered cannot
+     * flash, so this is the switch above {@link gearBlink} rather than a second spelling of it.
+     */
+    gearBands: (): Expr => read('GearBands', String(DEFAULT_FLAG_BOX_GEAR_BANDS)),
+    /**
+     * Whether those colours change on the car's own measured bar rather than on the ladder the sim
+     * publishes.
+     *
+     * The same answer the strips give, for the same reason: where somebody has sat in the car and
+     * written down when each light comes on, that is a better description of the car than anything
+     * derived from four numbers. A rig with no tables, or a car with no row in them, falls back to
+     * the published ladder with nothing said, exactly as a strip does — so this is on by default and
+     * costs a driver who has never fetched the tables nothing.
+     */
+    gearCarLadder: (): Expr => read('GearCarLadder', String(DEFAULT_FLAG_BOX_GEAR_CAR_LADDER)),
     /** Defaulted **per unit** from SimHub's own `TemperatureUnit`, as the global one was. */
     oilTemp: (): Expr => read('OilTemp', defaultByUnit(DEFAULT_OIL_TEMP)),
     waterTemp: (): Expr => read('WaterTemp', defaultByUnit(DEFAULT_WATER_TEMP)),
   };
 };
 
-/** The eleven property names of one matrix, in the order the plugin attaches them. */
+/** The thirteen property names of one matrix, in the order the plugin attaches them. */
 export const flagBoxMatrixProperties = (matrix: FlagBoxMatrix): string[] =>
   // The four that moved here from the tab are appended rather than interleaved, for the reason
   // every other list in this file is: both halves of the contract are pinned in order.
-  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side', 'CriticalOnly', 'Gear', 'OilTemp', 'WaterTemp', 'GearBlink'].map((n) => flagBoxMatrixSetting(matrix, n));
+  ['Rest', 'Flags', 'Pit', 'Spotter', 'Warnings', 'Side', 'CriticalOnly', 'Gear', 'OilTemp', 'WaterTemp', 'GearBlink', 'GearBands', 'GearCarLadder'].map((n) =>
+    flagBoxMatrixSetting(matrix, n),
+  );
 
 /**
  * Brightness and night mode are named `Lights*`, not `FlagBox*`, deliberately. A driver who owns a
@@ -1390,6 +1424,19 @@ export const DEFAULT_FLAG_BOX_GEAR = true;
  * loudest part of it if this defaulted off.
  */
 export const DEFAULT_FLAG_BOX_GEAR_BLINK = true;
+
+/**
+ * On. The digit is coloured by the shift model, which is the reason it is worth looking at rather
+ * than a readout of something the driver's own hand just did.
+ */
+export const DEFAULT_FLAG_BOX_GEAR_BANDS = true;
+
+/**
+ * On, as the strips are. `DEFAULT_LED_RPM_STYLE` is `car` for the argument that the car is right,
+ * and a digit banded on one ladder beside a strip banded on another would be two answers to one
+ * question on the same rig.
+ */
+export const DEFAULT_FLAG_BOX_GEAR_CAR_LADDER = true;
 
 /**
  * Laps, not litres. A litre threshold means nothing without knowing the car; laps remaining means
@@ -1476,6 +1523,11 @@ export function flagBoxProperties(): string[] {
     // by index, so a new name joins the end of the group and is never inserted into it.
     LIGHTS_LOW_FUEL_LAPS_SETTING,
     FLAG_BOX_SPOTTER_ANIMATION_SETTING,
+    // Computed rather than chosen, and the only two of those the box reads: the band the car's own
+    // measured bar puts the engine in, and its redline. They sit with the flag box because it is
+    // their only reader, the way `LedMirrorReady` sits with the strips that read it.
+    CAR_LADDER_STAGE,
+    CAR_LADDER_OVER_REV,
   ];
   const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
   return [...global, ...perMatrix].map(propertyName);
