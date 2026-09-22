@@ -179,7 +179,7 @@ namespace OpenDashPlugin
                 if (!fetched.Ok) return new UpdateOutcome { Reason = "openDash itself could not be downloaded (" + fetched.Reason + ")" };
                 if (!Digest.Matches(fetched.Bytes, pluginAsset.Digest))
                 {
-                    return new UpdateOutcome { Reason = "openDash itself did not download correctly, so nothing was installed" };
+                    return new UpdateOutcome { Reason = "openDash itself did not download correctly" };
                 }
                 pluginBytes = fetched.Bytes;
                 fetchedSoFar++;
@@ -192,7 +192,7 @@ namespace OpenDashPlugin
                 if (!fetched.Ok) return new UpdateOutcome { Reason = item.FolderName + " could not be downloaded (" + fetched.Reason + ")" };
                 if (!Digest.Matches(fetched.Bytes, item.Asset.Digest))
                 {
-                    return new UpdateOutcome { Reason = item.FolderName + " did not download correctly, so nothing was installed" };
+                    return new UpdateOutcome { Reason = item.FolderName + " did not download correctly" };
                 }
                 downloaded.Add(item.Asset.Name, fetched.Bytes);
                 fetchedSoFar++;

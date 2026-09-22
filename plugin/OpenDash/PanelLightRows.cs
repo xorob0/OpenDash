@@ -137,7 +137,7 @@ namespace OpenDashPlugin
 
         /// <summary>A build that embedded no profile at all has no rows to draw, and says why rather than
         /// leaving the heading over nothing.</summary>
-        public const string NoProfiles = "This build of openDash ships no light profiles.";
+        public const string NoProfiles = "This build ships no light profiles.";
 
         /// <summary>
         /// What a strip row says when SimHub's LED driver cannot be reached.
@@ -148,7 +148,7 @@ namespace OpenDashPlugin
         /// strip row would send a driver looking for a file that was never written. A state rather than an
         /// error, because nothing the driver does about it is here.
         /// </remarks>
-        public const string Unavailable = "SimHub's LED settings are not available, so a strip profile cannot be installed.";
+        public const string Unavailable = "SimHub's LED settings are not available.";
 
         /// <summary>The id suffixes a wiring adds, which `wheel(..., { reversed: true })` and `fanatec(...)`
         /// in packages/dash/src/leds/strip.ts spell. A suffix this does not know is not guessed at: the shape
@@ -389,7 +389,7 @@ namespace OpenDashPlugin
             switch (state)
             {
                 case FlagBoxInstallState.NotEmbedded:
-                    return "This build of openDash ships no such profile.";
+                    return "This build ships no such profile.";
                 case FlagBoxInstallState.Unavailable:
                     return Unavailable;
                 case FlagBoxInstallState.NotInstalled:

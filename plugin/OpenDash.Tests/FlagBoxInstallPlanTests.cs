@@ -152,7 +152,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Reinstall", PanelCopy.LightRow(upToDate.State, upToDate.InstalledVersion).Button);
             var text = FlagBoxInstallPlan.Summary(upToDate, null);
             Assert.Contains("replaces", text, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("changes you made", text, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("your changes", text, StringComparison.OrdinalIgnoreCase);
 
             // One sentence for both presses, so the two branches cannot drift apart again.
             Assert.Contains(FlagBoxInstallPlan.Replaces, text, StringComparison.Ordinal);

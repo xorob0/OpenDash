@@ -44,8 +44,7 @@ namespace OpenDashPlugin
         /// sentence a new user reads before anything else on the page, and the pill above it carries the
         /// announcement, so this says what adding a screen does instead of repeating that there is none.
         /// </remarks>
-        public const string EmptyRig =
-            "Add the screen your rig has and openDash installs its dashboard into SimHub.";
+        public const string EmptyRig = "Add the screen your rig has.";
         public const string Installing = "Installing";
         public const string Installed = "Installed";
         public const string NotInstalled = "Not installed";

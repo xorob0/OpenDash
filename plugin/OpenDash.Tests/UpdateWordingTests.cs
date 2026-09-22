@@ -51,8 +51,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_sentence_after_an_update_says_reopen_and_not_restart()
         {
-            Assert.Contains("Close the dashboard and start it again", UpdateWording.Reopen);
-            Assert.Contains("SimHub does not need restarting", UpdateWording.Reopen);
+            Assert.Contains("Close and reopen the dashboard", UpdateWording.Reopen);
+            // It no longer says "SimHub does not need restarting" either, which was a reassurance about
+            // a thing the sentence never raised. What matters is that it does not ask for a restart.
+            Assert.DoesNotContain("restart", UpdateWording.Reopen, System.StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -90,7 +92,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Contains("SimHub", UpdateWording.RestartTitle);
             Assert.Contains("Restart SimHub", UpdateWording.RestartLater);
-            Assert.Contains("Close it yourself", UpdateWording.RestartFailed);
+            Assert.Contains("Close SimHub yourself", UpdateWording.RestartFailed);
         }
 
         /// <summary>
@@ -111,7 +113,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_press_with_no_release_behind_it_names_the_button_that_would_find_one()
         {
-            Assert.Contains("no release to install", UpdateWording.NothingToApply);
+            Assert.Contains("release to install", UpdateWording.NothingToApply);
             Assert.Contains("Check now", UpdateWording.NothingToApply);
         }
 

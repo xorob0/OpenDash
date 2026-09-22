@@ -277,7 +277,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(outcome.Ok);
             Assert.Equal(new[] { "openDash" }, outcome.Updated);
             Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
-            Assert.Contains("Close the dashboard and start it again", outcome.Line);
+            Assert.Contains("Close and reopen the dashboard", outcome.Line);
             Assert.DoesNotContain("restart SimHub", outcome.Line);
         }
 

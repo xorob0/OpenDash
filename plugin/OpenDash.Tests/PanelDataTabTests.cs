@@ -64,7 +64,7 @@ namespace OpenDashPlugin.Tests
             // The canvas's own sentence, "Overall, or within your class", is what the segmented control
             // beside the row already says in two words. What the row keeps is the half the canvas does
             // not carry and the control cannot show: a zone overrides this on its own.
-            Assert.Equal("Each zone can be set to your class on its own.", PanelDataTab.PositionCaption);
+            Assert.Equal("Each zone can override this.", PanelDataTab.PositionCaption);
         }
     }
 }

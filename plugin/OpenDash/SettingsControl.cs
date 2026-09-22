@@ -218,7 +218,6 @@ namespace OpenDashPlugin
         {
             faceWarningText = null;
             faceWarningRow = null;
-            stripCaption = null;
             zoneSelects.Clear();
             zoneMaskButtons.Clear();
             zoneMaskBoxes.Clear();

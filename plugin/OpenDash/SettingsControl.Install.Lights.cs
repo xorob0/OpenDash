@@ -86,7 +86,7 @@ namespace OpenDashPlugin
                 {
                     flagBoxButton = button;
                     flagBoxButton.ToolTip =
-                        "Adds openDash's profile to SimHub. Profiles you made yourself are never changed.";
+                        "Adds openDash's profile. Your own profiles are never changed.";
                 });
         }
 
@@ -265,7 +265,7 @@ namespace OpenDashPlugin
             flagBoxLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
             flagBoxCopyButton = BuildSecondaryButton(
                 "Copy to SimHub's import folder",
-                "Puts a copy in Documents\\SimHub, where SimHub's profile import opens.");
+                "Puts a copy in Documents\\SimHub.");
             flagBoxCopyButton.Click += (sender, args) => CopyFlagBoxForImport();
             var block = Ui.VStack(8, flagBoxLine, Ui.HStack(12, flagBoxCopyButton, FlagBoxPathBox()));
             block.HorizontalAlignment = HorizontalAlignment.Left;
@@ -279,8 +279,7 @@ namespace OpenDashPlugin
             if (flagBoxLine == null) return;
             flagBoxLine.Text = copied != null && copied.Status == FlagBoxStatus.Failed
                 ? "Could not copy the profile: " + copied.Message
-                : "Copied to " + copied?.Path + ". In SimHub, open your matrix device's profiles and press "
-                    + "Import; the dialog opens in that folder.";
+                : "Copied to " + copied?.Path + ". In SimHub, open your device's profiles and press Import.";
         }
 
         private FrameworkElement FlagBoxPathBox()

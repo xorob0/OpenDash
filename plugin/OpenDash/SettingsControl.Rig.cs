@@ -28,7 +28,6 @@ namespace OpenDashPlugin
         private readonly Dictionary<string, ToggleButton> barEndButtons = new Dictionary<string, ToggleButton>();
         private TextBlock faceWarningText;
         private FrameworkElement faceWarningRow;
-        private TextBlock stripCaption;
 
         /// <summary>The screen the pane belongs to, or null when the rig is empty.</summary>
         private ScreenInstance Selected
@@ -65,9 +64,9 @@ namespace OpenDashPlugin
             // perfectly well -- it is a rule and a label with no indent -- but the pane already carries a
             // section of its own in the wheel buttons, and a heading that sits one level deeper than the
             // heading beneath it reads as a mistake.
-            // A pit wall brings its own two headings, "Where the zones are" over the picture and "What
-            // each zone shows" over the rows, because one wrapper here could only ever carry one of
-            // them and the canvas draws both. Every other kind takes a single heading from here.
+            // A pit wall brings its own two headings, "Layout" over the picture and "Zones" over the
+            // rows, because one wrapper here could only ever carry one of them and the canvas draws
+            // both. Every other kind takes a single heading from here.
             var pane = BuildScreenPane(screen);
             return Ui.VStack(0,
                 Ui.Section("Your rig", rows.ToArray()),
@@ -84,9 +83,9 @@ namespace OpenDashPlugin
         /// </remarks>
         private static string PaneTitle(ScreenInstance screen)
         {
-            if (screen.IsCompanion) return "Modules in the rotation";
-            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return "What each slot shows";
-            return "What each zone shows";
+            if (screen.IsCompanion) return "Modules";
+            if (string.Equals(screen.Kind, Contract.KindSlots, StringComparison.Ordinal)) return "Slots";
+            return "Zones";
         }
 
         /// <summary>The cards, wrapped, and the add card after them.</summary>
@@ -178,7 +177,7 @@ namespace OpenDashPlugin
         {
             var icon = Ui.Icon(Ui.WarningIcon, Theme.Caution, IconAlone);
             icon.VerticalAlignment = VerticalAlignment.Top;
-            var text = Ui.Caption("Remove the dashboards you have no screen for to tidy up SimHub's list.");
+            var text = Ui.Caption("Remove the dashboards you have no screen for.");
             var row = Ui.HStack(10, icon, text);
             row.Margin = new Thickness(0, 4, 0, 4);
             return row;
@@ -299,7 +298,7 @@ namespace OpenDashPlugin
             if (types.Count == 0)
             {
                 bodyHost.Content = Ui.VStack(0, Ui.Section(PanelAddScreen.SectionTitle,
-                    Ui.Caption("This build of openDash ships no dashboards, so there is nothing to add."),
+                    Ui.Caption("This build ships no dashboards."),
                     BackRow()));
                 return;
             }

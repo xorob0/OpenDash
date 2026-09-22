@@ -61,7 +61,7 @@ namespace OpenDashPlugin
 
         public const string BarEndsTitle = "LEDs at each end";
 
-        public const string BarEndsCaption = "These show flags, warnings and cars alongside. Pick None for one continuous run.";
+        public const string BarEndsCaption = "Flags, warnings and cars alongside. Pick None for one continuous run.";
 
         /// <summary>The device row of the add flow and of every bar.</summary>
         public const string BarDeviceTitle = "LED device";
@@ -87,8 +87,7 @@ namespace OpenDashPlugin
 
         /// <summary>Said when SimHub has none. The bar is still added and still configurable; what it
         /// cannot have is a profile anywhere, which is a thing about the rig and not about openDash.</summary>
-        public const string NoDevices =
-            "No LED device in SimHub. Add your wheel or Arduino on SimHub's Devices page first.";
+        public const string NoDevices = "No LED device in SimHub. Add your wheel or Arduino there first.";
 
         /// <summary>What a bar pointed at a device SimHub no longer has is shown as, so the row says what
         /// happened rather than silently reading as the first device in the list.</summary>
@@ -135,7 +134,7 @@ namespace OpenDashPlugin
 
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed into SimHub. See the Install tab.";
+            return "Added " + name + ", but its profile could not be installed. See the Install tab.";
         }
 
         /// <summary>The row that offers the car light tables, at the foot of the strips section.</summary>
@@ -159,12 +158,12 @@ namespace OpenDashPlugin
         /// source, where no driver reads it.</para>
         /// </remarks>
         public const string CarTablesCaption =
-            "Needed for the Car-specific rev light style. Every car is downloaded at once, about 400 KB, so "
-            + "nothing about which car you drive leaves your machine.";
+            "Needed for the Car-specific rev light style. Every car is downloaded at once, about 400 KB, "
+            + "so your car is never disclosed.";
 
         /// <summary>The button's own tooltip, which is not the row's caption: the caption is three lines
         /// of what the tables are for, and a tooltip on the button says what the button does.</summary>
-        public const string CarTablesButtonTooltip = "Downloads the car light tables from GitHub.";
+        public const string CarTablesButtonTooltip = "Downloads the car light tables.";
 
         /// <summary>Who measured it, and where to go and see. Shown under the row for as long as it exists.</summary>
         public static readonly string CarTablesAttribution = CarLightLibrary.Attribution + " " + CarLightLibrary.ProjectUrl;
@@ -194,7 +193,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Said beside the button when the copy is old enough that upstream has probably moved.</summary>
-        public const string CarTablesStale = "This copy is over a week old. Press Update for a newer one.";
+        public const string CarTablesStale = "Over a week old. Press Update for a newer copy.";
 
         /// <summary>The heading over the panels a driver has added.</summary>
         public const string PanelsTitle = "Your matrix panels";

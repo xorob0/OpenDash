@@ -62,7 +62,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0-15-0", PanelLights.BarShapeId(0, 15));
             // The one thing the two captions have to get the right way round, said in a driver's words
             // rather than the generator's ("lamps", "the rev ladder"); docs/design/voice.md is the rule.
-            Assert.Contains("flags", PanelLights.BarEndsCaption);
+            Assert.Contains("Flags", PanelLights.BarEndsCaption);
             Assert.Contains("Count your LEDs", PanelLights.BarCentreCaption);
         }
     }

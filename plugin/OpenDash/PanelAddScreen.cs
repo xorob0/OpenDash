@@ -126,17 +126,17 @@ namespace OpenDashPlugin
         {
             if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal))
             {
-                return "A phone or tablet beside the wheel, showing one module at a time.";
+                return "A phone or tablet beside the wheel.";
             }
             if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal))
             {
-                return "A monitor for your engineer: the field, the timing and the telemetry.";
+                return "A monitor for your engineer.";
             }
             if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal))
             {
                 return "Round faces on the older card layout.";
             }
-            return "The screen in front of the driver: rev bar, car settings, three zones and a flag band.";
+            return "The main screen in front of the driver.";
         }
 
         /// <summary>

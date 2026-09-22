@@ -28,19 +28,14 @@ namespace OpenDashPlugin
             if (size == null)
             {
                 return Ui.Caption(
-                    "openDash no longer ships a face at " + screen.SizeLabel + ", so there is nothing to set up here. "
-                    + "Your settings for this screen are kept.",
+                    "openDash no longer ships a " + screen.SizeLabel + " face. Your settings are kept.",
                     BodyWidth);
             }
             var face = size.Value;
 
             var rows = new List<UIElement>
             {
-                Ui.Caption(
-                    "Pick the page each zone opens on and which pages its button cycles through.",
-                    BodyWidth),
                 BuildFacePicture(screen, face),
-                BuildStripCaption(face),
                 BuildRevBarRow(screen),
                 BuildFlagFormatRow(screen),
                 BuildLapReviewRow(screen),
@@ -97,7 +92,7 @@ namespace OpenDashPlugin
             });
             var row = Ui.Row(
                 "Flag display",
-                "Full screen covers the zones for as long as the flag is out.",
+                "Full screen covers the zones while the flag is out.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
@@ -122,20 +117,10 @@ namespace OpenDashPlugin
             });
             var row = Ui.Row(
                 "Lap review",
-                "Shows the lap you just did for four seconds after the line.",
+                "Shows your last lap for four seconds after the line.",
                 control);
             row.HorizontalAlignment = HorizontalAlignment.Stretch;
             return row;
-        }
-
-        private TextBlock BuildStripCaption(Contract.FaceSize face)
-        {
-            stripCaption = Ui.Caption(face.HasBar
-                ? (face.BarFieldsPerEnd == 1 ? "One field at each end, " : "Two fields at each end, ")
-                    + "and your car settings between them. The bar does not cycle."
-                : "This screen has no room for a bar.",
-                BodyWidth);
-            return stripCaption;
         }
 
         private FrameworkElement BuildFacePicture(ScreenInstance screen, Contract.FaceSize face)
@@ -592,8 +577,8 @@ namespace OpenDashPlugin
                 Ui.Caption("Hold to show one page, release to return."));
             glanceText.MaxWidth = 420;
 
-            return Ui.Section("Wheel buttons on this screen",
-                Ui.Caption("Each screen has its own buttons.", BodyWidth),
+            return Ui.Section("Wheel buttons",
+                Ui.Caption("Each screen has its own.", BodyWidth),
                 wrap,
                 Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                     BuildGlanceSelect(screen),
@@ -652,13 +637,13 @@ namespace OpenDashPlugin
             glanceText.MaxWidth = 420;
 
             return Ui.VStack(0,
-                Ui.Section("Where the zones are",
+                Ui.Section("Layout",
                     BuildPitWallPicture()),
-                Ui.Section("What each zone shows", Ui.VStack(PanelPitWallPlan.RowGap, BuildPitWallRows(screen))),
+                Ui.Section("Zones", Ui.VStack(PanelPitWallPlan.RowGap, BuildPitWallRows(screen))),
                 // A binding and not a wheel button: nobody drives a pit wall, so the gesture is whatever
                 // SimHub will bind, and a keyboard key beside the monitor is the likelier one.
-                Ui.Section("Buttons for this pit wall",
-                    Ui.Caption("A keyboard key works as well as a wheel button.", BodyWidth),
+                Ui.Section("Buttons",
+                    Ui.Caption("A keyboard key works too.", BodyWidth),
                     Ui.Row(glanceText, Ui.HStack(PanelFacePlan.GlanceBinderGap,
                         BuildPitWallGlanceSelect(screen),
                         BuildBinder(Contract.HoldQuickGlanceActionFor(screen.Namespace), screen.Name + " · quick glance", hold: true)))));
@@ -904,8 +889,8 @@ namespace OpenDashPlugin
             }
             return Ui.VStack(12,
                 Ui.Caption(
-                    "Turn off the modules you never use and they are skipped. Energy, Damage and Track "
-                    + "rivals need a sim other than iRacing.",
+                    "Turn off the ones you never use. Energy, Damage and Track rivals need a sim other "
+                    + "than iRacing.",
                     BodyWidth),
                 grid,
                 BuildCompanionPaging(screen));
@@ -951,8 +936,8 @@ namespace OpenDashPlugin
             startText.MaxWidth = 420;
             return Ui.Section("Module paging",
                 Ui.Caption(
-                    "Tap the left or right half of the screen to move between modules. For a wheel button, "
-                    + "bind SimHub's \"Next screen\" for this dashboard under Controls and events.",
+                    "Tap the left or right half of the screen to change module. For a wheel button, bind "
+                    + "SimHub's \"Next screen\".",
                     BodyWidth),
                 Ui.Row(startText, BuildModuleSelect(Settings.ScreenCompanionStart(screen.Namespace), "The module a session starts on", value =>
                 {
@@ -968,8 +953,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildCompanionFlagRow(ScreenInstance screen)
         {
             var text = Ui.VStack(4, Ui.Body("Flag display"),
-                Ui.Caption("Full screen covers the module for as long as the flag is out. Bar is the thin "
-                    + "strip at the foot."));
+                Ui.Caption("Full screen covers the module. Bar is a thin strip at the foot."));
             text.MaxWidth = 420;
             var segmented = BuildSegmented(
                 Contract.CompanionFlagFormats,
@@ -985,7 +969,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildPitWallFlagRow(ScreenInstance screen)
         {
             var text = Ui.VStack(4, Ui.Body("Flag display"),
-                Ui.Caption("Bar is a strip under the header. Full screen covers everything below it."));
+                Ui.Caption("Bar is a strip under the header. Full screen covers the rest."));
             text.MaxWidth = 420;
             var segmented = BuildSegmented(
                 Contract.CompanionFlagFormats,
@@ -1038,9 +1022,7 @@ namespace OpenDashPlugin
                 Child = row,
             };
             return Ui.VStack(12,
-                Ui.Caption(
-                    "Put any card in any slot. A face with fewer slots uses the first ones.",
-                    BodyWidth),
+                Ui.Caption("Any card in any slot. A face with fewer slots uses the first ones.", BodyWidth),
                 picture,
                 BuildSlotsRevBarRow(),
                 BuildSlotWarning());

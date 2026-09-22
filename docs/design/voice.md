@@ -89,8 +89,13 @@ rest" are the panel talking to itself.
 
 ## The caption
 
-One short sentence. Two happen where the second carries a consequence or a next step, and three is
-the ceiling, reserved for a caption introducing a whole section rather than a single row.
+**One short sentence.** Two happen where the second carries a consequence or a next step, and two is
+now the ceiling for anything. A caption that needs three sentences is a caption that has not decided
+what it is for.
+
+A heading is a noun too, and a short one: "Zones", "Slots", "Modules", "Layout", "Wheel buttons".
+"What each zone shows" and "Modules in the rotation" were sentences pretending to be headings, and a
+heading over a list of zones does not need to announce that the list is of zones.
 
 A fact earns its place by being both actionable and absent from the screen, and the second half of
 that is what catches most of them. That a screen at the wrong size will not fit is true, and it is a
@@ -118,6 +123,11 @@ what the reader needs from it is that their two screens can show different pages
 about the project rather than about the rig in front of the reader. The one exception is a line that
 exists because of the history, such as the note about a migrated rig holding a dozen dashboards, and
 such a line goes when it stops being true rather than when somebody dismisses it.
+
+**A description of the picture above it.** The face pane draws the bar with a field at each end and
+the car settings between them, and it used to carry a caption saying that a field sat at each end
+and the car settings between them. The caption is gone; the picture was always the better of the
+two.
 
 **Names from inside the code.** A folder under `DashTemplates`, a namespace, a resource path and a
 package identifier are things the reader never types and never meets in SimHub, where a dashboard is
