@@ -1289,8 +1289,24 @@ export const FLAG_BOX_MATRIX_DEFAULTS: Record<FlagBoxMatrix, FlagBoxMatrixDefaul
 export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
   const d = FLAG_BOX_MATRIX_DEFAULTS[matrix];
   const read = (name: string, fallback: Expr): Expr => isnull(prop(propertyName(flagBoxMatrixSetting(matrix, name))), fallback);
+  const gear = (): Expr => read('Gear', String(DEFAULT_FLAG_BOX_GEAR));
   return {
-    rest: (): Expr => read('Rest', str(d.rest)),
+    /**
+     * `if(isnull([OpenDash.FlagBoxMatrix1Gear], true), isnull([OpenDash.FlagBoxMatrix1Rest], 'gear'), 'dark')`:
+     * what this panel shows when nothing has taken it over.
+     *
+     * `Gear` was a second switch over the same thing. The gear drew where the resting state was
+     * `gear` *and* the switch was on, so a panel resting dark ignored the switch and a panel resting
+     * on the gear was decided by the switch alone -- one setting spelled twice, and a pair a driver
+     * could not tell apart. What survives is the one that names the decision rather than one of its
+     * answers, which is the shape {@link setting.revBar} settled for `ShiftLights`.
+     *
+     * The switch is not retired with the control. It has shipped, the plugin still attaches it, and
+     * ADR 0003 makes a published property a public interface -- so this read is two fallbacks deep
+     * exactly as {@link setting.revBar} is, and a package installed beside a plugin that predates the
+     * collapse still rests dark for the driver who switched the gear off there.
+     */
+    rest: (): Expr => iff(eq(gear(), 'true'), read('Rest', str(d.rest)), str('dark')),
     flags: (): Expr => read('Flags', String(d.flags)),
     pit: (): Expr => read('Pit', String(d.pit)),
     spotter: (): Expr => read('Spotter', String(d.spotter)),
@@ -1298,8 +1314,13 @@ export const flagBoxMatrix = (matrix: FlagBoxMatrix) => {
     side: (): Expr => read('Side', str(d.side)),
     /** Quiet until something matters, for this panel. */
     criticalOnly: (): Expr => read('CriticalOnly', String(DEFAULT_FLAG_BOX_CRITICAL_ONLY)),
-    /** The gear as this panel's resting state. */
-    gear: (): Expr => read('Gear', String(DEFAULT_FLAG_BOX_GEAR)),
+    /**
+     * `isnull([OpenDash.FlagBoxMatrix1Gear], true)`: the gear as this panel's resting state.
+     *
+     * Deprecated, and kept attached rather than removed. The resting state is the one to read, and
+     * it resolves through this.
+     */
+    gear,
     /**
      * Whether this panel's digit flashes while the car is over-revving.
      *

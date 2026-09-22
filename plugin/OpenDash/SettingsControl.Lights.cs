@@ -214,7 +214,9 @@ namespace OpenDashPlugin
             {
                 var rest = BuildSegmented(Contract.FlagBoxRests, PanelLights.RestLabels, Settings.MatrixRest(m), value =>
                 {
-                    Settings.FlagBoxRest[m - 1] = value;
+                    // Through the setter rather than into the array, because the deprecated Gear switch
+                    // has to move with it or the collapse in Normalise() undoes this on the next load.
+                    Settings.SetMatrixRest(m, value);
                     Save();
                 });
                 var side = BuildSegmented(Contract.FlagBoxSides, PanelLights.SideLabels, Settings.MatrixSide(m), value =>
@@ -232,10 +234,10 @@ namespace OpenDashPlugin
                     // on the right is worse than no box at all, so it is asked rather than guessed.
                     Ui.Row("Mounting side", "Only lights for cars on this side.", side),
                     BuildMatrixPanelActions(m),
-                    // The four that moved off the tab header. They read as this panel's own rather than as
-                    // the rig's, which is what they had become by sitting above every panel at once.
+                    // The four that moved off the tab header, less the gear switch: it asked the same
+                    // question as "Idle display" above, whose Dark is the answer that switch called off,
+                    // and two controls over one decision is a pair nobody can tell apart.
                     Ui.Row("Critical flags only", "Stays dark for the chequer, white, green and start gantry.", BuildToggle(Settings.MatrixCriticalOnly(m), on => { Settings.FlagBoxMatrixCriticalOnly[m - 1] = on; Save(); })),
-                    Ui.Row("Gear display", null, BuildToggle(Settings.MatrixGear(m), on => { Settings.FlagBoxMatrixGear[m - 1] = on; Save(); })),
                     // Per panel, because a box on the wheel and a box on a monitor stand do not want the
                     // same answer: the one at the edge of vision strobing through the redline is what a
                     // driver who already has a rev bar turns off. Off leaves the digit in the redline
