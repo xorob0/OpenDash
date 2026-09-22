@@ -20,7 +20,8 @@
     "shots": "bun scripts/shots.ts",
     "affected": "bun scripts/affected.ts",
     "trace": "bun scripts/trace.ts",
-    "record": "bun scripts/record.ts"
+    "record": "bun scripts/record.ts",
+    "clips": "bash scripts/clips.sh"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

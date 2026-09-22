@@ -1,7 +1,7 @@
-# The OpenDash website
+# The openDash website
 
-The showcase site: what the dashes look like, which screens they fit, and where to download them.
-Next.js, deployed as a container.
+The showcase site: what the dashboards look like, which screens they fit, what they cost, and where
+to download them. Next.js, deployed as a container.
 
 ```bash
 bun install
@@ -11,8 +11,8 @@ bun run typecheck
 bun run generate         # just the three generators
 ```
 
-`dev`, `build` and `typecheck` all run `generate` first, because what it writes is gitignored and
-a fresh clone has none of it.
+`dev`, `build` and `typecheck` all run `generate` first, because what it writes is gitignored and a
+fresh clone has none of it.
 
 ## Nothing here restates a fact the repository already holds
 
@@ -21,44 +21,75 @@ Three scripts read the repository at build time, and their output is generated a
 | Script | Reads | Writes |
 |---|---|---|
 | `scripts/tokens.ts` | `design/tokens.json` | `app/tokens.css` |
-| `scripts/content.ts` | `build/manifest.json`, `packages/dash/src/contract.ts`, `VERSION`, `CHANGELOG.md`, `build/*.simhubdash` | `lib/content.generated.ts` |
+| `scripts/content.ts` | `build/manifest.json`, `packages/dash/src/contract.ts`, `flags.ts`, `leds/strip.ts`, `zones/index.ts`, `VERSION`, `CHANGELOG.md`, `build/*.simhubdash` | `lib/content.generated.ts` |
 | `scripts/fonts.ts` | `packages/dash/fonts/*.ttf` | `public/fonts/*.woff2` |
 
-So which packages exist, how big each one is, what the twenty-one modules are called, which three
-ship switched off, what version this is and what each release changed are all read rather than
-retyped. A colour comes from the token file through three layers of `var()`, exactly as the design
-canvas describes them.
+So which packages exist, how big each one is, what the 21 pages are called, which 3 ship off, the
+62 strip shapes, the flags in ranked order, the rectangles of the base face, what version this is
+and what each release changed are all read rather than retyped. A colour comes from the token file
+through three layers of `var()`.
 
-What is **not** generated is the prose, and one editorial file: `lib/packages.ts` holds the sentence
-that says what each screen size is *for*, which is in no build output. If a size is added, add its
-note there; a package with no note still renders.
+What is **not** generated is the prose. `lib/site.ts` holds the sentences every page reuses: the
+free-forever promise, the sim claim, the no-tracking line, the car data attribution and the three
+differentiators. `lib/packages.ts` holds the sentence that says what each size is for.
+`lib/compare.ts` holds the comparison with Lovely Sim Racing and Daniel Newman Racing, every
+competitor cell read from their pages on the date in `CHECKED_ON`. `lib/anatomy.ts` holds the words
+for the parts of the face; their rectangles are generated.
 
 `content.ts` reads `build/`, which only exists after `bun run build` at the repository root. Without
-it the downloads come back empty and the Downloads page says so rather than inventing a file.
+it the downloads come back empty and the pages say so rather than inventing a file.
 
-## The screenshots are real
+## The pages
 
-Every picture is a capture of the package through SimHub's own renderer on the Windows VM. None is a
-mock-up. Two commands make them, both from the repository root:
+| Route | What it answers |
+|---|---|
+| `/` | which sim, which host, what it costs; find your screen; download |
+| `/screens` | every size, to scale, with a download each; the anatomy; the companion; the pit wall |
+| `/pages` | the 21 pages, captured; the face's other catalogues |
+| `/lights` | the car's own shift lights, the strip shapes, the flag box, the Lights tab |
+| `/compare` | openDash beside the two competitors, dated |
+| `/install` | the 2 routes, the unblock step, nothing showing |
+| `/download` | the plugin, one file per screen, the release notes |
+
+`lib/routes.ts` lists them with their anchors. The sitemap is generated from it and
+`test/links.test.ts` checks every `href` against it.
+
+## The pictures are real, and they say when they were taken
+
+Every picture is a capture of the package through SimHub's own renderer on the Windows VM. None is
+a mock-up. `public/shots/captures.json` records the version, commit, date and emulator scenario
+behind every file, and the pages show that version under the pictures; when it is not the version
+being served they say so. `test/captures.test.ts` fails on a missing picture and warns on a stale
+one (`OPENDASH_SHOTS_STRICT=1` makes it fail).
+
+Files are `<slug>.png` for a package, `page-<id>.png` for a page and `panel-<tab>.png` for the
+plugin's settings. Two commands make them, both from the repository root:
 
 ```bash
-bun run shots --packages 'OpenDash,OpenDash 850x480' --scenarios green   # whole packages
-bun scripts/modules.ts --scenario green                                   # each module alone
+bun run shots --scenarios gallery          # whole packages
+bun scripts/modules.ts --scenario gallery  # each page alone
 ```
 
 Then look at the captures, and copy the ones worth keeping in:
 
 ```bash
-bun scripts/sync-shots.ts ../build/shots/green
+bun scripts/sync-shots.ts ../build/shots/gallery
 ```
 
-`sync-shots` strips the ordinal from the file name, because inserting a package into the capture
-list would otherwise renumber every file after it and break every reference at once. It is run by
-hand rather than as part of a build: a capture that caught SimHub mid-reconnect is a photograph of a
-bug, and the only thing that catches one is an eye.
+It is run by hand rather than as part of a build: a capture that caught SimHub mid-reconnect is a
+photograph of a bug, and the only thing that catches one is an eye.
 
-`components/Shot.tsx` names the files it expects; `lib/packages.ts` maps a package folder to its
-capture.
+The clips under `public/clips/` are the same idea in motion: raw frames of a dash window recorded
+by `bun run clips`, encoded on the host, with `clips.json` saying what was taken. A page shows a
+clip where one exists and the still otherwise; a reader who asked for reduced motion sees the still.
+
+## Tests
+
+`test/` runs under the repository's root `bun test` and imports nothing generated. `content.test.ts`
+holds the generator's functions against the modules they read; `captures.test.ts`, `links.test.ts`,
+`copy.test.ts` and `compare.test.ts` hold the site to its own rules: every picture exists, every
+link resolves, the promise is where it has to be, no em dash, no host beyond GitHub, the car data
+source and SimHub, and the comparison is complete and dated.
 
 ## Deploying
 

@@ -43,6 +43,24 @@ what SimHub saw, and the preview renderer, the per-pull-request video and the go
 file instead of claiming the VM. [traces/README.md](../traces/README.md) is the format and when to
 re-record.
 
+## Recording a clip is the same loop with a recorder in place of the camera
+
+```bash
+bun run clips                                  # the base face, the companion and the pit wall
+bun run clips --packages 'OpenDash 1280x480'   # one more
+bun run clips --encode-only                    # encode build/clips again without the VM
+```
+
+`bun run shots` photographs; `bun run clips` films. The loop is the same, one claim and one install,
+and per package it opens the dashboard, places it, and runs a C# loop in the desktop session that
+`PrintWindow`s the window on a fixed cadence, twenty times a second for a face and fifteen for the
+pit wall. The frames go to the guest's disk as raw pixels, because a PNG per frame cannot keep that
+rate, and come back to the host as one file. **ffmpeg on the host** (`apt-get install ffmpeg`) turns
+them into a webm, an mp4 and a poster; the guest never encodes. Six seconds is the default because
+it is one period of the emulator's rev sweep, so the loop seam is quiet. Every clip carries a
+`record.json` with the version, commit, scenario and the rate actually achieved, and
+`site/scripts/sync-clips.ts` moves the result into the site with that provenance.
+
 ## There is one VM
 
 `dev` claims it and refuses when somebody else holds the claim, because two sessions driving one

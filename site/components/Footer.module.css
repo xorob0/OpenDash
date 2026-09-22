@@ -1,58 +1,59 @@
 .footer {
+  border-top: 1px solid var(--color-surface-raised);
   padding-block: var(--space-8) var(--space-7);
-  margin-top: var(--section);
+  color: var(--color-text-secondary);
+  font-size: var(--size-small);
 }
 
 .grid {
   display: grid;
-  gap: var(--space-7) var(--space-6);
-  grid-template-columns: 1fr;
+  gap: var(--space-7);
 }
 
 .brand {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  align-items: flex-start;
 }
 
 .line {
-  font-size: var(--size-small);
-  color: var(--color-text-secondary);
-  max-width: 34ch;
+  max-width: 28ch;
 }
 
 .version {
-  font-size: var(--size-small);
   color: var(--color-text-secondary);
+  font-size: 1rem;
 }
 
 .col {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  align-items: flex-start;
 }
 
-.link {
-  font-size: var(--size-small);
-  color: var(--color-text-secondary);
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.navLink {
+  color: var(--color-text-primary);
   transition: color var(--fast) var(--ease);
 }
 
-.link:hover {
-  color: var(--color-text-primary);
+.navLink:hover {
+  color: var(--purpose-ui-accent);
 }
 
 .fine {
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--color-text-secondary);
-  max-width: 40ch;
+  max-width: 44ch;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 @media (min-width: 48rem) {
   .grid {
-    grid-template-columns: 1.4fr 1fr 1.3fr;
+    grid-template-columns: 1.2fr 0.8fr 1.4fr;
   }
 }

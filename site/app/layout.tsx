@@ -5,23 +5,17 @@ import { Nav } from '../components/Nav';
 import { Footer } from '../components/Footer';
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from '../lib/site';
 
+const TITLE = `${SITE_NAME}: free SimHub dashboards for iRacing`;
+const DESCRIPTION = '14 SimHub dashboards, 21 pages and 63 LED profiles for iRacing on Windows. Free, forever, under MIT. Generated from source.';
+
 export const metadata: Metadata = {
   // With NEXT_PUBLIC_SITE_URL unset there is no absolute origin to build on, and Next falls back
   // to relative URLs rather than to a domain this repository would have had to guess.
   ...(SITE_URL ? { metadataBase: new URL(SITE_URL) } : {}),
-  title: {
-    default: `${SITE_NAME} — a sim racing dashboard for SimHub`,
-    template: `%s — ${SITE_NAME}`,
-  },
-  description:
-    'Fourteen SimHub dashboards from 1920 by 480 to a 480 px round DDU, a companion for the phone beside the wheel, and a pit wall screen. One plugin installs them all. Open source, MIT.',
+  title: { default: TITLE, template: `%s · ${SITE_NAME}` },
+  description: DESCRIPTION,
   applicationName: SITE_NAME,
-  openGraph: {
-    type: 'website',
-    siteName: SITE_NAME,
-    title: `${SITE_NAME} — a sim racing dashboard for SimHub`,
-    description: SITE_TAGLINE,
-  },
+  openGraph: { type: 'website', siteName: SITE_NAME, title: TITLE, description: SITE_TAGLINE },
   twitter: { card: 'summary_large_image' },
   icons: { icon: '/icon.svg' },
 };

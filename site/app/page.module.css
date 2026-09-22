@@ -1,230 +1,144 @@
-/* ------------------------------------------------------------------ hero */
 .hero {
-  padding-block: clamp(3rem, 1rem + 7vw, 7rem) 0;
+  padding-block: clamp(3rem, 2rem + 4vw, 6rem) var(--section);
 }
 
-.eyebrow {
-  display: flex;
+.heroGrid {
+  display: grid;
+  gap: var(--space-7);
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
 }
 
-/*
- * Alpha is stated, not warned about. Caution is the meaning the token layer already has for
- * "a thing you should know before you rely on it", so the badge reads it rather than inventing one.
- */
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 40rem;
+}
+
+/* Alpha is stated, not warned about: the caution colour, at label size, once. */
 .alpha {
   color: var(--color-caution-primary);
 }
 
-.headline {
-  margin-bottom: var(--space-5);
-  max-width: 14ch;
-}
-
 .lede {
-  font-size: clamp(1.0625rem, 1rem + 0.45vw, 1.3125rem);
-  max-width: 54ch;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
-}
-
-/* Rule 3: one primary action per surface is where cyan becomes a fill. */
-.primary {
-  padding: 12px var(--space-5);
-  font-weight: 500;
-  color: var(--purpose-ui-on-accent);
-  background: var(--purpose-ui-accent);
-  border-radius: var(--radius-sm);
-  transition: background var(--fast) var(--ease);
-}
-
-.primary:hover {
-  background: var(--color-brand-tint);
-}
-
-.secondary {
-  padding: 12px var(--space-5);
-  font-weight: 500;
+  font-size: 1.25rem;
   color: var(--color-text-primary);
-  border: 1px solid var(--purpose-ui-border);
-  border-radius: var(--radius-sm);
-  transition:
-    border-color var(--fast) var(--ease),
-    background var(--fast) var(--ease);
-}
-
-.secondary:hover {
-  border-color: var(--color-text-secondary);
-  background: var(--purpose-ui-hover);
 }
 
 .heroShot {
-  margin-top: clamp(2.5rem, 1rem + 5vw, 5rem);
-}
-
-.note {
-  margin-top: var(--space-4);
-  max-width: 68ch;
-  font-size: var(--size-small);
-  color: var(--color-text-secondary);
-  text-wrap: pretty;
-}
-
-/* ------------------------------------------------------------------ sections */
-.block > :global(.page) > * + * {
-  margin-top: var(--space-5);
-}
-
-.title {
-  max-width: 22ch;
-}
-
-.anatomy {
-  margin-top: var(--space-6) !important;
-}
-
-/* ------------------------------------------------------------------ the page catalogue */
-.chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* The three reasons, separated by rules. */
+.why {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.reason {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-surface-raised);
+}
+
+.reason:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.credit {
+  font-size: 0.875rem;
+}
+
+.more {
+  margin-top: var(--space-6);
+}
+
+/* The chips: a grid whose 1 px gaps are the rules between cells. */
+.chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
   gap: 1px;
   background: var(--color-surface-raised);
   border: 1px solid var(--color-surface-raised);
 }
 
-/*
- * The catalogue is a row of equal boxes divided by 1 px gaps that read as rules, which is what the
- * canvas does with a row of driver marks and for the same reason: they are one kind of thing, so
- * none of them may look more important than another.
- */
 .chip {
-  flex: 1 1 auto;
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface-base);
-  font-size: var(--size-small);
   color: var(--color-text-primary);
-  white-space: nowrap;
-  transition: background var(--fast) var(--ease);
 }
 
-.chip:hover {
-  background: var(--color-surface-zone);
-}
-
-/*
- * A module that ships off is drawn dimmer rather than hidden, which is what an unlit telltale does.
- * One step dimmer, not three: the dash's text.dim is 1.7:1 and unreadable in a browser, while
- * secondary against the primary the other chips take is still an obvious difference and both are
- * legible. The sentence under the strip says which three and why, so the dimming is reinforcement
- * rather than the only carrier of the fact.
- */
-.chip[data-off] {
+.chipNumber {
   color: var(--color-text-secondary);
 }
 
-.chipNote {
-  margin-top: var(--space-4);
-  max-width: var(--measure);
-  font-size: var(--size-small);
+.off {
   color: var(--color-text-secondary);
-  text-wrap: pretty;
 }
 
-/* ------------------------------------------------------------------ three kinds */
-.kinds {
+.seconds {
   display: grid;
-  gap: var(--space-6);
-  margin-top: var(--space-6) !important;
+  gap: var(--space-7);
 }
 
-.kind {
+.second {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
   min-width: 0;
 }
 
-.kind h3 {
-  margin-top: var(--space-2);
-}
-
-@media (min-width: 62rem) {
-  .kinds {
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-5);
-  }
-}
-
-/* ------------------------------------------------------------------ sizes */
-/*
- * Ruled rather than gapped.
- *
- * The gap-over-a-coloured-background trick that the other grids on this site use needs every cell
- * of the last row to be filled, and this one is fourteen packages into a row count the viewport
- * decides — so it drew a lit rectangle where the fifteenth package would have been. Borders on the
- * cells have no such remainder: a short last row simply ends, which is what rule 8 wanted anyway.
- */
-.sizes {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  border-top: 1px solid var(--color-surface-raised);
-  border-left: 1px solid var(--color-surface-raised);
-}
-
-.size {
+.strips {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-4);
-  border-right: 1px solid var(--color-surface-raised);
-  border-bottom: 1px solid var(--color-surface-raised);
-  transition: background var(--fast) var(--ease);
+  gap: var(--space-4);
 }
 
-.size:hover {
-  background: var(--color-surface-zone);
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
 }
 
-.sizeNum {
-  font-size: 1.375rem;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--color-text-primary);
-}
-
-.sizeKind {
-  font-size: var(--size-label);
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.stripName {
   color: var(--color-text-secondary);
 }
 
-/* ------------------------------------------------------------------ close */
-.close :global(.page) {
-  display: grid;
-  gap: var(--space-5);
-  align-items: end;
-}
-
-.closeBody > * + * {
-  margin-top: var(--space-5);
+.status {
+  max-width: var(--measure);
+  color: var(--color-text-primary);
 }
 
 @media (min-width: 62rem) {
-  .close :global(.page) {
-    grid-template-columns: 1.15fr 1fr;
+  .heroGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 850px);
+    gap: var(--space-8);
+  }
+
+  .why {
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--space-7);
   }
 
-  .closeBody {
-    padding-bottom: 0.35rem;
+  .reason,
+  .reason:first-child {
+    padding-top: 0;
+    padding-inline-start: var(--space-6);
+    border-top: 0;
+    border-inline-start: 1px solid var(--color-surface-raised);
+  }
+
+  .seconds {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
   }
 }

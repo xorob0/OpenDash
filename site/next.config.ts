@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { REDIRECTS } from './lib/routes';
 
 const config: NextConfig = {
   // Dokploy runs the site as a container, so the build has to produce a server that can be copied
@@ -13,6 +14,10 @@ const config: NextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   eslint: { ignoreDuringBuilds: true },
+  // The first site's paths, kept alive so a link somebody saved still lands on the page it meant.
+  async redirects() {
+    return REDIRECTS.map((r) => ({ ...r, permanent: true }));
+  },
 };
 
 export default config;

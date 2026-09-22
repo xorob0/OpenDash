@@ -1,0 +1,22 @@
+.note {
+  margin-top: var(--space-5);
+}
+
+.lists {
+  max-width: var(--measure);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.term {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.names {
+  color: var(--color-text-secondary);
+}
