@@ -22,6 +22,7 @@
  */
 import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
+import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { cells, monoWidth, textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
@@ -63,6 +64,9 @@ import {
 import { ds, TRANSPARENT } from '../tokens.ts';
 
 const { fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
+
+/** D7, the one page of the band whose fields are a function of a setting rather than constants. */
+const RELATIVE_PAGE = 'relative';
 
 /** One field of a band page: a label above a value, with an optional unit after it. */
 export interface BandField {
@@ -232,21 +236,38 @@ const sectors: readonly BandField[] = [
  * The catalogue draws a 16 by 11 country flag between the two, which nothing publishes a country
  * for; it is the same missing source as the licence badge on the opponents page.
  *
- * The two neighbours are the player's own class wherever the positions heading them are, which is
- * `PositionMode` and nothing else here: a band screen is built at its rectangle and is never told
- * which face it belongs to, so there is no zone filter for it to ask. {@link listNeighbour} takes one as
- * its second argument for the day band D carries a filter of its own.
+ * The two neighbours are the player's own class wherever the rig counts in class or the zone asks
+ * for its own class, which is the one question {@link listNeighbour} answers for every list: the
+ * rig's `PositionMode` on its own, or the zone's filter beside it when the band is built for a face
+ * that carries one.
  */
 const relativePosition = (idx: string): string => positionLabelled(idx);
 
-const relative: readonly BandField[] = [
+/**
+ * D7's three fields, built against the filter the zone is carrying.
+ *
+ * On a table "my class only" means listing fewer cars, but this page is three gaps and not a list,
+ * so what it means here is asking for the car ahead *in the player's own class*, the class-only
+ * twin of the same lookup, which is the more useful of the two readings on a multi-class grid,
+ * where the car ahead on track is often in a class the driver is not racing. The rig's own
+ * `PositionMode` asks the same of every list since #212, and {@link listNeighbour} is where the two
+ * settings meet, so the band reads the twin when either says so.
+ *
+ * A function rather than a constant, because a built formula cannot be filtered after the fact and
+ * the condition has to reach the lookup as it is written. {@link BAND_PAGES} holds the result with
+ * no zone filter, which is what every page of the catalogue is when nobody asks otherwise, and
+ * what the artboards and the second screens draw.
+ *
+ * The middle field is untouched under any filter: a driver is in his own class by construction.
+ */
+const relativeFields = (classOnly?: Expr): readonly BandField[] => [
   {
     id: 'ahead',
     label: 'P3',
-    labelBind: relativePosition(listNeighbour(-1)),
+    labelBind: relativePosition(listNeighbour(-1, classOnly)),
     labelWidest: 'P99',
     sample: '-1.342',
-    bind: carRelativeGap(listNeighbour(-1)),
+    bind: carRelativeGap(listNeighbour(-1, classOnly)),
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -263,10 +284,10 @@ const relative: readonly BandField[] = [
   {
     id: 'behind',
     label: 'P5',
-    labelBind: relativePosition(listNeighbour(1)),
+    labelBind: relativePosition(listNeighbour(1, classOnly)),
     labelWidest: 'P99',
     sample: '+0.722',
-    bind: carRelativeGap(listNeighbour(1)),
+    bind: carRelativeGap(listNeighbour(1, classOnly)),
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -304,7 +325,7 @@ export const BAND_PAGES: Record<string, readonly BandField[]> = {
   tyres,
   weather,
   sectors,
-  relative,
+  [RELATIVE_PAGE]: relativeFields(),
 };
 
 /**
@@ -320,7 +341,7 @@ interface InlinePage {
   gap: number;
 }
 
-const INLINE_PAGES: Record<string, InlinePage> = { relative: { word: 'Relative', gap: 20 } };
+const INLINE_PAGES: Record<string, InlinePage> = { [RELATIVE_PAGE]: { word: 'Relative', gap: 20 } };
 
 /**
  * What the artboards draw band D to, per band rectangle.
@@ -531,12 +552,16 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
  * importance order, and it closes over any field the game does not publish. Nothing is spread to
  * fill: a band with three fields in it is three fields in the middle, not three fields stretched
  * across 1920 px.
+ *
+ * `classOnly` is the zone's class filter, and D7 is the only page that reads it: the rest of the
+ * catalogue lists nobody to filter. A caller with no filter to pass leaves it out and gets the
+ * catalogue's own fields, which is what the artboards and the second screens draw.
  */
-export function bandPageItems(id: string, frame: Rect, prefix: string, corners = false): Item[] {
+export function bandPageItems(id: string, frame: Rect, prefix: string, corners = false, classOnly?: Expr): Item[] {
   const usable = bandPageRoom(frame, corners);
   if (id === TELLTALE_PAGE) return telltaleItems(frame, prefix, usable);
 
-  const fields = BAND_PAGES[id];
+  const fields = id === RELATIVE_PAGE && classOnly !== undefined ? relativeFields(classOnly) : BAND_PAGES[id];
   if (!fields) throw new RangeError(`band D has no page "${id}"`);
   const m = bandMetrics(frame);
   const labelFs = ds.size.label;

@@ -702,12 +702,13 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_panel_offers_the_class_filter_only_where_a_page_would_change()
         {
-            // Zones B and C hold the leaderboard and the relative. Zone A lists nobody, and band D's
-            // relative page is three gaps rather than a list.
+            // Zones B and C hold the leaderboard and the relative. Band D holds D7, which is three
+            // gaps rather than a list and so reads the filter as the car ahead in the player's own
+            // class. Zone A lists nobody, which leaves it the one zone with nothing to filter.
             Assert.True(FacePages.OffersClassFilter("B"));
             Assert.True(FacePages.OffersClassFilter("C"));
+            Assert.True(FacePages.OffersClassFilter("D"));
             Assert.False(FacePages.OffersClassFilter("A"));
-            Assert.False(FacePages.OffersClassFilter("D"));
         }
 
         [Fact]

@@ -289,14 +289,20 @@ namespace OpenDashPlugin
             };
         }
 
-        /// <summary>Band D, across the foot: the same two controls as a body zone, laid along the row
-        /// rather than stacked, since a band has the width and not the height.</summary>
+        /// <summary>Band D, across the foot: the same controls as a body zone, laid along the row
+        /// rather than stacked, since a band has the width and not the height. The class filter is
+        /// among them because D7 reads it, and the row asks the same question a zone cell asks rather
+        /// than naming the letters itself, so one rule decides both.</summary>
         private FrameworkElement BuildBandStrip(ScreenInstance screen)
         {
-            var row = Ui.HStack(PanelFacePlan.BandGap,
+            var children = new List<UIElement>
+            {
                 Ui.Label(PanelFacePlan.ZoneLabel("D"), Theme.TextSecondary),
                 BuildZoneSelectFor(screen, "D", PanelFacePlan.BandSelectWidth),
-                BuildMaskDrop(screen, "D", PanelFacePlan.BandSelectWidth));
+                BuildMaskDrop(screen, "D", PanelFacePlan.BandSelectWidth),
+            };
+            if (FacePages.OffersClassFilter("D")) children.Add(BuildClassFilterRow(screen, "D"));
+            var row = Ui.HStack(PanelFacePlan.BandGap, children.ToArray());
             row.Margin = new Thickness(8, 0, 8, 0);
             return new Border { Background = Ui.Brush(Theme.SurfaceInset), Child = row };
         }

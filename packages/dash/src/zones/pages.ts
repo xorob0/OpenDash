@@ -71,7 +71,14 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     // A band draws no header either. It is one rank across the whole width, the corner blocks say
     // what is at each end, and a title line would take a third of the height to say "fuel" above a
     // field already labelled FUEL.
-    items = [...bandPageItems(page.id, frame, `${page.id}.`, corners), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])];
+    //
+    // The filter is handed to every page and read by D7 alone, because the rest of the band lists
+    // nobody: on a page of three gaps "my class only" is the car ahead in class rather than a
+    // shorter list, which is the whole of #210.
+    items = [
+      ...bandPageItems(page.id, frame, `${page.id}.`, corners, zoneClassOnlyOnPage(face, zones, page.number)),
+      ...(corners ? bandCorners(frame, `${page.id}.corner.`) : []),
+    ];
   } else {
     // The chrome is prefixed `zone.` rather than with the page id, because a module already names
     // its own items after itself: the track page draws `track.title` and so did the header.
