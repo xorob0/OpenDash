@@ -31,11 +31,9 @@ function sources(dir: string): string[] {
  * rewrites the file, so the list shrinks to nothing and the rules then hold everywhere.
  */
 const LEGACY = [
-  'app/download/',
   'components/Shot.tsx',
   'components/SectionHead.tsx',
   'components/Reveal.tsx',
-  'components/Changelog.tsx',
 ];
 
 const isLegacy = (rel: string): boolean => LEGACY.some((l) => rel.startsWith(l));
