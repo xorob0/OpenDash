@@ -100,7 +100,7 @@ curl -sI https://your.domain/downloads/OpenDash-plugin.zip | head -1
 ```
 
 The first says the container is serving and the certificate is in place. The second says the build
-argument arrived, and should list the seven pages rather than come back as an empty `<urlset>`. The
+argument arrived, and should list the site's pages rather than come back as an empty `<urlset>`. The
 third says the artifacts stage ran and its output reached the public folder, which is the part with the
 most moving pieces behind it.
 
