@@ -1,51 +1,40 @@
-// PluginIcon.cs: the 32x32 icon SimHub shows beside "OpenDash" in its left menu: the cyan segment mark of
-// the wordmark, drawn with System.Drawing and handed to SimHub's ToIcon(). Null when drawing fails.
+// PluginIcon.cs: the 32x32 icon SimHub shows beside "OpenDash" in its left menu.
+//
+// It is the mark itself, rendered from the same Ui.Mark the panel draws, so the menu carries the shape
+// media/logo.svg declares rather than a second drawing of it. It used to be a lone rounded bar drawn with
+// System.Drawing, which reads as a placeholder at 32 px rather than as a logo.
+//
+// SimHub paints the icon in the menu's own foreground and keeps only the alpha, so the mark arrives white
+// whatever Ui.Mark fills it with, and the needle is a hole rather than a second colour precisely because
+// the even-odd rule cuts it out of the housing. Anything drawn here has to survive being reduced to a
+// silhouette. Null when rendering fails, which leaves the entry without an icon rather than unloadable.
 using System;
-using System.Drawing;
-using System.Drawing.Drawing2D;
+using System.Windows;
 using System.Windows.Media;
-using SimHub.Plugins;
+using System.Windows.Media.Imaging;
 
 namespace OpenDashPlugin
 {
     internal static class PluginIcon
     {
-        public static ImageSource Create(IWPFSettings plugin)
+        public static ImageSource Create()
         {
             try
             {
-                using (var bitmap = new Bitmap(32, 32, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
-                {
-                    using (var graphics = Graphics.FromImage(bitmap))
-                    {
-                        graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                        graphics.Clear(System.Drawing.Color.Transparent);
-                        using (var path = RoundedRectangle(new RectangleF(2, 11, 28, 10), (float)Theme.Radius))
-                        using (var brush = new SolidBrush(ColorTranslator.FromHtml(Theme.Accent)))
-                        {
-                            graphics.FillPath(brush, path);
-                        }
-                    }
-                    return plugin.ToIcon(bitmap);
-                }
+                var side = (int)MarkShape.Box;
+                var mark = Ui.Mark(MarkShape.Box);
+                mark.Measure(new Size(side, side));
+                mark.Arrange(new Rect(0, 0, side, side));
+                var bitmap = new RenderTargetBitmap(side, side, 96, 96, PixelFormats.Pbgra32);
+                bitmap.Render(mark);
+                bitmap.Freeze(); // Cached in a field and read by whichever thread asks for the property.
+                return bitmap;
             }
             catch (Exception ex)
             {
                 Log.Warn("Could not draw the menu icon: " + ex.Message);
                 return null;
             }
-        }
-
-        private static GraphicsPath RoundedRectangle(RectangleF rect, float radius)
-        {
-            var path = new GraphicsPath();
-            var d = radius * 2;
-            path.AddArc(rect.Left, rect.Top, d, d, 180, 90);
-            path.AddArc(rect.Right - d, rect.Top, d, d, 270, 90);
-            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
-            path.AddArc(rect.Left, rect.Bottom - d, d, d, 90, 90);
-            path.CloseFigure();
-            return path;
         }
     }
 }
