@@ -27,10 +27,10 @@
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
-import { CHARS, average5, clock, fuelIsSettled, fuelTimeLeft, lapOfTotal, NO_VALUE, player } from '../second/values.ts';
+import { CHARS, average5, clock, lapOfTotal, player, settledFuelTimeLeft } from '../second/values.ts';
 import { defineModule, fieldsRow, fld } from './module.ts';
 
-const { fmt, iff, isnull, num, str, driver, timespanToSeconds, game } = ncalc;
+const { fmt, isnull, num, driver, timespanToSeconds, game } = ncalc;
 
 export const stint = defineModule('stint', (ctx) => {
   const d = densityOf(ctx.density);
@@ -48,7 +48,9 @@ export const stint = defineModule('stint', (ctx) => {
           fld(ctx, 'lap', 'Lap', { sample: '12 / 43', bind: lapOfTotal(), chars: CHARS.lapOfTotal, fs: d.big }),
           // Gated on a completed lap for the reason `fuelIsSettled` gives: before one, SimHub is
           // extrapolating a partial lap and this clock runs backwards and forwards as you drive.
-          fld(ctx, 'fuelTime', 'Fuel time', { sample: '0:31:40', bind: iff(fuelIsSettled(), clock(fuelTimeLeft()), str(NO_VALUE)), chars: CHARS.clock, fs: d.big }),
+          // The gate is on the seconds, so an unsettled range reads `-:--:--` as the stint time
+          // beside it does when it has nothing to count, rather than `--` in a row of clocks.
+          fld(ctx, 'fuelTime', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
           fld(ctx, 'stintTime', 'Stint time', { sample: '0:21:40', bind: clock(stintSeconds), chars: CHARS.clock, fs: d.big }),
         ],
         ctx,

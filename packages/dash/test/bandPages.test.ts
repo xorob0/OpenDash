@@ -18,7 +18,7 @@ import { BAND_PAGES, BAND_PAGE_IDS, bandCorners, bandCornerWidths, bandMetrics, 
 import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } from '../src/zones/telltales.ts';
 import { assetNamed } from '../src/design/assets.ts';
 import { SPECIAL_CHARS } from '../src/design/metrics.ts';
-import { fuelIsSettled, NO_VALUE } from '../src/second/values.ts';
+import { fuelIsSettled, fuelLastLapIsSettled, NO_VALUE } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 
 const BANDS = {
@@ -229,13 +229,15 @@ describe('the fields the catalogue draws on each page', () => {
    * #382. The pit capture of 2026-09-22 read `EST. LAPS --` beside `PER LAP 0.000` and `LAST LAP
    * 0.000`, one row and one tank with two fields saying they had no reading and two saying the car
    * had burned nothing, because only the estimate carried the gate. Before a crossing SimHub
-   * extrapolates the per-lap figure from the lap in progress, so the four have to answer together.
+   * extrapolates the per-lap figure from the lap in progress, so the four have to answer together,
+   * and each of them has to answer what the face drawing the same property answers.
    */
   describe('the fuel fields a completed lap pays for', () => {
-    const GATED = ['time', 'laps', 'perLap', 'lastLap'];
+    /** The absence each of the four draws: the placeholder of the shape the reading has. */
+    const ABSENT = { time: '--:--', laps: NO_VALUE, perLap: NO_VALUE, lastLap: NO_VALUE } as const;
     const fieldNamed = (id: string): BandField => BAND_PAGES.fuel!.find((f) => f.id === id)!;
 
-    for (const id of GATED) {
+    for (const id of ['laps', 'perLap']) {
       test(`${id} reads the absence until a lap has been completed`, () => {
         const { bind } = fieldNamed(id);
         expect(bind.startsWith(`if(${fuelIsSettled()}, `)).toBe(true);
@@ -243,13 +245,34 @@ describe('the fields the catalogue draws on each page', () => {
       });
     }
 
-    test('the absence sits in the cells each of the four is cut for, so no column moves at the first lap', () => {
-      for (const id of GATED) {
+    test('the last lap waits for a lap that cost something, which is the gate the fuel module reads it behind', () => {
+      // A completed lap is not enough for this one property: SimHub publishes
+      // `Fuel_LastLapConsumption` as zero for a lap that included a refuelling stop as well as for
+      // a lap that has not happened, so the band gated on the completed lap alone drew `0.000`
+      // where the fuel module and the pit wall's fuel zone drew `--` for the same quantity.
+      const { bind } = fieldNamed('lastLap');
+      expect(bind.startsWith(`if(${fuelLastLapIsSettled()}, `)).toBe(true);
+      expect(bind.endsWith(`, '${NO_VALUE}')`)).toBe(true);
+      expect(fuelLastLapIsSettled()).toContain(fuelIsSettled());
+    });
+
+    test('the fuel time waits for the same lap and keeps one spelling of its absence', () => {
+      // Gated on the seconds rather than around the drawing, so the field answers `--:--` before a
+      // lap and `--:--` on a dry tank rather than a minus pair in the one case and a time-shaped
+      // placeholder in the other: two spellings of nothing in one box move the column it sits in.
+      const { bind } = fieldNamed('time');
+      expect(bind).toContain(fuelIsSettled());
+      expect(bind.endsWith(`, '${ABSENT.time}')`)).toBe(true);
+      expect(bind.endsWith(`, '${NO_VALUE}')`)).toBe(false);
+    });
+
+    test('each absence sits in the cells its field is cut for, so no column moves at the first lap', () => {
+      for (const [id, absent] of Object.entries(ABSENT)) {
         // `-` keeps the digit cell rather than joining the narrow set, which is why the budget is
         // counted this way rather than by length alone.
-        const specials = [...NO_VALUE].filter((c) => SPECIAL_CHARS.includes(c)).length;
+        const specials = [...absent].filter((c) => SPECIAL_CHARS.includes(c)).length;
         const { chars } = fieldNamed(id);
-        expect({ id, digits: NO_VALUE.length - specials <= chars.digits, specials: specials <= chars.specials }).toEqual({
+        expect({ id, digits: absent.length - specials <= chars.digits, specials: specials <= chars.specials }).toEqual({
           id,
           digits: true,
           specials: true,

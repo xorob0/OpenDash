@@ -479,6 +479,30 @@ export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap(
 export const fuelIsSettled = (): Expr => and(gt(completedLaps(), num(0)), gt(fuelPerLap(), num(0)));
 
 /**
+ * Whether the last completed lap's consumption is a reading.
+ *
+ * Two conditions rather than one, since SimHub publishes `Fuel_LastLapConsumption` as zero in two
+ * separate situations: before the first crossing, which is what {@link fuelIsSettled} answers, and
+ * after a lap that included a refuelling stop, on which the difference between the two crossings is
+ * not a consumption at all. Both of them are an absence, whereas `0.000` drawn on a face reads as a
+ * broken sensor. The band's fuel page and the fuel module draw this one property, so they ask this
+ * one question of it rather than each guarding it in a way of its own. #382.
+ */
+export const fuelLastLapIsSettled = (): Expr => and(fuelIsSettled(), gt(fuelLastLap(), num(0)));
+
+/**
+ * The fuel range in seconds, or nothing to count until a lap has said what one costs.
+ *
+ * The gate sits on the seconds rather than around the drawing, which is what keeps one field to one
+ * absence. A fuel time is drawn through {@link clock} on the modules and through
+ * {@link minutesClock} on band D, and each of those already writes a placeholder of the shape the
+ * time has when there is nothing to count; a gate wrapped around the drawing instead would answer
+ * `--` before a lap and `-:--:--` after the tank had run dry, two shapes for one absence in one
+ * box, and the shorter of the two would move the column the time sits in.
+ */
+export const settledFuelTimeLeft = (): Expr => iff(fuelIsSettled(), fuelTimeLeft(), num(0));
+
+/**
  * How long the race is expected to run, in laps.
  *
  * `TotalLaps` where the session has one, which is every lap-limited race and no timed one. For a

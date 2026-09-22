@@ -22,14 +22,15 @@ import {
   fuel as fuelLevel,
   fuelLapsLeft,
   fuelLastLap,
+  fuelLastLapIsSettled,
   fuelPercent,
   fuelIsSettled,
   fuelPerLap,
   fuelThisLap,
-  fuelTimeLeft,
   fuelToAdd,
   fuelUnit,
   NO_VALUE,
+  settledFuelTimeLeft,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
@@ -72,12 +73,12 @@ export const fuel = defineModule('fuel', (ctx) => {
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
             follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
           }),
-          // Behind the consumption gate for the reason the estimate beside it is, and in the
-          // spelling `modules/stint.ts` already gives the same field: SimHub derives
-          // `Fuel_RemainingTime` from the per-lap figure, so on the out lap the range in minutes
-          // moves every frame along with it, and the row would otherwise be an estimate that says
-          // it has none next to a range that names one.
-          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: iff(fuelIsSettled(), clock(fuelTimeLeft()), str(NO_VALUE)), chars: CHARS.clock, fs: d.big }),
+          // Behind the consumption gate for the reason the estimate beside it is: SimHub derives
+          // `Fuel_RemainingTime` from the per-lap figure, so on the out lap the range moves every
+          // frame along with it, and the row would otherwise be an estimate saying it has none
+          // beside a range naming one. The gate is on the seconds rather than around the drawing,
+          // so the absence keeps the clock's own shape and the field has one spelling of nothing.
+          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
           fld(ctx, 'lapsLeft', 'Est. laps', {
             sample: '11.2',
             bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),
@@ -98,7 +99,7 @@ export const fuel = defineModule('fuel', (ctx) => {
             color: ds.color.caution.primary,
           }),
           fld(ctx, 'average', 'Per lap', { ...consumption(fuelPerLap(), fuelIsSettled()), fs: d.mid }),
-          fld(ctx, 'lastLap', 'Last lap', { ...consumption(fuelLastLap(), gt(fuelLastLap(), num(0))), fs: d.mid }),
+          fld(ctx, 'lastLap', 'Last lap', { ...consumption(fuelLastLap(), fuelLastLapIsSettled()), fs: d.mid }),
           fld(ctx, 'thisLap', 'This lap', { ...consumption(fuelThisLap(), gt(fuelThisLap(), num(0))), fs: d.mid }),
         ],
         ctx,
