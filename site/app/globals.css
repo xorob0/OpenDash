@@ -58,8 +58,8 @@
 
   /* Hierarchy from size. Every step fluid between a phone and a wide desktop. */
   --size-display: clamp(2.75rem, 1.25rem + 5vw, 6rem);
-  --size-h1: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
-  --size-h2: clamp(1.5rem, 1.2rem + 1.2vw, 2.125rem);
+  --size-h1: clamp(1.875rem, 1.3rem + 2.2vw, 2.75rem);
+  --size-h2: clamp(1.375rem, 1.15rem + 0.9vw, 1.875rem);
   --size-h3: 1.125rem;
   --size-body: 1.0625rem;
   --size-small: 0.9375rem;
@@ -67,7 +67,7 @@
 
   /* The page's rhythm. The dash's space scale stops at 64, which is a card's world, not a page's. */
   --gutter: clamp(1rem, 0.5rem + 2.5vw, 4rem);
-  --section: clamp(3.5rem, 2rem + 6vw, 7rem);
+  --section: clamp(3rem, 1.9rem + 4vw, 5.5rem);
   --measure: 60ch;
   --page: 88rem;
 
@@ -173,21 +173,19 @@ kbd {
 
 .h1 {
   font-family: var(--font-data);
-  font-weight: 600;
+  font-weight: 700;
   font-size: var(--size-h1);
-  line-height: 1;
+  line-height: 1.02;
   letter-spacing: -0.015em;
-  text-transform: uppercase;
   text-wrap: balance;
 }
 
 .h2 {
   font-family: var(--font-data);
-  font-weight: 600;
+  font-weight: 700;
   font-size: var(--size-h2);
   line-height: 1.05;
   letter-spacing: -0.01em;
-  text-transform: uppercase;
   text-wrap: balance;
 }
 

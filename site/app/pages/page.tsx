@@ -20,10 +20,8 @@ export default function Pages() {
         level={1}
         ruled={false}
         id="catalogue"
-        label="Pages"
-        title="21 pages."
-        lede="The same pages serve zone B, zone C, the companion and the pit wall zones. Each is laid out for the box it gets."
-        wide
+        title="21 pages"
+        lede="The same pages serve zone B, zone C, the companion and the pit wall zones, each laid out for the box it gets."
       >
         <PageGrid pages={on} />
         <div className={styles.note}>
@@ -31,7 +29,7 @@ export default function Pages() {
         </div>
       </Section>
 
-      <Section id="face" label="The face" title="More pages on the face." lede="Zone A, band D and the bar have catalogues of their own, sized for their shapes." wide>
+      <Section id="face" title="More pages on the face" lede="Zone A, band D and the bar have catalogues of their own, sized for their shapes.">
         <dl className={`rows ${styles.lists}`}>
           <div className={styles.list}>
             <dt className={styles.term}>Zone A, {ZONE_A_PAGES.length} pages</dt>
@@ -52,7 +50,7 @@ export default function Pages() {
         </dl>
       </Section>
 
-      <Section id="glance" label="Quick glance" title="Hold a button, see a page." lede="Hold a wheel button to show 1 chosen page in 1 chosen zone. Release, and the zone returns to what it showed." wide />
+      <Section id="glance" title="Quick glance" lede="Hold a wheel button and one zone shows a page you chose. Release it and the zone goes back." />
     </>
   );
 }

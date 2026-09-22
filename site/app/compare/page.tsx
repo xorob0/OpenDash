@@ -28,10 +28,8 @@ export default function Compare() {
         level={1}
         ruled={false}
         id="table"
-        label="Compare"
-        title="OpenDash beside Lovely and Daniel Newman Racing."
+        title="OpenDash beside Lovely and Daniel Newman Racing"
         lede={`Both have shipped longer and cover more sims. This table says what you gain and what you lose. ${FREE_FOREVER} ${NOTHING_TO_UNLOCK}`}
-        wide
       >
         <ul className={styles.legend}>
           {LEGEND.map(([mark, word]) => (
@@ -54,7 +52,7 @@ export default function Compare() {
         </div>
       </Section>
 
-      <Section id="scheduled" label="Scheduled" title="What is coming." lede="Each is an open issue. The list is read from the table above, so it cannot say one thing here and another there." wide>
+      <Section id="scheduled" title="What is coming" lede="Each is an open issue, read from the table above so the two cannot disagree.">
         <ul className={`rows ${styles.scheduled}`}>
           {SCHEDULED.map((row) => (
             <li key={row.id} className={styles.item}>
