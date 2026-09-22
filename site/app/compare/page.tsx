@@ -3,7 +3,7 @@ import { CompareTable } from '../../components/CompareTable';
 import { Section } from '../../components/Section';
 import { CHECKED_ON, SCHEDULED } from '../../lib/compare';
 import { longDate } from '../../lib/captures';
-import { FREE_FOREVER, NOTHING_TO_UNLOCK, REPO_URL, issueUrl } from '../../lib/site';
+import { REPO_URL, issueUrl } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default function Compare() {
         ruled={false}
         id="table"
         title="OpenDash beside Lovely and Daniel Newman Racing"
-        lede={`Both have shipped longer and cover more sims. This table says what you gain and what you lose. ${FREE_FOREVER} ${NOTHING_TO_UNLOCK}`}
+        lede="Both have shipped longer and cover more sims than OpenDash. This is what you would gain and lose by switching."
       >
         <ul className={styles.legend}>
           {LEGEND.map(([mark, word]) => (
