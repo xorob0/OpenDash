@@ -382,7 +382,7 @@ export const carRaceGap = (idx: Expr): Expr => {
 };
 
 /**
- * The same gap on a list drawn from the player's own class: `Lead` on the class leader's row, the
+ * The same gap on a list drawn from the player's own class: `Lead` on the row it counts from, the
  * seconds to that car on a classmate sharing its lap, and `+1L` on one that does not.
  *
  * The reference is the leader of the list rather than the leader of the race, because a column
@@ -394,6 +394,15 @@ export const carRaceGap = (idx: Expr): Expr => {
  * publish, exactly as {@link carInterval} takes one between two rows, and the lap count is built
  * here rather than taken from `gaptoleadercombined`, which is combined with the overall leader and
  * has no class twin.
+ *
+ * The word on the row the column counts from is the one thing here that follows the numbering
+ * rather than the rows. `Lead` is a claim about a place, and a zone filtered to one class while
+ * the rig counts overall draws that class by its overall places: the top row of such a list reads
+ * `P2` where the class is a lap down on another, and `Lead` beside it is two cells of one row
+ * making claims that contradict each other. {@link carPosition} is the place the row draws, so the
+ * word is shown when that place is the first and the cell is left empty otherwise, the row having
+ * nothing to measure against itself, which is what {@link carInterval} already draws in the cell
+ * beside it. A class leading the race keeps the word under either setting.
  */
 export const carClassRaceGap = (idx: Expr): Expr => {
   const here = driver('gaptoleader', idx);
@@ -401,7 +410,7 @@ export const carClassRaceGap = (idx: Expr): Expr => {
   const lapsDown = sub(driver('currentlap', classPosition(num(1))), driver('currentlap', idx));
   return iff(
     eq(isnull(driver('classposition', idx), num(0)), num(1)),
-    str('Lead'),
+    iff(eq(carPosition(idx), num(1)), str('Lead'), str('')),
     iff(
       ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)),
       str(NO_VALUE),

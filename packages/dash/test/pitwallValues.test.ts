@@ -39,12 +39,18 @@ const car = (fields: Partial<Car>): Car =>
  * reads and not how the generator happens to spell it. Only the operators these expressions use
  * are translated; anything else reaches JavaScript unchanged and throws, which is the honest
  * outcome for a formula this evaluator does not understand.
+ *
+ * `positionMode` is the rig's own setting, which one cell of a class board reads: the word on the
+ * row the Gap column counts from is a claim about a place and follows the places the board draws.
+ * The default is the mode such a board is normally drawn under, and the cases that turn on the
+ * other one say so.
  */
-function evaluate(formula: string, board: readonly Car[], row: number): unknown {
+function evaluate(formula: string, board: readonly Car[], row: number, positionMode: 'overall' | 'class' = 'class'): unknown {
   const js = formula
     .replace(/\bdriversector[a-z]+\(/g, 'sector(')
     .replace(/\bdriver([a-z]+)\(/g, "field('$1', ")
     .replace(/\bgetopponentleaderboardposition_playerclassonly\(/g, 'classRow(')
+    .replace(/\[([A-Za-z0-9_.]+)\]/g, "P('$1')")
     .replace(/\brepeatindex\(\)/g, 'ROW')
     .replace(/\bif\(/g, 'iff(')
     .replace(/\bisnull\(/g, 'nz(')
@@ -62,6 +68,10 @@ function evaluate(formula: string, board: readonly Car[], row: number): unknown 
     ROW: row,
     field: (name: keyof Car, index: number): unknown => board[index - 1]?.[name] ?? null,
     classRow: (place: number): number => ourRows[place - 1] ?? -1,
+    P: (name: string): string => {
+      if (name !== 'OpenDash.PositionMode') throw new Error(`the evaluator publishes one property, not ${name}`);
+      return positionMode;
+    },
     sector: (index: number, sector: number): number | null => board[index - 1]?.sectors[sector - 1] ?? null,
     // .NET's `format(x, '0.0', true)`: the pattern's decimals, and a sign on a positive value too.
     // A null formats to nothing, as NCalc's does. NCalc's `if` takes only the branch it needs and
@@ -147,11 +157,36 @@ describe('the Gap and Int columns of a list drawn from one class', () => {
   ];
   /** The leaderboard rows such a list draws, top to bottom. */
   const ROWS = [3, 5, 6, 7];
-  const gapOf = (row: number): unknown => evaluate(carClassRaceGap(repeatIndex()), BOARD, row);
+  const gapOf = (row: number, positionMode: 'overall' | 'class' = 'class'): unknown => evaluate(carClassRaceGap(repeatIndex()), BOARD, row, positionMode);
   const intOf = (row: number): unknown => evaluate(carClassInterval(repeatIndex()), BOARD, row);
 
   test('the leader of the list reads Lead, whatever its place in the race', () => {
     expect({ gap: gapOf(3), position: BOARD[2]!.position }).toEqual({ gap: 'Lead', position: 3 });
+  });
+
+  test('numbered overall, that row claims no lead it does not hold', () => {
+    // The other half of the setting, which a zone's own filter reaches: one class listed by its
+    // overall places. The row the column counts from is headed P3 there, and a cell beside it
+    // reading Lead is one row of a board making two claims about a place that disagree. Nothing
+    // is left to measure against the row itself, so the cell is empty, as the Int cell is.
+    expect({ gap: gapOf(3, 'overall'), position: BOARD[2]!.position }).toEqual({ gap: '', position: 3 });
+  });
+
+  test('and every other row of it is measured exactly as before, the rows not having moved', () => {
+    // The word follows the numbering; the figure follows the rows. A filter is what put these cars
+    // on the board, so the car they are measured against is the one at the top of it either way.
+    expect([gapOf(5, 'overall'), gapOf(6, 'overall'), gapOf(7, 'overall')]).toEqual([gapOf(5), gapOf(6), gapOf(7)]);
+    expect([gapOf(5, 'overall'), gapOf(6, 'overall')]).toEqual(['+4.2', '+10.0']);
+  });
+
+  test('a class that leads the race keeps the word under either setting', () => {
+    const LEADING: readonly Car[] = [
+      car({ position: 1, classposition: 1, gaptoleader: 0, currentlap: 24, ours: true }),
+      car({ position: 2, classposition: 1, gaptoleader: 3.2, currentlap: 24 }),
+      car({ position: 3, classposition: 2, gaptoleader: 8.4, currentlap: 24, ours: true }),
+    ];
+    const lead = (positionMode: 'overall' | 'class'): unknown => evaluate(carClassRaceGap(repeatIndex()), LEADING, 1, positionMode);
+    expect({ overall: lead('overall'), inClass: lead('class') }).toEqual({ overall: 'Lead', inClass: 'Lead' });
   });
 
   test('measured to the race leader the same column says nothing at all', () => {

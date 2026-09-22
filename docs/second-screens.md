@@ -150,11 +150,18 @@ by the "is there a car on this row" test above rather than drawn empty.
 
 The Gap and the Int columns move with the rows, because both are measured against a car above the
 row and that car has to be one the list draws. On a filtered list the Gap is to the leader of the
-player's class, whose own row reads `Lead`, and the Int is to the row above it on the list rather
-than to whatever car the leaderboard puts in between. Measured the other way a class running a lap
-behind the overall leader reads `+1L` on every row and `Lead` on none, which is a column carrying
-no gap at all. SimHub publishes neither figure for a class, so both are differences of the two gaps
-to the overall leader that it does publish.
+player's class and the Int is to the row above it on the list rather than to whatever car the
+leaderboard puts in between. Measured the other way a class running a lap behind the overall leader
+reads `+1L` on every row and `Lead` on none, which is a column carrying no gap at all. SimHub
+publishes neither figure for a class, so both are differences of the two gaps to the overall leader
+that it does publish.
+
+The word on the row a Gap column counts from is the one cell of the two that follows the numbering
+instead, `Lead` being a claim about a place rather than a measurement. A zone filtered to one class
+while the rig counts overall heads such a list with a row reading `P3`, and `Lead` beside it would
+be two cells of a single row disagreeing about where the car is; that cell is therefore left empty
+there, as the Int cell of the same row already is, and it carries the word wherever the place the
+row draws is the first. A class that leads the race keeps it under either setting.
 
 The ± column follows the numbering for the same reason, a places-gained figure being the movement
 of the place the column beside it shows. Counting in class it reads SimHub's `PositionGainClass`
