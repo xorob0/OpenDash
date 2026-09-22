@@ -82,7 +82,7 @@ export const ROWS: CompareRow[] = [
     id: 'accounts',
     label: 'Activation and accounts',
     cells: {
-      opendash: cell('yes', 'None.', { word: 'None' }),
+      opendash: cell('yes', '', { word: 'None' }),
       lovely: cell('partial', 'A licence key for the paid tiers.', { word: 'Licence key' }),
       dnr: cell('partial', 'A membership for anything beyond the shipped dashboards.', { word: 'Membership' }),
     },
