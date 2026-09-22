@@ -1,0 +1,138 @@
+.picker {
+  display: grid;
+  gap: var(--space-7);
+}
+
+/*
+ * One virtual canvas for every rectangle, so their sizes compare. On a phone the canvas is
+ * narrower so the smallest face still has room for its label.
+ */
+.shapes {
+  --canvas: 2000;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.shape {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(var(--w) / var(--canvas) * 100%);
+  aspect-ratio: var(--w) / var(--h);
+  border: 1px solid var(--color-surface-raised);
+  background: var(--color-surface-inset);
+  color: var(--color-text-secondary);
+  transition:
+    border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.shape:hover {
+  background: var(--color-surface-zone);
+  color: var(--color-text-primary);
+}
+
+.round {
+  border-radius: 50%;
+}
+
+/* The one cyan on the picker: the selected shape's rule. */
+.on {
+  color: var(--color-text-primary);
+  border-color: var(--purpose-ui-accent);
+  outline: 1px solid var(--purpose-ui-accent);
+  outline-offset: -1px;
+}
+
+.size {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.tag {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  top: var(--space-1);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--purpose-ui-accent);
+}
+
+.round .tag {
+  inset-inline-end: auto;
+  top: 18%;
+}
+
+.detail {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 1.5rem;
+}
+
+.emph {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: var(--size-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--purpose-ui-accent);
+}
+
+.download {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-5);
+  color: var(--purpose-ui-on-accent);
+  background: var(--purpose-ui-accent);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: background var(--fast) var(--ease);
+}
+
+.download:hover {
+  background: var(--color-brand-tint);
+}
+
+.weight {
+  opacity: 0.8;
+}
+
+.notBuilt {
+  color: var(--color-text-secondary);
+}
+
+@media (min-width: 48rem) {
+  .shapes {
+    --canvas: 3500;
+  }
+
+  .size {
+    font-size: 0.95rem;
+  }
+
+  .detail {
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  }
+}

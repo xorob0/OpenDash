@@ -7,12 +7,10 @@
  * The type ramp is new. The dash's ramp is pixels on a 480 px panel read at arm's length through a
  * wheel, and the plugin's is 96 dpi inside SimHub's own window; neither means anything in a browser
  * at an unknown size. So the site has a third ramp, built on the same two families and obeying the
- * same rule 6 — hierarchy from size, never from weight or colour.
+ * same rule: hierarchy from size, never from weight or colour.
  *
- * Motion is allowed here. Rule 11 holds the dash to motion that carries meaning, because a dash is
- * read at 200 km/h and anything that moves without meaning is a hazard. A web page is documentation,
- * which is the surface where brand cyan already lives, so the page may move. It still moves the way
- * the dash looks: linear or near-linear, nothing bouncing, nothing easing in from nowhere.
+ * Motion is kept to what carries meaning. A clip of a dashboard moves because the dashboard moves;
+ * nothing else on the page animates beyond a colour changing under the pointer.
  */
 
 /* ---------------------------------------------------------------- fonts */
@@ -58,25 +56,23 @@
   --font-ui: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-data: 'Barlow Condensed', 'Arial Narrow', sans-serif;
 
-  /* Rule 6: hierarchy from size. Every step fluid between a phone and a wide desktop. */
-  --size-display: clamp(3.5rem, 1.5rem + 8vw, 8.5rem);
-  --size-h1: clamp(2.25rem, 1.4rem + 3.4vw, 4rem);
-  --size-h2: clamp(1.625rem, 1.2rem + 1.7vw, 2.5rem);
-  --size-h3: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  /* Hierarchy from size. Every step fluid between a phone and a wide desktop. */
+  --size-display: clamp(2.75rem, 1.25rem + 5vw, 6rem);
+  --size-h1: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  --size-h2: clamp(1.5rem, 1.2rem + 1.2vw, 2.125rem);
+  --size-h3: 1.125rem;
   --size-body: 1.0625rem;
   --size-small: 0.9375rem;
   --size-label: 0.75rem;
 
   /* The page's rhythm. The dash's space scale stops at 64, which is a card's world, not a page's. */
   --gutter: clamp(1rem, 0.5rem + 2.5vw, 4rem);
-  --section: clamp(4rem, 2rem + 8vw, 9rem);
-  --measure: 62ch;
+  --section: clamp(3.5rem, 2rem + 6vw, 7rem);
+  --measure: 60ch;
   --page: 88rem;
 
-  /* Rule 11, as the site reads it: linear-ish, short, never bouncing. */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --fast: 140ms;
-  --slow: 420ms;
 
   color-scheme: dark;
 }
@@ -91,7 +87,6 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  scroll-behavior: smooth;
 }
 
 body {
@@ -100,7 +95,7 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-ui);
   font-size: var(--size-body);
-  line-height: 1.6;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* A wide page on a narrow phone is the one bug that makes a site feel broken. */
@@ -115,7 +110,9 @@ p,
 figure,
 blockquote,
 ul,
-ol {
+ol,
+dl,
+dd {
   margin: 0;
 }
 
@@ -141,10 +138,18 @@ button {
   font: inherit;
   color: inherit;
   background: none;
+  border: 0;
+  padding: 0;
   cursor: pointer;
 }
 
-/* Rule 7: hard edges. The focus ring is a 2 px ring with no blur, as the canvas specifies. */
+code,
+kbd {
+  font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+/* Hard edges. The focus ring is a 2 px ring with no blur. */
 :focus-visible {
   outline: 2px solid var(--purpose-ui-focus);
   outline-offset: 2px;
@@ -160,9 +165,10 @@ button {
   font-family: var(--font-data);
   font-weight: 700;
   font-size: var(--size-display);
-  line-height: 0.86;
+  line-height: 0.9;
   letter-spacing: -0.02em;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .h1 {
@@ -172,6 +178,7 @@ button {
   line-height: 1;
   letter-spacing: -0.015em;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .h2 {
@@ -181,37 +188,36 @@ button {
   line-height: 1.05;
   letter-spacing: -0.01em;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .h3 {
   font-weight: 600;
   font-size: var(--size-h3);
-  line-height: 1.25;
+  line-height: 1.3;
+  color: var(--color-text-primary);
 }
 
 /*
- * Rule 5: one label idiom. Barlow 500, uppercase, tracked 0.14em off the dash.
+ * One label idiom: Barlow 500, uppercase, tracked 0.14em off the dash.
  *
  * The ink is the one part that does not carry over. `color.text.label` is #5A6069, which is
- * 3.1:1 against surface.base — fine on a self-lit DDU read at arm's length in a dark cockpit,
- * which is the viewing condition the dash palette was chosen for, and below the 4.5:1 a browser
- * needs for small text on whatever screen at whatever brightness somebody reads this on. So the
- * site's labels take the step above, text.secondary at 6.1:1, and the dash keeps its own.
- *
- * The same reasoning applies everywhere below: nothing under 18.66px on this site is set in
- * text.label or text.dim, and those two are left for marks that are not read — a rule, a bullet,
- * an ordinal beside something that already says what it is.
+ * 3.1:1 against surface.base: fine on a self-lit DDU read at arm's length in a dark cockpit, and
+ * below the 4.5:1 a browser needs for small text on whatever screen somebody reads this on. So the
+ * site's labels take the step above, text.secondary at 6.1:1, and the dash keeps its own. Nothing
+ * under 18.66 px on this site is set in text.label or text.dim; those two are for marks that are
+ * not read, such as a rule or a bullet.
  */
 .label {
   font-weight: 500;
   font-size: var(--size-label);
-  line-height: 1;
+  line-height: 1.2;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
 
-/* Rule 4: a numeral is always Barlow Condensed 600 or 700. */
+/* A numeral is always Barlow Condensed 600 or 700, and tabular. */
 .num {
   font-family: var(--font-data);
   font-weight: 600;
@@ -230,6 +236,14 @@ button {
   font-weight: 600;
 }
 
+.prose code,
+.code {
+  padding: 0.08em 0.4em;
+  background: var(--color-surface-zone);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+}
+
 .prose a,
 .link {
   color: var(--color-brand-primary);
@@ -241,7 +255,19 @@ button {
 
 .prose a:hover,
 .link:hover {
-  color: var(--purpose-ui-accent-hover, var(--color-brand-tint));
+  color: var(--color-brand-tint);
+}
+
+/* A block of one command, as the install page shows the unblock line. */
+.pre {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-inset);
+  border: 1px solid var(--color-surface-raised);
+  color: var(--color-text-primary);
+  font-size: var(--size-small);
+  overflow-x: auto;
+  white-space: pre;
 }
 
 /* ---------------------------------------------------------------- layout */
@@ -256,7 +282,7 @@ button {
   padding-block: var(--section);
 }
 
-/* Rule 8: zones are separated by 1 px rules, never boxes. */
+/* Zones are separated by 1 px rules, never boxes. */
 .ruled {
   border-top: 1px solid var(--color-surface-raised);
 }
@@ -266,32 +292,18 @@ button {
   flex-direction: column;
 }
 
-/* ---------------------------------------------------------------- motion */
-/*
- * Reveal-on-scroll. The elements start displaced and un-inked and the observer adds `.in`; with no
- * JavaScript, or with reduced motion asked for, they are simply visible, which is why the rule
- * below sets the resting state rather than the hidden one.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .reveal {
-    opacity: 0;
-    transform: translateY(14px);
-    transition:
-      opacity var(--slow) var(--ease),
-      transform var(--slow) var(--ease);
-  }
-
-  .reveal.in {
-    opacity: 1;
-    transform: none;
-  }
+/* A ruled list: one line per item, a rule between items, nothing else. */
+.rows > * {
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--color-surface-raised);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+.rows > *:last-child {
+  border-bottom: 1px solid var(--color-surface-raised);
+}
 
+/* ---------------------------------------------------------------- motion */
+@media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {

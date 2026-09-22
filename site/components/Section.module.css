@@ -1,0 +1,30 @@
+.section {
+  scroll-margin-top: 60px;
+}
+
+.head {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lede {
+  font-size: 1.125rem;
+}
+
+.body {
+  margin-top: var(--space-7);
+}
+
+@media (min-width: 62rem) {
+  .wide {
+    grid-template-columns: 1.1fr 1fr;
+    align-items: end;
+    gap: var(--space-8);
+  }
+}

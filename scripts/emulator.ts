@@ -46,7 +46,12 @@ const SHARE_UNC = '\\\\host.lan\\Data';
  * still have to be recorded from a real SimHub. Listed by name rather than skipped by a rule, so
  * that adding a scenario without a trace stays a decision somebody made.
  */
-export const UNTRACED_SCENARIOS: readonly string[] = ['flagbox'];
+export const UNTRACED_SCENARIOS: readonly string[] = [
+  // flagbox drives lights, not a dashboard.
+  'flagbox',
+  // gallery exists to be photographed for the website; nothing replays it.
+  'gallery',
+];
 
 /** Every scenario a run may name. */
 export function scenarios(): string[] {
@@ -208,6 +213,36 @@ Get-Content ${psq(GUEST_LOG)} -Tail ${Math.max(1, Math.trunc(lines))}`,
  * lives in `scripts/emulator.sh`, which is what `bun run emulator` invokes, because a shell trap
  * does run.
  */
+/**
+ * The laps the running scenario has completed since it started, read from the log.
+ *
+ * The log is appended across runs, so the count is of `lap N completed` lines after the most recent
+ * scenario banner. What a capture needs is not a settled connection but a settled history: SimHub's
+ * last-lap columns, fuel averages, stint counters and recorded track map all fill on a completed
+ * lap it has observed, and a photograph taken before the first one carries blanks that look like
+ * bugs. `waitForLaps` blocks until `n` have gone by, or gives up after `timeoutSeconds`.
+ */
+export function lapsCompleted(host: Host): number {
+  const lines = tail(host, 400).stdout.split('\n');
+  const banner = lines.map((l, i) => (l.includes('IrsdkEmulator - scenario') ? i : -1)).filter((i) => i >= 0).pop() ?? -1;
+  return lines.slice(banner + 1).filter((l) => /lap \d+ completed in/.test(l)).length;
+}
+
+export function waitForLaps(host: Host, n: number, timeoutSeconds = 420): boolean {
+  const deadline = Date.now() + timeoutSeconds * 1000;
+  let seen = -1;
+  while (Date.now() < deadline) {
+    const laps = lapsCompleted(host);
+    if (laps !== seen) {
+      seen = laps;
+      console.log(`  ${laps} of ${n} laps completed`);
+    }
+    if (laps >= n) return true;
+    sleep(10);
+  }
+  return false;
+}
+
 export async function follow(host: Host): Promise<void> {
   let seen = '';
   for (;;) {

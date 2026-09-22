@@ -1,23 +1,19 @@
 .wrap {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: var(--space-5);
+  align-items: start;
 }
 
 .stage {
+  width: 100%;
   background: var(--color-surface-inset);
   border: 1px solid var(--color-surface-raised);
   overflow: hidden;
 }
 
-/*
- * The picture's own box. Everything positioned in percentages — the mask and the six hit regions —
- * is a child of this rather than of the stage, so the percentages stay percentages of the face
- * however wide the window onto it happens to be.
- */
+/* The picture's own box. Everything positioned in percentages is a child of this. */
 .canvas {
   position: relative;
-  aspect-ratio: 1920 / 480;
   width: 100%;
 }
 
@@ -29,8 +25,8 @@
 
 /*
  * The hole in the dimming. `box-shadow` with a spread wider than the stage paints everything
- * outside this rectangle, so one element does the whole mask and there is no seam where four
- * strips would meet. The ring is 1 px and unblurred, as rule 7 requires of everything else.
+ * outside this rectangle, so one element does the whole mask and there is no seam. The ring is
+ * 1 px and unblurred.
  */
 .mask {
   position: absolute;
@@ -39,10 +35,10 @@
   outline: 1px solid var(--purpose-ui-accent);
   outline-offset: -1px;
   transition:
-    left var(--slow) var(--ease),
-    top var(--slow) var(--ease),
-    width var(--slow) var(--ease),
-    height var(--slow) var(--ease);
+    left var(--fast) var(--ease),
+    top var(--fast) var(--ease),
+    width var(--fast) var(--ease),
+    height var(--fast) var(--ease);
 }
 
 .hit {
@@ -54,19 +50,18 @@
 .readout {
   display: grid;
   gap: var(--space-4);
-  align-items: start;
+  align-content: start;
 }
 
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0;
   border-top: 1px solid var(--color-surface-raised);
 }
 
-/* Rule 8 again: the parts are divided by rules, and the chosen one is marked by a rule in cyan. */
+/* The parts are divided by rules, and the chosen one is marked by a rule in cyan. */
 .tab {
-  flex: 1 1 auto;
+  flex: 1 1 33%;
   padding: var(--space-3) var(--space-2);
   font-size: var(--size-label);
   font-weight: 500;
@@ -82,7 +77,7 @@
 }
 
 .tab:hover {
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 
 .tab[aria-selected='true'] {
@@ -94,66 +89,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  min-height: 9.5rem;
-}
-
-/*
- * The copy is re-keyed on the part, so React replaces the node and this runs again. It is the one
- * place the site fades something in, and it is doing what rule 11 asks of motion on the dash: the
- * movement is the signal that the text underneath has been replaced.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .text {
-    animation: swap var(--slow) var(--ease);
-  }
-}
-
-@keyframes swap {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  min-height: 7rem;
 }
 
 @media (min-width: 62rem) {
-  .readout {
-    grid-template-columns: 1fr;
+  .wrap {
+    grid-template-columns: minmax(0, 850px) minmax(18rem, 1fr);
+    gap: var(--space-7);
   }
 
-  .text {
-    min-height: 7rem;
-    max-width: var(--measure);
-  }
-}
-
-/* On a phone the stage is a window onto a taller picture, and the face can be dragged across. */
-@media (max-width: 47.99rem) {
-  .stage {
-    height: 46vw;
-    max-height: 15rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-text-dim) transparent;
-  }
-
-  .canvas {
-    width: auto;
-    height: 100%;
-  }
-
-  .img {
-    width: auto;
-    max-width: none;
-    height: 100%;
-  }
-
-  /* The strip would otherwise be six items on one line, each too narrow to read or to hit. */
   .tab {
-    flex: 1 1 33%;
+    flex: 1 1 auto;
   }
 }

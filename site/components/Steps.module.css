@@ -1,0 +1,27 @@
+.list {
+  max-width: 48rem;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  gap: var(--space-4);
+}
+
+.n {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  color: var(--color-text-secondary);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* The step that fails silently: its number in the caution colour, once. */
+.important .n {
+  color: var(--color-caution-primary);
+}

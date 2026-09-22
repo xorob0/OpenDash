@@ -40,7 +40,8 @@ import { DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from '../packages/dash/src/das
 import { readVersion } from '../packages/dash/src/build.ts';
 import { noticesForPackage } from '../packages/dash/src/design/notices.ts';
 import { ds } from '../packages/dash/src/tokens.ts';
-import { build as buildEmulator, start as startEmulator, stop as stopEmulator, upload as uploadEmulator } from './emulator.ts';
+import { build as buildEmulator, lapsCompleted, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, waitForLaps } from './emulator.ts';
+import { provenance, writeRun, type RunCapture } from './shotsRun.ts';
 import { captureDashboard, closeDashboards, guiAvailable, openDashboard, placeDashboards } from './gui.ts';
 import { claim, install, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
@@ -189,6 +190,12 @@ export async function run(host: Host, opts: Options): Promise<number> {
     uploadEmulator(host);
     startEmulator(host, { scenario: opts.scenario, replace: true });
     sleep(6);
+    // The pages that read a history (lap history, sectors, stint, the recorded track map) are blank
+    // until SimHub has watched a lap or two complete; photographing them before that is a picture
+    // of the wait, not of the page.
+    console.log('  letting 2 laps go by first');
+    if (!waitForLaps(host, 2)) console.error('  the laps did not come; photographing anyway');
+    const run = { ...provenance(opts.scenario), captures: {} as Record<string, RunCapture> };
 
     mkdirSync(opts.outDir, { recursive: true });
     let taken = 0;
@@ -201,16 +208,18 @@ export async function run(host: Host, opts: Options): Promise<number> {
         continue;
       }
       placeDashboards(host, 0, 0, { name, width: SIZE.width, height: SIZE.height });
-      const file = path.join(opts.outDir, `module-${meta.id}.png`);
+      const file = path.join(opts.outDir, `page-${meta.id}.png`);
       const shot = captureDashboard(host, name, file);
       if (shot.ok) {
         taken += 1;
+        run.captures[path.basename(file)] = { kind: 'page', page: meta.id, width: SIZE.width, height: SIZE.height, lapsSeen: lapsCompleted(host) };
         console.log(`  [${index + 1}/${wanted.length}] ${meta.name} photographed`);
       } else {
         console.error(`  [${index + 1}/${wanted.length}] ${meta.name}: ${shot.stderr.trim()}`);
       }
     }
 
+    writeRun(opts.outDir, run);
     console.log(`\n  ${taken} of ${wanted.length} photographed into ${path.relative(repoRoot, opts.outDir)}/\n`);
     return taken === wanted.length ? 0 : 1;
   } finally {

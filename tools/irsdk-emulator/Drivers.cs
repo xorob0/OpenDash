@@ -75,6 +75,7 @@ namespace IrsdkEmulator
                 case "pitLimiterToggle": return new PitLimiterToggleDriver();
                 case "field": return new FieldDriver();
                 case "sine": return new SineDriver();
+                case "ramp": return new RampDriver();
                 case "toggle": return new ToggleDriver();
                 default: throw new FormatException("unknown driver type '" + type + "'. Known: clock, rpmSweep, gearFromRpm, lapTimer, fuelBurn, flagCycle, pitLimiterToggle, field, sine, toggle");
             }
@@ -431,6 +432,29 @@ namespace IrsdkEmulator
     }
 
     /// <summary>
+    /// Any variable climbs from "min" to "max" over "period" seconds and wraps: a saw, not a sine.
+    /// Written for the heading. SimHub builds an iRacing track map by dead-reckoning from the car's
+    /// velocity and YawNorth, so a heading that sweeps a full turn over one lap gives it a closed
+    /// outline to record, where a pinned heading gives it a straight line.
+    /// </summary>
+    public sealed class RampDriver : Driver
+    {
+        public RampDriver() { Type = "ramp"; }
+
+        public override void Tick(SimContext c)
+        {
+            string var = PS("var", null);
+            if (string.IsNullOrEmpty(var)) return;
+            double min = P("min", 0), max = P("max", 1), period = Math.Max(0.05, P("period", 4)), phase = P("phase", 0);
+            double frac = (c.Time / period + phase) % 1.0;
+            if (frac < 0) frac += 1.0;
+            c.Vars.Set(var, PI("index", 0), min + (max - min) * frac);
+        }
+
+        public override string Describe() { return "ramp " + PS("var", "?") + " " + P("min", 0) + ".." + P("max", 1) + " / " + P("period", 4) + " s"; }
+    }
+
+    /// <summary>
     /// Multi-car field: every listed car runs around the track at its pace; positions, class positions, gaps,
     /// laps and CarIdx* arrays are recomputed every tick. The player car follows the lapTimer driver when present.
     /// Also renders the ResultsPositions / ResultsFastestLap YAML blocks (placeholders {{ResultsPositions}} and
@@ -457,6 +481,8 @@ namespace IrsdkEmulator
             public double Dist;
             public double Gap;
             public bool IsPlayer;
+            /// <summary>This car's own lap-time jitter. Zero holds a car at an exact gap, which is what a radar capture needs.</summary>
+            public double Jitter;
         }
 
         private readonly List<Car> _cars = new List<Car>();
@@ -485,21 +511,22 @@ namespace IrsdkEmulator
                     Pct = Json.GetDouble(d, "pct", 0),
                     Lap = Json.GetInt(d, "lap", 1),
                     Pit = Json.GetBool(d, "pit", false),
+                    Jitter = Json.GetDouble(d, "jitter", jitter),
                 };
                 if (car.Idx < 0 || car.Idx >= 64) throw new FormatException("field: car idx must be 0..63");
                 car.IsPlayer = car.Idx == player;
                 car.PitInitial = car.Pit;
                 car.Completed = Math.Max(0, car.Lap - 1);
-                car.Last = Json.GetDouble(d, "last", car.Pace + jitter * (c.Rng.NextDouble() * 2 - 1));
+                car.Last = Json.GetDouble(d, "last", car.Pace + car.Jitter * (c.Rng.NextDouble() * 2 - 1));
                 car.Best = Json.GetDouble(d, "best", car.Pace - 0.2 - c.Rng.NextDouble() * 0.6);
                 car.BestLap = Json.GetInt(d, "bestLap", Math.Max(1, car.Completed - c.Rng.Next(0, 5)));
-                car.CurLapTime = car.Pace + jitter * (c.Rng.NextDouble() * 2 - 1);
+                car.CurLapTime = car.Pace + car.Jitter * (c.Rng.NextDouble() * 2 - 1);
                 _cars.Add(car);
             }
             if (!_cars.Any(x => x.IsPlayer))
             {
                 c.Log("field: player car (idx " + player + ") not listed, adding it");
-                _cars.Add(new Car { Idx = player, IsPlayer = true, ClassId = (int)c.Vars.Get("PlayerCarClass"), Pace = pace, Lap = 1, CurLapTime = pace, Best = pace, Last = pace, BestLap = 1 });
+                _cars.Add(new Car { Idx = player, IsPlayer = true, ClassId = (int)c.Vars.Get("PlayerCarClass"), Pace = pace, Lap = 1, CurLapTime = pace, Best = pace, Last = pace, BestLap = 1, Jitter = jitter });
             }
             _init = true;
             // Render the initial standings so the very first session string already carries ResultsPositions.
@@ -531,7 +558,6 @@ namespace IrsdkEmulator
         {
             if (!_init) Init(c);
             var v = c.Vars;
-            double jitter = P("jitter", 0.5);
             bool havePlayerSignals = c.HasSignal("player.pct");
             // "pitCars": [idx, ...] (settable from the timeline) parks those cars in their pit stall.
             var pitList = PL("pitCars");
@@ -567,7 +593,7 @@ namespace IrsdkEmulator
                         if (car.Best <= 0 || car.Last < car.Best) { car.Best = car.Last; car.BestLap = car.Lap; }
                         car.Lap++;
                         car.Completed++;
-                        car.CurLapTime = car.Pace + jitter * (c.Rng.NextDouble() * 2 - 1);
+                        car.CurLapTime = car.Pace + car.Jitter * (c.Rng.NextDouble() * 2 - 1);
                     }
                 }
                 car.Dist = car.Completed + car.Pct;

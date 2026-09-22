@@ -5,7 +5,7 @@
  * reason worth writing down: the only markdown this site renders is one file in this repository,
  * written by the people who maintain this repository, and a parser that accepts exactly what that
  * file contains is easier to be sure of than one that accepts everything. It also means no
- * `dangerouslySetInnerHTML` anywhere on the site — this returns data, the component turns it into
+ * `dangerouslySetInnerHTML` anywhere on the site: this returns data, the component turns it into
  * elements, and a changelog entry cannot inject markup even in principle.
  *
  * It returns data rather than React nodes deliberately. The presentation belongs to the component,
@@ -22,7 +22,7 @@
  *   `code`             a property name, a file name, a command
  *   [text](url)        a link
  *
- * Anything else — a table, an image, a nested list, a fenced block — is passed through as plain
+ * Anything else (a table, an image, a nested list, a fenced block) is passed through as plain
  * text. That is a deliberate floor rather than a bug: the text still reads, and the missing
  * formatting is visible enough in review to be noticed and either added here or avoided there.
  */
@@ -109,7 +109,7 @@ export function toBlocks(markdown: string): Block[] {
  * does not.
  *
  * `**bold**` is listed before `*italic*` because the alternation is ordered and the double
- * delimiter has to be tried first — the other way round, every bold run would come back as an
+ * delimiter has to be tried first; the other way round, every bold run would come back as an
  * italic empty string between stray asterisks, and the changelog is full of bold.
  */
 export function toInline(text: string): Inline[] {

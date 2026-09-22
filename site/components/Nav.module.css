@@ -2,13 +2,13 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: color-mix(in srgb, var(--color-surface-base) 88%, transparent);
+  background: color-mix(in srgb, var(--color-surface-base) 90%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
-  transition: border-color var(--slow) var(--ease);
+  transition: border-color var(--fast) var(--ease);
 }
 
-/* Rule 8: the rule is the whole boundary. It appears only when there is something above to divide. */
+/* The rule is the whole boundary. It appears only when there is something above to divide. */
 .scrolled {
   border-bottom-color: var(--color-surface-raised);
 }
@@ -49,11 +49,7 @@
   color: var(--color-text-primary);
 }
 
-/*
- * The current page is marked with a rule under it rather than with a colour, because cyan is
- * identity and a nav item is not an action. The rule grows from nothing on hover, which is the one
- * piece of motion the header has.
- */
+/* The current page is marked with a rule under it, in cyan; a nav item is not an action. */
 .link::after {
   content: '';
   position: absolute;
@@ -90,9 +86,9 @@
   margin-inline-start: 0;
 }
 
-/* The one primary action on the page, so the one place cyan is a fill. */
+/* The one primary action in the header, so the one place cyan is a fill. */
 .cta {
-  display: none;
+  display: inline-flex;
   padding: 7px var(--space-4);
   font-size: var(--size-small);
   font-weight: 500;
@@ -114,7 +110,7 @@
   margin-inline-end: -8px;
 }
 
-/* Rule 12: icons are drawn, not typed. Two 1.5 px strokes that cross into a close mark. */
+/* Icons are drawn, not typed. Two 1.5 px strokes that cross into a close mark. */
 .bars,
 .bars::before,
 .bars::after {
@@ -122,7 +118,9 @@
   width: 20px;
   height: 1.5px;
   background: var(--color-text-primary);
-  transition: transform var(--fast) var(--ease), opacity var(--fast) var(--ease);
+  transition:
+    transform var(--fast) var(--ease),
+    opacity var(--fast) var(--ease);
 }
 
 .bars {
@@ -172,18 +170,18 @@
   transition: color var(--fast) var(--ease);
 }
 
-.menuLink:last-child {
-  border-bottom: 0;
+.menuLink[aria-current='page'],
+.menuLink:hover,
+.menuCta {
   color: var(--purpose-ui-accent);
 }
 
-.menuLink:hover {
-  color: var(--purpose-ui-accent);
+.menuCta {
+  border-bottom: 0;
 }
 
 @media (min-width: 62rem) {
-  .links,
-  .cta {
+  .links {
     display: flex;
   }
 

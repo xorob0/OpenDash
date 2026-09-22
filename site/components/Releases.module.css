@@ -1,0 +1,112 @@
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.release {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-6);
+  border-top: 1px solid var(--color-surface-raised);
+}
+
+.release:last-child {
+  border-bottom: 1px solid var(--color-surface-raised);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.version {
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--color-text-primary);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* Caution is already the meaning for "know this before you rely on it". */
+.pre {
+  color: var(--color-caution-primary);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.group {
+  margin-top: var(--space-2);
+}
+
+.para,
+.item {
+  max-width: 74ch;
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+
+.para strong,
+.item strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* A bullet is a 6 px square. */
+.item {
+  position: relative;
+  padding-inline-start: var(--space-5);
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  background: var(--color-text-dim);
+}
+
+.body :global(code) {
+  padding: 1px 5px;
+  background: var(--color-surface-zone);
+  color: var(--color-text-primary);
+}
+
+@media (min-width: 62rem) {
+  .release {
+    grid-template-columns: 14rem 1fr;
+    gap: var(--space-6);
+  }
+
+  .head {
+    flex-direction: column;
+    gap: var(--space-2);
+    position: sticky;
+    top: 5rem;
+    align-self: start;
+  }
+}
