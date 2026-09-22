@@ -7,6 +7,7 @@
  * cannot be listed on one page and missing from another.
  */
 import { DOWNLOADS, PACKAGES } from './content.generated';
+import { hasCapture, packageFile, stillFor } from './captures';
 import { NOTES, inReadingOrder, slug, type PackageNote } from './packages';
 import type { SitePackage } from '../scripts/content';
 
@@ -36,3 +37,31 @@ export const BASE_FACE: PackageOption | undefined = FACES.find((f) => f.note?.em
 export const LARGE_FACE: PackageOption | undefined = FACES.find((f) => f.note?.emphasis === 'large');
 
 export const byFolder = (folder: string): PackageOption | undefined => ALL.find((p) => p.folder === folder);
+
+/** The faces as the picker draws them: with their capture's URL when it has been photographed. */
+export interface PickerFace {
+  folder: string;
+  slug: string;
+  width: number;
+  height: number;
+  round: boolean;
+  file: string;
+  bytes?: number;
+  what?: string;
+  emphasis?: 'base' | 'large';
+  capture: string | null;
+}
+
+export const pickerFaces = (): PickerFace[] =>
+  FACES.map((f) => ({
+    folder: f.folder,
+    slug: f.slug,
+    width: f.width,
+    height: f.height,
+    round: f.round,
+    file: f.file,
+    bytes: f.bytes,
+    what: f.note?.what,
+    emphasis: f.note?.emphasis,
+    capture: hasCapture(packageFile(f.folder)) ? stillFor(f.folder) : null,
+  }));

@@ -1,0 +1,15 @@
+.glyph {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.centre {
+  fill: var(--color-text-primary);
+}
+
+.side {
+  fill: none;
+  stroke: var(--color-text-secondary);
+  stroke-width: 1;
+}

@@ -1,254 +1,201 @@
 import Link from 'next/link';
-import { Anatomy } from '../components/Anatomy';
-import { Reveal } from '../components/Reveal';
-import { SectionHead } from '../components/SectionHead';
-import { Shot } from '../components/Shot';
+import { Attribution } from '../components/Attribution';
+import { Actions, Primary, Secondary } from '../components/Buttons';
+import { Capture, CaptureNote } from '../components/Capture';
+import { Clip } from '../components/Clip';
+import { ScreenPicker } from '../components/ScreenPicker';
+import { Section } from '../components/Section';
+import { StripGlyph } from '../components/StripGlyph';
+import { packageFile } from '../lib/captures';
+import { clipFor } from '../lib/clips';
 import { MODULES, SIMHUB_VERSION, VERSION } from '../lib/content.generated';
-import { ALL as ORDERED } from '../lib/faces';
+import { BASE_FACE, byFolder, pickerFaces } from '../lib/faces';
+import { sizeLabel } from '../lib/packages';
+import { CLAIMED_SIM, DIFFERENTIATORS, FREE_FOREVER, FREE_HEADLINE, NOTHING_TO_UNLOCK, issueUrl } from '../lib/site';
 import styles from './page.module.css';
 
-const faces = ORDERED.filter((p) => p.kind === 'dash');
+/** The shapes the lights teaser draws: a common wheel, a wide wheel, a brow. */
+const STRIP_EXAMPLES = [
+  { left: 3, centre: 9, right: 3, name: '3 / 9 / 3' },
+  { left: 4, centre: 14, right: 4, name: '4 / 14 / 4' },
+  { left: 0, centre: 25, right: 0, name: 'A brow of 25' },
+];
 
 export default function Home() {
+  const hero = BASE_FACE;
+  const clip = hero ? clipFor(hero.folder) : undefined;
+  const companion = byFolder('OpenDash Companion');
+  const pitWall = byFolder('OpenDash Pit wall');
+  const faces = pickerFaces();
+  const off = MODULES.filter((m) => !m.enabled);
+
   return (
     <>
-      {/* ------------------------------------------------------------------ hero */}
-      <section className={styles.hero}>
-        <div className="page">
-          <p className={`label ${styles.eyebrow}`}>
-            <span className={styles.alpha}>Alpha</span>
-            <span aria-hidden="true">·</span>
-            <span>SimHub {SIMHUB_VERSION}+</span>
-            <span aria-hidden="true">·</span>
-            <span>MIT</span>
-          </p>
-
-          <h1 className={`display ${styles.headline}`}>
-            Every screen
-            <br />
-            on the rig.
-          </h1>
-
-          <p className={`prose ${styles.lede}`}>
-            OpenDash is not one dashboard. It is the face on your wheel, the phone or tablet beside
-            it, and a pit wall screen for whoever is not driving — {faces.length} sizes from a{' '}
-            <span className="num">1920 × 480</span> ultrawide down to a{' '}
-            <span className="num">480 px</span> round DDU, and one SimHub plugin that installs all of
-            them.
-          </p>
-
-          <div className={styles.actions}>
-            <Link href="/download" className={styles.primary}>
-              Download {VERSION}
-            </Link>
-            <Link href="/dashes" className={styles.secondary}>
-              See every size
-            </Link>
-          </div>
-        </div>
-
-        <div className={`page ${styles.heroShot}`}>
-          <Shot
-            src="/shots/opendash-green.png"
-            alt="The OpenDash face at 1920 by 480: rev bar, the bar of settled values, lap times, the gear, the relative, and the fuel band"
-            width={1920}
-            height={480}
-            priority
-          />
-          <p className={styles.note}>
-            Every picture on this site is the package itself, photographed through SimHub’s own
-            renderer at its own size while a telemetry emulator replayed a lap at Spa. None of them
-            is a mock-up, and no value in them was typed by hand.
-          </p>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ anatomy */}
-      <section className={`section ruled ${styles.block}`}>
-        <div className="page">
-          <SectionHead label="The face" title={<>Five parts, and only one of them moves slowly.</>}>
-            <p>
-              A driver does not configure a dashboard. They change it mid-stint, with a thumb, and
-              the layout has to survive that. So the face is a small number of named regions, each
-              showing one page at a time from its own catalogue and each bound to a wheel button.
+      <section className={`section ${styles.hero}`}>
+        <div className={`page ${styles.heroGrid}`}>
+          <div className={styles.heroText}>
+            <p className="label">
+              iRacing · SimHub {SIMHUB_VERSION}+ · Windows · <span className={styles.alpha}>Alpha {VERSION}</span>
             </p>
-          </SectionHead>
-
-          <Reveal delay={80} className={styles.anatomy}>
-            <Anatomy src="/shots/opendash-green.png" />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ pages */}
-      <section className={`section ruled ${styles.block}`}>
-        <div className="page">
-          <SectionHead
-            label="The catalogue"
-            title={<>{MODULES.length} pages. A wheel button, not a menu.</>}
-          >
-            <p>
-              Zones B and C each choose from the same catalogue, the band from eight that suit a
-              wide, shallow strip, and zone A from four. Hold a button instead of tapping it and you
-              get a glance: one page shows while you hold, and the zone returns to what it was when
-              you let go.
+            <h1 className="display">{FREE_HEADLINE}</h1>
+            <p className={`prose ${styles.lede}`}>
+              OpenDash is a set of SimHub dashboards for iRacing on Windows. 14 screens, 21 pages and 63 LED profiles, generated from source.
             </p>
-          </SectionHead>
-
-          <Reveal delay={80}>
-            <ul className={styles.chips}>
-              {MODULES.map((m) => (
-                <li key={m.id} className={styles.chip} data-off={!m.enabled || undefined}>
-                  {m.name}
-                </li>
-              ))}
-            </ul>
-            <p className={styles.chipNote}>
-              Three ship switched off because iRacing publishes none of their data. They say so
-              rather than drawing zeros.{' '}
-              <Link href="/modules" className="link">
-                Every page, with a photograph
-              </Link>
-              .
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ three kinds */}
-      <section className={`section ruled ${styles.block}`}>
-        <div className="page">
-          <SectionHead
-            label="Three kinds of screen"
-            title={<>Built from the same parts, drawn for different rooms.</>}
-          >
-            <p>
-              All three are assembled from the same elements, components and pages, and each is
-              redrawn for the rectangle it is given rather than scaled into it.
-            </p>
-          </SectionHead>
-
-          <div className={styles.kinds}>
-            <Reveal delay={0} className={styles.kind}>
-              <Shot
-                src="/shots/opendash-850x480-green.png"
-                alt="The OpenDash face at 850 by 480, the base size"
-                width={850}
-                height={480}
-                sizes="(min-width: 62rem) 40rem, 100vw"
-              />
-              <h3 className="h3">The face</h3>
-              <p className="prose">
-                On the wheel or on the dash. Ten sizes, and the base is{' '}
-                <span className="num">850 × 480</span> — the common wheel-mounted DDU, and the
-                tightest face that still carries all five parts.
-              </p>
-            </Reveal>
-
-            <Reveal delay={90} className={styles.kind}>
-              <Shot
-                src="/shots/opendash-companion-green.png"
-                alt="The OpenDash companion at 850 by 480, showing one module at a time"
-                width={850}
-                height={480}
-                sizes="(min-width: 62rem) 40rem, 100vw"
-              />
-              <h3 className="h3">The companion</h3>
-              <p className="prose">
-                A phone or a tablet beside the wheel, showing one of the {MODULES.length} modules at
-                a time and paged with the same wheel button. Portrait, for a phone stood on end, is
-                a second package.
-              </p>
-            </Reveal>
-
-            <Reveal delay={180} className={styles.kind}>
-              <Shot
-                src="/shots/opendash-pit-wall-green.png"
-                alt="The OpenDash pit wall at 1920 by 1080, showing the whole field"
-                width={1920}
-                height={1080}
-                sizes="(min-width: 62rem) 40rem, 100vw"
-              />
-              <h3 className="h3">The pit wall</h3>
-              <p className="prose">
-                <span className="num">1920 × 1080</span> for somebody who is not driving: the whole
-                field with gaps, intervals, sectors, stints and stops, your own lap beside it, and
-                four data zones that are plugin settings.
-              </p>
-            </Reveal>
-          </div>
-
-          <Reveal delay={240}>
-            <p className={styles.chipNote}>
-              <Link href="/second-screens" className="link">
-                More on the companion and the pit wall
-              </Link>
-              .
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ fit */}
-      <section className={`section ruled ${styles.block}`}>
-        <div className="page">
-          <SectionHead label="Fit" title={<>A page is never scaled. It is redrawn.</>}>
-            <p>
-              A bigger screen does not buy you the same dashboard, larger. It buys you more in each
-              zone. The relative lists seven drivers at <span className="num">850 × 480</span> and
-              eighteen at <span className="num">1280 × 720</span>; a page sheds its secondary rows
-              before it shrinks its numerals, and it grows to fill a box it does not fill until it
-              meets the height, the width, or the next size up its own ramp.
-            </p>
-          </SectionHead>
-
-          <Reveal delay={80}>
-            <ul className={styles.sizes}>
-              {ORDERED.map((p) => (
-                <li key={p.folder} className={styles.size}>
-                  <span className={`num ${styles.sizeNum}`}>
-                    {p.round ? `${p.width} round` : `${p.width}×${p.height}`}
-                  </span>
-                  <span className={styles.sizeKind}>
-                    {p.kind === 'dash' ? 'Face' : p.kind === 'companion' ? 'Companion' : 'Pit wall'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className={styles.chipNote}>
-              <Link href="/dashes" className="link">
-                Every size, photographed, with the table of what to pick
-              </Link>
-              .
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ close */}
-      <section className={`section ruled ${styles.close}`}>
-        <div className="page">
-          <Reveal>
-            <h2 className={`h1 ${styles.title}`}>Nothing has to be configured to work.</h2>
-          </Reveal>
-          <Reveal delay={60} className={styles.closeBody}>
             <p className="prose">
-              Every package carries a default layout by itself, so the shortest way to see OpenDash
-              on a display is to double-click one file. The plugin is what makes that layout yours —
-              and it exposes its settings as SimHub properties, so your other dashboards and LED
-              profiles can read them too.
+              <strong>{FREE_FOREVER}</strong> {NOTHING_TO_UNLOCK}
             </p>
-            <div className={styles.actions}>
-              <Link href="/download" className={styles.primary}>
-                Download {VERSION}
-              </Link>
-              <Link href="/install" className={styles.secondary}>
-                How to install it
-              </Link>
+            <Actions>
+              <Primary href="/download">Download {VERSION}</Primary>
+              <Secondary href="#screen">Find your screen</Secondary>
+            </Actions>
+          </div>
+
+          {hero ? (
+            <div className={styles.heroShot}>
+              {clip ? (
+                <Clip clip={clip} alt={`The ${sizeLabel(hero)} face, running`} caption={`OpenDash ${sizeLabel(hero)}, the base size`} priority />
+              ) : (
+                <Capture file={packageFile(hero.folder)} alt={`The ${sizeLabel(hero)} face`} width={hero.width} height={hero.height} caption={`OpenDash ${sizeLabel(hero)}, the base size`} priority />
+              )}
+              <CaptureNote served={VERSION} />
             </div>
-          </Reveal>
+          ) : null}
         </div>
       </section>
+
+      <section id="why" className={`section ruled`}>
+        <div className="page">
+          <ul className={styles.why}>
+            {DIFFERENTIATORS.map((d) => (
+              <li key={d.id} className={styles.reason}>
+                <h2 className="h3">{d.title}</h2>
+                <p className="prose">{d.body}</p>
+                {d.id === 'lights' ? <Attribution className={styles.credit} /> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <Section
+        id="screen"
+        label="Screens"
+        title="Find your screen."
+        lede="10 face sizes, drawn to scale. Pick yours to see it and download that file. If nothing matches, take the nearest shape. 850 × 480 is the base size."
+        wide
+      >
+        <ScreenPicker faces={faces} initial={hero?.slug ?? faces[0]?.slug ?? ''} />
+        <p className={`prose ${styles.more}`}>
+          <Link href="/screens" className="link">
+            All 14 screens, with the companion and the pit wall
+          </Link>
+        </p>
+      </Section>
+
+      <Section
+        id="pages"
+        label="Pages"
+        title="21 pages. 1 button per zone."
+        lede="Zone B and zone C each show 1 page. A wheel button cycles it. Hold a button to glance at another page, release to return."
+        wide
+      >
+        <ul className={styles.chips}>
+          {MODULES.map((m) => (
+            <li key={m.id} className={`${styles.chip} ${m.enabled ? '' : styles.off}`}>
+              <span className={`num ${styles.chipNumber}`}>{String(m.number).padStart(2, '0')}</span>
+              {m.name}
+            </li>
+          ))}
+        </ul>
+        <p className={`prose ${styles.more}`}>
+          {off.length} pages ship off because iRacing publishes no data for them: {off.map((m) => m.name).join(', ')}.{' '}
+          <Link href="/pages" className="link">
+            Every page, captured
+          </Link>
+          .
+        </p>
+      </Section>
+
+      <Section id="second-screens" label="Second screens" title="A phone beside the wheel. A screen for the pit wall." wide>
+        <div className={styles.seconds}>
+          {companion ? (
+            <div className={styles.second}>
+              <h3 className="h3">The companion</h3>
+              <p className="prose">1 page at a time on a phone or tablet. 21 pages, each with a switch. Landscape 850 × 480 or portrait 480 × 850.</p>
+              <Capture file={packageFile(companion.folder)} alt="The companion showing lap times" width={companion.width} height={companion.height} caption={sizeLabel(companion)} />
+            </div>
+          ) : null}
+          {pitWall ? (
+            <div className={styles.second}>
+              <h3 className="h3">The pit wall</h3>
+              <p className="prose">1920 × 1080 for whoever is not driving. 3 pages: Race, Tower and Telemetry. A 1080 × 1920 portrait version in 1 page.</p>
+              <Capture file={packageFile(pitWall.folder)} alt="The pit wall's race page" width={pitWall.width} height={pitWall.height} caption={sizeLabel(pitWall)} />
+            </div>
+          ) : null}
+        </div>
+        <p className={`prose ${styles.more}`}>
+          <Link href="/screens#companion" className="link">
+            More on the companion and the pit wall
+          </Link>
+        </p>
+      </Section>
+
+      <Section
+        id="lights"
+        label="Lights"
+        title="Lights that match the car."
+        lede="62 strip shapes and an 8 × 8 flag box, all generated. The strip shows your car's own shift lights. Flags, spotter, pit states and warnings light it too."
+        wide
+      >
+        <ul className={styles.strips}>
+          {STRIP_EXAMPLES.map((s) => (
+            <li key={s.name} className={styles.strip}>
+              <StripGlyph left={s.left} centre={s.centre} right={s.right} led={12} gap={4} title={`A ${s.name} strip`} />
+              <span className={`num ${styles.stripName}`}>{s.name}</span>
+            </li>
+          ))}
+        </ul>
+        <Attribution className={`prose ${styles.credit}`} />
+        <p className={`prose ${styles.more}`}>
+          <Link href="/lights" className="link">
+            The lights, the strip shapes and the flag box
+          </Link>
+        </p>
+      </Section>
+
+      <Section id="status" label="Status" title="Alpha. Here is what is missing." wide>
+        <ul className={`rows ${styles.status}`}>
+          <li>Every release so far is a pre-release.</li>
+          <li>{CLAIMED_SIM}</li>
+          <li>
+            No idle screen yet (
+            <a href={issueUrl(113)} className="link" rel="noopener">
+              #113
+            </a>
+            ).
+          </li>
+          <li>
+            Night mode is for the lights only. Screens are coming (
+            <a href={issueUrl(128)} className="link" rel="noopener">
+              #128
+            </a>
+            ).
+          </li>
+          <li>The 800 and 480 round faces are still the old 12-slot design.</li>
+        </ul>
+        <p className={`prose ${styles.more}`}>
+          <Link href="/compare" className="link">
+            The full comparison with Lovely and Daniel Newman Racing
+          </Link>
+        </p>
+      </Section>
+
+      <Section id="get" label="Get it" title="Get it." lede={`${FREE_FOREVER} Windows, SimHub ${SIMHUB_VERSION} or later.`} wide>
+        <Actions>
+          <Primary href="/download">Download {VERSION}</Primary>
+          <Secondary href="/install">How to install</Secondary>
+        </Actions>
+      </Section>
     </>
   );
 }
