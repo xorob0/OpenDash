@@ -1,0 +1,61 @@
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A 6 px square, as the changelog's bullets are, in a meaning colour where there is a meaning. */
+.square {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--color-text-dim);
+}
+
+.yes {
+  background: var(--color-good-primary);
+}
+
+.partial {
+  background: var(--color-text-secondary);
+}
+
+.paid,
+.soon {
+  background: var(--color-caution-primary);
+}
+
+.no,
+.notBuilt {
+  background: var(--color-text-dim);
+}
+
+.unchecked {
+  background: transparent;
+  outline: 1px solid var(--color-text-dim);
+}
+
+.word {
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.text {
+  color: var(--color-text-secondary);
+  font-size: var(--size-small);
+}
+
+.refs {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}

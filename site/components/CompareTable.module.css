@@ -1,0 +1,104 @@
+.wrap {
+  width: 100%;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.feature {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-4) var(--space-3) var(--space-4) 0;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.product {
+  text-align: left;
+  vertical-align: bottom;
+  padding: var(--space-3);
+}
+
+.productName {
+  display: block;
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.asOf {
+  display: block;
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+.row {
+  border-top: 1px solid var(--color-surface-raised);
+}
+
+.cell {
+  vertical-align: top;
+  padding: var(--space-4) var(--space-3);
+}
+
+/* On a phone the table becomes a stack: each row's cells one under the other, labelled. */
+@media (max-width: 61.99rem) {
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .table,
+  .table tbody,
+  .row {
+    display: block;
+  }
+
+  .row {
+    padding-block: var(--space-4);
+  }
+
+  .feature {
+    display: block;
+    padding: 0 0 var(--space-3);
+  }
+
+  .cell {
+    display: block;
+    padding: var(--space-3) 0 var(--space-3) var(--space-4);
+    border-inline-start: 1px solid var(--color-surface-raised);
+  }
+
+  .cell::before {
+    content: attr(data-product);
+    display: block;
+    font-size: var(--size-label);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-2);
+  }
+}
+
+@media (min-width: 62rem) {
+  .feature {
+    width: 14rem;
+  }
+
+  .product,
+  .cell {
+    width: calc((100% - 14rem) / 3);
+  }
+}
