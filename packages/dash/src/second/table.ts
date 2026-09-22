@@ -34,7 +34,7 @@ import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition,
+import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition,
   positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
 const { iff, str, fmt, eq, ne, num, and, not, gt, lt, abs, concat, left, ucase, isnull } = ncalc;
@@ -213,6 +213,12 @@ interface CellContext {
   /** True when the car is in the pit lane, which dims its row. */
   inPit: Expr;
   mode: TableMode;
+  /**
+   * The condition under which the rows of this block are the player's own class, absent on a block
+   * whose rows never are. A cell measuring a gap to a car above it asks this, so that what it
+   * counts from is on the list it is drawn in.
+   */
+  inClass?: Expr;
   /** How the column this cell belongs to is aligned. */
   align: HAlign;
 }
@@ -259,6 +265,21 @@ const inkBind = (ctx: CellContext): Expr => iff(ctx.inPit, str(ds.color.text.dim
 
 /** The three cells the own row lifts: its position, its name and its gap. The rest keep their ink. */
 const liftBind = (ctx: CellContext, otherwise: Expr): Expr => iff(ctx.isPlayer, str(ds.color.text.primary), otherwise);
+
+/**
+ * A cell measured against a car above it, which has to be a car the list actually draws.
+ *
+ * Gap and Int are the two and they answer together, Int being the difference of two neighbouring
+ * Gaps: a board counting the one from the class leader while the other counted between leaderboard
+ * neighbours would draw two columns of the same quantity that do not add up. The question is the
+ * one the rows themselves are drawn by, so the three agree by construction: a table in `mode:
+ * 'class'` is one class and asks nothing, a block whose rows are always the whole field asks
+ * nothing either, and everything else carries the condition {@link rowIndexFor} carries.
+ */
+const measuredInList = (ctx: CellContext, inClass: (idx: Expr) => Expr, whole: (idx: Expr) => Expr): Expr => {
+  if (ctx.mode === 'class') return inClass(ctx.idx);
+  return ctx.inClass === undefined ? whole(ctx.idx) : iff(ctx.inClass, inClass(ctx.idx), whole(ctx.idx));
+};
 
 /**
  * A numeral cell, vertically centred in the row.
@@ -457,9 +478,9 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
           // the typographic minus `signed` substitutes, so that what Dash Studio shows at design
           // time is the glyph the bound value draws rather than .NET's hyphen.
           cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
-        : cellValue(ctx, 'gap', '+12.6', carRaceGap(ctx.idx), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
+        : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
   },
-  int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', carInterval(ctx.idx), CHARS.gap) },
+  int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', measuredInList(ctx, carClassInterval, carInterval), CHARS.gap) },
   last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
   best: {
     header: 'Best',
@@ -636,10 +657,10 @@ function headerRow(spec: TableSpec, widths: number[], top: number, geometry: { h
  * evaluates a few hundred times a tick, and the two halves of a split list differ in one thing
  * only: where they start counting.
  */
-function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: { name: string; top: number; rows: number; idx: Expr }): LayerItem {
+function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: { name: string; top: number; rows: number; idx: Expr; inClass?: Expr }): LayerItem {
   const d = densityOf(spec.density);
   const board = spec.board ?? false;
-  const { name, top, rows, idx } = block;
+  const { name, top, rows, idx, inClass } = block;
   const isPlayer = carIsPlayer(idx);
   const inPit = carInPit(idx);
   const children: Item[] = [
@@ -665,6 +686,7 @@ function rowBlock(spec: TableSpec, widths: number[], rowHeight: number, block: {
         isPlayer,
         inPit,
         mode: spec.mode,
+        ...(inClass === undefined ? {} : { inClass }),
         align: COLUMNS[id].align,
       }),
     );
@@ -764,10 +786,14 @@ export function table(spec: TableSpec): Item[] {
   if (!splits) {
     // The player sits in the middle of a relative table, so the row index counts from that row.
     const idx = rowIndexFor(spec, Math.ceil(rows / 2));
-    return [...head, rowBlock(spec, widths, rowHeight, { name: 'row', top, rows, idx })];
+    return [...head, rowBlock(spec, widths, rowHeight, { name: 'row', top, rows, idx, inClass: rowsInClass(spec.classOnly) })];
   }
   // The player sits in the middle of the window, as in a relative table, so a driver reads as many
   // cars ahead as behind whatever the field does around them.
+  //
+  // Neither block carries a class condition, because neither block's rows do: both are the overall
+  // leaderboard, for the reason `rowIndex.split` records, so a gap measured from the class leader
+  // would be measured from a car the list does not draw.
   const windowRows = rows - topRows;
   const bandTop = top + topRows * (rowHeight + rowGap);
   return [

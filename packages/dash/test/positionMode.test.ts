@@ -20,7 +20,7 @@ import { secondScreen, setting } from '../src/contract.ts';
 import { rect } from '../src/design/geometry.ts';
 import { BAND_PAGES } from '../src/zones/bandPages.ts';
 import { MODULES } from '../src/modules/index.ts';
-import { carPosition, player } from '../src/second/values.ts';
+import { carPosition, player, rowsInClass } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Expr } from '../src/bind.ts';
 import type { Item, TextItem } from '../src/generator.ts';
@@ -190,6 +190,19 @@ describe('a list numbers the field it is drawn from', () => {
   test('a filter and the rig agreeing is the same list as either of them alone', () => {
     const both = column(build('leaderboard', PAGE.width, PAGE.height, secondScreen.classOnly()), { positionMode: 'class', screenFilter: true });
     expect(both).toEqual([1, 2, 3]);
+  });
+
+  test('the gap column counts from the leader of the list, asking the rows their own question', () => {
+    // A cell measured against a car above the row has to be measured against a car the list draws.
+    // A class board whose gap counted from the race leader reads `+1L` on every row of a class that
+    // is a lap down on the race and `Lead` on none of them, which is the column saying nothing at
+    // all; `pitwallValues.test.ts` reads the two values row by row against a board built for it.
+    // What belongs here is that the page asks the one question, so that the rows and the number
+    // measured against them cannot come apart.
+    const gap = flat(build('leaderboard', PAGE.width, PAGE.height)).find((i) => i.name === 'table.row.gap')!;
+    const formula = formulaOf(gap, 'Text');
+    expect(formula).toStartWith(`if(${rowsInClass()}, `);
+    expect(formula).toContain('getopponentleaderboardposition_playerclassonly(1)');
   });
 });
 

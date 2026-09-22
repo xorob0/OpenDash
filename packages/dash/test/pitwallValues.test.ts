@@ -12,21 +12,25 @@ import { describe, expect, test } from 'bun:test';
 import { ncalc } from '../src/generator.ts';
 import { cells, monoWidth, MINUS, type Chars } from '../src/design/metrics.ts';
 import { DENSITIES, densityOf, type Density } from '../src/second/density.ts';
-import { CHARS, carRaceGap, carSector, sectorTime } from '../src/second/values.ts';
+import { CHARS, carClassInterval, carClassRaceGap, carInterval, carRaceGap, carSector, sectorTime } from '../src/second/values.ts';
 
 const { num, repeatIndex } = ncalc;
 
 /** One car of the leaderboard the expressions are evaluated against. */
 interface Car {
   position: number;
+  classposition: number;
   gaptoleader: number | null;
   currentlap: number;
   gaptoleadercombined: string | null;
+  /** Whether this car is in the player's own class, which is what the class-only lookup answers from. */
+  ours: boolean;
   /** The last lap's sectors, in seconds; `0` is a sector that was never set. */
   sectors: readonly number[];
 }
 
-const car = (fields: Partial<Car>): Car => ({ position: 1, gaptoleader: 0, currentlap: 1, gaptoleadercombined: null, sectors: [0, 0, 0], ...fields });
+const car = (fields: Partial<Car>): Car =>
+  ({ position: 1, classposition: 1, gaptoleader: 0, currentlap: 1, gaptoleadercombined: null, ours: false, sectors: [0, 0, 0], ...fields });
 
 /**
  * An NCalc formula evaluated in JavaScript against a leaderboard.
@@ -40,6 +44,7 @@ function evaluate(formula: string, board: readonly Car[], row: number): unknown 
   const js = formula
     .replace(/\bdriversector[a-z]+\(/g, 'sector(')
     .replace(/\bdriver([a-z]+)\(/g, "field('$1', ")
+    .replace(/\bgetopponentleaderboardposition_playerclassonly\(/g, 'classRow(')
     .replace(/\brepeatindex\(\)/g, 'ROW')
     .replace(/\bif\(/g, 'iff(')
     .replace(/\bisnull\(/g, 'nz(')
@@ -50,9 +55,13 @@ function evaluate(formula: string, board: readonly Car[], row: number): unknown 
     .replace(/ and /g, ' && ')
     .replace(/ or /g, ' || ');
 
+  /** The leaderboard rows of the player's own class, in order, which is what the class lookup returns. */
+  const ourRows = board.flatMap((c, i) => (c.ours ? [i + 1] : []));
+
   const helpers = {
     ROW: row,
     field: (name: keyof Car, index: number): unknown => board[index - 1]?.[name] ?? null,
+    classRow: (place: number): number => ourRows[place - 1] ?? -1,
     sector: (index: number, sector: number): number | null => board[index - 1]?.sectors[sector - 1] ?? null,
     // .NET's `format(x, '0.0', true)`: the pattern's decimals, and a sign on a positive value too.
     // A null formats to nothing, as NCalc's does. NCalc's `if` takes only the branch it needs and
@@ -113,6 +122,65 @@ describe('the Gap column', () => {
     // runs to a thousand seconds, so three digits of seconds is the ceiling.
     expect(fits('+999.9', CHARS.gap)).toBe(true);
     expect(fits(`${MINUS}999.9`, CHARS.gap)).toBe(true);
+  });
+});
+
+/**
+ * The same two columns on a board filtered to the player's own class, which is what a rig counting
+ * in class draws everywhere and what the pit wall's own filter has always drawn.
+ *
+ * A column is measured against a car above it, so the car it is measured against has to be one the
+ * list draws. The board below is the case that makes both readings visible: the player's class runs
+ * a lap behind the overall leader and is interleaved with another, so a gap taken to the race
+ * leader lands every row of it in the lapped branch, and an interval taken between leaderboard
+ * neighbours is measured against a car of another class.
+ */
+describe('the Gap and Int columns of a list drawn from one class', () => {
+  const BOARD: readonly Car[] = [
+    car({ position: 1, classposition: 1, gaptoleader: 0, currentlap: 24, gaptoleadercombined: '' }),
+    car({ position: 2, classposition: 2, gaptoleader: 2.64, currentlap: 24, gaptoleadercombined: '+2.6' }),
+    car({ position: 3, classposition: 1, gaptoleader: 130, currentlap: 23, gaptoleadercombined: '+1L', ours: true }),
+    car({ position: 4, classposition: 3, gaptoleader: 132, currentlap: 23, gaptoleadercombined: '+1L' }),
+    car({ position: 5, classposition: 2, gaptoleader: 134.2, currentlap: 23, gaptoleadercombined: '+1L', ours: true }),
+    car({ position: 6, classposition: 3, gaptoleader: 140, currentlap: 23, gaptoleadercombined: '+1L', ours: true }),
+    car({ position: 7, classposition: 4, gaptoleader: 260, currentlap: 22, gaptoleadercombined: '+2L', ours: true }),
+  ];
+  /** The leaderboard rows such a list draws, top to bottom. */
+  const ROWS = [3, 5, 6, 7];
+  const gapOf = (row: number): unknown => evaluate(carClassRaceGap(repeatIndex()), BOARD, row);
+  const intOf = (row: number): unknown => evaluate(carClassInterval(repeatIndex()), BOARD, row);
+
+  test('the leader of the list reads Lead, whatever its place in the race', () => {
+    expect({ gap: gapOf(3), position: BOARD[2]!.position }).toEqual({ gap: 'Lead', position: 3 });
+  });
+
+  test('measured to the race leader the same column says nothing at all', () => {
+    // The defect this reading exists for, and the reason it is not the one beside it: the class is
+    // a lap down on the race, so every row falls into the lapped branch, no row reads Lead and the
+    // column carries no gap within the class anywhere down it.
+    expect(ROWS.map((row) => evaluate(carRaceGap(repeatIndex()), BOARD, row))).toEqual(['+1L', '+1L', '+1L', '+2L']);
+  });
+
+  test("a car on the class leader's lap reads the seconds to that car", () => {
+    expect([gapOf(5), gapOf(6)]).toEqual(['+4.2', '+10.0']);
+  });
+
+  test('a car a lap down on the class leader reads the lap, not the seconds', () => {
+    // Its own lap against the class leader's, and not against the race leader's: the class leader
+    // is itself a lap down on the race, so the two questions give different answers here.
+    expect(gapOf(7)).toBe('+1L');
+  });
+
+  test('the interval is to the row above on the list, not to the car above on the leaderboard', () => {
+    // Row 5 is the second of its class and the fifth of the board, and the car between the two is
+    // of another class. The leaderboard reading is what a class board used to draw in this cell.
+    expect({ list: intOf(5), leaderboard: evaluate(carInterval(repeatIndex()), BOARD, 5) }).toEqual({ list: '+4.2', leaderboard: '+2.2' });
+  });
+
+  test('the two columns add up, which is why they are one decision', () => {
+    // Gap to the leader of the list, plus the interval to the row above, is the row above's gap.
+    expect({ int: intOf(6), gap: gapOf(6), above: gapOf(5) }).toEqual({ int: '+5.8', gap: '+10.0', above: '+4.2' });
+    expect(intOf(3)).toBe('');
   });
 });
 

@@ -148,12 +148,22 @@ twin of each of the two functions a table addresses its rows through, so the sam
 either way and only the car each one carries moves. The rows a short class leaves over are hidden
 by the "is there a car on this row" test above rather than drawn empty.
 
+The Gap and the Int columns move with the rows, because both are measured against a car above the
+row and that car has to be one the list draws. On a filtered list the Gap is to the leader of the
+player's class, whose own row reads `Lead`, and the Int is to the row above it on the list rather
+than to whatever car the leaderboard puts in between. Measured the other way a class running a lap
+behind the overall leader reads `+1L` on every row and `Lead` on none, which is a column carrying
+no gap at all. SimHub publishes neither figure for a class, so both are differences of the two gaps
+to the overall leader that it does publish.
+
 The round faces read the same setting from `cards/position.ts` and are unaffected, there being no
 rows on a card to filter: the position and the count it is shown out of are both in class, which is
 the reading that setting has always given.
 
 `packages/dash/test/positionMode.test.ts` holds the two to each other. It evaluates the formulas
-the build writes against a six-car, three-class grid and reads the position column downwards.
+the build writes against a six-car, three-class grid and reads the position column downwards. The
+Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`, against a
+board whose class is interleaved with another and a lap behind it.
 
 ## What is not drawn, and why
 
