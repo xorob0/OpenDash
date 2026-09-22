@@ -19,8 +19,8 @@ export const BARE: readonly SiteStripShape[] = SHAPES.filter((s) => !s.legacy &&
 
 export const LEGACY: readonly SiteStripShape[] = SHAPES.filter((s) => s.legacy);
 
-/** The side lengths the grid has, ascending. */
-export const SIDES: readonly number[] = [...new Set(SIDED.map((s) => s.left))].sort((a, b) => a - b);
+/** The side lengths the grid has, ascending, with the bare runs as the row of none. */
+export const SIDES: readonly number[] = [0, ...new Set(SIDED.map((s) => s.left))].sort((a, b) => a - b);
 
 /** The centre lengths the sided grid has, ascending. */
 export const CENTRES: readonly number[] = [...new Set(SIDED.map((s) => s.centre))].sort((a, b) => a - b);

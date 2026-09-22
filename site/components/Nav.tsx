@@ -11,7 +11,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { DOWNLOAD, NAV, REPO_URL } from '../lib/site';
+import { INSTALL, NAV, REPO_URL } from '../lib/site';
 import { Wordmark } from './Wordmark';
 import styles from './Nav.module.css';
 
@@ -51,8 +51,8 @@ export function Nav() {
         </nav>
 
         <div className={styles.end}>
-          <Link href={DOWNLOAD.href} className={styles.cta} aria-current={current(DOWNLOAD.href)}>
-            {DOWNLOAD.label}
+          <Link href={INSTALL.href} className={styles.cta} aria-current={current(INSTALL.href)}>
+            {INSTALL.label}
           </Link>
           <button
             className={styles.toggle}
@@ -76,8 +76,8 @@ export function Nav() {
           <a href={REPO_URL} className={styles.menuLink} rel="noopener">
             GitHub
           </a>
-          <Link href={DOWNLOAD.href} className={`${styles.menuLink} ${styles.menuCta}`}>
-            {DOWNLOAD.label}
+          <Link href={INSTALL.href} className={`${styles.menuLink} ${styles.menuCta}`}>
+            {INSTALL.label}
           </Link>
         </div>
       </div>

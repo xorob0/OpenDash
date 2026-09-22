@@ -1,0 +1,50 @@
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.strip {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Unlit is the dash's dim ink, lit is the functional palette: the colours a strip means by. */
+.led {
+  fill: var(--color-text-dim);
+  transition: fill 60ms linear;
+}
+
+.green {
+  fill: var(--color-good-primary);
+}
+
+.amber {
+  fill: var(--color-caution-primary);
+}
+
+.red {
+  fill: var(--color-danger-primary);
+}
+
+.blue {
+  fill: var(--color-info-primary);
+}
+
+.yellow {
+  fill: var(--color-caution-primary);
+}
+
+.white {
+  fill: var(--color-text-primary);
+}
+
+.caption {
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}

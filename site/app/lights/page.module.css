@@ -67,3 +67,30 @@
     grid-template-columns: minmax(0, 616px) minmax(18rem, 1fr);
   }
 }
+
+.demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+  overflow-x: auto;
+}
+
+.aside {
+  font-size: var(--size-small);
+}
+
+.examples {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-5) var(--space-7);
+  margin-bottom: var(--space-5);
+}
+
+.example {
+  min-width: 0;
+}
+
+.priority {
+  margin-top: var(--space-5);
+}
