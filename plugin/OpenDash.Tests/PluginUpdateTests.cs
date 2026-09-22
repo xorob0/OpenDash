@@ -111,7 +111,7 @@ namespace OpenDashPlugin.Tests
         /// <remarks>
         /// The script says the same thing either way -- the paths do not change between stagings -- so a
         /// write that cannot happen is not a reason to report the swap unarmed. Reporting false here would
-        /// put "openDash itself could not be updated" in front of a driver whose update was fine.
+        /// put "OpenDash itself could not be updated" in front of a driver whose update was fine.
         /// </remarks>
         [Fact]
         public void Arming_again_over_a_script_that_cannot_be_written_still_counts_as_armed()
@@ -187,8 +187,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(PluginUpdate.AskToReopen(root, false));
         }
 
-        /// <summary>The staged assembly and the script live in openDash's own folder, not in SimHub's:
-        /// PluginsData is SimHub's, and the assembly in use is the only thing openDash puts at the root.</summary>
+        /// <summary>The staged assembly and the script live in OpenDash's own folder, not in SimHub's:
+        /// PluginsData is SimHub's, and the assembly in use is the only thing OpenDash puts at the root.</summary>
         [Fact]
         public void What_is_staged_lives_beside_the_flag_box_profile()
         {

@@ -100,7 +100,7 @@ namespace OpenDashPlugin.Tests
             var result = new ReleaseClient("0.1.0-rc.3").GetString(prefix);
 
             Assert.True(result.Ok);
-            Assert.Equal("openDash/0.1.0-rc.3", LastRequest()["User-Agent"]);
+            Assert.Equal("OpenDash/0.1.0-rc.3", LastRequest()["User-Agent"]);
         }
 
         /// <summary>The promise that nothing about the user travels. Anything identifying added later fails here.</summary>
@@ -117,7 +117,7 @@ namespace OpenDashPlugin.Tests
 
             // And the User-Agent carries a version, not a machine, a user or an installation.
             var agent = request["User-Agent"];
-            Assert.StartsWith("openDash/", agent);
+            Assert.StartsWith("OpenDash/", agent);
             Assert.DoesNotContain(Environment.MachineName, agent, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(Environment.UserName, agent, StringComparison.OrdinalIgnoreCase);
         }
@@ -125,8 +125,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_version_that_is_missing_still_produces_a_usable_agent()
         {
-            Assert.Equal("openDash/0.0.0", new ReleaseClient(null).UserAgent);
-            Assert.Equal("openDash/0.0.0", new ReleaseClient("   ").UserAgent);
+            Assert.Equal("OpenDash/0.0.0", new ReleaseClient(null).UserAgent);
+            Assert.Equal("OpenDash/0.0.0", new ReleaseClient("   ").UserAgent);
         }
 
         [Fact]

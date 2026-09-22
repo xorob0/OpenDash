@@ -74,7 +74,7 @@ namespace OpenDashPlugin
             return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? "slots" : null;
         }
 
-        /// <summary>The card's second line: the size openDash installed, behind the kind when the kind has
+        /// <summary>The card's second line: the size OpenDash installed, behind the kind when the kind has
         /// no icon to be carried by.</summary>
         public static string SizeLine(string kind, string size)
         {

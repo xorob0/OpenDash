@@ -13,7 +13,7 @@ import { ds } from '../../tokens.ts';
 import { zoneLayoutDescription, type ZoneLayout } from '../layout.ts';
 
 export const zoneFace600x686: ZoneLayout = {
-  folder: 'openDash 600x686',
+  folder: 'OpenDash 600x686',
   description: zoneLayoutDescription(600, 686),
   width: 600,
   height: 686,

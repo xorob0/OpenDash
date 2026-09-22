@@ -13,12 +13,12 @@ namespace OpenDashPlugin.Tests
 {
     public class DashboardInstallerTests : IDisposable
     {
-        private const string Sidecar = "{\"Title\":\"openDash\",\"DashboardVersion\":\"0.1.0\"}";
+        private const string Sidecar = "{\"Title\":\"OpenDash\",\"DashboardVersion\":\"0.1.0\"}";
 
         // Resource names the way MSBuild embeds Resources/*.simhubdash: ordinal order puts the spaced name first.
-        private const string WideName = "OpenDashPlugin.Resources.openDash.simhubdash";
-        private const string SmallName = "OpenDashPlugin.Resources.openDash 1280x480.simhubdash";
-        private const string SmallFolder = "openDash 1280x480";
+        private const string WideName = "OpenDashPlugin.Resources.OpenDash.simhubdash";
+        private const string SmallName = "OpenDashPlugin.Resources.OpenDash 1280x480.simhubdash";
+        private const string SmallFolder = "OpenDash 1280x480";
 
         private readonly string root;
         private readonly DeniedPaths denied = new DeniedPaths();
@@ -39,7 +39,7 @@ namespace OpenDashPlugin.Tests
         {
             return new MemoryPackageSource()
                 .Add(SmallName, SyntheticPackage.Zip(SmallFolder, version))
-                .Add(WideName, SyntheticPackage.Zip("openDash", version));
+                .Add(WideName, SyntheticPackage.Zip("OpenDash", version));
         }
 
         private DashboardInstaller Installer(IPackageSource packages, IInstallLog log = null, IFolderRecord record = null)
@@ -68,7 +68,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
             // The package outside the rig still reports itself honestly on its own row; it simply does
             // not speak for the rig.
-            Assert.Equal(InstallStatus.NotInstalled, installer.Packages.Single(p => p.FolderName == "openDash").Status);
+            Assert.Equal(InstallStatus.NotInstalled, installer.Packages.Single(p => p.FolderName == "OpenDash").Status);
             Assert.Equal(InstallStatus.UpToDate, installer.Packages.Single(p => p.FolderName == SmallFolder).Status);
         }
 
@@ -78,7 +78,7 @@ namespace OpenDashPlugin.Tests
         public void The_pill_still_answers_for_a_screen_the_rig_wants()
         {
             var installer = Installer(TwoPackages());
-            installer.Wanted = new[] { SmallFolder, "openDash" };
+            installer.Wanted = new[] { SmallFolder, "OpenDash" };
             installer.Refresh();
             Assert.Equal(InstallStatus.NotInstalled, installer.Status);
         }
@@ -104,10 +104,10 @@ namespace OpenDashPlugin.Tests
         public void A_folder_with_nothing_remembered_is_adopted_rather_than_held_back()
         {
             var record = new MemoryFolderRecord();
-            PackageExtractor.Install(SyntheticPackage.Zip("openDash", "0.1.0"), root, null);
+            PackageExtractor.Install(SyntheticPackage.Zip("OpenDash", "0.1.0"), root, null);
             Assert.Empty(record.Entries);
 
-            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), record: record);
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0")), record: record);
             installer.EnsureInstalled(false);
 
             var entry = installer.Packages.Single();
@@ -115,13 +115,13 @@ namespace OpenDashPlugin.Tests
             Assert.False(entry.HeldBack);
             Assert.True(entry.Extracted);
             Assert.Equal("0.2.0", entry.InstalledVersion);
-            Assert.NotNull(record.Get("openDash"));
+            Assert.NotNull(record.Get("OpenDash"));
         }
 
         /// <summary>
         /// The case #169 creates, and the one it says can hurt somebody.
         ///
-        /// A user on rc.2 has DashTemplates/openDash holding the twelve-slot card face, and their settings carry no
+        /// A user on rc.2 has DashTemplates/OpenDash holding the twelve-slot card face, and their settings carry no
         /// fingerprint for it, because fingerprints only began in rc.3. The rename puts the zone face under that
         /// name, so the update replaces their dashboard with a different design rather than a newer version of the
         /// same one. Nothing can ask them first, since no record exists to tell an edit from an untouched folder, so
@@ -131,12 +131,12 @@ namespace OpenDashPlugin.Tests
         public void A_folder_replaced_under_a_name_it_did_not_have_before_is_still_copied_first()
         {
             var record = new MemoryFolderRecord();
-            PackageExtractor.Install(SyntheticPackage.Zip("openDash", "0.1.0-rc.2"), root, null);
-            var theirs = Path.Combine(root, "DashTemplates", "openDash", "openDash.djson");
+            PackageExtractor.Install(SyntheticPackage.Zip("OpenDash", "0.1.0-rc.2"), root, null);
+            var theirs = Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson");
             File.WriteAllText(theirs, "{\"theirs\":true}");
             Assert.Empty(record.Entries);
 
-            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0-rc.1")), record: record);
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0-rc.1")), record: record);
             installer.EnsureInstalled(false);
 
             var entry = installer.Packages.Single();
@@ -144,12 +144,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.2.0-rc.1", entry.InstalledVersion);
 
             // The copy exists, holds what they had, and is named so that a person can find it.
-            var backup = Path.Combine(root, "DashTemplates", "openDash" + PackageExtractor.BackupSuffix);
+            var backup = Path.Combine(root, "DashTemplates", "OpenDash" + PackageExtractor.BackupSuffix);
             Assert.Equal(backup, entry.KeptCopy);
             Assert.True(File.Exists(backup));
             using (var zip = ZipFile.OpenRead(backup))
             {
-                var djson = zip.Entries.Single(e => e.FullName.EndsWith("openDash.djson", StringComparison.Ordinal));
+                var djson = zip.Entries.Single(e => e.FullName.EndsWith("OpenDash.djson", StringComparison.Ordinal));
                 using (var reader = new StreamReader(djson.Open()))
                 {
                     Assert.Equal("{\"theirs\":true}", reader.ReadToEnd());
@@ -163,29 +163,29 @@ namespace OpenDashPlugin.Tests
         public void A_folder_that_is_current_is_still_adopted_so_the_next_run_can_tell()
         {
             var record = new MemoryFolderRecord();
-            PackageExtractor.Install(SyntheticPackage.Zip("openDash", "0.2.0"), root, null);
+            PackageExtractor.Install(SyntheticPackage.Zip("OpenDash", "0.2.0"), root, null);
 
-            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), record: record);
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0")), record: record);
             installer.EnsureInstalled(false);
 
             Assert.False(installer.Packages.Single().Extracted);
-            Assert.NotNull(record.Get("openDash"));
+            Assert.NotNull(record.Get("OpenDash"));
         }
 
         [Fact]
-        public void A_folder_edited_after_openDash_wrote_it_is_left_alone_and_said_so()
+        public void A_folder_edited_after_OpenDash_wrote_it_is_left_alone_and_said_so()
         {
             var record = new MemoryFolderRecord();
-            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.1.0")), record: record);
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.1.0")), record: record);
             installer.EnsureInstalled(false);
-            Assert.NotNull(record.Get("openDash"));
+            Assert.NotNull(record.Get("OpenDash"));
 
             // What Dash Studio does: it rewrites the dashboard in place.
-            var djson = Path.Combine(root, "DashTemplates", "openDash", "openDash.djson");
+            var djson = Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson");
             File.WriteAllText(djson, "{\"Version\":2,\"mine\":true}");
 
             var log = new ListLog();
-            var newer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), log, record);
+            var newer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0")), log, record);
             newer.EnsureInstalled(false);
 
             var entry = newer.Packages.Single();
@@ -205,10 +205,10 @@ namespace OpenDashPlugin.Tests
         public void A_folder_left_alone_says_so_rather_than_reporting_up_to_date()
         {
             var record = new MemoryFolderRecord();
-            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.1.0")), record: record).EnsureInstalled(false);
-            File.WriteAllText(Path.Combine(root, "DashTemplates", "openDash", "openDash.djson"), "{\"mine\":true}");
+            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.1.0")), record: record).EnsureInstalled(false);
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson"), "{\"mine\":true}");
 
-            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), record: record);
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0")), record: record);
             installer.EnsureInstalled(false);
 
             var described = installer.Packages.Single().Describe();
@@ -220,11 +220,11 @@ namespace OpenDashPlugin.Tests
         public void An_edited_folder_is_replaced_when_a_person_says_so()
         {
             var record = new MemoryFolderRecord();
-            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.1.0")), record: record).EnsureInstalled(false);
-            var djson = Path.Combine(root, "DashTemplates", "openDash", "openDash.djson");
+            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.1.0")), record: record).EnsureInstalled(false);
+            var djson = Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson");
             File.WriteAllText(djson, "{\"Version\":2,\"mine\":true}");
 
-            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), record: record);
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0")), record: record);
             installer.EnsureInstalled(false, replaceEdited: true);
 
             var entry = installer.Packages.Single();
@@ -233,7 +233,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(entry.Edited);
             Assert.Equal("0.2.0", entry.InstalledVersion);
             // And what was there is recoverable, because Install kept it.
-            Assert.True(PackageExtractor.Restore(root, "openDash", null));
+            Assert.True(PackageExtractor.Restore(root, "OpenDash", null));
             Assert.Equal("{\"Version\":2,\"mine\":true}", File.ReadAllText(djson));
         }
 
@@ -248,14 +248,14 @@ namespace OpenDashPlugin.Tests
         public void A_folder_that_cannot_be_read_is_asked_about_rather_than_marked_failed()
         {
             var record = new MemoryFolderRecord();
-            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.1.0")), record: record).EnsureInstalled(false);
+            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.1.0")), record: record).EnsureInstalled(false);
 
             // A file beside the dashboard rather than its sidecar: the version is read from the sidecar before the
             // fingerprint is taken, and a sidecar that cannot be read is a failure the installer reports on purpose.
-            denied.Deny(Path.Combine(root, "DashTemplates", "openDash", "cards.djson"));
+            denied.Deny(Path.Combine(root, "DashTemplates", "OpenDash", "cards.djson"));
 
             var log = new ListLog();
-            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0")), log, record);
+            var installer = Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0")), log, record);
             installer.EnsureInstalled(false);
 
             var entry = installer.Packages.Single();
@@ -281,24 +281,24 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
             Assert.Null(installer.LastError);
-            Assert.True(PackageExtractor.IsInstalled(root, "openDash"));
+            Assert.True(PackageExtractor.IsInstalled(root, "OpenDash"));
             Assert.True(PackageExtractor.IsInstalled(root, SmallFolder));
             Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
 
-            Assert.Equal(new[] { SmallFolder, "openDash" }, installer.Packages.Select(p => p.FolderName));
+            Assert.Equal(new[] { SmallFolder, "OpenDash" }, installer.Packages.Select(p => p.FolderName));
             Assert.All(installer.Packages, p => Assert.Equal(InstallStatus.UpToDate, p.Status));
             Assert.All(installer.Packages, p => Assert.True(p.Extracted));
             Assert.All(installer.Packages, p => Assert.Null(p.Error));
 
-            Assert.Equal("openDash", installer.FolderName);
+            Assert.Equal("OpenDash", installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
             Assert.Equal("0.2.0", installer.EmbeddedVersion);
-            Assert.Equal("openDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion));
+            Assert.Equal("OpenDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion));
 
             // Both packages carry the same fonts; the second install finds them in DashFonts already.
             Assert.Equal(2, Directory.GetFiles(Path.Combine(root, "DashFonts"), "*.ttf").Length);
-            Assert.Contains("info: Installed openDash 1280x480 0.2.0 into " + PackageExtractor.InstalledFolder(root, SmallFolder), log.Lines);
-            Assert.Contains("info: Installed openDash 0.2.0 into " + PackageExtractor.InstalledFolder(root, "openDash"), log.Lines);
+            Assert.Contains("info: Installed OpenDash 1280x480 0.2.0 into " + PackageExtractor.InstalledFolder(root, SmallFolder), log.Lines);
+            Assert.Contains("info: Installed OpenDash 0.2.0 into " + PackageExtractor.InstalledFolder(root, "OpenDash"), log.Lines);
         }
 
         [Fact]
@@ -311,7 +311,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
             Assert.False(installer.Packages.Single(p => p.FolderName == SmallFolder).Extracted);
-            Assert.True(installer.Packages.Single(p => p.FolderName == "openDash").Extracted);
+            Assert.True(installer.Packages.Single(p => p.FolderName == "OpenDash").Extracted);
             Assert.False(File.Exists(Path.Combine(root, "DashTemplates", SmallFolder + PackageExtractor.BackupSuffix)));
 
             installer.EnsureInstalled(true);
@@ -319,7 +319,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
             Assert.All(installer.Packages, p => Assert.True(p.Extracted));
             Assert.True(File.Exists(Path.Combine(root, "DashTemplates", SmallFolder + PackageExtractor.BackupSuffix)));
-            Assert.True(File.Exists(Path.Combine(root, "DashTemplates", "openDash" + PackageExtractor.BackupSuffix)));
+            Assert.True(File.Exists(Path.Combine(root, "DashTemplates", "OpenDash" + PackageExtractor.BackupSuffix)));
         }
 
         /// <summary>
@@ -349,7 +349,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
             Assert.All(installer.Packages, p => Assert.True(p.Extracted));
-            Assert.True(PackageExtractor.IsInstalled(root, "openDash"));
+            Assert.True(PackageExtractor.IsInstalled(root, "OpenDash"));
             Assert.True(PackageExtractor.IsInstalled(root, SmallFolder));
         }
 
@@ -370,7 +370,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void An_older_installed_copy_is_updated_and_a_newer_one_left_alone()
         {
-            using (var package = SyntheticPackage.Zip("openDash", "0.1.0")) PackageExtractor.Install(package, root, null);
+            using (var package = SyntheticPackage.Zip("OpenDash", "0.1.0")) PackageExtractor.Install(package, root, null);
             using (var package = SyntheticPackage.Zip(SmallFolder, "0.3.0")) PackageExtractor.Install(package, root, null);
             var installer = Installer(TwoPackages("0.2.0"));
 
@@ -382,7 +382,7 @@ namespace OpenDashPlugin.Tests
             installer.EnsureInstalled(false);
 
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
-            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.Equal("0.3.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
             Assert.Equal("0.2.0", installer.InstalledVersion);
         }
@@ -411,14 +411,14 @@ namespace OpenDashPlugin.Tests
             var log = new ListLog();
             var packages = new MemoryPackageSource()
                 .Add("OpenDashPlugin.Resources.broken.simhubdash", "this is not a zip")
-                .Add(WideName, SyntheticPackage.Zip("openDash", "0.2.0"));
+                .Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0"));
             var installer = Installer(packages, log);
 
             installer.EnsureInstalled(false);
 
             Assert.Equal(InstallStatus.Failed, installer.Status);
             Assert.NotNull(installer.LastError);
-            Assert.True(PackageExtractor.IsInstalled(root, "openDash"));
+            Assert.True(PackageExtractor.IsInstalled(root, "OpenDash"));
 
             var broken = installer.Packages[0];
             Assert.Equal(InstallStatus.Failed, broken.Status);
@@ -428,12 +428,12 @@ namespace OpenDashPlugin.Tests
             Assert.StartsWith("OpenDashPlugin.Resources.broken.simhubdash: Install failed (", broken.Describe());
 
             Assert.Equal(InstallStatus.UpToDate, installer.Packages[1].Status);
-            Assert.Equal("openDash: Up to date", installer.Packages[1].Describe());
+            Assert.Equal("OpenDash: Up to date", installer.Packages[1].Describe());
 
             // The primary package still names the version even though another one failed.
-            Assert.Equal("openDash", installer.FolderName);
+            Assert.Equal("OpenDash", installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
-            Assert.Equal(broken.Describe() + "\n" + "openDash: Up to date", installer.PackageReport());
+            Assert.Equal(broken.Describe() + "\n" + "OpenDash: Up to date", installer.PackageReport());
             Assert.Contains(log.Lines, line => line.StartsWith("error: Installing OpenDashPlugin.Resources.broken.simhubdash failed"));
         }
 
@@ -453,14 +453,14 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Not_installed_outranks_update_available()
         {
-            using (var package = SyntheticPackage.Zip("openDash", "0.1.0")) PackageExtractor.Install(package, root, null);
+            using (var package = SyntheticPackage.Zip("OpenDash", "0.1.0")) PackageExtractor.Install(package, root, null);
             var installer = Installer(TwoPackages("0.2.0"));
 
             installer.Refresh();
 
             Assert.Equal(InstallStatus.NotInstalled, installer.Status);
             Assert.Equal(InstallStatus.NotInstalled, installer.Packages.Single(p => p.FolderName == SmallFolder).Status);
-            Assert.Equal(InstallStatus.UpdateAvailable, installer.Packages.Single(p => p.FolderName == "openDash").Status);
+            Assert.Equal(InstallStatus.UpdateAvailable, installer.Packages.Single(p => p.FolderName == "OpenDash").Status);
         }
 
         [Fact]
@@ -472,7 +472,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(SmallFolder, installer.FolderName);
             Assert.Equal("0.2.0", installer.InstalledVersion);
-            Assert.Equal("openDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion));
+            Assert.Equal("OpenDash 0.2.0", DashboardInstaller.Summary(installer.InstalledVersion));
         }
 
         [Fact]
@@ -490,7 +490,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(Directory.Exists(Path.Combine(root, "DashTemplates")));
             Assert.Contains(log.Lines, line => line.StartsWith("warn: No .simhubdash is embedded"));
 
-            using (var package = SyntheticPackage.Zip("openDash", "0.1.0")) PackageExtractor.Install(package, root, null);
+            using (var package = SyntheticPackage.Zip("OpenDash", "0.1.0")) PackageExtractor.Install(package, root, null);
             installer.Refresh();
             Assert.Equal(InstallStatus.UpToDate, installer.Status);
             Assert.Equal("0.1.0", installer.InstalledVersion);
@@ -499,8 +499,8 @@ namespace OpenDashPlugin.Tests
         // The panel's texts
 
         [Theory]
-        [InlineData("0.1.0", "openDash 0.1.0")]
-        [InlineData("(unknown version)", "openDash (unknown version)")]
+        [InlineData("0.1.0", "OpenDash 0.1.0")]
+        [InlineData("(unknown version)", "OpenDash (unknown version)")]
         public void Summary_is_the_wordmark_and_the_version(string version, string expected)
         {
             // The lowercase d is how the product spells itself, and the count of dashboards belongs to the
@@ -540,7 +540,7 @@ namespace OpenDashPlugin.Tests
         {
             var source = new AssemblyPackageSource(typeof(DashboardInstallerTests).Assembly);
             Assert.Empty(source.Names);
-            Assert.Throws<FileNotFoundException>(() => source.Open("OpenDashPlugin.Resources.openDash 1280x480.simhubdash"));
+            Assert.Throws<FileNotFoundException>(() => source.Open("OpenDashPlugin.Resources.OpenDash 1280x480.simhubdash"));
         }
 
         // The pure interpretation of a folder's files
@@ -565,7 +565,7 @@ namespace OpenDashPlugin.Tests
         [Theory]
         [InlineData(null)] // sidecar file missing
         [InlineData("")]
-        [InlineData("{\"Title\":\"openDash\",\"Width\":1920}")] // no DashboardVersion
+        [InlineData("{\"Title\":\"OpenDash\",\"Width\":1920}")] // no DashboardVersion
         [InlineData("{\"DashboardVersion\":\"\"}")]
         [InlineData("{ this is not json")]
         [InlineData("{\"DashboardVersion\": 0.1.0}")] // unquoted: not the shape the generator writes

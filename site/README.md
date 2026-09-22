@@ -1,4 +1,4 @@
-# The openDash website
+# The OpenDash website
 
 The showcase site: what the dashes look like, which screens they fit, and where to download them.
 Next.js, deployed as a container.
@@ -42,7 +42,7 @@ Every picture is a capture of the package through SimHub's own renderer on the W
 mock-up. Two commands make them, both from the repository root:
 
 ```bash
-bun run shots --packages 'openDash,openDash 850x480' --scenarios green   # whole packages
+bun run shots --packages 'OpenDash,OpenDash 850x480' --scenarios green   # whole packages
 bun scripts/modules.ts --scenario green                                   # each module alone
 ```
 

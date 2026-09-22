@@ -16,7 +16,7 @@ import { ALL_SHAPES, BARE_RUN_LENGTHS, CENTRE_LENGTHS, GRID_SHAPES, LEGACY_SHAPE
 import { rpmStripFileName } from '../src/leds/rpmStrip.ts';
 import { FLAG_BOX_FILE } from '../src/build.ts';
 
-/** What the build writes, and what the plugin embeds: `openDash <id>.ledsprofile`. */
+/** What the build writes, and what the plugin embeds: `OpenDash <id>.ledsprofile`. */
 const fileOf = (shape: (typeof ALL_SHAPES)[number]): string => `${rpmStripFileName(shape)}${leds.LEDS_PROFILE_EXTENSION}`;
 
 describe('the profile file names', () => {
@@ -70,7 +70,7 @@ describe('the profile file names', () => {
     // reads the name back out. A dot in the stem would not: it would read as another folder part.
     for (const shape of ALL_SHAPES) {
       const stem = rpmStripFileName(shape);
-      expect({ id: shape.id, stem, ok: /^openDash [0-9A-Za-z-]+$/.test(stem) }).toMatchObject({ ok: true });
+      expect({ id: shape.id, stem, ok: /^OpenDash [0-9A-Za-z-]+$/.test(stem) }).toMatchObject({ ok: true });
     }
   });
 });

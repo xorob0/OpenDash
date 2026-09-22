@@ -21,41 +21,41 @@ import { claim, install, readClaim, release, resolveHost, screenshot, simhubStop
 const repoRoot = path.resolve(import.meta.dir, '..');
 
 /**
- * The faces, in the order Dash Studio lists them when filtered by "openDash".
+ * The faces, in the order Dash Studio lists them when filtered by "OpenDash".
  *
  * `openDashboard` clicks a row by its index in that list, so the order is not cosmetic. `shots.ts`
  * reads the same list rather than keeping a second copy.
  *
  * Since #169 the zone faces carry the shipped names and the card faces are the ones saying
- * "slots". That makes the bare `openDash` a prefix of every other entry, so filtering the list by it
+ * "slots". That makes the bare `OpenDash` a prefix of every other entry, so filtering the list by it
  * matches all of them and the opener takes the first row; it is first here because it is first
  * there, and that is checked on the VM rather than assumed, since this order is read off Dash
  * Studio and is not a sort this repository performs.
  */
 export const LIST_ORDER = [
-  'openDash',
-  'openDash 1280x400',
-  'openDash 1280x480',
-  'openDash 1280x720',
-  'openDash 480 round',
-  'openDash 600x686',
-  'openDash 800 round',
-  'openDash 800x286',
-  'openDash 800x480',
-  'openDash 850x480',
+  'OpenDash',
+  'OpenDash 1280x400',
+  'OpenDash 1280x480',
+  'OpenDash 1280x720',
+  'OpenDash 480 round',
+  'OpenDash 600x686',
+  'OpenDash 800 round',
+  'OpenDash 800x286',
+  'OpenDash 800x480',
+  'OpenDash 850x480',
   // The card faces, built beside the zone faces for comparison until #146 deletes them.
-  'openDash slots 1280x400',
-  'openDash slots 1280x480',
-  'openDash slots 1280x720',
-  'openDash slots 1920x480',
-  'openDash slots 600x686',
-  'openDash slots 800x286',
-  'openDash slots 800x480',
-  'openDash slots 850x480',
-  'openDash Companion',
-  'openDash Companion portrait',
-  'openDash Pit wall',
-  'openDash Pit wall portrait',
+  'OpenDash slots 1280x400',
+  'OpenDash slots 1280x480',
+  'OpenDash slots 1280x720',
+  'OpenDash slots 1920x480',
+  'OpenDash slots 600x686',
+  'OpenDash slots 800x286',
+  'OpenDash slots 800x480',
+  'OpenDash slots 850x480',
+  'OpenDash Companion',
+  'OpenDash Companion portrait',
+  'OpenDash Pit wall',
+  'OpenDash Pit wall portrait',
 ] as const;
 
 export interface DevOptions {

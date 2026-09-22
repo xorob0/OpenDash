@@ -11,10 +11,10 @@ expectation, and so the measurement can be repeated when SimHub changes.
 
 ```bash
 bun tools/binding-probe/probe.ts build
-bun run vm install 'openDash Probe'
+bun run vm install 'OpenDash Probe'
 ```
 
-Then open `openDash Probe` in SimHub and look at it. Twelve rows, each drawing a literal that says
+Then open `OpenDash Probe` in SimHub and look at it. Twelve rows, each drawing a literal that says
 FAIL and a binding that says PASS, so the answer needs no telemetry and no plugin:
 
 | Row | Question |
@@ -38,7 +38,7 @@ validator permits only the targets OpenDash already relies on and the point is t
 ## `themedTwin.ts`: what the bindings cost
 
 ```bash
-bun tools/binding-probe/themedTwin.ts 'build/openDash zones 1920x480'
+bun tools/binding-probe/themedTwin.ts 'build/OpenDash zones 1920x480'
 ```
 
 Rewrites a built package so that every non-transparent colour becomes

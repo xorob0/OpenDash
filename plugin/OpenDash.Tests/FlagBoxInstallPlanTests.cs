@@ -24,8 +24,8 @@ namespace OpenDashPlugin.Tests
         private static readonly Guid Ours = new Guid("11111111-1111-5111-8111-111111111111");
         private static readonly Guid Theirs = new Guid("22222222-2222-5222-8222-222222222222");
 
-        private const string V1 = "The alert catalogue. Built by openDash 0.2.0-rc.1; do not edit here.";
-        private const string V2 = "The alert catalogue. Built by openDash 0.3.0; do not edit here.";
+        private const string V1 = "The alert catalogue. Built by OpenDash 0.2.0-rc.1; do not edit here.";
+        private const string V2 = "The alert catalogue. Built by OpenDash 0.3.0; do not edit here.";
 
         private static InstalledProfile Profile(Guid id, string description, string name = "x")
         {
@@ -37,7 +37,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("0.2.0-rc.1", FlagBoxInstallPlan.VersionOf(V1));
             Assert.Equal("0.3.0", FlagBoxInstallPlan.VersionOf(V2));
-            Assert.Equal("1.0.0+build.7", FlagBoxInstallPlan.VersionOf("Built by openDash 1.0.0+build.7, honest."));
+            Assert.Equal("1.0.0+build.7", FlagBoxInstallPlan.VersionOf("Built by OpenDash 1.0.0+build.7, honest."));
         }
 
         [Fact]
@@ -46,7 +46,7 @@ namespace OpenDashPlugin.Tests
             Assert.Null(FlagBoxInstallPlan.VersionOf(null));
             Assert.Null(FlagBoxInstallPlan.VersionOf(""));
             Assert.Null(FlagBoxInstallPlan.VersionOf("A profile somebody made by hand."));
-            Assert.Null(FlagBoxInstallPlan.VersionOf("Built by openDash "));
+            Assert.Null(FlagBoxInstallPlan.VersionOf("Built by OpenDash "));
         }
 
         [Fact]
@@ -87,8 +87,8 @@ namespace OpenDashPlugin.Tests
             // profile, even one named the same or carrying a version-looking description, is invisible.
             var theirs = new[]
             {
-                Profile(Theirs, "My own flag box", "openDash Flag box"),
-                Profile(Theirs, V1, "Built by openDash 0.2.0-rc.1"),
+                Profile(Theirs, "My own flag box", "OpenDash Flag box"),
+                Profile(Theirs, V1, "Built by OpenDash 0.2.0-rc.1"),
             };
             var plan = FlagBoxInstallPlan.Decide(Ours, V1, theirs);
             Assert.Equal(FlagBoxInstallState.NotInstalled, plan.State);
@@ -109,7 +109,7 @@ namespace OpenDashPlugin.Tests
         {
             // Somebody imported the file by hand from an older build, or edited the description.
             // Offering the update is right; claiming it is current is not.
-            var plan = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, "openDash flag box") });
+            var plan = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, "OpenDash flag box") });
             Assert.Equal(FlagBoxInstallState.Outdated, plan.State);
             Assert.Null(plan.InstalledVersion);
         }

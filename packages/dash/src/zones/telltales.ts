@@ -108,7 +108,7 @@ export const TELLTALES: readonly Telltale[] = [
   // are failures rather than advisories, which is why the lamp is danger red and not the amber a
   // road car gives a check-engine light; the artboard draws this lamp dark and settles neither.
   { id: 'engine', lit: 'danger', on: or(engineWarning(ENGINE_WARNING_BITS.waterTemperature), engineWarning(ENGINE_WARNING_BITS.oilPressure)) },
-  // The same threshold every other light openDash drives reads, per the contract's own note on
+  // The same threshold every other light OpenDash drives reads, per the contract's own note on
   // LightsLowFuelLaps: one number answers "am I low" for the strip, the rev bar, the box and now
   // the band. The remaining laps default high rather than to zero, so a sim that computes none
   // leaves the lamp dark instead of lighting it on every car that has no such reading.

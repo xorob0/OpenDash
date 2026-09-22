@@ -15,7 +15,7 @@ there and like it, bring the change back into the TypeScript.
 ```bash
 bun install
 bun run check      # typecheck + tests, must pass before a pull request
-bun run build      # writes build/openDash.simhubdash
+bun run build      # writes build/OpenDash.simhubdash
 ```
 
 For the plugin you need the .NET 8 SDK. It builds on Linux, macOS and Windows:

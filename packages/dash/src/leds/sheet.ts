@@ -86,7 +86,7 @@ export function contactSheet(glyphs: readonly Glyph[] = glyphCatalogue()): strin
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<rect width="${width}" height="${height}" fill="${PAPER}"/>`,
-    `<text x="6" y="12" font-family="monospace" font-size="9" fill="${INK}">openDash flag box, ${glyphs.length} glyphs, ${ROWS}x${COLUMNS}</text>`,
+    `<text x="6" y="12" font-family="monospace" font-size="9" fill="${INK}">OpenDash flag box, ${glyphs.length} glyphs, ${ROWS}x${COLUMNS}</text>`,
   ];
   glyphs.forEach((glyph, i) => {
     const x = (i % COLS) * TILE_W + 7;

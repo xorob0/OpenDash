@@ -33,16 +33,16 @@ namespace OpenDashPlugin
             var caption = Ui.Caption(PanelPackageRow.SectionCaption, BodyWidth);
             if (catalogue.Count == 0)
             {
-                return Ui.Section("Screens openDash can install",
+                return Ui.Section("Screens OpenDash can install",
                     caption,
-                    Ui.Caption("This build of openDash ships no dashboards.", BodyWidth));
+                    Ui.Caption("This build of OpenDash ships no dashboards.", BodyWidth));
             }
 
             var rows = new List<UIElement>();
             foreach (var entry in catalogue) rows.Add(BuildPackageRow(entry));
             // The rows go in as one child rather than as a child each: a section holds what it is given
             // twenty apart, and an install row is separated by its own rule and by nothing else.
-            return Ui.Section("Screens openDash can install", caption, Ui.VStack(0, rows.ToArray()));
+            return Ui.Section("Screens OpenDash can install", caption, Ui.VStack(0, rows.ToArray()));
         }
 
         private FrameworkElement BuildPackageRow(PackageEntry entry)

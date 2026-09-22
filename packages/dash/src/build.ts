@@ -209,7 +209,7 @@ export function validateOrThrow(pkg: DashPackage, screen?: string): ValidationIs
  * A module returns items and never sees the dashboard it lands on, so no drawing can declare its
  * own artwork; the declaration is derived here instead, from what is actually drawn. A package
  * therefore carries the assets it uses and no others, which is what keeps a package a package
- * SimHub can read at startup rather than a folder of every picture openDash owns.
+ * SimHub can read at startup rather than a folder of every picture OpenDash owns.
  *
  * Run before validation, so that an item whose image nothing declares is the validator's
  * `image/missing` rather than a dashboard that loads and draws a hole.
@@ -260,7 +260,7 @@ export function validateProfileOrThrow(profile: MatrixProfile): ValidationIssue[
 export type PackageKind = 'dash' | 'companion' | 'pitwall';
 
 export interface ManifestEntry {
-  /** Package folder and main dashboard name; may contain spaces ("openDash 850x480"). */
+  /** Package folder and main dashboard name; may contain spaces ("OpenDash 850x480"). */
   folder: string;
   kind: PackageKind;
   width: number;
@@ -441,7 +441,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
 
   const stagedProfiles: { shape: StripShape; fileName: string; profile: leds.LedProfile; warnings: ValidationIssue[] }[] = [];
   for (const shape of stripShapes) {
-    const profile = rpmStripProfile(shape, stableGuid(`openDash/leds/${shape.id}`));
+    const profile = rpmStripProfile(shape, stableGuid(`OpenDash/leds/${shape.id}`));
     const warnings = validateStripProfileOrThrow(profile, deviceLength(shape));
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     stagedProfiles.push({ shape, fileName: rpmStripFileName(shape), profile, warnings });
@@ -533,8 +533,8 @@ export function build(opts: BuildOptions = {}): BuildResult {
  * Anything else in the directory -- `fonts/`, an unpacked package folder, whatever somebody left there
  * -- is left where it is.
  *
- * The reason this exists is a shape that was renamed. `openDash 3/9/3 Fanalab` became
- * `openDash 3/9/3 Fanatec`, the build wrote the new file, and the old one sat in `build/` until
+ * The reason this exists is a shape that was renamed. `OpenDash 3/9/3 Fanalab` became
+ * `OpenDash 3/9/3 Fanatec`, the build wrote the new file, and the old one sat in `build/` until
  * scripts/package.sh copied it into the plugin's resources: the release then carried a profile no
  * source builds, offering a wiring order the panel no longer captions. A removed screen size would do
  * the same, and would be installed by anyone who pressed the button beside it.

@@ -3,7 +3,7 @@
 **Last updated:** 2026-09-21
 **Status:** agreed, and applied across the settings panel.
 
-[brand.md](brand.md) settles what openDash looks like. This document settles what it sounds like,
+[brand.md](brand.md) settles what OpenDash looks like. This document settles what it sounds like,
 which had never been written down and had accordingly drifted a long way: the panel had accumulated
 captions arguing for the decision behind a control instead of naming the control, because whoever
 wrote a caption had just finished making that decision and the reasoning was the freshest thing in
@@ -15,7 +15,7 @@ their head.
 > say nothing.
 
 Two failures hide behind the same sentence and both have to be looked for. The first is mechanism:
-"openDash itself was downloaded. It is put in place when SimHub closes" describes an assembly swap
+"OpenDash itself was downloaded. It is put in place when SimHub closes" describes an assembly swap
 the reader has no part in, where "Restart SimHub to finish updating" names the one thing they have
 to do. The second is harder, because the sentence left after the mechanism goes is usually accurate,
 usually readable, and still worth deleting: "Pick your screen's real resolution. The wrong size will
@@ -83,7 +83,7 @@ rather than describing the set.
 
 **The audience is a sim racer, and the vocabulary that audience already uses is not jargon.**
 Spotter, redline, delta, stint, limiter and pit lane all stay, since the reader has met every one of
-them in iRacing and in SimHub before meeting it here. What gets translated is openDash's own
+them in iRacing and in SimHub before meeting it here. What gets translated is OpenDash's own
 invented vocabulary, which nobody has met anywhere: "band D", "the ladder", "the lamps" and "at
 rest" are the panel talking to itself.
 
@@ -115,11 +115,11 @@ end" names no end anywhere in the row, and naming it costs a few words.
 
 ## What never appears
 
-**Mechanism**, with no exception, and openDash's own internals as much as SimHub's. That a second
+**Mechanism**, with no exception, and OpenDash's own internals as much as SimHub's. That a second
 screen at one size gets a settings group of its own is a design decision of some consequence, and
 what the reader needs from it is that their two screens can show different pages.
 
-**History.** What openDash used to do, what a setting replaced and which design came first are facts
+**History.** What OpenDash used to do, what a setting replaced and which design came first are facts
 about the project rather than about the rig in front of the reader. The one exception is a line that
 exists because of the history, such as the note about a migrated rig holding a dozen dashboards, and
 such a line goes when it stops being true rather than when somebody dismisses it.
@@ -148,7 +148,7 @@ consistency is worth more than the two characters.
 A message is what the panel says after something happens, and it is the one place where a sentence
 is owed rather than merely allowed.
 
-**Say the step openDash does not take.** Several actions finish half a job by design, and that half
+**Say the step OpenDash does not take.** Several actions finish half a job by design, and that half
 is exactly where a user gives up: installing a profile adds it without selecting it on the device,
 installing a dashboard writes it without assigning it to a display, and replacing a package leaves
 an open dash window showing what it parsed when it opened. The sentence afterwards names the
@@ -167,7 +167,7 @@ line says so rather than reproducing it.
 
 **An empty state names the emptiness and points at the button.** "No strips yet", beside a button
 reading "Add an LED strip", is the whole of it. The rig's own empty state is the single exception,
-since a rig with no screens is somebody's first minute with openDash and the card there is the only
+since a rig with no screens is somebody's first minute with OpenDash and the card there is the only
 thing on the page.
 
 **A dialog earns its interruption with a consequence, not with a reason.** A modal takes the window

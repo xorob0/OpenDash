@@ -24,8 +24,8 @@ namespace OpenDashPlugin
 
     /// <summary>The packages embedded in an assembly: every manifest resource whose name ends in .simhubdash.
     /// MSBuild names an embedded resource "&lt;RootNamespace&gt;.&lt;folder&gt;.&lt;file name&gt;" and keeps the file name as it is,
-    /// spaces included (only the folder part is turned into an identifier), so Resources/openDash 1280x480.simhubdash is
-    /// "OpenDashPlugin.Resources.openDash 1280x480.simhubdash". GetManifestResourceStream takes that exact name back.</summary>
+    /// spaces included (only the folder part is turned into an identifier), so Resources/OpenDash 1280x480.simhubdash is
+    /// "OpenDashPlugin.Resources.OpenDash 1280x480.simhubdash". GetManifestResourceStream takes that exact name back.</summary>
     public sealed class AssemblyPackageSource : IPackageSource
     {
         private readonly Assembly assembly;
@@ -83,7 +83,7 @@ namespace OpenDashPlugin
         /// <summary>The name in the package source (the embedded resource name).</summary>
         public string Name { get; set; }
 
-        /// <summary>The folder under DashTemplates, e.g. "openDash 1280x480"; null when the package could not be read.</summary>
+        /// <summary>The folder under DashTemplates, e.g. "OpenDash 1280x480"; null when the package could not be read.</summary>
         public string FolderName { get; set; }
 
         /// <summary>Null when the package has no readable sidecar version.</summary>
@@ -110,7 +110,7 @@ namespace OpenDashPlugin
         /// <summary>Where the copy of what was there went, when this run replaced something. Null otherwise.</summary>
         public string KeptCopy { get; set; }
 
-        /// <summary>"openDash 1280x480: Up to date", with the error appended when there is one.</summary>
+        /// <summary>"OpenDash 1280x480: Up to date", with the error appended when there is one.</summary>
         public string Describe()
         {
             var line = (FolderName ?? Name) + ": " + Status.Label();
@@ -127,7 +127,7 @@ namespace OpenDashPlugin
 
         /// <summary>The folder of the reference layout (1920 x 480). The panel's version is read from this package when it is
         /// embedded, from the first package otherwise; every package carries the same version, so it rarely matters.</summary>
-        public const string PrimaryFolder = "openDash";
+        public const string PrimaryFolder = "OpenDash";
 
         private static readonly IReadOnlyList<PackageStatus> NoPackages = new PackageStatus[0];
 
@@ -187,7 +187,7 @@ namespace OpenDashPlugin
 
         public bool HasEmbeddedPackage => PackageCount > 0;
 
-        /// <summary>Folder of the primary package under DashTemplates ("openDash"); the panel reads its version.</summary>
+        /// <summary>Folder of the primary package under DashTemplates ("OpenDash"); the panel reads its version.</summary>
         public string FolderName { get; private set; } = PrimaryFolder;
 
         /// <summary>Installed version of the primary package. Null when not installed; Versioning.UnknownVersion when
@@ -201,7 +201,7 @@ namespace OpenDashPlugin
         public string LastError { get; private set; }
 
         /// <summary>
-        /// The "This plugin" section's title: "openDash 0.1.0".
+        /// The "This plugin" section's title: "OpenDash 0.1.0".
         /// </summary>
         /// <remarks>
         /// The wordmark is written as the product writes it, with the lowercase d, because a section headed
@@ -212,7 +212,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public static string Summary(string version)
         {
-            return "openDash " + version;
+            return "OpenDash " + version;
         }
 
         /// <summary>One line per package, for the status tooltip: which dashboard is in which state, and why it failed.</summary>

@@ -501,7 +501,7 @@ namespace OpenDashPlugin.Tests
             // On: movement is what a flag is read by at the edge of vision, and off is the driver
             // asking for a rim that holds rather than blinks.
             Assert.True(Contract.DefaultLedFlagAnimation);
-            // Rig settings rather than per-device groups, unlike a matrix: openDash generates one
+            // Rig settings rather than per-device groups, unlike a matrix: OpenDash generates one
             // profile per strip shape. The mirror runs are the exception and are not a device either --
             // LedMirror14 is a run length, which several shapes share -- so they are held out of this
             // check rather than allowed to retire it.

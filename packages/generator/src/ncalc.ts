@@ -153,7 +153,7 @@ export const referencedProperties = (expression: string): string[] => {
 // row's Visible is bound to `driveravailable`. The index helpers below return -1 when there is
 // no such car, and `driverXxx(-1)` is null, so the two compose safely.
 
-/** The `driver<name>(position)` functions openDash uses, as SimHub registers them (lower case). */
+/** The `driver<name>(position)` functions OpenDash uses, as SimHub registers them (lower case). */
 export type DriverFunction =
   | 'available'
   | 'isplayer'

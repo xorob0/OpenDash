@@ -1,5 +1,5 @@
 /**
- * The RPM strip profile: the first `.ledsprofile` openDash emits, and the one that proves the
+ * The RPM strip profile: the first `.ledsprofile` OpenDash emits, and the one that proves the
  * approach. ADR 0013 for why it is generated at all, ADR 0014 for what makes it light.
  *
  * The centre is the mirror. Its two derived ladders are built from the *same* expressions the rev
@@ -367,14 +367,14 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
   return [...lamps, ...spotterWhole, ...ranked.map(wholeRun)];
 };
 
-/** What a strip profile is called, in SimHub's profile list. Keeps the slashes: `openDash 4/14/4`. */
-export const rpmStripProfileName = (shape: StripShape): string => `openDash ${shape.label}`;
+/** What a strip profile is called, in SimHub's profile list. Keeps the slashes: `OpenDash 4/14/4`. */
+export const rpmStripProfileName = (shape: StripShape): string => `OpenDash ${shape.label}`;
 
 /**
  * What the file is called. The shape's id rather than its label, because a label is `4/14/4` and a
  * slash is a path separator on every platform the build runs on.
  */
-export const rpmStripFileName = (shape: StripShape): string => `openDash ${shape.id}`;
+export const rpmStripFileName = (shape: StripShape): string => `OpenDash ${shape.id}`;
 
 /** The whole tree for one shape, before any reversal is applied. */
 const treeFor = (shape: StripShape): leds.LedContainer[] => [
@@ -400,7 +400,7 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
  * The rig's brightness, over everything a strip draws.
  *
  * `LightsBrightness`, `LightsNightBrightness` and `LightsNightMode` are named for the rig rather
- * than for one device, and the panel captions them "for every light openDash drives"; until this
+ * than for one device, and the panel captions them "for every light OpenDash drives"; until this
  * container existed that sentence was untrue, because the only reader of the composed expression
  * was the flag box (`leds/profile.ts`), so a wheel strip and a brow ignored all three. Both
  * artefacts now read the one `flagBox.brightness()`, so day, night and the switch resolve in a

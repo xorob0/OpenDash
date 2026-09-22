@@ -24,7 +24,7 @@ namespace OpenDashPlugin.Tests
             try { Directory.Delete(root, true); } catch { }
         }
 
-        private string Folder(string name = "openDash")
+        private string Folder(string name = "OpenDash")
         {
             var folder = Path.Combine(root, name);
             Directory.CreateDirectory(folder);
@@ -49,7 +49,7 @@ namespace OpenDashPlugin.Tests
             var folder = Folder();
             var before = FolderFingerprint.Of(folder);
 
-            File.WriteAllText(Path.Combine(folder, "openDash.djson"), "{\"Version\":2,\"edited\":true}");
+            File.WriteAllText(Path.Combine(folder, "OpenDash.djson"), "{\"Version\":2,\"edited\":true}");
             Assert.NotEqual(before, FolderFingerprint.Of(folder));
             Assert.False(FolderFingerprint.LooksUntouched(folder, before));
         }
@@ -84,36 +84,36 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Where_the_folder_sits_does_not_change_it()
         {
-            var first = Folder("openDash");
+            var first = Folder("OpenDash");
             var recorded = FolderFingerprint.Of(first);
 
             var elsewhere = Path.Combine(root, "moved");
             Directory.CreateDirectory(elsewhere);
-            Directory.Move(first, Path.Combine(elsewhere, "openDash"));
+            Directory.Move(first, Path.Combine(elsewhere, "OpenDash"));
 
-            Assert.Equal(recorded, FolderFingerprint.Of(Path.Combine(elsewhere, "openDash")));
+            Assert.Equal(recorded, FolderFingerprint.Of(Path.Combine(elsewhere, "OpenDash")));
         }
 
         /// <summary>
         /// A fingerprint that could not be computed must not erase the one we had. Erasing turned "cannot vouch for
         /// this folder" into "this folder is not ours", and the adoption branch would then have recorded whatever was
-        /// on disk, including somebody's edit, as openDash's own work.
+        /// on disk, including somebody's edit, as OpenDash's own work.
         /// </summary>
         [Fact]
         public void A_fingerprint_that_could_not_be_computed_does_not_erase_the_one_we_had()
         {
             var settings = new OpenDashSettings();
             var record = new SettingsFolderRecord(() => settings);
-            record.Set("openDash", "sha256:abc");
+            record.Set("OpenDash", "sha256:abc");
 
-            record.Set("openDash", null);
-            Assert.Equal("sha256:abc", record.Get("openDash"));
+            record.Set("OpenDash", null);
+            Assert.Equal("sha256:abc", record.Get("OpenDash"));
 
-            record.Set("openDash", "   ");
-            Assert.Equal("sha256:abc", record.Get("openDash"));
+            record.Set("OpenDash", "   ");
+            Assert.Equal("sha256:abc", record.Get("OpenDash"));
 
-            record.Set("openDash", "sha256:def");
-            Assert.Equal("sha256:def", record.Get("openDash"));
+            record.Set("OpenDash", "sha256:def");
+            Assert.Equal("sha256:def", record.Get("OpenDash"));
         }
 
         /// <summary>
@@ -127,11 +127,11 @@ namespace OpenDashPlugin.Tests
             var settings = new OpenDashSettings();
             var record = new SettingsFolderRecord(() => settings);
 
-            Assert.Null(record.Get("openDash"));
-            record.Set("openDash", "sha256:abc");
+            Assert.Null(record.Get("OpenDash"));
+            record.Set("OpenDash", "sha256:abc");
 
-            Assert.Equal("sha256:abc", record.Get("openDash"));
-            Assert.Equal("sha256:abc", settings.FolderFingerprints["openDash"]);
+            Assert.Equal("sha256:abc", record.Get("OpenDash"));
+            Assert.Equal("sha256:abc", settings.FolderFingerprints["OpenDash"]);
 
             // Folder names come from a zip and from a filesystem, so the lookup does not depend on their case.
             Assert.Equal("sha256:abc", record.Get("OPENDASH"));

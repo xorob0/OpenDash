@@ -1,7 +1,7 @@
 // CarLightsTests: the reader that survives somebody else's files, and the renderer that draws a
 // car's bar onto a strip that is not the car's bar.
 //
-// The fixtures are invented rather than copied. openDash carries no measurements it has not made
+// The fixtures are invented rather than copied. OpenDash carries no measurements it has not made
 // (ADR 0018), and a test that pinned a real car's RPMs would be carrying them -- so each fixture is
 // the *shape* of a real pattern with round numbers: ascending, symmetric, blocked, gapped, single.
 // What is being tested is that the shape survives, which is the whole claim.

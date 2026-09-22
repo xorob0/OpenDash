@@ -45,15 +45,15 @@ namespace OpenDashPlugin.Tests
             var newest = releases[0];
 
             // Every space becomes a period on upload, which is why the lookup goes forwards only.
-            var wide = newest.AssetFor("openDash Pit wall portrait");
+            var wide = newest.AssetFor("OpenDash Pit wall portrait");
             Assert.NotNull(wide);
-            Assert.Equal("openDash.Pit.wall.portrait.simhubdash", wide.Name);
+            Assert.Equal("OpenDash.Pit.wall.portrait.simhubdash", wide.Name);
 
-            Assert.Equal("openDash.480.round.simhubdash", newest.AssetFor("openDash 480 round").Name);
-            Assert.Equal("openDash.simhubdash", newest.AssetFor("openDash").Name);
+            Assert.Equal("OpenDash.480.round.simhubdash", newest.AssetFor("OpenDash 480 round").Name);
+            Assert.Equal("OpenDash.simhubdash", newest.AssetFor("OpenDash").Name);
 
             // A package this release does not carry is absent rather than mismatched.
-            Assert.Null(newest.AssetFor("openDash zones 1920x480"));
+            Assert.Null(newest.AssetFor("OpenDash zones 1920x480"));
             Assert.Null(newest.AssetFor(null));
         }
 

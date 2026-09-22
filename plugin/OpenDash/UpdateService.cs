@@ -56,7 +56,7 @@ namespace OpenDashPlugin
                 // about to be swapped makes "SimHub does not need restarting" false, and of the two
                 // instructions the restart is the one that also reopens the dashboard.
                 if (PluginStaged) return line + UpdateWording.Restart;
-                if (PluginReason != null) line += "openDash itself could not be updated (" + PluginReason + "). ";
+                if (PluginReason != null) line += "OpenDash itself could not be updated (" + PluginReason + "). ";
                 return line + UpdateWording.Reopen;
             }
         }
@@ -176,10 +176,10 @@ namespace OpenDashPlugin
             if (pluginAsset != null)
             {
                 var fetched = source.GetBytes(pluginAsset.DownloadUrl, within => progress?.Invoke(within * slice));
-                if (!fetched.Ok) return new UpdateOutcome { Reason = "openDash itself could not be downloaded (" + fetched.Reason + ")" };
+                if (!fetched.Ok) return new UpdateOutcome { Reason = "OpenDash itself could not be downloaded (" + fetched.Reason + ")" };
                 if (!Digest.Matches(fetched.Bytes, pluginAsset.Digest))
                 {
-                    return new UpdateOutcome { Reason = "openDash itself did not download correctly" };
+                    return new UpdateOutcome { Reason = "OpenDash itself did not download correctly" };
                 }
                 pluginBytes = fetched.Bytes;
                 fetchedSoFar++;

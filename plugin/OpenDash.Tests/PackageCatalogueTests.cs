@@ -36,20 +36,20 @@ namespace OpenDashPlugin.Tests
         /// </remarks>
         private static readonly (string Folder, int Width, int Height)[] Release =
         {
-            ("openDash", 1920, 480),
-            ("openDash 1280x480", 1280, 480),
-            ("openDash 1280x400", 1280, 400),
-            ("openDash 850x480", 850, 480),
-            ("openDash 800x480", 800, 480),
-            ("openDash 1280x720", 1280, 720),
-            ("openDash 800x286", 800, 286),
-            ("openDash 600x686", 600, 686),
-            ("openDash 480 round", 480, 480),
-            ("openDash 800 round", 800, 800),
-            ("openDash Companion", 850, 480),
-            ("openDash Companion portrait", 480, 850),
-            ("openDash Pit wall", 1920, 1080),
-            ("openDash Pit wall portrait", 1080, 1920),
+            ("OpenDash", 1920, 480),
+            ("OpenDash 1280x480", 1280, 480),
+            ("OpenDash 1280x400", 1280, 400),
+            ("OpenDash 850x480", 850, 480),
+            ("OpenDash 800x480", 800, 480),
+            ("OpenDash 1280x720", 1280, 720),
+            ("OpenDash 800x286", 800, 286),
+            ("OpenDash 600x686", 600, 686),
+            ("OpenDash 480 round", 480, 480),
+            ("OpenDash 800 round", 800, 800),
+            ("OpenDash Companion", 850, 480),
+            ("OpenDash Companion portrait", 480, 850),
+            ("OpenDash Pit wall", 1920, 1080),
+            ("OpenDash Pit wall portrait", 1080, 1920),
         };
 
         private static PackageEntry Entry(string folder, int width, int height)
@@ -68,25 +68,25 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_design_names_six_packages_and_captions_them()
         {
-            Assert.Equal("Main DDU", Entry("openDash", 1920, 480).DisplayName);
-            Assert.Equal("1920 × 480", Entry("openDash", 1920, 480).SizeCaption);
+            Assert.Equal("Main DDU", Entry("OpenDash", 1920, 480).DisplayName);
+            Assert.Equal("1920 × 480", Entry("OpenDash", 1920, 480).SizeCaption);
 
-            Assert.Equal("Rim", Entry("openDash 850x480", 850, 480).DisplayName);
-            Assert.Equal("850 × 480", Entry("openDash 850x480", 850, 480).SizeCaption);
+            Assert.Equal("Rim", Entry("OpenDash 850x480", 850, 480).DisplayName);
+            Assert.Equal("850 × 480", Entry("OpenDash 850x480", 850, 480).SizeCaption);
 
-            Assert.Equal("Pit wall", Entry("openDash Pit wall", 1920, 1080).DisplayName);
-            Assert.Equal("1920 × 1080", Entry("openDash Pit wall", 1920, 1080).SizeCaption);
+            Assert.Equal("Pit wall", Entry("OpenDash Pit wall", 1920, 1080).DisplayName);
+            Assert.Equal("1920 × 1080", Entry("OpenDash Pit wall", 1920, 1080).SizeCaption);
 
-            Assert.Equal("Phone", Entry("openDash Companion", 850, 480).DisplayName);
-            Assert.Equal("850 × 480", Entry("openDash Companion", 850, 480).SizeCaption);
+            Assert.Equal("Phone", Entry("OpenDash Companion", 850, 480).DisplayName);
+            Assert.Equal("850 × 480", Entry("OpenDash Companion", 850, 480).SizeCaption);
 
-            Assert.Equal("Nano", Entry("openDash 800x286", 800, 286).DisplayName);
-            Assert.Equal("800 × 286", Entry("openDash 800x286", 800, 286).SizeCaption);
+            Assert.Equal("Nano", Entry("OpenDash 800x286", 800, 286).DisplayName);
+            Assert.Equal("800 × 286", Entry("OpenDash 800x286", 800, 286).SizeCaption);
 
             // The one caption that is not a size. The package is 480 × 480 pixels and the screen it is
             // drawn for is round, which is the fact somebody shopping for a DDU recognises.
-            Assert.Equal("Round", Entry("openDash 480 round", 480, 480).DisplayName);
-            Assert.Equal("480 round", Entry("openDash 480 round", 480, 480).SizeCaption);
+            Assert.Equal("Round", Entry("OpenDash 480 round", 480, 480).DisplayName);
+            Assert.Equal("480 round", Entry("OpenDash 480 round", 480, 480).SizeCaption);
         }
 
         /// <summary>
@@ -113,17 +113,17 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_package_the_design_does_not_name_keeps_its_folder()
         {
-            var face = Entry("openDash 1280x480", 1280, 480);
-            Assert.Equal("openDash 1280x480", face.DisplayName);
+            var face = Entry("OpenDash 1280x480", 1280, 480);
+            Assert.Equal("OpenDash 1280x480", face.DisplayName);
             Assert.Null(face.SizeCaption);
 
-            var portrait = Entry("openDash Pit wall portrait", 1080, 1920);
-            Assert.Equal("openDash Pit wall portrait", portrait.DisplayName);
+            var portrait = Entry("OpenDash Pit wall portrait", 1080, 1920);
+            Assert.Equal("OpenDash Pit wall portrait", portrait.DisplayName);
             Assert.Null(portrait.SizeCaption);
 
             // The larger round is the near miss: the design names one round face and not the other.
-            var round = Entry("openDash 800 round", 800, 800);
-            Assert.Equal("openDash 800 round", round.DisplayName);
+            var round = Entry("OpenDash 800 round", 800, 800);
+            Assert.Equal("OpenDash 800 round", round.DisplayName);
             Assert.Null(round.SizeCaption);
 
             // A package whose folder could not be read is still a row rather than a crash.
@@ -169,14 +169,14 @@ namespace OpenDashPlugin.Tests
                     "Phone",
                     "Nano",
                     "Round",
-                    "openDash 1280x720",
-                    "openDash 1280x480",
-                    "openDash 1280x400",
-                    "openDash 600x686",
-                    "openDash 800x480",
-                    "openDash Companion portrait",
-                    "openDash Pit wall portrait",
-                    "openDash 800 round",
+                    "OpenDash 1280x720",
+                    "OpenDash 1280x480",
+                    "OpenDash 1280x400",
+                    "OpenDash 600x686",
+                    "OpenDash 800x480",
+                    "OpenDash Companion portrait",
+                    "OpenDash Pit wall portrait",
+                    "OpenDash 800 round",
                 },
                 catalogue.Select(entry => entry.DisplayName).ToArray());
         }
@@ -192,8 +192,8 @@ namespace OpenDashPlugin.Tests
         public void The_rim_and_the_phone_are_two_rows_at_one_size()
         {
             var source = new MemoryPackageSource()
-                .Add("OpenDashPlugin.Resources.openDash 850x480.simhubdash", Package("openDash 850x480", 850, 480))
-                .Add("OpenDashPlugin.Resources.openDash Companion.simhubdash", Package("openDash Companion", 850, 480));
+                .Add("OpenDashPlugin.Resources.OpenDash 850x480.simhubdash", Package("OpenDash 850x480", 850, 480))
+                .Add("OpenDashPlugin.Resources.OpenDash Companion.simhubdash", Package("OpenDash Companion", 850, 480));
 
             var catalogue = PackageCatalogue.From(source);
             Assert.Equal(2, catalogue.Count);
@@ -301,7 +301,7 @@ namespace OpenDashPlugin.Tests
             {
                 if (!Directory.Exists(folder)) continue;
                 var files = Directory.GetFiles(folder, "*" + DashboardInstaller.PackageExtension)
-                    .Where(file => !Path.GetFileName(file).StartsWith("openDash slots ", StringComparison.Ordinal))
+                    .Where(file => !Path.GetFileName(file).StartsWith("OpenDash slots ", StringComparison.Ordinal))
                     .ToArray();
                 if (files.Length == 0) continue;
                 var source = new MemoryPackageSource();

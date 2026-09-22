@@ -238,7 +238,7 @@ namespace OpenDashPlugin.Tests
         /// profile list and wrong in a property name.
         /// </summary>
         /// <remarks>
-        /// `openDash 0/9/0` slugs to `LedopenDash090`, which is what a driver would have to find in
+        /// `OpenDash 0/9/0` slugs to `LedOpenDash090`, which is what a driver would have to find in
         /// SimHub's property list to bind anything to their own strip. The prefix comes off first.
         /// </remarks>
         [Fact]
@@ -246,8 +246,8 @@ namespace OpenDashPlugin.Tests
         {
             var settings = new OpenDashSettings();
             settings.Normalise();
-            var bar = settings.AddLedBar("0-9-0", "openDash 0/9/0", LedBar.ArduinoDevice);
-            Assert.Equal("openDash 0/9/0", bar.Name);
+            var bar = settings.AddLedBar("0-9-0", "OpenDash 0/9/0", LedBar.ArduinoDevice);
+            Assert.Equal("OpenDash 0/9/0", bar.Name);
             Assert.Equal("Led090", bar.Namespace);
 
             // And a name of the driver's own is simply slugged.
@@ -259,7 +259,7 @@ namespace OpenDashPlugin.Tests
         /// </summary>
         /// <remarks>
         /// SimHub keeps one profile list per LED device, in that device's own file, and a profile in one
-        /// is invisible in every other. openDash installed into the Arduino RGB LEDs device whatever the
+        /// is invisible in every other. OpenDash installed into the Arduino RGB LEDs device whatever the
         /// strip was, so a 3-9-3 bar added for a wheel was written, saved and verified correctly into a
         /// list the wheel does not read -- reported from a rig as the profile simply not being there.
         /// These pin the vocabulary the settings file holds; LedTargets resolves it against SimHub.
@@ -278,7 +278,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(bar.Device, bar.Copy().Device);
         }
 
-        /// <summary>A bar written before openDash knew there was more than one device is read as the
+        /// <summary>A bar written before OpenDash knew there was more than one device is read as the
         /// Arduino's, because that is where those bars were actually installed. It is a statement about
         /// the past, not a preference.</summary>
         [Fact]
@@ -293,7 +293,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(LedBar.ArduinoDevice, bar.Device);
         }
 
-        /// <summary>An id openDash cannot read is not kept. A bar pointed at nothing would install
+        /// <summary>An id OpenDash cannot read is not kept. A bar pointed at nothing would install
         /// nowhere and say it had, which is the shape of the bug this field exists to close.</summary>
         [Fact]
         public void An_unreadable_device_id_falls_back_rather_than_being_kept()

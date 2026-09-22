@@ -391,7 +391,7 @@ export const carBehindClass = (): Expr => iff(carAvailable(carBehind()), chipTex
 
 /**
  * `P4 LMP2`: the position of the car behind and its class, or the empty string when there is
- * nothing behind. The position honours PositionMode, as every position openDash draws does.
+ * nothing behind. The position honours PositionMode, as every position OpenDash draws does.
  */
 export const carBehindPositionClass = (): Expr =>
   iff(carAvailable(carBehind()), concat(str('P'), fmt(carPosition(carBehind()), '0'), str(' '), chipText(carClass(carBehind()))), str(''));

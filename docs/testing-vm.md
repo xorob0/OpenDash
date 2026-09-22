@@ -36,8 +36,8 @@ The prose below explains what the script does and is what to read when it breaks
 
 1. Call `vm_status`. If `ssh_reachable` is false, call `vm_start` then `vm_wait_ready`.
 2. Put your build output where Windows can see it:
-   `cp build/openDash.simhubdash /opt/winvm/shared/` (that folder is `Z:\` in Windows),
-   or `upload_file(local_path, "C:\\Temp\\openDash.simhubdash")`.
+   `cp build/OpenDash.simhubdash /opt/winvm/shared/` (that folder is `Z:\` in Windows),
+   or `upload_file(local_path, "C:\\Temp\\OpenDash.simhubdash")`.
 3. Install it into SimHub (see *Loading a dash* below), `simhub_start`, then `screenshot`.
 4. Read `simhub_logs` for binding / parse errors. Iterate.
 5. `simhub_stop` when done; `vm_stop` if nobody else needs the VM (it holds ~4.5 GB RAM
@@ -86,7 +86,7 @@ Fast path, no GUI involved:
 
 ```powershell
 # run_powershell
-$src = 'Z:\openDash.simhubdash'
+$src = 'Z:\OpenDash.simhubdash'
 $dst = 'C:\Program Files (x86)\SimHub\DashTemplates'
 Remove-Item "$dst\OpenDash" -Recurse -Force -ErrorAction SilentlyContinue
 Expand-Archive -LiteralPath $src -DestinationPath $dst -Force
@@ -97,7 +97,7 @@ Then `simhub_start` (or `simhub_stop` + `simhub_start` if it was already running
 template list refreshes), `screenshot`, navigate **Dash Studio** in the left menu, and open the
 dash. Parse errors show up in `simhub_logs` immediately after the template list is scanned.
 
-GUI path (what a user does): `run_in_desktop('C:\Temp\openDash.simhubdash')` triggers
+GUI path (what a user does): `run_in_desktop('C:\Temp\OpenDash.simhubdash')` triggers
 SimHub's importer through the file association, then click through the prompt.
 
 ### Web renderer

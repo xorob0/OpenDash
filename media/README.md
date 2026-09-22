@@ -38,7 +38,7 @@ photographing a face: take several frames and keep the one where the rev bar is 
 photographed at part throttle is dark and says nothing.
 
 ```bash
-bun run shots --packages "openDash 850x480,openDash 1280x480,openDash Companion,openDash Pit wall" --scenarios green
+bun run shots --packages "OpenDash 850x480,OpenDash 1280x480,OpenDash Companion,OpenDash Pit wall" --scenarios green
 ```
 
 Then copy the four PNGs over the ones in `media/readme/`, keeping the names, and say in the commit
@@ -47,7 +47,7 @@ message what moved.
 Three of those four cannot be opened by that command today, which is #303. Dash Studio draws a
 "Last used" band above the list once a dashboard has been run, the band pushes every row down by
 about 220 px, and `openDashboard` measures its rows from a constant, so the click lands on a
-neighbour: filtering by `openDash` opened the face one row below it. Until the opener measures the
+neighbour: filtering by `OpenDash` opened the face one row below it. Until the opener measures the
 list rather than assuming it, open those three in Dash Studio by hand (Start, then Windowed) and
 run `bun run dev '<package>' --no-build --keep`, which finds the window already open, skips the
 clicking and photographs it into `build/dev.png` at its own size.

@@ -1,4 +1,4 @@
-// FlagBoxInstaller.cs: installing openDash's light profiles through SimHub's own object model.
+// FlagBoxInstaller.cs: installing OpenDash's light profiles through SimHub's own object model.
 //
 // ADR 0013 originally said the plugin could not install this, because matrix profiles live inside
 // PluginsData/Common/ArduinoRGBMatrixSettings.json and SimHub rewrites that file itself. That was

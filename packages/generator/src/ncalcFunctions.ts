@@ -48,7 +48,7 @@ export interface NCalcFunction {
  *
  * `BestLapOpponentPosition` and `BestLapOpponentSameClassPosition` are public properties of
  * `StatusDataBase`, so `second/values.ts` reads them under `GameData` instead. These stay listed
- * because they exist and the list is a record of what SimHub has, not of what openDash calls;
+ * because they exist and the list is a record of what SimHub has, not of what OpenDash calls;
  * `expressions.test.ts` is what keeps a package from calling them.
  */
 const THROWS =

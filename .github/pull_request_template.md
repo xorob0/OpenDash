@@ -19,7 +19,7 @@ Closes XOR-
 ## What it looks like
 
 <!--
-`bun run shots --packages "openDash" --scenarios green` photographs the dash window at its own
+`bun run shots --packages "OpenDash" --scenarios green` photographs the dash window at its own
 size through SimHub's own renderer. Put the capture worth showing in media/<issue>/ and link it
 here. A change nobody can see does not need one; say so instead of leaving this empty.
 -->

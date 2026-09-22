@@ -3,7 +3,7 @@
 > **Closed. Superseded by [scope.md](scope.md).**
 >
 > This document is kept as the record of what the MVP was and of the reasoning behind it. It no
-> longer describes the product: openDash now ships fourteen packages across ten face sizes, two
+> longer describes the product: OpenDash now ships fourteen packages across ten face sizes, two
 > companions and two pit walls, and five of the lines this document lists as out of scope have
 > since been reversed. The face it describes -- a hero zone beside a grid of equal slots -- was
 > itself replaced by the zone model in [ADR 0006](decisions/0006-the-zone-face.md).
@@ -42,7 +42,7 @@ be advertised.
 ## Definition of done
 
 The MVP is done when the author can drive a complete iRacing race on the physical 1920 by 480
-display with openDash as the only dashboard, when every card described below shows a correct
+display with OpenDash as the only dashboard, when every card described below shows a correct
 value during that race, and when a fresh SimHub install can be brought to that state by
 downloading the two release artifacts and following the README. A first outside contribution
 would be a welcome signal, but it is not a condition.
@@ -50,7 +50,7 @@ would be a welcome signal, but it is not a condition.
 ## Deliverables
 
 Three artifacts leave the repository at each tagged release. The first is
-`openDash.simhubdash`, the packaged dashboard, which works on its own with default settings.
+`OpenDash.simhubdash`, the packaged dashboard, which works on its own with default settings.
 The second is `OpenDash-plugin.zip`, which contains `OpenDash.dll` and installation
 instructions; the plugin embeds the same dashboard and installs it. The third is the source
 itself, which is the artifact that matters for contributors.
@@ -116,7 +116,7 @@ the values from the last stop, exactly as the game itself does, and their label 
 Moreover, TC and ABS levels are only exposed by cars that have adjustable systems in the
 cockpit, which is why those cards have a "none" state.
 
-"Laps remaining on fuel" is computed by SimHub, not by openDash. The MVP contains no computation
+"Laps remaining on fuel" is computed by SimHub, not by OpenDash. The MVP contains no computation
 of its own, and anything that is not available as a SimHub property is out of scope.
 
 ### Units
@@ -162,7 +162,7 @@ it.
 
 ### Panel
 
-A single WPF page titled openDash in SimHub's left menu, built with SimHub's own control styles
+A single WPF page titled OpenDash in SimHub's left menu, built with SimHub's own control styles
 so that it looks native. It has four sections: General (shift lights), Data (position, delta,
 session), Layout (twelve card selectors and the duplicate warning) and Dashboard (installed
 version and a reinstall button). Settings are persisted through SimHub's common settings

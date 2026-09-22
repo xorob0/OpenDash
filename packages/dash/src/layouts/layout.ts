@@ -17,7 +17,7 @@ export interface NamedRect {
 }
 
 export interface Layout {
-  /** Package folder and main dashboard name, e.g. "openDash 850x480". Spaces are allowed. */
+  /** Package folder and main dashboard name, e.g. "OpenDash 850x480". Spaces are allowed. */
   folder: string;
   /** Metadata description: "<w> x <h>, <n> slots", or "<n> slots, round". */
   description: string;

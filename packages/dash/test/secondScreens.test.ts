@@ -49,7 +49,7 @@ const PACKAGES = SCREEN_PACKAGES.map((def) => {
 /**
  * The three cyans the identity is drawn in, which is what `build.test.ts`, `layouts.test.ts` and
  * `e2e.test.ts` all match on. This was `/#00E5FF/i`, a hexadecimal that appears nowhere in the
- * repository and is no colour of openDash's, so the four checks below passed on any package
+ * repository and is no colour of OpenDash's, so the four checks below passed on any package
  * whatever it drew and would have gone on passing the day cyan reached a companion.
  */
 const BRAND = /#(33D9F2|5CE1F5|22909F)/i;
@@ -81,7 +81,7 @@ const textsOf = (dashboard: Dashboard): TextItem[] => itemsOf(dashboard).filter(
 
 describe('the packages are built and valid', () => {
   test('four packages: two companions and two pit walls', () => {
-    expect(SCREEN_PACKAGES.map((d) => d.folder)).toEqual(['openDash Companion', 'openDash Companion portrait', 'openDash Pit wall', 'openDash Pit wall portrait']);
+    expect(SCREEN_PACKAGES.map((d) => d.folder)).toEqual(['OpenDash Companion', 'OpenDash Companion portrait', 'OpenDash Pit wall', 'OpenDash Pit wall portrait']);
     expect(SCREEN_PACKAGES.filter((d) => d.kind === 'companion')).toHaveLength(2);
     expect(SCREEN_PACKAGES.filter((d) => d.kind === 'pitwall')).toHaveLength(2);
   });
@@ -166,9 +166,9 @@ describe('the packages are built and valid', () => {
 });
 
 describe('the companion', () => {
-  const companion = PACKAGES.find((p) => p.def.folder === 'openDash Companion')!;
+  const companion = PACKAGES.find((p) => p.def.folder === 'OpenDash Companion')!;
   const main = companion.pkg.dashboards[0]!;
-  const bothSizes = PACKAGES.filter((p) => p.def.folder.startsWith('openDash Companion'));
+  const bothSizes = PACKAGES.filter((p) => p.def.folder.startsWith('OpenDash Companion'));
 
   test('has one screen per module, in catalogue order', () => {
     expect(main.screens).toHaveLength(MODULE_COUNT);
@@ -247,8 +247,8 @@ describe('the companion', () => {
       const g = companionGeometry(COMPANION_SIZES.find((s) => s.folder === folder)!);
       return [g.header.height, g.module.height, g.dots.height, g.flags.height];
     };
-    expect(bandsOf('openDash Companion')).toEqual([56, 388, 24, 12]);
-    expect(bandsOf('openDash Companion portrait')).toEqual([56, 758, 24, 12]);
+    expect(bandsOf('OpenDash Companion')).toEqual([56, 388, 24, 12]);
+    expect(bandsOf('OpenDash Companion portrait')).toEqual([56, 758, 24, 12]);
     for (const size of COMPANION_SIZES) {
       expect(bandsOf(size.folder).reduce((a, b) => a + b, 0)).toBe(size.height);
       // What the band arithmetic is for: the box the module is actually handed.
@@ -275,7 +275,7 @@ describe('the companion', () => {
   });
 
   test('the portrait package draws the same modules in a taller box', () => {
-    const portrait = PACKAGES.find((p) => p.def.folder === 'openDash Companion portrait')!.pkg.dashboards[0]!;
+    const portrait = PACKAGES.find((p) => p.def.folder === 'OpenDash Companion portrait')!.pkg.dashboards[0]!;
     expect(portrait.width).toBe(480);
     expect(portrait.height).toBe(850);
     expect(portrait.screens.map((s) => s.name)).toEqual(main.screens.map((s) => s.name));
@@ -283,7 +283,7 @@ describe('the companion', () => {
 });
 
 describe('the pit wall', () => {
-  const landscape = PACKAGES.find((p) => p.def.folder === 'openDash Pit wall')!;
+  const landscape = PACKAGES.find((p) => p.def.folder === 'OpenDash Pit wall')!;
   const main = landscape.pkg.dashboards[0]!;
 
   test('has three pages', () => {
@@ -339,7 +339,7 @@ describe('the pit wall', () => {
   });
 
   test('the portrait page is one screen with four zones', () => {
-    const portrait = PACKAGES.find((p) => p.def.folder === 'openDash Pit wall portrait')!.pkg.dashboards[0]!;
+    const portrait = PACKAGES.find((p) => p.def.folder === 'OpenDash Pit wall portrait')!.pkg.dashboards[0]!;
     expect(portrait.screens.map((s) => s.name)).toEqual(['portrait']);
     expect(itemsOf(portrait).filter((i) => i.kind === 'widget')).toHaveLength(4);
   });
@@ -742,7 +742,7 @@ describe('the opponents identity row sets its cells side by side', () => {
   // A narrow zone sheds the row down to nothing, and a row of nothing overlaps nothing, so this is
   // what keeps the check from passing because it found no cells anywhere.
   test('the companion page draws all three of them', () => {
-    const page = moduleBoxes().find((b) => b.name === 'openDash Companion page')!;
+    const page = moduleBoxes().find((b) => b.name === 'OpenDash Companion page')!;
     const items = opponents.build({ frame: page.frame, density: page.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
     expect(cellsOf(items, 'ahead').map((i) => i.name)).toEqual(['ahead.name', 'ahead.num.value', 'ahead.class.block']);
   });
@@ -1026,7 +1026,7 @@ describe('the radar is cut from its box', () => {
     // 802 by 336 fixture this used to measure. That fixture was the page the companion produced
     // while its flag band was wrongly 32 px tall, and the divisor had been fitted to it, so the page
     // that shipped drew 1.37 and the suite went on agreeing with a rectangle nobody was given.
-    const page = moduleBoxes().find((b) => b.name === 'openDash Companion page')!;
+    const page = moduleBoxes().find((b) => b.name === 'OpenDash Companion page')!;
     expect(radarIn(MODULES.find((m) => m.id === 'radar')!.build({ frame: page.frame, density: page.density, prefix: 'radar.' })).scale).toBe(1.25);
   });
 
@@ -1169,7 +1169,7 @@ describe('the wide car-telemetry page', () => {
   });
 
   test('and leaves the telemetry column its four lines a plot', () => {
-    const pitwall = PACKAGES.find((p) => p.def.folder === 'openDash Pit wall')!.pkg.dashboards[0]!;
+    const pitwall = PACKAGES.find((p) => p.def.folder === 'OpenDash Pit wall')!.pkg.dashboards[0]!;
     const screen = pitwall.screens.find((s) => s.name === 'telemetry')!;
     const lines = new Map<string, number>();
     for (const item of itemsOf({ ...pitwall, screens: [screen] })) {

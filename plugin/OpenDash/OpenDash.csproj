@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- SimHub plugin: installs the embedded openDash package and exposes its settings as properties.
+  <!-- SimHub plugin: installs the embedded OpenDash package and exposes its settings as properties.
        net48, code-only WPF (no UseWPF, no XAML) so that `dotnet build` works on Linux against the
        Microsoft.NETFramework.ReferenceAssemblies package and the SimHub assemblies in ../lib. -->
   <PropertyGroup>
@@ -63,10 +63,10 @@
   <!-- The dashboard packages the plugin installs, one per screen size. The dash build writes build/*.simhubdash and
        CI copies them into Resources/ before building; the folder is gitignored (see Resources/README.md).
        Every resource whose name ends in .simhubdash is installed, so the manifest name does not matter: MSBuild names
-       these "OpenDashPlugin.Resources.<file name>" and keeps the spaces of names like "openDash 1280x480.simhubdash";
+       these "OpenDashPlugin.Resources.<file name>" and keeps the spaces of names like "OpenDash 1280x480.simhubdash";
        the dashboard folder is read from the zip itself (PackageExtractor.PackageFolderName). -->
   <ItemGroup>
-    <!-- Except the card faces, which since #169 are the ones named "openDash slots ...". The zone faces
+    <!-- Except the card faces, which since #169 are the ones named "OpenDash slots ...". The zone faces
          now carry the shipped names and are what a user gets; the card faces are still built so that the two
          can be compared on a rig before #146 deletes the card path, and they must not be installed beside
          their replacements.
@@ -77,7 +77,7 @@
          company unnoticed. The exclusion lives here rather than in the copy step because CI copies the whole
          dash artefact in, and a rule that only scripts/package.sh applied would hold locally and not in a
          release. -->
-    <EmbeddedResource Include="Resources/*.simhubdash" Exclude="Resources/openDash slots *.simhubdash" />
+    <EmbeddedResource Include="Resources/*.simhubdash" Exclude="Resources/OpenDash slots *.simhubdash" />
   </ItemGroup>
 
   <!-- The flag box profile. Embedded the same way and extracted at runtime (FlagBoxProfile.cs), but

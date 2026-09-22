@@ -358,7 +358,7 @@ decide, grouped by where they arose. Each is a sentence the author can answer in
 - **The full-screen yellow blanks the whole body for half of every cycle.** That is the band's own
   behaviour at forty times the area, and it is worth looking at on the rig before release.
 - **A strip profile carries no version, so it can never read as out of date.** Nineteen of the twenty
-  profiles compare null with null and answer up to date forever, so a driver who updates openDash is
+  profiles compare null with null and answer up to date forever, so a driver who updates OpenDash is
   offered a reinstall and never an update. Stamping the same marker the flag box carries is three
   lines across the profile model, its serialiser and the strip.
 - **The plugin's resources document states something false.** It says a light profile is embedded but
@@ -493,7 +493,7 @@ that only you can confirm.
 - **The lap review offers three session values rather than the canvas's four.** Practice is left out
   because the spellings SimHub publishes for a practice session are verified by no committed trace,
   and a value that silently never matches is worse than one not offered.
-- **The companion is paged by openDash rather than by SimHub's own ring.** Each of its twenty-one
+- **The companion is paged by OpenDash rather than by SimHub's own ring.** Each of its twenty-one
   screens is enabled when its module is on and the page property names it, which is the mechanism the
   face's two rev-bar arrangements already use. The cost is the Next and Previous ring, replaced by a
   binding that skips the modules a driver has turned off.

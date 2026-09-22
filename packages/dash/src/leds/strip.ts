@@ -2,7 +2,7 @@
  * The shapes of RGB strip people actually own, expressed as side / centre / side.
  *
  * A strip is a run of addressable LEDs with a group at each end that the maker intends for
- * something other than revs. openDash describes one effect tree and fits it to each shape, and a
+ * something other than revs. OpenDash describes one effect tree and fits it to each shape, and a
  * strip whose wiring presents that shape in another order is a `Groups.RemapGroup` rather than a
  * second profile — which is what makes a new device a row of numbers instead of a rebuild.
  *

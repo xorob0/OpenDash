@@ -54,7 +54,7 @@ export interface BarScale {
 }
 
 export interface ZoneLayout {
-  /** Package folder and main dashboard name, e.g. `openDash zones 1920x480`. */
+  /** Package folder and main dashboard name, e.g. `OpenDash zones 1920x480`. */
   folder: string;
   description: string;
   width: number;

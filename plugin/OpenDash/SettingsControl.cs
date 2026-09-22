@@ -430,7 +430,7 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Warn("ControlsEditor is unavailable; naming the action instead: " + ex.Message);
-                // The sheet's value on a binding row, which is the one string openDash sets on such a row
+                // The sheet's value on a binding row, which is the one string OpenDash sets on such a row
                 // at all: the editor beside it is SimHub's and draws its own.
                 var text = Ui.Text(friendlyName + ": bind " + Contract.FullActionName(action) + " in Controls and events", Theme.SizeLabel, FontWeights.Normal, Theme.TextPrimary);
                 text.HorizontalAlignment = HorizontalAlignment.Right;

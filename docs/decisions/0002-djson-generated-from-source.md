@@ -64,4 +64,4 @@ Neither [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes), whi
 `.djson` in git and zips it in CI, nor
 [DahlDesignDash](https://github.com/andreasdahl1987/DahlDesignDash), which runs Prettier over
 `.djson` in CI for diff readability, generates the JSON. Both stop at storing and formatting
-it, and that gap is where openDash's advantage lives.
+it, and that gap is where OpenDash's advantage lives.

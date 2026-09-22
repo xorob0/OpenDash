@@ -7,18 +7,18 @@ import { ellipse, layer, rect } from './fixtures.ts';
 
 describe('stableGuid', () => {
   test('is a lower-case 8-4-4-4-12 GUID', () => {
-    expect(stableGuid('openDash/openDash')).toMatch(GUID_PATTERN);
+    expect(stableGuid('OpenDash/OpenDash')).toMatch(GUID_PATTERN);
     expect(isGuid(stableGuid('x'))).toBe(true);
   });
 
   test('is stable across calls and fixed for a known path', () => {
-    expect(stableGuid('openDash/openDash')).toBe(stableGuid('openDash/openDash'));
-    // Regression pin: SHA-1("openDash/openDash") with the version and variant bits set.
-    expect(stableGuid('openDash/openDash')).toBe('ae8bdfad-7414-590c-a57a-83cebf3ae402');
+    expect(stableGuid('OpenDash/OpenDash')).toBe(stableGuid('OpenDash/OpenDash'));
+    // Regression pin: SHA-1("OpenDash/OpenDash") with the version and variant bits set.
+    expect(stableGuid('OpenDash/OpenDash')).toBe('04e9296d-fd89-54e2-a0d0-888e1a14a026');
   });
 
   test('carries version 5 and the RFC 4122 variant', () => {
-    for (const path of ['a', 'openDash/cards/lastLap/value', 'ünïcödé/path']) {
+    for (const path of ['a', 'OpenDash/cards/lastLap/value', 'ünïcödé/path']) {
       const guid = stableGuid(path);
       expect(guid.charAt(14)).toBe('5');
       expect(['8', '9', 'a', 'b']).toContain(guid.charAt(19));
@@ -26,7 +26,7 @@ describe('stableGuid', () => {
   });
 
   test('derives from the SHA-1 of the UTF-8 path', () => {
-    const path = 'openDash/Main/Slot01';
+    const path = 'OpenDash/Main/Slot01';
     const sha = createHash('sha1').update(path, 'utf8').digest('hex');
     const guid = stableGuid(path).replace(/-/g, '');
     expect(guid.slice(0, 12)).toBe(sha.slice(0, 12));
@@ -41,9 +41,9 @@ describe('stableGuid', () => {
 
 describe('paths', () => {
   test('compose package, dashboard, screen and item names with slashes', () => {
-    expect(dashboardPath('openDash', 'cards')).toBe('openDash/cards');
-    expect(screenPath('openDash', 'cards', 'lastLap')).toBe('openDash/cards/lastLap');
-    expect(itemPath('openDash/cards/lastLap', 'value')).toBe('openDash/cards/lastLap/value');
+    expect(dashboardPath('OpenDash', 'cards')).toBe('OpenDash/cards');
+    expect(screenPath('OpenDash', 'cards', 'lastLap')).toBe('OpenDash/cards/lastLap');
+    expect(itemPath('OpenDash/cards/lastLap', 'value')).toBe('OpenDash/cards/lastLap/value');
   });
 
   test('resolveItemId prefers an explicit id', () => {

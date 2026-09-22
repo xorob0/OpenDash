@@ -22,7 +22,7 @@ const { eq, isnull, num } = ncalc;
  * other read in this project follows.
  *
  * `EngineIgnitionOn` is a normalised `GameData` read and a sim that does not fill it gives null.
- * Defaulted to off, as an unknown normally is, that null would black out every LED openDash drives
+ * Defaulted to off, as an unknown normally is, that null would black out every LED OpenDash drives
  * for the whole of a session in that sim, and a dark strip is indistinguishable from a profile that
  * failed to load. The cost of the other default is a strip that lights in the garage of a sim which
  * publishes no ignition, which is the state of every sim today and is what a driver already has.

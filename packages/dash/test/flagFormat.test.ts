@@ -75,24 +75,24 @@ const keptParts = (layout: ZoneLayout, revBar: boolean): string[] => [...(revBar
 
 /** The rectangles the FaceVariants sheets quote for the full-screen block, with the rev bar on. */
 const SHEET_BLOCK: Record<string, Rect> = {
-  openDash: rect(0, 105, 1920, 314),
-  'openDash 1280x480': rect(0, 99, 1280, 320),
-  'openDash 1280x400': rect(0, 87, 1280, 258),
-  'openDash 1280x720': rect(0, 105, 1280, 554),
-  'openDash 850x480': rect(0, 91, 850, 328),
-  'openDash 800x480': rect(0, 91, 800, 328),
-  'openDash 800x286': rect(0, 33, 800, 194),
-  'openDash 600x686': rect(0, 83, 600, 546),
+  OpenDash: rect(0, 105, 1920, 314),
+  'OpenDash 1280x480': rect(0, 99, 1280, 320),
+  'OpenDash 1280x400': rect(0, 87, 1280, 258),
+  'OpenDash 1280x720': rect(0, 105, 1280, 554),
+  'OpenDash 850x480': rect(0, 91, 850, 328),
+  'OpenDash 800x480': rect(0, 91, 800, 328),
+  'OpenDash 800x286': rect(0, 33, 800, 194),
+  'OpenDash 600x686': rect(0, 83, 600, 546),
 };
 
 /** The name size each sheet quotes, which the ratio has to land within a pixel or two of. */
 const SHEET_NAME_SIZE: Record<string, number> = {
-  openDash: 142,
-  'openDash 1280x480': 143,
-  'openDash 1280x400': 115,
-  'openDash 1280x720': 248,
-  'openDash 850x480': 148,
-  'openDash 800x480': 148,
+  OpenDash: 142,
+  'OpenDash 1280x480': 143,
+  'OpenDash 1280x400': 115,
+  'OpenDash 1280x720': 248,
+  'OpenDash 850x480': 148,
+  'OpenDash 800x480': 148,
 };
 
 describe('the full-screen block is the union of zones B, A and C', () => {
@@ -237,7 +237,7 @@ describe('the full-screen name fits the block it is centred on', () => {
   });
 
   test('and is cut to the face where it is not: the portrait block is the case that proves it', () => {
-    const portrait = ZONE_FACES.find((f) => f.folder === 'openDash 600x686')!;
+    const portrait = ZONE_FACES.find((f) => f.folder === 'OpenDash 600x686')!;
     const block = bodyRect(portrait);
     // 0.447 of a 546 px block is 244 px, and YELLOW at 244 px is half as wide again as the face.
     expect(measureText('BarlowCondensedBold', 'YELLOW', Math.floor(0.447 * block.height))).toBeGreaterThan(block.width);
@@ -254,12 +254,12 @@ describe('the full-screen name fits the block it is centred on', () => {
     const widest = (names: readonly string[]): string => names.reduce((a, b) => (measureText('BarlowCondensedBold', b, 1) > measureText('BarlowCondensedBold', a, 1) ? b : a));
     expect(widest(FLAG_FULL_NAMES)).toBe('MEATBALL');
     expect(FLAG_FULL_NAMES).toEqual([...new Set(STATES.filter((id) => BLOCK_NAME[id] !== undefined).map((id) => BLOCK_NAME[id]!))]);
-    const unchanged = ZONE_FACES.filter((f) => f.folder !== 'openDash 600x686');
+    const unchanged = ZONE_FACES.filter((f) => f.folder !== 'OpenDash 600x686');
     for (const face of unchanged) {
       const block = bodyRect(face);
       expect({ face: face.folder, size: flagFullNameSize(block) }).toEqual({ face: face.folder, size: Math.floor(FLAG_FULL_NAME_RATIO * block.height) });
     }
-    expect(flagFullNameSize(bodyRect(ZONE_FACES.find((f) => f.folder === 'openDash 600x686')!))).toBe(143);
+    expect(flagFullNameSize(bodyRect(ZONE_FACES.find((f) => f.folder === 'OpenDash 600x686')!))).toBe(143);
   });
 });
 

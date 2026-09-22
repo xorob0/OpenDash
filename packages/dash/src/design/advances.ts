@@ -1,5 +1,5 @@
 /**
- * Advance widths in em, measured from the bundled TTFs, for the characters openDash draws. They
+ * Advance widths in em, measured from the bundled TTFs, for the characters OpenDash draws. They
  * are how a proportional string's width is known before SimHub renders it: SimHub hands the box
  * to WPF as `MaxTextWidth` and clips whatever does not fit, so a label that does not fit must be
  * shortened by the card rather than cut by the renderer.

@@ -486,7 +486,7 @@ namespace OpenDashPlugin
             statusHost.Child = Ui.StatusPill(dot, status.Label(), label);
             var report = installer.HasEmbeddedPackage
                 ? (installer.Packages.Count > 0 ? installer.PackageReport() : installer.LastError)
-                : "This build of openDash ships no dashboards.";
+                : "This build of OpenDash ships no dashboards.";
             // The release's own version belongs in the tooltip when the offer is what turned the pill:
             // the pill says an update is available and the tooltip says which.
             statusHost.ToolTip = updateStatus.State == UpdateState.UpdateAvailable && updateStatus.Line != null ? $"{report}\n{updateStatus.Line}" : report;

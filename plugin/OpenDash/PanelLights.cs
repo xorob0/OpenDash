@@ -71,7 +71,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// There is no shared list of LED profiles in SimHub. Every LED device keeps its own, in its own
-        /// file, and a profile in one is invisible in every other. openDash used to install into the
+        /// file, and a profile in one is invisible in every other. OpenDash used to install into the
         /// Arduino RGB LEDs device whatever the strip was, so a bar added for a wheel was written and
         /// saved correctly into a list the wheel does not read, and the driver went looking in the wheel
         /// and found nothing. Somebody reading this row has to understand that choosing is not optional.
@@ -86,7 +86,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Said when SimHub has none. The bar is still added and still configurable; what it
-        /// cannot have is a profile anywhere, which is a thing about the rig and not about openDash.</summary>
+        /// cannot have is a profile anywhere, which is a thing about the rig and not about OpenDash.</summary>
         public const string NoDevices = "No LED device in SimHub. Add your wheel or Arduino there first.";
 
         /// <summary>What a bar pointed at a device SimHub no longer has is shown as, so the row says what
@@ -123,7 +123,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// It names the device, because "your LED device" was the whole confusion: a profile goes into
-        /// one device's list and openDash used to always pick the Arduino's, so somebody reading this
+        /// one device's list and OpenDash used to always pick the Arduino's, so somebody reading this
         /// line went to their wheel and found nothing. Now the line says where to look.
         /// </remarks>
         public static string BarAdded(string name, string device)
@@ -146,7 +146,7 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Every clause of this is load-bearing and none of it is decoration.
         ///
-        /// <para>The tables are somebody else's work under CC BY-NC-SA 4.0 and openDash ships none of
+        /// <para>The tables are somebody else's work under CC BY-NC-SA 4.0 and OpenDash ships none of
         /// them (ADR 0018). What makes that work is that the copy is the user's own, and a copy a
         /// background thread made during startup is a poor version of that; a copy made when somebody
         /// pressed a button that had named the project, the licence, the size and the host is the whole

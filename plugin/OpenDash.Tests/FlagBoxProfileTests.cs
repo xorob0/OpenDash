@@ -21,10 +21,10 @@ namespace OpenDashPlugin.Tests
             // The pin. A release embeds nineteen RPM strips beside the one matrix profile and SimHub
             // gives both families the same extension, so ResourceNames is a census of two different
             // kinds of file and its first entry means nothing. This assembly is arranged the same way:
-            // "openDash 0-10-0.ledsprofile" sorts ahead of the flag box ('0' is 0x30, 'F' is 0x46).
+            // "OpenDash 0-10-0.ledsprofile" sorts ahead of the flag box ('0' is 0x30, 'F' is 0x46).
             var names = FlagBoxProfile.ResourceNames(Self);
             Assert.Equal(2, names.Count);
-            Assert.EndsWith("openDash 0-10-0.ledsprofile", names[0], StringComparison.Ordinal);
+            Assert.EndsWith("OpenDash 0-10-0.ledsprofile", names[0], StringComparison.Ordinal);
 
             // Taking names[0] would take the strip. Taking it by name takes the flag box.
             var resource = FlagBoxProfile.ResourceName(Self);
@@ -59,7 +59,7 @@ namespace OpenDashPlugin.Tests
             // reads it back. An assembly with profiles but not that one has no flag box, which is a
             // different answer from an assembly with no profiles at all and a much better one than
             // whichever profile happened to sort first.
-            Assert.Equal("openDash Flag box.ledsprofile", FlagBoxProfile.FileName);
+            Assert.Equal("OpenDash Flag box.ledsprofile", FlagBoxProfile.FileName);
             Assert.Equal(FlagBoxProfile.ProfileName + FlagBoxProfile.ProfileExtension, FlagBoxProfile.FileName);
             Assert.Null(FlagBoxProfile.ResourceName(typeof(string).Assembly));
         }
@@ -71,25 +71,25 @@ namespace OpenDashPlugin.Tests
             // Every shape of list a release can hand it, with the flag box never first.
             var release = new[]
             {
-                prefix + "openDash 0-10-0.ledsprofile",
-                prefix + "openDash 4-14-4-reversed.ledsprofile",
-                prefix + "openDash Flag box.ledsprofile",
-                prefix + "openDash brow-25.ledsprofile",
+                prefix + "OpenDash 0-10-0.ledsprofile",
+                prefix + "OpenDash 4-14-4-reversed.ledsprofile",
+                prefix + "OpenDash Flag box.ledsprofile",
+                prefix + "OpenDash brow-25.ledsprofile",
             };
-            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(release, FlagBoxProfile.FileName));
-            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(Enumerable.Reverse(release), FlagBoxProfile.FileName));
+            Assert.Equal(prefix + "OpenDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(release, FlagBoxProfile.FileName));
+            Assert.Equal(prefix + "OpenDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(Enumerable.Reverse(release), FlagBoxProfile.FileName));
 
             // Strips only: no flag box, rather than the nearest thing to one.
-            Assert.Null(FlagBoxProfile.SelectResource(new[] { prefix + "openDash 0-10-0.ledsprofile", prefix + "openDash brow-9.ledsprofile" }, FlagBoxProfile.FileName));
+            Assert.Null(FlagBoxProfile.SelectResource(new[] { prefix + "OpenDash 0-10-0.ledsprofile", prefix + "OpenDash brow-9.ledsprofile" }, FlagBoxProfile.FileName));
             Assert.Null(FlagBoxProfile.SelectResource(new string[0], FlagBoxProfile.FileName));
 
             // A case-only variant is taken when it is all there is, because copying the built file
-            // over an older "openDash flag box.ledsprofile" on Windows replaces the bytes and keeps
+            // over an older "OpenDash flag box.ledsprofile" on Windows replaces the bytes and keeps
             // the old casing; it loses to the exact spelling whenever both are present, whichever
             // way round the list holds them.
-            var lower = prefix + "openDash flag box.ledsprofile";
+            var lower = prefix + "OpenDash flag box.ledsprofile";
             Assert.Equal(lower, FlagBoxProfile.SelectResource(new[] { lower }, FlagBoxProfile.FileName));
-            Assert.Equal(prefix + "openDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(new[] { lower, prefix + "openDash Flag box.ledsprofile" }, FlagBoxProfile.FileName));
+            Assert.Equal(prefix + "OpenDash Flag box.ledsprofile", FlagBoxProfile.SelectResource(new[] { lower, prefix + "OpenDash Flag box.ledsprofile" }, FlagBoxProfile.FileName));
         }
 
         [Fact]
@@ -102,25 +102,25 @@ namespace OpenDashPlugin.Tests
             const string prefix = "OpenDashPlugin.Resources.";
             var release = new[]
             {
-                prefix + "openDash 0-10-0.ledsprofile",
-                prefix + "openDash 4-14-4-reversed.ledsprofile",
-                prefix + "openDash 4-14-4.ledsprofile",
-                prefix + "openDash Flag box.ledsprofile",
-                prefix + "openDash brow-25.ledsprofile",
+                prefix + "OpenDash 0-10-0.ledsprofile",
+                prefix + "OpenDash 4-14-4-reversed.ledsprofile",
+                prefix + "OpenDash 4-14-4.ledsprofile",
+                prefix + "OpenDash Flag box.ledsprofile",
+                prefix + "OpenDash brow-25.ledsprofile",
             };
 
             foreach (var id in new[] { "0-10-0", "4-14-4", "4-14-4-reversed", "brow-25" })
             {
                 var chosen = FlagBoxProfile.SelectResource(release, FlagBoxProfile.StripFileName(id));
-                Assert.Equal(prefix + "openDash " + id + FlagBoxProfile.ProfileExtension, chosen);
+                Assert.Equal(prefix + "OpenDash " + id + FlagBoxProfile.ProfileExtension, chosen);
                 Assert.NotEqual(prefix + FlagBoxProfile.FileName, chosen);
             }
 
             // "4-14-4" is a prefix of "4-14-4-reversed": a match that was not the whole file name would
             // hand the reversed wiring to a strip wired the usual way, which lights the wrong end.
             Assert.Equal(
-                prefix + "openDash 4-14-4.ledsprofile",
-                FlagBoxProfile.SelectResource(new[] { prefix + "openDash 4-14-4-reversed.ledsprofile", prefix + "openDash 4-14-4.ledsprofile" }, FlagBoxProfile.StripFileName("4-14-4")));
+                prefix + "OpenDash 4-14-4.ledsprofile",
+                FlagBoxProfile.SelectResource(new[] { prefix + "OpenDash 4-14-4-reversed.ledsprofile", prefix + "OpenDash 4-14-4.ledsprofile" }, FlagBoxProfile.StripFileName("4-14-4")));
 
             // A shape this build did not emit is absent, not the nearest thing to it.
             Assert.Null(FlagBoxProfile.SelectResource(release, FlagBoxProfile.StripFileName("7-7-7")));
@@ -139,11 +139,11 @@ namespace OpenDashPlugin.Tests
 
             // The flag box is not a shape, and neither is a file that is not ours at all.
             Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources." + FlagBoxProfile.FileName));
-            Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.openDash flag box.ledsprofile"));
+            Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.OpenDash flag box.ledsprofile"));
             Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.somebody else.ledsprofile"));
-            Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.openDash .ledsprofile"));
+            Assert.Null(FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.OpenDash .ledsprofile"));
             Assert.Null(FlagBoxProfile.ShapeIdOf(null));
-            Assert.Equal("brow-9", FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.openDash brow-9.ledsprofile"));
+            Assert.Equal("brow-9", FlagBoxProfile.ShapeIdOf("OpenDashPlugin.Resources.OpenDash brow-9.ledsprofile"));
 
             // And the round trip, which is the contract with rpmStripFileName() on the dash side.
             Assert.Equal("4-14-4", FlagBoxProfile.ShapeIdOf("x.Resources." + FlagBoxProfile.StripFileName("4-14-4")));
@@ -156,7 +156,7 @@ namespace OpenDashPlugin.Tests
             // disk, because only it has a by-hand import path to fall back to.
             var strip = FlagBoxProfile.StripResourceNames(Self).Single();
             var json = FlagBoxProfile.ResourceText(Self, strip);
-            Assert.Equal("openDash 0/10/0", FlagBoxProfile.ProfileNameOf(json));
+            Assert.Equal("OpenDash 0/10/0", FlagBoxProfile.ProfileNameOf(json));
             Assert.Null(FlagBoxProfile.ResourceText(Self, "OpenDashPlugin.Resources.not embedded.ledsprofile"));
             Assert.Null(FlagBoxProfile.ResourceText(Self, null));
         }
@@ -166,7 +166,7 @@ namespace OpenDashPlugin.Tests
         {
             // MSBuild turns the folder part into an identifier and leaves the file name alone, which is
             // what lets the shipped name carry a space.
-            Assert.Equal("openDash Flag box.ledsprofile", FlagBoxProfile.FileNameOf("OpenDashPlugin.Tests.Resources.openDash Flag box.ledsprofile"));
+            Assert.Equal("OpenDash Flag box.ledsprofile", FlagBoxProfile.FileNameOf("OpenDashPlugin.Tests.Resources.OpenDash Flag box.ledsprofile"));
             Assert.Equal("x.ledsprofile", FlagBoxProfile.FileNameOf("x.ledsprofile"));
             Assert.Null(FlagBoxProfile.FileNameOf(null));
         }
@@ -174,7 +174,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void ReadsTheProfileName()
         {
-            Assert.Equal("openDash Flag box", FlagBoxProfile.ProfileNameOf("{\n  \"Name\": \"openDash Flag box\"\n}"));
+            Assert.Equal("OpenDash Flag box", FlagBoxProfile.ProfileNameOf("{\n  \"Name\": \"OpenDash Flag box\"\n}"));
             Assert.Null(FlagBoxProfile.ProfileNameOf("{}"));
             Assert.Null(FlagBoxProfile.ProfileNameOf(null));
         }
@@ -189,13 +189,13 @@ namespace OpenDashPlugin.Tests
   ""LedContainers"": [
     { ""Description"": ""Brightness"", ""LedContainers"": [ { ""Description"": ""Racing"", ""Name"": ""nope"" } ] }
   ],
-  ""Name"": ""openDash Flag box"",
-  ""Author"": ""openDash"",
-  ""Description"": ""Built by openDash 9.9.9; do not edit here.""
+  ""Name"": ""OpenDash Flag box"",
+  ""Author"": ""OpenDash"",
+  ""Description"": ""Built by OpenDash 9.9.9; do not edit here.""
 }";
-            Assert.Equal("openDash Flag box", FlagBoxProfile.ProfileNameOf(json));
-            Assert.Equal("openDash", FlagBoxProfile.AuthorOf(json));
-            Assert.Equal("Built by openDash 9.9.9; do not edit here.", FlagBoxProfile.DescriptionOf(json));
+            Assert.Equal("OpenDash Flag box", FlagBoxProfile.ProfileNameOf(json));
+            Assert.Equal("OpenDash", FlagBoxProfile.AuthorOf(json));
+            Assert.Equal("Built by OpenDash 9.9.9; do not edit here.", FlagBoxProfile.DescriptionOf(json));
         }
 
         [Fact]
@@ -205,9 +205,9 @@ namespace OpenDashPlugin.Tests
             // tracking strings would then lose the top level entirely.
             const string json = @"{
   ""LedContainers"": [ { ""TriggerFormula"": { ""Expression"": ""isnull([X], 1) = {weird}"" } } ],
-  ""Description"": ""Built by openDash 1.2.3; a \""quoted\"" word and a } brace.""
+  ""Description"": ""Built by OpenDash 1.2.3; a \""quoted\"" word and a } brace.""
 }";
-            Assert.Equal(@"Built by openDash 1.2.3; a ""quoted"" word and a } brace.", FlagBoxProfile.DescriptionOf(json));
+            Assert.Equal(@"Built by OpenDash 1.2.3; a ""quoted"" word and a } brace.", FlagBoxProfile.DescriptionOf(json));
         }
 
         [Fact]
@@ -228,9 +228,9 @@ namespace OpenDashPlugin.Tests
             {
                 var result = FlagBoxProfile.Extract(root.Path, Self);
                 Assert.Equal(FlagBoxStatus.Extracted, result.Status);
-                Assert.Equal(Path.Combine(root.Path, "OpenDash", "openDash Flag box.ledsprofile"), result.Path);
+                Assert.Equal(Path.Combine(root.Path, "OpenDash", "OpenDash Flag box.ledsprofile"), result.Path);
                 Assert.True(File.Exists(result.Path));
-                Assert.Equal("openDash Flag box", result.ProfileName);
+                Assert.Equal("OpenDash Flag box", result.ProfileName);
             }
         }
 
@@ -288,7 +288,7 @@ namespace OpenDashPlugin.Tests
                 var second = FlagBoxProfile.Extract(root.Path, Self);
 
                 Assert.Equal(FlagBoxStatus.Extracted, second.Status);
-                Assert.Contains("openDash Flag box", File.ReadAllText(second.Path), StringComparison.Ordinal);
+                Assert.Contains("OpenDash Flag box", File.ReadAllText(second.Path), StringComparison.Ordinal);
             }
         }
 
@@ -329,7 +329,7 @@ namespace OpenDashPlugin.Tests
                 var copied = FlagBoxProfile.CopyForImport(extracted, docs.Path);
 
                 Assert.Equal(FlagBoxStatus.Extracted, copied.Status);
-                Assert.Equal(Path.Combine(docs.Path, "SimHub", "openDash Flag box.ledsprofile"), copied.Path);
+                Assert.Equal(Path.Combine(docs.Path, "SimHub", "OpenDash Flag box.ledsprofile"), copied.Path);
                 Assert.Equal(File.ReadAllText(extracted.Path), File.ReadAllText(copied.Path));
             }
         }
@@ -385,7 +385,7 @@ namespace OpenDashPlugin.Tests
             {
                 var summary = FlagBoxProfile.Summary(FlagBoxProfile.Extract(root.Path, Self));
                 Assert.Contains("Lights", summary, StringComparison.Ordinal);
-                Assert.Contains("openDash Flag box.ledsprofile", summary, StringComparison.Ordinal);
+                Assert.Contains("OpenDash Flag box.ledsprofile", summary, StringComparison.Ordinal);
             }
         }
 

@@ -29,10 +29,10 @@ namespace OpenDashPlugin.Tests
         {
             // The release carries more than this machine has. Adding a screen size nobody asked for belongs to the
             // dashboard manager, not to an update.
-            var release = ReleaseWith("openDash", "openDash 1280x480", "openDash 800 round");
-            var plan = UpdatePlan.For(new[] { Installed("openDash"), Installed("openDash 800 round") }, release);
+            var release = ReleaseWith("OpenDash", "OpenDash 1280x480", "OpenDash 800 round");
+            var plan = UpdatePlan.For(new[] { Installed("OpenDash"), Installed("OpenDash 800 round") }, release);
 
-            Assert.Equal(new[] { "openDash", "openDash 800 round" }, plan.Items.Select(i => i.FolderName));
+            Assert.Equal(new[] { "OpenDash", "OpenDash 800 round" }, plan.Items.Select(i => i.FolderName));
             Assert.Empty(plan.NotCarried);
             Assert.False(plan.IsEmpty);
         }
@@ -41,16 +41,16 @@ namespace OpenDashPlugin.Tests
         public void A_folder_the_release_does_not_carry_is_reported_and_left_alone()
         {
             // Real rather than hypothetical: the build makes twenty-two packages and rc.2 published fourteen.
-            var plan = UpdatePlan.For(new[] { Installed("openDash"), Installed("openDash zones 1920x480") }, ReleaseWith("openDash"));
+            var plan = UpdatePlan.For(new[] { Installed("OpenDash"), Installed("OpenDash zones 1920x480") }, ReleaseWith("OpenDash"));
 
-            Assert.Equal(new[] { "openDash" }, plan.Items.Select(i => i.FolderName));
-            Assert.Equal(new[] { "openDash zones 1920x480" }, plan.NotCarried);
+            Assert.Equal(new[] { "OpenDash" }, plan.Items.Select(i => i.FolderName));
+            Assert.Equal(new[] { "OpenDash zones 1920x480" }, plan.NotCarried);
         }
 
         [Fact]
         public void A_package_that_is_not_installed_is_not_an_update()
         {
-            var plan = UpdatePlan.For(new[] { new PackageStatus { FolderName = "openDash", InstalledVersion = null } }, ReleaseWith("openDash"));
+            var plan = UpdatePlan.For(new[] { new PackageStatus { FolderName = "OpenDash", InstalledVersion = null } }, ReleaseWith("OpenDash"));
             Assert.True(plan.IsEmpty);
             Assert.Empty(plan.NotCarried);
         }
@@ -58,15 +58,15 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Nothing_to_go_on_is_an_empty_plan_rather_than_a_throw()
         {
-            Assert.True(UpdatePlan.For(null, ReleaseWith("openDash")).IsEmpty);
-            Assert.True(UpdatePlan.For(new[] { Installed("openDash") }, null).IsEmpty);
+            Assert.True(UpdatePlan.For(null, ReleaseWith("OpenDash")).IsEmpty);
+            Assert.True(UpdatePlan.For(new[] { Installed("OpenDash") }, null).IsEmpty);
         }
 
         [Fact]
         public void The_asset_is_found_by_the_name_GitHub_published()
         {
-            var plan = UpdatePlan.For(new[] { Installed("openDash Pit wall portrait") }, ReleaseWith("openDash Pit wall portrait"));
-            Assert.Equal("openDash.Pit.wall.portrait.simhubdash", plan.Items.Single().Asset.Name);
+            var plan = UpdatePlan.For(new[] { Installed("OpenDash Pit wall portrait") }, ReleaseWith("OpenDash Pit wall portrait"));
+            Assert.Equal("OpenDash.Pit.wall.portrait.simhubdash", plan.Items.Single().Asset.Name);
         }
 
         // The digest
@@ -99,16 +99,16 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_downloaded_package_reads_back_as_many_times_as_it_is_opened()
         {
-            var package = SyntheticPackage.Zip("openDash", "0.2.0").ToArray();
-            var source = new DownloadedPackageSource().Add("openDash.simhubdash", package);
+            var package = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
+            var source = new DownloadedPackageSource().Add("OpenDash.simhubdash", package);
 
-            Assert.Equal(new[] { "openDash.simhubdash" }, source.Names);
+            Assert.Equal(new[] { "OpenDash.simhubdash" }, source.Names);
             for (var i = 0; i < 3; i++)
             {
-                using (var stream = source.Open("openDash.simhubdash"))
+                using (var stream = source.Open("OpenDash.simhubdash"))
                 {
                     Assert.Equal("0.2.0", PackageExtractor.ReadPackageVersion(stream, out var folder));
-                    Assert.Equal("openDash", folder);
+                    Assert.Equal("OpenDash", folder);
                 }
             }
             Assert.Throws<FileNotFoundException>(() => source.Open("absent.simhubdash"));
@@ -122,11 +122,11 @@ namespace OpenDashPlugin.Tests
             var root = Path.Combine(Path.GetTempPath(), "opendash-tests", System.Guid.NewGuid().ToString("N"));
             try
             {
-                var source = new DownloadedPackageSource().Add("openDash.simhubdash", SyntheticPackage.Zip("openDash", "0.2.0").ToArray());
+                var source = new DownloadedPackageSource().Add("OpenDash.simhubdash", SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray());
                 var installer = new DashboardInstaller(root, null, source, new MemoryFolderRecord());
                 installer.EnsureInstalled(false);
 
-                Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "openDash"));
+                Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
                 Assert.True(installer.Packages.Single().Extracted);
             }
             finally

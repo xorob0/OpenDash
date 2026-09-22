@@ -13,7 +13,7 @@ const WIDTH = 1920;
 const HEIGHT = 480;
 
 export const zoneFace1920x480: ZoneLayout = {
-  folder: 'openDash',
+  folder: 'OpenDash',
   description: zoneLayoutDescription(WIDTH, HEIGHT),
   width: WIDTH,
   height: HEIGHT,

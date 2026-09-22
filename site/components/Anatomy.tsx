@@ -133,7 +133,7 @@ export function Anatomy({ src }: { src: string }) {
         <div className={styles.canvas}>
           <Image
             src={src}
-            alt="The openDash face at 1920 by 480, photographed rendering live telemetry in SimHub"
+            alt="The OpenDash face at 1920 by 480, photographed rendering live telemetry in SimHub"
             width={W}
             height={H}
             sizes="(min-width: 88rem) 84rem, 100vw"

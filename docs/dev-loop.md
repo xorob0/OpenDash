@@ -12,7 +12,7 @@ restarts SimHub, starts the telemetry emulator, opens the dashboard and photogra
 
 ```bash
 bun run dev                                   # OpenDash on the race scenario
-bun run dev 'openDash Pit wall'               # another package
+bun run dev 'OpenDash Pit wall'               # another package
 bun run dev --scenario notc                   # another scenario
 bun run dev --no-build                        # when only the scenario changed
 bun run dev --keep                            # leave the emulator running and the VM claimed

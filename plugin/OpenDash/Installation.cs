@@ -42,7 +42,7 @@ namespace OpenDashPlugin
 
     public sealed class InstallResult
     {
-        /// <summary>The folder under DashTemplates, e.g. "openDash".</summary>
+        /// <summary>The folder under DashTemplates, e.g. "OpenDash".</summary>
         public string FolderName { get; set; }
 
         /// <summary>DashboardVersion of the package that was installed, null when the sidecar has none.</summary>

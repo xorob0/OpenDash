@@ -595,8 +595,8 @@ export interface PitWallSize {
 }
 
 export const PIT_WALL_SIZES: readonly PitWallSize[] = [
-  { folder: 'openDash Pit wall', width: 1920, height: 1080, description: '1920 x 1080, three pages', portrait: false },
-  { folder: 'openDash Pit wall portrait', width: 1080, height: 1920, description: '1080 x 1920, one page', portrait: true },
+  { folder: 'OpenDash Pit wall', width: 1920, height: 1080, description: '1920 x 1080, three pages', portrait: false },
+  { folder: 'OpenDash Pit wall portrait', width: 1080, height: 1920, description: '1080 x 1920, one page', portrait: true },
 ];
 
 /**

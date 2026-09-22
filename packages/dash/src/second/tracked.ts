@@ -1,5 +1,5 @@
 /**
- * The car settings openDash watches: what each one reads, what it is called and how it is written.
+ * The car settings OpenDash watches: what each one reads, what it is called and how it is written.
  *
  * One list with two consumers, which is the point of the file. The bar's strip draws them settled,
  * as a rank of cells a driver reads between corners, and the change notification draws one of them

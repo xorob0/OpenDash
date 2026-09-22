@@ -295,7 +295,7 @@ foreach ($name in @(${names.map(psq).join(', ')})) {
 # SimHub resolves a bundled font from DashFonts, not from the package, so they are copied too.
 $fonts = Join-Path ${psq(SIMHUB_DIR)} 'DashFonts'
 New-Item -ItemType Directory -Force -Path $fonts | Out-Null
-Get-ChildItem (Join-Path $dt 'openDash*\\_SHFonts\\*.ttf') -ErrorAction SilentlyContinue | ForEach-Object { Copy-Item $_.FullName $fonts -Force }
+Get-ChildItem (Join-Path $dt 'OpenDash*\\_SHFonts\\*.ttf') -ErrorAction SilentlyContinue | ForEach-Object { Copy-Item $_.FullName $fonts -Force }
 "installed: " + ($installed -join ', ')`,
     300,
   );
@@ -342,7 +342,7 @@ Unblock-File -LiteralPath $dest -ErrorAction SilentlyContinue
   return { ...copy, stdout: `${copy.stdout}\n${started.stdout}` };
 }
 
-/** The openDash plugin's type, which is how SimHub names it in PluginsActivation.json. */
+/** The OpenDash plugin's type, which is how SimHub names it in PluginsActivation.json. */
 export const OPENDASH_PLUGIN_CLASS = 'OpenDashPlugin.OpenDash';
 
 /** One entry of SimHub's PluginsActivation.json, keyed by the plugin type's full name. */
@@ -636,7 +636,7 @@ const USAGE = `vm: drive the Windows test VM and its SimHub.
   bun run vm wait [seconds]         block until the guest answers (a cold start is ~2 min)
 
   bun run vm install [package...]   expand built packages into DashTemplates, restart SimHub
-                                    names are globs over build/, e.g. 'openDash', 'openDash 8*'
+                                    names are globs over build/, e.g. 'OpenDash', 'OpenDash 8*'
   bun run vm plugin [--no-build]    package, install OpenDash.dll, restart SimHub
                                     packaging is what embeds the current dashboards in the plugin
 

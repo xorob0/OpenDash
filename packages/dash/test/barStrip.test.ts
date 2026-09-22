@@ -102,7 +102,7 @@ const exprOf = (id: string): string => {
 };
 
 describe('the strip closes over what the game does not publish', () => {
-  const FOLDER = 'openDash';
+  const FOLDER = 'OpenDash';
   const values = stripValues(FOLDER);
   const ids = values.map(cellIdOf);
   /** Where each cell sits when every setting is published. */
@@ -168,7 +168,7 @@ describe('the strip closes over what the game does not publish', () => {
 
   test('a narrow face closes its shorter strip the same way', () => {
     // 850 by 480 keeps four of the seven, so the arithmetic is a different one and worth its own case.
-    const narrow = stripValues('openDash 850x480');
+    const narrow = stripValues('OpenDash 850x480');
     expect(narrow.length).toBeGreaterThan(0);
     expect(narrow.length).toBeLessThan(values.length);
     const full = narrow.map((v) => evaluate(leftOf(v), []));
@@ -189,14 +189,14 @@ describe('the strip closes over what the game does not publish', () => {
  */
 describe('the strip is a rank of equal columns', () => {
   const KEPT: Record<string, string[]> = {
-    openDash: ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
-    'openDash 1280x480': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
-    'openDash 1280x400': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
-    'openDash 1280x720': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
-    'openDash 850x480': ['slip', 'tc', 'bias', 'abs'],
-    'openDash 800x480': ['tc', 'bias', 'abs'],
-    'openDash 600x686': ['slip', 'tc', 'cut', 'bias', 'abs'],
-    'openDash 800x286': [],
+    OpenDash: ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'OpenDash 1280x480': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'OpenDash 1280x400': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'OpenDash 1280x720': ['slip', 'tc', 'cut', 'bias', 'abs', 'map', 'diff'],
+    'OpenDash 850x480': ['slip', 'tc', 'bias', 'abs'],
+    'OpenDash 800x480': ['tc', 'bias', 'abs'],
+    'OpenDash 600x686': ['slip', 'tc', 'cut', 'bias', 'abs'],
+    'OpenDash 800x286': [],
   };
 
   for (const face of ZONE_FACES) {

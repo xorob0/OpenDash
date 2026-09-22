@@ -26,7 +26,7 @@
  *   bun scripts/modules.ts --modules fuel,tyres  # by id
  *   bun scripts/modules.ts --scenario race --keep
  *
- * The packages it installs are named `openDash module <nn> <id>` so that they sort in catalogue
+ * The packages it installs are named `OpenDash module <nn> <id>` so that they sort in catalogue
  * order in Dash Studio's list and never collide with a shipped name. They are scratch: nothing
  * removes them from the VM, and the next `bun run dev` install pass leaves them alone.
  */
@@ -49,9 +49,9 @@ const repoRoot = path.resolve(import.meta.dir, '..');
 /** The landscape companion. The portrait one is the same modules in a narrower box. */
 const SIZE = COMPANION_SIZES[0]!;
 
-/** `openDash module 05 fuel`: sorts in catalogue order and cannot collide with a shipped name. */
+/** `OpenDash module 05 fuel`: sorts in catalogue order and cannot collide with a shipped name. */
 export const packageNameFor = (number: number, id: string): string =>
-  `openDash module ${String(number).padStart(2, '0')} ${id}`;
+  `OpenDash module ${String(number).padStart(2, '0')} ${id}`;
 
 /**
  * One package holding one module.

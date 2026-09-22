@@ -57,7 +57,7 @@ namespace OpenDashPlugin
         /// the Arduino RGB LEDs device has one, and each wheel, button plate or brow that SimHub knows
         /// as a device has one of its own, in its own file. A profile added to one is invisible to all
         /// the others, so a bar that did not say which device it was for was installed into whichever
-        /// one openDash happened to name -- the Arduino's -- and a driver whose LEDs are in their wheel
+        /// one OpenDash happened to name -- the Arduino's -- and a driver whose LEDs are in their wheel
         /// went looking for it in the wheel and found nothing. <see cref="LedTargets"/> is the list.
         ///
         /// <see cref="ArduinoDevice"/> is what a bar written before this existed is read as, because
@@ -66,7 +66,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public string Device { get; set; }
 
-        /// <summary>SimHub's Arduino RGB LEDs, the device openDash installed into when it only knew one.</summary>
+        /// <summary>SimHub's Arduino RGB LEDs, the device OpenDash installed into when it only knew one.</summary>
         public const string ArduinoDevice = "arduino";
 
         /// <summary>One device of SimHub's Devices plugin, by the instance id SimHub persists for it.</summary>
@@ -86,7 +86,7 @@ namespace OpenDashPlugin
             return Guid.TryParseExact(id.Substring(DevicePrefix.Length), "D", out parsed) ? parsed : (Guid?)null;
         }
 
-        /// <summary>A spellable device id: the Arduino's unless it is one openDash can recognise. An id
+        /// <summary>A spellable device id: the Arduino's unless it is one OpenDash can recognise. An id
         /// it cannot read is not kept, because a bar pointed at nothing would silently install nowhere.</summary>
         public static string NormaliseDevice(string id)
         {

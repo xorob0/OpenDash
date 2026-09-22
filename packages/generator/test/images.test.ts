@@ -124,7 +124,7 @@ describe('the image item', () => {
   const item: ImageItem = { kind: 'image', name: 'Telltale', image: 'brake-warning', rect: { left: 10, top: 20, width: 48, height: 36 } };
 
   test('is sized from its rect, never from the image', () => {
-    const o = buildItemObject(item, 'openDash/openDash.djson/Race');
+    const o = buildItemObject(item, 'OpenDash/OpenDash.djson/Race');
     expect(o).toMatchObject({
       $type: ITEM_TYPES.image,
       Image: 'brake-warning',
@@ -168,7 +168,7 @@ describe('the .ressources sidecar', () => {
     const pkg = samplePackage();
     pkg.dashboards[0]!.images = [describeImage(iconPath)];
     const written = writePackage(pkg, join(root, 'packed'));
-    expect(listFiles(written.folder)).toContain('openDash.djson.ressources');
+    expect(listFiles(written.folder)).toContain('OpenDash.djson.ressources');
     // The dashboard with no images gets no sidecar: an empty zip beside every .djson would be noise.
     expect(listFiles(written.folder)).not.toContain('cards.djson.ressources');
   });

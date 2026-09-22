@@ -98,7 +98,7 @@ the reader to find out which. The 1.6 megabyte snapshot file covers the rest of 
 ## Decision
 
 **A pull request carries native SimHub captures, taken by the author with `bun run shots` and
-attached to the pull request. openDash does not build a preview renderer.**
+attached to the pull request. OpenDash does not build a preview renderer.**
 
 The captures come from the real engine on Windows, at the dashboard's own size, with the emulator
 replaying one of the pinned scenarios so that two captures of the same package show the same

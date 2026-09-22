@@ -28,7 +28,7 @@ namespace OpenDashPlugin
             if (size == null)
             {
                 return Ui.Caption(
-                    "openDash no longer ships a " + screen.SizeLabel + " face. Your settings are kept.",
+                    "OpenDash no longer ships a " + screen.SizeLabel + " face. Your settings are kept.",
                     BodyWidth);
             }
             var face = size.Value;
@@ -897,11 +897,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// How a companion is paged, which is not openDash's to decide any more.
+        /// How a companion is paged, which is not OpenDash's to decide any more.
         /// </summary>
         /// <remarks>
         /// There were two selects here -- the module a session opens on and the one a held button
-        /// shows -- and a binder for openDash's own next-module action. All three needed openDash to be
+        /// shows -- and a binder for OpenDash's own next-module action. All three needed OpenDash to be
         /// the thing choosing which screen was up, and that is exactly what stopped a tap working:
         /// SimHub's only touch gesture maps a tap to the previous or next screen, and its navigation
         /// walks the screens whose expression is true, so with one of twenty-one enabled there was

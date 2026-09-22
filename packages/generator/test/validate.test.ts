@@ -10,8 +10,8 @@ const OPTS = { declaredProperties: DECLARED, propertyPrefix: 'OpenDash' };
 const codes = (issues: { code: string }[]): string[] => issues.map((i) => i.code);
 
 const single = (items: Item[], fonts: string[] = [BARLOW_MEDIUM, BARLOW_CONDENSED_SEMIBOLD]): DashPackage => ({
-  folderName: 'openDash',
-  dashboards: [dashboard('openDash', [screen('Main', items)])],
+  folderName: 'OpenDash',
+  dashboards: [dashboard('OpenDash', [screen('Main', items)])],
   fonts,
 });
 
@@ -30,13 +30,13 @@ describe('happy path', () => {
 
   test('formatIssues renders one line per issue', () => {
     const r = validatePackage(single([rect('r', { backgroundColor: 'red' as never })]), OPTS);
-    expect(formatIssues(r.errors)).toMatch(/^color\/invalid openDash\/openDash\/Main\/r#backgroundColor: /);
+    expect(formatIssues(r.errors)).toMatch(/^color\/invalid OpenDash\/OpenDash\/Main\/r#backgroundColor: /);
   });
 });
 
 describe('package level errors', () => {
   test('no dashboards', () => {
-    const r = validatePackage({ folderName: 'openDash', dashboards: [], fonts: [] }, OPTS);
+    const r = validatePackage({ folderName: 'OpenDash', dashboards: [], fonts: [] }, OPTS);
     expect(codes(r.errors)).toContain('package/empty');
     expect(r.ok).toBe(false);
   });
@@ -73,7 +73,7 @@ describe('package level errors', () => {
 
 describe('structure errors', () => {
   test('dashboard without screens and screen without items', () => {
-    const noScreens: DashPackage = { folderName: 'openDash', dashboards: [dashboard('openDash', [])], fonts: [] };
+    const noScreens: DashPackage = { folderName: 'OpenDash', dashboards: [dashboard('OpenDash', [])], fonts: [] };
     expect(codes(validatePackage(noScreens, OPTS).errors)).toContain('dashboard/no-screens');
     expect(codes(validatePackage(single([]), OPTS).errors)).toContain('screen/no-items');
   });
@@ -82,7 +82,7 @@ describe('structure errors', () => {
     const pkg = single([rect('r')]);
     pkg.dashboards[0]!.metadata = undefined as never;
     const r = validatePackage(pkg, OPTS);
-    expect(r.errors.filter((e) => e.code === 'metadata/missing').map((e) => e.path)).toEqual(['openDash/openDash']);
+    expect(r.errors.filter((e) => e.code === 'metadata/missing').map((e) => e.path)).toEqual(['OpenDash/OpenDash']);
     expect(codes(r.errors)).not.toContain('metadata/version');
     expect(codes(r.errors)).not.toContain('metadata/simhub-version');
     expect(r.ok).toBe(false);
@@ -98,7 +98,7 @@ describe('structure errors', () => {
   });
 
   test('duplicate screen names', () => {
-    const pkg: DashPackage = { folderName: 'openDash', dashboards: [dashboard('openDash', [screen('A', [rect('r')]), screen('A', [rect('r')])])], fonts: [] };
+    const pkg: DashPackage = { folderName: 'OpenDash', dashboards: [dashboard('OpenDash', [screen('A', [rect('r')]), screen('A', [rect('r')])])], fonts: [] };
     const r = validatePackage(pkg, OPTS);
     expect(codes(r.errors)).toContain('name/duplicate');
     expect(codes(r.errors)).toContain('id/duplicate');
@@ -112,9 +112,9 @@ describe('colours', () => {
     ]), OPTS);
     const paths = r.errors.filter((e) => e.code === 'color/invalid').map((e) => e.path);
     expect(paths).toEqual([
-      'openDash/openDash/Main/t#backgroundColor',
-      'openDash/openDash/Main/t#border.color',
-      'openDash/openDash/Main/t#textColor',
+      'OpenDash/OpenDash/Main/t#backgroundColor',
+      'OpenDash/OpenDash/Main/t#border.color',
+      'OpenDash/OpenDash/Main/t#textColor',
     ]);
   });
 
@@ -123,10 +123,10 @@ describe('colours', () => {
     pkg.dashboards[0]!.backgroundColor = 'black' as never;
     pkg.dashboards[0]!.screens[0]!.backgroundColor = '#0000' as never;
     const paths = validatePackage(pkg, OPTS).errors.filter((e) => e.code === 'color/invalid').map((e) => e.path);
-    expect(paths).toContain('openDash/openDash#backgroundColor');
-    expect(paths).toContain('openDash/openDash/Main#backgroundColor');
-    expect(paths).toContain('openDash/openDash/Main/r#Bindings.BackgroundColor#startColor');
-    expect(paths).toContain('openDash/openDash/Main/r#Bindings.BackgroundColor#middleColor');
+    expect(paths).toContain('OpenDash/OpenDash#backgroundColor');
+    expect(paths).toContain('OpenDash/OpenDash/Main#backgroundColor');
+    expect(paths).toContain('OpenDash/OpenDash/Main/r#Bindings.BackgroundColor#startColor');
+    expect(paths).toContain('OpenDash/OpenDash/Main/r#Bindings.BackgroundColor#middleColor');
   });
 
   test('a required colour that is missing is color/missing; optional ones may be omitted', () => {
@@ -137,9 +137,9 @@ describe('colours', () => {
     pkg.dashboards[0]!.backgroundColor = undefined as never;
     const r = validatePackage(pkg, OPTS);
     expect(r.errors.filter((e) => e.code === 'color/missing').map((e) => e.path)).toEqual([
-      'openDash/openDash#backgroundColor',
-      'openDash/openDash/Main/t#textColor',
-      'openDash/openDash/Main/r#Bindings.BackgroundColor#startColor',
+      'OpenDash/OpenDash#backgroundColor',
+      'OpenDash/OpenDash/Main/t#textColor',
+      'OpenDash/OpenDash/Main/r#Bindings.BackgroundColor#startColor',
     ]);
     expect(codes(r.errors)).not.toContain('color/invalid');
     expect(r.ok).toBe(false);
@@ -151,11 +151,11 @@ describe('ids and names', () => {
     const r = validatePackage(single([layer('A', [rect('seg')]), layer('B', [rect('seg')])]), OPTS);
     const dup = r.errors.filter((e) => e.code === 'name/duplicate');
     expect(dup).toHaveLength(1);
-    expect(dup[0]!.path).toBe('openDash/openDash/Main/B/seg');
+    expect(dup[0]!.path).toBe('OpenDash/OpenDash/Main/B/seg');
   });
 
   test('the same name in different screens is fine', () => {
-    const pkg: DashPackage = { folderName: 'openDash', dashboards: [dashboard('openDash', [screen('A', [rect('r')]), screen('B', [rect('r')])])], fonts: [] };
+    const pkg: DashPackage = { folderName: 'OpenDash', dashboards: [dashboard('OpenDash', [screen('A', [rect('r')]), screen('B', [rect('r')])])], fonts: [] };
     expect(validatePackage(pkg, OPTS).errors).toEqual([]);
   });
 
@@ -166,7 +166,7 @@ describe('ids and names', () => {
     pkg.dashboards[1]!.screens[0]!.items[0]!.id = id;
     const dup = validatePackage(pkg, OPTS).errors.filter((e) => e.code === 'id/duplicate');
     expect(dup).toHaveLength(1);
-    expect(dup[0]!.message).toContain('openDash/openDash/Main/rule');
+    expect(dup[0]!.message).toContain('OpenDash/OpenDash/Main/rule');
   });
 
   test('explicit ids must be GUIDs', () => {
@@ -214,10 +214,10 @@ describe('binding targets', () => {
       widget('w', { bindings: { EllipseColor: fill } as never }),
     ]), OPTS);
     expect(bad.errors.filter((e) => e.code === 'binding/unknown-target').map((e) => e.path)).toEqual([
-      'openDash/openDash/Main/r#Bindings.FillColor',
-      'openDash/openDash/Main/t#Bindings.EllipseColor',
-      'openDash/openDash/Main/l#Bindings.FillColor',
-      'openDash/openDash/Main/w#Bindings.EllipseColor',
+      'OpenDash/OpenDash/Main/r#Bindings.FillColor',
+      'OpenDash/OpenDash/Main/t#Bindings.EllipseColor',
+      'OpenDash/OpenDash/Main/l#Bindings.FillColor',
+      'OpenDash/OpenDash/Main/w#Bindings.EllipseColor',
     ]);
   });
 
@@ -229,24 +229,24 @@ describe('binding targets', () => {
       rect('r', { bindings: { BorderColor: gradient } as never }),
     ]), OPTS);
     expect(r.errors.filter((e) => e.code === 'binding/unknown-target').map((e) => e.path)).toEqual([
-      'openDash/openDash/Main/t#Bindings.BorderColor',
-      'openDash/openDash/Main/r#Bindings.BorderColor',
+      'OpenDash/OpenDash/Main/t#Bindings.BorderColor',
+      'OpenDash/OpenDash/Main/r#Bindings.BorderColor',
     ]);
-    expect(r.errors.filter((e) => e.code === 'binding/gradient-target').map((e) => e.path)).toEqual(['openDash/openDash/Main/r#Bindings.BorderColor']);
+    expect(r.errors.filter((e) => e.code === 'binding/gradient-target').map((e) => e.path)).toEqual(['OpenDash/OpenDash/Main/r#Bindings.BorderColor']);
     expect(r.ok).toBe(false);
   });
 
   test('layer: only Visible, Opacity and BlinkEnabled', () => {
     const r = validatePackage(single([layer('L', [rect('c')], { bindings: { Left: { mode: 'formula', formula: '1' }, Visible: { mode: 'formula', formula: 'true' } } })]), OPTS);
     const bad = r.errors.filter((e) => e.code === 'binding/unknown-target');
-    expect(bad.map((e) => e.path)).toEqual(['openDash/openDash/Main/L#Bindings.Left']);
+    expect(bad.map((e) => e.path)).toEqual(['OpenDash/OpenDash/Main/L#Bindings.Left']);
   });
 
   test('widget: geometry, Visible and InitialScreenIndex only', () => {
     const pkg = samplePackage();
     pkg.dashboards[0]!.screens[0]!.items.push(widget('Slot03', { rect: { left: 513, top: 65, width: 255, height: 187 }, bindings: { Text: { mode: 'formula', formula: "'x'" }, Width: { mode: 'formula', formula: '255' } } }));
     const bad = validatePackage(pkg, OPTS).errors.filter((e) => e.code === 'binding/unknown-target');
-    expect(bad.map((e) => e.path)).toEqual(['openDash/openDash/Main/Slot03#Bindings.Text']);
+    expect(bad.map((e) => e.path)).toEqual(['OpenDash/OpenDash/Main/Slot03#Bindings.Text']);
   });
 
   test('rectangle: no Text, TextColor or FontSize', () => {
@@ -268,7 +268,7 @@ describe('binding targets', () => {
   test('a mode other than formula or gradient is an error', () => {
     const r = validatePackage(single([rect('r', { bindings: { Visible: { mode: 'expression', formula: 'true' } as never } })]), OPTS);
     const e = r.errors.filter((x) => x.code === 'binding/unknown-mode');
-    expect(e.map((x) => x.path)).toEqual(['openDash/openDash/Main/r#Bindings.Visible']);
+    expect(e.map((x) => x.path)).toEqual(['OpenDash/OpenDash/Main/r#Bindings.Visible']);
     expect(e[0]!.message).toContain('"expression"');
     expect(r.ok).toBe(false);
   });
@@ -280,8 +280,8 @@ describe('binding targets', () => {
       rect('c', { bindings: { Visible: { mode: 'formula', formula: 'true' } } }),
     ]), OPTS);
     expect(r.errors.filter((x) => x.code === 'binding/invalid-expression').map((x) => x.path)).toEqual([
-      'openDash/openDash/Main/a#Bindings.Visible',
-      'openDash/openDash/Main/b#Bindings.Width',
+      'OpenDash/OpenDash/Main/a#Bindings.Visible',
+      'OpenDash/OpenDash/Main/b#Bindings.Width',
     ]);
     expect(r.ok).toBe(false);
   });
@@ -292,18 +292,18 @@ describe('widgets', () => {
     const pkg = samplePackage();
     pkg.dashboards[0]!.screens[0]!.items.push(widget('Slot03', { fileName: 'nope.djson' }));
     const r = validatePackage(pkg, OPTS);
-    expect(r.errors.filter((e) => e.code === 'widget/missing-file').map((e) => e.path)).toEqual(['openDash/openDash/Main/Slot03#fileName']);
+    expect(r.errors.filter((e) => e.code === 'widget/missing-file').map((e) => e.path)).toEqual(['OpenDash/OpenDash/Main/Slot03#fileName']);
   });
 
   test('case differences are a warning, self reference an error, bad screen index an error', () => {
     const pkg = samplePackage();
     const items = pkg.dashboards[0]!.screens[0]!.items;
     items.push(widget('Slot03', { fileName: 'Cards.djson', initialScreenIndex: 2 }));
-    items.push(widget('Slot04', { fileName: 'openDash.djson' }));
+    items.push(widget('Slot04', { fileName: 'OpenDash.djson' }));
     const r = validatePackage(pkg, OPTS);
     expect(codes(r.warnings)).toContain('widget/file-case');
-    expect(r.errors.filter((e) => e.code === 'widget/screen-index').map((e) => e.path)).toEqual(['openDash/openDash/Main/Slot03#initialScreenIndex']);
-    expect(r.errors.filter((e) => e.code === 'widget/self-reference').map((e) => e.path)).toEqual(['openDash/openDash/Main/Slot04#fileName']);
+    expect(r.errors.filter((e) => e.code === 'widget/screen-index').map((e) => e.path)).toEqual(['OpenDash/OpenDash/Main/Slot03#initialScreenIndex']);
+    expect(r.errors.filter((e) => e.code === 'widget/self-reference').map((e) => e.path)).toEqual(['OpenDash/OpenDash/Main/Slot04#fileName']);
   });
 });
 
@@ -316,7 +316,7 @@ describe('plugin properties', () => {
     const r = validatePackage(single([rect('r', { bindings: { Visible: { mode: 'formula', formula: 'isnull([OpenDash.Nope], true)' } } })]), OPTS);
     const e = r.errors.filter((x) => x.code === 'property/undeclared');
     expect(e).toHaveLength(1);
-    expect(e[0]!.path).toBe('openDash/openDash/Main/r#Bindings.Visible');
+    expect(e[0]!.path).toBe('OpenDash/OpenDash/Main/r#Bindings.Visible');
     expect(e[0]!.message).toContain('[OpenDash.Nope]');
   });
 
@@ -327,7 +327,7 @@ describe('plugin properties', () => {
     ]);
     pkg.dashboards[0]!.screens[0]!.enabledExpression = '[OpenDash.AlsoMissing] = 1';
     const e = validatePackage(pkg, OPTS).errors.filter((x) => x.code === 'property/undeclared').map((x) => x.path);
-    expect(e).toEqual(['openDash/openDash/Main#enabledExpression', 'openDash/openDash/Main/r#Bindings.Visible']);
+    expect(e).toEqual(['OpenDash/OpenDash/Main#enabledExpression', 'OpenDash/OpenDash/Main/r#Bindings.Visible']);
   });
 
   test('a screen enabled expression naming a function SimHub does not dispatch is an error', () => {
@@ -337,12 +337,12 @@ describe('plugin properties', () => {
     const pkg = single([rect('r')]);
     pkg.dashboards[0]!.screens[0]!.enabledExpression = 'left([DataCorePlugin.GameData.CarModel], 4) = \'Merc\'';
     const e = validatePackage(pkg, OPTS).errors.filter((x) => x.code === 'expression/arity');
-    expect(e.map((x) => x.path)).toEqual(['openDash/openDash/Main#enabledExpression']);
+    expect(e.map((x) => x.path)).toEqual(['OpenDash/OpenDash/Main#enabledExpression']);
 
     const unknown = single([rect('r')]);
     unknown.dashboards[0]!.screens[0]!.enabledExpression = 'nosuchfunction([DataCorePlugin.GameData.Gear])';
     expect(validatePackage(unknown, OPTS).errors.filter((x) => x.code === 'expression/unknown-function').map((x) => x.path)).toEqual([
-      'openDash/openDash/Main#enabledExpression',
+      'OpenDash/OpenDash/Main#enabledExpression',
     ]);
   });
 });
@@ -351,8 +351,8 @@ describe('fonts', () => {
   test('an empty or blank font family is an error, and is not reported again as unbundled', () => {
     const r = validatePackage(single([label('a', 'X', { font: '' }), label('b', 'Y', { font: '   ' }), numeral('v', '[X]')]), OPTS);
     expect(r.errors.filter((e) => e.code === 'font/empty').map((e) => e.path)).toEqual([
-      'openDash/openDash/Main/a#font',
-      'openDash/openDash/Main/b#font',
+      'OpenDash/OpenDash/Main/a#font',
+      'OpenDash/OpenDash/Main/b#font',
     ]);
     expect(r.warnings).toEqual([]);
     expect(r.ok).toBe(false);
@@ -367,9 +367,9 @@ describe('ellipses', () => {
       ellipse('c', { strokeThickness: 0 }),
     ]), OPTS);
     expect(r.errors.map((e) => `${e.code} ${e.path}`)).toEqual([
-      'color/missing openDash/openDash/Main/a#fillColor',
-      'color/invalid openDash/openDash/Main/a#strokeColor',
-      'ellipse/thickness openDash/openDash/Main/b#strokeThickness',
+      'color/missing OpenDash/OpenDash/Main/a#fillColor',
+      'color/invalid OpenDash/OpenDash/Main/a#strokeColor',
+      'ellipse/thickness OpenDash/OpenDash/Main/b#strokeThickness',
     ]);
   });
 
@@ -396,9 +396,9 @@ describe('rotation', () => {
     ]), OPTS);
     // The fixture widget has no cards.djson to point at; that error is not what this test is about.
     expect(r.errors.filter((e) => e.code !== 'widget/missing-file').map((e) => `${e.code} ${e.path}`)).toEqual([
-      'rotation/unsupported openDash/openDash/Main/l#rotation',
-      'rotation/unsupported openDash/openDash/Main/w#rotation',
-      'number/invalid openDash/openDash/Main/nan#rotation',
+      'rotation/unsupported OpenDash/OpenDash/Main/l#rotation',
+      'rotation/unsupported OpenDash/OpenDash/Main/w#rotation',
+      'number/invalid OpenDash/OpenDash/Main/nan#rotation',
     ]);
   });
 
@@ -412,7 +412,7 @@ describe('rotation', () => {
     pkg.dashboards[0]!.width = 480;
     pkg.dashboards[0]!.height = 480;
     const w = validatePackage(pkg, OPTS).warnings.filter((x) => x.code === 'geometry/outside-canvas');
-    expect(w.map((x) => x.path)).toEqual(['openDash/openDash/Main/flat#rect', 'openDash/openDash/Main/spun#rect']);
+    expect(w.map((x) => x.path)).toEqual(['OpenDash/OpenDash/Main/flat#rect', 'OpenDash/OpenDash/Main/spun#rect']);
     expect(w[1]!.message).toContain('rotated 45 deg');
   });
 });
@@ -441,9 +441,9 @@ describe('warnings', () => {
       layer('L', [rect('deep', { rect: { left: 0, top: 470, width: 10, height: 11 } })]),
     ]), OPTS);
     expect(r.warnings.filter((w) => w.code === 'geometry/outside-canvas').map((w) => w.path)).toEqual([
-      'openDash/openDash/Main/right#rect',
-      'openDash/openDash/Main/above#rect',
-      'openDash/openDash/Main/L/deep#rect',
+      'OpenDash/OpenDash/Main/right#rect',
+      'OpenDash/OpenDash/Main/above#rect',
+      'OpenDash/OpenDash/Main/L/deep#rect',
     ]);
     expect(r.ok).toBe(true);
   });
@@ -452,7 +452,7 @@ describe('warnings', () => {
     const pkg = samplePackage();
     pkg.dashboards[1]!.screens[0]!.items.push(rect('wide', { rect: { left: 0, top: 0, width: 256, height: 10 } }));
     const w = validatePackage(pkg, OPTS).warnings.filter((x) => x.code === 'geometry/outside-canvas');
-    expect(w.map((x) => x.path)).toEqual(['openDash/cards/currentLap/wide#rect']);
+    expect(w.map((x) => x.path)).toEqual(['OpenDash/cards/currentLap/wide#rect']);
   });
 
   test('zero-sized items', () => {
@@ -464,13 +464,13 @@ describe('warnings', () => {
     const r = validatePackage(single([label('a', 'X', { font: 'Segoe UI' }), label('b', 'Y', { font: 'Segoe UI' }), numeral('v', '[X]')], [BARLOW_CONDENSED_SEMIBOLD]), OPTS);
     const missing = r.warnings.filter((w) => w.code === 'font/missing');
     expect(missing).toHaveLength(1);
-    expect(missing[0]!.path).toBe('openDash/openDash/Main/a#font');
+    expect(missing[0]!.path).toBe('OpenDash/OpenDash/Main/a#font');
     expect(missing[0]!.message).toContain('Segoe UI');
   });
 
   test('a bundled family without the requested weight', () => {
     const r = validatePackage(single([label('a', 'X', { fontWeight: 'Bold' })], [BARLOW_MEDIUM]), OPTS);
-    expect(r.warnings.filter((w) => w.code === 'font/weight-missing').map((w) => w.path)).toEqual(['openDash/openDash/Main/a#fontWeight']);
+    expect(r.warnings.filter((w) => w.code === 'font/weight-missing').map((w) => w.path)).toEqual(['OpenDash/OpenDash/Main/a#fontWeight']);
     expect(validatePackage(single([label('a', 'X', { fontWeight: 'Medium' })], [BARLOW_MEDIUM]), OPTS).warnings).toEqual([]);
   });
 

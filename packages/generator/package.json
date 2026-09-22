@@ -2,7 +2,7 @@
   "name": "@opendash/generator",
   "version": "0.1.0",
   "private": true,
-  "description": "Emits SimHub DashStudio .djson scene graphs from a typed model: serialiser, validator, NCalc helpers and package writer. Knows nothing about openDash.",
+  "description": "Emits SimHub DashStudio .djson scene graphs from a typed model: serialiser, validator, NCalc helpers and package writer. Knows nothing about OpenDash.",
   "license": "MIT",
   "type": "module",
   "main": "src/index.ts",

@@ -1,4 +1,4 @@
-// SettingsControl.Install.cs: the Install tab -- what openDash can install, what is on disk, and the
+// SettingsControl.Install.cs: the Install tab -- what OpenDash can install, what is on disk, and the
 // plugin itself with its reinstall and its update check.
 //
 // The Install tab and the Rig tab are two views of one list, and adding in either place does the same

@@ -44,7 +44,7 @@ namespace OpenDashPlugin.Tests
         public static string Version() => File.ReadAllText(Path.Combine(Root(), "VERSION")).Trim();
 
         /// <summary>The package `bun run build` writes; absent until the dash has been built.</summary>
-        public static string BuildPackage() => Path.Combine(Root(), "build", "openDash.simhubdash");
+        public static string BuildPackage() => Path.Combine(Root(), "build", "OpenDash.simhubdash");
 
         /// <summary>The folder whose contents the plugin embeds. It is gitignored build output, and CI
         /// fills it by downloading the dash job's artifact straight into it before `dotnet test` runs,

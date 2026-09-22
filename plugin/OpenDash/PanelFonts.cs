@@ -1,6 +1,6 @@
 // PanelFonts.cs: Barlow and openDash Display (Barlow Condensed renamed) for the settings panel. The TTFs are embedded in the assembly
 // (the project has no WPF resource pipeline, so pack:// URIs are unavailable); they are written once to
-// %LocalAppData%\openDash\Fonts and loaded from there through a directory-based FontFamily. Any failure
+// %LocalAppData%\OpenDash\Fonts and loaded from there through a directory-based FontFamily. Any failure
 // falls back to Segoe UI, which is SimHub's own UI font, and is logged once.
 using System;
 using System.IO;
@@ -73,7 +73,7 @@ namespace OpenDashPlugin
         /// <summary>Writes the embedded files to the private font folder, and removes any face no longer shipped.</summary>
         private static string Extract()
         {
-            var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "openDash", "Fonts");
+            var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenDash", "Fonts");
             Directory.CreateDirectory(folder);
             var assembly = typeof(PanelFonts).Assembly;
             foreach (var file in Files)

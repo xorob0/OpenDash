@@ -408,7 +408,7 @@ const buildWebPageObject = (item: WebPageItem, id: string): JsonObject => {
 };
 
 /**
- * `AutoSize` false with `AutoSizeScale` at its default: openDash sizes an image from its rect,
+ * `AutoSize` false with `AutoSizeScale` at its default: OpenDash sizes an image from its rect,
  * not from the image's own pixels, so that a telltale occupies the same box whichever artwork
  * ends up behind it. `AutoSizeScale` is written even though it is unused, because SimHub
  * populates it on load and leaving it out makes every round trip through DashStudio a diff.

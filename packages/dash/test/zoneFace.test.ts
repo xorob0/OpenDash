@@ -72,7 +72,7 @@ import { SAMPLE_LIT, stageOf } from '../src/components/revSegments.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 const BUILT = ZONE_FACES.map((face) => ({ face, built: buildZoneFace(face, OPTS) }));
-// Looked up by identity rather than by folder name, which moved to plain "openDash" in #169.
+// Looked up by identity rather than by folder name, which moved to plain "OpenDash" in #169.
 const reference = BUILT.find((b) => b.face === zoneFace1920x480)!;
 /** Every zone property carries its face's prefix, so a test that names one has to say whose. */
 const REFERENCE = facePrefix(sizeOf(zoneFace1920x480));
@@ -81,8 +81,8 @@ describe('the base face and the large one', () => {
   // Named constants rather than folder strings, because the two sizes are a product decision
   // docs/scope.md holds and README.md photographs, and the scripts read them from here.
   test('the base is 850 by 480 and the large one 1280 by 480', () => {
-    expect({ folder: BASE_FACE.folder, width: BASE_FACE.width, height: BASE_FACE.height }).toEqual({ folder: 'openDash 850x480', width: 850, height: 480 });
-    expect({ folder: LARGE_FACE.folder, width: LARGE_FACE.width, height: LARGE_FACE.height }).toEqual({ folder: 'openDash 1280x480', width: 1280, height: 480 });
+    expect({ folder: BASE_FACE.folder, width: BASE_FACE.width, height: BASE_FACE.height }).toEqual({ folder: 'OpenDash 850x480', width: 850, height: 480 });
+    expect({ folder: LARGE_FACE.folder, width: LARGE_FACE.width, height: LARGE_FACE.height }).toEqual({ folder: 'OpenDash 1280x480', width: 1280, height: 480 });
   });
 
   test('both ship', () => {
@@ -208,14 +208,14 @@ describe('the two faces the sheets fix and no test held', () => {
  */
 describe('every zone is the shape its face sheet chips it', () => {
   const CHIPS: Record<string, readonly [Archetype, Archetype, Archetype, Archetype]> = {
-    openDash: ['grid', 'wide', 'wide', 'grid'],
-    'openDash 1280x480': ['grid', 'grid', 'grid', 'grid'],
-    'openDash 1280x400': ['grid', 'grid', 'grid', 'grid'],
-    'openDash 1280x720': ['tall', 'tall', 'tall', 'grid'],
-    'openDash 850x480': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
-    'openDash 800x480': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
-    'openDash 800x286': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
-    'openDash 600x686': ['wide', 'grid', 'grid', 'grid'],
+    OpenDash: ['grid', 'wide', 'wide', 'grid'],
+    'OpenDash 1280x480': ['grid', 'grid', 'grid', 'grid'],
+    'OpenDash 1280x400': ['grid', 'grid', 'grid', 'grid'],
+    'OpenDash 1280x720': ['tall', 'tall', 'tall', 'grid'],
+    'OpenDash 850x480': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'OpenDash 800x480': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'OpenDash 800x286': ['tallNarrow', 'tallNarrow', 'tallNarrow', 'grid'],
+    'OpenDash 600x686': ['wide', 'grid', 'grid', 'grid'],
   };
 
   test('every face is chipped, and chipped once', () => {
@@ -480,15 +480,15 @@ describe('the parts the face draws itself', () => {
 describe('the rev bar segments sit at the gap each artboard draws', () => {
   /** The `gap` of the flex row holding the fifteen segments, per sheet. */
   const GAPS: Record<string, number> = {
-    openDash: 8,
-    'openDash 1280x480': 6,
-    'openDash 1280x400': 6,
-    'openDash 1280x720': 6,
-    'openDash 850x480': 4,
+    OpenDash: 8,
+    'OpenDash 1280x480': 6,
+    'OpenDash 1280x400': 6,
+    'OpenDash 1280x720': 6,
+    'OpenDash 850x480': 4,
     // 800 x 480 has no sheet of its own and takes 850's here as it takes every other number.
-    'openDash 800x480': 4,
-    'openDash 800x286': 4,
-    'openDash 600x686': 4,
+    'OpenDash 800x480': 4,
+    'OpenDash 800x286': 4,
+    'OpenDash 600x686': 4,
   };
 
   const segmentsOf = (layout: ZoneLayout, layer = 'revBar.shiftLights'): RectangleItem[] => {

@@ -39,7 +39,7 @@ export default function FlagBox() {
               state, a car alongside, and the warnings you would otherwise miss.
             </p>
             <p>
-              SimHub drives the hardware natively; openDash only supplies what it shows. The profile
+              SimHub drives the hardware natively; OpenDash only supplies what it shows. The profile
               works without the plugin, because every setting it reads has a default built in.
             </p>
           </SectionHead>
@@ -62,7 +62,7 @@ export default function FlagBox() {
             <figure className={styles.sheet}>
               <Image
                 src="/flag-box.svg"
-                alt="Every glyph the openDash flag box can draw, each on an 8 by 8 grid"
+                alt="Every glyph the OpenDash flag box can draw, each on an 8 by 8 grid"
                 width={616}
                 height={810}
                 className={styles.sheetImg}
@@ -117,7 +117,7 @@ export default function FlagBox() {
           <SectionHead label="Setting it up" title={<>Two settings on the device, first.</>}>
             <p>
               This is the step everybody gets wrong, and the symptom is that the profile looks
-              broken. Both belong to SimHub’s device page rather than to openDash, because they are
+              broken. Both belong to SimHub’s device page rather than to OpenDash, because they are
               facts about <em>your</em> box — which corner the data cable enters — and two places to
               set them would be two places to disagree.
             </p>
@@ -153,7 +153,7 @@ export default function FlagBox() {
             <Reveal delay={240} className={styles.card}>
               <h3 className="h3">Never installed for you</h3>
               <p className="prose">
-                openDash never installs the profile on its own. A profile paints hardware you own,
+                OpenDash never installs the profile on its own. A profile paints hardware you own,
                 and that is a thing to be asked about rather than assumed. Press{' '}
                 <strong>Install into SimHub</strong> on the plugin’s Lights page.
               </p>

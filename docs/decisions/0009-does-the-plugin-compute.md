@@ -51,7 +51,7 @@ That generalises. Going through the catalogue field by field:
 | SoF | not published by SimHub in any form we could find |
 
 So the third of the catalogue that looked like it needed a computing plugin is, on inspection,
-**two fields**: one that only exists in a sim openDash does not support, and one that no plugin of
+**two fields**: one that only exists in a sim OpenDash does not support, and one that no plugin of
 ours could compute either, because the datum is not there to compute from.
 
 ## Decision

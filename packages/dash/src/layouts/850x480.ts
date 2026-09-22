@@ -19,7 +19,7 @@ const SLOT = { width: 233, height: 124 } as const;
 const HERO_WIDTH = 382;
 
 export const layout850x480: Layout = flankedLayout({
-  folder: 'openDash slots 850x480',
+  folder: 'OpenDash slots 850x480',
   width: WIDTH,
   height: HEIGHT,
   revBar: { left: REV_BAR_MARGIN, top: (HEADER_HEIGHT - ds.shiftLights.height) / 2, width: WIDTH - 2 * REV_BAR_MARGIN, height: ds.shiftLights.height, gap: ds.space[1] },

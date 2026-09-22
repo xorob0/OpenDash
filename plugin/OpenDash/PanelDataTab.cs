@@ -37,11 +37,11 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// "Shift lights" and "RPM bar" were offered as if they were tastes, and they are not: the bar
-        /// has one right behaviour and it is the car's own. Where openDash has a table for the car it
+        /// has one right behaviour and it is the car's own. Where OpenDash has a table for the car it
         /// draws that car's lights ([ADR 0018](docs/decisions/0018-the-cars-own-lights.md)); where it
         /// has none it draws SimHub's bands, which is an RPM bar that ends in shift lights, and that is
         /// what almost every car does. A driver asked to choose between them was being asked a question
-        /// openDash should answer, and one of the two answers was worse.
+        /// OpenDash should answer, and one of the two answers was worse.
         ///
         /// So the row is on or off, and off is the one that still means something: a wheel with its own
         /// LEDs does not need the strip, and the room goes back to the zones.

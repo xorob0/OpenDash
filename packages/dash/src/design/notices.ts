@@ -3,7 +3,7 @@
  *
  * A `.simhubdash` is a redistribution, not a build artefact that stays on this machine. The SIL
  * Open Font Licence requires its notice to accompany the fonts wherever they go, and every
- * package openDash ships carries five Barlow faces in `_SHFonts/`, so every package owes the
+ * package OpenDash ships carries five Barlow faces in `_SHFonts/`, so every package owes the
  * notice. It was not carrying one, which is the gap this closes.
  *
  * The notices are derived from what the package actually holds rather than listed by hand, so a
@@ -25,13 +25,13 @@ export const FONT_LICENCE: NoticeFile = { name: 'OFL.txt', path: path.join(VENDO
  *
  * The record is exhaustive over the sources, so artwork from somewhere new does not compile until
  * somebody has answered what travels with it. An empty list is that answer and not an oversight:
- * openDash's own drawings are MIT with the repository they are published from, and nothing
+ * OpenDash's own drawings are MIT with the repository they are published from, and nothing
  * separate has to accompany them. Material Design Icons, which the twelve telltale pictograms are
  * still waiting on, are Apache 2.0 and will owe both the licence text and the NOTICE naming
  * Pictogrammers, in the commit that brings the files.
  */
 export const NOTICES_BY_SOURCE: Record<AssetSourceId, readonly NoticeFile[]> = {
-  openDash: [],
+  OpenDash: [],
 };
 
 /** Every licence `pkg` owes, in the order they are written into the folder. */

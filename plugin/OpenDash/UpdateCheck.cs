@@ -111,7 +111,7 @@ namespace OpenDashPlugin
         /// The version a release is compared against: the older of what is installed and what the plugin is.
         /// </summary>
         /// <remarks>
-        /// **The older of the two, not the dashboards' alone.** An openDash install is two halves that move
+        /// **The older of the two, not the dashboards' alone.** An OpenDash install is two halves that move
         /// together, and either can be behind. Reading only the dashboards' version told a rig whose packages
         /// were current and whose plugin was a release behind that it had "the newest release" -- which is
         /// exactly the state a machine is in between staging the new assembly and restarting SimHub, and the

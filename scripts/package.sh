@@ -19,6 +19,6 @@ done
 cp -R build/fonts plugin/OpenDash/Resources/fonts
 dotnet build plugin/OpenDash -c Release --no-incremental
 bash plugin/scripts/package-plugin.sh
-embedded=$(ls plugin/OpenDash/Resources/*.simhubdash | grep -vc '/openDash slots ' || true)
+embedded=$(ls plugin/OpenDash/Resources/*.simhubdash | grep -vc '/OpenDash slots ' || true)
 profiles=$(ls plugin/OpenDash/Resources/*.ledsprofile | wc -l)
 echo "packaged: ${embedded} embedded of $(ls build/*.simhubdash | wc -l) built, ${profiles} LED profile(s), build/OpenDash-plugin.zip"

@@ -38,13 +38,13 @@ one `zip` command, and the whole project strategy rests on this fact.
 ### What a dashboard folder contains
 
 ```
-openDash/
-  openDash.djson               the scene graph
-  openDash.djson.metadata      JSON sidecar, see below
-  openDash.djson.ressources    a zip of the images the dashboard references (misspelt in the format itself)
-  openDash.djson.carclasses    JSON sidecar, "[]" in every sample
-  openDash.djson.png           gallery preview, written by DashStudio on save
-  openDash.djson.00.png        per-screen previews
+OpenDash/
+  OpenDash.djson               the scene graph
+  OpenDash.djson.metadata      JSON sidecar, see below
+  OpenDash.djson.ressources    a zip of the images the dashboard references (misspelt in the format itself)
+  OpenDash.djson.carclasses    JSON sidecar, "[]" in every sample
+  OpenDash.djson.png           gallery preview, written by DashStudio on save
+  OpenDash.djson.00.png        per-screen previews
   cards.djson                  further .djson files are widgets included by the main one
   _SHFonts/                    bundled .ttf files, installed at import
   JavascriptExtensions/        optional .js files loaded into the JavaScript engine
@@ -220,7 +220,7 @@ The list above is what samples happened to bind. This is the rule underneath it,
 `BindingHelper`, `EditorModel.ApplyBindings` and `PropertyItemWrapper`.
 
 The rule is decompiled. Which targets actually apply at runtime was then checked on the VM as
-`openDash Probe` ([tools/binding-probe](../../tools/binding-probe/probe.ts)): twelve rows, each
+`OpenDash Probe` ([tools/binding-probe](../../tools/binding-probe/probe.ts)): twelve rows, each
 drawing a literal that reads FAIL beside a binding that reads PASS, captured in
 [media/xor-73/binding-probe.png](../../media/xor-73/binding-probe.png). Where a claim below was run
 there rather than only read, it says so.
@@ -460,7 +460,7 @@ rounding it to three. Read from the metadata of the `SimHub.Plugins.dll` committ
 The same class is where the map's shape limits come from: it holds exactly two styles, one for the
 player and one for every opponent, and a style is a dot with a radius and a border. Square markers,
 sector markers and a colour for one named car are consequently not expressible;
-`OverrideColorsWithCarClassColors` is the only per-car colouring on offer and openDash refuses it.
+`OverrideColorsWithCarClassColors` is the only per-car colouring on offer and OpenDash refuses it.
 
 ### Community precedent for source in git
 
@@ -570,7 +570,7 @@ NCalc exposes one is not established.
 
 Not verified on a running sim: that every one of these fires when the sim raises it. `servicible`
 is spelt that way in the SDK, and `randomWaving` and `crossed` have no documented meaning in
-iRacing's own reference. Anything openDash draws from this table is drawn only where the meaning
+iRacing's own reference. Anything OpenDash draws from this table is drawn only where the meaning
 is certain; see `docs/design/flag-box.md`.
 
 Still open: whether `Version` gates anything (every sample says 2, and 2 is what we write), and

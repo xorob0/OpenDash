@@ -10,7 +10,7 @@ import styles from './page.module.css';
 export const metadata: Metadata = {
   title: 'Download',
   description:
-    'The openDash SimHub plugin, which installs all fourteen dashboards, and every .simhubdash on its own. Windows, SimHub 9.12.6 or later.',
+    'The OpenDash SimHub plugin, which installs all fourteen dashboards, and every .simhubdash on its own. Windows, SimHub 9.12.6 or later.',
 };
 
 const PLUGIN_ZIP = 'OpenDash-plugin.zip';
@@ -48,7 +48,7 @@ export default function Download() {
               <p className={styles.pre}>
                 <span className={styles.preTag}>Pre-release.</span> A version ending in a suffix such
                 as <span className="num">-rc.1</span> is a release candidate, which is what to expect
-                while openDash is alpha.
+                while OpenDash is alpha.
               </p>
             ) : null}
           </SectionHead>
@@ -64,7 +64,7 @@ export default function Download() {
               <h2 className="h2">The plugin</h2>
               <p className="prose">
                 One file. It carries all {ORDERED.length} dashboards inside it, extracts them into
-                SimHub, and adds an openDash page to the left menu where every setting lives — which
+                SimHub, and adds an OpenDash page to the left menu where every setting lives — which
                 zone shows what, the rev bar, the flag box, the LED profiles.
               </p>
               {plugin ? (
@@ -94,7 +94,7 @@ export default function Download() {
               <p className="prose">
                 Double-click a <code>.simhubdash</code> and SimHub imports it. You get the default
                 layout and the default pages, and no settings page. Nothing else is needed, so this
-                is the shortest way to see openDash on a display.
+                is the shortest way to see OpenDash on a display.
               </p>
               <p className={styles.hint}>
                 <strong>850 × 480</strong> is the base size and the one to take if nothing matches

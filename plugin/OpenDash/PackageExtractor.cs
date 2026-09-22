@@ -238,7 +238,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public sealed class ScreenTarget
         {
-            /// <summary>The folder to write under DashTemplates, e.g. "openDash Rim".</summary>
+            /// <summary>The folder to write under DashTemplates, e.g. "OpenDash Rim".</summary>
             public string Folder { get; set; }
 
             /// <summary>The screen's name, which becomes the dashboard's Title in SimHub's own list.</summary>

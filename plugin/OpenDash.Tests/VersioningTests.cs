@@ -75,9 +75,9 @@ namespace OpenDashPlugin.Tests
 
         [Theory]
         [InlineData("{\"SimHubVersion\":\"9.12.6\",\"DashboardVersion\":\"0.1.0\"}", "0.1.0")]
-        [InlineData("{\n  \"Title\": \"openDash\",\n  \"DashboardVersion\" : \"0.4.0\" ,\n  \"Width\": 1920\n}", "0.4.0")]
+        [InlineData("{\n  \"Title\": \"OpenDash\",\n  \"DashboardVersion\" : \"0.4.0\" ,\n  \"Width\": 1920\n}", "0.4.0")]
         [InlineData("{\"DashboardVersion\":\"\"}", null)]
-        [InlineData("{\"Title\":\"openDash\"}", null)]
+        [InlineData("{\"Title\":\"OpenDash\"}", null)]
         [InlineData("{ this is not json", null)]
         [InlineData("", null)]
         [InlineData(null, null)]

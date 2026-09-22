@@ -8,7 +8,7 @@ chipped *proposed* on the LEDs, Flag box and face pages is an answer to one of t
 the build.
 
 Two documents on an earlier branch cover part of the same ground and were read first: a comparison,
-which reads three dashboards and twelve LED profiles against openDash, and led-strip-redesign.md,
+which reads three dashboards and twelve LED profiles against OpenDash, and led-strip-redesign.md,
 which answers the nine LED notes with a slot model. This document agrees with both on the shape of
 the answer and departs from the second in four places, which section 4 names. Where it does, the
 reason is a source the earlier document did not have.
@@ -69,7 +69,7 @@ a colour the ramp does not use, usually flashing.
 **The shift point is the whole bar in one colour.** No sampled car changes only its top third. The
 majority turns every LED blue (Porsche 992 and 963, Cadillac, IR18, McLaren, Mustang, Lamborghini,
 W12); the rest go all red (BMW, Mercedes, Ferrari, Acura, GR86). About half of them flash that row
-and the rest hold it, so flashing at the blink RPM is openDash's own choice, justified by the sim
+and the rest hold it, so flashing at the blink RPM is OpenDash's own choice, justified by the sim
 publishing a blink RPM for every car. Fill direction, band widths and colours differ per car and
 match no three-equal-band ladder, which is why per-car tables exist at all and why the sim
 publishes thresholds only, never a colour.
@@ -191,7 +191,7 @@ These are not design questions and should be looked at before any of the above i
    `StaticColor` containers both derive from `StaticColorContainerBase`, whose result fills the run
    with `BlinkingColor` while blinking and `Color` otherwise, with `BlinkingColor` defaulting to
    transparent; the assembly the plugin builds against, `plugin/lib/SimHub.Plugins.dll`, decompiles
-   locally and says so. Every openDash effect that blinks writes the same colour to both fields
+   locally and says so. Every OpenDash effect that blinks writes the same colour to both fields
    (traction control, DRS, push to pass, low fuel, the indicators, the limiter, speeding, the
    yellow flag), and `rungs()` writes the top band's own red as its blinking colour, so the
    over-rev flash of the ladder has never flashed either. The notes asking for blinking were
@@ -201,7 +201,7 @@ These are not design questions and should be looked at before any of the above i
    off phase.
 2. **The Fanatec 3/9/3 is wired the other way.** Through Fanalab a Fanatec wheel presents its LEDs
    as the nine rev LEDs first, then the right flag LEDs from the outside in, then the left; a
-   working profile carries a `RemapGroup` for exactly that order. openDash's 3/9/3 assumes left,
+   working profile carries a `RemapGroup` for exactly that order. OpenDash's 3/9/3 assumes left,
    centre, right, so on that device it lights the wrong physical LEDs.
 3. **The strips ignore brightness and night mode**, and nothing gates on the ignition; both are the
    box's existing answers applied to the other artefact.
@@ -257,7 +257,7 @@ limit stopped it; the rows it reached say *held* and carry its corrections, the 
 
 ## 8. What is not decided
 
-Whether openDash takes a sixth hue for the spotter; whether the gear colour is five colours or a
+Whether OpenDash takes a sixth hue for the spotter; whether the gear colour is five colours or a
 two-value mode under ADR 0011; whether the brows derive ends; whether `changed()` is admitted under
 ADR 0009; whether the per-car appearance table is transcribed from the manuals or read from the
 open data; and what a frame of several minutes does on a real matrix. Each is named in the table

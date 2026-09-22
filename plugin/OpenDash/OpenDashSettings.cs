@@ -174,7 +174,7 @@ namespace OpenDashPlugin
         /// to install and nothing more, so two strips on one rig could not be configured apart. Null
         /// means "this file has never named bars", which is every file written before they existed and
         /// every new install; both start with none, because a profile paints hardware somebody owns and
-        /// openDash does not guess at what that is (ADR 0013).
+        /// OpenDash does not guess at what that is (ADR 0013).
         /// </remarks>
         public List<LedBar> LedBars { get; set; }
 
@@ -216,12 +216,12 @@ namespace OpenDashPlugin
         public int[] FlagBoxMatrixWaterTemp { get; set; } = Contract.DefaultFlagBoxTemps();
 
         /// <summary>What the middle of an RGB strip shows: "rpm", "brake", "throttleBrake" or "fuel".
-        /// One value for the rig and not an array, because openDash generates one profile per strip
+        /// One value for the rig and not an array, because OpenDash generates one profile per strip
         /// shape rather than per device and every shape reads this one name.</summary>
         public string LedCentre { get; set; } = Contract.DefaultLedCentre;
 
         /// <summary>How the rev ladder fills a strip: "car", "leftToRight", "meetInMiddle" or "f1".
-        /// The three openDash styles are the look only; the thresholds are the car's own whichever is
+        /// The three OpenDash styles are the look only; the thresholds are the car's own whichever is
         /// set (ADR 0014). "car" is the car's whole bar, from the fetched table (ADR 0018).</summary>
         public string LedRpmStyle { get; set; } = Contract.DefaultLedRpmStyle;
 
@@ -286,7 +286,7 @@ namespace OpenDashPlugin
         /// <summary>What one bar's middle shows, or the rig's own answer when the bar has gone. An
         /// attached delegate outlives the bar it was attached for until SimHub restarts.</summary>
         /// <summary>Which LED device one bar's profile is installed into. The Arduino's when the bar is
-        /// unknown, which is what a bar written before openDash knew there was more than one is read as.</summary>
+        /// unknown, which is what a bar written before OpenDash knew there was more than one is read as.</summary>
         public string BarDevice(string ns)
         {
             var bar = LedBarByNamespace(ns);
@@ -906,7 +906,7 @@ namespace OpenDashPlugin
         /// first-run state the panel teaches from, and #85's point that an empty rig is one fewer
         /// surface than a wizard.
         ///
-        /// Any other file gets one screen per folder openDash has written, because those are the
+        /// Any other file gets one screen per folder OpenDash has written, because those are the
         /// dashboards the user actually has. Every one takes the stock namespace for its kind and size,
         /// which is what carries the settings across: a face finds the group Faces already held under
         /// that key, and the companion and the pit wall find the flat fields that were theirs when there
@@ -1241,7 +1241,7 @@ namespace OpenDashPlugin
             }
             var wanted = string.IsNullOrWhiteSpace(name) ? entry.SizeLabel : name.Trim();
             // The folders too, and not only the namespaces: two screens sharing a DashTemplates folder
-            // means removing one deletes the other's dashboard, which is what "openDash rim" twice on one
+            // means removing one deletes the other's dashboard, which is what "OpenDash rim" twice on one
             // rig did.
             var folders = new List<string>();
             foreach (var screen in Rig)
@@ -1298,8 +1298,8 @@ namespace OpenDashPlugin
         /// </remarks>
         private static string FreeBarNamespace(string name, ICollection<string> taken)
         {
-            // Without the product's own name in front of it. The name box opens on "openDash 0/9/0",
-            // which is right for SimHub's profile list and reads as `LedopenDash090` in a property
+            // Without the product's own name in front of it. The name box opens on "OpenDash 0/9/0",
+            // which is right for SimHub's profile list and reads as `LedOpenDash090` in a property
             // name; what a driver wants to find in the property list is what they called the bar.
             var wanted = name ?? string.Empty;
             if (wanted.StartsWith(FlagBoxProfile.FilePrefix, StringComparison.OrdinalIgnoreCase))

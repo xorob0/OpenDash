@@ -17,7 +17,7 @@ body:
     attributes:
       label: Which package, and what size is the screen
       description: The folder name as SimHub lists it, and the resolution you run it at.
-      placeholder: openDash 850x480, on a 5 inch 850 by 480 USB screen
+      placeholder: OpenDash 850x480, on a 5 inch 850 by 480 USB screen
     validations:
       required: true
 
@@ -25,7 +25,7 @@ body:
     id: simhub
     attributes:
       label: SimHub version
-      description: Help, About. openDash is verified against 9.12.6.
+      description: Help, About. OpenDash is verified against 9.12.6.
       placeholder: 9.12.6
     validations:
       required: true
@@ -33,12 +33,12 @@ body:
   - type: dropdown
     id: plugin
     attributes:
-      label: Is the openDash plugin installed
+      label: Is the OpenDash plugin installed
       description: >
         A package without the plugin shows the defaults for every setting, which is supported and
         is a different situation from a package with it.
       options:
-        - 'Yes, the plugin is installed and the openDash page is in the left menu'
+        - 'Yes, the plugin is installed and the OpenDash page is in the left menu'
         - 'No, I installed only the .simhubdash'
         - 'I do not know'
     validations:
@@ -49,7 +49,7 @@ body:
     attributes:
       label: Which sim, and what was happening
       description: >
-        openDash is verified on iRacing. Other sims very probably work and none is advertised as
+        OpenDash is verified on iRacing. Other sims very probably work and none is advertised as
         supported. Say what the session was doing, because most of what the dash draws only
         appears in some of them.
       placeholder: iRacing, race session, in the pit stall with service selected

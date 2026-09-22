@@ -1,6 +1,6 @@
 blank_issues_enabled: true
 contact_links:
-  - name: What openDash is, and what it refuses to be
+  - name: What OpenDash is, and what it refuses to be
     url: https://github.com/xorob0/OpenDash/blob/main/docs/scope.md
     about: >
       The scope document ends in a list of refusals rather than a backlog. A request that falls
@@ -10,4 +10,4 @@ contact_links:
     url: https://github.com/xorob0/OpenDash/blob/main/docs/research/simhub-dash-format.md
     about: >
       What was verified by decompiling SimHub 9.12.6 and by loading packages on a test VM. Most
-      "openDash draws this wrong" reports turn out to be recorded here already.
+      "OpenDash draws this wrong" reports turn out to be recorded here already.

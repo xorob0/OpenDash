@@ -85,7 +85,7 @@ export const dashboard = (name: string, screens: Screen[], over: Partial<Dashboa
 });
 
 /** A two-file package like the MVP: a main dashboard with widgets and a cards widget file. */
-export const samplePackage = (folderName = 'openDash'): DashPackage => {
+export const samplePackage = (folderName = 'OpenDash'): DashPackage => {
   const cards = dashboard(
     'cards',
     [

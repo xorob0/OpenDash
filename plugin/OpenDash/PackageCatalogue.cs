@@ -22,7 +22,7 @@ namespace OpenDashPlugin
         /// <summary>The resource name in the package source, for extracting it.</summary>
         public string Package { get; set; }
 
-        /// <summary>The folder it writes under DashTemplates, e.g. "openDash 1280x480".</summary>
+        /// <summary>The folder it writes under DashTemplates, e.g. "OpenDash 1280x480".</summary>
         public string Folder { get; set; }
 
         /// <summary>One of Contract.ScreenKinds.</summary>
@@ -70,7 +70,7 @@ namespace OpenDashPlugin
     public static class PackageCatalogue
     {
         /// <summary>The folder of the 1920x480 zone face, which is the one package whose name carries no size.</summary>
-        public const string PrimaryFolder = "openDash";
+        public const string PrimaryFolder = "OpenDash";
 
         /// <summary>One package the design names, with the size line it writes beside the name.</summary>
         private sealed class NamedPackage
@@ -107,11 +107,11 @@ namespace OpenDashPlugin
         private static readonly NamedPackage[] NamedPackages =
         {
             new NamedPackage(PrimaryFolder, "Main DDU", "1920 × 480"),
-            new NamedPackage("openDash 850x480", "Rim", "850 × 480"),
-            new NamedPackage("openDash Pit wall", "Pit wall", "1920 × 1080"),
-            new NamedPackage("openDash Companion", "Phone", "850 × 480"),
-            new NamedPackage("openDash 800x286", "Nano", "800 × 286"),
-            new NamedPackage("openDash 480 round", "Round", "480 round"),
+            new NamedPackage("OpenDash 850x480", "Rim", "850 × 480"),
+            new NamedPackage("OpenDash Pit wall", "Pit wall", "1920 × 1080"),
+            new NamedPackage("OpenDash Companion", "Phone", "850 × 480"),
+            new NamedPackage("OpenDash 800x286", "Nano", "800 × 286"),
+            new NamedPackage("OpenDash 480 round", "Round", "480 round"),
         };
 
         /// <summary>Every folder the design names, for the test that pins them against the dash build.</summary>
@@ -174,7 +174,7 @@ namespace OpenDashPlugin
             var name = folder ?? string.Empty;
             if (name.IndexOf("Companion", StringComparison.OrdinalIgnoreCase) >= 0) return Contract.KindCompanion;
             if (name.IndexOf("Pit wall", StringComparison.OrdinalIgnoreCase) >= 0) return Contract.KindPitWall;
-            if (name.StartsWith("openDash slots ", StringComparison.OrdinalIgnoreCase)) return Contract.KindSlots;
+            if (name.StartsWith("OpenDash slots ", StringComparison.OrdinalIgnoreCase)) return Contract.KindSlots;
             foreach (var size in Contract.FaceSizes)
             {
                 if (size.Width == width && size.Height == height) return Contract.KindFace;
@@ -186,7 +186,7 @@ namespace OpenDashPlugin
         /// The size a folder name spells, for a folder whose package cannot be read.
         /// </summary>
         /// <remarks>
-        /// "openDash 1280x480" and "openDash slots 1280x480" both give 1280 x 480; the bare "openDash" is
+        /// "OpenDash 1280x480" and "OpenDash slots 1280x480" both give 1280 x 480; the bare "OpenDash" is
         /// the 1920x480 face, which is the one name that carries no size and the reason this is not a
         /// plain parse. Anything else gives zero, and the caller treats a zero size as unknown rather
         /// than guessing.
@@ -274,8 +274,8 @@ namespace OpenDashPlugin
                         var folder = PackageExtractor.PackageFolderName(zip);
                         if (folder == null) continue;
                         int width, height;
-                        // The package's own metadata, not the folder name. "openDash Companion" and
-                        // "openDash 480 round" carry no size at all, and reading it off the name left
+                        // The package's own metadata, not the folder name. "OpenDash Companion" and
+                        // "OpenDash 480 round" carry no size at all, and reading it off the name left
                         // their cards saying 0 x 0.
                         if (!SizeFromMetadata(zip, folder, out width, out height)) SizeFromFolder(folder, out width, out height);
                         entries.Add(new PackageEntry
