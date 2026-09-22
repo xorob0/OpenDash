@@ -2,6 +2,11 @@
  * Module 16, Opponents: the one car ahead and the one car behind, with the gap large enough to
  * read at a glance and enough about them to know who they are.
  *
+ * The two cars are the two a driver is racing, so they follow the same filter the lists do: the
+ * zone's own, where the zone has one, and the rig's `PositionMode` everywhere. Heading a block
+ * "AHEAD · P3" with a class position while the car under it is whoever happens to be in front on
+ * track is the defect #212 reports about a leaderboard, said of two rows instead of twenty.
+ *
  * Each block is a heading, an identity row and a gap row six pixels apart, and the two blocks sit
  * twelve either side of a rule. A block is a hand-built row rather than a rank of fields because
  * two of its three lines are not fields: the identity row is a name, a number and a chip centred on
@@ -52,7 +57,7 @@ import { chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
-  positionLabelled, carRating, carRelativeGap, driverCode, neighbour } from '../second/values.ts';
+  positionLabelled, carRating, carRelativeGap, driverCode, listNeighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -162,7 +167,7 @@ const detailWidth = (text: string, fs: number): number => Math.ceil(measureText(
  * once the page has been read once, and that is the width the prefix costs spent on the reading.
  */
 function details(ctx: ModuleContext, side: Side, keep: readonly string[]): { id: string; text: string; bind: Expr }[] {
-  const idx = neighbour(side.offset);
+  const idx = listNeighbour(side.offset, ctx.classOnly);
   // The wide page is "Opponents · best and last", so its label carries the best lap as well as the
   // last one. The sheet writes "Last Best 1:42.994 · 1:43.234" and leaves which time is which to
   // the reader; the times say it themselves, 1:42.994 being the faster, so the best is drawn first.
@@ -186,7 +191,7 @@ function details(ctx: ModuleContext, side: Side, keep: readonly string[]): { id:
 function block(ctx: ModuleContext, side: Side, box: { left: number; width: number }, fs: number, keep: readonly string[]): StackRow | undefined {
   if (keep.length === 0) return undefined;
   const d = densityOf(ctx.density);
-  const idx = neighbour(side.offset);
+  const idx = listNeighbour(side.offset, ctx.classOnly);
   const has = (piece: string): boolean => keep.includes(piece);
   // The canvas draws the number at the fourth size of the companion ramp and at the last of the
   // zone one, which is not the same rung of the two ladders, so the instrument says which.

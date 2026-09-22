@@ -168,8 +168,42 @@ export const ratingK = (value: Expr): Expr => iff(gt(isnull(value, num(0)), num(
 /** The player's 1-based leaderboard index, which every per-car read of your own car goes through. */
 export const player = (): Expr => playerPosition();
 
-/** The car ahead on track (-1) or behind (1). */
+/** The car ahead on track (-1) or behind (1), taken from the whole track whoever is on it. */
 export const neighbour = (offset: number): Expr => aheadBehind(num(offset));
+
+/**
+ * Whether the rig counts positions in class rather than overall, which is `PositionMode`.
+ *
+ * One reading, because four drawings ask it: the position a row shows, the field that position is
+ * shown out of, which cars a list is drawn from, and which neighbour a relative reads.
+ */
+export const classMode = (): Expr => eq(setting.positionMode(), str('class'));
+
+/**
+ * Whether a list draws the player's own class rather than the whole field.
+ *
+ * Two settings answer it and either one on its own is enough. A zone carries its own filter, which
+ * is one rectangle of a face or one pit wall answering for itself; `PositionMode` is the rig's
+ * answer, and it filters the rows it numbers rather than only numbering them. A column of class
+ * positions over the whole field is three cars called P1 in an order that is not the order of any
+ * of the numbers, which is not a leaderboard.
+ *
+ * The converse remains two questions, deliberately: a zone filtered to one class while the rig
+ * counts overall lists that class by its overall places, which is a legitimate thing to want on a
+ * multi-class grid and is what the zone setting is for.
+ */
+export const rowsInClass = (zoneFilter?: Expr): Expr => (zoneFilter === undefined ? classMode() : ncalc.or(zoneFilter, classMode()));
+
+/**
+ * The car ahead (-1) or behind (1) on track, in the player's class wherever the list it belongs to
+ * is filtered to that class.
+ *
+ * {@link neighbour} asks the same of the whole track and is what a blue flag is about, a faster
+ * class arriving being the commonest reason for one. This is what a drawing reads when its subject
+ * is the cars a driver is actually racing.
+ */
+export const listNeighbour = (offset: number, zoneFilter?: Expr): Expr =>
+  iff(rowsInClass(zoneFilter), aheadBehindInClass(num(offset)), aheadBehind(num(offset)));
 
 /**
  * Where a split list's window opens: the first leaderboard row drawn under the limit line.
@@ -288,8 +322,7 @@ export const carClass = (idx: Expr): Expr => driver('carclass', idx);
  * prints a position asks it first. A grid of AI before the green flag has no positions at all, and
  * a column of `P0` is a row of wrong answers where an empty cell is an honest one.
  */
-export const carPosition = (idx: Expr): Expr =>
-  iff(eq(setting.positionMode(), str('class')), isnull(driver('classposition', idx), num(0)), isnull(driver('position', idx), num(0)));
+export const carPosition = (idx: Expr): Expr => iff(classMode(), isnull(driver('classposition', idx), num(0)), isnull(driver('position', idx), num(0)));
 
 /** True once the sim has actually placed this car. Positions count from one, so zero is "not yet". */
 export const hasPosition = (idx: Expr): Expr => gt(carPosition(idx), num(0));
@@ -373,8 +406,12 @@ export const carRating = (idx: Expr): Expr => ratingK(driver('iracingirating', i
  * The car immediately behind on track, which is the one a blue flag is about.
  *
  * On track and not on the leaderboard: a blue flag is thrown for the car that is about to arrive,
- * and the car a place behind on the timing screen may be a lap away. {@link neighbour} is the same
- * reading the relative table's rows are built from.
+ * and the car a place behind on the timing screen may be a lap away.
+ *
+ * Whoever is on the track, moreover, and not whoever is in the player's class: the car about to
+ * arrive is most often a faster class, so this stays on {@link neighbour} while the lists moved to
+ * {@link listNeighbour}. The position it prints still follows `PositionMode`, as every position
+ * OpenDash draws does.
  */
 export const carBehind = (): Expr => neighbour(1);
 
@@ -426,7 +463,7 @@ export const opponentCount = (): Expr => isnull(game('OpponentsCount'), num(0));
 export const classOpponentCount = (): Expr => isnull(game('PlayerClassOpponentsCount'), num(0));
 
 /** The field size a position is shown out of, per PositionMode. */
-export const fieldSize = (): Expr => iff(eq(setting.positionMode(), str('class')), classOpponentCount(), opponentCount());
+export const fieldSize = (): Expr => iff(classMode(), classOpponentCount(), opponentCount());
 
 export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
 

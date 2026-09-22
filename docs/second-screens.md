@@ -126,6 +126,35 @@ Rows are one continuous list in leaderboard order with a class chip on each. Sim
 per-class rows only for the player's own class, so a block per class would be a picture of data
 that is not there.
 
+#### What `class` means on a list page
+
+`OpenDash.PositionMode` set to `class` filters the rows as well as numbering them. Every page that
+lists other cars therefore lists the player's own class: the leaderboard, the relative and the
+opponents page, on a face zone as on the companion and on the pit wall, and band D's relative
+alongside them. One could think that the mode is a readout setting and that the field should stay
+visible under class numbers. In reality a column of class positions over the whole field draws
+three cars called P1 in an order that is not the order of any of the numbers, which is not a
+leaderboard; the numbers a column shows and the cars it shows them against are one question and
+are answered together.
+
+A zone carries a filter of its own, which is a different question and stays one. `ZoneBClassOnly`,
+`ZoneCClassOnly` and the pit wall's `PitWallClassOnly` say who is in the list without saying how
+they are numbered, so a zone filtered to one class while the rig counts overall lists that class by
+its overall places, which on a multi-class grid is a legitimate thing to want. A list is filtered
+when either answer is yes, and `rowsInClass` in `second/values.ts` is where the two meet.
+
+The filter is a lookup swap rather than a row set built somewhere else: SimHub has a class-only
+twin of each of the two functions a table addresses its rows through, so the same rows are drawn
+either way and only the car each one carries moves. The rows a short class leaves over are hidden
+by the "is there a car on this row" test above rather than drawn empty.
+
+The round faces read the same setting from `cards/position.ts` and are unaffected, there being no
+rows on a card to filter: the position and the count it is shown out of are both in class, which is
+the reading that setting has always given.
+
+`packages/dash/test/positionMode.test.ts` holds the two to each other. It evaluates the formulas
+the build writes against a six-car, three-class grid and reads the position column downwards.
+
 ## What is not drawn, and why
 
 Nothing here is a placeholder for work that is pending. Each is a value the sim does not publish.

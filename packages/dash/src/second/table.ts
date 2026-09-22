@@ -35,7 +35,7 @@ import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carName, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, splitHiddenCars } from './values.ts';
+  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverCode, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
 const { iff, str, fmt, eq, ne, num, and, not, gt, lt, abs, concat, left, ucase, isnull } = ncalc;
 
@@ -535,11 +535,13 @@ export interface TableSpec {
    */
   split?: number;
   /**
-   * When true, the table lists the player's own class rather than the whole field.
+   * The zone's own answer to "does this list show the player's class", where the zone has one.
    *
    * An expression, because it is a plugin setting a driver changes mid-session and the file is
    * written once. It only reaches `mode: 'full'` and `mode: 'relative'`: `mode: 'class'` is already
-   * one class and has nothing left to filter.
+   * one class and has nothing left to filter. It is not the whole condition either, the rig-wide
+   * `PositionMode` being the other half of it; {@link rowsInClass} joins the two and a table that
+   * passes nothing here still asks that one.
    */
   classOnly?: Expr;
 }
@@ -549,16 +551,18 @@ export interface TableSpec {
  *
  * SimHub has a class-only twin of each of the two lookups a table uses, so filtering to the
  * player's class is the same question asked of a different function rather than a row set built
- * somewhere else. With no `classOnly` the expression is the bare lookup it has always been, which
- * is what the companion still passes; the pit wall passes its screen's own setting, so the same
- * rows are drawn either way and only the car each one addresses moves.
+ * somewhere else: the same rows are drawn either way and only the car each one addresses moves.
+ *
+ * Two settings reach the condition and {@link rowsInClass} joins them, which is why a table with no
+ * `classOnly` of its own is still conditional. The zone's filter is the one a caller passes, and
+ * the rig's `PositionMode` is read for every table there is, the companion's included: a column of
+ * class positions drawn over the whole field numbers an order it did not sort.
  */
 function rowIndexFor(spec: TableSpec, centre: number): Expr {
   if (spec.mode === 'class') return rowIndex.inClass();
   const whole = spec.mode === 'relative' ? rowIndex.relative(centre) : rowIndex.full();
-  if (!spec.classOnly) return whole;
   const inClass = spec.mode === 'relative' ? rowIndex.relativeInClass(centre) : rowIndex.inClass();
-  return iff(spec.classOnly, inClass, whole);
+  return iff(rowsInClass(spec.classOnly), inClass, whole);
 }
 
 /**
@@ -727,6 +731,11 @@ export function table(spec: TableSpec): Item[] {
     // The kept rows are the head of the overall leaderboard and the window below counts in the same
     // numbers; a class filter would restart both at one and the limit line would count a field the
     // rows above it are not drawn from.
+    //
+    // Which is why the rig-wide `PositionMode` is not refused here as `classOnly` is: it is a
+    // runtime setting and nothing built once can throw on it. A split list in class mode would
+    // therefore number an overall field by class, which is #212 over again; no page draws one
+    // today, and the page that first does has to answer the limit line before it answers this.
     throw new Error(`table ${spec.name}: a split list is the overall leaderboard, so it takes neither a class mode nor classOnly`);
   }
   // The limit line costs a row's worth of the body and is laid out whether or not the field is long
