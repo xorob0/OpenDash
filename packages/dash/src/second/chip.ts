@@ -14,7 +14,7 @@
  */
 import type { Hex, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, roundRect } from '../design/geometry.ts';
 import { textBox } from '../design/metrics.ts';
@@ -77,17 +77,17 @@ export function chip(name: string, text: string, x: number, top: number, density
   const inkBind = opts.invertedBind ? iff(opts.invertedBind, str(ds.color.surface.base), str(ds.color.text.secondary)) : undefined;
   const block = band(`${name}.block`, box, fill, { visibleBind: opts.visibleBind });
   return [
-    { ...block, ...withBindings({ Visible: opts.visibleBind, BackgroundColor: fillBind }) },
-    {
-      ...label(`${name}.text`, text, x + d.chipPadding, textY, width - 2 * d.chipPadding, {
+    withMoreBindings(block, { BackgroundColor: fillBind }),
+    withMoreBindings(
+      label(`${name}.text`, text, x + d.chipPadding, textY, width - 2 * d.chipPadding, {
         size,
         color: ink,
         hAlign: 'center',
         bind: opts.bind,
         visibleBind: opts.visibleBind,
       }),
-      ...withBindings({ Text: opts.bind, Visible: opts.visibleBind, TextColor: inkBind }),
-    },
+      { TextColor: inkBind },
+    ),
   ];
 }
 

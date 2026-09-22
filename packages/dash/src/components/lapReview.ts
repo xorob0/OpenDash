@@ -38,7 +38,7 @@
  */
 import type { Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { rect, roundRect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
@@ -345,5 +345,5 @@ export function lapReviewItems(frame: Rect, prefix = 'lapReview'): Item[] {
 
 /** The panel behind the expression that decides when it is out. */
 export function lapReview(frame: Rect, when: Expr, prefix = 'lapReview'): LayerItem {
-  return { kind: 'layer', name: prefix, children: lapReviewItems(frame, prefix), ...withBindings({ Visible: when }) };
+  return withMoreBindings({ kind: 'layer', name: prefix, children: lapReviewItems(frame, prefix) }, { Visible: when });
 }

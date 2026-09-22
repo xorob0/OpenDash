@@ -9,7 +9,7 @@
  * follower, which is positioned from the cells.
  */
 import type { HAlign, Hex, Monospace, TextItem } from '../generator.ts';
-import { withBindings, type Expr } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText, type MeasuredFace } from '../design/advances.ts';
 import { boxSlack, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { roundRect } from '../design/geometry.ts';
@@ -72,7 +72,7 @@ export function numeral(name: string, sample: string, x: number, y: number, fs: 
   // Floored, so that a box whose left rounds up still ends inside the room it was given.
   const capped = opts.maxWidth === undefined ? wanted : Math.max(budget, Math.min(wanted, Math.floor(opts.maxWidth)));
   const width = opts.width === undefined ? capped : Math.max(budget, Math.floor(opts.width));
-  return {
+  return withMoreBindings({
     kind: 'text',
     name,
     rect: roundRect({ left: x, top: box.top, width, height: box.height }),
@@ -86,6 +86,5 @@ export function numeral(name: string, sample: string, x: number, y: number, fs: 
     ...(mono ? { monospace: mono } : {}),
     ...(opts.widest ? { widest: opts.widest } : {}),
     backgroundColor: TRANSPARENT,
-    ...withBindings({ Text: opts.bind, TextColor: opts.colorBind, Visible: opts.visibleBind, Left: opts.leftBind }),
-  };
+  }, { Text: opts.bind, TextColor: opts.colorBind, Visible: opts.visibleBind, Left: opts.leftBind });
 }

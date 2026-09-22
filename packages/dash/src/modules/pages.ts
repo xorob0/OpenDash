@@ -6,7 +6,7 @@
  */
 import type { Item, WebPageItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { withBindings } from '../bind.ts';
+import { withMoreBindings } from '../bind.ts';
 import { secondScreen } from '../contract.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
@@ -31,21 +31,20 @@ export function webView(ctx: ModuleContext): Item[] {
   const d = densityOf(ctx.density);
   const url = secondScreen.webViewUrl();
   const empty = eq(url, str(''));
-  const page: WebPageItem = {
+  const page: WebPageItem = withMoreBindings({
     kind: 'webPage',
     name: `${ctx.prefix}web`,
     rect: rect(ctx.frame.left, ctx.frame.top, ctx.frame.width, ctx.frame.height),
     startAddress: '',
     clickThrough: false,
-    ...withBindings({ StartAddress: url, Visible: ne(url, str('')) }),
-  };
+  }, { StartAddress: url, Visible: ne(url, str('')) });
   return [
-    {
-      ...band(`${ctx.prefix}box`, rect(ctx.frame.left, ctx.frame.top, ctx.frame.width, ctx.frame.height), TRANSPARENT, {
+    withMoreBindings(
+      band(`${ctx.prefix}box`, rect(ctx.frame.left, ctx.frame.top, ctx.frame.width, ctx.frame.height), TRANSPARENT, {
         border: { color: ds.color.text.dim, width: 1 },
       }),
-      ...withBindings({ Visible: empty }),
-    },
+      { Visible: empty },
+    ),
     label(`${ctx.prefix}empty`, WEB_VIEW_MESSAGE, ctx.frame.left, ctx.frame.top + (ctx.frame.height - d.labelSm) / 2, ctx.frame.width, {
       size: d.labelSm,
       hAlign: 'center',
