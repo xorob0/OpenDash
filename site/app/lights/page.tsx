@@ -30,10 +30,8 @@ export default function Lights() {
         level={1}
         ruled={false}
         id="car"
-        label="Lights"
-        title="Your car’s own shift lights, on any strip."
+        title="Your car’s own shift lights, on any strip"
         lede="Every car has its own shift lights: the colours, the order, the revs each one comes on at. OpenDash lights your strip the way the real car does, and uses the sides for what matters."
-        wide
       >
         <div className={styles.demo}>
           <LedStrip left={3} centre={9} right={3} live led={22} gap={8} />
@@ -60,15 +58,13 @@ export default function Lights() {
 
       <Section
         id="strips"
-        label="Strip shapes"
-        title={`${STRIP_SHAPES.length} strip shapes.`}
+        title={`${STRIP_SHAPES.length} strip shapes`}
         lede="A strip is sides and a centre: 0 to 4 LEDs each side, 4 to 12 in the middle, and bare runs up to 25 for a brow. Pick yours by counting, not by brand."
-        wide
       >
         <StripGrid />
       </Section>
 
-      <Section id="strip-shows" label="The sides" title="LEDs, for more than revs." lede="The sides light for what matters in the moment: a flag, a car alongside, the pit limiter, a warning. The first thing on the list that is true takes them." wide>
+      <Section id="strip-shows" title="LEDs, for more than revs" lede="The sides light for what matters in the moment: a flag, a car alongside, the limiter, a warning. The first thing on the list that is true takes the lamp.">
         <ul className={styles.examples}>
           {EXAMPLES.map((f) => (
             <li key={f.label} className={styles.example}>
@@ -84,10 +80,8 @@ export default function Lights() {
 
       <Section
         id="flag-box"
-        label="Flag box"
-        title="The flag box."
-        lede="An 8 × 8 WS2812b matrix on an Arduino, beside the screen. 69 glyphs, 1 at a time, in priority order: the flag that is out, the pit state, warnings, then the gear."
-        wide
+        title="The flag box"
+        lede="An 8 × 8 WS2812b matrix on an Arduino, beside the screen. 69 glyphs, one at a time, in priority order: the flag that is out, the pit state, the warnings, then the gear."
       >
         <div className={styles.box}>
           <figure className={styles.sheet}>
@@ -117,10 +111,8 @@ export default function Lights() {
 
       <Section
         id="tab"
-        label="The Lights tab"
-        title="Everything above, on 1 tab."
-        lede="The flag box and up to 4 matrix panels, a low fuel warning in laps, a strip per device with its centre display and rev light style, the car light tables with their update button, and brightness, night brightness and night mode for every light."
-        wide
+        title="The Lights tab"
+        lede="The flag box and up to four matrix panels, a low fuel warning in laps, a strip per device with its centre display and rev style, the car tables, and brightness and night mode for every light."
       >
         <Capture file={panelFile('lights')} alt="The plugin’s Lights tab in SimHub" width={panel?.width ?? 1200} height={panel?.height ?? 1790} caption="The Lights tab" />
         <p className={`prose ${styles.more}`}>

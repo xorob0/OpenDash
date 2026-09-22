@@ -49,18 +49,18 @@ export const CAR_DATA_CREDIT =
 export const DIFFERENTIATORS = [
   {
     id: 'free',
-    title: 'Free and open source, under MIT.',
-    body: 'No tier, no key, no PC limit. The source is on GitHub, and a new size or feature is a pull request.',
+    title: 'Free and open source, under MIT',
+    body: 'No tier, no key, no limit on how many machines. The source is on GitHub, and a new size or feature is a pull request.',
   },
   {
     id: 'lights',
-    title: 'LEDs and matrix panels.',
-    body: 'Shift lights in your car’s own colours and order, flags and the spotter on the sides, and an 8 × 8 flag box. 62 strip shapes, all included.',
+    title: 'LEDs and matrix panels',
+    body: 'Shift lights in your car’s own colours and order, sides that carry the flags and the spotter, and an 8 × 8 flag box. 62 strip shapes.',
   },
   {
     id: 'design',
-    title: 'Modern design and features.',
-    body: 'A dashboard laid out for each screen, 21 pages a wheel button cycles, a phone companion and a pit wall.',
+    title: 'Modern design and features',
+    body: 'A dashboard drawn for each screen, 21 pages on a wheel button, a phone companion and a pit wall.',
   },
 ] as const;
 
