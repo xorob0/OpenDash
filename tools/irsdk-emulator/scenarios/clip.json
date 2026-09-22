@@ -4,6 +4,8 @@
   // change at an unlucky moment and a rev bar that never reaches its lights. Here the sweep runs
   // from 5000 to 9100 over three seconds, so a clip catches two gear changes, the first within
   // its first three seconds, and the shift lights come on and flash at the top of every sweep.
+  // The gear model runs between third and fourth rather than second to sixth, so the changes are
+  // an upshift and a downshift rather than a wrap from sixth to second at 274 km/h.
   // Everything else is the gallery's, restated because a driver list replaces its parent's.
   "extends": "green.json",
   "name": "The gallery lap with a fast, high rev sweep, for the clips",
@@ -31,7 +33,7 @@
   ],
   "drivers": [
     {"type": "rpmSweep", "min": 5000, "max": 9100, "period": 3, "slFirst": 7800, "slBlink": 9000},
-    {"type": "gearFromRpm", "minGear": 2, "maxGear": 6, "redline": 9000,
+    {"type": "gearFromRpm", "minGear": 3, "maxGear": 4, "redline": 9000,
      "speedAtRedline": [0, 85, 125, 160, 195, 235, 275]},
     {"type": "lapTimer", "lapTime": 97.9, "jitter": 0, "trackLength": 7000},
     {"type": "fuelBurn", "litersPerLap": 2.9, "maxLiters": 100, "kgPerLiter": 0.75},
