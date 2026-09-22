@@ -77,7 +77,7 @@ namespace OpenDashPlugin
         {
             if (plugin.FlagBoxJson == null) return null;
             return BuildLightRow(
-                plugin.FlagBox.ProfileName ?? FlagBoxProfile.ProfileName,
+                FlagBoxName(),
                 PanelLightRows.FlagBoxCaption,
                 plan,
                 InstallFlagBox,

@@ -215,7 +215,60 @@ namespace OpenDashPlugin
 
         public const string PanelNameTitle = "Name";
 
-        public const string PanelNameCaption = null;
+        /// <summary>
+        /// The line under a panel's name box, which exists to say what the name is NOT.
+        /// </summary>
+        /// <remarks>
+        /// A strip's name goes into SimHub -- <see cref="BarNameCaption"/> says so, because installing a
+        /// bar is what puts a profile of that name into the device's list. A panel's does not: all four
+        /// are painted by the one flag box profile, so somebody who named a panel and went to SimHub's
+        /// Arduino page looking for that name found an OpenDash profile with another name and read it as
+        /// a failure. The two name boxes look identical and answered different questions in silence.
+        /// </remarks>
+        public const string PanelNameCaption = "OpenDash's own label. It is not shown in SimHub's profile list.";
+
+        /// <summary>What the add-a-panel screen says above the name: which content number the panel will
+        /// be, and which profile the driver selects on the device to see it.</summary>
+        public static string AddPanelCaption(int matrix, string profile)
+        {
+            return "It will be " + PanelSlot(matrix) + ". Pick that content number on the device, and select \""
+                + profile + "\" there: one profile paints all four panels.";
+        }
+
+        /// <summary>
+        /// What is said once a panel exists, which is the step SimHub does not take for you.
+        /// </summary>
+        /// <remarks>
+        /// The twin of <see cref="BarAdded"/>, and it has to make the one point that differs: a bar is a
+        /// profile and a panel is a content number inside one. The sentence therefore names the profile
+        /// the driver is to select, and says whose name is on it, rather than leaving them to search
+        /// SimHub's list for the name they just typed.
+        /// </remarks>
+        public static string PanelAdded(string name, int matrix, string profile, FlagBoxInstallState state)
+        {
+            var known = state == FlagBoxInstallState.UpToDate || state == FlagBoxInstallState.Outdated;
+            var where = "Added " + name + ". It is " + PanelSlot(matrix) + ": pick that content number on the device";
+            return known
+                ? where + " and select \"" + profile + "\" there. That one profile paints every panel, so"
+                    + " SimHub's list carries its name rather than yours."
+                : where + ". \"" + profile + "\" is the profile that paints it, and SimHub has not got it:"
+                    + " install it from the Install tab.";
+        }
+
+        /// <summary>Whether <see cref="PanelAdded"/> is asking for something to be done before the panel
+        /// will light, which is what decides the colour it is said in.</summary>
+        public static bool PanelNeedsInstall(FlagBoxInstallState state)
+        {
+            return state != FlagBoxInstallState.UpToDate && state != FlagBoxInstallState.Outdated;
+        }
+
+        /// <summary>The line under the flag box heading: one profile, named, and where it comes from.
+        /// It names the profile because the panels below do not carry their own.</summary>
+        public static string BoxCaption(string profile)
+        {
+            return "An 8x8 LED matrix. \"" + profile + "\" is the one profile that paints every panel below;"
+                + " install it from the Install tab.";
+        }
 
         /// <summary>What a panel's group says under its name: which of SimHub's four contents it is, since
         /// that is the number a driver has to match on the device itself.</summary>
