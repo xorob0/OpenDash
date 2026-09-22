@@ -49,6 +49,7 @@ import {
   fuelUnit,
   incidents,
   lastLap,
+  listNeighbour,
   localClock,
   minutesClock,
   NO_TIME,
@@ -60,7 +61,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, aheadBehind, timespanToSeconds, toShortTime } = ncalc;
+const { fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
 
 /** One field of a band page: a label above a value, with an optional unit after it. */
 export interface BandField {
@@ -207,6 +208,11 @@ const sectors: readonly BandField[] = [
  *
  * The catalogue draws a 16 by 11 country flag between the two, which nothing publishes a country
  * for; it is the same missing source as the licence badge on the opponents page.
+ *
+ * The two neighbours are the player's own class wherever the positions heading them are, which is
+ * `PositionMode` and nothing else here: a band screen is built at its rectangle and is never told
+ * which face it belongs to, so there is no zone filter for it to ask. {@link listNeighbour} takes one as
+ * its second argument for the day band D carries a filter of its own.
  */
 const relativePosition = (idx: string): string => positionLabelled(idx);
 
@@ -214,10 +220,10 @@ const relative: readonly BandField[] = [
   {
     id: 'ahead',
     label: 'P3',
-    labelBind: relativePosition(aheadBehind(num(-1))),
+    labelBind: relativePosition(listNeighbour(-1)),
     labelWidest: 'P99',
     sample: '-1.342',
-    bind: carRelativeGap(aheadBehind(num(-1))),
+    bind: carRelativeGap(listNeighbour(-1)),
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -234,10 +240,10 @@ const relative: readonly BandField[] = [
   {
     id: 'behind',
     label: 'P5',
-    labelBind: relativePosition(aheadBehind(num(1))),
+    labelBind: relativePosition(listNeighbour(1)),
     labelWidest: 'P99',
     sample: '+0.722',
-    bind: carRelativeGap(aheadBehind(num(1))),
+    bind: carRelativeGap(listNeighbour(1)),
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },

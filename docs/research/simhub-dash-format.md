@@ -462,6 +462,17 @@ player and one for every opponent, and a style is a dot with a radius and a bord
 sector markers and a colour for one named car are consequently not expressible;
 `OverrideColorsWithCarClassColors` is the only per-car colouring on offer and OpenDash refuses it.
 
+### The class leader has gap functions of its own (2026-09-22, #212)
+
+The opponent providers of the 9.12.6 assembly in `plugin/lib` register, beside `gaptoleader`,
+`lapstoleader` and `gaptoleadercombined`, three class twins: `gaptoclassleader`, described as the
+driver's gap to his own class leader; `lapstoclassleader`; and `gaptoclassleadercombined`, the
+driver's gap to the player's class leader as laps or seconds, spelled the way the overall one is.
+They were found while #212 was reviewed, the class gap having been built on the belief that they
+did not exist. `carClassRaceGap` in `packages/dash/src/second/values.ts` still derives the figure
+from the two gaps to the overall leader, for the reason its comment gives; the three names are here
+so that the next reader checks them rather than the belief.
+
 ### Community precedent for source in git
 
 Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over `**/*.djson`

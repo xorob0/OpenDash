@@ -574,13 +574,16 @@ could not reach one without reaching the other. `OpenDash.PitWallClassOnly` is t
 per pit wall screen, rather than one per zone and rather than one for the rig, since a rig may hold
 two pit walls and a board belongs to the screen it is drawn on.
 
-It is **not** `PositionMode`. That setting is which number a position column shows; this one is who
-is in the list at all, and one class counted by overall position is a legitimate thing to ask for.
-What `PositionMode: class` currently does to a list it did not reorder is #212.
+It is **not** `PositionMode`, although since #212 the two meet. That setting is the rig's own
+answer and it filters as well as numbering, a column of class positions drawn over the whole field
+having been no leaderboard at all; this one is a zone's answer to who is in the list, and one class
+counted by overall position remains a legitimate thing to ask for. A list is filtered when either
+of the two says so, and `rowsInClass` in `second/values.ts` is where they meet.
 
-Two pages read it: the leaderboard and the relative. Zone A lists nobody. Band D's own relative
-page is three gaps rather than a list, so filtering it means asking for the car *ahead in class*
-rather than listing fewer of them — the same idea, a different change, and #210. The panel
+Three pages read it: the leaderboard, the relative and the opponents page, whose two cars are a
+list of two. Zone A lists nobody. Band D's own relative page is three gaps rather than a list, so
+filtering it means asking for the car *ahead in class* rather than listing fewer of them — the
+same idea, a different change, and #210. The panel
 offers the checkbox only where a page would change.
 
 ### The counter
