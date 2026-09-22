@@ -333,8 +333,21 @@ export const positionDigits = (idx: Expr): Expr => iff(hasPosition(idx), fmt(car
 /** A position with the P the drawings prefix it with, or `P--` before the sim has placed the car. */
 export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDigits(idx));
 
-/** Places gained since the start, signed; 0 when the sim does not track it. */
-export const carRankChange = (idx: Expr): Expr => isnull(driver('positiongain', idx), num(0));
+/**
+ * Places gained since the start, signed; 0 when the sim does not track it.
+ *
+ * Counted in the field the position beside it is counted in, which is {@link carPosition}'s own
+ * question and is why the two read the same setting: a triangle counting the whole race next to a
+ * number counting one class is the pair of cells #212 is about, a place and the movement of that
+ * place answered from different fields. A car that started eighth overall and third in class and
+ * now runs fifth and first drew `P1` with three places gained beside it.
+ *
+ * SimHub publishes the twin rather than leaving it to be worked out: `PositionGainClass` is
+ * "driver's position gains in his own class since the start of the race/connection", registered
+ * beside `PositionGain` among the opponent providers of SimHub 9.12.6.
+ */
+export const carRankChange = (idx: Expr): Expr =>
+  iff(classMode(), isnull(driver('positiongainclass', idx), num(0)), isnull(driver('positiongain', idx), num(0)));
 
 /**
  * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and

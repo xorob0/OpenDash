@@ -20,6 +20,7 @@ import { secondScreen, setting } from '../src/contract.ts';
 import { rect } from '../src/design/geometry.ts';
 import { BAND_PAGES } from '../src/zones/bandPages.ts';
 import { MODULES } from '../src/modules/index.ts';
+import { racePage } from '../src/screens/pitwall.ts';
 import { carPosition, player, rowsInClass } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Expr } from '../src/bind.ts';
@@ -35,15 +36,31 @@ import type { Item, TextItem } from '../src/generator.ts';
  */
 const GRID = ['GT3', 'LMP2', 'GT3', 'LMP3', 'LMP2', 'GT3'] as const;
 const PLAYER_ROW = 3;
-const PLAYER_CLASS = GRID[PLAYER_ROW - 1];
+const PLAYER_CLASS = GRID[PLAYER_ROW - 1]!;
+
+/** The leaderboard rows of a class, in order. */
+const rowsOfClass = (klass: string): number[] => GRID.flatMap((c, i) => (c === klass ? [i + 1] : []));
 
 /** The leaderboard rows of the player's own class, in order: 1, 3 and 6. */
-const CLASS_ROWS = GRID.map((c, i) => (c === PLAYER_CLASS ? i + 1 : 0)).filter((row) => row > 0);
+const CLASS_ROWS = rowsOfClass(PLAYER_CLASS);
 
 const onGrid = (row: number): boolean => row >= 1 && row <= GRID.length;
 
 /** The position of a row within its own class, counting from one. */
 const classPositionOf = (row: number): number => GRID.slice(0, row).filter((c) => c === GRID[row - 1]).length;
+
+/**
+ * Where each row started, overall, which is what a places-gained reading counts from.
+ *
+ * Chosen so that the player's own two readings differ. Row 3 started sixth overall and runs third,
+ * three places gained; within its own class it started last of the three and runs second, one place
+ * gained. Were the grid's starting order its running order, or the player's class contiguous, the
+ * assertion below would pass on a ± column reading either field.
+ */
+const START = [2, 1, 6, 4, 5, 3] as const;
+
+/** The place a row started in within its own class: its class ordered by where each of them started. */
+const classStartOf = (row: number): number => [...rowsOfClass(GRID[row - 1]!)].sort((a, b) => START[a - 1]! - START[b - 1]!).indexOf(row) + 1;
 
 /** What the plugin publishes for one run of the evaluator. */
 interface Settings {
@@ -67,10 +84,13 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
       if (pattern !== '0') throw new Error(`the evaluator knows one format pattern, not ${pattern}`);
       return String(Math.round(value));
     },
+    abs: Math.abs,
     repeatindex: (): number => repeatIndex,
     getplayerleaderboardposition: (): number => PLAYER_ROW,
     driverposition: (row: number): number | undefined => (onGrid(row) ? row : undefined),
     driverclassposition: (row: number): number | undefined => (onGrid(row) ? classPositionOf(row) : undefined),
+    driverpositiongain: (row: number): number | undefined => (onGrid(row) ? START[row - 1]! - row : undefined),
+    driverpositiongainclass: (row: number): number | undefined => (onGrid(row) ? classStartOf(row) - classPositionOf(row) : undefined),
     driveravailable: (row: number): boolean | undefined => (onGrid(row) ? true : undefined),
     getopponentleaderboardposition_playerclassonly: classRowAt,
     getopponentleaderboardposition_aheadbehind: (k: number): number => (onGrid(PLAYER_ROW + k) ? PLAYER_ROW + k : -1),
@@ -90,7 +110,8 @@ function toJavaScript(formula: string): string {
     .replace(/ and /g, ' && ')
     .replace(/ or /g, ' || ');
   const unknown = js.replace(/'[^']*'/g, '').match(/\b[a-z][a-z0-9_]*\(/g) ?? [];
-  const known = ['nz(', 'if(', 'format(', 'repeatindex(', 'driverposition(', 'driverclassposition(', 'driveravailable(', 'getplayerleaderboardposition(',
+  const known = ['nz(', 'if(', 'format(', 'abs(', 'repeatindex(', 'driverposition(', 'driverclassposition(', 'driverpositiongain(', 'driverpositiongainclass(',
+    'driveravailable(', 'getplayerleaderboardposition(',
     'getopponentleaderboardposition_playerclassonly(', 'getopponentleaderboardposition_aheadbehind(', 'getopponentleaderboardposition_aheadbehind_playerclassonly('];
   for (const call of unknown) if (!known.includes(call)) throw new Error(`the evaluator does not know ${call})`);
   return js;
@@ -203,6 +224,20 @@ describe('a list numbers the field it is drawn from', () => {
     const formula = formulaOf(gap, 'Text');
     expect(formula).toStartWith(`if(${rowsInClass()}, `);
     expect(formula).toContain('getopponentleaderboardposition_playerclassonly(1)');
+  });
+
+  test('the rank column counts the places the position column counts', () => {
+    // A ± is the movement of a place, so the field it counts is the field the place beside it is
+    // counted in. The player has gained three overall since the start and one within its own class,
+    // that class having started in a different order; a cell reading the first beside a column
+    // showing the second draws P2 with three places gained against it, which is this ticket a
+    // column to the right. The race board is the one page that heads the column.
+    const count = flat(racePage(1920, 1080).items).find((i) => i.name.endsWith('.row.rank.count'))!;
+    const drawn = (settings: Settings, row: number): unknown => evaluate(formulaOf(count, 'Text'), settings, row);
+    expect({
+      overall: drawn({ positionMode: 'overall' }, PLAYER_ROW),
+      inClass: drawn({ positionMode: 'class' }, classPositionOf(PLAYER_ROW)),
+    }).toEqual({ overall: '3', inClass: '1' });
   });
 });
 

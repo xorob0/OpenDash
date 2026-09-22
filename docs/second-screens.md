@@ -156,14 +156,20 @@ behind the overall leader reads `+1L` on every row and `Lead` on none, which is 
 no gap at all. SimHub publishes neither figure for a class, so both are differences of the two gaps
 to the overall leader that it does publish.
 
+The ± column follows the numbering for the same reason, a places-gained figure being the movement
+of the place the column beside it shows. Counting in class it reads SimHub's `PositionGainClass`
+instead of its `PositionGain`, so that a car which has climbed three places overall and one within
+its own class does not draw the one figure against the other number.
+
 The round faces read the same setting from `cards/position.ts` and are unaffected, there being no
 rows on a card to filter: the position and the count it is shown out of are both in class, which is
 the reading that setting has always given.
 
 `packages/dash/test/positionMode.test.ts` holds the two to each other. It evaluates the formulas
-the build writes against a six-car, three-class grid and reads the position column downwards. The
-Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`, against a
-board whose class is interleaved with another and a lap behind it.
+the build writes against a six-car, three-class grid and reads the position column downwards, and
+it reads the race board's own ± cell beside it on a grid whose starting order is not its running
+order. The Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`,
+against a board whose class is interleaved with another and a lap behind it.
 
 ## What is not drawn, and why
 
