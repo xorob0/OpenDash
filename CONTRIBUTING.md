@@ -179,6 +179,10 @@ TypeScript strict, ES modules, small pure functions, a short comment at the top 
 saying what it is for. Prose in docs and comments uses plain sentences without em-dashes.
 Commit messages say what changed and why.
 
+Text a user reads is held to [docs/design/voice.md](docs/design/voice.md), which is a different
+register from this one: a caption says what a control does and stops, and the reasoning behind the
+control belongs in a comment or a decision record instead.
+
 ## Licence
 
 By contributing you agree that your contribution is licensed under the MIT licence of this

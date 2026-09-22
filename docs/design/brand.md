@@ -5,7 +5,7 @@
 
 Token values live in [`design/tokens.json`](../../design/tokens.json), which is the source of
 truth. This document explains the reasoning, so that future changes are made for reasons rather
-than taste.
+than taste. What openDash *sounds* like is [voice.md](voice.md).
 
 ## Reference
 

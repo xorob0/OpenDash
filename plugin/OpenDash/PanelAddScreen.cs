@@ -57,21 +57,21 @@ namespace OpenDashPlugin
     {
         public const string SectionTitle = "Add a screen";
 
-        public const string TypeTitle = "What is it";
+        public const string TypeTitle = "Screen type";
 
-        public const string TypeCaption = "The kind of screen you are adding. It decides what the rest of this page asks you.";
+        public const string TypeCaption = null;
 
-        public const string SizeTitle = "How big";
+        public const string SizeTitle = "Screen size";
 
-        public const string SizeCaption = "The sizes openDash draws for. Pick the one your screen actually is: SimHub scales nothing, so a dashboard drawn for another size is drawn wrong.";
+        public const string SizeCaption = null;
 
-        public const string OrientationTitle = "Which way round";
+        public const string OrientationTitle = "Orientation";
 
-        public const string OrientationCaption = "The same screen, laid out for the way you have it mounted.";
+        public const string OrientationCaption = null;
 
-        public const string NameTitle = "Call it";
+        public const string NameTitle = "Name";
 
-        public const string NameCaption = "Yours. It names the card here and the dashboard in SimHub's own list, and you can change it later.";
+        public const string NameCaption = "Also shown in SimHub's dashboard list.";
 
         /// <summary>The words on the orientation control, landscape first.</summary>
         public static readonly string[] OrientationLabels = { "Landscape", "Portrait" };
@@ -89,9 +89,7 @@ namespace OpenDashPlugin
         /// properties. That is the whole reason a resize exists rather than "remove it and add the
         /// right one", which is what a driver who picked the wrong size had to do.
         /// </remarks>
-        public const string ResizeCaption =
-            "Your zones, your bar and your buttons all stay as they are, and this screen's properties keep the names "
-            + "they have, so nothing you have bound to it stops working. Only the dashboard in SimHub is rewritten.";
+        public const string ResizeCaption = "Your settings and bindings are kept.";
 
         /// <summary>
         /// The kinds the build can make a screen of, in the order the page offers them.
@@ -128,17 +126,17 @@ namespace OpenDashPlugin
         {
             if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal))
             {
-                return "A phone or a tablet beside the wheel, showing one of the twenty-one modules at a time.";
+                return "A phone or tablet beside the wheel.";
             }
             if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal))
             {
-                return "A monitor for somebody who is not driving: three pages of the field, the timing and the telemetry.";
+                return "A monitor for your engineer.";
             }
             if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal))
             {
-                return "The round faces, which are still on the card design openDash shipped before the zones.";
+                return "Round faces on the older card layout.";
             }
-            return "The screen in front of the driver: the rev bar, the bar of settled values, three zones and a band.";
+            return "The main screen in front of the driver.";
         }
 
         /// <summary>
@@ -235,16 +233,15 @@ namespace OpenDashPlugin
         {
             if (entry == null) return string.Empty;
             return second
-                ? "This is your second " + entry.SizeLabel + ", so it gets a copy of the dashboard and settings of its own. "
-                    + "The first keeps the one openDash ships, and the two cycle apart."
-                : "openDash will install " + entry.Folder + " into SimHub for it.";
+                ? "Your second " + entry.SizeLabel + " gets settings of its own."
+                : string.Empty;
         }
 
         /// <summary>What the panel says once the screen exists, which is the two steps SimHub does not
         /// take for you.</summary>
         public static string Added(string name, string title)
         {
-            return "Added " + name + ". Restart SimHub, then open Dash Studio and assign \"" + title + "\" to this display.";
+            return "Added " + name + ". Restart SimHub, then assign \"" + title + "\" to this display in Dash Studio.";
         }
 
         public static string AddFailed(string name, string error)
@@ -254,12 +251,12 @@ namespace OpenDashPlugin
 
         public static string Resized(string name, string size, string title)
         {
-            return name + " is now " + size + ". Restart SimHub, then open Dash Studio and assign \"" + title + "\" to this display again.";
+            return name + " is now " + size + ". Restart SimHub, then assign \"" + title + "\" to this display again in Dash Studio.";
         }
 
         public static string ResizeFailed(string name, string error)
         {
-            return "Could not write " + name + " at its new size: " + error;
+            return "Could not resize " + name + ": " + error;
         }
     }
 }

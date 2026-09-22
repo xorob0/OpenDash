@@ -157,10 +157,14 @@ namespace OpenDashPlugin
 
         /// <summary>A settings row: title and caption on the left, the control on the right, 32 px apart.
         /// The text column caps at the canvas's 460 and the room between the two grows with the page, so
-        /// a wider window moves the control right rather than stretching the prose after it.</summary>
+        /// a wider window moves the control right rather than stretching the prose after it.
+        /// A null or empty caption draws the title alone, which is the answer for a row whose control
+        /// already says everything there is to say; see docs/design/voice.md.</summary>
         public static Grid Row(string title, string caption, FrameworkElement control)
         {
-            var text = VStack(4, Body(title), Caption(caption));
+            var text = string.IsNullOrEmpty(caption)
+                ? VStack(0, Body(title))
+                : VStack(4, Body(title), Caption(caption));
             text.MaxWidth = 460;
             text.HorizontalAlignment = HorizontalAlignment.Left;
             return Row(text, control);

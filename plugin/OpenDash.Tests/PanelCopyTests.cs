@@ -26,8 +26,9 @@ namespace OpenDashPlugin.Tests
         {
             Assert.DoesNotContain("no screens", PanelCopy.EmptyRig, System.StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("empty", PanelCopy.EmptyRig, System.StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("openDash installs its dashboard into SimHub", PanelCopy.EmptyRig, System.StringComparison.Ordinal);
-            Assert.EndsWith(".", PanelCopy.EmptyRig, System.StringComparison.Ordinal);
+            // What adding one does is the card's own job to say, so the sentence is now the instruction
+            // and nothing else; docs/design/voice.md is the rule.
+            Assert.Equal("Add the screen your rig has.", PanelCopy.EmptyRig);
         }
 
         [Fact]

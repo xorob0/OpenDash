@@ -35,7 +35,7 @@ namespace OpenDashPlugin
             {
                 return Ui.Section("Screens openDash can install",
                     caption,
-                    Ui.Caption("This build of openDash carries no dashboard packages. See plugin/OpenDash/Resources/README.md.", BodyWidth));
+                    Ui.Caption("This build of openDash ships no dashboards.", BodyWidth));
             }
 
             var rows = new List<UIElement>();
@@ -64,7 +64,7 @@ namespace OpenDashPlugin
                 PanelPackageRow.Caption(captured),
                 Ui.StatusPill(dot, state.State, state.StateHex),
                 null);
-            row.ToolTip = PanelPackageRow.Tooltip(captured.Folder, uses);
+            row.ToolTip = PanelPackageRow.Tooltip(uses);
             return row;
         }
     }

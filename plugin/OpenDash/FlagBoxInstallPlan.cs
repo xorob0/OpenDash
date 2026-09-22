@@ -88,8 +88,7 @@ namespace OpenDashPlugin
         /// <summary>The sentence a row shows when the profile is installed but the device is listing the
         /// maker's built-in profiles instead.</summary>
         public const string BuiltInModeNote =
-            "SimHub is showing your device's built-in profiles, so openDash's will not be in its list. "
-            + "Turn built-in profiles off on the device to see it.";
+            "Turn off built-in profiles on your device, or openDash's will not be listed.";
 
         /// <summary>Stamped into the profile's Author by the build; how we tell ours from the user's.</summary>
         public const string Author = "openDash";
@@ -97,8 +96,7 @@ namespace OpenDashPlugin
         /// <summary>The warning both presses owe the user. Update and Reinstall cost the same thing --
         /// the copy in SimHub goes, and whatever the user changed in it goes with it -- so the sentence
         /// names the press rather than either verb and both branches carry it.</summary>
-        public const string Replaces =
-            "Pressing the button replaces the copy in SimHub, including any changes you made to it there.";
+        public const string Replaces = "Replaces the copy in SimHub, including your changes to it.";
 
         /// <summary>
         /// The version the build stamped into a profile description, or null.
@@ -236,32 +234,19 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>The label on the button, which has to say what pressing it does.</summary>
-        public static string ButtonLabel(FlagBoxPlan plan)
-        {
-            if (plan == null) return "Install into SimHub";
-            switch (plan.State)
-            {
-                case FlagBoxInstallState.Outdated: return "Update in SimHub";
-                case FlagBoxInstallState.UpToDate: return "Reinstall in SimHub";
-                default: return "Install into SimHub";
-            }
-        }
-
         /// <summary>The line beside the button. Says what is true now, not what we wish were true.</summary>
         public static string Summary(FlagBoxPlan plan, string path)
         {
-            if (plan == null) return "Flag box: not checked.";
+            if (plan == null) return "Not checked.";
             switch (plan.State)
             {
                 case FlagBoxInstallState.NotEmbedded:
-                    return "No flag box profile is embedded in this build.";
+                    return "This build ships no flag box profile.";
                 case FlagBoxInstallState.Unavailable:
-                    return "SimHub's matrix settings are not available, so openDash cannot install the profile. "
-                        + "Import it by hand from " + (path ?? "the openDash folder") + ".";
+                    return "SimHub's matrix settings are not available. Import it by hand from "
+                        + (path ?? "the openDash folder") + ".";
                 case FlagBoxInstallState.NotInstalled:
-                    return "Not installed. Press the button to add it to SimHub's matrix profiles; "
-                        + "then pick it on your matrix device.";
+                    return "Not installed. Install it, then select it on your device.";
                 case FlagBoxInstallState.UpToDate:
                     // Installing adds a profile; it does not switch to one. SimHub picks the current
                     // profile from its own persisted activeProfileId, so a user who presses the button
@@ -273,14 +258,14 @@ namespace OpenDashPlugin
                     // press that was never warned about.
                     return "Installed and up to date"
                         + (plan.InstalledVersion == null ? ". " : " (" + plan.InstalledVersion + "). ")
-                        + "Select it on your matrix device to use it. "
+                        + "Select it on your device to use it. "
                         + Replaces;
                 case FlagBoxInstallState.Outdated:
                     return "A newer profile is available ("
                         + (plan.InstalledVersion ?? "unknown") + " to " + (plan.EmbeddedVersion ?? "unknown")
                         + "). " + Replaces;
                 default:
-                    return "Installing the flag box profile failed.";
+                    return "Install failed. See SimHub's log.";
             }
         }
     }
