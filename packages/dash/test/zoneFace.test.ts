@@ -1217,6 +1217,49 @@ describe('a zone may list the class a driver is racing in', () => {
     }
   });
 
+  /** The band dashboard of the reference face, which is the file band D's eight pages live in. */
+  const referenceBand = (): Dashboard => {
+    const d = rectOf(zoneFace1920x480, 'D');
+    return reference.built.zones.find((n) => n.name === zoneDashboardName('band', { width: d.width, height: d.height }))!;
+  };
+
+  /** Every formula of the named items of one screen. */
+  const formulasOf = (dashboard: Dashboard, page: string, matches: (name: string) => boolean): string[] => {
+    const screen = dashboard.screens.find((s) => s.name === page)!;
+    return itemsOf({ ...dashboard, screens: [screen] })
+      .filter((item) => matches(item.name))
+      .flatMap((item) => Object.values(item.bindings ?? {}))
+      .map((b) => (b as { formula?: string }).formula ?? '');
+  };
+
+  test('band D asks for the car ahead in class, a page of three gaps having no list to shorten', () => {
+    const band = referenceBand();
+    const outer = formulasOf(band, 'relative', (name) => name.startsWith('relative.ahead') || name.startsWith('relative.behind'));
+    // Four: a position and a gap for each of the two cars the page names.
+    expect(outer).toHaveLength(4);
+    for (const formula of outer) {
+      expect(formula).toContain(`OpenDash.${REFERENCE}ZoneDClassOnly`);
+      // The class-only twin of the same lookup, which is what the filter means where there is no
+      // list: the car ahead in the driver's class rather than fewer cars.
+      expect(formula).toContain('getopponentleaderboardposition_aheadbehind_playerclassonly');
+    }
+  });
+
+  test('the middle of band D’s relative is the driver, who is in his own class whatever the filter says', () => {
+    const middle = formulasOf(referenceBand(), 'relative', (name) => name.startsWith('relative.you'));
+    expect(middle.length).toBeGreaterThan(0);
+    for (const formula of middle) expect(formula).not.toContain('ClassOnly');
+  });
+
+  test('the other seven pages of band D list nobody, so none of them reads the setting', () => {
+    const band = referenceBand();
+    for (const page of ['fuel', 'energy', 'stint', 'tyres', 'weather', 'sectors', 'car']) {
+      const screen = band.screens.find((s) => s.name === page)!;
+      const used = propertiesIn({ ...band, screens: [screen] });
+      expect({ page, used: used.filter((p) => p.endsWith('ClassOnly')) }).toMatchObject({ used: [] });
+    }
+  });
+
   test('a portrait face gives B and C a file each, and neither reads the other zone', () => {
     // 600 x 686 stacks A over B over C, so the two are different rectangles and cannot share.
     const portrait = BUILT.find((b) => b.face === zoneFace600x686)!;

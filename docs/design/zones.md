@@ -578,10 +578,16 @@ It is **not** `PositionMode`. That setting is which number a position column sho
 is in the list at all, and one class counted by overall position is a legitimate thing to ask for.
 What `PositionMode: class` currently does to a list it did not reorder is #212.
 
-Two pages read it: the leaderboard and the relative. Zone A lists nobody. Band D's own relative
-page is three gaps rather than a list, so filtering it means asking for the car *ahead in class*
-rather than listing fewer of them — the same idea, a different change, and #210. The panel
-offers the checkbox only where a page would change.
+Three pages read it: the leaderboard, the relative, and band D's own relative page D7. Zone A lists
+nobody, which leaves it the one zone with nothing to filter, and the panel offers the checkbox only
+where a page would change.
+
+D7 reads it differently from the other two, because it is three gaps and not a list. Filtering a
+table means listing fewer cars, whereas filtering three gaps means asking for the car *ahead in the
+player's own class*, which is the class-only twin of the same row lookup rather than a shorter
+result. On a multi-class grid this is arguably the more useful of the two readings, since the car
+ahead on track is frequently in a class the driver is not racing. The middle field is untouched
+under either reading, a driver being in his own class by construction.
 
 ### The counter
 
@@ -733,7 +739,7 @@ Four things the artboard does not settle, and what the panel does about each:
 | | |
 |---|---|
 | **The mask has no control drawn.** | It is the setting that decides how long a driver's cycle is, so it cannot simply be missing. The panel puts a second drop in each zone cell, reading "21 of 21 pages", opening a checkbox per page. Owed on the canvas. |
-| **Nor has the class filter.** | A checkbox under the start page in each zone cell, reading "My class only", and only in the cells where a page would change — zones B and C. Owed on the canvas alongside the mask. |
+| **Nor has the class filter.** | A checkbox reading "My class only", under the start page in each zone cell where a page would change, and along the strip for band D, whose controls lie in a row rather than stacked. Zone A alone is offered none. Owed on the canvas alongside the mask. |
 | **An end of the bar is drawn as one control** reading "Race · lap", and an end carries two fields. | The control stays one box and opens a panel with a picker for each, rather than splitting into two boxes the artboard does not have. |
 | **Nothing says what happens to a zone sitting on a page that is then turned off.** | It snaps *forward* to the next enabled page, wrapping once — forward because a cycle runs forward, so the next press of the button carries on rather than repeats. Turning off a zone's last enabled page is refused: a zone with an empty cycle has nothing to draw. |
 
