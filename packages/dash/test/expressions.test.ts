@@ -97,12 +97,15 @@ describe('card expressions', () => {
     }
   });
 
-  test('fuel laps show -.- in text.dim without an estimate and go red only under a lap', () => {
+  // #382. The card drew its own gate, `Fuel_RemainingLaps <= 0`, where band D's fuel page and the
+  // fuel module draw the same property behind a completed lap, so on the out lap the main face
+  // named a figure that moves every frame while the second screen beside it drew its absence. The
+  // absence is `--` here too: `-.-` was the one card writing a no-data glyph of its own.
+  test('fuel laps wait for the lap that says what one costs, then go red only under a lap', () => {
     const laps = 'isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)';
-    expect(formulaOf(textItem('fuelLaps', 'value'), 'Text')).toBe(`if((${laps}) <= (0), '-.-', format(${laps}, '0.0'))`);
-    expect(formulaOf(textItem('fuelLaps', 'value'), 'TextColor')).toBe(
-      `if((${laps}) <= (0), '#33383F', if(((${laps}) > (0)) and ((${laps}) < (1)), '#FF2D46', '#F5F7FA'))`,
-    );
+    const settled = values.fuelIsSettled();
+    expect(formulaOf(textItem('fuelLaps', 'value'), 'Text')).toBe(`if(${settled}, format(${laps}, '0.0'), '${values.NO_VALUE}')`);
+    expect(formulaOf(textItem('fuelLaps', 'value'), 'TextColor')).toBe(`if(${settled}, if((${laps}) < (1), '#FF2D46', '#F5F7FA'), '#33383F')`);
   });
 
   test('fuel unit Left adds one digit cell for the decimal and one special for the point', () => {
@@ -456,6 +459,17 @@ describe('module expressions', () => {
     if (!item || item.kind !== 'text') throw new Error(`${id}.${name} is not a text item`);
     return item;
   };
+
+  test('the fuel page paints nothing low until a lap has said what one costs (#382)', () => {
+    // `Fuel_RemainingLaps` is zero before the first crossing and zero is under a lap, so the level
+    // and the estimate beside it were red on a full tank at an idle screen, next to the `--` the
+    // estimate draws for itself. The gate the estimate reads is the gate the colour reads.
+    for (const name of ['level.value', 'lapsLeft.value']) {
+      const colour = formulaOf(moduleItem('fuel', name), 'TextColor');
+      expect(colour).toContain('Fuel_LitersPerLap');
+      expect(colour).toContain('Fuel_RemainingLaps');
+    }
+  });
 
   test('the delta draws its sign as U+2212, in the value and at the left end of the scale', () => {
     const value = moduleItem('delta', 'delta.value');

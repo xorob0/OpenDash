@@ -56,6 +56,7 @@ import {
   deltaColour,
   fuel,
   fuelLastLap,
+  fuelLastLapIsSettled,
   fuelUnit,
   hasTime,
   lapTime,
@@ -175,14 +176,22 @@ const deltaField = (prefix: string, id: string, caption: string, value: Expr, co
   value: { sample, bind: value, chars: CHARS.delta, fs: densityOf(DENSITY).mid, colorBind: colour },
 });
 
-/** A fuel field: 46 px with the sim's own unit after it, which is `L` or `gal` and never both. */
-const fuelField = (prefix: string, id: string, caption: string, value: Expr, sample: string, chars = CHARS.fuel): FieldSpec => ({
+/**
+ * A fuel field: 46 px with the sim's own unit after it, which is `L` or `gal` and never both.
+ *
+ * `guard` is the condition under which the value is a reading at all; without one the field draws
+ * the number as it is. The fuel used carries one and the tank does not, because the tank is a
+ * reading of its own at every moment whereas a lap's consumption is a figure SimHub publishes as
+ * zero for a lap that never happened, and a review of the lap that said the lap cost nothing was
+ * contradicting the band and the fuel page it had been brought into agreement with (#382).
+ */
+const fuelField = (prefix: string, id: string, caption: string, value: Expr, sample: string, chars = CHARS.fuel, guard?: Expr): FieldSpec => ({
   name: `${prefix}.${id}`,
   id,
   label: caption,
   value: {
     sample,
-    bind: fmt(value, '0.0'),
+    bind: guard ? iff(guard, fmt(value, '0.0'), str(NO_VALUE)) : fmt(value, '0.0'),
     chars,
     fs: densityOf(DENSITY).mid,
     follower: { text: 'L', widest: 'gal', bind: fuelUnit(), size: densityOf(DENSITY).labelSm },
@@ -205,7 +214,7 @@ const deltaFields = (prefix: string): FieldSpec[] => [
 ];
 
 const fuelFields = (prefix: string): FieldSpec[] => [
-  fuelField(prefix, 'fuelUsed', 'Fuel used', fuelLastLap(), '2.84', CHARS.consumption),
+  fuelField(prefix, 'fuelUsed', 'Fuel used', fuelLastLap(), '2.84', CHARS.consumption, fuelLastLapIsSettled()),
   fuelField(prefix, 'fuelLeft', 'Fuel left', fuel(), '38.4'),
 ];
 
