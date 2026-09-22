@@ -9,8 +9,9 @@
  * frames come back to the host and ffmpeg turns them into a webm, an mp4 and a poster; the guest
  * never encodes anything.
  *
- * Six seconds by default, which is one period of the emulator's rev sweep, so the bar and the
- * shift lights end at the phase they began and the loop seam is quiet. Every clip carries a
+ * Six seconds by default on the clip scenario, whose rev sweep is three seconds long: two gear
+ * changes, the first early, and the shift lights at the top of each. The seam falls on a sweep
+ * boundary, so the bar ends at the phase it began. Every clip carries a
  * sidecar with the version, commit, scenario and rate it was taken at; `site/scripts/sync-clips.ts`
  * reads it.
  *
@@ -59,7 +60,7 @@ export function parseArgs(argv: readonly string[]): ClipsOptions | { help: true 
   const fps = flagValue('fps');
   return {
     packages: list(flagValue('packages')) ?? [...CLIP_PACKAGES],
-    scenario: flagValue('scenario') ?? 'gallery',
+    scenario: flagValue('scenario') ?? 'clip',
     seconds: Number(flagValue('seconds') ?? 6),
     fps: fps === undefined || fps === 'auto' ? 'auto' : Number(fps),
     preroll: Number(flagValue('preroll') ?? 1),
@@ -238,7 +239,7 @@ const USAGE = `clips: record a few seconds of each dashboard on the VM and encod
                 [--out build/clips] [--no-build] [--keep] [--no-encode] [--encode-only] [--gif]
 
   --packages     comma separated; default ${CLIP_PACKAGES.join(', ')}
-  --scenario     default gallery; one of ${scenarios().join(', ') || '(none built)'}
+  --scenario     default clip; one of ${scenarios().join(', ') || '(none built)'}
   --seconds      length kept; default 6, one period of the rev sweep
   --fps          default auto: 20, or 15 past 1280 x 720
   --no-build     skip the dashboard build
