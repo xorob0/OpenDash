@@ -16,6 +16,13 @@
  * again, since the duplicated targets those sites passed have been dropped, but they would fail by
  * way of a moved rectangle or a missing row value, which names neither the helper nor the rule. The
  * collision throw has no other coverage at all.
+ *
+ * Deleting `withBindings` did not by itself make the trap unexpressible, since `sectorStrip` in
+ * second/sectors.ts and the energy notice in modules/energy.ts had written the replace by hand as a
+ * `bindings:` key rather than as a spread of the helper. Both now fold through `withMoreBindings`,
+ * and because the elements underneath carry nothing of their own they take the branch that adds to
+ * an item with no bindings yet, which is why that branch is asserted below rather than left to the
+ * two other cases, both of which start from an element that already binds something.
  */
 import { describe, expect, test } from 'bun:test';
 import { formula, withMoreBindings } from '../src/bind.ts';
@@ -29,6 +36,13 @@ describe('withMoreBindings', () => {
     const merged = withMoreBindings(drawn, { Visible: 'showDelta' });
 
     expect(merged.bindings).toEqual({ Text: formula('delta'), Visible: formula('showDelta') });
+  });
+
+  test('an element with no bindings of its own gets exactly what the caller binds', () => {
+    const drawn = label('lap.sector', 'S1', 0, 0, 80);
+    expect(drawn.bindings).toBeUndefined();
+
+    expect(withMoreBindings(drawn, { Visible: 'timed' }).bindings).toEqual({ Visible: formula('timed') });
   });
 
   test('three places binding three targets keep all three', () => {
