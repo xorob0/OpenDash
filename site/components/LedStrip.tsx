@@ -1,39 +1,20 @@
 'use client';
 
 /**
- * An emulated LED strip: what a side / centre / side strip shows, drawn by the site.
+ * An emulated LED strip: what a strip shows, drawn by the site rather than photographed.
  *
- * The centre is the rev bar, green then amber then red, flashing at the limiter. The sides are
- * lamps: a flag, a car alongside, the pit limiter, ABS. `live` runs a short script through all of
- * them; a `frame` draws one state and holds it. It is drawn by the browser rather than
- * photographed, which the caption beside it says, because no strip is plugged into the test
- * machine and a film of one would show nothing a drawing does not.
+ * The centre is the rev bar, green to amber to red, flashing at the top of the sweep. The sides are
+ * lamps of one LED each, counted from the outside in, and which role lands on which LED is the
+ * generated `LAMPS` table, which is the profile's own. `live` runs a script through everything a
+ * strip says on a lap; a `frame` draws one state and holds it.
+ *
+ * No strip is plugged into the test machine, so this is a drawing and the page says so. It is the
+ * one picture on the site that is not a photograph.
  */
 import { useEffect, useState } from 'react';
-import { FRAMES, type Lamp, type StripFrame } from '../lib/stripFrames';
+import { LAMPS } from '../lib/content.generated';
+import { LOOP, scripted, type Ink, type Lit, type StripFrame } from '../lib/stripFrames';
 import styles from './LedStrip.module.css';
-
-/** The script the live strip runs, in seconds: revs climb and drop with each gear, the sides tell the rest. */
-const LOOP = 18;
-
-function scripted(t: number): StripFrame {
-  const gear = t % 3;
-  let revs = 0.3 + 0.7 * Math.min(1, gear / 2.6);
-  const blink = gear > 2.6;
-  if (gear > 2.85) revs = 0.35;
-  let left: Lamp = 'off';
-  let right: Lamp = 'off';
-  let sidesBlink = false;
-  let label = 'Revs, in the car’s own colours';
-  if (t >= 3 && t < 6) [left, right, label] = ['blue', 'blue', 'Blue flag'];
-  else if (t >= 6 && t < 8.5) [left, right, sidesBlink, label] = ['yellow', 'yellow', true, 'Waved yellow'];
-  else if (t >= 8.5 && t < 11) [left, label] = ['white', 'A car on your left'];
-  else if (t >= 11 && t < 12.5) [left, right, sidesBlink, label] = ['white', 'white', true, 'ABS'];
-  else if (t >= 12.5 && t < 15) [left, right, sidesBlink, label] = ['amber', 'amber', true, 'Pit limiter'];
-  else if (t >= 15 && t < 17) [left, right, label] = ['red', 'red', 'Low fuel'];
-  if (t >= 12.5 && t < 15) revs = 0.2;
-  return { revs, blink, left, right, sidesBlink, label };
-}
 
 export interface LedStripProps {
   left: number;
@@ -41,13 +22,27 @@ export interface LedStripProps {
   right: number;
   frame?: StripFrame;
   live?: boolean;
+  /** Pixel size of one LED. */
   led?: number;
   gap?: number;
-  /** Show the label under the strip. */
   caption?: boolean;
 }
 
-const centreColour = (i: number, n: number): string => (i / n < 0.5 ? 'green' : i / n < 0.8 ? 'amber' : 'red');
+/** The ladder the centre climbs: green, then amber, then red. */
+const rev = (i: number, n: number): Ink => (i / n < 0.5 ? 'good' : i / n < 0.8 ? 'caution' : 'danger');
+
+/** What a lamp of a side shows: the first of its roles that has something to say. */
+function lampInk(frame: StripFrame, side: 'left' | 'right', index: number, count: number): Lit | null {
+  const lamp = LAMPS[Math.min(count, LAMPS.length - 1)]?.[index];
+  if (!lamp) return null;
+  for (const role of lamp.carries) {
+    if (role === 'side' && frame.spotter?.[side]) return { ink: 'caution' };
+    if (role === 'race' && frame.race) return frame.race;
+    if (role === 'car' && frame.car) return frame.car;
+    if (role === 'aid' && frame.aid) return frame.aid;
+  }
+  return null;
+}
 
 export function LedStrip({ left, centre, right, frame, live = false, led = 14, gap = 5, caption = true }: LedStripProps) {
   const [t, setT] = useState(0);
@@ -70,28 +65,42 @@ export function LedStrip({ left, centre, right, frame, live = false, led = 14, g
     return () => cancelAnimationFrame(raf);
   }, [live]);
 
-  const f: StripFrame = frame ?? (live && !reduced ? scripted(t) : FRAMES.blue!);
-  const phase = Math.floor(t * 8) % 2 === 0;
+  const f: StripFrame = frame ?? (live && !reduced ? scripted(t) : { label: 'Revs, in the car’s own colours', revs: 0.7 });
+  // One clock for every blink on the strip, so two lamps blinking are in step, as the profile's are.
+  const on = Math.floor(t * 4) % 2 === 0 || !live;
   const n = left + centre + right;
   const width = n * led + (n - 1) * gap;
-  const litCentre = Math.round(f.revs * centre);
+  const lit = Math.round(f.revs * centre);
+
+  const inkOf = (i: number): Ink | null => {
+    if (f.strip) return f.strip.blink && !on ? null : f.strip.ink;
+    if (i < left || i >= left + centre) {
+      const side = i < left ? 'left' : 'right';
+      const index = i < left ? i : n - 1 - i;
+      const count = side === 'left' ? left : right;
+      const lamp = lampInk(f, side, index, count);
+      if (!lamp) return null;
+      return lamp.blink && !on ? null : lamp.ink;
+    }
+    const c = i - left;
+    if (c >= lit) return null;
+    if (f.shift && !on) return null;
+    return rev(c, centre);
+  };
 
   return (
     <figure className={styles.figure}>
-      <svg viewBox={`0 0 ${width} ${led}`} width={width} height={led} className={styles.strip} role="img" aria-label={`${left}/${centre}/${right} strip showing: ${f.label}`}>
+      <svg
+        viewBox={`0 0 ${width} ${led}`}
+        width={width}
+        height={led}
+        className={styles.strip}
+        role="img"
+        aria-label={`A ${left}/${centre}/${right} strip showing: ${f.label}`}
+      >
         {Array.from({ length: n }, (_, i) => {
-          const isLeft = i < left;
-          const isRight = i >= left + centre;
-          let lamp: Lamp = 'off';
-          if (isLeft) lamp = f.left;
-          else if (isRight) lamp = f.right;
-          else {
-            const c = i - left;
-            lamp = c < litCentre ? (centreColour(c, centre) as Lamp) : 'off';
-            if (f.blink && lamp !== 'off' && !phase) lamp = 'off';
-          }
-          if ((isLeft || isRight) && f.sidesBlink && !phase) lamp = 'off';
-          return <rect key={i} x={i * (led + gap)} y={0} width={led} height={led} className={`${styles.led} ${styles[lamp]}`} />;
+          const ink = inkOf(i);
+          return <rect key={i} x={i * (led + gap)} y={0} width={led} height={led} className={`${styles.led} ${ink ? styles[ink] : ''}`} />;
         })}
       </svg>
       {caption ? <figcaption className={styles.caption}>{f.label}</figcaption> : null}

@@ -16,7 +16,7 @@ import { CLAIMED_SIM, DIFFERENTIATORS, FREE_FOREVER, FREE_HEADLINE, INSTALL, NOT
 import styles from './page.module.css';
 
 /** The states the lights teaser shows, drawn by the site. */
-const TEASER = [FRAMES.revs!, FRAMES.blue!, FRAMES.spotterLeft!];
+const TEASER = [FRAMES.shift!, FRAMES.yellow!, FRAMES.spotter!];
 
 export default function Home() {
   const hero = BASE_FACE;
@@ -70,7 +70,7 @@ export default function Home() {
         </div>
       </section>
 
-      <Section id="screen" label="Screens" title="Find your screen." lede="10 face sizes, drawn to scale. Pick yours to see it. If nothing matches, take the nearest shape." wide>
+      <Section id="screen" title="Find your screen" lede="Ten faces, drawn to scale and showing what they draw. Pick one to watch it run; if nothing matches your panel, take the nearest shape.">
         <ScreenPicker faces={faces} initial={hero?.slug ?? faces[0]?.slug ?? ''} />
         <p className={`prose ${styles.more}`}>
           <Link href="/screens" className="link">
@@ -79,7 +79,7 @@ export default function Home() {
         </p>
       </Section>
 
-      <Section id="pages" label="Pages" title="21 pages. 1 button per zone." lede="Zone B and zone C each show 1 page. A wheel button cycles it. Hold a button to glance at another page, release to return." wide>
+      <Section id="pages" title="21 pages, one button per zone" lede="Zone B and zone C each show one page, and a wheel button cycles it. Hold the button to glance at another, release to go back.">
         <ul className={styles.chips}>
           {MODULES.map((m) => (
             <li key={m.id} className={`${styles.chip} ${m.enabled ? '' : styles.off}`}>
@@ -95,19 +95,19 @@ export default function Home() {
         </p>
       </Section>
 
-      <Section id="second-screens" label="Second screens" title="A phone beside the wheel. A screen for the pit wall." wide>
+      <Section id="second-screens" title="A phone beside the wheel, a screen for the pit wall">
         <div className={styles.seconds}>
           {companion ? (
             <div className={styles.second}>
               <h3 className="h3">The companion</h3>
-              <p className="prose">1 page at a time on a phone or tablet, landscape or portrait. 21 pages, each with a switch.</p>
+              <p className="prose">One page at a time on a phone or tablet, landscape or portrait. All 21, each with a switch.</p>
               <Capture file={packageFile(companion.folder)} alt="The companion showing lap times" width={companion.width} height={companion.height} caption="Companion" />
             </div>
           ) : null}
           {pitWall ? (
             <div className={styles.second}>
               <h3 className="h3">The pit wall</h3>
-              <p className="prose">A screen for whoever is not driving. 3 pages: Race, Tower and Telemetry, and a portrait version.</p>
+              <p className="prose">For whoever is not driving: the field with gaps and stops, your lap beside it, and a portrait version.</p>
               <Capture file={packageFile(pitWall.folder)} alt="The pit wall's race page" width={pitWall.width} height={pitWall.height} caption="Pit wall" />
             </div>
           ) : null}
@@ -119,7 +119,7 @@ export default function Home() {
         </p>
       </Section>
 
-      <Section id="lights" label="Lights" title="LEDs, for more than revs." lede="Shift lights in your car's own colours and order. Flags, a car alongside, the pit limiter and warnings on the sides. 62 strip shapes and an 8 × 8 flag box, all included." wide>
+      <Section id="lights" title="LEDs, for more than revs" lede="Shift lights in your car's own colours and order, and sides that carry the flags, a car alongside, the limiter and the warnings. 62 strip shapes and an 8 × 8 flag box.">
         <ul className={styles.strips}>
           {TEASER.map((f) => (
             <li key={f.label} className={styles.strip}>
@@ -135,9 +135,9 @@ export default function Home() {
         </p>
       </Section>
 
-      <Section id="status" label="Status" title="Alpha. Here is what is missing." wide>
+      <Section id="status" title="Alpha: what is missing">
         <ul className={`rows ${styles.status}`}>
-          <li>Every release so far is a pre-release.</li>
+          <li>Every release so far is a candidate.</li>
           <li>{CLAIMED_SIM}</li>
           <li>
             No idle screen yet (
@@ -162,7 +162,7 @@ export default function Home() {
         </p>
       </Section>
 
-      <Section id="get" label="Get it" title="Get it." lede={`${FREE_FOREVER} Windows, SimHub ${SIMHUB_VERSION} or later.`} wide>
+      <Section id="get" title="Install it" lede={`Windows, SimHub ${SIMHUB_VERSION} or later. ${FREE_FOREVER}`}>
         <Actions>
           <Primary href={INSTALL.href}>{INSTALL.label} OpenDash</Primary>
           <Secondary href="/download">Download the files</Secondary>

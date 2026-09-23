@@ -20,10 +20,11 @@ describe('the comparison', () => {
     }
   });
 
-  test('a refusal has a reason', () => {
+  test('a refusal has a reason, and a word that is not the mark repeated', () => {
     for (const row of ROWS) {
       const c = row.cells.opendash;
       if (c.mark === 'notBuilt') expect(c.text.length).toBeGreaterThan(10);
+      expect({ row: row.id, repeats: c.text.trim().toLowerCase() === c.word.toLowerCase() + '.' }).toEqual({ row: row.id, repeats: false });
     }
   });
 

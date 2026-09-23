@@ -5,6 +5,204 @@
   "simHubVersion": "9.12.6",
   "clips": [
     {
+      "slug": "opendash",
+      "package": "OpenDash",
+      "scenario": "clip",
+      "width": 1920,
+      "height": 480,
+      "fps": 20,
+      "seconds": 6,
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T21:45:01.066Z",
+      "files": {
+        "webm": "opendash.webm",
+        "mp4": "opendash.mp4",
+        "poster": "opendash.png"
+      },
+      "bytes": {
+        "webm": 108747,
+        "mp4": 131277,
+        "poster": 91868
+      }
+    },
+    {
+      "slug": "opendash-1280x400",
+      "package": "OpenDash 1280x400",
+      "scenario": "clip",
+      "width": 1280,
+      "height": 400,
+      "fps": 20,
+      "seconds": 6,
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T21:48:38.170Z",
+      "files": {
+        "webm": "opendash-1280x400.webm",
+        "mp4": "opendash-1280x400.mp4",
+        "poster": "opendash-1280x400.png"
+      },
+      "bytes": {
+        "webm": 75329,
+        "mp4": 86556,
+        "poster": 62360
+      }
+    },
+    {
+      "slug": "opendash-1280x480",
+      "package": "OpenDash 1280x480",
+      "scenario": "clip",
+      "width": 1280,
+      "height": 480,
+      "fps": 20,
+      "seconds": 6,
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T21:11:40.554Z",
+      "files": {
+        "webm": "opendash-1280x480.webm",
+        "mp4": "opendash-1280x480.mp4",
+        "poster": "opendash-1280x480.png"
+      },
+      "bytes": {
+        "webm": 73714,
+        "mp4": 90652,
+        "poster": 55066
+      }
+    },
+    {
+      "slug": "opendash-1280x720",
+      "package": "OpenDash 1280x720",
+      "scenario": "clip",
+      "width": 1280,
+      "height": 720,
+      "fps": 20,
+      "seconds": 6,
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T21:46:14.039Z",
+      "files": {
+        "webm": "opendash-1280x720.webm",
+        "mp4": "opendash-1280x720.mp4",
+        "poster": "opendash-1280x720.png"
+      },
+      "bytes": {
+        "webm": 130238,
+        "mp4": 151701,
+        "poster": 99676
+      }
+    },
+    {
+      "slug": "opendash-480-round",
+      "package": "OpenDash 480 round",
+      "scenario": "clip",
+      "width": 480,
+      "height": 480,
+      "fps": 20,
+      "seconds": 6,
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T21:20:28.379Z",
+      "files": {
+        "webm": "opendash-480-round.webm",
+        "mp4": "opendash-480-round.mp4",
+        "poster": "opendash-480-round.png"
+      },
+      "bytes": {
+        "webm": 29061,
+        "mp4": 41361,
+        "poster": 11734
+      }
+    },
+    {
+      "slug": "opendash-600x686",
+      "package": "OpenDash 600x686",
+      "scenario": "clip",
+      "width": 600,
+      "height": 686,
+      "fps": 15,
+      "seconds": 6,
+      "frames": 105,
+      "dropped": 0,
+      "takenAt": "2026-09-22T21:53:22.001Z",
+      "files": {
+        "webm": "opendash-600x686.webm",
+        "mp4": "opendash-600x686.mp4",
+        "poster": "opendash-600x686.png"
+      },
+      "bytes": {
+        "webm": 32941,
+        "mp4": 46285,
+        "poster": 26929
+      }
+    },
+    {
+      "slug": "opendash-800-round",
+      "package": "OpenDash 800 round",
+      "scenario": "clip",
+      "width": 800,
+      "height": 800,
+      "fps": 20,
+      "seconds": 6,
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T21:19:16.228Z",
+      "files": {
+        "webm": "opendash-800-round.webm",
+        "mp4": "opendash-800-round.mp4",
+        "poster": "opendash-800-round.png"
+      },
+      "bytes": {
+        "webm": 50303,
+        "mp4": 66118,
+        "poster": 27506
+      }
+    },
+    {
+      "slug": "opendash-800x286",
+      "package": "OpenDash 800x286",
+      "scenario": "clip",
+      "width": 800,
+      "height": 286,
+      "fps": 20,
+      "seconds": 6,
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T21:16:51.675Z",
+      "files": {
+        "webm": "opendash-800x286.webm",
+        "mp4": "opendash-800x286.mp4",
+        "poster": "opendash-800x286.png"
+      },
+      "bytes": {
+        "webm": 49884,
+        "mp4": 59573,
+        "poster": 25437
+      }
+    },
+    {
+      "slug": "opendash-800x480",
+      "package": "OpenDash 800x480",
+      "scenario": "clip",
+      "width": 800,
+      "height": 480,
+      "fps": 20,
+      "seconds": 6,
+      "frames": 138,
+      "dropped": 2,
+      "takenAt": "2026-09-22T21:15:39.475Z",
+      "files": {
+        "webm": "opendash-800x480.webm",
+        "mp4": "opendash-800x480.mp4",
+        "poster": "opendash-800x480.png"
+      },
+      "bytes": {
+        "webm": 41855,
+        "mp4": 53601,
+        "poster": 31400
+      }
+    },
+    {
       "slug": "opendash-850x480",
       "package": "OpenDash 850x480",
       "scenario": "clip",
@@ -12,18 +210,18 @@
       "height": 480,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T19:12:39.022Z",
+      "frames": 139,
+      "dropped": 1,
+      "takenAt": "2026-09-22T21:47:26.099Z",
       "files": {
         "webm": "opendash-850x480.webm",
         "mp4": "opendash-850x480.mp4",
         "poster": "opendash-850x480.png"
       },
       "bytes": {
-        "webm": 85546,
-        "mp4": 105693,
-        "poster": 55191
+        "webm": 87719,
+        "mp4": 105097,
+        "poster": 54727
       }
     },
     {

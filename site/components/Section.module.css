@@ -3,28 +3,16 @@
 }
 
 .head {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.titles {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  max-width: 68ch;
 }
 
 .lede {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
 }
 
 .body {
-  margin-top: var(--space-7);
-}
-
-@media (min-width: 62rem) {
-  .wide {
-    grid-template-columns: 1.1fr 1fr;
-    align-items: end;
-    gap: var(--space-8);
-  }
+  margin-top: var(--space-6);
 }

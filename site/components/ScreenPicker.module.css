@@ -1,11 +1,12 @@
 .picker {
-  display: grid;
-  gap: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 /*
  * One virtual canvas for every rectangle, so their sizes compare. On a phone the canvas is
- * narrower so the smallest face still has room for its label.
+ * narrower, so the smallest face still has room to be seen.
  */
 .shapes {
   --canvas: 2000;
@@ -17,29 +18,55 @@
 
 .shape {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: block;
   width: calc(var(--w) / var(--canvas) * 100%);
   aspect-ratio: var(--w) / var(--h);
+  overflow: hidden;
   border: 1px solid var(--color-surface-raised);
   background: var(--color-surface-inset);
   color: var(--color-text-secondary);
   transition:
     border-color var(--fast) var(--ease),
-    background var(--fast) var(--ease),
     color var(--fast) var(--ease);
-}
-
-.shape:hover {
-  background: var(--color-surface-zone);
-  color: var(--color-text-primary);
 }
 
 .round {
   border-radius: 50%;
 }
 
-/* The one cyan on the picker: the selected shape's rule. */
+.picture,
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* The size sits over its own picture, so the wall still reads as a set of sizes. */
+.size {
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 0;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-surface-base) 78%, transparent);
+}
+
+.round .size {
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  bottom: 8%;
+}
+
+.shape:hover {
+  border-color: var(--color-text-secondary);
+}
+
+/* The one cyan on the picker: the chosen size. */
 .on {
   color: var(--color-text-primary);
   border-color: var(--purpose-ui-accent);
@@ -47,61 +74,17 @@
   outline-offset: -1px;
 }
 
-.size {
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.tag {
-  position: absolute;
-  inset-inline-end: var(--space-2);
-  top: var(--space-1);
-  font-size: 0.6rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--purpose-ui-accent);
-}
-
-.round .tag {
-  inset-inline-end: auto;
-  top: 18%;
-}
-
-.detail {
-  display: grid;
-  gap: var(--space-6);
-  align-items: start;
-}
-
-.about {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.name {
+.get {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-3);
-  font-size: 1.5rem;
-}
-
-.emph {
-  font-family: var(--font-ui);
-  font-weight: 500;
-  font-size: var(--size-label);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--purpose-ui-accent);
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  color: var(--color-text-secondary);
 }
 
 .install {
   display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-3);
+  align-items: center;
   min-height: 44px;
   padding: var(--space-2) var(--space-5);
   color: var(--purpose-ui-on-accent);
@@ -115,13 +98,8 @@
   background: var(--color-brand-tint);
 }
 
-
 .file {
   font-size: var(--size-small);
-}
-
-.notBuilt {
-  color: var(--color-text-secondary);
 }
 
 @media (min-width: 48rem) {
@@ -130,10 +108,6 @@
   }
 
   .size {
-    font-size: 0.95rem;
-  }
-
-  .detail {
-    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+    font-size: 0.9rem;
   }
 }

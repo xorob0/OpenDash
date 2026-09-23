@@ -8,6 +8,7 @@
  */
 import { DOWNLOADS, PACKAGES } from './content.generated';
 import { hasCapture, packageFile, stillFor } from './captures';
+import { clipFor } from './clips';
 import { inReadingOrder, slug } from './packages';
 import type { SitePackage } from '../scripts/content';
 
@@ -45,17 +46,25 @@ export interface PickerFace {
   round: boolean;
   file: string;
   bytes?: number;
+  /** The picture the cell shows: the clip's own first frame where there is a clip. */
   capture: string | null;
+  /** What plays when the cell is chosen, where this size has been filmed. */
+  clip: { webm: string; mp4: string } | null;
 }
 
 export const pickerFaces = (): PickerFace[] =>
-  FACES.map((f) => ({
-    folder: f.folder,
-    slug: f.slug,
-    width: f.width,
-    height: f.height,
-    round: f.round,
-    file: f.file,
-    bytes: f.bytes,
-    capture: hasCapture(packageFile(f.folder)) ? stillFor(f.folder) : null,
-  }));
+  FACES.map((f) => {
+    const clip = clipFor(f.folder);
+    return {
+      folder: f.folder,
+      slug: f.slug,
+      width: f.width,
+      height: f.height,
+      round: f.round,
+      file: f.file,
+      bytes: f.bytes,
+      // The clip's poster is the clip's first frame, so a cell that starts playing does not jump.
+      capture: clip?.poster ?? (hasCapture(packageFile(f.folder)) ? stillFor(f.folder) : null),
+      clip: clip ? { webm: clip.webm, mp4: clip.mp4 } : null,
+    };
+  });
