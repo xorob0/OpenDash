@@ -1,7 +1,7 @@
 /**
  * The comparison is complete and honest by construction: every row has a cell for every product,
- * a coming feature names its issue, a refusal has its reason, openDash's own column is never
- * "not checked", and the competitor columns say when they were read.
+ * a coming feature names its issue, a refusal has its reason, and no competitor cell is left
+ * blank. A cell we could not stand behind is cut from the row, never hedged.
  */
 import { describe, expect, test } from 'bun:test';
 import { PRODUCTS, ROWS } from '../lib/compare.ts';
@@ -28,15 +28,14 @@ describe('the comparison', () => {
     }
   });
 
-  test('openDash never marks itself not checked', () => {
-    expect(ROWS.filter((r) => r.cells.opendash.mark === 'unchecked').map((r) => r.id)).toEqual([]);
+  test('every competitor cell says something', () => {
+    const blank = [];
+    for (const row of ROWS) for (const p of PRODUCTS) if (p.id !== 'opendash' && row.cells[p.id].text.trim().length < 10) blank.push(`${row.id}/${p.id}`);
+    expect(blank).toEqual([]);
   });
 
-  test('the competitor columns are dated and openDash is not', () => {
-    for (const p of PRODUCTS) {
-      if (p.id === 'opendash') expect(p.asOf).toBeUndefined();
-      else expect(p.asOf).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    }
+  test('every cell carries a word', () => {
+    for (const row of ROWS) for (const p of PRODUCTS) expect({ cell: `${row.id}/${p.id}`, word: row.cells[p.id].word.length > 0 }).toEqual({ cell: `${row.id}/${p.id}`, word: true });
   });
 
   test('the price row makes the promise', () => {

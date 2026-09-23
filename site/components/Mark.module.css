@@ -37,11 +37,6 @@
   background: var(--color-text-dim);
 }
 
-.unchecked {
-  background: transparent;
-  outline: 1px solid var(--color-text-dim);
-}
-
 .word {
   font-size: var(--size-label);
   font-weight: 500;
