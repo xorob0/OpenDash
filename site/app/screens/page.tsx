@@ -1,12 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Anatomy } from '../../components/Anatomy';
-import { Actions, Primary, Secondary } from '../../components/Buttons';
 import { Capture } from '../../components/Capture';
 import { Clip } from '../../components/Clip';
 import { ScreenPicker } from '../../components/ScreenPicker';
 import { Section } from '../../components/Section';
-import { SizeList } from '../../components/SizeList';
 import { anatomyParts } from '../../lib/anatomy';
 import { packageFile, stillFor } from '../../lib/captures';
 import { clipFor } from '../../lib/clips';
@@ -38,27 +36,13 @@ export default function Screens() {
         level={1}
         ruled={false}
         id="faces"
-        label="Screens"
-        title="Every screen on the rig."
-        lede="10 faces for the wheel or the dash, 2 companions, 2 pit walls. Each is laid out for its screen, never scaled. The plugin installs all of them."
-        wide
+        title="Every screen on the rig"
+        lede="Ten faces for the wheel or the dash, two companions and two pit walls, all in the plugin. Drawn to scale below: pick one to watch it run."
       >
-        <h2 className="h3">Find your face size</h2>
-        <p className={`prose ${styles.under}`}>10 face sizes, drawn to scale. Pick yours to see it. If nothing matches, take the nearest shape.</p>
-        <div className={styles.picker}>
-          <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
-        </div>
-        <h2 className={`h3 ${styles.listHead}`}>All 14 screens</h2>
-        <SizeList packages={ALL} />
-        <div className={styles.actions}>
-          <Actions>
-            <Primary href={INSTALL.href}>{INSTALL.label} the plugin</Primary>
-            <Secondary href="/download#packages">The files, one by one</Secondary>
-          </Actions>
-        </div>
+        <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
       </Section>
 
-      <Section id="anatomy" label="Anatomy" title="1 face, 5 parts." lede="Every rectangular face has the same 5 parts. Hover or tap a part." wide>
+      <Section id="anatomy" title="One face, five parts" lede="Every rectangular face is built the same way. Hover or tap a part.">
         {base ? (
           <Anatomy src={stillFor(base.folder)} alt={`The ${sizeLabel(base)} face`} width={HERO_FACE.width} height={HERO_FACE.height} parts={anatomyParts(HERO_FACE)} />
         ) : null}
@@ -66,10 +50,8 @@ export default function Screens() {
 
       <Section
         id="fit"
-        label="Sizes"
-        title="Made for a wide range of screens."
-        lede="From a 1920 × 480 strip to a 480 round, and the phone and the pit wall besides. Each size is laid out for its own pixels: a small screen keeps what matters, a large one shows more."
-        wide
+        title="Made for a wide range of screens"
+        lede="From a 1920 × 480 strip to a 480 round. Each size is laid out for its own pixels: a small screen keeps what matters, a large one shows more."
       >
         <div className={styles.pair}>
           {base ? <Capture file={packageFile(base.folder)} alt={`The ${sizeLabel(base)} face`} width={base.width} height={base.height} caption={sizeLabel(base)} /> : null}
@@ -79,10 +61,8 @@ export default function Screens() {
 
       <Section
         id="companion"
-        label="Companion"
-        title="The companion."
-        lede="A phone or tablet on SimHub's network display. 1 page at a time, 21 to choose from, each with a switch. A wheel button or a tap changes the page."
-        wide
+        title="The companion"
+        lede="A phone or tablet on SimHub's network display, showing one page at a time. A wheel button or a tap changes it."
       >
         <div className={styles.pair}>
           {companion ? (
@@ -100,10 +80,8 @@ export default function Screens() {
 
       <Section
         id="pit-wall"
-        label="Pit wall"
-        title="The pit wall."
-        lede="A screen for whoever is not driving. 3 pages: Race, Tower and Telemetry. 4 data zones, each showing 1 of 11 pages, plus a web view for any address. A portrait version fits it in 1 page."
-        wide
+        title="The pit wall"
+        lede="For whoever is not driving: the whole field with gaps, sectors and stops, your own lap beside it, and four zones you fill from eleven pages or a web view. Three pages, and a portrait version."
       >
         <div className={styles.pitWalls}>
           {pitWall ? (
@@ -121,8 +99,7 @@ export default function Screens() {
 
       <Section
         id="round"
-        label="Round faces"
-        title="The 2 round faces."
+        title="The two round faces"
         lede={
           <>
             800 round and 480 round still use the old 12-slot design. What a round face does with zones is not decided (
@@ -132,7 +109,6 @@ export default function Screens() {
             ). Both install and work.
           </>
         }
-        wide
       >
         <div className={styles.pair}>
           {ALL.filter((p) => p.round).map((p) => (
@@ -143,7 +119,6 @@ export default function Screens() {
 
       <Section
         id="not-listed"
-        label="Another size"
         title="Not listed?"
         lede={
           <>
@@ -154,7 +129,6 @@ export default function Screens() {
             .
           </>
         }
-        wide
       >
         <p className="prose">
           <Link href={INSTALL.href} className="link">

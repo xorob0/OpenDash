@@ -6,7 +6,7 @@ import { SizeList } from '../../components/SizeList';
 import { DOWNLOADS, RELEASES, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
 import { COMPANIONS, FACES, PIT_WALLS } from '../../lib/faces';
 import { weigh } from '../../lib/packages';
-import { FREE_FOREVER, NOTHING_TO_UNLOCK, REPO_URL } from '../../lib/site';
+import { FREE_FOREVER, REPO_URL } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -26,10 +26,8 @@ export default function Download() {
         level={1}
         ruled={false}
         id="plugin"
-        label={`Version ${VERSION}`}
-        title="Download."
-        lede={`${FREE_FOREVER} ${NOTHING_TO_UNLOCK} Windows, SimHub ${SIMHUB_VERSION} or later. Built from this commit’s source by the same command CI runs.`}
-        wide
+        title={`Download ${VERSION}`}
+        lede={`${FREE_FOREVER} Windows, SimHub ${SIMHUB_VERSION} or later. Built from this commit’s source by the same command CI runs.`}
       >
         {preRelease ? (
           <p className={`prose ${styles.pre}`}>
@@ -60,7 +58,7 @@ export default function Download() {
         </div>
       </Section>
 
-      <Section id="packages" label="By hand" title="1 dashboard at a time." lede="For whoever wants only 1 file. Double-click to import: default pages, no settings page, no updates. The LED profiles come with the plugin." wide>
+      <Section id="packages" title="One dashboard at a time" lede="Double-click to import: default pages, no settings page, no updates. The LED profiles come with the plugin.">
         <div className={styles.groups}>
           <div className={styles.group}>
             <h3 className="h3">Faces</h3>
@@ -79,8 +77,7 @@ export default function Download() {
 
       <Section
         id="source"
-        label="Source"
-        title="Or build it."
+        title="Build it yourself"
         lede={
           <>
             MIT. Clone{' '}
@@ -90,10 +87,9 @@ export default function Download() {
             , run <code>bun install</code>, then <code>bun run build</code>. Every package comes out of the build directory.
           </>
         }
-        wide
       />
 
-      <Section id="releases" label="Release notes" title="What each version changed." lede={`This site serves the version it was built from, so only ${VERSION} is downloadable here. The notes below are the whole changelog, newest first.`} wide>
+      <Section id="releases" title="Release notes" lede={`This site serves the version it was built from, so only ${VERSION} is downloadable here. The whole changelog, newest first.`}>
         <Releases releases={RELEASES} />
       </Section>
     </>

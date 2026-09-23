@@ -13,7 +13,7 @@ export function Mark({ cell }: { cell: Cell }) {
         <span className={`${styles.square} ${styles[cell.mark]}`} aria-hidden="true" />
         <span className={styles.word}>{cell.word}</span>
       </p>
-      <p className={styles.text}>{cell.text}</p>
+      {cell.text ? <p className={styles.text}>{cell.text}</p> : null}
       {cell.issues && cell.issues.length > 0 ? (
         <p className={styles.refs}>
           {cell.issues.map((n, i) => (

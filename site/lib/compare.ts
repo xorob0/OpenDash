@@ -48,7 +48,7 @@ export const PRODUCTS: Product[] = [
 
 const WORD: Record<Mark, string> = { yes: 'Included', partial: 'Partly', no: 'No', paid: 'Paid', soon: 'Coming soon', notBuilt: 'Not built', unchecked: 'Not checked' };
 const cell = (mark: Mark, text: string, extra: Partial<Cell> = {}): Cell => ({ mark, word: WORD[mark], text, ...extra });
-const unchecked = cell('unchecked', 'Their pages do not say.');
+const unchecked = cell('unchecked', '');
 
 export const ROWS: CompareRow[] = [
   {
@@ -82,7 +82,7 @@ export const ROWS: CompareRow[] = [
     id: 'accounts',
     label: 'Activation and accounts',
     cells: {
-      opendash: cell('yes', 'None.', { word: 'None' }),
+      opendash: cell('yes', '', { word: 'None' }),
       lovely: cell('partial', 'A licence key for the paid tiers.', { word: 'Licence key' }),
       dnr: cell('partial', 'A membership for anything beyond the shipped dashboards.', { word: 'Membership' }),
     },
@@ -145,7 +145,7 @@ export const ROWS: CompareRow[] = [
     id: 'idle',
     label: 'Idle screen',
     cells: {
-      opendash: cell('soon', 'Coming soon.', { issues: [113] }),
+      opendash: cell('soon', '', { issues: [113] }),
       lovely: cell('yes', 'An animated screen, in the free tier.'),
       dnr: cell('yes', 'DNR, driver, car or your own picture.'),
     },
@@ -190,7 +190,7 @@ export const ROWS: CompareRow[] = [
     id: 'themes',
     label: 'Themes and colours',
     cells: {
-      opendash: cell('soon', 'Coming soon.', { issues: [127, 99] }),
+      opendash: cell('soon', '', { issues: [127, 99] }),
       lovely: unchecked,
       dnr: cell('paid', 'Colours and customisation from Pit Crew.'),
     },
@@ -199,7 +199,7 @@ export const ROWS: CompareRow[] = [
     id: 'driverRows',
     label: 'Licence and rating on driver rows',
     cells: {
-      opendash: cell('soon', 'Coming soon.', { issues: [149] }),
+      opendash: cell('soon', '', { issues: [149] }),
       lovely: unchecked,
       dnr: unchecked,
     },
@@ -208,7 +208,7 @@ export const ROWS: CompareRow[] = [
     id: 'flagsScreen',
     label: 'Flags screen for a second display',
     cells: {
-      opendash: cell('soon', 'Coming soon.', { issues: [116] }),
+      opendash: cell('soon', '', { issues: [116] }),
       lovely: cell('yes', 'Flags variants: standard, round and square.'),
       dnr: unchecked,
     },
