@@ -1,21 +1,21 @@
 /**
  * The comparison with Lovely Sim Racing and Daniel Newman Racing, row by row.
  *
- * Every competitor cell was read from that product's own public pages on the date in `asOf`, and
- * nothing is inferred: a feature their pages do not state is `unchecked`, not `no`. OpenDash's
- * column marks what is shipped, what is scheduled (with the issue it is scheduled under) and what
- * is not built, with the scope line where one exists. No competitor image appears anywhere; the
- * comparison is words and OpenDash's own captures.
+ * Every competitor cell was read from that product's own pages, release notes or shipped package,
+ * and nothing is guessed: a claim we could not stand behind was cut rather than softened, which is
+ * why no cell says "not checked". OpenDash's column marks what is shipped, what is scheduled (with
+ * the issue it is scheduled under) and what is not built, with the scope line where one exists. No
+ * competitor image appears anywhere; the comparison is words and OpenDash's own captures.
  */
 import { FREE_FOREVER, NOTHING_TO_UNLOCK } from './site';
 
 export type ProductId = 'opendash' | 'lovely' | 'dnr';
 
-export type Mark = 'yes' | 'partial' | 'no' | 'paid' | 'soon' | 'notBuilt' | 'unchecked';
+export type Mark = 'yes' | 'partial' | 'no' | 'paid' | 'soon' | 'notBuilt';
 
 export interface Cell {
   mark: Mark;
-  /** The word in the cell: Free, Included, Compatible, Paid, Coming soon, Not built, Not checked. */
+  /** The word in the cell: Free, Included, Compatible, Paid, Coming soon, Not built. */
   word: string;
   text: string;
   /** The issues a coming feature is scheduled under. Required when the mark is `soon`. */
@@ -28,8 +28,6 @@ export interface Product {
   id: ProductId;
   name: string;
   short: string;
-  /** ISO date the product's pages were read. Competitors only. */
-  asOf?: string;
 }
 
 export interface CompareRow {
@@ -38,26 +36,23 @@ export interface CompareRow {
   cells: Record<ProductId, Cell>;
 }
 
-export const CHECKED_ON = '2026-09-22';
-
 export const PRODUCTS: Product[] = [
   { id: 'opendash', name: 'OpenDash', short: 'openDash' },
-  { id: 'lovely', name: 'Lovely Sim Racing', short: 'Lovely', asOf: CHECKED_ON },
-  { id: 'dnr', name: 'Daniel Newman Racing', short: 'DNR', asOf: CHECKED_ON },
+  { id: 'lovely', name: 'Lovely Sim Racing', short: 'Lovely' },
+  { id: 'dnr', name: 'Daniel Newman Racing', short: 'DNR' },
 ];
 
-const WORD: Record<Mark, string> = { yes: 'Included', partial: 'Partly', no: 'No', paid: 'Paid', soon: 'Coming soon', notBuilt: 'Not built', unchecked: 'Not checked' };
+const WORD: Record<Mark, string> = { yes: 'Included', partial: 'Partly', no: 'No', paid: 'Paid', soon: 'Coming soon', notBuilt: 'Not built' };
 const cell = (mark: Mark, text: string, extra: Partial<Cell> = {}): Cell => ({ mark, word: WORD[mark], text, ...extra });
-const unchecked = cell('unchecked', '');
 
 export const ROWS: CompareRow[] = [
   {
     id: 'sims',
     label: 'Sims',
     cells: {
-      opendash: cell('partial', 'iRacing, tested. Other sims may work and are not claimed.', { word: 'iRacing' }),
+      opendash: cell('partial', 'Built and tested on iRacing. Other sims may work. We do not claim them.', { word: 'iRacing' }),
       lovely: cell('yes', '12 sims natively, and any sim SimHub reads.', { word: 'Compatible' }),
-      dnr: cell('yes', '7 sims with measured car data, and any sim SimHub reads.', { word: 'Compatible' }),
+      dnr: cell('yes', '9 sims with their own presets, 7 with measured car data, and any sim SimHub reads.', { word: 'Compatible' }),
     },
   },
   {
@@ -65,53 +60,53 @@ export const ROWS: CompareRow[] = [
     label: 'Price',
     cells: {
       opendash: cell('yes', `${FREE_FOREVER} ${NOTHING_TO_UNLOCK}`, { word: 'Free' }),
-      lovely: cell('paid', 'Free tier limited to 3 modules per side and no pit wall. Starter €1 a month, Pro €3, Gold €9.'),
-      dnr: cell('paid', 'Dashboards free as shipped. Changing anything starts at Pit Crew, £3 a month. Team Driver £6, Team Principal £9, all before VAT.'),
+      lovely: cell('paid', 'The free tier caps you at 3 modules a side and has no pit wall. €1 a month lifts the cap, €3 adds the pit wall, €9 adds the partner LED app. Tax included.'),
+      dnr: cell('paid', 'The dashboards are free the way they ship. Changing any setting starts at £3 a month, then £6 and £9, all before VAT.'),
     },
   },
   {
     id: 'licence',
     label: 'Licence',
     cells: {
-      opendash: cell('yes', 'MIT. Use it, change it, redistribute it.', { word: 'MIT' }),
-      lovely: cell('partial', 'A licence key, on at most 2 PCs. No refunds. Source published, reuse of the design forbidden.', { word: 'Restricted' }),
-      dnr: cell('partial', '1 PC per plan, 2 on Team Principal.', { word: 'Restricted' }),
+      opendash: cell('yes', 'Use it, change it, sell it. Nobody to ask.', { word: 'MIT' }),
+      lovely: cell('partial', 'Non-commercial. One key on 2 PCs. Remix it privately, never share what you make. No refunds.', { word: 'Restricted' }),
+      dnr: cell('partial', 'One PC per plan, two on the £9 tier. No sharing the files, no taking them apart.', { word: 'Restricted' }),
     },
   },
   {
     id: 'accounts',
     label: 'Activation and accounts',
     cells: {
-      opendash: cell('yes', '', { word: 'None' }),
-      lovely: cell('partial', 'A licence key for the paid tiers.', { word: 'Licence key' }),
-      dnr: cell('partial', 'A membership for anything beyond the shipped dashboards.', { word: 'Membership' }),
+      opendash: cell('yes', 'Download and race.', { word: 'None' }),
+      lovely: cell('partial', 'A key for the paid tiers, checked online every 15 minutes.', { word: 'Licence key' }),
+      dnr: cell('partial', 'An account and a sign-in, even to install the free dashboards.', { word: 'Account' }),
     },
   },
   {
     id: 'sizes',
     label: 'Screen sizes',
     cells: {
-      opendash: cell('yes', '10 faces: 1920 × 480, 1280 × 480, 1280 × 400, 1280 × 720, 850 × 480, 800 × 480, 800 × 286, 600 × 686, 800 round, 480 round.'),
-      lovely: cell('yes', 'Standard, curved, square, round, nano 800 × 286, 1280 × 400, 1280 × 480, 1920 × 480, 800 round, and the Heusinkveld DisplayDash.'),
-      dnr: cell('yes', '7 dashboards for VoCore, DDUs, wheels, phones, tablets and monitors. Sizes not listed.'),
+      opendash: cell('yes', '10 faces: 1920 × 480, 1280 × 720, 1280 × 480, 1280 × 400, 850 × 480, 800 × 480, 800 × 286, 600 × 686, 800 round, 480 round.'),
+      lovely: cell('yes', '850 × 480, 1280 × 480, 1280 × 400, 1920 × 480, 800 × 286, 600 × 686, plus round and square.'),
+      dnr: cell('yes', '800 × 480, 1280 × 400, 1920 × 480, 1920 × 720 and 1920 × 1080, across 7 dashboards.'),
     },
   },
   {
     id: 'noPlugin',
     label: 'Works without the plugin',
     cells: {
-      opendash: cell('yes', 'Yes. Every dashboard carries its own defaults.', { word: 'Yes' }),
-      lovely: cell('no', 'The dashboards cannot run without the Lovely Plugin, in their own words.'),
-      dnr: cell('no', 'The plugin is part of the install; running without it is not described.'),
+      opendash: cell('yes', 'Every package carries its own defaults.', { word: 'Yes' }),
+      lovely: cell('no', 'The dashboards cannot run without the plugin. Their words.'),
+      dnr: cell('no', 'Without the plugin a dashboard draws a notice screen instead of your data.'),
     },
   },
   {
     id: 'companion',
     label: 'Second screen',
     cells: {
-      opendash: cell('yes', 'A companion at 850 × 480 and 480 × 850, 21 pages.'),
-      lovely: cell('yes', 'A companion, landscape and portrait.'),
-      dnr: cell('yes', 'Co-Pilot.'),
+      opendash: cell('yes', '850 × 480 and 480 × 850, 21 pages.'),
+      lovely: cell('yes', 'A companion, landscape and portrait, free.'),
+      dnr: cell('yes', 'Co-Pilot, 14 panels. Choosing which ones appear costs £3 a month.'),
     },
   },
   {
@@ -119,17 +114,17 @@ export const ROWS: CompareRow[] = [
     label: 'Pit wall',
     cells: {
       opendash: cell('yes', '1920 × 1080 with 3 pages, and 1080 × 1920.'),
-      lovely: cell('paid', 'Lovely Pit Wall, on Pro at €3 a month.'),
-      dnr: cell('yes', 'Race Control.'),
+      lovely: cell('paid', 'Lovely Pit Wall, on the €3 tier and up.'),
+      dnr: cell('yes', 'Race Control, free: the field, a track map and traces.'),
     },
   },
   {
     id: 'leds',
     label: 'LED profiles and per-car shift lights',
     cells: {
-      opendash: cell('yes', '62 strip shapes. The car’s own lights from the open Lovely Car Data table, fetched by the plugin.', { word: 'Free' }),
-      lovely: unchecked,
-      dnr: cell('paid', 'Every LED profile needs a membership. Shift points measured for over 600 cars.'),
+      opendash: cell('yes', '62 strip shapes, and the car’s own lights from the open Lovely car data, fetched by the plugin.', { word: 'Free' }),
+      lovely: cell('partial', 'Lovely dropped its own LED profiles in 2023. Per-car shift lights come from ATSR, a separate app, free only on the €9 tier.', { word: 'Third party' }),
+      dnr: cell('paid', 'Every profile needs a membership, from £3 a month. Shift points measured for over 600 cars.'),
     },
   },
   {
@@ -137,8 +132,8 @@ export const ROWS: CompareRow[] = [
     label: 'Flag box, 8 × 8 matrix',
     cells: {
       opendash: cell('yes', '69 glyphs, generated. Flags, pit states, warnings, the gear and the spotter.', { word: 'Free' }),
-      lovely: unchecked,
-      dnr: cell('paid', 'Matrix profiles on Team Driver, £6 a month.'),
+      lovely: cell('no', 'Nothing in the dashboards or the plugin drives a matrix.'),
+      dnr: cell('paid', 'An 8 × 8 box and the SimRep panel, on the £6 tier.'),
     },
   },
   {
@@ -146,8 +141,8 @@ export const ROWS: CompareRow[] = [
     label: 'Idle screen',
     cells: {
       opendash: cell('soon', '', { issues: [113] }),
-      lovely: cell('yes', 'An animated screen, in the free tier.'),
-      dnr: cell('yes', 'DNR, driver, car or your own picture.'),
+      lovely: cell('yes', 'An animated screen, free. It needs SimHub’s HTML renderer.'),
+      dnr: cell('paid', 'The logo, a driver tag or the car. Choosing costs £3 a month.'),
     },
   },
   {
@@ -155,35 +150,35 @@ export const ROWS: CompareRow[] = [
     label: 'Alerts and pop-ups',
     cells: {
       opendash: cell('yes', '15 flags on the band, pit alerts over the gear, pop-ups for lap times and setting changes.'),
-      lovely: unchecked,
-      dnr: cell('yes', 'Car state, incidents, setting changes and the full flag stack.'),
+      lovely: cell('yes', 'Weather, damage, setup changes, a lap review and a pit-now warning.'),
+      dnr: cell('yes', 'Flags, car state and setting changes, in 3 sizes. Choosing the size costs £3 a month.'),
     },
   },
   {
     id: 'pitPage',
     label: 'Pit page on the face',
     cells: {
-      opendash: cell('soon', 'Pit view is a page today. A pit page that opens on entering the lane is coming.', { issues: [383] }),
-      lovely: unchecked,
-      dnr: unchecked,
+      opendash: cell('soon', 'Pit view is a page today. A page that opens the moment you cross the line is coming.', { issues: [383] }),
+      lovely: cell('partial', 'No pit page. The whole interface turns blue in the lane.'),
+      dnr: cell('partial', 'A pit page, but you page to it yourself.'),
     },
   },
   {
     id: 'manager',
     label: 'Dashboard manager and first run',
     cells: {
-      opendash: cell('soon', 'The plugin installs all 14 and updates itself. Browsing, removing and a first-run guide are coming.', { issues: [84, 85] }),
-      lovely: cell('yes', 'A dashboard manager in the plugin.'),
-      dnr: cell('yes', 'Through the plugin.'),
+      opendash: cell('soon', 'The plugin installs every package and updates itself. Browsing, removing and a first-run guide are coming.', { issues: [84, 85] }),
+      lovely: cell('yes', 'A dashboard manager that installs and updates.'),
+      dnr: cell('yes', 'A wizard that puts a dashboard on each screen you own, plus updates and older versions.'),
     },
   },
   {
     id: 'night',
     label: 'Night mode',
     cells: {
-      opendash: cell('soon', 'Brightness and night brightness for the lights today. Screens coming.', { issues: [128] }),
-      lovely: cell('yes', 'True Dark Mode.'),
-      dnr: cell('paid', 'Dark mode with day and night switching, from Pit Crew.'),
+      opendash: cell('soon', 'The lights have a night brightness today. The screens are coming.', { issues: [128] }),
+      lovely: cell('yes', 'True Dark Mode, free, on your headlights or a hotkey.'),
+      dnr: cell('paid', 'Dark mode from £3 a month. It follows the game’s own night in 2 sims.'),
     },
   },
   {
@@ -191,17 +186,17 @@ export const ROWS: CompareRow[] = [
     label: 'Themes and colours',
     cells: {
       opendash: cell('soon', '', { issues: [127, 99] }),
-      lovely: unchecked,
-      dnr: cell('paid', 'Colours and customisation from Pit Crew.'),
+      lovely: cell('yes', '5 colour themes, free, plus your name, number and logo.'),
+      dnr: cell('paid', 'Themes, gauges and colours, from £3 a month.'),
     },
   },
   {
     id: 'driverRows',
     label: 'Licence and rating on driver rows',
     cells: {
-      opendash: cell('soon', '', { issues: [149] }),
-      lovely: unchecked,
-      dnr: unchecked,
+      opendash: cell('soon', 'iRating is on the opponents page and the pit wall tower. The nationality flag and the licence badge are coming.', { issues: [149] }),
+      lovely: cell('yes', 'Licence and iRating on the opponents modules, iRacing only.'),
+      dnr: cell('yes', 'Licence, rating, pit status and strength of field.'),
     },
   },
   {
@@ -209,71 +204,71 @@ export const ROWS: CompareRow[] = [
     label: 'Flags screen for a second display',
     cells: {
       opendash: cell('soon', '', { issues: [116] }),
-      lovely: cell('yes', 'Flags variants: standard, round and square.'),
-      dnr: unchecked,
+      lovely: cell('yes', 'Lovely Flags, free, in 3 shapes.'),
+      dnr: cell('partial', 'A flags panel drawn over the game, on the £6 tier. No screen of its own.'),
     },
   },
   {
     id: 'overlay',
     label: 'Stream overlay',
     cells: {
-      opendash: cell('notBuilt', 'Not built. Nobody has asked for it.', { scope: 'the stream overlay is neither built nor refused; nobody has asked for it.' }),
-      lovely: cell('yes', 'Lovely Overlay and Lovely Tower.'),
-      dnr: cell('paid', 'Overlays on Team Driver, £6 a month.'),
+      opendash: cell('notBuilt', 'Nobody has asked for one.', { scope: 'the stream overlay is neither built nor refused; nobody has asked for it.' }),
+      lovely: cell('yes', 'Lovely Overlay and Lovely Tower, free.'),
+      dnr: cell('paid', '5 overlays, on the £6 tier.'),
     },
   },
   {
     id: 'invisible',
     label: 'Invisible dash',
     cells: {
-      opendash: cell('notBuilt', 'Not built. A see-through dash over the game is an overlay, and nobody has asked for one.'),
-      lovely: unchecked,
-      dnr: cell('yes', 'Invisible, a see-through overlay.'),
+      opendash: cell('notBuilt', 'A see-through dash over the game is an overlay, and nobody has asked for one.'),
+      lovely: cell('no', 'Nothing of the kind ships.'),
+      dnr: cell('yes', 'Invisible: the sim drawn through your own dash screen, on a hotkey. Free.'),
     },
   },
   {
     id: 'teammates',
     label: 'Teammate telemetry',
     cells: {
-      opendash: cell('notBuilt', 'Not built. Nothing about you leaves your machine.', { scope: 'telemetry about the user: nothing about the user leaves their machine.' }),
-      lovely: cell('yes', 'TeamLINQ.'),
-      dnr: cell('paid', 'DNR RELAY, from Pit Crew.'),
+      opendash: cell('notBuilt', 'Nothing about you leaves your machine.', { scope: 'telemetry about the user: nothing about the user leaves their machine.' }),
+      lovely: cell('paid', 'TeamLINQ, on the team plans only, from €5 a month. Still in beta.'),
+      dnr: cell('paid', 'RELAY, from £3 a month, and every driver needs their own.'),
     },
   },
   {
     id: 'vendor',
     label: 'Vendor wheel integrations',
     cells: {
-      opendash: cell('notBuilt', 'Not built. A strip is a shape, not a brand: any sides and centre are covered.'),
-      lovely: cell('yes', 'Editions for several wheel makers.'),
-      dnr: unchecked,
+      opendash: cell('partial', 'Named wirings for SimRep, Ascher, GridSim and Fanatec. Every other device is matched by its shape, not its brand.', { word: 'Some' }),
+      lovely: cell('yes', 'Ascher, MOZA, Heusinkveld, Conspit and more, each with its own build.'),
+      dnr: cell('yes', 'Button layouts drawn for around 60 rims.'),
     },
   },
   {
     id: 'source',
     label: 'Buildable from source',
     cells: {
-      opendash: cell('yes', 'Yes. TypeScript and design tokens, 1 command.', { word: 'Yes' }),
-      lovely: cell('no', 'Source published, reuse forbidden.'),
-      dnr: cell('no', 'Closed.'),
+      opendash: cell('yes', 'TypeScript and design tokens. One command.', { word: 'Yes' }),
+      lovely: cell('no', 'The public repository holds a readme. The dashboards ship as binaries.'),
+      dnr: cell('no', 'Closed, and the licence forbids taking it apart.'),
     },
   },
   {
     id: 'privacy',
     label: 'What leaves your machine',
     cells: {
-      opendash: cell('yes', 'An optional daily update check to GitHub. Nothing else.', { word: 'Nothing' }),
-      lovely: unchecked,
-      dnr: unchecked,
+      opendash: cell('yes', 'An update check to GitHub, and the car tables when you press the button. Nothing about you, ever.', { word: 'Nothing' }),
+      lovely: cell('partial', 'Your key and PC name every 15 minutes, and the car you are driving, to fetch its logo. No privacy statement covers the plugin.', { word: 'Some' }),
+      dnr: cell('partial', 'Your name, your email, every machine you sign in on with the IP it came from, and a count of which locked buttons you press.', { word: 'Some' }),
     },
   },
   {
     id: 'community',
     label: 'Community',
     cells: {
-      opendash: cell('partial', 'GitHub issues. No Discord.', { word: 'GitHub' }),
-      lovely: cell('yes', 'A Discord of about 18,000.', { word: 'Discord' }),
-      dnr: cell('yes', 'A Discord of about 7,800.', { word: 'Discord' }),
+      opendash: cell('partial', 'Issues and pull requests. No Discord.', { word: 'GitHub' }),
+      lovely: cell('yes', 'About 18,700.', { word: 'Discord' }),
+      dnr: cell('yes', 'About 7,800.', { word: 'Discord' }),
     },
   },
 ];
