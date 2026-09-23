@@ -111,6 +111,14 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 WORKDIR /app
 
+# Prisma's query engine links the system libssl; node itself does not need it, so the slim image
+# does not carry it, and without it the first survey request dies inside the engine rather than at
+# an obvious place. DATABASE_URL and SURVEY_ADMIN_KEY are runtime variables set in Dokploy's
+# Environment tab; docs/deploy.md has the rows.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
 # `output: standalone` writes a server carrying only the modules it actually imports. Because
 # outputFileTracingRoot is the repository, the tree it writes is rooted there too, and the server
 # and its node_modules sit under `standalone/site/` rather than at `standalone/`.
