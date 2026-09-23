@@ -1,0 +1,21 @@
+// The one table the site owns: survey submissions. DATABASE_URL comes from the environment at
+// runtime; docs/deploy.md says where it is set. There is no migrations folder: the table is
+// created by lib/surveyDb.ts on first use, and a change to this model changes that SQL too.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SurveyResponse {
+  id          Int      @id @default(autoincrement())
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  answers     Json
+
+  @@map("survey_response")
+}
