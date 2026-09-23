@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
 import { CompareTable } from '../../components/CompareTable';
 import { Section } from '../../components/Section';
-import { CHECKED_ON, SCHEDULED } from '../../lib/compare';
-import { longDate } from '../../lib/captures';
+import { SCHEDULED } from '../../lib/compare';
 import { REPO_URL, issueUrl } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'OpenDash compared with Lovely and Daniel Newman Racing',
-  description: 'Sims, price, licence, sizes, LEDs and more, dated, with what is coming and what is not built.',
+  description: 'Sims, price, licence, sizes, LEDs and more, with what is coming and what is not built.',
 };
 
 const LEGEND = [
@@ -18,7 +17,6 @@ const LEGEND = [
   ['soon', 'Coming soon, with the issue'],
   ['notBuilt', 'Not built, with the reason'],
   ['no', 'No'],
-  ['unchecked', 'Not checked: their pages do not say'],
 ] as const;
 
 export default function Compare() {
@@ -42,11 +40,11 @@ export default function Compare() {
         <CompareTable />
         <div className={styles.notes}>
           <p className="prose">
-            Competitor facts were read from their public sites on {longDate(CHECKED_ON)}. Tell us{' '}
+            Every line about Lovely and DNR was read from their own pages, release notes or shipped files. Tell us{' '}
             <a href={REPO_URL} className="link" rel="noopener">
               on GitHub
             </a>{' '}
-            if one is wrong.
+            if one is wrong and it gets fixed.
           </p>
           <p className="prose">No competitor screenshots appear on this site. Lovely’s licence forbids using its interface in marketing, and the same rule is applied to both.</p>
         </div>
