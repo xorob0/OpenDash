@@ -273,9 +273,12 @@ describe('widget build on disk', () => {
       // A card face carries cards.djson; a zone face carries one dashboard per distinct zone
       // rectangle and catalogue, which the package itself is the list of. A dashboard that draws a
       // picture carries its own sidecar beside the two, which the pit view's tick is the first of.
+      // The gallery thumbnail belongs to the main dashboard alone, and only when somebody has
+      // photographed that package: SimHub deletes one filed under any other name.
       const expected = [
         ...FONT_FILES,
         FONT_LICENCE.name,
+        ...(previewFor(folder) === undefined ? [] : [`${folder}${PREVIEW_EXTENSION}`]),
         ...p.pkg.dashboards.flatMap((d) => [
           `${d.name}.djson`,
           `${d.name}.djson.metadata`,

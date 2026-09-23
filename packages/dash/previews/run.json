@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "previews": {
+    "OpenDash": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 1200,
+      "height": 300
+    },
+    "OpenDash 1280x400": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 960,
+      "height": 300
+    },
+    "OpenDash 1280x480": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 800,
+      "height": 300
+    },
+    "OpenDash 1280x720": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 533,
+      "height": 300
+    },
+    "OpenDash 480 round": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 300,
+      "height": 300
+    },
+    "OpenDash 600x686": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 262,
+      "height": 300
+    },
+    "OpenDash 800 round": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 300,
+      "height": 300
+    },
+    "OpenDash 800x286": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 800,
+      "height": 286
+    },
+    "OpenDash 800x480": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 500,
+      "height": 300
+    },
+    "OpenDash 850x480": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 531,
+      "height": 300
+    },
+    "OpenDash Companion": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 531,
+      "height": 300
+    },
+    "OpenDash Companion portrait": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 200,
+      "height": 354
+    },
+    "OpenDash Pit wall": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 533,
+      "height": 300
+    },
+    "OpenDash Pit wall portrait": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 200,
+      "height": 356
+    },
+    "OpenDash slots 1280x400": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 960,
+      "height": 300
+    },
+    "OpenDash slots 1280x480": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 800,
+      "height": 300
+    },
+    "OpenDash slots 1280x720": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 533,
+      "height": 300
+    },
+    "OpenDash slots 1920x480": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 1200,
+      "height": 300
+    },
+    "OpenDash slots 600x686": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 262,
+      "height": 300
+    },
+    "OpenDash slots 800x286": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 800,
+      "height": 286
+    },
+    "OpenDash slots 800x480": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 3,
+      "width": 500,
+      "height": 300
+    },
+    "OpenDash slots 850x480": {
+      "version": "0.3.0-rc.6",
+      "commit": "c5b92c7",
+      "dirty": false,
+      "date": "2026-09-22",
+      "scenario": "green",
+      "lapsSeen": 4,
+      "width": 531,
+      "height": 300
+    }
+  }
+}
