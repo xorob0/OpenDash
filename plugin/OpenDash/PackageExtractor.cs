@@ -76,18 +76,44 @@ namespace OpenDashPlugin
             if (!string.Equals(wanted, folderName, StringComparison.Ordinal))
             {
                 var renamed = Path.Combine(staging, wanted);
-                Directory.Move(source, renamed);
+                Rename(source, renamed, Directory.Move);
                 source = renamed;
                 foreach (var suffix in new[] { DashExtension, MetadataExtension })
                 {
                     var from = Path.Combine(source, folderName + suffix);
-                    if (File.Exists(from)) File.Move(from, Path.Combine(source, wanted + suffix));
+                    if (File.Exists(from)) Rename(from, Path.Combine(source, wanted + suffix), File.Move);
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(screen.Title)) WriteTitle(source, wanted, screen.Title, log);
             if (screen.Rewrites) RewriteNamespace(source, screen, log);
             return wanted;
+        }
+
+        /// <summary>
+        /// Renames a file or folder, including the case-only rename Windows refuses to do in one step.
+        /// </summary>
+        /// <remarks>
+        /// A rig upgraded across #374 carries its folders spelled "openDash 850x480" in the settings
+        /// while the package's own is "OpenDash 850x480", and Windows treats those as one path:
+        /// Directory.Move compares them without case and throws "Source and destination path must be
+        /// different" rather than doing the rename. The reinstall on the Edit panel is where that landed
+        /// -- the press that is supposed to be the repair, failing on exactly the rigs that need it.
+        ///
+        /// Going through a name neither of them holds is what makes a case change a move Windows will
+        /// perform. It is inside the staging folder, so nothing SimHub reads is ever called by it.
+        /// </remarks>
+        private static void Rename(string from, string to, Action<string, string> move)
+        {
+            if (string.Equals(from, to, StringComparison.Ordinal)) return;
+            if (!string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
+            {
+                move(from, to);
+                return;
+            }
+            var through = to + ".case" + Guid.NewGuid().ToString("N");
+            move(from, through);
+            move(through, to);
         }
 
         /// <summary>The token a property carries in a built binding: "OpenDash." and the screen's namespace.</summary>
