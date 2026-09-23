@@ -4,7 +4,6 @@
  */
 import { PRODUCTS, ROWS } from '../lib/compare';
 import { VERSION } from '../lib/content.generated';
-import { longDate } from '../lib/captures';
 import { Mark } from './Mark';
 import styles from './CompareTable.module.css';
 
@@ -20,7 +19,7 @@ export function CompareTable() {
             {PRODUCTS.map((p) => (
               <th key={p.id} scope="col" className={styles.product}>
                 <span className={styles.productName}>{p.name}</span>
-                <span className={styles.asOf}>{p.asOf ? `checked ${longDate(p.asOf)}` : `version ${VERSION}`}</span>
+                {p.id === 'opendash' ? <span className={styles.asOf}>version {VERSION}</span> : null}
               </th>
             ))}
           </tr>

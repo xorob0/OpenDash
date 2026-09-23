@@ -38,11 +38,6 @@
   background: var(--color-text-dim);
 }
 
-.unchecked {
-  background: transparent;
-  outline: 1px solid var(--color-text-dim);
-}
-
 .notes {
   display: flex;
   flex-direction: column;
