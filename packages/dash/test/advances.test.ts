@@ -8,7 +8,7 @@
  * are checked here against the files the package ships.
  */
 import { describe, expect, test } from 'bun:test';
-import { ELLIPSIS, FALLBACK_ADVANCE, charsThatFit, measureText, widestGlyph, widestOf, type MeasuredFace } from '../src/design/advances.ts';
+import { ELLIPSIS, FALLBACK_ADVANCE, TITTLE_BREAK, charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type MeasuredFace } from '../src/design/advances.ts';
 
 /** Which bundled file each measured face is measured from. */
 const FILES: Record<MeasuredFace, string> = {
@@ -83,5 +83,63 @@ describe('the widest glyph, which is what a character budget is measured by', ()
     for (const face of FACES) {
       expect({ face, narrower: measureText(face, ELLIPSIS, 1) < widestGlyph(face).advance }).toMatchObject({ narrower: true });
     }
+  });
+});
+
+/**
+ * And the other half of a glyph a fit test cannot see: where its ink breaks.
+ *
+ * An advance says how much room a letter takes and says nothing about whether the letter survives
+ * being drawn at that size. Barlow's `i` is a stem with a dot floating 0.080 em above it, and at 13 px
+ * the VM's relative drew four of nine names with the dot welded to the stem: `Llam B…`, `NIna H…`,
+ * `Sofla …`, `Henrlk…`. The break is what decides that, so it is read off the outlines here and the
+ * name column's case rule is built on it rather than on the screenshot.
+ */
+describe('the break inside a glyph, which is what the name column is cased by', () => {
+  for (const face of FACES) {
+    test(`${face} breaks its i and its j where the table says, and no letter else`, async () => {
+      const { inkBreak, loadFont } = await import('../../../tools/measure-font/measure.ts');
+      const font = loadFont(`packages/dash/fonts/${FILES[face]}`);
+      // Composites are drawn from components rather than contours and answer `undefined`; in these
+      // faces they are the full stop and its relatives, and no letter is one.
+      const broken = CHARACTERS.filter((ch) => (inkBreak(font, ch) ?? 0) > 0);
+      // Letters only: `!`, `?` and `;` break too and are not drawn in a name.
+      expect({ face, letters: broken.filter((ch) => /[A-Za-z]/.test(ch)) }).toMatchObject({ letters: ['i', 'j'] });
+      expect({ face, table: TITTLE_BREAK[face], font: Math.round((inkBreak(font, 'i') ?? 0) * 1000) / 1000 }).toMatchObject({ table: TITTLE_BREAK[face] });
+    });
+  }
+
+  test('no upper-case letter and no digit is drawn in two pieces, which is why upper case is the remedy', async () => {
+    // The whole of the argument for shouting a name at a small size. Shouting is not more legible in
+    // general; it is that the failure needs a glyph with a gap in it, and the upper-case alphabet has
+    // none. A counter does not count: the spans are merged before the gaps are measured, so the hole
+    // in an `O` is inside the letter and not a break.
+    const { inkBreak, loadFont } = await import('../../../tools/measure-font/measure.ts');
+    for (const face of FACES) {
+      const font = loadFont(`packages/dash/fonts/${FILES[face]}`);
+      // `undefined` rather than 0 would be a composite glyph, which none of these are, and would make
+      // the assertion vacuous — so the answer is compared as it comes back.
+      for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -') {
+        expect({ face, ch, break: inkBreak(font, ch) }).toMatchObject({ break: 0 });
+      }
+    }
+  });
+
+  test('a heavier weight closes the gap rather than opening it', () => {
+    // The candidate remedy that reads as obvious and is measurably backwards. A fatter stem and a
+    // fatter dot are drawn into the same vertical, so the room between them is what gives way: in the
+    // condensed family the break falls from 0.101 em at Light to 0.070 at SemiBold to 0.058 at Bold.
+    expect(TITTLE_BREAK.BarlowCondensedLight).toBeGreaterThan(TITTLE_BREAK.BarlowCondensedSemiBold);
+    expect(TITTLE_BREAK.BarlowCondensedSemiBold).toBeGreaterThan(TITTLE_BREAK.BarlowCondensedBold);
+    expect(TITTLE_BREAK.BarlowMedium).toBeGreaterThan(TITTLE_BREAK.BarlowBold);
+  });
+
+  test('two device pixels of break is 25 px in the name face, above every size a list draws a name at', () => {
+    // Which is what makes the case rule cover every table rather than the one row the VM photographed:
+    // 15 px from the 34 px row up, 13 in the narrow zone's, 12 on a companion, and a board's 15.
+    expect(dottedLetterSize('BarlowMedium')).toBe(25);
+    for (const fs of [12, 13, 15]) expect({ fs, safe: fs >= dottedLetterSize('BarlowMedium') }).toMatchObject({ safe: false });
+    // And it is a bound that a big enough size really does clear, rather than one nothing can reach.
+    expect({ safe: 34 >= dottedLetterSize('BarlowMedium') }).toMatchObject({ safe: true });
   });
 });
