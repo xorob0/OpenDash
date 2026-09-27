@@ -1,0 +1,29 @@
+{
+  // The game running with no session named, which is the one state #406's notice is for: zones B
+  // and C and band D's fuel page should read "… · GO INTO A SESSION" while the rest of the face
+  // draws normally. `inSession()` is GameRunning and a named session type, so stopping the
+  // emulator does not reach it -- that makes GameRunning false and SimHub switches to the idle
+  // screen of #113 instead. The emulator has to keep running and say nothing about the session.
+  //
+  // What blanks it: SimHub's iRacing reader takes GameData.SessionTypeName from the session whose
+  // SessionNum matches the telemetry's SessionNum and returns that session's SessionType verbatim
+  // (GD_SessionTypeName in the decompiled ICarsReader 9.12.6; it falls back to
+  // WeekendInfo.EventType only when no session matches). So the one field to blank is that
+  // session's SessionType, and blanking it reaches SimHub as an empty name rather than as the
+  // previous one, because the emulator re-renders the whole session string and bumps
+  // sessionInfoUpdate whenever it changes. An empty scalar is already in this document --
+  // `SessionSubType:` has always been empty and SimHub parses it -- so the blank costs nothing at
+  // the parser.
+  //
+  // SessionNum stays 2, which is deliberate: GD_TotalLaps indexes Sessions[SessionNum] directly,
+  // so pointing the telemetry at a session that is not in the list would throw inside SimHub
+  // rather than draw a notice. SessionName stays RACE because nothing reads it.
+  //
+  // Held still, like the capture scenarios, since the notice is the whole of what it is here to
+  // show: it extends green, so the flag is green from the first tick and the limiter is off.
+  "extends": "green.json",
+  "name": "Game running, no session named",
+  "yaml": {
+    "RaceSessionType": ""
+  }
+}
