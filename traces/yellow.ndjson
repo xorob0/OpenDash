@@ -131,6 +131,7 @@
 {"p":"DataCorePlugin.GameRunning","v":1}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
 {"p":"OpenDash.CarLadderChosen","v":true}
+{"p":"OpenDash.CarLadderFlashes","v":false}
 {"p":"OpenDash.CarLadderLamps","v":0}
 {"p":"OpenDash.CarLadderLit","v":0}
 {"p":"OpenDash.CarLadderOverRev","v":false}

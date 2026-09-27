@@ -29,7 +29,7 @@
  */
 import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
-import { CAR_LADDER_CHOSEN, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, propertyName } from './contract.ts';
+import { CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, propertyName } from './contract.ts';
 
 const { prop, game, raw, gt, ge, eq, mul, sub, num, isnull, and, or, not, max, iff } = ncalc;
 
@@ -333,10 +333,35 @@ export const carLadderTopRpm = (): Expr => isnull(prop(propertyName(CAR_LADDER_T
  * for a shift that does not exist.
  *
  * The 47 measured cars in 85 that publish no flash at all report false at any RPM, because the
- * plugin answers this from the same `OverRev` the strips mirror: a flash the car never gives is a
- * warning OpenDash invented.
+ * plugin answers this from the same `OverRev` the strips mirror: a flash the car never gives is not
+ * one a strip may invent. What a *screen* does about those 47 is {@link carLadderFlash}.
  */
 export const carLadderOverRev = (): Expr => and(eq(isnull(prop(propertyName(CAR_LADDER_OVER_REV)), 'false'), 'true'), not(lastGear()));
+
+/** Whether this car and gear have a flash to give at all, which is not whether they are giving one. */
+const carLadderFlashes = (): Expr => eq(isnull(prop(propertyName(CAR_LADDER_FLASHES)), 'false'), 'true');
+
+/**
+ * The flash on the car's own measured bar, as OpenDash draws it: the car's own redline where the car
+ * has one, and the published threshold where it has none.
+ *
+ * The fallback is the whole of this function and it is not decoration. `CarLightMirror.OverRev` is
+ * false outright for a car whose table carries no blink interval, no redline or no blink colour, and
+ * that is 47 of the 85 measured cars. A strip mirroring one of them does not blink, which is right,
+ * because a strip is a copy of the car's bar. OpenDash's own bar is not a copy: its top band has
+ * flashed at redline since ADR 0004, on every car, and leaving it solid at the limit on more than half
+ * the measured cars would be adopting the car's *look* rather than its timing -- the opposite of what
+ * #353 decided. So where the car says it never flashes, the flash is `overRevEither()`, which is
+ * exactly what this surface drew before the tables reached it.
+ *
+ * Only where the car says so, and not merely where it is not flashing yet: a car with a flash at a
+ * threshold above the published one would otherwise flash early, and the two would fight. The last
+ * gear is already excluded by both halves.
+ *
+ * One definition, read by the rev bar, the rev arc and the flag box's digit, for the reason
+ * {@link overRevEither} is one: a digit strobing against a solid bar is what #774's review found.
+ */
+export const carLadderFlash = (): Expr => or(carLadderOverRev(), and(not(carLadderFlashes()), overRevEither()));
 
 /** `a` where `wanted` holds and `b` where it does not, for two ladders answering one question. */
 export const eitherOf = (wanted: Expr, a: Expr, b: Expr): Expr => or(and(wanted, a), and(not(wanted), b));

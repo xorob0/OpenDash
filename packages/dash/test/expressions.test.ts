@@ -279,7 +279,14 @@ describe('hero expressions', () => {
   const LAMPS = 'isnull([OpenDash.CarLadderLamps], 0)';
   const TOP_RPM = 'isnull([OpenDash.CarLadderTopRpm], 0)';
   const CAR = `((isnull([OpenDash.CarLadderChosen], false)) = (true)) and ((isnull([OpenDash.CarLadderStage], -1)) >= (0))`;
-  const CAR_FLASH = `((isnull([OpenDash.CarLadderOverRev], false)) = (true)) and (!(${LAST_GEAR}))`;
+  const CAR_OWN_FLASH = `((isnull([OpenDash.CarLadderOverRev], false)) = (true)) and (!(${LAST_GEAR}))`;
+  // The two derived flashes and the choice between them, which is what the measured bar falls back to
+  // for a car whose table carries no flash -- 47 of the 85. Spelled out here too, for the same reason.
+  const MIRROR_FLASH = `((${RPMS}) >= (max(${SL('Blink')}, ${SL('Last')}))) and (!(${LAST_GEAR}))`;
+  const SIMHUB_FLASH = `((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)) and (!(${LAST_GEAR}))`;
+  const EITHER_FLASH = `((${MIRROR}) and (${MIRROR_FLASH})) or ((!(${MIRROR})) and (${SIMHUB_FLASH}))`;
+  const FLASHES = `(isnull([OpenDash.CarLadderFlashes], false)) = (true)`;
+  const CAR_FLASH = `(${CAR_OWN_FLASH}) or ((!(${FLASHES})) and (${EITHER_FLASH}))`;
 
   const segOf = (layer: { children: readonly unknown[] }, k: number) => {
     const s = layer.children[k];
@@ -351,16 +358,35 @@ describe('hero expressions', () => {
     }
     // The flash is the car's own redline for the gear it is in -- a threshold of its own, not the top
     // band -- and it stops in the last gear, on the same terms as both derived ladders.
+    //
+    // With one fallback, which is a review finding on this ticket's first cut: `CarLightMirror.OverRev`
+    // is false outright for a car whose table carries no blink interval, no redline or no blink colour,
+    // and that is 47 of the 85 measured cars. A strip mirroring one of them does not blink, which is
+    // right, because a strip is a copy of the car's bar. This bar is OpenDash's own and its top band has
+    // flashed at redline since ADR 0004, so where the car says it never flashes the threshold is the
+    // published one -- exactly what this segment blinked on before the tables reached it. Only where the
+    // car says so, never merely where it is not flashing yet, or a car with a flash above the published
+    // threshold would flash early and the two would fight.
     expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: CAR_FLASH });
+    expect(CAR_FLASH).toContain('[OpenDash.CarLadderFlashes]');
+    expect(CAR_FLASH).toContain(EITHER_FLASH);
     expect(seg(14).blink).toEqual({ delayMs: 62 });
     expect(seg(9).blink).toBeUndefined();
-    // And the layer reads the plugin's answer and nothing else: no threshold, no colour, no gear, and
-    // nothing of the table. One definition, read twice, which is what the ticket asked for.
+    // And what lights the segments is the plugin's answer and nothing else: no threshold, no colour,
+    // no gear, nothing of the table. One definition, read twice, which is what the ticket asked for.
     const text = JSON.stringify(car);
     expect(text).toContain(LIT);
     expect(text).toContain(LAMPS);
-    expect(text).not.toContain('DriverCarSL');
-    expect(text).not.toContain('CarSettings_RPMShiftLight');
+    const colours = Array.from({ length: 15 }, (_, k) => String(seg(k).bindings?.BackgroundColor?.formula ?? '')).join('\n');
+    expect(colours).not.toContain('DriverCarSL');
+    expect(colours).not.toContain('CarSettings_RPMShiftLight');
+    // The published RPMs reach this layer in exactly one place, the top band's flash, and only inside
+    // the branch that exists for a car whose table carries no flash at all. Naming it here rather than
+    // forbidding it: `not.toContain('DriverCarSL')` over the whole layer read as "nothing of the
+    // published ladder is in here", and after the fallback that is true of the lights and not of the
+    // flash.
+    expect(text).toContain('DriverCarSLBlinkRPM');
+    expect(String(seg(14).bindings?.BlinkEnabled?.formula ?? '')).toContain('DriverCarSLBlinkRPM');
   });
 
   test("the car's own ladder: nothing below First, bands at First and Shift, the last band at Last, the flash at Blink", () => {

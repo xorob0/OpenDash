@@ -40,7 +40,7 @@ import type { Expr } from '../bind.ts';
 import { shiftBands, type ShiftBand } from '../components/revSegments.ts';
 import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type Hex, type MatrixContainer } from '../generator.ts';
-import { carLadderOnScreens, carLadderOverRev, carLadderStageEntered, eitherOf } from '../shift.ts';
+import { carLadderFlash, carLadderOnScreens, carLadderStageEntered, eitherOf } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
 
@@ -198,10 +198,16 @@ function bandRaised(band: ShiftBand, matrix: FlagBoxMatrix): Expr {
   return and(eq(flagBoxMatrix(matrix).gearBands(), 'true'), ladder);
 }
 
-/** The band's flash, on the same ladder. The resting bands have none on either. */
+/**
+ * The band's flash, on the same ladder. The resting bands have none on either.
+ *
+ * `carLadderFlash()` rather than the published over-rev on its own, because 47 of the 85 measured cars
+ * carry no flash at all and the digit went solid at the limit for them; it now falls back to the same
+ * threshold the bar beside it falls back to, which for the redline band is `band.blink` itself. #353.
+ */
 function bandBlink(band: ShiftBand, matrix: FlagBoxMatrix): Expr | null {
   if (band.blink === null) return null;
-  return eitherOf(readingCarLadder(matrix), carLadderOverRev(), band.blink);
+  return eitherOf(readingCarLadder(matrix), carLadderFlash(), band.blink);
 }
 
 /**

@@ -218,11 +218,25 @@ segment count lights segment `k` when `lit * count > k * lamps` — the same cro
 published ladder's bands use — so the fraction of the bar that is lit is the fraction of the car's
 bar that is lit, and the top band reddens on the frame the flag box's digit reaches the third band.
 `CarLadderTopRpm` is what the Redline readout prints, so the number beside the bar is still the number
-the bar goes red at, which is what `shift.ts` promises. The flash is `CarLadderOverRev`, which already
-existed for the digit.
+the bar goes red at, which is what `shift.ts` promises.
+
+**The flash is the car's own where the car has one, and OpenDash's where it has not.** `CarLadderOverRev`
+already existed for the digit and is the table's own redline for the gear, at the car's own blink
+interval. But 47 of the 85 measured cars publish no flash at all and say so with a zero, and for them
+that property is false at any RPM. On a strip that is right — a strip is a copy of the car's bar, and a
+flash the car never gives is not one to invent. On a screen it is not: OpenDash's own top band has
+flashed at redline since [ADR 0004](0004-rev-bar-model.md), on every car, and going dark there on more
+than half the cars anybody has measured would be adopting the car's *look* while claiming to take only
+its timing. So the plugin publishes `CarLadderFlashes` — whether this car and gear have a flash to give
+at all, which is not whether they are giving one — and where it is false the bar, the arc and the digit
+flash on the published threshold, exactly as they did before the tables reached them. Where it is true
+nothing falls back, because a car that flashes above the published threshold would otherwise flash
+early and the two would fight. The first cut of this amendment said "the flash is `CarLadderOverRev`,
+which already existed for the digit" and left those 47 cars solid at the limit on every surface.
 
 The fallback is unchanged and total, and there is now a fourth way to land on it: no plugin, no
-tables, no row for this car, a row that would not read, or a driver on one of OpenDash's own styles.
+tables, no row for this car, a row that would not read, or a rig on one of OpenDash's own styles — and,
+for the flash alone, a car that publishes none.
 All of them leave the screens on rungs 3 and 4, drawing exactly what they drew before — and which one
 a car is on is which layer of the bar is visible in Dash Studio, as it has been since ADR 0014.
 

@@ -235,6 +235,10 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.CarLadderLit, () => CarLights.Lit);
             this.AttachDelegate(Contract.CarLadderLamps, () => CarLights.Lamps);
             this.AttachDelegate(Contract.CarLadderTopRpm, () => CarLights.TopRpm);
+            // And whether this car flashes at all, which is what lets a screen tell "not over-revving"
+            // from "never says so" and keep OpenDash's own redline flash on the 47 measured cars in 85
+            // that publish none.
+            this.AttachDelegate(Contract.CarLadderFlashes, () => CarLights.Flashes);
             // And whether the rig asked for any of it, which a screen cannot work out for itself: the
             // style is a per-bar setting and a face has no bar. The same reduction that decides whether
             // the tables are walked at all, so the gate and the numbers behind it cannot disagree.
