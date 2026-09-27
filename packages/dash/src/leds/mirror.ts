@@ -11,10 +11,14 @@
  * one at a time, all red — appears nowhere in this file and nowhere in the generated profile. It is
  * the numbers in the table, and the strip draws whatever they say.
  *
- * The screens do not read this yet, and that is a gap rather than a shape: the rev bar and the rev
- * arc still draw OpenDash's tokens at the published ladder's thresholds, so a strip and a face in
- * one rig now disagree about a car the table covers. #353 decides what a screen should do with a
- * car's colours; the mechanism is the property below either way.
+ * **The screens read the same frame, and not this property.** #353 settled what a face should do with
+ * a car's colours: take its instants and keep OpenDash's palette. So the rev bar, the rev arc, the
+ * companion's speedo bar and the Redline beside it light where the car's own bar lights, drawn in
+ * `design/tokens.json`, out of the count the plugin publishes beside these runs -- `CarLadderLit`,
+ * `CarLadderLamps` and `CarLadderTopRpm`, read in `shift.ts`. A colour per LED is what a strip needs
+ * because a strip is a copy of the car's bar; a face is OpenDash's drawing of the same fact, and a
+ * 992's cornflower blue inside one would read as a rendering fault. Both gates are the rig-wide `car`
+ * style, so the two surfaces cannot disagree about which ladder they are on.
  *
  * **Why a colour formula rather than a lit/unlit formula.** `CustomStatus`, which every other effect
  * in `rpmStrip.ts` uses, has one colour chosen at build time and an expression that says whether to

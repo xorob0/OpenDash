@@ -522,11 +522,16 @@ describe('brightness', () => {
       'OpenDash.LightsNightMode',
       'OpenDash.LightsLowFuelLaps',
       'OpenDash.FlagBoxSpotterAnimation',
-      // Not settings at all, and so not settings silently shared: these two are one frame of
+      // Not settings at all, and so not settings silently shared: these five are one frame of
       // telemetry read through the car's own table, and the same frame for every panel by
-      // construction. What is per panel is whether a panel reads them, which is indexed.
+      // construction. What is per panel is whether a panel reads them, which is indexed. The last
+      // three are the same frame as a screen draws its rev bar from and are read by no panel at all
+      // (#353); they are declared in this group because the plugin computes them all at once.
       'OpenDash.CarLadderStage',
       'OpenDash.CarLadderOverRev',
+      'OpenDash.CarLadderLit',
+      'OpenDash.CarLadderLamps',
+      'OpenDash.CarLadderTopRpm',
     ]);
     const text = serializeProfile(profile);
     for (const name of flagBoxProperties()) {

@@ -61,7 +61,7 @@ const COLOUR_EXCEPTIONS: readonly { value: string; why: string }[] = [
  * is drawn, so those two are named by shape alone.
  */
 const RADIUS_EXCEPTIONS: readonly { match: RegExp; radius?: number; why: string }[] = [
-  { match: /(?:^|\.)(?:shift|rpm|simhub)\.\d+$/, radius: ds.radius.seg, why: 'radius.seg on a shift-light or rev-bar segment: the one rounded thing on the face' },
+  { match: /(?:^|\.)(?:shift|rpm|simhub|car)\.\d+$/, radius: ds.radius.seg, why: 'radius.seg on a shift-light or rev-bar segment: the one rounded thing on the face' },
   { match: /(?:^|\.)tyres\.(?:Front|Rear)(?:Left|Right)\.(?:body|change)$/, why: "the tyre drawing's body and its change badge, cut from their box: packages/dash/src/second/wheel.ts" },
   // The three tread columns of the same drawing. The outer two are the tyre's shoulders, which are
   // round where the crown between them is not, so the radius is what makes the drawing read as a
