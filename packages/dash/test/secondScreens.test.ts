@@ -28,7 +28,8 @@ import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts'
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox } from '../src/second/density.ts';
 import { CHARS, CORNERS } from '../src/second/values.ts';
-import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
+import { DENOMINATOR_GAP, UNIT_GAP, charsOfText, field, type FieldSpec, type Follower } from '../src/second/field.ts';
+import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
 import { contains, rect } from '../src/design/geometry.ts';
@@ -675,11 +676,12 @@ describe('every tyre reading carries its unit', () => {
    * The widest string a unit can really draw, read off the unit's own binding.
    *
    * This used to be a list written beside the test -- `['PSI', 'KPA', 'BAR']` for the pressure --
-   * and the assertion asked only whether the declared `widest` was a member of it. That compares one
-   * declaration against another and never against the binding, which is how the pressure kept `kPa`
-   * while `bar`, 0.028 em wider upper-cased, was what a driver with `TyrePressureUnit = Bar` was
-   * drawn. The literals a binding can put on the screen are what `drawableGlyphs` already collects
-   * for the monospaced values, by the same reading of the expression.
+   * and the assertion asked only whether the declared `widest` was a member of it. That compares a
+   * declaration against a second declaration and never against the binding, which is how the
+   * pressure kept `kPa` while `bar`, 0.028 em wider upper-cased, was what a driver with
+   * `TyrePressureUnit = Bar` was drawn. The literals a binding can put on the screen are what
+   * `drawableGlyphs` already collects for the monospaced values, by the same reading of the
+   * expression.
    */
   const widestDrawn = (item: TextItem): string | undefined => {
     const wider = (a: string, b: string): string => (measureText(faceOf(item), a, item.fontSize) > measureText(faceOf(item), b, item.fontSize) ? a : b);
@@ -710,6 +712,45 @@ describe('every tyre reading carries its unit', () => {
       // And the temperature's mark follows the driver's setting rather than assuming Celsius.
       const mark = items.find((i) => i.name === 'FrontLeft.temp.unit');
       expect({ box: box.name, bound: JSON.stringify(mark?.bindings ?? {}) }).toMatchObject({ bound: expect.stringContaining('TemperatureUnit') });
+    });
+  }
+});
+
+/**
+ * #384, the other half of a labelled reading: the unit has to sit beside the figure, not at the end
+ * of the budget the figure is cut from.
+ *
+ * `84` in a three-digit budget leaves the third cell empty, so a mark placed at the budget's end
+ * stood 36 px from the digits on a companion page beside a corner reading `104` that drew it five
+ * away -- one axle, two gaps, the same reading and the same unit. The degree sign that the mark
+ * replaced rode in the value's cells and so moved with the digits, which is what the canvas draws.
+ *
+ * Both halves are checked: the design-time gap, which is what DashStudio's editor and every preview
+ * show, and the Left binding that keeps it at runtime. Without the binding the two disagree the
+ * moment a temperature crosses a hundred, and only the binding can be wrong quietly.
+ */
+describe('a tyre reading and its unit keep one gap', () => {
+  const tyres = MODULES.find((m) => m.id === 'tyres')!;
+  const propertiesOf = (expression: string): string[] => ncalc.referencedProperties(expression);
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const items = tyres.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+      for (const corner of CORNERS) {
+        const texts = items.filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith(`${corner}.`));
+        for (const value of texts.filter((i) => !i.name.endsWith('.unit'))) {
+          const mark = texts.find((i) => i.name === `${value.name}.unit`);
+          if (mark === undefined) continue;
+          const mono = value.monospace!;
+          const after = value.rect.left + monoWidth(mono, charsOfText(value.text, mono));
+          expect({ box: box.name, item: value.name, gap: mark.rect.left - after }).toMatchObject({ gap: WHEEL_UNIT_GAP });
+          // And it is the figure the mark follows, not a constant: every property its Left reads is
+          // one the value's own Text reads.
+          const follows = propertiesOf(bindingExpression(mark, 'Left'));
+          const read = propertiesOf(bindingExpression(value, 'Text'));
+          expect({ box: box.name, item: value.name, follows: follows.length > 0, strays: follows.filter((p) => !read.includes(p)) }).toMatchObject({ follows: true, strays: [] });
+        }
+      }
     });
   }
 });

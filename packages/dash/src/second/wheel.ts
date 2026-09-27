@@ -11,7 +11,9 @@
  * `TemperatureUnit` and the pressure follows `TyrePressureUnit`, so that nothing in the cell is a
  * bare figure a driver has to recognise by its size. A reading is measured with its unit, which is
  * why a narrow cell now sheds a reading a little sooner: what it sheds is a labelled quantity, and
- * an unlabelled one is not what a cell keeps instead. #384.
+ * an unlabelled one is not what a cell keeps instead. The unit sits beside the figure rather than at
+ * the end of the budget the figure is cut from, which is what keeps one gap between `84 °C` and
+ * `104 °C` on the same axle; see {@link drawnValue}. #384.
  *
  * A cell too small for three readings drops one rather than shrinking all three, which is rule 17
  * and what `docs/design/readability-pass.md` §15 asks for; the drawing beside them is cut from
@@ -24,7 +26,7 @@
  * iRacing reports the pressure the car left the pit box with, not a live one; the temperature and
  * the tread are live.
  */
-import type { Hex, Item, Rect } from '../generator.ts';
+import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
@@ -35,9 +37,10 @@ import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { tyreGlyph, tyreGlyphSize } from './tyreGlyph.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { CHARS, pressureUnit, temperatureMark, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
+import { charsOfText } from './field.ts';
+import { CHARS, NO_VALUE, pressureUnit, temperatureMark, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
 
-const { iff, eq, lt, gt, str, num, fmt, mul, game } = ncalc;
+const { iff, eq, lt, gt, str, num, fmt, mul, add, round, digitCount, game } = ncalc;
 
 /** Tread left below this percentage is drawn in caution. */
 export const WEAR_CAUTION = 65;
@@ -116,12 +119,49 @@ interface Quantity {
   color?: Hex;
   colorBind?: Expr;
   unit?: { text: string; widest?: string; bind?: Expr };
+  /** Where the unit sits once the value is drawn: see {@link drawnValue}. */
+  drawn?: (mono: Monospace) => Expr;
   /**
    * The same value read a second way, drawn after the first on the line they share. Only the wide
    * page carries one, and only its pressure: see {@link otherPressure}.
    */
   also?: Quantity;
 }
+
+/**
+ * The width a figure of `intDigits` whole digits and `decimals` decimals really draws in, as an
+ * expression: the digits it has, not the digits its budget holds.
+ */
+const figureWidth = (value: Expr, intDigits: number, decimals: number, mono: Monospace): Expr => {
+  const whole = digitCount(round(value, decimals), intDigits);
+  const digits = decimals === 0 ? whole : add(whole, num(decimals));
+  const drawn = mul(digits, num(mono.charWidth));
+  // One decimal point, in the narrow cell `.` is given.
+  return decimals === 0 ? drawn : add(drawn, num(mono.specialCharsWidth));
+};
+
+/**
+ * Where a reading's unit sits once the value is drawn, rather than where the value's budget ends.
+ *
+ * A temperature is budgeted for three digits and usually draws two, so a unit placed at the end of
+ * the budget stands 36 px from the digits on a companion page while the corner beside it, reading
+ * `104`, draws it 5 px away: two gaps between the same reading and the same unit on one axle line.
+ * The degree sign used to ride in the value's own cells, so it moved with the digits, and the canvas
+ * draws `84°` flush at every artboard.
+ *
+ * A follower keeps that by binding its own Left to what the value draws, which is how the dash
+ * cards' followers are placed -- `cards/speed.ts` and `cards/fuel.ts` do the same arithmetic -- and
+ * what `components/readoutRow.ts` says it is for: "3 / 24" and "12 / 24" keep the same gap. The
+ * cells stay left-aligned, so the digits themselves never move; only the mark after them does, as
+ * the degree sign did. #384.
+ *
+ * `decimals` is the reading's own format, so the width and the binding cannot disagree, and
+ * `NO_VALUE` is two digit cells, the minus keeping the digit cell.
+ */
+const drawnValue =
+  (value: Expr, intDigits: number, decimals: number) =>
+  (mono: Monospace): Expr =>
+    iff(eq(value, num(0)), num(NO_VALUE.length * mono.charWidth), figureWidth(value, intDigits, decimals, mono));
 
 /** A row's readings, left to right: the quantity itself, and the second reading where it has one. */
 const readings = (q: Quantity): Quantity[] => (q.also ? [q, q.also] : [q]);
@@ -167,13 +207,18 @@ const PSI_PER_BAR = 14.503774;
  * The unit branched on is `pressureUnit`'s own spelling rather than SimHub's, so that the two
  * readings can never disagree about which unit the first of them is in.
  */
-function otherPressure(pressure: Expr): { value: Expr; unit: Expr } {
+function otherPressure(pressure: Expr): { value: Expr; unit: Expr; width: (mono: Monospace) => Expr } {
   const shown = pressureUnit();
   const isPsi = eq(shown, str('psi'));
+  const asKpa = mul(pressure, num(KPA_PER_PSI));
+  const asPsi = mul(pressure, iff(eq(shown, str('bar')), num(PSI_PER_BAR), num(PSI_PER_KPA)));
   return {
     // kPa is drawn whole and psi keeps its decimal, which is how each is read on a setup screen.
-    value: iff(isPsi, fmt(mul(pressure, num(KPA_PER_PSI)), '0'), fmt(mul(pressure, iff(eq(shown, str('bar')), num(PSI_PER_BAR), num(PSI_PER_KPA))), '0.0')),
+    value: iff(isPsi, fmt(asKpa, '0'), fmt(asPsi, '0.0')),
     unit: iff(isPsi, str('kPa'), str('psi')),
+    // The two branches are drawn different lengths -- four whole digits against three and a decimal
+    // -- so the mark follows whichever of them is on the screen.
+    width: (mono) => iff(isPsi, figureWidth(asKpa, CHARS.pressure.digits, 0, mono), figureWidth(asPsi, CHARS.pressure.digits - 1, 1, mono)),
   };
 }
 
@@ -189,9 +234,10 @@ function otherReading(corner: Corner, d: DensitySpec): Quantity {
     chars: CHARS.pressure,
     // The samples are the psi a stint starts on, so the second reading of one of them is kPa.
     sample: String(Math.round(Number(CORNER_SAMPLES[corner].pressure) * KPA_PER_PSI)),
-    bind: iff(eq(pressure, num(0)), str('--'), other.value),
+    bind: iff(eq(pressure, num(0)), str(NO_VALUE), other.value),
     color: ds.purpose.tyre.pressure,
     unit: { text: 'kPa', widest: 'kPa', bind: other.unit },
+    drawn: (mono) => iff(eq(pressure, num(0)), num(NO_VALUE.length * mono.charWidth), other.width(mono)),
   };
 }
 
@@ -207,8 +253,9 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
       fs: temperatureSize(d, density),
       chars: CHARS.temperature,
       sample: sample.temperature,
-      bind: iff(eq(temp, num(0)), str('--'), fmt(temp, '0')),
+      bind: iff(eq(temp, num(0)), str(NO_VALUE), fmt(temp, '0')),
       colorBind: temperatureColour(corner),
+      drawn: drawnValue(temp, CHARS.temperature.digits, 0),
       // The degree sign used to ride in the value, taking a digit cell of its own, and said only
       // that the figure was a temperature of some kind. The mark follows the driver's own unit
       // instead, the way the pressure follows theirs, so `84` reads as 84 °C on a metric car and
@@ -220,7 +267,7 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
       fs: d.small,
       chars: CHARS.pressure,
       sample: sample.pressure,
-      bind: iff(eq(pressure, num(0)), str('--'), fmt(pressure, '0.0')),
+      bind: iff(eq(pressure, num(0)), str(NO_VALUE), fmt(pressure, '0.0')),
       color: ds.purpose.tyre.pressure,
       // `bar` and not `kPa`: `pressureUnit` draws one of three spellings and a unit is drawn
       // upper-cased, where Barlow Medium gives BAR 1.867 em against KPA's 1.839, so the driver the
@@ -228,6 +275,7 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
       // and a `widest` that is not the widest is wrong whatever it costs today -- the same fault the
       // tyre temps card's `TYRES °F` was.
       unit: { text: 'psi', widest: 'bar', bind: pressureUnit() },
+      drawn: drawnValue(pressure, CHARS.pressure.digits - 1, 1),
       // Wide zone page 5 is "Tyres with both pressure units", and it is the only box the catalogue
       // gives a corner enough width for a second reading; every other density draws the sim's own.
       ...(density === 'wide' ? { also: otherReading(corner, d) } : {}),
@@ -239,8 +287,9 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
       fs: d.small,
       chars: CHARS.percent,
       sample: sample.wear,
-      bind: iff(eq(wear, num(0)), str('--'), fmt(wear, '0')),
+      bind: iff(eq(wear, num(0)), str(NO_VALUE), fmt(wear, '0')),
       colorBind: cautionWhen(wear, ds.purpose.tyre.pressure),
+      drawn: drawnValue(wear, CHARS.percent.digits, 0),
       // Rule 19: the per-cent sign is one of the glyphs `font.cell.excluded` names, so it follows
       // the value as a label rather than going through a cell cut for digits.
       unit: { text: '%' },
@@ -328,11 +377,17 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
       );
       if (r.unit) {
         const box = unitBox(r, d);
+        const mono = cells('SemiBold', r.fs);
+        const left = Math.round(x) + UNIT_GAP;
+        // After the sample's own characters in the editor and after the drawn figure on the dash,
+        // rather than after the budget both are cut from: see {@link drawnValue}. The row is still
+        // measured at the budget, so the mark's runtime place is the rightmost it can take.
         items.push(
-          unit(`${name}.${r.id}.unit`, r.unit.text, x + valueWidth(r) + UNIT_GAP, canvasYForBaseline(canvasBaseline(top, r.fs), d.labelSm), box, {
+          unit(`${name}.${r.id}.unit`, r.unit.text, left + monoWidth(mono, charsOfText(r.sample, mono)), canvasYForBaseline(canvasBaseline(top, r.fs), d.labelSm), box, {
             size: d.labelSm,
             bind: r.unit.bind,
             widest: r.unit.widest,
+            ...(r.drawn ? { leftBind: add(num(left), r.drawn(mono)) } : {}),
           }),
         );
       }
