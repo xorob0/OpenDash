@@ -698,11 +698,26 @@ and the letter stands just inboard of it and survives. It writes no name at that
 12 px strip writes none. None of it is drawn on any artboard, and
 [§10](#10-where-the-canvas-contradicts-itself) records that.
 
-**The settled form is not a setting**, which #380 asked to have decided rather than assumed. The
-takeover is still there and only its duration changed, so no driver loses a reading he had: he keeps
-the flag, in its colour and with its name, and gains the page under it. A switch would exist to offer
-the strictly poorer of two views. A driver whose screen's whole job is the flag has the full-screen
-format instead, which this leaves exactly as it was.
+**The settled form is not a setting**, which #380 asked to have decided rather than assumed, and the
+decision is worth stating together with what it costs, because it is not nothing. On the four faces
+with corner blocks it costs a driver nothing of the flag: the block holds the name, so he keeps the
+colour and the word and gains the page under them. On the four without, the block is sixteen pixels
+and writes no name, so after three seconds he keeps the colour alone — and a colour is a family
+rather than a member. DISQUALIFIED, BLACK FLAG · FURLED and BLACK FLAG become one outlined sliver,
+DEBRIS and YELLOW FLAG one yellow sliver. That is a reading lost, on the very face the ticket is
+written about.
+
+It is still not a setting. What a switch would buy that driver is the band held for the whole flag,
+at the price of the fuel page for the whole caution — the case #380 opens with, on that same face —
+in exchange for a name he has already read during the three seconds the flag had the band. And the
+choice between a flag held and a page given back is already a setting: `FlagFormat` set to `full`
+gives the flag zones B, A and C for the whole of its duration and names it there, DSQ apart from
+FURLED apart from BLACK, at the cost of the gear rather than of the band. A third arm would be a
+setting inside a setting for a view one of the two already offers. What those four faces are owed is
+a drawing rather than a switch, and [§10](#10-where-the-canvas-contradicts-itself) is where that debt
+is written down: a block wide enough for a name there means taking room from the page, so the canvas
+has to say which. Reversing the decision costs one more term on each of the two groups' `Visible` and
+no new screen, so the author can do it cheaply.
 
 **It draws the whole flag catalogue, which is fifteen conditions and not six.** The band used to
 read the six `Flag_*` properties SimHub normalises, and those are a lossy summary of what iRacing
@@ -737,7 +752,10 @@ transparent flag left the page underneath fully readable and a flag takes the ba
 **The nano writes no name.** Its twelve pixels are colour alone, so the conditions that share a
 colour share a band there: a debris flag reads as a yellow, and the three members of the black
 family as one outline. That is the price of the strip's height rather than a decision of the
-catalogue's, and it is why the names exist on every other face.
+catalogue's, and it is why the names exist wherever there is width to hold one. Since #380 the nano is
+not the only place that pays it: a flag settled into the sixteen pixels at the ends of a band with no
+corner block, twelve in portrait, reads the same way, which is the cost
+[§6](#6-band-d--eight-pages) weighs above.
 
 ---
 
@@ -925,7 +943,7 @@ a mistake in this document.
 | The sector deltas' size | The companion draws the delta page's S1/S2/S3 rank at 34 px and the catalogue draws it at 34 as well, which is `small` on one ramp and `mid` on the other; the page therefore names the ramp rung by density rather than by one token. The same question decides the recap under the sectors: 34 on the companion and 24 in a zone are both `small`, and a compact zone's `small` is 18 where the 800 × 480 sheet chips 24. |
 | Three sector columns in a narrow zone | The catalogue draws the sectors page as three columns at every shape, including `tall narrow`, where three 34 px sector times and their gaps need 286 px of a 274 px zone. The build used to reach three columns by stepping the rank down to 18 px, which is the page shrinking the reading it exists for. **The rank now keeps 34 and wraps to two lines and one**, per rule 17; the canvas owes the redraw, as it does for lap times at the same shape. |
 | Spreading or centring | Whether a page spreads its ranks over the full height or centres them as one block is decided page by page on the catalogue and not by shape: sectors, fuel, session, stint, the speedo and car settings spread at all four shapes, lap times spreads at three and centres at `tall narrow`, the delta centres at three and spreads at `tall`, and the lists, the drawings and the pit view centre everywhere. The engine therefore takes it from the page (`justify: 'spaceBetween'` on `stack`) and centres by default. |
-| The flag once it has settled | No artboard draws a flag anywhere but across the whole band, so the block at each end that [§6](#6-band-d--eight-pages) describes is an addition rather than a reading of a drawing. **It is taken** because the alternative is the case [#380](https://github.com/xorob0/OpenDash/issues/380) opens with, namely SAFETY CAR over an unreadable fuel page for the length of a caution. On the four faces with corner blocks the addition is nearly a rectangle the canvas does draw, though not exactly one: it covers what a corner block holds and, the corner width being those two fields plus the band's side padding plus the room the zone letter stands in, the padding and the letter as well, so band D has no **D** for as long as a flag is out. §6 says why that is the cheaper of the two prices available. On 850 × 480, 800 × 480, 800 × 286 and 600 × 686 there is no such rectangle and the flag keeps the side padding, which is 16 px of colour at each end and 12 in portrait: enough to say a flag is still out and not enough for a word. Widening it there means taking room from the page, and the 600 × 686 fuel page has 6 px of slack, so the canvas owes either a drawn settled form for those four faces or the judgement that the padding is enough. |
+| The flag once it has settled | No artboard draws a flag anywhere but across the whole band, so the block at each end that [§6](#6-band-d--eight-pages) describes is an addition rather than a reading of a drawing. **It is taken** because the alternative is the case [#380](https://github.com/xorob0/OpenDash/issues/380) opens with, namely SAFETY CAR over an unreadable fuel page for the length of a caution. On the four faces with corner blocks the addition is nearly a rectangle the canvas does draw, though not exactly one: it covers what a corner block holds and, the corner width being those two fields plus the band's side padding plus the room the zone letter stands in, the padding and the letter as well, so band D has no **D** for as long as a flag is out. §6 says why that is the cheaper of the two prices available. On 850 × 480, 800 × 480, 800 × 286 and 600 × 686 there is no such rectangle and the flag keeps the side padding, which is 16 px of colour at each end and 12 in portrait: enough to say a flag is still out and not enough for a word. **The word is what a colour cannot carry**, so on those four faces a settled flag names a family and not a member: DISQUALIFIED, BLACK FLAG · FURLED and BLACK FLAG are one outlined sliver, DEBRIS and YELLOW FLAG one yellow sliver. Widening it there means taking room from the page, and the 600 × 686 fuel page has 6 px of slack, so the canvas owes either a drawn settled form for those four faces or the judgement that colour alone is enough once the name has had its three seconds. |
 | A short box's ranks | `keepsSecondaryRanks` says a short box keeps one rank, while `archetypeOf` hands a wide short box the `grid` answer, which keeps two. The code follows `archetypeOf`, and the helper is unused. Either the short boxes the build produces get a fifth declared answer, agreed with the canvas, or the helper goes so that one rule governs. |
 
 ### Every variant the 1280 × 480 sheet lists

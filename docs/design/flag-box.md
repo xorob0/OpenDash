@@ -92,8 +92,11 @@ picture on 64 pixels has nothing to settle into and nothing underneath it to giv
 
 **The debris flag's danger stripes are not drawn on the band.** The canvas gives the alert
 catalogue two patterns, the chequer and the stripes, and the band draws the first. A debris flag is
-a yellow band named "DEBRIS", which says it on every face that writes a name and reads as a plain
-yellow on the nano, which writes none. The second pattern is a piece of work of its own.
+a yellow band named "DEBRIS", which says it wherever there is width for a name: the whole band on
+every face while the flag has it, and the corner block it settles into on the four faces wide enough
+to draw one. It reads as a plain yellow on the nano, which writes none, and, since #380, in the
+sixteen pixels a settled flag keeps at the ends of a band with no corner block. The second pattern is
+a piece of work of its own.
 
 **The band has no critical-flags switch.** Sixty-four pixels are the only thing a driver with a box
 has, which is what the switch is for; a driver who wants band D quieter turns the flag format off.
