@@ -46,14 +46,21 @@ describe('the promise', () => {
 });
 
 /**
- * The first screen, which is the hero and the three reasons under it, down to where the screen
- * picker starts. A visitor arrives with three questions before any picture matters: whether it runs
- * their sim, what it costs, and why they would switch. All three are answered before any scrolling,
- * and a rewrite that drops one of the answers still typechecks, so this is what notices.
+ * The first screen, which is the home page's first `<section>` and nothing after it. A visitor
+ * arrives with three questions before any picture matters: whether it runs their sim, what it costs,
+ * and why they would switch. All three are answered in that one section, so the three reasons have
+ * to share it with the hero rather than open a section of their own below the fold. Reading only as
+ * far as the section's closing tag is what notices when they move back out.
  */
 describe('the first screen', () => {
   const home = read('app/page.tsx');
-  const first = home.slice(0, home.indexOf('id="screen"'));
+  const opens = home.indexOf('<section');
+  const first = home.slice(opens, home.indexOf('</section>', opens));
+
+  test('is one section, and it ends before the screen picker', () => {
+    expect(first.slice('<section'.length)).not.toContain('<section');
+    expect(first).not.toContain('id="screen"');
+  });
 
   test.each(['iRacing', 'SimHub', 'Windows'])('says %s', (word) => {
     expect(first).toContain(word);
