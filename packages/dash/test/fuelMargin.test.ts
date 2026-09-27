@@ -11,14 +11,22 @@
  * The two forms are checked separately because they are two quantities: laps against `RemainingLaps`
  * in a lap-counted session, minutes against `SessionTimeLeft` in a timed one, and which of the two
  * is drawn follows `SessionProgress` exactly as the session page's own counter does.
+ *
+ * The last describe here is about width rather than value, and it is the one the fit tests cannot do
+ * for themselves. `textFit`, `secondScreens` and `zoneFace` measure what an item says it draws, and a
+ * bound value says its sample unless it declares a `widest`: cut for `+1.4` and handed `−169.0`, the
+ * margin passed every box in the build and clipped on every one of them. So the readings the
+ * expression can produce are enumerated from the expression itself and held against the declaration,
+ * which is what puts the real figure in front of the boxes.
  */
 import { describe, expect, test } from 'bun:test';
 import { rect } from '../src/design/geometry.ts';
+import { MINUS, monoWidth, cells } from '../src/design/metrics.ts';
 import type { TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
-import { NO_VALUE } from '../src/second/values.ts';
+import { CHARS, FUEL_TO_END_WIDEST, NO_VALUE } from '../src/second/values.ts';
 import { BAND_PAGES } from '../src/zones/bandPages.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
@@ -125,5 +133,73 @@ describe('the same reading on band D', () => {
   test('and its absence sits in the cells the field is cut for, so no column moves at the first lap', () => {
     expect(evalNcalc(margin.bind, telemetry({ lapsDone: 0 }))).toBe(NO_VALUE);
     expect(NO_VALUE.length).toBeLessThanOrEqual(margin.chars.digits);
+  });
+});
+
+describe('every reading the margin can draw is inside the width it declares', () => {
+  const margin = BAND_PAGES.fuel!.find((field) => field.id === 'toEnd')!;
+  const value = fuelItems.find((item) => item.name === 'toEnd.value')!;
+
+  /**
+   * Every reading the expression arrives at over the races a driver can be in.
+   *
+   * Enumerated from the formula rather than written out, because the point is the range of the
+   * expression and not a list of strings somebody thought of: `0.0` writes a sign, the integer digits
+   * and a decimal whatever the numbers are, so the widest reading belongs to the longest race and not
+   * to the sample the field was drawn with.
+   */
+  const readings = (): Set<string> => {
+    const seen = new Set<string>();
+    const add = (props: Props): void => {
+      seen.add(String(evalNcalc(margin.bind, props)));
+    };
+    // Lap-counted races from a sprint to the longest oval, at both ends of the tank.
+    for (const lapsLeft of [1, 5, 11, 50, 78, 199, 367, 999]) {
+      for (const fuelLaps of [0, 1.4, 13.1, 30, 47.8, 999.9]) add(telemetry({ lapsLeft, fuelLaps, progress: 'laps' }));
+    }
+    // Timed races from a ten-minute sprint to a day's endurance, less a second so the session is
+    // still timed, at both ends of the tank.
+    for (const sessionSeconds of [600, 1200, 3600, 21600, 43200, 86399]) {
+      for (const fuelSeconds of [0, 300, 1500, 4200, 86399]) add(telemetry({ sessionSeconds, fuelSeconds, progress: 'time' }));
+    }
+    // And the absence, which is a reading too.
+    add(telemetry({ lapsDone: 0 }));
+    return seen;
+  };
+
+  /** Width of a string in the cells the item is laid in, which is how WPF will measure it. */
+  const cellWidth = (text: string, mono: { charWidth: number; specialCharsWidth: number; specialChars?: string }): number => {
+    const specials = [...text].filter((c) => mono.specialChars?.includes(c) ?? false).length;
+    return (text.length - specials) * mono.charWidth + specials * mono.specialCharsWidth;
+  };
+
+  test('the widest declared is really the widest, so the fit tests are measuring the right string', () => {
+    const mono = value.monospace!;
+    const declared = cellWidth(FUEL_TO_END_WIDEST, mono);
+    for (const reading of readings()) {
+      expect({ reading, inside: cellWidth(reading, mono) <= declared }).toEqual({ reading, inside: true });
+    }
+    // And it is a reading of the right shape: five digit cells and a decimal, the sign in one of them.
+    expect(FUEL_TO_END_WIDEST).toBe(`${MINUS}999.9`);
+    expect(declared).toBeLessThanOrEqual(monoWidth(mono, CHARS.margin));
+  });
+
+  test('the two drawings are cut for it and say so, which is what the fit tests read', () => {
+    // The box comes from `chars` and the measurement from `widest`; a field with one and not the
+    // other is either clipped or unchecked, and the margin managed both at once.
+    expect({ chars: value.monospace && monoWidth(value.monospace, CHARS.margin), widest: value.widest }).toEqual({
+      chars: monoWidth(cells('SemiBold', value.fontSize), CHARS.margin),
+      widest: FUEL_TO_END_WIDEST,
+    });
+    expect({ chars: margin.chars, widest: margin.numeralWidest }).toEqual({ chars: CHARS.margin, widest: FUEL_TO_END_WIDEST });
+    // Not `widest`, which on a band field means a proportional word and would take the cells and the
+    // colour binding with it.
+    expect(margin.widest).toBeUndefined();
+  });
+
+  test('and the longest of them fits the box every drawing gives it', () => {
+    // The global fit tests do this for every face now that the item declares what it draws; this is
+    // the one box this file has in hand, and it fails here first if the budget is ever narrowed.
+    expect(cellWidth(FUEL_TO_END_WIDEST, value.monospace!)).toBeLessThan(value.rect.width);
   });
 });

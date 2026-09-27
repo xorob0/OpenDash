@@ -54,6 +54,16 @@ export interface FieldValue {
   bind?: Expr;
   /** Character budget: how wide the value can get. */
   chars: Chars;
+  /**
+   * The longest reading `bind` can produce, for a value whose sample is not it.
+   *
+   * A monospaced box is cut from `chars` and not from this, so declaring it never moves a field; what
+   * it moves is the measurement. The fit tests ask an item what it draws, and a bound value with only
+   * a sample on it answers with the sample: the fuel margin was cut for four cells and measured at
+   * three, because `+1.4` is what it was written with and `−169.0` is what a long race hands it.
+   * Declare it wherever the sample is the short end of the range rather than the long one.
+   */
+  widest?: string;
   /** Font size; a density size, e.g. `d.big`. */
   fs: number;
   color?: Hex;
@@ -269,6 +279,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
     numeral(`${spec.name}.value`, spec.value.sample, x, valueY, spec.value.fs, spec.value.chars, {
       weight: spec.value.weight,
       bind: spec.value.bind,
+      widest: spec.value.widest,
       color: spec.value.color,
       colorBind: spec.value.colorBind,
       visibleBind: spec.visibleBind,
