@@ -266,10 +266,56 @@ describe('the row the canvas draws', () => {
     expect(rowBand(narrow).height).toBe(28);
     expect(cell(narrow, 'pos').fontSize).toBe(24);
     expect(cell(narrow, 'gap').fontSize).toBe(24);
-    // 13 and not 15 here, which is the other half of #339's answer: the name is cut to a count of
-    // characters, and at 82 px of column 15 buys five of them where 13 buys seven. A bigger name that
-    // says less is not a more readable one. 13 is where density.ts puts the floor, not below it.
+    // 13 and not 15 here, which is the canvas's own number at every shape and the one the build keeps.
+    // It was argued for as a three-character saving at 82 px of column and it is one character; the test
+    // below counts all six. 13 is where density.ts puts the floor, not below it.
     expect(cell(narrow, 'name').fontSize).toBe(13);
+  });
+
+  /**
+   * What 15 px would actually cost the three narrow boxes, counted rather than asserted.
+   *
+   * The 28 px row keeping 13 was recorded in three places as "82 px is seven characters at 13 and five
+   * at 15". It is seven and six. The boxes the row is handed are zone C of the 850 x 480, 800 x 286 and
+   * 800 x 480 faces, at 82, 77 and 57 px of name column once `fittingColumns` is down to the position,
+   * the name and the gap, and 15 costs one character, one character and nothing. So the saving is not
+   * what keeps 13 there — the catalogue drawing 13 at every shape is, a second divergence needing to
+   * buy more than a glyph. Pinned here because a documented count nothing runs is a number that rots.
+   */
+  test('and 15 px would cost the three narrow boxes one character, one character and nothing', () => {
+    const budgets = [250, 245, 225].map((width) => {
+      const name = columnWidths(['pos', 'name', 'gap'], width, 'compact', 28)[1] ?? 0;
+      return { width, name, at13: charsThatFit(NAME_FACE, 13, name), at15: charsThatFit(NAME_FACE, 15, name) };
+    });
+    expect(budgets).toEqual([
+      { width: 250, name: 82, at13: 7, at15: 6 },
+      { width: 245, name: 77, at13: 6, at15: 5 },
+      { width: 225, name: 57, at13: 4, at15: 4 },
+    ]);
+  });
+
+  /**
+   * And what the one lever those boxes still have would buy, which is the other number zones.md owes.
+   *
+   * Four characters at 800 x 480 is `Lia…`, one glyph more than the `LIA` #385 was written to delete and
+   * strictly less for `L. Byrne` and `B. Liam`. The row is down to the position, the name and the gap,
+   * all three of which `NEVER_DROPPED` keeps, so the only width left to give the name is one of the other
+   * two: the position's 40 px and the gap's 92 are both the canvas's stated numbers, and the gap's is a
+   * floor over its own content — six digits and a sign need 79 px at 24, so even dropping a decimal
+   * would not narrow it. Giving the name the position's column is therefore the whole of the lever, and
+   * it is worth four characters at the narrowest face. Not taken: the position is what says whether the
+   * car behind is racing you or lapping you, and dropping a third column is the canvas's to decide.
+   */
+  test('and giving the name the position column would buy it nine characters at the narrowest face', () => {
+    const withoutPos = [250, 245, 225].map((width) => {
+      const name = columnWidths(['name', 'gap'], width, 'compact', 28)[0] ?? 0;
+      return { width, name, at13: charsThatFit(NAME_FACE, 13, name) };
+    });
+    expect(withoutPos).toEqual([
+      { width: 250, name: 134, at13: 11 },
+      { width: 245, name: 129, at13: 11 },
+      { width: 225, name: 109, at13: 9 },
+    ]);
   });
 
   test('and the canvas widths are the floor of every monospaced column', () => {
