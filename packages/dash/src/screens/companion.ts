@@ -16,9 +16,11 @@
  * is the price of a start page and a glance, and it is the same price the paged form would have
  * charged.
  *
- * Every screen carries the same roles (in game and idle, not pit). SimHub only filters screens by
- * role when the roles differ between them, so keeping them identical means the page shows whether or
- * not a game is running, which is what a companion is for.
+ * Every module screen is an in-game screen and nothing else, and the dashboard ends with one idle
+ * screen (`idle.ts`). SimHub filters screens by role only when the roles differ between them, which
+ * they now do, so while a game runs the twenty-one are the whole ring and the tap still pages them,
+ * and between sessions the ring is the idle screen alone. Before there was an idle screen the roles
+ * were identical and a companion at rest drew a module full of dashes; #113.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { MODULE_CATALOGUE, MODULE_COUNT, secondScreen } from '../contract.ts';
@@ -26,6 +28,7 @@ import { rect } from '../design/geometry.ts';
 import { withMoreBindings } from '../bind.ts';
 import { flagFull } from '../components/flagFull.ts';
 import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
+import { idleScreen } from '../idle.ts';
 import { MODULES } from '../modules/index.ts';
 import { COMPANION_HEADER, companionHeader, pageDots } from '../second/header.ts';
 import { contentRect } from '../second/layout.ts';
@@ -91,7 +94,9 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
   return {
     name: meta.id,
     inGame: true,
-    idle: true,
+    // Not idle. A module with no game behind it is a page of dashes, and the screen the dashboard
+    // ends with is what SimHub shows instead; #113.
+    idle: false,
     pit: false,
     backgroundColor: ds.color.surface.base,
     // The rotation alone, not the rotation and the plugin's page.
@@ -128,6 +133,10 @@ export function companionDashboard(size: CompanionSize, metadata: DashboardMetad
     width: size.width,
     height: size.height,
     backgroundColor: ds.color.surface.base,
-    screens: Array.from({ length: MODULE_COUNT }, (_, i) => companionScreen(size, i + 1)),
+    screens: [
+      ...Array.from({ length: MODULE_COUNT }, (_, i) => companionScreen(size, i + 1)),
+      // Last, so the module screens keep the indices the plugin's rotation and every test count from.
+      idleScreen({ frame: rect(0, 0, size.width, size.height) }),
+    ],
   };
 }

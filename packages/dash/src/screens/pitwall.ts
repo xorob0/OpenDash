@@ -13,6 +13,7 @@ import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../genera
 import { ncalc } from '../generator.ts';
 import { secondScreen } from '../contract.ts';
 import { rect } from '../design/geometry.ts';
+import { idleScreen } from '../idle.ts';
 import { rule } from '../elements/rule.ts';
 import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { flagFull } from '../components/flagFull.ts';
@@ -452,7 +453,7 @@ export function racePage(width: number, height: number): Screen {
   items.push(rule('race.zoneRule', columnLeft, y + zoneHeight, columnWidth, 1));
   items.push(zoneWidget('race.zoneB', rect(columnLeft, y + zoneHeight + 1, columnWidth, zoneHeight), 'standard', 'race', 'B'));
   items.push(...flagLayers('race', rect(0, bodyTop, width, bodyHeight)));
-  return { name: 'race', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(0) };
+  return { name: 'race', inGame: true, idle: false, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(0) };
 }
 
 /** The tower page: a compact field list, the track, and three zones. */
@@ -480,7 +481,7 @@ export function towerPage(width: number, height: number): Screen {
     zoneWidget('tower.zoneB', rect(columnLeft + zoneWidth + 1, zonesTop, zoneWidth, zoneHeight), 'standard', 'tower', 'B'),
   ];
   items.push(...flagLayers('tower', rect(0, bodyTop, width, bodyHeight)));
-  return { name: 'tower', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(1) };
+  return { name: 'tower', inGame: true, idle: false, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(1) };
 }
 
 /** The telemetry page: the traces of the last minute of driving, and three zones beside them. */
@@ -524,7 +525,7 @@ export function telemetryPage(width: number, height: number): Screen {
     if (i < 2) items.push(rule(`telemetry.zone${letter}.rule`, zoneLeft, top + zoneHeight, zoneWidth, 1));
   });
   items.push(...flagLayers('telemetry', rect(0, bodyTop, width, bodyHeight)));
-  return { name: 'telemetry', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(2) };
+  return { name: 'telemetry', inGame: true, idle: false, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(2) };
 }
 
 /**
@@ -581,7 +582,7 @@ export function portraitPage(width: number, height: number): Screen {
     zoneWidget('portrait.zoneD', rect(half + 1, zonesTop + zoneHeight + 1, rightWidth, zoneHeight), 'standard', 'portrait', 'D'),
   ];
   items.push(...flagLayers('portrait', rect(0, bodyTop, width, height - bodyTop)));
-  return { name: 'portrait', inGame: true, idle: true, pit: false, backgroundColor: ds.color.surface.base, items };
+  return { name: 'portrait', inGame: true, idle: false, pit: false, backgroundColor: ds.color.surface.base, items };
 }
 
 export interface PitWallSize {
@@ -612,6 +613,10 @@ export const PIT_WALL_SIZES: readonly PitWallSize[] = [
  * rather than the price.
  */
 export function pitWallDashboard(size: PitWallSize, metadata: DashboardMetadata): Dashboard {
-  const screens = size.portrait ? [portraitPage(size.width, size.height)] : [racePage(size.width, size.height), towerPage(size.width, size.height), telemetryPage(size.width, size.height)];
+  const pages = size.portrait ? [portraitPage(size.width, size.height)] : [racePage(size.width, size.height), towerPage(size.width, size.height), telemetryPage(size.width, size.height)];
+  // And one idle screen after the pages, enabled unconditionally where each page is gated on the
+  // setting: an engineer's monitor between sessions showed a header, an empty field and four zones of
+  // dashes, which is #113. Last, so `PitWallPage` and the previews still count the pages from zero.
+  const screens = [...pages, idleScreen({ frame: rect(0, 0, size.width, size.height) })];
   return { name: size.folder, width: size.width, height: size.height, backgroundColor: ds.color.surface.base, screens, metadata };
 }

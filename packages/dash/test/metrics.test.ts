@@ -59,7 +59,10 @@ describe('metrics', () => {
     const { familyOf, loadFont, measure } = await import('../../../tools/measure-font/measure.ts');
     const { fontsForPackage } = await import('../src/dashboard.ts');
     const faces = fontsForPackage().filter((f) => familyOf(loadFont(f)) === ds.font.data);
-    expect(faces.length).toBe(2);
+    // Three since #113: SemiBold, Bold and the Light the idle screen's wordmark is half set in. The
+    // gear is never drawn in Light, and the sweep covers it anyway, because what the cell has to
+    // survive is whichever face of the shipped family the renderer resolves.
+    expect(faces.length).toBe(3);
     for (const face of faces) {
       const font = loadFont(face);
       for (const ch of '0123456789NR') {

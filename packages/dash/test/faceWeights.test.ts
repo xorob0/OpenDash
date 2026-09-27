@@ -33,13 +33,22 @@ const isGear = (name: string): boolean => /(^|\.)gear$/.test(name) || /(^|\.)gea
  */
 const isFlagName = (name: string): boolean => name.startsWith('flag.') || name.startsWith('flagFull.');
 
+/**
+ * The wordmark's second half, which is the identity rather than a numeral.
+ *
+ * `docs/design/brand.md` sets "Dash" in Bold and "open" in Light, and says the two weights are the
+ * whole of the mark. It reaches a face with the idle screen (#113), where it is the one text drawn at
+ * rest; the pit wall header has drawn it since the wall shipped.
+ */
+const isWordmark = (name: string): boolean => name.endsWith('.wordmark.dash') || name.endsWith('wordmark.open');
+
 describe('only the gear is Bold', () => {
   for (const face of ZONE_FACES) {
     test(`${face.folder} sets every other numeral in the numeral weight`, () => {
       const built = buildZoneFace(face, OPTS);
       const bold = textsOf([built.main, ...built.zones]).filter((i) => i.fontWeight === 'Bold');
       expect(bold.length).toBeGreaterThan(0);
-      const stray = [...new Set(bold.map((i) => i.name))].filter((n) => !isGear(n) && !isFlagName(n));
+      const stray = [...new Set(bold.map((i) => i.name))].filter((n) => !isGear(n) && !isFlagName(n) && !isWordmark(n));
       expect({ folder: face.folder, stray }).toEqual({ folder: face.folder, stray: [] });
     });
   }
@@ -49,8 +58,9 @@ describe('only the gear is Bold', () => {
       const pkg = buildPackage(layout, { version: OPTS.version, simHubVersion: OPTS.simHubVersion, strategy: 'widget' as const });
       const bold = textsOf(pkg.dashboards).filter((i) => i.fontWeight === 'Bold');
       // The flag band's name is the other Bold the design asks for, and it is a label rather than a
-      // numeral: the artboards set it in the label family at 700 against the 500 of every other.
-      const stray = [...new Set(bold.map((i) => i.name))].filter((n) => !isGear(n) && !isFlagName(n));
+      // numeral: the artboards set it in the label family at 700 against the 500 of every other. The
+      // wordmark's "Dash" is the third, and it is neither.
+      const stray = [...new Set(bold.map((i) => i.name))].filter((n) => !isGear(n) && !isFlagName(n) && !isWordmark(n));
       expect({ folder: pkg.folderName, stray }).toEqual({ folder: pkg.folderName, stray: [] });
     }
   });
