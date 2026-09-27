@@ -27,7 +27,7 @@ import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox } from '../src/second/density.ts';
-import { CHARS } from '../src/second/values.ts';
+import { CHARS, CORNERS } from '../src/second/values.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { contentRect } from '../src/second/layout.ts';
@@ -654,6 +654,48 @@ describe('the opponents page keeps both cars', () => {
       // The same pieces on both, never one car's gap without the other's: what a short box sheds,
       // it sheds from the pair.
       expect({ box: box.name, behind: [...new Set(drawn('behind'))] }).toEqual({ box: box.name, behind: [...new Set(drawn('ahead'))] });
+    });
+  }
+});
+
+/**
+ * #384: the tyres page drew three numbers per corner and named none of them, so `85` and `27.6`
+ * were a temperature and a pressure only to a driver who had read the source. Every reading a
+ * corner keeps therefore carries its unit, in the driver's own unit where the sim converts one, and
+ * a cell too narrow for a reading together with its unit keeps neither: the shedding order decides
+ * which quantities survive labelled, never which survives unlabelled.
+ *
+ * Checked at every box the build produces, the pit wall's tyre zone included, because the widget is
+ * one widget and the zone is where the cells are tightest.
+ */
+describe('every tyre reading carries its unit', () => {
+  const tyres = MODULES.find((m) => m.id === 'tyres')!;
+  /** What each reading's unit can be drawn as; a unit is drawn upper-cased. */
+  const UNITS: Record<string, readonly string[]> = {
+    temp: ['°C', '°F', 'K'],
+    pressure: ['PSI', 'KPA', 'BAR'],
+    'pressure.alt': ['PSI', 'KPA'],
+    wear: ['%'],
+  };
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const items = tyres.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+      for (const corner of CORNERS) {
+        const texts = items.filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith(`${corner}.`));
+        const readings = texts.filter((i) => !i.name.endsWith('.unit')).map((i) => i.name.slice(corner.length + 1));
+        // A corner that has shed every reading is a tyre and no numbers, which no box here is
+        // narrow enough for: the point of the check is that nothing arrives at one by accident.
+        expect({ box: box.name, corner, readings: readings.length > 0 }).toMatchObject({ readings: true });
+        for (const reading of readings) {
+          const unit = texts.find((i) => i.name === `${corner}.${reading}.unit`);
+          expect({ box: box.name, corner, reading, unit: unit?.widest ?? unit?.text }).toMatchObject({ unit: expect.anything() });
+          expect({ box: box.name, corner, reading, known: UNITS[reading]?.includes((unit!.widest ?? unit!.text).toUpperCase()) }).toMatchObject({ known: true });
+        }
+      }
+      // And the temperature's mark follows the driver's setting rather than assuming Celsius.
+      const mark = items.find((i) => i.name === 'FrontLeft.temp.unit');
+      expect({ box: box.name, bound: JSON.stringify(mark?.bindings ?? {}) }).toMatchObject({ bound: expect.stringContaining('TemperatureUnit') });
     });
   }
 });

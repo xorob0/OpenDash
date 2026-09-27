@@ -7,6 +7,12 @@
  * outboard and the drawing inboard, the left corners right-aligning their readings against the
  * drawing and the right corners left-aligning theirs.
  *
+ * Each of the three carries its unit, and carries it in the driver's own: the temperature follows
+ * `TemperatureUnit` and the pressure follows `TyrePressureUnit`, so that nothing in the cell is a
+ * bare figure a driver has to recognise by its size. A reading is measured with its unit, which is
+ * why a narrow cell now sheds a reading a little sooner: what it sheds is a labelled quantity, and
+ * an unlabelled one is not what a cell keeps instead. #384.
+ *
  * A cell too small for three readings drops one rather than shrinking all three, which is rule 17
  * and what `docs/design/readability-pass.md` §15 asks for; the drawing beside them is cut from
  * whatever is left, which is rule 18. Nothing here is ever scaled down.
@@ -29,9 +35,9 @@ import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { tyreGlyph, tyreGlyphSize } from './tyreGlyph.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
-import { CHARS, pressureUnit, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
+import { CHARS, pressureUnit, temperatureMark, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
 
-const { iff, eq, lt, gt, str, num, fmt, mul, concat, game } = ncalc;
+const { iff, eq, lt, gt, str, num, fmt, mul, game } = ncalc;
 
 /** Tread left below this percentage is drawn in caution. */
 export const WEAR_CAUTION = 65;
@@ -199,11 +205,15 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
     {
       id: 'temp',
       fs: temperatureSize(d, density),
-      // The degree sign takes a digit cell: 0.359 em in the condensed face against a 0.475 em cell.
-      chars: { digits: CHARS.temperature.digits + 1, specials: CHARS.temperature.specials },
-      sample: `${sample.temperature}°`,
-      bind: iff(eq(temp, num(0)), str('--'), concat(fmt(temp, '0'), str('°'))),
+      chars: CHARS.temperature,
+      sample: sample.temperature,
+      bind: iff(eq(temp, num(0)), str('--'), fmt(temp, '0')),
       colorBind: temperatureColour(corner),
+      // The degree sign used to ride in the value, taking a digit cell of its own, and said only
+      // that the figure was a temperature of some kind. The mark follows the driver's own unit
+      // instead, the way the pressure follows theirs, so `84` reads as 84 °C on a metric car and
+      // `183` as 183 °F on an imperial one. `°C` is the widest of the three; `K` is the narrowest.
+      unit: { text: '°C', widest: '°C', bind: temperatureMark() },
     },
     {
       id: 'pressure',
@@ -240,10 +250,16 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
  * rather than down a column: a pressure the cell can draw once and not twice is still a pressure,
  * and shedding the whole row to keep the conversion beside it would cost the driver the figure in
  * order to keep the gloss on it. Only width is at stake, both readings sharing one line.
+ *
+ * A reading is measured with its unit, so a cell too narrow for the temperature and its mark sheds
+ * the temperature rather than drawing a figure that says nothing about what it measures -- and it
+ * sheds the last one too, leaving the drawing alone, because dropping the mark to keep the digits
+ * is the state #384 was filed about. No box the build produces is that narrow: the tightest corner
+ * the catalogue cuts is 107 px across and a labelled temperature needs 75.
  */
 function keptQuantities(all: readonly Quantity[], frame: Rect, d: DensitySpec): Quantity[] {
   const kept = all.map((q) => (q.also && rowWidth(q, d) > frame.width ? { ...q, also: undefined } : q));
-  while (kept.length > 1 && (blockHeight(kept) > frame.height || Math.max(...kept.map((q) => rowWidth(q, d))) > frame.width)) kept.pop();
+  while (kept.length > 0 && (blockHeight(kept) > frame.height || Math.max(...kept.map((q) => rowWidth(q, d))) > frame.width)) kept.pop();
   return kept;
 }
 
@@ -262,8 +278,10 @@ export function wheel(name: string, frame: Rect, corner: Corner, density: Densit
   const d = densityOf(density);
   const gap = opts.gap ?? CORNER_GAP;
   const kept = keptQuantities(quantities(corner, d, density), frame, d);
-  const numbers = Math.max(...kept.map((q) => rowWidth(q, d)));
-  const drawing = tyreGlyphSize(frame, frame.width - gap - numbers);
+  // No reading kept is no column and no gap either: the drawing takes the whole cell rather than
+  // the cell reserving room for numbers it is not drawing.
+  const numbers = kept.length === 0 ? 0 : Math.max(...kept.map((q) => rowWidth(q, d)));
+  const drawing = tyreGlyphSize(frame, kept.length === 0 ? frame.width : frame.width - gap - numbers);
   const items: Item[] = [];
   if (drawing.width > 0) {
     const box = rect(

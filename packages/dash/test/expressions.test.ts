@@ -195,6 +195,12 @@ describe('second-screen values', () => {
     expect(values.fuelUnit()).toContain("'gal'");
     expect(values.fuelUnit()).toContain("'L'");
     expect(values.pressureUnit()).toContain("'kPa'");
+    // The three temperature marks, `Celcius`'s own spelling included, and no degree sign on Kelvin.
+    expect(values.temperatureMark()).toContain("'°C'");
+    expect(values.temperatureMark()).toContain("'°F'");
+    expect(values.temperatureMark()).toContain("'K'");
+    expect(values.temperatureMark()).toContain("'Celcius'");
+    expect(values.temperatureMark()).not.toContain("'°K'");
   });
 
   test('the five-lap average reads the five history slots and waits for all five', () => {
