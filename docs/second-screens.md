@@ -249,22 +249,21 @@ body, which is the shape the pit wall's other panels will need when they are gat
 none of the rest is gated yet, since each has its own chrome, its own body and its own wording to
 settle.
 
-**It covers the game not running as well, and today that is the whole of the idle screen (#763).**
-The plan for this said the division of labour was that SimHub's idle screen covers the game not
-running while this covers the game running with nothing to show. The code does not implement that
-division and cannot yet: `serialize.ts` writes `IdleScreen: true` for every screen of every package,
-because every screen constructor sets `idle: true`, so these are the screens SimHub switches to when
-no game is running. That is #763's first line and its stated bug -- "SimHub already shows the racing
-face with no data in it when no game is running". `inSession()` is the game running *and* a session
-named, so with nothing running the notice is up, and that is the deliberate answer until there is an
-idle screen with content of its own: a dim `LEADERBOARD · GO INTO A SESSION` is a better thing to
-find on a rig between sessions than a table of empty rows, which is what was there before.
+**It no longer covers the game not running, because #763 landed and took that state (#763).** The
+division of labour the plan described is the one in the code now: SimHub's idle screen covers the game
+not running, and this notice covers the game running with nothing to show. The racing face
+(`dashboard.ts`, `zones/face.ts`), the companion's module screens and all four pit wall pages declare
+`idle: false`, and every package ends with an idle screen of its own, so a rig with nothing running
+shows the wordmark and a clock rather than a page of notices — watched happen on 2026-09-27, which
+[dev-loop.md](dev-loop.md) records. The two constructors that still set `idle: true` are `pageScreen`
+and `cardScreens`, and they build the dashboards a widget embeds, whose screen is chosen by a bound
+`InitialScreenIndex` rather than by SimHub's idle selection.
 
-So #763 inherits one decision rather than a conflict. When it adds a screen with idle content it has
-to decide whether the module screens keep `idle: true`: if they do, SimHub has two idle candidates
-and picks by index, and if they do not, this notice narrows on its own to the state it was written
-for, the game running and no session joined yet, which is where a driver waiting to qualify is.
-Either way nothing here has to change. `packages/dash/test/sessionNotice.test.ts` checks every box a
+So this notice has narrowed on its own to the state it was written for: the game running and no
+session joined yet, which is where a driver waiting to qualify is, and where a rig sits through the
+few seconds iRacing spends loading. Nothing here had to change for that to happen. Reaching it needs
+a scenario, since stopping the emulator reaches the idle screen instead:
+`bun run dev --scenario nosession`. `packages/dash/test/sessionNotice.test.ts` checks every box a
 module is drawn in.
 
 ## Where the code lives
