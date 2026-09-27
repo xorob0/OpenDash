@@ -1,8 +1,10 @@
 /**
  * The session's three modes, exercised by evaluating the NCalc the card emits, and the module
- * beside it reading the same setting. The
- * evaluator covers only the subset those expressions use: [Property] reads, if, isnull, format,
- * timespantoseconds (seconds are passed as numbers), max, truncate, comparison, and/or/!, +, %, /.
+ * beside it reading the same setting.
+ *
+ * The evaluator is `ncalcEval.ts`, which covers the subset these expressions use and is shared with
+ * the fuel margin's tests: two readings that follow one setting are better read off one evaluator
+ * than off two.
  */
 import { describe, expect, test } from 'bun:test';
 import { session, showTime, timedSession, TIME_PLACEHOLDER, UNTIMED_SECONDS } from '../src/cards/session.ts';
@@ -10,40 +12,7 @@ import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { walkItems } from '../src/walk.ts';
 import type { TextItem } from '../src/generator.ts';
-
-type Props = Record<string, unknown>;
-
-function evalNcalc(expression: string, props: Props): unknown {
-  // Split on string literals so that operator rewriting never touches their contents.
-  const js = expression
-    .split(/('(?:[^'\\]|\\.)*')/)
-    .map((part, i) =>
-      i % 2 === 1
-        ? part
-        : part
-            .replace(/\[([A-Za-z0-9_.]+)\]/g, (_, name: string) => `P(${JSON.stringify(name)})`)
-            .replace(/\bif\(/g, 'IF(')
-            .replace(/\band\b/g, '&&')
-            .replace(/\bor\b/g, '||')
-            .replace(/ = /g, ' === ')
-            .replace(/ != /g, ' !== '),
-    )
-    .join('');
-  const fns = {
-    P: (name: string): unknown => (name in props ? props[name] : null),
-    IF: (c: unknown, a: unknown, b: unknown): unknown => (c ? a : b),
-    isnull: (v: unknown, d?: unknown): unknown => (d === undefined ? v === null || v === undefined : (v ?? d)),
-    format: (v: number, pattern: string): string => {
-      const [int = '0', frac = ''] = pattern.split('.');
-      const [i = '0', f] = Math.abs(v).toFixed(frac.length).split('.');
-      return `${v < 0 ? '-' : ''}${i.padStart(int.length, '0')}${f ? `.${f}` : ''}`;
-    },
-    timespantoseconds: (v: unknown): number => Number(v),
-    max: Math.max,
-    truncate: Math.trunc,
-  };
-  return new Function(...Object.keys(fns), `return (${js});`)(...Object.values(fns));
-}
+import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const items = session.build(rect(0, 0, 255, 187), 'session.');
 const item = (name: string): TextItem => {
