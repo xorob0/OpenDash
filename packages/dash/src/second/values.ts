@@ -972,10 +972,16 @@ export const gameRunning = (): Expr => gt(isnull(prop('DataCorePlugin.GameRunnin
  * Read from iRacing alone, and kept here so that a second sim is a change to one line -- the
  * per-game mapping block #312 opened was closed on 2026-09-22.
  *
- * **It is false with no game running too, which today is the idle screen as well.** Every screen of
- * every package is written with `idle: true`, so SimHub draws these screens when nothing is running
- * and a notice is what a rig between sessions shows: deliberate until #113 gives the idle state
- * content of its own, and #113's to decide whether these screens keep `idle` when it does. See the
+ * **It is false with no game running too, but that state belongs to the idle screen now (#113).**
+ * The racing face, the companion's module screens and all four pit wall pages declare `idle: false`
+ * and every package ends with an idle screen of its own, so a rig with nothing running shows the
+ * wordmark and a clock rather than a page of notices. The two constructors still setting `idle: true`
+ * -- `pageScreen` and `cardScreens` -- build the dashboards a widget embeds, whose screen is chosen by
+ * a bound `InitialScreenIndex` rather than by SimHub's idle selection.
+ *
+ * So the state this is for is the narrow one it was written for: the game running and no session
+ * named. `tools/irsdk-emulator/scenarios/nosession.json` exists because it is the only way to reach
+ * it -- stopping the emulator makes `gameRunning()` false and reaches the idle screen instead. See the
  * "no session yet" section of docs/second-screens.md.
  */
 export const inSession = (): Expr => and(gameRunning(), ne(sessionType(), str('')));
