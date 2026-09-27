@@ -17,7 +17,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DRIVER_NAME_FORMATS, type DriverNameFormat } from '../src/contract.ts';
 import { charsThatFit, ELLIPSIS, measureText, widestGlyph, widestOf } from '../src/design/advances.ts';
-import { columnWidths, MIXED_CASE_NAME_SIZE, NAME_FACE, nameColumnFloor, nameIsUpperCased, nameSizeForRow, SHORTEST_NAME_CHARS, tableRowHeight, type ColumnId } from '../src/second/table.ts';
+import { columnWidths, MIXED_CASE_NAME_SIZE, NAME_FACE, nameColumnFloor, nameIsUpperCased, nameSizeForRow, nameText, SHORTEST_NAME_CHARS, tableRowHeight, type ColumnId } from '../src/second/table.ts';
 import { driverName, ellipsised } from '../src/second/values.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { fittingColumns, LEADERBOARD_COLUMNS } from '../src/modules/leaderboard.ts';
@@ -105,6 +105,8 @@ function evaluate(formula: string, entry: Entry | undefined, rig: Rig): unknown 
     lft: (value: string, startIndex: number, maxLength: number): string => Left(value, startIndex, maxLength),
     // .NET's String.Replace: every occurrence, not the first.
     rep: (value: string, from: string, to: string): string => value.split(from).join(to),
+    // NCalc's `ucase`, which is .NET's `String.ToUpper()` and total: there is no name it can get wrong.
+    ucase: (value: unknown): string => String(value).toUpperCase(),
   };
   const names = Object.keys(helpers);
   return new Function(...names, `return ${js};`)(...names.map((n) => helpers[n as keyof typeof helpers]));
@@ -116,6 +118,10 @@ const named = (entry: Entry | undefined, format: DriverNameFormat, team = false)
 /** And with the column's budget applied. */
 const drawn = (entry: Entry | undefined, format: DriverNameFormat, chars: number, team = false): unknown =>
   evaluate(ellipsised(driverName(repeatIndex()), chars), entry, { format, team });
+
+/** And what the row really puts on the glass: the cut, in the case the size can carry. */
+const shown = (entry: Entry | undefined, format: DriverNameFormat, chars: number, fs: number, team = false): unknown =>
+  evaluate(nameText(repeatIndex(), chars, fs), entry, { format, team });
 
 const entry = (name: string, team = ''): Entry => ({ name, team });
 
@@ -215,6 +221,20 @@ describe('the ellipsis', () => {
     expect(drawn(entry('Hannah Fischer'), 'full', 9)).toBe(`Hannah F${ELLIPSIS}`);
     // A name with no space in it is untouched by any of it.
     expect(drawn(entry('Verstappen'), 'full', 6)).toBe(`Verst${ELLIPSIS}`);
+  });
+
+  test('and the four strings the narrowest column draws are the four zones.md quotes', () => {
+    // The 4-character name column of zone C on the 800 x 480 face, at the 13 px its 28 px row sets: the
+    // narrowest any list has, and the one the divergence row argues the three-letter code away with. The
+    // four strings moved twice — once when the cut stopped keeping the space it landed on, once when the
+    // column started shouting — and a number a document states and nothing runs is a number that rots,
+    // so the document's own four are evaluated here.
+    const four = DRIVER_NAME_FORMATS.map((format) => shown(entry('Liam Byrne'), format, 4, 13));
+    expect(four).toEqual([`LIA${ELLIPSIS}`, `L.${ELLIPSIS}`, `B.${ELLIPSIS}`, `BYR${ELLIPSIS}`]);
+    // Which is the comparison the row makes: one glyph more than the `LIA` #385 deleted for the two
+    // formats that cut inside a word, and the same three for the two whose cut lands on the space after
+    // an initial and loses it.
+    expect(four.map((text) => String(text).length)).toEqual([4, 3, 3, 4]);
   });
 
   test('what is drawn never exceeds the budget, at any budget', () => {
