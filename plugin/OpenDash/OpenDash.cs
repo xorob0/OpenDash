@@ -423,6 +423,10 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.PositionMode, () => Settings.PositionMode);
             this.AttachDelegate(Contract.DeltaReference, () => Settings.DeltaReference);
             this.AttachDelegate(Contract.SessionProgress, () => Settings.SessionProgress);
+            // The twelve slots, which drive the two round faces and nothing else. They are attached
+            // unconditionally and are not deprecated: a round face becomes zones on a ring after 1.0
+            // (#145), and until it does these are the only properties either round package reads.
+            // #170.
             for (var slot = 1; slot <= Contract.SlotCount; slot++)
             {
                 var captured = slot;

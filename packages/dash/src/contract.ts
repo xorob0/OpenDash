@@ -133,7 +133,13 @@ export const DEFAULTS = {
   BlueFlagDetail: 'none' as BlueFlagDetail,
 } as const;
 
-/** `Slot01` .. `Slot12` for a 1-based slot index. */
+/**
+ * `Slot01` .. `Slot12` for a 1-based slot index.
+ *
+ * Read by `OpenDash 480 round` and `OpenDash 800 round` and by nothing else -- the 480 takes the
+ * first two and the 800 the first six. They are not deprecated; see the note over
+ * {@link FACE_SIZES}.
+ */
 export function slotSettingName(slot: number): string {
   assertSlot(slot);
   return `Slot${String(slot).padStart(2, '0')}`;
@@ -322,9 +328,11 @@ export const setting = {
 
 // --- The zone face -------------------------------------------------------------------------
 //
-// Additive. `Slot01` to `Slot12` stay declared and stay tested until the card path is retired in
-// #146, because ten faces still read them and README.md publishes them as properties an LED
-// profile may read.
+// Additive. `Slot01` to `Slot12` stay declared and stay tested, and they are not on their way out:
+// they drive `OpenDash 480 round` and `OpenDash 800 round` and nothing else, the 480 reading the
+// first two and the 800 the first six, and README.md publishes them as properties another dashboard
+// or an LED profile may read. A round face becomes zones on a ring after 1.0 (#145), and that
+// release is the one that would carry a warning about the twelve; none is promised before it (#170).
 //
 // The shape of these is the whole point of the model. A slot is arranged once, with a mouse,
 // before a session; a zone is changed with a thumb in the middle of a lap. So what the contract

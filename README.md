@@ -137,8 +137,12 @@ bar rather than going dark, which is what ADR 0004 records.
 `OpenDash.ShiftLights` is still attached beside it as the deprecated alias, true only in the
 `shift` state.
 
-The two round faces are still the twelve-slot design of 0.1.x, because what a round face does with
-zones is not decided; they are the only ones `OpenDash.Slot01` to `Slot12` still drive.
+`OpenDash.Slot01` to `OpenDash.Slot12` are the card in each slot of a round face, and the two round
+faces are the only screens that read them: `OpenDash 480 round` reads the first two and
+`OpenDash 800 round` the first six. They are ordinary properties like the rest, so a dashboard or an
+LED profile of your own may read them, and they are not deprecated and are not being removed. The two
+round faces keep the twelve-slot design of 0.1.x on purpose; a round face becomes zones on a ring
+after 1.0, and the release that converts it is the one that will say what happens to these twelve.
 
 ## The second screens
 

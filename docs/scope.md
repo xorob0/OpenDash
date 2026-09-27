@@ -16,10 +16,6 @@ contributor or an agent should read first, and the one that has to be amended wh
 > rather than a gap: a round face becomes zones on a ring after 1.0, and until it does it stays the
 > design it is (#145).
 >
-> `README.md` and `plugin/INSTALL.md` still describe the twelve-slot face and are now wrong about
-> the product a user installs; correcting them is #150, and until it lands this document is the
-> one to trust.
->
 > The distinction matters because of the rule at the end of the refusals: a line has to move here
 > before the code that crosses it may be written. That is the reason this document changed first.
 
@@ -189,10 +185,16 @@ and it states how far the line moved and what would move it further.
 
 The settings are the shift lights, the position mode, the delta reference, the session progress
 mode, the four zones of the face (the page each shows, which pages are enabled, and the page it
-opens on), the quick glance, the bar's four end fields, twenty-one companion module switches,
-five pit wall zone assignments and a web view address. Because they are ordinary SimHub properties, another
-dashboard or an LED profile can read them, and a change reaches the running dashboard at once
-without restarting SimHub or reopening the dashboard.
+opens on), the quick glance, the bar's four end fields, twelve card slots, twenty-one companion
+module switches, five pit wall zone assignments and a web view address. Because they are ordinary
+SimHub properties, another dashboard or an LED profile can read them, and a change reaches the
+running dashboard at once without restarting SimHub or reopening the dashboard.
+
+`OpenDash.Slot01` to `OpenDash.Slot12` are the twelve card slots, and the only screens that read
+them are the two round faces: `OpenDash 480 round` reads the first two and `OpenDash 800 round` the
+first six. Every rectangular face is zones. They are not deprecated and no release is promised to
+remove them; the release that converts a round face to zones on a ring, which is after 1.0, is the
+one that says what becomes of them (#170).
 
 Every expression that reads an `OpenDash` property wraps it in `isnull()` with the default, so a
 user who installs only a `.simhubdash` gets the default layout and the default modes. That is a
