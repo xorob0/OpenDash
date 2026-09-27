@@ -159,8 +159,8 @@ describe('what it draws', () => {
  * Which rung of the ramp each screen lands on, by the size of its wordmark.
  *
  * Read, not asserted for its own sake: the ramp is measured against each frame, so this is where a
- * face that has grown or shrunk shows itself. The 480 round is the disc, and the 480 px portrait
- * companion is the one rectangle whose limit is the wordmark's box rather than its letters.
+ * face that has grown or shrunk shows itself. Two frames take the second rung and both are out of
+ * room for the first: the 800 x 286 nano strip is short, and the 480 round's disc is 456 across.
  */
 const WORDMARK_SIZES: Record<string, number> = {
   OpenDash: ds.size.hero,
@@ -182,7 +182,7 @@ const WORDMARK_SIZES: Record<string, number> = {
   'OpenDash 480 round': ds.size.lapTime,
   'OpenDash 800 round': ds.size.hero,
   'OpenDash Companion': ds.size.hero,
-  'OpenDash Companion portrait': ds.size.lapTime,
+  'OpenDash Companion portrait': ds.size.hero,
   'OpenDash Pit wall': ds.size.hero,
   'OpenDash Pit wall portrait': ds.size.hero,
 };
@@ -205,6 +205,19 @@ describe('it fits every frame the build emits', () => {
         const ink = inkOf(item);
         const clear = ink.left >= IDLE_MARGIN && ink.top >= IDLE_MARGIN && ink.right <= main.width - IDLE_MARGIN && ink.bottom <= main.height - IDLE_MARGIN;
         expect({ folder, item: item.name, ink, margin: IDLE_MARGIN, clear }).toMatchObject({ clear: true });
+      }
+    }
+  });
+
+  test('no box is ever narrower than the letters in it', () => {
+    // `wordmark` caps its boxes at the room the frame leaves, so the 480 px portrait companion draws
+    // the mark at the same size as every landscape package instead of losing a rung to a transparent
+    // box. The cap may take the slack and may never take a letter: WPF clips what does not fit and
+    // says nothing, which is the whole reason the slack is there.
+    for (const { folder, main } of MAINS) {
+      for (const item of textsOf(idleOf(main))) {
+        const ink = inkOf(item);
+        expect({ folder, item: item.name, box: item.rect.width, letters: ink.right - ink.left, holds: item.rect.width >= ink.right - ink.left }).toMatchObject({ holds: true });
       }
     }
   });

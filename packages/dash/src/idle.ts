@@ -100,10 +100,10 @@ interface IdleStep {
  * The state line stays at one of the design's two label sizes on every rung, because it is a label and
  * those are the two sizes there are. What grows with the frame is the mark and the clock.
  *
- * As the packages stand every screen takes the first rung but three, and the three are the ones with
- * no room for it: the 800 x 286 nano strip, the 480 px round face, whose disc is 456 across, and the
- * 480 px portrait companion, where what runs out is the width. The last two rungs are the floor under a
- * frame nobody has built yet. `packages/dash/test/idle.test.ts` records where each one lands.
+ * As the packages stand every screen takes the first rung but two, and the two are the ones with no
+ * room for it: the 800 x 286 nano strip, and the 480 px round face, whose disc is 456 across. The last
+ * two rungs are the floor under a frame nobody has built yet.
+ * `packages/dash/test/idle.test.ts` records where each one lands.
  */
 const IDLE_STEPS: readonly IdleStep[] = [
   { wordmark: ds.size.hero, clock: ds.size.lapTime, state: ds.size.label, gap: ds.space[5] },
@@ -134,13 +134,21 @@ const stateWidth = (fs: number): number => Math.ceil(measureText('BarlowMedium',
  */
 interface IdleBlockSpec {
   ink(fs: number): number;
-  draw(name: string, cx: number, y: number, fs: number): TextItem[];
+  /**
+   * The drawing. `frame` is passed because the wordmark's boxes are the one thing here whose width is
+   * not a function of the text alone: their slack is capped by the room the frame leaves, so that a
+   * box nobody sees cannot cost the mark a rung of the ramp.
+   */
+  draw(name: string, cx: number, y: number, fs: number, frame: Rect): TextItem[];
 }
 
 const BLOCKS: Record<IdleBlock, IdleBlockSpec> = {
   wordmark: {
     ink: (fs) => wordmarkWidth(fs),
-    draw: (name, cx, y, fs) => wordmark(name, left(cx, wordmarkWidth(fs)), y, fs).items,
+    draw: (name, cx, y, fs, frame) => {
+      const x = left(cx, wordmarkWidth(fs));
+      return wordmark(name, x, y, fs, { maxWidth: frame.left + frame.width - x }).items;
+    },
   },
   clock: {
     ink: (fs) => monoWidth(cells('SemiBold', fs), CHARS.minutesClock),
@@ -165,13 +173,13 @@ interface IdleDrawing {
 }
 
 /** The stack of blocks at a step, centred on `cx`, its first canvas line box at `top`. */
-function stack(blocks: readonly IdleBlock[], step: IdleStep, prefix: string, cx: number, top: number): IdleDrawing {
+function stack(blocks: readonly IdleBlock[], step: IdleStep, prefix: string, cx: number, top: number, frame: Rect): IdleDrawing {
   const items: TextItem[] = [];
   const ink: Rect[] = [];
   let y = top;
   for (const id of blocks) {
     const fs = step[id];
-    const drawn = BLOCKS[id].draw(`${prefix}${id}`, cx, y, fs);
+    const drawn = BLOCKS[id].draw(`${prefix}${id}`, cx, y, fs, frame);
     items.push(...drawn);
     // The block's line box at the width of its letters: the vertical extent is the boxes' own, since a
     // WPF line box is what the glyphs are laid out in, and the horizontal extent is the ink's.
@@ -223,7 +231,9 @@ const inside = (outer: Rect, box: Rect): boolean =>
  * Two rules and not one, because the wordmark's boxes are wider than its letters. The letters are what
  * a reader sees, so they are what the margin and the disc are about; the boxes are what the validator
  * sees, and one leaving the canvas is a `geometry/outside-canvas` warning on a package that is meant to
- * build without any. The 480 px portrait companion is where the two answers differ.
+ * build without any. The box rule is a backstop rather than the thing that decides a rung: the slack
+ * that would break it is capped by `wordmark`'s `maxWidth` first, so a box never costs the mark a size
+ * the letters had room for.
  */
 function fits(drawing: IdleDrawing, spec: IdleSpec): boolean {
   const room = rect(spec.frame.left + IDLE_MARGIN, spec.frame.top + IDLE_MARGIN, spec.frame.width - 2 * IDLE_MARGIN, spec.frame.height - 2 * IDLE_MARGIN);
@@ -242,8 +252,8 @@ function placed(blocks: readonly IdleBlock[], step: IdleStep, spec: IdleSpec): I
   const middle = spec.disc ? { x: spec.disc.cx, y: spec.disc.cy } : centre(spec.frame);
   // Drawn once at the origin to learn its own height, a line box hanging above and below the canvas
   // box it was asked for, and then drawn where that puts it, so the items carry no second offset.
-  const span = boundsOf(stack(blocks, step, prefix, middle.x, 0).items.map((i) => i.rect));
-  return stack(blocks, step, prefix, middle.x, Math.round(middle.y - span.height / 2 - span.top));
+  const span = boundsOf(stack(blocks, step, prefix, middle.x, 0, spec.frame).items.map((i) => i.rect));
+  return stack(blocks, step, prefix, middle.x, Math.round(middle.y - span.height / 2 - span.top), spec.frame);
 }
 
 /**
