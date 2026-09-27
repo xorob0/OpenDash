@@ -1,0 +1,32 @@
+{
+  // A lap-counted race that publishes no session clock, which is what iRacing publishes for one:
+  // "SessionTime: unlimited" in the session string and a SessionTimeRemain of a week, which is the
+  // sentinel UNTIMED_SECONDS in packages/dash/src/second/values.ts is compared against. Otherwise
+  // green's held lap: 30 laps with 12 done, P3 of 24.
+  //
+  // It exists for the form of #387's fuel margin that nothing could photograph. The margin follows
+  // `showsTimeLeft`, so it reads minutes where the session has a clock and laps where it does not --
+  // Fuel_RemainingLaps against RemainingLaps -- and every scenario here published a clock, including
+  // the 30-lap race. Expect about "−4.8 LAPS" in the danger red on the fuel page and on band D
+  // (thirteen laps in the tank against eighteen to run), the session page counting laps rather than
+  // time left, and the pit wall's LEFT reading "-:--:--".
+  //
+  // Expect the bar's Race time field to be clipped, and read that as a bug in the bar rather than in
+  // this scenario. `zones/bar.ts` draws `raceTime` and `timeLeft` as `clock(sessionTimeLeft())` with
+  // no `isTimedSession()` guard, where the session card, the session module, the pit wall header and
+  // the pit wall's own field all have one -- and `raceTime` is the default of the bar's first slot.
+  // A week of time left is therefore drawn as "168:00:00", seven digit cells in a budget of six, and
+  // WPF takes the last glyph off it. Every iRacing lap race does this today; the scenario is what
+  // makes it visible.
+  "extends": "green.json",
+  "name": "Lap-counted race with no session clock, P3 of 24",
+  "yaml": {
+    "RaceSessionTime": "unlimited"
+  },
+  "variables": [
+    // 604800 is Irsdk.UnlimitedTime. The clock driver leaves a remaining time at or above it alone
+    // instead of counting it down, so the sentinel holds for the length of the run.
+    {"name": "SessionTimeTotal", "value": 604800.0},
+    {"name": "SessionTimeRemain", "value": 604800.0}
+  ]
+}

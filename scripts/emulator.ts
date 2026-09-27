@@ -56,9 +56,11 @@ export const UNTRACED_SCENARIOS: readonly string[] = [
   // gallery exists to be photographed for the website, and clip to be filmed; nothing replays them.
   'gallery',
   'clip',
-  // Added for #406's VM pass by a branch that could not claim the VM: the game running with no
-  // session named. Worth recording — a trace of it would let the notices be replayed headlessly.
+  // Added for the #406 and #387 VM pass by a branch that could not claim the VM: the game running
+  // with no session named, and the lap-counted race that publishes no clock. Both are worth
+  // recording — a trace of either would let a state nothing else reaches be replayed headlessly.
   'nosession',
+  'untimed',
 ];
 
 /** Every scenario a run may name. */
