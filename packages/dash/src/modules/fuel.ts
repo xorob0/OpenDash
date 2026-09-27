@@ -37,6 +37,7 @@ import {
   fuelToEndText,
   fuelToEndUnit,
   FUEL_TO_END_UNIT_WIDEST,
+  FUEL_TO_END_WIDEST,
   fuelUnit,
   NO_VALUE,
   settledFuelTimeLeft,
@@ -101,7 +102,8 @@ export const fuel = defineModule('fuel', (ctx) => {
           fld(ctx, 'toEnd', 'Margin', {
             sample: '+1.4',
             bind: fuelToEndText(),
-            chars: CHARS.consumption,
+            widest: FUEL_TO_END_WIDEST,
+            chars: CHARS.margin,
             fs: d.big,
             colorBind: fuelToEndColour(),
             follower: { text: 'laps', bind: fuelToEndUnit(), widest: FUEL_TO_END_UNIT_WIDEST },

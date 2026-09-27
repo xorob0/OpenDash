@@ -51,6 +51,7 @@ import {
   fuelToEndText,
   fuelToEndUnit,
   FUEL_TO_END_UNIT_WIDEST,
+  FUEL_TO_END_WIDEST,
   fuelUnit,
   incidents,
   lastLap,
@@ -125,6 +126,16 @@ export interface BandField {
    * a label that happens to be bound, not a value. `widest` is what it is measured by.
    */
   widest?: string;
+  /**
+   * The longest reading the binding can produce, for a field that stays a numeral.
+   *
+   * Not `widest` above, which turns a field into a proportional word and takes its cells and its
+   * colour binding with it. This one changes nothing about the drawing: a monospaced box is cut from
+   * `chars`, and what this declares is what the fit tests measure. Without it a bound value is
+   * measured by the sample it was written with, which is how the fuel margin came to be checked at
+   * `+1.4` and drawn at `−169.0`.
+   */
+  numeralWidest?: string;
 }
 
 const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), toShortTime(expr, 3));
@@ -169,7 +180,8 @@ const fuel: readonly BandField[] = [
     label: 'Margin',
     sample: '+1.4',
     bind: fuelToEndText(),
-    chars: CHARS.consumption,
+    numeralWidest: FUEL_TO_END_WIDEST,
+    chars: CHARS.margin,
     colorBind: fuelToEndColour(),
     after: 'laps',
     afterBind: fuelToEndUnit(),
@@ -530,6 +542,7 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
             })
           : numeral(`${prefix}${field.id}.value`, field.sample, at.x, valueTop, valueFs, field.chars, {
               bind: field.bind,
+              widest: field.numeralWidest,
               color: field.color,
               colorBind: field.colorBind,
               maxWidth: cell + 4,
@@ -804,7 +817,12 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
             bind: field.bind,
             widest: field.widest,
           })
-        : numeral(`${prefix}${field.id}.value`, field.sample, x, valueTop, valueFs, field.chars, { bind: field.bind, color: field.color, maxWidth: w + 4 }),
+        : numeral(`${prefix}${field.id}.value`, field.sample, x, valueTop, valueFs, field.chars, {
+            bind: field.bind,
+            widest: field.numeralWidest,
+            color: field.color,
+            maxWidth: w + 4,
+          }),
     );
     x += w + CORNER_GAP;
   }

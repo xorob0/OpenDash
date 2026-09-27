@@ -101,6 +101,16 @@ export const CHARS = {
   fuel: { digits: 4, specials: 1 } as Chars,
   /** `2.84` */
   consumption: { digits: 4, specials: 1 } as Chars,
+  /**
+   * A signed margin: `−169.0` laps, `−1389` min.
+   *
+   * Five digit cells rather than the estimate's four, because the sign takes one of them and the
+   * figure behind it is a whole race: the margin on the first lap of a 200-lap race is the tank's
+   * range less 199 laps, which is three integer digits and a decimal on top of the minus. It is the
+   * budget {@link CHARS.delta} already carries for the same reason, kept separate so that widening
+   * one signed reading cannot quietly widen the other.
+   */
+  margin: { digits: 5, specials: 1 } as Chars,
   /** `104` */
   temperature: { digits: 3, specials: 0 } as Chars,
   /** `28.6` */
@@ -673,13 +683,28 @@ export const fuelToEnd = (): Expr => iff(showsTimeLeft(), fuelToEndMinutes(), fu
  * A tenth of a lap and a whole minute, which is the precision each of the two earns rather than one
  * pattern applied to both. A tenth of a lap is a reading -- half a lap in hand is a stop and a lap
  * and a half is not -- where a tenth of a minute is six seconds of a figure that moves by more than
- * that every corner, and nobody plans a race on it. It also keeps the field inside
- * {@link CHARS.consumption}, the four digit cells `Est. laps` beside it is drawn in, the sign taking
- * one of them: `−99.9` and `−440` both fit, and a box cut for the tenth of a minute as well would be
- * the widest on the page for a digit no driver reads.
+ * that every corner, and nobody plans a race on it. A box cut for the tenth of a minute as well
+ * would be the widest on the page for a digit no driver reads.
+ *
+ * The width is {@link CHARS.margin} and not the estimate's {@link CHARS.consumption}, which is a
+ * correction: `0.0` always writes a sign, the integer digits and a decimal, so the margin on lap one
+ * of a 200-lap race is `−169.0`, six cells where the estimate beside it is cut for five, and WPF
+ * takes the last glyph off every reading of the first half of any long race. {@link FUEL_TO_END_WIDEST}
+ * is what the two boxes carrying it are measured by, since the sample is the narrow end of the range.
  */
 export const fuelToEndText = (): Expr =>
   iff(fuelToEndIsSettled(), iff(showsTimeLeft(), signed(fuelToEndMinutes(), '0'), signed(fuelToEndLaps(), '0.0')), str(NO_VALUE));
+
+/**
+ * The widest reading the margin can draw, which is what its box is measured against.
+ *
+ * The lap form, because the decimal costs a cell the minutes do not spend: `−999.9` laps is five
+ * digit cells and a special where the longest timed reading, a full day's `−1439` min, is five digit
+ * cells and none. Both are inside {@link CHARS.margin}; a `widest` is declared because a monospaced
+ * box is cut from its budget and the fit tests measure what the item says it draws, so a field left
+ * with `+1.4` on it is a field measured at three cells for a reading that takes six.
+ */
+export const FUEL_TO_END_WIDEST = `${MINUS}999.9`;
 
 /** What the margin is counted in, which is the unit of whichever term the page is counting down. */
 export const fuelToEndUnit = (): Expr => iff(showsTimeLeft(), str('min'), str('laps'));
