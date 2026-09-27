@@ -20,7 +20,7 @@ import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, nextOnRamp, type Density, type DensitySpec } from './density.ts';
-import { charsOfText, textWidth, type DrawnWidth } from './drawn.ts';
+import { charsOfText, drawnWithin, textWidth, type DrawnWidth } from './drawn.ts';
 import { rank } from './rank.ts';
 
 const { add, num } = ncalc;
@@ -261,7 +261,10 @@ function followerLeft(spec: FieldSpec, x: number, gap: number, mono: Monospace, 
     );
   }
   if (drawn === 'fixed') return undefined;
-  return add(leftAt?.() ?? num(x), drawn(mono), num(gap));
+  // Held against the field's own cells on the way through: the follower's box is measured from the
+  // end of those cells, so a value declaring that it draws wider than its budget binds the mark
+  // outside everything that was measured, and a box that fits says nothing about it.
+  return add(leftAt?.() ?? num(x), drawnWithin(`field ${spec.name}`, drawn, spec.value.chars, mono), num(gap));
 }
 
 /**
