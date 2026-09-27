@@ -12,6 +12,170 @@ including any that the plugin does not install.
 From 0.2.0-rc.2 it also carries one `.ledsprofile` per LED device shape, which covers the RGB
 strips, the brows and the flag box, together with a `manifest.json` listing everything published.
 
+## 0.3.0-rc.7 (2026-09-27)
+
+The candidate that has something to say when there is nothing to instrument. A dashboard is
+installed and opened before a session is joined, and what a rig showed in that moment was the racing
+face with no data in it: a rev bar at zero over three zones of dashes, twenty empty leaderboard
+rows, a relative of three blank gaps. Two changes cover that. The rest of the release is about
+readings that now say what they are -- which unit, whose name, and how much fuel there is against
+how much race is left -- and a panel that draws the screen it is configuring instead of describing
+it.
+
+**Every package idles on a screen of its own.** All twenty-two -- the eight zone faces, the ten card
+faces, the two companions and the two pit walls -- gain one: the wordmark, the wall clock, and a
+line naming the state. Deliberately nothing a game has to publish, no last best lap and no car and
+no session, because a dash where one of those should be is the thing being fixed. The racing screens
+give up the idle role they all carried, so while a game runs the Next and Previous ring is the
+racing screens alone and at rest it is the idle screen alone, and the thumbnail SimHub lists and the
+panel's own preview still point at the face.
+
+**A module that needs a session says so.** Twelve of the twenty-one companion and pit wall modules
+have nothing to draw until timing exists, and they drew the shape with nothing in it -- and an empty
+leaderboard reads exactly like a leaderboard that has failed. They now say `LEADERBOARD · GO INTO A
+SESSION` in the dim text colour, centred, wherever that module is drawn. The pit wall's Track panel
+says it once across the whole panel rather than over the map beside a session best it was still
+drawing.
+
+**The rev bar lights where the car's own bar lights, in OpenDash's colours.** ADR 0018 left open
+whether a screen should follow the car's measured shift lights at all; the answer is that the timing
+mirrors and the palette wins. The rev bar, the rev arc, the companion's speedo bar and the Redline
+printed under it take the car's own instants per gear, drawn from the tokens, while a strip stays a
+literal copy of the car's bar. A segment lights on the frame the car lights its own LED, the top
+third reddens exactly where a flag box's digit reaches its third band, and OpenDash's redline flash
+survives the 47 measured cars that publish no flash of their own. Which ladder a screen is on is now
+the strips' own setting, reduced by the plugin, rather than a rig-wide field the panel had stopped
+writing: a driver who set their one strip to F1 was getting the car's instants on every screen
+regardless, and a rig carrying an older `f1` in its settings had it the other way round.
+
+**Fuel to the end of the race is one signed number.** The fuel page carried the range, the session
+page carried the laps left, and the driver did the subtraction mid-corner. The margin is that
+subtraction: `+1.4 laps` while the tank reaches the flag, `-2.3 laps` when it does not, green or
+red, on the fuel module and on band D's fuel page -- laps on a lap-counted grid, minutes on a timed
+one, with the unit beside the figure so the same box cannot mean one on this grid and the other on
+the next. It waits for a completed lap and for a race, so the eight minutes of fuel in a
+thirty-minute practice session no longer read as `-22` MIN in the danger red.
+
+### Added
+
+- **An idle screen on every package.** See above.
+- **A session notice on the twelve modules that need timing.** See above.
+- **The car's own shift lights on the screens**, gated on the same answer the strips obey. See
+  above.
+- **Fuel to the end of the race, as a signed margin** on the fuel module and band D's fuel page. See
+  above.
+- **Four driver name formats, chosen once for the rig**: `Liam Byrne`, `L. Byrne`, `B. Liam` or
+  `Byrne Liam`, offered on the Data tab as four worked examples of one name rather than four
+  descriptions of a format, and a second switch that draws the entry's team instead -- falling back
+  to the driver per row where the sim publishes no team, so a mixed grid draws teams for the entries
+  that have one. Both default to what shipped, and both are read through a fallback, so a package
+  without the plugin still draws a name.
+- **A tyre temperature says which degrees it is in.** The corner drew three numbers and named one of
+  them; the temperature now follows the rig's temperature unit the way the pressure follows its own,
+  so a metric car reads `84 °C` and an imperial one `183 °F`. The tick and the compound, which have
+  no room for a unit after them, are named by a caption under the grid instead, shed in an order of
+  their own.
+- **The Rig tab draws the screen it is configuring, live.** Choosing between Opponents and Relative
+  was choosing between two empty boxes. The pane now loads the same `.djson` the driver's screen
+  loads and hands it to SimHub's own renderer and NCalc, so there is no second renderer in OpenDash
+  and nothing to keep in step. Recorded as ADR 0020.
+- **One Edit panel per screen**, carrying the name, the size and a Reinstall, where the card header
+  used to offer Rename and Change the size as two links and offered no way at all to write the
+  dashboard again.
+- **A thumbnail in SimHub's dashboard list.** SimHub reads `<folder>.djson.png` beside the `.djson`
+  and draws an empty box when there is none, so OpenDash installed as a column of grey rectangles
+  beside everybody else's artwork. Every one of the twenty-two packages now carries its own capture,
+  photographed on the test rig with a session live.
+- **Two switches for the gear on a flag box.** Shift colours decides whether the digit is banded at
+  all, so a panel on a rig that already has a rev bar in front of the driver can report the gear and
+  nothing besides; Car-specific thresholds decides where those bands come from, and is on by default
+  for the same reason the strips' own style is -- a digit banded on one ladder beside a strip banded
+  on another is two answers to one question.
+- **A flag keeps a block at each end of band D** after its takeover ends, in its colour and with its
+  name where the block has room, until its bits clear.
+
+### Changed
+
+- **A flag takes band D for three seconds, not for as long as it is out.** Under a safety car the
+  band read SAFETY CAR and nothing on the face said fuel for the whole caution -- which is exactly
+  when a driver decides whether to pit, and the flag has said everything it has to say after two
+  seconds. The takeover is now the canvas's alert window, the same one the lap-time pop-up is out
+  for, and the band's page is drawn again behind the corner blocks afterwards. The full-screen flag
+  format is untouched, as are the companion's strip and the pit wall's header.
+- **A name too long for its column ends in an ellipsis rather than being cut.** Every list used to
+  draw the driver as three letters off the front of the name, so Liam Byrne was LIA and Hannah
+  Fischer HAN: it identified nobody and collided for any two drivers sharing a first name, on the
+  one page a driver reads to answer who that is. Wider columns drew the whole name and let WPF clip
+  it.
+- **The relative lists a window it declares** -- at most five cars either side of the player, eleven
+  rows, at least one either side -- rather than as many as divide into the body, which reached
+  fifteen on the 1280 x 720 face. The row then fills the body those rows leave, and the name is
+  raised off the 13 px floor, except where the taller row would cost the column a character it was
+  drawing before.
+- **A reading's unit sits beside the figure**, not at the end of the character budget it is cut
+  from, so two corners drawing `84` and `104` no longer carry their scales a cell apart.
+- **A matrix panel's name is OpenDash's own and is not in SimHub's list.** A panel was added on the
+  Lights tab, named, and then looked for on SimHub's Arduino page, where the RGB Matrix list held an
+  older OpenDash profile and nothing carrying the name just typed. Nothing was broken -- a strip is
+  a profile and a panel is a content number inside the one flag box profile -- but two
+  identical-looking name boxes answered different questions in silence. The panel now says which
+  profile SimHub lists, and adding one says what is left to do.
+- **The twelve `OpenDash.Slot01` to `Slot12` properties stay, and are not deprecated.** rc.2
+  promised a release of warning before they went in 0.3.0; that promise is withdrawn. They drive the
+  two round faces, which keep the card model until a round face becomes zones on a ring after 1.0,
+  so they are load-bearing for the whole of 1.0. They are also read by the eight published card
+  faces, which seven places in the documents said they were not.
+- **Four features the scope document neither built nor refused are refused**: the invisible dash,
+  the stream overlay, vendor-specific wheel integrations and user-ordered leaderboard columns. The
+  wheel line refuses the vendor configuration screens and not the properties SimHub publishes for
+  any wheel.
+
+### Fixed
+
+- **The name you gave a screen left the dashboard list on every update.** A stock screen's folder
+  belongs to a package and is written byte for byte, title included, so an update handed SimHub the
+  package's title back and the Install tab's Reinstall wrote it again. The name is now written back
+  after every install that has the rig in hand, and only over a folder whose fingerprint still
+  matches what OpenDash wrote.
+- **Reinstall and every resize failed on a rig upgraded across the rename**, with "Source and
+  destination path must be different": the settings carried `openDash 850x480` where the package's
+  own folder is `OpenDash 850x480`, and Windows treats those as one path, so the press that is meant
+  to be the repair threw on exactly the rigs that need it. A case-only rename now goes through a
+  third name.
+- **A strip mirrored the car while the bar beside it banded on a derived ladder**, and a flag box's
+  digit could band on either one independently of the bar. Both read one answer now.
+- **The margin, the fuel module and band D were measured against a reading they could not draw.** A
+  signed field declared no width of its own, so three fit tests measured `+1.4` and passed a reading
+  half again as wide; `-169.0` laps, which is the first lap of a 200-lap race, lost its last glyph.
+- **`TYRES °F` and `kPa` were declared as the widest string of boxes that also draw `TYRES °C` and
+  `BAR`,** which are the wider ones, so two boxes were measured short of what a driver is shown.
+
+### Development
+
+- **The website is rebuilt**, from the wording outward: the first line says iRacing, SimHub, Windows
+  and free forever, the plugin is the way in, the three reasons are free and open source, the LEDs
+  and the design, the screen picker plays each face's own clip in the cell it is already in, and
+  every cell of the comparison was re-read from its sources' own
+  pages or cut. The site's origin is a build argument, its container reports its health, the image
+  is built and served in CI so the Dockerfile cannot drift as far as a redeploy, and the whole
+  deployment is written down in `docs/deploy.md`.
+- **A `widest` is held to the binding it describes.** It is what a box is measured from and nothing
+  checked it against the expression beside it; the same defect was found three times in two days by
+  eye, in review, after every fit test had passed. A Text binding is now read as a tree for the
+  strings its output is certain to be at least as wide as, and a floor wider than the declared
+  `widest` fails.
+- **A trace column that was typed rather than recorded says so in its header**, so a reader
+  replaying `green.ndjson` can tell an observation from an assertion.
+
+### Known
+
+- **The idle screen has not been seen on the Windows VM.** Its content, its ramp and SimHub's own
+  screen selection are read off the decompiled 9.12.6 and held by tests, and the definition of done
+  asks for a look in real SimHub that this release does not have. Two things are worth looking at
+  first: whether WPF draws the wordmark's "open" in Light at 116 px, that being the one weight a
+  package ships which it may have to synthesise, and whether a display comes back to the racing face
+  when a game starts.
+
 ## 0.3.0-rc.6 (2026-09-22)
 
 The candidate that answers one question per row. A review of the whole product on 22 September,
