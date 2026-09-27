@@ -141,19 +141,24 @@ and this section exists so that it is a recorded one.
 go through a scheduled task. An emulator started over SSH is invisible to SimHub and the dash
 simply shows its defaults, with nothing in any log.
 
-**With no emulator running, what you should be looking at is the idle screen**, not a face with no
-data in it: since #763 every package carries one and SimHub switches to it whenever `GameRunning` is
-false. The wordmark and a clock on screen therefore mean the telemetry never arrived, which is a
-clearer symptom than the old one and a surprise if you were expecting the face.
+**With no emulator running, what you are looking at is the idle screen**, not a face with no data in
+it: since #763 every package carries one and SimHub switches to it whenever `GameRunning` is false.
+The wordmark and a clock on screen therefore mean the telemetry never arrived, which is a clearer
+symptom than the old one and a surprise if you were expecting the face.
 
-"Should", because that sentence is read off the decompiled 9.12.6 screen selection that
-[research/simhub-dash-format.md](research/simhub-dash-format.md) records and nobody has watched the
-switch happen: #763 landed without a VM pass. Two things are worth a look while you are in there. The
-face now draws the wordmark's "open" in Light, which is the one weight a package ships that WPF may
-have to synthesise, and a synthesised face is the one case the advances cannot predict. And the way
-back matters as much as the way in: a display that shows the idle screen and stays on it when a game
-starts is the same bug the other way round. Whichever way it comes out, this paragraph is where the
-answer goes.
+That sentence was read off the decompiled 9.12.6 screen selection that
+[research/simhub-dash-format.md](research/simhub-dash-format.md) records for as long as #763 was
+open, and it has now been watched. On 2026-09-27, at 8d748ac, `OpenDash 850x480` and `OpenDash
+Companion` both switched to the idle screen with SimHub running and no game, and both came back to
+the racing face when the emulator started -- the way back matters as much as the way in, since a
+display that shows the idle screen and stays on it is the same bug the other way round. The
+wordmark's "open" draws correctly in Light, which was the one weight a package ships that WPF might
+have had to synthesise and the one case the advances cannot predict.
+
+**The neighbouring state is not this one.** A game running with no session named keeps the racing
+face and fills the timing pages with `… · GO INTO A SESSION` (#406); the wordmark and the clock mean
+no game at all. `bun run dev --scenario nosession` is how to reach the first, and stopping the
+emulator is how to reach the second.
 
 **SimHub reads its template list once**, at startup, so a package has to be installed before SimHub
 starts rather than after.
