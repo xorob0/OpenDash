@@ -196,6 +196,27 @@ describe('the ellipsis', () => {
     expect(drawn(entry('Liam Byrne'), 'full', 9)).toBe(`Liam Byr${ELLIPSIS}`);
   });
 
+  test('a cut that lands between two words takes the space with it', () => {
+    // What the VM photographed: the narrow zone holds seven characters, so `Chloe Dubois` was cut to
+    // `Chloe ` and closed to `Chloe …`. A gap and then three dots reads as a pause rather than as a
+    // name that would not fit, and it spends one of the seven on nothing.
+    expect(drawn(entry('Chloe Dubois'), 'full', 7)).toBe(`Chloe${ELLIPSIS}`);
+    expect(drawn(entry('Marco Ricci'), 'full', 7)).toBe(`Marco${ELLIPSIS}`);
+    expect(drawn(entry('Liam Byrne'), 'full', 6)).toBe(`Liam${ELLIPSIS}`);
+    expect(drawn(entry('Hannah Fischer'), 'full', 8)).toBe(`Hannah${ELLIPSIS}`);
+    // And the surname-first format, where the space of the same name falls somewhere else.
+    expect(drawn(entry('Chloe Dubois'), 'surnameFirst', 8)).toBe(`Dubois${ELLIPSIS}`);
+  });
+
+  test('and a cut that lands inside a word keeps every letter it had room for', () => {
+    // The other half: the needle is a space *and* an ellipsis, so it matches the one thing the
+    // expression just built and nothing the sim sent.
+    expect(drawn(entry('Chloe Dubois'), 'full', 8)).toBe(`Chloe D${ELLIPSIS}`);
+    expect(drawn(entry('Hannah Fischer'), 'full', 9)).toBe(`Hannah F${ELLIPSIS}`);
+    // A name with no space in it is untouched by any of it.
+    expect(drawn(entry('Verstappen'), 'full', 6)).toBe(`Verst${ELLIPSIS}`);
+  });
+
   test('what is drawn never exceeds the budget, at any budget', () => {
     for (let chars = 0; chars <= 30; chars++) {
       const text = String(drawn(long, 'full', chars));
