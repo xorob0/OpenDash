@@ -136,9 +136,11 @@ export const DEFAULTS = {
 /**
  * `Slot01` .. `Slot12` for a 1-based slot index.
  *
- * Read by `OpenDash 480 round` and `OpenDash 800 round` and by nothing else -- the 480 takes the
- * first two and the 800 the first six. They are not deprecated; see the note over
- * {@link FACE_SIZES}.
+ * Of the faces the plugin installs, read by `OpenDash 480 round` and `OpenDash 800 round` alone --
+ * the 480 takes the first two and the 800 the first six. The eight `OpenDash slots <size>` packages
+ * read them as well, each reading `layout.slots.length` of them, which `layouts.test.ts` asserts;
+ * they are published with every release but excluded from the plugin's embedded resources. No zone
+ * face reads any of them. They are not deprecated; see the note over {@link FACE_SIZES}.
  */
 export function slotSettingName(slot: number): string {
   assertSlot(slot);
@@ -329,10 +331,12 @@ export const setting = {
 // --- The zone face -------------------------------------------------------------------------
 //
 // Additive. `Slot01` to `Slot12` stay declared and stay tested, and they are not on their way out:
-// they drive `OpenDash 480 round` and `OpenDash 800 round` and nothing else, the 480 reading the
-// first two and the 800 the first six, and README.md publishes them as properties another dashboard
-// or an LED profile may read. A round face becomes zones on a ring after 1.0 (#145), and that
-// release is the one that would carry a warning about the twelve; none is promised before it (#170).
+// of the installed faces they drive `OpenDash 480 round` and `OpenDash 800 round` alone, the 480
+// reading the first two and the 800 the first six, and the eight published `OpenDash slots <size>`
+// card faces read four to twelve of them besides. No zone face reads one. README.md publishes the
+// twelve as properties another dashboard or an LED profile may read. A round face becomes zones on a
+// ring after 1.0 (#145), and that release is the one that would carry a warning about the twelve;
+// none is promised before it (#170).
 //
 // The shape of these is the whole point of the model. A slot is arranged once, with a mouse,
 // before a session; a zone is changed with a thumb in the middle of a lap. So what the contract

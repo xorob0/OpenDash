@@ -104,10 +104,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Slot12", Contract.SlotProperty(12));
             Assert.Equal(Enumerable.Range(1, 12).Select(Contract.SlotProperty), names.Skip(4).Take(12));
 
-            // The zone face, declared beside the slots rather than instead of them: the two round
-            // faces read Slot01 to Slot12 and are the only faces that do, and README publishes the
-            // twelve as properties an LED profile may read. They are not deprecated and there is no
-            // release in which they go; see Contract.SlotProperty. #170.
+            // The zone face, declared beside the slots rather than instead of them: of the faces the
+            // plugin installs the two round ones are the only readers of Slot01 to Slot12, the eight
+            // published OpenDash slots <size> card faces read four to twelve of them besides, no zone
+            // face reads one, and README publishes the twelve as properties an LED profile may read.
+            // They are not deprecated and there is no release in which they go; see
+            // Contract.SlotProperty. #170.
             // The zone face's groups follow, one per face that ships, each naming its own screen so
             // that two faces on a rig are configured apart.
             // Appended to the shared group, not inserted beside ShiftLights: the four names above and

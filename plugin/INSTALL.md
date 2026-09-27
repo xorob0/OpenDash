@@ -218,10 +218,12 @@ reference face is showing, `Face1920x480ZoneAPages` which of its pages are enabl
 `OpenDash.CompanionModule01` to `CompanionModule21`, `OpenDash.PitWallZoneA` to `PitWallZoneD`,
 `OpenDash.PitWallWide` and `OpenDash.WebViewUrl`.
 
-`OpenDash.Slot01` to `OpenDash.Slot12` are read by two dashboards and no others:
+`OpenDash.Slot01` to `OpenDash.Slot12` are read by two of the dashboards the plugin installs:
 `OpenDash 480 round` reads the first two and `OpenDash 800 round` the first six. They are the card in
 each slot of those faces, and they stay: the round faces keep the twelve-slot design on purpose, and
-the release that gives them zones is the one that will say what happens to the twelve properties.
+the release that gives them zones is the one that will say what happens to the twelve properties. The
+`OpenDash slots <size>` faces published with each release read them as well, four to twelve each, so
+if you have installed one of those by hand it is reading the twelve too.
 
 `OpenDash.RevBar` is `shift`, `rpm` or `off`, and it is what the General section's control writes.
 `OpenDash.ShiftLights` is the deprecated alias kept beside it, true only in the `shift` state, so a
@@ -248,7 +250,8 @@ fetched at all. Nothing is ever installed without being asked for.
 **Coming from 0.1.x.** The face changed: what was twelve fixed slots is now four zones you cycle
 with a wheel button, under the same dashboard names. Your old face is still published with each
 release as `OpenDash slots <size>.simhubdash`, so you can install one by hand if you prefer it.
-Your slot settings are not lost; they still drive the two round faces.
+Your slot settings are not lost; they still drive the two round faces, and they drive an
+`OpenDash slots <size>` face too if you install one.
 
 ## Uninstall
 
