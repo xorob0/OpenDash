@@ -29,7 +29,7 @@ The same five parts on every rectangular face. Only their sizes change.
 | **Zone B** | A page from the catalogue of twenty-one. |
 | **Zone A** | The one read by reflex: gear, gear and speed, speed, or the track. |
 | **Zone C** | A page from the same catalogue of twenty-one. |
-| **Band D** | Fuel by default, and seven more pages that suit a wide short band. A flag takes the band over while one is out. |
+| **Band D** | Fuel by default, and seven more pages that suit a wide short band. A flag takes the band over for three seconds when it comes out, and then settles into the block at each end and gives the page back until it clears. |
 
 Zone A is **a narrow column holding the gear**, not a third of the screen holding one digit.
 
