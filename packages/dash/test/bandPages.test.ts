@@ -18,7 +18,7 @@ import { BAND_PAGES, BAND_PAGE_IDS, bandCorners, bandCornerWidths, bandMetrics, 
 import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } from '../src/zones/telltales.ts';
 import { assetNamed } from '../src/design/assets.ts';
 import { SPECIAL_CHARS } from '../src/design/metrics.ts';
-import { fuelIsSettled, fuelLastLapIsSettled, NO_VALUE } from '../src/second/values.ts';
+import { fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, NO_VALUE } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 
 const BANDS = {
@@ -147,10 +147,32 @@ describe('the metrics band D is drawn to', () => {
 });
 
 describe('the fields the catalogue draws on each page', () => {
-  test('D1 Fuel is the tank, the time, the laps, the refuel, the last two consumptions', () => {
-    expect(BAND_PAGES.fuel!.map((f) => f.id)).toEqual(['fuel', 'time', 'laps', 'refuel', 'perLap', 'lastLap']);
-    expect(BAND_PAGES.fuel!.map((f) => f.label)).toEqual(['Fuel', 'Fuel time', 'Est. laps', 'Refuel', 'Per lap', 'Last lap']);
+  test('D1 Fuel is the tank, the time, the margin, the laps, the refuel, the last two consumptions', () => {
+    expect(BAND_PAGES.fuel!.map((f) => f.id)).toEqual(['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap', 'lastLap']);
+    expect(BAND_PAGES.fuel!.map((f) => f.label)).toEqual(['Fuel', 'Fuel time', 'Margin', 'Est. laps', 'Refuel', 'Per lap', 'Last lap']);
     expect(BAND_PAGES.fuel!.find((f) => f.id === 'fuel')!.after).toBe('L');
+  });
+
+  /**
+   * The margin outranks the estimate it is derived from, which is the whole of why it is third.
+   *
+   * The rank sheds from the tail, so the order is the design decision: a band that can carry only
+   * one of the two carries the signed figure saying whether the tank reaches the flag rather than
+   * the estimate a driver would have to subtract the laps left from himself. #387, and
+   * docs/design/zones.md §5 records that the canvas draws neither field in this order.
+   */
+  test('the margin sits ahead of the estimate it answers, and names the unit it is counted in', () => {
+    const ids = BAND_PAGES.fuel!.map((f) => f.id);
+    expect(ids.indexOf('toEnd')).toBeLessThan(ids.indexOf('laps'));
+    const margin = BAND_PAGES.fuel!.find((f) => f.id === 'toEnd')!;
+    // Laps on one grid and minutes on the next, so the unit is bound and the box is measured by the
+    // wider of the two spellings rather than by whichever happens to be the design-time text.
+    expect(margin.after).toBe('laps');
+    expect(margin.afterBind).toBe(fuelToEndUnit());
+    expect(margin.afterWidest).toBe(FUEL_TO_END_UNIT_WIDEST);
+    // The sign is the reading: `signed` writes the typographic minus and keeps the plus.
+    expect(margin.bind).toContain('\u2212');
+    expect(margin.bind).toContain('true');
   });
 
   test('the refuel of both fuel pages is amber, which is what says it is a number to act on', () => {
@@ -234,7 +256,7 @@ describe('the fields the catalogue draws on each page', () => {
    */
   describe('the fuel fields a completed lap pays for', () => {
     /** The absence each of the four draws: the placeholder of the shape the reading has. */
-    const ABSENT = { time: '--:--', laps: NO_VALUE, perLap: NO_VALUE, lastLap: NO_VALUE } as const;
+    const ABSENT = { time: '--:--', toEnd: NO_VALUE, laps: NO_VALUE, perLap: NO_VALUE, lastLap: NO_VALUE } as const;
     const fieldNamed = (id: string): BandField => BAND_PAGES.fuel!.find((f) => f.id === id)!;
 
     test('the fuel page is pinned as it is emitted, gates and all', () => {
@@ -261,6 +283,16 @@ describe('the fields the catalogue draws on each page', () => {
       expect(bind.startsWith(`if(${fuelLastLapIsSettled()}, `)).toBe(true);
       expect(bind.endsWith(`, '${NO_VALUE}')`)).toBe(true);
       expect(fuelLastLapIsSettled()).toContain(fuelIsSettled());
+    });
+
+    test('the margin waits for the lap and for a race with an end to reach', () => {
+      // The same completed lap the estimate waits for, and the session's own length besides: a
+      // margin to the end of a session that has no end is the whole of the range drawn as spare,
+      // `+13.1` laps to a flag nobody is going to wave.
+      const { bind } = fieldNamed('toEnd');
+      expect(bind.startsWith(`if(${fuelToEndIsSettled()}, `)).toBe(true);
+      expect(bind.endsWith(`, '${NO_VALUE}')`)).toBe(true);
+      expect(fuelToEndIsSettled()).toContain(fuelIsSettled());
     });
 
     test('the fuel time waits for the same lap and keeps one spelling of its absence', () => {

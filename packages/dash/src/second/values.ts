@@ -617,6 +617,95 @@ export const fuelLastLapIsSettled = (): Expr => and(fuelIsSettled(), gt(fuelLast
  */
 export const settledFuelTimeLeft = (): Expr => iff(fuelIsSettled(), fuelTimeLeft(), num(0));
 
+/** So the timed margin below reads as minutes rather than as a division by a bare 60. */
+const SECONDS_PER_MINUTE = 60;
+
+/**
+ * Whether the race has an end for the tank to be measured against.
+ *
+ * A margin to the end of the race is nothing at all in a session that has no end, and a practice
+ * session with a full tank would otherwise draw the whole of the range as spare: `+13.1` laps to a
+ * flag nobody is going to wave. So the reading waits for a length as well as for a lap, and the
+ * length it waits for is the one the page is counting down -- the time in a timed session and the
+ * laps remaining in a lap-counted one -- because those are the two numbers the subtraction is
+ * against and either may be missing while the other is there.
+ */
+const raceHasAnEnd = (): Expr => iff(showsTimeLeft(), isTimedSession(), gt(lapsLeft(), num(0)));
+
+/**
+ * Whether there is a margin to draw: a lap has said what one costs, and the race has an end.
+ *
+ * {@link fuelIsSettled} is the gate every other estimate on the fuel page reads, and this is that
+ * gate with the session's own added, so the margin appears at the same crossing as the estimate it
+ * is derived from rather than a frame before or after it.
+ */
+export const fuelToEndIsSettled = (): Expr => and(fuelIsSettled(), raceHasAnEnd());
+
+/** The lap-counted form: the range in the tank less the laps the session still has to run. */
+const fuelToEndLaps = (): Expr => sub(fuelLapsLeft(), lapsLeft());
+/** The timed form, in minutes: the range in the tank less the time the session still has to run. */
+const fuelToEndMinutes = (): Expr => div(sub(fuelTimeLeft(), sessionTimeLeft()), num(SECONDS_PER_MINUTE));
+
+/**
+ * Fuel to the end of the race, signed: how much more than the rest of the race the tank holds.
+ *
+ * The one fuel question in a race is whether the tank makes it, and the fuel page had every term of
+ * that subtraction on it -- the range, the estimated laps -- while the laps left sat on the session
+ * page, so the driver did the arithmetic mid-corner. [ADR 0009](../../../../docs/decisions/0009-does-the-plugin-compute.md)
+ * allows a subtraction of two published values in an expression, and this is that subtraction. #387.
+ *
+ * Two quantities rather than one, chosen the way the session page chooses which counter to draw: a
+ * timed session compares `Fuel_RemainingTime` with `SessionTimeLeft` and reads in minutes, a
+ * lap-counted one compares `Fuel_RemainingLaps` with `RemainingLaps` and reads in laps. The switch
+ * is {@link showsTimeLeft}, so the margin counts in whatever the face beside it is counting in and
+ * the driver is never asked to notice that the unit changed for a reason of its own. The unit is
+ * drawn beside the number by {@link fuelToEndUnit}, because a bare signed figure that means laps on
+ * one grid and minutes on the next is a reading nobody can act on.
+ */
+export const fuelToEnd = (): Expr => iff(showsTimeLeft(), fuelToEndMinutes(), fuelToEndLaps());
+
+/**
+ * The margin as text: `+1.4` laps, `−3` minutes, or {@link NO_VALUE} until there is one.
+ *
+ * Through {@link signed}, which writes the typographic minus and keeps the `+`: the sign is the
+ * whole of what the reading says, so a margin drawn without one would be the estimate again.
+ *
+ * A tenth of a lap and a whole minute, which is the precision each of the two earns rather than one
+ * pattern applied to both. A tenth of a lap is a reading -- half a lap in hand is a stop and a lap
+ * and a half is not -- where a tenth of a minute is six seconds of a figure that moves by more than
+ * that every corner, and nobody plans a race on it. It also keeps the field inside
+ * {@link CHARS.consumption}, the four digit cells `Est. laps` beside it is drawn in, the sign taking
+ * one of them: `−99.9` and `−440` both fit, and a box cut for the tenth of a minute as well would be
+ * the widest on the page for a digit no driver reads.
+ */
+export const fuelToEndText = (): Expr =>
+  iff(fuelToEndIsSettled(), iff(showsTimeLeft(), signed(fuelToEndMinutes(), '0'), signed(fuelToEndLaps(), '0.0')), str(NO_VALUE));
+
+/** What the margin is counted in, which is the unit of whichever term the page is counting down. */
+export const fuelToEndUnit = (): Expr => iff(showsTimeLeft(), str('min'), str('laps'));
+
+/** The wider of the two spellings, which every box carrying the unit is measured by. */
+export const FUEL_TO_END_UNIT_WIDEST = 'laps';
+
+/**
+ * Good while the tank reaches the flag, danger once it does not, and the plain text until it says.
+ *
+ * The delta greens and reds rather than the fuel page's own amber, because the reading is a verdict
+ * on the plan and not a level in a tank: `purpose.fuel.low` is the colour of the tank and the bar
+ * under it, and a second field in it would read as a second alarm about the same tank. There is no
+ * middle band, unlike {@link deltaColour}: a margin of a tenth of a lap is not a lap in hand, and
+ * the question this answers has two answers.
+ *
+ * Zero counts as reaching the flag, since `RemainingLaps` counts the lap you are on, and the
+ * absence is drawn in the primary text: a green `--` claims the tank makes it before anything knows.
+ */
+export const fuelToEndColour = (): Expr =>
+  iff(
+    ncalc.not(fuelToEndIsSettled()),
+    str(dsTokens.color.text.primary),
+    iff(lt(fuelToEnd(), num(0)), str(dsTokens.purpose.delta.slower), str(dsTokens.purpose.delta.faster)),
+  );
+
 /**
  * How long the race is expected to run, in laps.
  *
@@ -659,6 +748,14 @@ export const lapOfTotal = (): Expr =>
  * the fuel pop-up, on the flag box and on every strip at once, which is exactly what a driver
  * sitting in the menus saw in 0.3.0-rc.1. The gate is the one the fuel module already draws its
  * "est. laps" behind, so the number and the warning about it now agree about when there is one.
+ *
+ * **It stays on the driver's threshold and does not read {@link fuelToEnd}.** #387 raised the
+ * question and this is the answer: a warning that came on because the tank will not reach the flag
+ * would be a second rule behind one lamp, silent in a practice session where a low tank is still a
+ * low tank, and loud on the first lap of a long race where a car is by definition short of fuel for
+ * the whole of it. The threshold is a number the driver chose, in laps, and it means the same thing
+ * in every session. The margin answers a different question and answers it as a reading on the fuel
+ * page and on band D, which is where a strategy is read rather than warned about.
  */
 export const tankIsLow = (): Expr => and(fuelIsSettled(), lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps()));
 
