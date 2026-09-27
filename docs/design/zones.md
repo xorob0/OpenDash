@@ -790,13 +790,50 @@ This section is filled in when the canvas answers it. #154 owns the question.
 
 ## 9. What a round face is
 
-**Not yet decided.** The two round artboards are the only two of twenty-five still drawing the
-slot model, and `canvas.json` still titles them "2 slots" and "6 slots". The only zone-era word
-touching them is rule 10: *a round face uses its ring instead of a band.*
+**Zones on a ring.** Of the three answers #145 put — zones on a ring, freeze the round faces on the
+card path, or drop them — the first is taken. A round face is the rev arc, zone A in the middle, the
+rectangles its cards occupy today turned into small catalogue zones, and the flag on the ring. No
+bar and no band: the ring is where a band would have gone, which is rule 10, and there is no
+straight edge long enough to settle values along. It is taken because it reuses every part the
+rectangular faces already have, and because dropping the round faces would take fourteen packages to
+twelve over a question about two rectangles.
 
-`480round.ts` and `800round.ts` read `layout.slots`, which the zone work makes optional rather
-than removing, so they keep building throughout. The decision is owed before the card path is
-retired, not before the first zone face. #145 owns it.
+**It is built after 1.0, and until then the two round faces ship on the card model deliberately.**
+That is the second half of the answer and the half a reader is most likely to need: the round faces
+are not undecided, they are decided and not yet converted. So through 1.0 `480round.ts` and
+`800round.ts` keep reading `layout.slots`, `OpenDash.Slot01` to `Slot12` keep driving them and
+nothing else ([§7](#7-the-settings-the-contract-fixes) and #170), and the card path is not retired at
+1.0 — #146 now waits on the conversion rather than on this answer.
+
+Part by part, what a round face becomes:
+
+| | |
+|---|---|
+| The rev arc | Unchanged. It is already the round faces' answer to the rev bar, at radius 206 on the 480 and 352 on the 800, and `OpenDash.RevBar`'s `off` state falls back to the plain arc rather than selecting a second arrangement, because a round face has no well to give back ([ADR 0004](../decisions/0004-rev-bar-model.md)). |
+| Zone A | The middle of the disc, cycling the same four pages as on a rectangular face. The rect is the one the gear already has: 160 × 340 on the 480, 320 × 280 on the 800. |
+| The catalogue zones | The card rectangles, as they are drawn: two 140 × 108 on the 480 and six 180 × 110 on the 800. Each cycles its own catalogue and each is one wheel action, the way zones B and C are. |
+| The flag | The ring, being the outer 12 px the artboards already reserve for it, rather than a band. Whether a round face also gains the full-screen flag the rectangular faces have under `FlagFormat` is owed with the conversion; that setting is declared per rectangular face today and a round face has none. |
+| The bar | None. |
+| Band D | None. |
+
+**Which pages a round zone may show is the work's to answer, not this section's.** A 140 × 108 box is
+far smaller than any zone a rectangular face gives, and rule 17 in [§2](#2-the-shape-model) says a
+page answers to the shape of its box, shedding or shrinking rather than drawing outside it. So the
+catalogue of a round zone is whatever survives that box, and not the twenty-one by declaration. Counting it needs the boxes measured against the pages
+the way `secondScreens.test.ts` measures the module shapes, which is part of the conversion.
+
+**The canvas is owed two artboards, and it is not this repository's to draw.** `DashRound480.dc.html`
+and `DashRound800.dc.html` draw the card model, and `canvas.json` still titles them "2 slots" and "6
+slots". They are the two of twenty-five the zone pass never reached, and after this decision they
+disagree with the design rather than merely lagging it. The disagreement is recorded here because
+`design/` is the author's; the artboards are owed before the conversion, being the thing the rects and
+the catalogue would be read off.
+
+**The panel owes a round picker with it.** A face is configured on a picture of itself
+([ADR 0020](../decisions/0020-the-panel-draws-what-it-configures.md)), and the rectangular plan in
+[plugin.md](plugin.md) does not fit a disc. The picker the conversion needs is the arc, zone A in the
+middle and the catalogue zones where the card rects are. Until the conversion the round faces keep
+the Layout section they have, which assigns cards to slots.
 
 ---
 
