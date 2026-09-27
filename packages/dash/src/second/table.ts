@@ -182,10 +182,16 @@ interface RowType {
  * That is #339: the relative is the page a driver reads most and it drew the column that says *who* at
  * the floor of the design, 13 px under a gap drawn at 34, on a screen 600 mm from the eye. The 34 px
  * row is the row of a zone read at arm's length, and 15 is what that face labels at everywhere else;
- * `density.ts` calls 13 the floor rather than the size. The 28 px row keeps 13 deliberately, because
- * the cut is counted in characters and 15 would cost a narrow column three of them — the 850 x 480
- * face gives the name 82 px, which is seven characters at 13 and five at 15, and a bigger name that
- * says less is not a more readable one.
+ * `density.ts` calls 13 the floor rather than the size.
+ *
+ * **The 28 px row keeps 13, which is the canvas's own number and needs no argument beyond that.** The
+ * argument it was given here was a wrong one: "15 would cost a narrow column three characters — 82 px
+ * is seven at 13 and five at 15". Run it. The three boxes the 28 px row is ever handed are 82, 77 and
+ * 57 px of name column, and 15 costs one character at the first, one at the second and none at the
+ * third: seven against six, six against five, four against four. One character is not a reason, and
+ * neither is it an argument for 15 — a second divergence from a catalogue that draws 13 at every shape
+ * has to buy more than one glyph of width, and this one buys one. `tables.test.ts` holds all six
+ * counts, so the next reader can check the claim rather than redo the arithmetic behind it.
  *
  * A board is read across a garage rather than at arm's length and types the other way about: the
  * pit wall artboards draw every `.trow` with a 15 px name under 24 px numerals, with the car
