@@ -1,5 +1,5 @@
 .hero {
-  padding-block: clamp(3rem, 2rem + 4vw, 6rem) var(--section);
+  padding-block: clamp(2.5rem, 1.75rem + 3vw, 4.5rem) var(--section);
 }
 
 .heroGrid {
@@ -15,9 +15,11 @@
   max-width: 40rem;
 }
 
-/* Alpha is stated, not warned about: the caution colour, at label size, once. */
+/* Alpha is stated, not warned about: the caution colour, at label size, once. The version is one
+   token, so a narrow screen wraps before it rather than inside it. */
 .alpha {
   color: var(--color-caution-primary);
+  white-space: nowrap;
 }
 
 .lede {
@@ -32,7 +34,15 @@
   min-width: 0;
 }
 
-/* The three reasons, separated by rules. */
+/*
+ * The three reasons, separated by rules. They belong to the first screen, so they sit inside the
+ * hero's own section rather than in one of their own: a visitor who has read the price has the
+ * three answers to "why would I switch" without scrolling.
+ */
+.whyWrap {
+  margin-top: clamp(2rem, 1.25rem + 2.5vw, 3.5rem);
+}
+
 .why {
   display: grid;
   gap: var(--space-6);

@@ -4,3 +4,6 @@
 # Generated from design/tokens.json and from the repository's own sources by scripts/.
 /app/tokens.css
 /lib/content.generated.ts
+
+# Screenshots taken by hand to check a page, never part of the site.
+/.screenshots
