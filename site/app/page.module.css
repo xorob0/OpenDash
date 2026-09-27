@@ -38,9 +38,13 @@
  * The three reasons, separated by rules. They belong to the first screen, so they sit inside the
  * hero's own section rather than in one of their own: a visitor who has read the price has the
  * three answers to "why would I switch" without scrolling.
+ *
+ * The block is an anchor target, and the header is sticky, so it clears it by the same 60 px every
+ * other anchored block does: without this, /#why scrolls the three headings under the header.
  */
 .whyWrap {
   margin-top: clamp(2rem, 1.25rem + 2.5vw, 3.5rem);
+  scroll-margin-top: 60px;
 }
 
 .why {
@@ -145,12 +149,21 @@
     gap: var(--space-7);
   }
 
-  .reason,
-  .reason:first-child {
+  .reason {
     padding-top: 0;
     padding-inline-start: var(--space-6);
     border-top: 0;
     border-inline-start: 1px solid var(--color-surface-raised);
+  }
+
+  /*
+   * The first column opens the block instead of continuing a ruled section, so it has no rule to its
+   * left: the two rules between the columns are what separates the three, and the first one's copy
+   * starts on the gutter, in line with the eyebrow, the headline and the lede above it.
+   */
+  .reason:first-child {
+    padding-inline-start: 0;
+    border-inline-start: 0;
   }
 
   .seconds {
