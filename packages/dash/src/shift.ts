@@ -299,22 +299,34 @@ const carLadderChosen = (): Expr => eq(isnull(prop(propertyName(CAR_LADDER_CHOSE
 export const carLadderOnScreens = (): Expr => and(carLadderChosen(), carLadderAvailable());
 
 /**
- * Segment `k` of `count`, under the car's own measured bar: lit once the car has lit as much of its
- * own bar as this segment is up this one.
+ * Stage `stage` (0, 1, 2), segment `local` of `count`, under the car's own measured bar: lit once the
+ * car has lit as much of its own bar as this segment is up this one.
  *
- * Global rather than per band, which is the one place this ladder is shaped differently from the two
- * derived ones. Those carry a threshold per band and so are asked per band; this one carries a count,
- * and a count is a fact about the whole bar. The colours are still the bands' -- thirds of the
- * segments, from `design/tokens.json` -- so what a driver sees is OpenDash's bar lighting at the
- * car's instants, which is what #353 decided.
+ * Asked per band, like the two derived ladders, though for a different reason. Those carry a threshold
+ * per band; this one carries a count of the car's lamps, and asking per band is what keeps the band
+ * *boundaries* exact. The fraction of the bar this segment stands for is `(stage + local/count) / 3`,
+ * so it lights when `lit / lamps` has passed it -- and the first segment of band `b` then lights on
+ * `lit * 3 > b * lamps`, which is precisely where the plugin's `Stage` reaches `b + 1`. The digit on a
+ * flag box and the third of the bar that is red are one comparison at every band, whatever the segment
+ * count and however the thirds divide.
+ *
+ * That last clause is a review finding on this ticket's first cut, which asked globally -- segment `k`
+ * of the whole bar, `lit * count > k * lamps`. At fifteen segments that is this same expression, and
+ * the identity held; at fourteen the top band begins at segment 10 of 14, which is not two thirds, and
+ * the digit would have reddened a frame before the bar. Nothing said so, because both tests spelled the
+ * fifteen out. Written this way there is nothing to pin: any count and any split satisfies it.
  *
  * A cross-multiplication in integers rather than a division, for the reason `bandLit` is one: it
  * cannot divide by a zero-width bar, and it lights a segment on the frame the car lights its own LED
- * rather than a rounding either side of it. Reduced to the entry test for the first segment, where
- * the comparison is against zero.
+ * rather than a rounding either side of it. Reduced to the entry test for the first segment of the
+ * first band, where the comparison is against zero. The colours are still the bands' -- thirds of the
+ * segments, from `design/tokens.json` -- so what a driver sees is OpenDash's bar lighting at the car's
+ * instants, which is what #353 decided.
  */
-export const carLadderSegmentLit = (k: number, count: number): Expr =>
-  k === 0 ? gt(carLadderLit(), num(0)) : gt(mul(carLadderLit(), num(count)), mul(num(k), carLadderLamps()));
+export const carLadderSegmentLit = (stage: number, local: number, count: number): Expr =>
+  stage === 0 && local === 0
+    ? gt(carLadderLit(), num(0))
+    : gt(mul(carLadderLit(), num(3 * count)), mul(num(stage * count + local), carLadderLamps()));
 
 /**
  * The RPM the top band of the car's own measured bar lights at, in the gear it is in: the number a

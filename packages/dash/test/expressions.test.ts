@@ -2,7 +2,8 @@
 import { describe, expect, test } from 'bun:test';
 import { leds, ncalc, stableGuid } from '../src/generator.ts';
 import { revBar, REDLINE_BLINK_MS } from '../src/components/revBar.ts';
-import { GEAR_COUNT_PROPERTY, SHIFT_RPM_PROPERTIES, lastGear, redlineRpm } from '../src/shift.ts';
+import { stageOf } from '../src/components/revSegments.ts';
+import { GEAR_COUNT_PROPERTY, SHIFT_RPM_PROPERTIES, carLadderSegmentLit, lastGear, redlineRpm } from '../src/shift.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { readFileSync } from 'node:fs';
@@ -637,4 +638,72 @@ describe('module expressions', () => {
     // angle than the wheel is actually at.
     expect(at(10)).toEqual(at(values.STEERING_RANGE));
   });
+});
+
+/**
+ * The identity the measured ladder rests on, at every segment count rather than at fifteen.
+ *
+ * The flag box's digit reads a band number the plugin worked out, and a screen's rev bar reads the
+ * count the same walk produced. They are one answer only if the bar's band boundaries are the digit's
+ * band boundaries, and the first cut of #353 made that true by arithmetic accident: it asked for
+ * segment `k` of the whole bar, which coincides with `Stage` only where the top band begins at exactly
+ * two thirds. Fifteen segments does; fourteen does not, and both tests spelled the fifteen out, so the
+ * token could have been changed and left the digit reddening a frame before the bar with every test
+ * green. This walks the arithmetic instead, at four counts, so there is nothing to keep in step.
+ */
+describe("the measured ladder's bands are the digit's bands", () => {
+  /** The plugin's `CarLightMirror.CarLadder.Stage`, in TypeScript. Rounded up, capped at three. */
+  const stage = (lit: number, lamps: number): number => (lamps <= 0 ? -1 : lit <= 0 ? 0 : Math.min(3, Math.ceil((lit * 3) / lamps)));
+
+  /** Whether the expression for one segment holds, read off the integers it compares. */
+  const lit = (formula: string, litNow: number, lamps: number): boolean => {
+    const entry = /^\(isnull\(\[OpenDash\.CarLadderLit\], 0\)\) > \(0\)$/.exec(formula);
+    if (entry) return litNow > 0;
+    const parts = /^\(\(isnull\(\[OpenDash\.CarLadderLit\], 0\)\) \* \((\d+)\)\) > \(\((\d+)\) \* \(isnull\(\[OpenDash\.CarLadderLamps\], 0\)\)\)$/.exec(formula);
+    if (!parts) throw new Error(`not a segment comparison: ${formula}`);
+    return litNow * Number(parts[1]) > Number(parts[2]) * lamps;
+  };
+
+  for (const count of [15, 14, 12, 9]) {
+    test(`${count} segments: the first segment of a band lights where the digit reaches it`, () => {
+      const indexes = Array.from({ length: count }, (_, i) => i);
+      for (let k = 0; k < count; k++) {
+        const band = stageOf(k, count);
+        const start = indexes.findIndex((i) => stageOf(i, count) === band);
+        const size = indexes.filter((i) => stageOf(i, count) === band).length;
+        const formula = String(carLadderSegmentLit(band, k - start, size));
+        // Every bar a car has been measured with, and every count of lit lamps on it.
+        for (const lamps of [1, 4, 6, 8, 9, 10, 15, 16]) {
+          for (let on = 0; on <= lamps; on++) {
+            const expected = k === start ? stage(on, lamps) >= band + 1 : undefined;
+            if (expected === undefined) continue;
+            expect({ count, k, lamps, on, band: stage(on, lamps), segment: lit(formula, on, lamps) }).toEqual({ count, k, lamps, on, band: stage(on, lamps), segment: expected });
+          }
+        }
+      }
+    });
+
+    test(`${count} segments: a segment lights at the fraction of the bar it stands for, and never unlights`, () => {
+      const formulas = (() => {
+        const indexes = Array.from({ length: count }, (_, i) => i);
+        return indexes.map((k) => {
+          const band = stageOf(k, count);
+          const start = indexes.findIndex((i) => stageOf(i, count) === band);
+          const size = indexes.filter((i) => stageOf(i, count) === band).length;
+          return String(carLadderSegmentLit(band, k - start, size));
+        });
+      })();
+      for (const lamps of [1, 6, 9, 16]) {
+        for (let on = 0; on <= lamps; on++) {
+          const drawn = formulas.map((f) => lit(f, on, lamps));
+          // A prefix and nothing else: no gap can appear in the middle of the bar.
+          const litCount = drawn.filter((x) => x).length;
+          expect({ lamps, on, drawn }).toEqual({ lamps, on, drawn: formulas.map((_, k) => k < litCount) });
+          // And a full bar is a full bar, an empty one empty.
+          if (on === lamps) expect(litCount).toBe(count);
+          if (on === 0) expect(litCount).toBe(0);
+        }
+      }
+    });
+  }
 });

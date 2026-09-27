@@ -213,10 +213,14 @@ got the reverse. Neither is what the paragraph above says, and both are what it 
 
 **The screens read a number, never the table.** The plugin already walks the table every frame for
 the strips, so it publishes three more values out of the same walk: how many of the car's own lamps
-are lit now, how many that gear's ladder has, and the RPM the top third of it lights at. A bar of any
-segment count lights segment `k` when `lit * count > k * lamps` — the same cross-multiplication the
-published ladder's bands use — so the fraction of the bar that is lit is the fraction of the car's
-bar that is lit, and the top band reddens on the frame the flag box's digit reaches the third band.
+are lit now, how many that gear's ladder has, and the RPM the top third of it lights at. A bar lights the segment
+`local` of its band `b`, out of that band's `m`, when `lit * 3m > (b * m + local) * lamps` — the same
+cross-multiplication the published ladder's bands use, and asked per band for the same reason they are.
+So the fraction of the bar that is lit is the fraction of the car's bar that is lit, and the first
+segment of a band lights on `lit * 3 > b * lamps`, which is exactly where the digit reaches that band.
+That holds at any segment count and however the thirds divide, which the first cut of this amendment did
+not: it asked for segment `k` of the whole bar, which coincides with the digit only where the top band
+begins at two thirds exactly. Fifteen does and fourteen does not, and nothing said so.
 `CarLadderTopRpm` is what the Redline readout prints, so the number beside the bar is still the number
 the bar goes red at, which is what `shift.ts` promises.
 
