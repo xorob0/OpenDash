@@ -686,11 +686,17 @@ never which flag wins.
 what keeps a settled flag out of room a page is using. On the four faces that draw corner blocks they
 are those blocks, taken whole and to the band's edge: the flag covers the incidents and the track
 state at one end and the lamps and both clocks at the other, which is the room the band can most
-afford to lose while a flag is out. On the four that draw none there is no block to take, so the
-flag keeps the side padding instead: 16 px of colour at each end, 12 in portrait, which is the only
-room in the band no page is ever laid into. It writes no name at that width, as the nano's 12 px
-strip writes none. That is a decision rather than a drawing, and
-[§10](#10-where-the-canvas-contradicts-itself) records it.
+afford to lose while a flag is out. Whole is the whole width the band reserves for a corner, and that
+width is the block's two fields *plus* the side padding *plus* the room the zone letter stands in, so
+a settled flag covers band D's own **D** as well on those four faces. That is deliberate and it is
+the cheaper of two prices: the letter is twelve pixels, says which zone the band is and never
+changes, whereas starting the block 44 px in to clear it would hold the flag inboard of the band's
+left edge on four faces and hard against it on the other four, which is two drawings of one thing. On
+the four that draw none there is no block to take, so the flag keeps the side padding instead: 16 px
+of colour at each end, 12 in portrait, which is the only room in the band no page is ever laid into,
+and the letter stands just inboard of it and survives. It writes no name at that width, as the nano's
+12 px strip writes none. None of it is drawn on any artboard, and
+[§10](#10-where-the-canvas-contradicts-itself) records that.
 
 **The settled form is not a setting**, which #380 asked to have decided rather than assumed. The
 takeover is still there and only its duration changed, so no driver loses a reading he had: he keeps
@@ -919,7 +925,7 @@ a mistake in this document.
 | The sector deltas' size | The companion draws the delta page's S1/S2/S3 rank at 34 px and the catalogue draws it at 34 as well, which is `small` on one ramp and `mid` on the other; the page therefore names the ramp rung by density rather than by one token. The same question decides the recap under the sectors: 34 on the companion and 24 in a zone are both `small`, and a compact zone's `small` is 18 where the 800 × 480 sheet chips 24. |
 | Three sector columns in a narrow zone | The catalogue draws the sectors page as three columns at every shape, including `tall narrow`, where three 34 px sector times and their gaps need 286 px of a 274 px zone. The build used to reach three columns by stepping the rank down to 18 px, which is the page shrinking the reading it exists for. **The rank now keeps 34 and wraps to two lines and one**, per rule 17; the canvas owes the redraw, as it does for lap times at the same shape. |
 | Spreading or centring | Whether a page spreads its ranks over the full height or centres them as one block is decided page by page on the catalogue and not by shape: sectors, fuel, session, stint, the speedo and car settings spread at all four shapes, lap times spreads at three and centres at `tall narrow`, the delta centres at three and spreads at `tall`, and the lists, the drawings and the pit view centre everywhere. The engine therefore takes it from the page (`justify: 'spaceBetween'` on `stack`) and centres by default. |
-| The flag once it has settled | No artboard draws a flag anywhere but across the whole band, so the block at each end that [§6](#6-band-d--eight-pages) describes is an addition rather than a reading of a drawing. **It is taken** because the alternative is the case [#380](https://github.com/xorob0/OpenDash/issues/380) opens with, namely SAFETY CAR over an unreadable fuel page for the length of a caution. On the four faces with corner blocks the addition at least uses rectangles the canvas does draw, and covers what they hold. On 850 × 480, 800 × 480, 800 × 286 and 600 × 686 there is no such rectangle and the flag keeps the side padding, which is 16 px of colour at each end and 12 in portrait: enough to say a flag is still out and not enough for a word. Widening it there means taking room from the page, and the 600 × 686 fuel page has 6 px of slack, so the canvas owes either a drawn settled form for those four faces or the judgement that the padding is enough. |
+| The flag once it has settled | No artboard draws a flag anywhere but across the whole band, so the block at each end that [§6](#6-band-d--eight-pages) describes is an addition rather than a reading of a drawing. **It is taken** because the alternative is the case [#380](https://github.com/xorob0/OpenDash/issues/380) opens with, namely SAFETY CAR over an unreadable fuel page for the length of a caution. On the four faces with corner blocks the addition is nearly a rectangle the canvas does draw, though not exactly one: it covers what a corner block holds and, the corner width being those two fields plus the band's side padding plus the room the zone letter stands in, the padding and the letter as well, so band D has no **D** for as long as a flag is out. §6 says why that is the cheaper of the two prices available. On 850 × 480, 800 × 480, 800 × 286 and 600 × 686 there is no such rectangle and the flag keeps the side padding, which is 16 px of colour at each end and 12 in portrait: enough to say a flag is still out and not enough for a word. Widening it there means taking room from the page, and the 600 × 686 fuel page has 6 px of slack, so the canvas owes either a drawn settled form for those four faces or the judgement that the padding is enough. |
 | A short box's ranks | `keepsSecondaryRanks` says a short box keeps one rank, while `archetypeOf` hands a wide short box the `grid` answer, which keeps two. The code follows `archetypeOf`, and the helper is unused. Either the short boxes the build produces get a fifth declared answer, agreed with the canvas, or the helper goes so that one rule governs. |
 
 ### Every variant the 1280 × 480 sheet lists
