@@ -762,6 +762,14 @@ const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, dens
  * seconds, whereas what a driver decides during one is whether to pit, so the fuel page outranks a
  * clock and the availability of DRS for the rest of the caution.
  *
+ * Whole is `bandCornerWidths`, which is the block's two fields plus `padX` plus `letterRoom`, so the
+ * left block covers band D's letter as well: `zones/face.ts` draws the `D` at `padX` and pushes the
+ * two flag groups after it. That is the cheaper of the two prices on offer. The letter is twelve
+ * pixels, it says which zone the band is and it never changes, whereas starting the block at
+ * `padX + letterRoom` to clear it would hold the flag 44 px inboard of the band's left edge on these
+ * four faces while it is hard against the edge on the other four, which is two drawings of one thing.
+ * zones.md §6 and §10 record it, and `flagBand.test.ts` holds the face to it either way.
+ *
  * On a face that draws no corners -- 850 x 480, 800 x 480, 800 x 286 and 600 x 686 -- there is none
  * to take, and the flag keeps the side padding instead: `padX` at each end, which is the only room in
  * the band no page is ever laid into, since `bandPageRoom` reserves it at both ends whether the face
