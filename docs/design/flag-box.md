@@ -73,15 +73,22 @@ and the code disagree about, and it wants the author's arbitration.
 
 ### What the band does that the box does not, and the reverse
 
-**The band has no duration.** The canvas asks for a configurable three seconds per alert and
-`design/tokens.json` states it as `indicator.alert.durationMs`, and neither is read: a duration
-needs a clock, and neither NCalc nor the plugin has one under
-[ADR 0009](decisions/0009-does-the-plugin-compute.md). Every condition shows for exactly as long as
-its bits are set. The green flag is the one place that hurt, because iRacing holds `green` for the
-whole green-flag stint and band D would have been a solid green bar over the fuel page for an entire
-race; SimHub passes `Flag_Green` through a `GreenLimiter` and reports it only shortly after the flag
-is raised, which is the only clock there is, so the band reads that property where it reads bits
+**No duration decides *whether* a condition shows.** Every condition shows for exactly as long as
+its bits are set, on the band as in the box: the canvas asks for a configurable three seconds per
+alert and that is not read as a lifetime, because a flag that went dark on a clock while it was still
+flying would be a lie. The green flag is the one place that hurt, because iRacing holds `green` for
+the whole green-flag stint and band D would have been a solid green bar over the fuel page for an
+entire race; SimHub passes `Flag_Green` through a `GreenLimiter` and reports it only shortly after the
+flag is raised, which is the only clock there is, so the band reads that property where it reads bits
 everywhere else. The box keeps the bit, a lit green lamp costing nothing.
+
+**One duration decides *how* the band shows it.** Since #380 the band's three seconds are how long a
+flag keeps the *whole* band before it settles into the block at each end and gives band D's page back;
+`indicator.alert.durationMs` is the figure and SimHub's own `changed()` window is the clock, which
+[ADR 0009](decisions/0009-does-the-plugin-compute.md) admits precisely because the state is SimHub's
+rather than ours. The window watches the rank of the winning condition and not one condition's bits,
+so a caution clearing to the yellow under it takes the band again. The box has no equivalent: a
+picture on 64 pixels has nothing to settle into and nothing underneath it to give back.
 
 **The debris flag's danger stripes are not drawn on the band.** The canvas gives the alert
 catalogue two patterns, the chequer and the stripes, and the band draws the first. A debris flag is

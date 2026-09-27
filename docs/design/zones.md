@@ -626,8 +626,8 @@ Fuel is the default because it is what a driver checks on a straight.
 
 **Corner blocks.** A block at each end on the wider faces: incidents against their limit and the
 track state on the left; DRS, push to pass, spotter lamps and both clocks on the right. They are
-drawn at 1920 × 480, 1280 × 480, 1280 × 400 and 1280 × 720, and absent at 850 × 480, 800 × 286 and
-600 × 686. The threshold is those drawings, not a round number.
+drawn at 1920 × 480, 1280 × 480, 1280 × 400 and 1280 × 720, and absent at 850 × 480, 800 × 480,
+800 × 286 and 600 × 686. The threshold is those drawings, not a round number.
 
 **A page sheds its last field before the rank overflows**, with nothing spread to fill. The rank is
 packed and centred in what the side padding, the zone letter and the corners leave, never in the
@@ -659,10 +659,44 @@ Two parts of that drawing are absences rather than refusals, and [§10](#10-wher
 records each: the pictogram files are not in the repository, and nine of the twelve lamps have
 nothing that lights them.
 
-**A flag takes the band over.** While a flag is out, the flag has the band, because an alert
+**A flag takes the band over.** When a flag comes out, the flag has the band, because an alert
 outranks fuel. This replaces the bottom-edge flag strip the slot model drew, so the same sixty
 pixels goes to whichever has the better claim. The band draws as a filled bar with a 3 px border
 in the flag's colour and the flag's name in dark text.
+
+**And then it settles into the blocks at the ends, giving the page back.** The takeover lasts
+`indicator.alert.durationMs`, which is three seconds and is the same window the lap-time pop-up and
+the change notification are out for; after it the band's page is drawn again and the flag continues
+in the block at each end, in its colour and with its name where the block has room, until its bits
+clear. That is [#380](https://github.com/xorob0/OpenDash/issues/380), and the case it answers is a
+safety car: a caution runs several minutes, the flag has said everything it has to say after two
+seconds, and what a driver decides during a caution is whether to pit, so SAFETY CAR over an
+unreadable fuel page for five minutes is the wrong trade in every minute but the first. A change of
+flag takes the band again for its few seconds, including a change no single bit shows — a
+full-course caution clearing to the local yellow underneath it is a new thing to tell a driver — so
+what the window watches is the rank of the *winning* condition, `raisedRank` in
+`packages/dash/src/flags.ts`. A blinking flag keeps blinking in the block.
+
+So band D's own priority over time reads: **the flag alone for three seconds, then the flag at both
+ends over the page, then the page alone.** Nothing else about the ranking changes; the fifteen
+conditions are ranked by the same expression in both phases, so the phase decides the rectangle and
+never which flag wins.
+
+**The blocks a flag settles into are the band's own**, `bandFlagBlocks` in `bandPages.ts`, which is
+what keeps a settled flag out of room a page is using. On the four faces that draw corner blocks they
+are those blocks, taken whole and to the band's edge: the flag covers the incidents and the track
+state at one end and the lamps and both clocks at the other, which is the room the band can most
+afford to lose while a flag is out. On the four that draw none there is no block to take, so the
+flag keeps the side padding instead: 16 px of colour at each end, 12 in portrait, which is the only
+room in the band no page is ever laid into. It writes no name at that width, as the nano's 12 px
+strip writes none. That is a decision rather than a drawing, and
+[§10](#10-where-the-canvas-contradicts-itself) records it.
+
+**The settled form is not a setting**, which #380 asked to have decided rather than assumed. The
+takeover is still there and only its duration changed, so no driver loses a reading he had: he keeps
+the flag, in its colour and with its name, and gains the page under it. A switch would exist to offer
+the strictly poorer of two views. A driver whose screen's whole job is the flag has the full-screen
+format instead, which this leaves exactly as it was.
 
 **It draws the whole flag catalogue, which is fifteen conditions and not six.** The band used to
 read the six `Flag_*` properties SimHub normalises, and those are a lossy summary of what iRacing
@@ -841,6 +875,7 @@ a mistake in this document.
 | The sector deltas' size | The companion draws the delta page's S1/S2/S3 rank at 34 px and the catalogue draws it at 34 as well, which is `small` on one ramp and `mid` on the other; the page therefore names the ramp rung by density rather than by one token. The same question decides the recap under the sectors: 34 on the companion and 24 in a zone are both `small`, and a compact zone's `small` is 18 where the 800 × 480 sheet chips 24. |
 | Three sector columns in a narrow zone | The catalogue draws the sectors page as three columns at every shape, including `tall narrow`, where three 34 px sector times and their gaps need 286 px of a 274 px zone. The build used to reach three columns by stepping the rank down to 18 px, which is the page shrinking the reading it exists for. **The rank now keeps 34 and wraps to two lines and one**, per rule 17; the canvas owes the redraw, as it does for lap times at the same shape. |
 | Spreading or centring | Whether a page spreads its ranks over the full height or centres them as one block is decided page by page on the catalogue and not by shape: sectors, fuel, session, stint, the speedo and car settings spread at all four shapes, lap times spreads at three and centres at `tall narrow`, the delta centres at three and spreads at `tall`, and the lists, the drawings and the pit view centre everywhere. The engine therefore takes it from the page (`justify: 'spaceBetween'` on `stack`) and centres by default. |
+| The flag once it has settled | No artboard draws a flag anywhere but across the whole band, so the block at each end that [§6](#6-band-d--eight-pages) describes is an addition rather than a reading of a drawing. **It is taken** because the alternative is the case [#380](https://github.com/xorob0/OpenDash/issues/380) opens with, namely SAFETY CAR over an unreadable fuel page for the length of a caution. On the four faces with corner blocks the addition at least uses rectangles the canvas does draw, and covers what they hold. On 850 × 480, 800 × 480, 800 × 286 and 600 × 686 there is no such rectangle and the flag keeps the side padding, which is 16 px of colour at each end and 12 in portrait: enough to say a flag is still out and not enough for a word. Widening it there means taking room from the page, and the 600 × 686 fuel page has 6 px of slack, so the canvas owes either a drawn settled form for those four faces or the judgement that the padding is enough. |
 | A short box's ranks | `keepsSecondaryRanks` says a short box keeps one rank, while `archetypeOf` hands a wide short box the `grid` answer, which keeps two. The code follows `archetypeOf`, and the helper is unused. Either the short boxes the build produces get a fifth declared answer, agreed with the canvas, or the helper goes so that one rule governs. |
 
 ### Every variant the 1280 × 480 sheet lists
