@@ -10,7 +10,7 @@ import { GENERATED_FONTS_DIR, prepareFont } from './design/fontFiles.ts';
 import { rect } from './design/geometry.ts';
 import { idleScreen } from './idle.ts';
 import type { Layout } from './layouts/layout.ts';
-import { faceOf, INNER_INSET } from './layouts/round.ts';
+import { faceOf, innerDiameter } from './layouts/round.ts';
 import { rule } from './elements/rule.ts';
 import { CARDS_DASHBOARD_NAME, cardScreens, DEFAULT_STRATEGY, inlineSlotItems, widgetSlotItems, type SlotStrategy } from './slots.ts';
 
@@ -71,7 +71,7 @@ export function buildLayout(layout: Layout, opts: BuildOptions): BuiltLayout {
         background: layout.background,
         // A round face is a disc inside its bounding square, and nothing may lie outside the inner
         // disc the flag ring leaves; `layouts/round.ts` is where both come from.
-        ...(layout.shape === 'round' ? { disc: { ...faceOf(layout.width), r: layout.width / 2 - INNER_INSET } } : {}),
+        ...(layout.shape === 'round' ? { disc: { ...faceOf(layout.width), r: innerDiameter(layout.width) / 2 } } : {}),
       }),
     ],
     metadata,

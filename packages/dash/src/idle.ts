@@ -93,16 +93,17 @@ interface IdleStep {
 }
 
 /**
- * Largest first. Which rung a screen gets is measured rather than tabulated: there are fourteen frames
- * to fit, from a 1920 x 1080 pit wall to a 480 px disc, and a table of fourteen answers is a table
- * that goes stale the next time one of them moves.
+ * Largest first. Which rung a screen gets is measured rather than tabulated: there are twenty-two
+ * packages to fit, from a 1920 x 1080 pit wall to a 480 px disc, and a table of twenty-two answers is a
+ * table that goes stale the next time one of them moves.
  *
  * The state line stays at one of the design's two label sizes on every rung, because it is a label and
  * those are the two sizes there are. What grows with the frame is the mark and the clock.
  *
- * As the packages stand, the wide faces and both pit walls take the first rung, the rest of the faces
- * and both companions the second, and the last two are the floor under a frame nobody has built yet;
- * `packages/dash/test/idle.test.ts` records which one each screen actually lands on.
+ * As the packages stand every screen takes the first rung but three, and the three are the ones with
+ * no room for it: the 800 x 286 nano strip, the 480 px round face, whose disc is 456 across, and the
+ * 480 px portrait companion, where what runs out is the width. The last two rungs are the floor under a
+ * frame nobody has built yet. `packages/dash/test/idle.test.ts` records where each one lands.
  */
 const IDLE_STEPS: readonly IdleStep[] = [
   { wordmark: ds.size.hero, clock: ds.size.lapTime, state: ds.size.label, gap: ds.space[5] },
