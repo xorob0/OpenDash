@@ -183,7 +183,9 @@ against a board whose class is interleaved with another and a lap behind it.
 
 ## What is not drawn, and why
 
-Nothing here is a placeholder for work that is pending. Each is a value the sim does not publish.
+Nothing in the table below is a placeholder for work that is pending. Each is a value the sim does
+not publish. The subsection after it is the one absence of the other kind: a reading that exists and
+has not arrived yet.
 
 | Not drawn | Why |
 |---|---|
@@ -207,6 +209,34 @@ Nothing here is a placeholder for work that is pending. Each is a value the sim 
 
 Three of those (energy, damage, track rivals) ship as modules that say so, off by default, because
 the data exists in other sims and the module should be there when someone runs one.
+
+### The one absence that is temporary: no session yet
+
+The centred dim block those three modules draw says something else too, and it is the opposite kind
+of absence from the table above. Twelve of the
+twenty-one modules have nothing to draw until timing exists -- lap times, delta, sectors, fuel, pit
+view, session, track, leaderboard, relative, opponents, stint and lap history -- and rather than an
+empty table they say `LEADERBOARD · GO INTO A SESSION`, in the same centred dim block, until there is
+one. Not a value the sim cannot publish, therefore, but one it has not published yet, and the
+difference is that this notice goes away on its own. It matters because a dashboard is installed,
+opened and looked at before any session is joined, so the empty state is the product's first
+impression, and an empty leaderboard reads exactly like a leaderboard that has failed.
+
+The declaration is `needsSession` in `MODULE_CATALOGUE`, one line per module, so a module added later
+answers the question by existing; `defineModule` composes the two halves from it. The condition is
+`inSession()` in `second/values.ts` and it is one definition that everything cites: the game is
+running and has named a session type. Both halves are needed, and `values.ts` says why in the detail
+the decompiled source gives.
+
+Band D's four timing pages get the same notice -- fuel, stint, sectors, relative -- arranged in
+`zones/pages.ts` rather than in `bandPageItems`, and so does zone A's track page, which is the track
+module itself. Zone A's other three pages, and band D's energy, tyres, weather and car, are car state
+and take nothing. The module called Session says the instruction alone rather than stuttering its own
+name in front of it.
+
+It does not collide with the idle screen (#113): the idle screen covers the game not running and
+this covers the game running with nothing to show, which is the state a driver is in while waiting to
+qualify. `packages/dash/test/sessionNotice.test.ts` checks every box a module is drawn in.
 
 ## Where the code lives
 
