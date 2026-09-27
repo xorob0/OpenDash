@@ -270,9 +270,11 @@ export const PARTS: Record<string, Keeps> = {
   // The summary word and the four corner toggles beside it are the drawing's `Tyres · RIGHTS`;
   // the fast repair and the tear-off stay at every shape.
   pitView: { wide: ['tyres'], grid: ['tyres'], tallNarrow: [], tall: [] },
-  // The captions say how the tread fills the drawing and what the tick on it means, and the chip
-  // over the grid names the compound. A column that narrow has room for neither, and the
-  // catalogue's `tall narrow` drawing is the four corners and nothing else.
+  // The captions say how the tread fills the drawing, what the tick on it means and what the chip
+  // over the grid is, that chip naming the compound. A column that narrow has room for neither the
+  // captions nor the chip, and the catalogue's `tall narrow` drawing is the four corners and nothing
+  // else -- which leaves its tick unexplained, recorded with the rest of #384's room in
+  // `docs/design/zones.md` §10.
   tyres: { wide: ['footer', 'compound'], grid: ['footer', 'compound'], tallNarrow: [], tall: ['footer', 'compound'] },
   // The steering is a fourth column beside the three pedals, and the catalogue draws it at the two
   // shapes with the width for it. A narrow zone spends that width on the trace instead, which is

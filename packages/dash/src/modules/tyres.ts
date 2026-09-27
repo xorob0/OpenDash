@@ -7,8 +7,8 @@
  * second row to give them, so the four go in one line instead.
  *
  * iRacing's pressures are the ones the car left the box with rather than live figures, which is
- * worth knowing and is no longer said on the page: the captions under the grid are the canvas's
- * two, about the tread and about the tick.
+ * worth knowing and is no longer said on the page: the captions under the grid are the canvas's two,
+ * about the tread and about the tick, and #384's third, about the compound.
  */
 import { rect } from '../design/geometry.ts';
 import { measureText } from '../design/advances.ts';
@@ -39,21 +39,68 @@ const COMPANION_GAP = { x: 28, y: 12 } as const;
 /**
  * The compound chip: a badge rather than a label, so it keeps its own size at every density.
  *
- * It carries no word naming it, which #384 asked for and the drawing has no room for: the chip is
- * centred on the axle line, the only band there free of the two inboard drawings is the column gap
- * of 18 to 28 px, and the chip's own 80 px already overlap each front tyre by about thirty. A
- * `COMPOUND` beside it measures 66 px more and would cover a third of each of them, and the footer
- * is no roomier -- its two captions take 692 px of the 802 the widest box drawing them has. A chip
- * draws a word rather than a figure, which is the reason a class chip is unlabelled too; the
- * disagreement is recorded in `docs/design/zones.md` §10 rather than settled here, because the room
- * for a label is the canvas's to give.
+ * No word sits beside it on the axle line, which #384 asked for and the drawing has no room for: the
+ * chip is centred there, the only band free of the two inboard drawings is the column gap of 18 to
+ * 28 px, and the chip's own 80 px already overlap each front tyre by about thirty. A `COMPOUND`
+ * beside it measures 66 px more and would cover a third of each of them. What names it instead is a
+ * caption under the grid, where the page already explains the tick, drawn wherever the footer line
+ * has the room for a second sentence; the room for a label on the axle line is the canvas's to give,
+ * and the disagreement is recorded in `docs/design/zones.md` §10 rather than settled here.
  */
 const CHIP = { height: 28, size: 15, padding: 13, widest: 'MEDIUM' } as const;
 
-/** Gap between the two captions when they share a line. */
+/** Gap between two captions sharing a line. */
 const CAPTION_GAP = 20;
 
-export const CAPTIONS = ['Tread left fills the tyre, inner to outer', 'A tick marks a wheel changed at the next stop'] as const;
+/** One caption under the grid: the mark it names, and the sentence naming it. */
+interface Caption {
+  id: string;
+  text: string;
+}
+
+/**
+ * The captions, in the order the canvas draws them: what fills the tyre, what the tick on it means,
+ * and, #384's, what the word between the axles is.
+ */
+export const CAPTIONS: readonly Caption[] = [
+  { id: 'tread', text: 'Tread left fills the tyre, inner to outer' },
+  { id: 'tick', text: 'A tick marks a wheel changed at the next stop' },
+  { id: 'compound', text: 'The word between the axles is the compound' },
+];
+
+/**
+ * Which caption a line too short for all of them gives up first.
+ *
+ * This used to be the array order, which is the canvas's drawing order and not an order of
+ * importance: the tread's sentence came first and so survived, and the tick's went, leaving the tick
+ * itself drawn -- it is drawn at every shape -- with nothing anywhere on the page saying what it is.
+ *
+ * The order here is what #384 measures a page by, which is whether each quantity carries something
+ * naming it. The tick and the compound carry nothing else; the tread's columns stand beside a figure
+ * that already carries its own per cent, and what its sentence adds is which column is the inner
+ * shoulder. So the tread's is the first to go and the tick's the last, and the two mid-sized boxes
+ * that once drew tread and tick now draw tick and compound. What they are drawn in is still the
+ * canvas's order, which the trade is recorded against in `docs/design/zones.md` §10.
+ */
+const SHED_FIRST: readonly string[] = ['tread', 'compound', 'tick'];
+
+/** A caption's box: the sentence upper-cased, and the pixel of slack WPF needs not to clip it. */
+const captionWidth = (caption: Caption, fs: number): number => Math.ceil(measureText('BarlowMedium', caption.text.toUpperCase(), fs)) + 1;
+
+/**
+ * The captions the line holds, in the order they are drawn: as many as fit, shed by
+ * {@link SHED_FIRST}. None, where it does not hold even the last of them, a caption cut in half by
+ * the renderer saying less than the half that fits.
+ */
+function captionsThatFit(candidates: readonly Caption[], width: number, fs: number): Caption[] {
+  const total = (kept: readonly Caption[]): number => kept.reduce((sum, caption) => sum + captionWidth(caption, fs), 0) + CAPTION_GAP * Math.max(0, kept.length - 1);
+  let kept = [...candidates];
+  for (const id of SHED_FIRST) {
+    if (total(kept) <= width) break;
+    kept = kept.filter((caption) => caption.id !== id);
+  }
+  return kept;
+}
 
 export const tyres = defineModule('tyres', (ctx) => {
   const d = densityOf(ctx.density);
@@ -111,16 +158,17 @@ export const tyres = defineModule('tyres', (ctx) => {
       ...(footer
         ? [
             blockRow(footerHeight, (bottom) => {
-              // Both sentences where the line holds them, the tread one alone where it does not:
-              // a caption cut in half by the renderer says less than the half that fits.
-              const widths = CAPTIONS.map((text) => Math.ceil(measureText('BarlowMedium', text.toUpperCase(), d.label)) + 1);
-              const both = widths[0]! + CAPTION_GAP + widths[1]! <= ctx.frame.width;
+              // The compound's sentence is offered only where the chip it names is drawn; a
+              // four-column row has no axle line to put one on and so nothing to explain.
+              const candidates = CAPTIONS.filter((caption) => caption.id !== 'compound' || compound);
               const y = bottom - footerHeight;
-              const captions = [
-                label(`${ctx.prefix}footer.tread`, CAPTIONS[0], ctx.frame.left, y, widths[0]!, { size: d.label }),
-                ...(both ? [label(`${ctx.prefix}footer.tick`, CAPTIONS[1], ctx.frame.left + widths[0]! + CAPTION_GAP, y, widths[1]!, { size: d.label })] : []),
-              ];
-              return captions;
+              let x = ctx.frame.left;
+              return captionsThatFit(candidates, ctx.frame.width, d.label).map((caption) => {
+                const width = captionWidth(caption, d.label);
+                const item = label(`${ctx.prefix}footer.${caption.id}`, caption.text, x, y, width, { size: d.label });
+                x += width + CAPTION_GAP;
+                return item;
+              });
             }),
           ]
         : []),

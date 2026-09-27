@@ -717,6 +717,41 @@ describe('every tyre reading carries its unit', () => {
 });
 
 /**
+ * #384's other two quantities: the tick on a tyre and the compound between the axles, neither of
+ * which is a figure with room for a unit after it.
+ *
+ * Both are named by a caption under the grid, which is how the canvas already explains the tick, and
+ * the line holds two of the three sentences at most sizes and one at many. Which ones it keeps is
+ * therefore the whole of whether the page names what it draws, and it used to be the order they
+ * happened to be written in: the tread's survived and the tick's went. So the rule is checked rather
+ * than the arithmetic -- the tick is drawn at every shape and is named wherever there is a footer at
+ * all, the compound is named wherever the line holds a second sentence beside it, and no caption
+ * names a mark the box does not draw.
+ *
+ * What is left is the shapes with no footer: `tall narrow` and the compact faces, where PARTS sheds
+ * the footer outright and a tick is drawn unexplained. That is declared shedding rather than a
+ * decision this makes, and it is recorded with the axle line's own in docs/design/zones.md §10.
+ */
+describe('the tyres page names the tick and the compound', () => {
+  const tyres = MODULES.find((m) => m.id === 'tyres')!;
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const items = tyres.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+      const names = items.map((i) => i.name);
+      const captions = names.filter((name) => name.startsWith('footer.')).map((name) => name.slice('footer.'.length));
+      const chip = names.some((name) => name.startsWith('compound'));
+      // The tick is drawn at every shape, so a footer that draws anything draws its sentence.
+      expect({ box: box.name, captions }).toMatchObject(captions.length === 0 ? {} : { captions: expect.arrayContaining(['tick']) });
+      // The compound's sentence where the chip is drawn and the line holds a second one, and never
+      // where the chip is not: a four-column row has no axle line and nothing to explain.
+      if (!chip) expect({ box: box.name, orphan: captions.includes('compound') }).toMatchObject({ orphan: false });
+      if (chip && captions.length > 1) expect({ box: box.name, captions }).toMatchObject({ captions: expect.arrayContaining(['compound']) });
+    });
+  }
+});
+
+/**
  * #384, the other half of a labelled reading: the unit has to sit beside the figure, not at the end
  * of the budget the figure is cut from.
  *
