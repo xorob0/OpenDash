@@ -18,7 +18,7 @@ import { BAND_PAGES, BAND_PAGE_IDS, bandCorners, bandCornerWidths, bandMetrics, 
 import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } from '../src/zones/telltales.ts';
 import { assetNamed } from '../src/design/assets.ts';
 import { SPECIAL_CHARS } from '../src/design/metrics.ts';
-import { fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, NO_VALUE } from '../src/second/values.ts';
+import { fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 
 const BANDS = {
@@ -285,14 +285,16 @@ describe('the fields the catalogue draws on each page', () => {
       expect(fuelLastLapIsSettled()).toContain(fuelIsSettled());
     });
 
-    test('the margin waits for the lap and for a race with an end to reach', () => {
-      // The same completed lap the estimate waits for, and the session's own length besides: a
-      // margin to the end of a session that has no end is the whole of the range drawn as spare,
-      // `+13.1` laps to a flag nobody is going to wave.
+    test('the margin waits for the lap, for a length to run and for the session to be a race', () => {
+      // The same completed lap the estimate waits for, and the session besides. A session with no end
+      // would draw the whole of the range as spare, `+13.1` laps to a flag nobody is going to wave;
+      // and a practice or qualifying session that does have a length has an end nobody waves a flag
+      // at either, which read as a red `−22` MIN for half an hour before the name was in the gate.
       const { bind } = fieldNamed('toEnd');
       expect(bind.startsWith(`if(${fuelToEndIsSettled()}, `)).toBe(true);
       expect(bind.endsWith(`, '${NO_VALUE}')`)).toBe(true);
       expect(fuelToEndIsSettled()).toContain(fuelIsSettled());
+      expect(fuelToEndIsSettled()).toContain(`(ucase(${sessionType()})) = ('RACE')`);
     });
 
     test('the fuel time waits for the same lap and keeps one spelling of its absence', () => {
