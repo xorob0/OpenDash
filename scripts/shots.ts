@@ -14,6 +14,12 @@
  *
  * The order is scenario first, package second. The other way round would restart the emulator once
  * per capture, and an emulator restart costs a SimHub reconnection.
+ *
+ * **A capture taken with no emulator running is a photograph of the idle screen.** Since #763 every
+ * package carries one, and SimHub switches to it whenever `GameRunning` is false, so a scenario that
+ * failed to start no longer shows as an empty face in the picture -- it shows as the wordmark and a
+ * clock. `waitForLaps` is what makes that a failure rather than a surprise, and it is the reason the
+ * emulator is started before anything is opened rather than alongside it.
  */
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
