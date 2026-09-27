@@ -71,6 +71,10 @@ const DRAWS_ARGUMENT: Record<string, (index: number) => boolean> = {
  * A literal outside any call is drawable: string concatenation in NCalc is `+`, so
  * `('#') + (drivercarnumber(1))` has its hash at the top level. That is the shape this is really
  * looking for, and the shape that shipped thirty-one clipped glyphs.
+ *
+ * This is a reading by glyph, for a cell: which characters can arrive. For which *strings* can
+ * arrive -- a `widest` is a string, and `'TYRES ' + ('°C')` is wider than either literal --
+ * `drawnStrings.ts` reads the same expression as a tree.
  */
 export function drawableLiterals(expression: string): string[] {
   const out: string[] = [];
