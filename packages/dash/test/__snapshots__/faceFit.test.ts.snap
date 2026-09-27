@@ -6,7 +6,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          wide       keeps delta s1 s2 s3  parts bar scale rule
   sectors        wide       keeps s1 s2 s3 yourBest last sessionBest bestS1 bestS2 bestS3
   speedo         wide       keeps speed rpm redline
-  fuel           wide       keeps level time toAdd lastLap thisLap average lapsLeft
+  fuel           wide       keeps level time toEnd toAdd lastLap thisLap average lapsLeft
   energy         wide       one drawing, nothing to shed
   tyres          wide       one drawing, nothing to shed  parts footer compound
   pitView        wide       keeps refuel pitTime  parts tyres
@@ -29,7 +29,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          wide       keeps delta s1 s2 s3  parts bar scale rule
   sectors        wide       keeps s1 s2 s3 yourBest last sessionBest bestS1 bestS2 bestS3
   speedo         wide       keeps speed rpm redline
-  fuel           wide       keeps level time toAdd lastLap thisLap average lapsLeft
+  fuel           wide       keeps level time toEnd toAdd lastLap thisLap average lapsLeft
   energy         wide       one drawing, nothing to shed
   tyres          wide       one drawing, nothing to shed  parts footer compound
   pitView        wide       keeps refuel pitTime  parts tyres
@@ -52,7 +52,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          grid       keeps delta s1 s2 s3  parts bar scale rule
   sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
   speedo         grid       keeps speed rpm  sheds redline
-  fuel           grid       keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           grid       keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
@@ -75,7 +75,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          grid       keeps delta s1 s2 s3  parts bar scale rule
   sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
   speedo         grid       keeps speed rpm  sheds redline
-  fuel           grid       keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           grid       keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
@@ -98,7 +98,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          grid       keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
   sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
   speedo         grid       keeps speed rpm  sheds redline
-  fuel           grid       keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           grid       keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
@@ -121,7 +121,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          grid       keeps delta s1 s2 s3  parts bar scale rule
   sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
   speedo         grid       keeps speed rpm  sheds redline
-  fuel           grid       keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           grid       keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
@@ -144,7 +144,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
-  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           tallNarrow keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
@@ -167,7 +167,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
-  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           tallNarrow keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
@@ -190,7 +190,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
-  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           tallNarrow keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
@@ -213,7 +213,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          tallNarrow keeps delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
-  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           tallNarrow keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
@@ -236,7 +236,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          tall       keeps delta s1 s2 s3  parts bar scale rule
   sectors        tall       keeps s1 s2 s3 last sessionBest  sheds yourBest bestS1 bestS2 bestS3
   speedo         tall       keeps speed rpm  sheds redline
-  fuel           tall       keeps level time toAdd lastLap thisLap average lapsLeft
+  fuel           tall       keeps level time toEnd toAdd lastLap thisLap average lapsLeft
   energy         tall       one drawing, nothing to shed
   tyres          tall       one drawing, nothing to shed  parts footer compound
   pitView        tall       keeps refuel pitTime
@@ -259,7 +259,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          tall       keeps delta s1 s2 s3  parts bar scale rule
   sectors        tall       keeps s1 s2 s3 last sessionBest  sheds yourBest bestS1 bestS2 bestS3
   speedo         tall       keeps speed rpm  sheds redline
-  fuel           tall       keeps level time toAdd lastLap thisLap average lapsLeft
+  fuel           tall       keeps level time toEnd toAdd lastLap thisLap average lapsLeft
   energy         tall       one drawing, nothing to shed
   tyres          tall       one drawing, nothing to shed  parts footer compound
   pitView        tall       keeps refuel pitTime
@@ -282,7 +282,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          tallNarrow keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3  sheds yourBest last sessionBest bestS1 bestS2 bestS3  declared s1 s2 s3 yourBest last
   speedo         tallNarrow keeps speed rpm  sheds redline
-  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           tallNarrow keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
@@ -305,7 +305,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          tallNarrow keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
   sectors        tallNarrow keeps s1 s2 s3 yourBest last  sheds sessionBest bestS1 bestS2 bestS3
   speedo         tallNarrow keeps speed rpm  sheds redline
-  fuel           tallNarrow keeps level time toAdd average  sheds lastLap thisLap lapsLeft
+  fuel           tallNarrow keeps level toEnd toAdd average  sheds time lastLap thisLap lapsLeft
   energy         tallNarrow one drawing, nothing to shed
   tyres          tallNarrow one drawing, nothing to shed
   pitView        tallNarrow keeps refuel pitTime
@@ -328,7 +328,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          grid       keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
   sectors        grid       keeps s1 s2 s3 yourBest last sessionBest  sheds bestS1 bestS2 bestS3
   speedo         grid       keeps speed rpm  sheds redline
-  fuel           grid       keeps level time  sheds toAdd lastLap thisLap average lapsLeft  declared level time toAdd average
+  fuel           grid       keeps level toEnd  sheds time toAdd lastLap thisLap average lapsLeft  declared level toEnd toAdd average
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres
@@ -351,7 +351,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   delta          grid       keeps delta  sheds s1 s2 s3  declared delta s1 s2 s3  parts bar scale rule
   sectors        grid       keeps s1 s2 s3  sheds yourBest last sessionBest bestS1 bestS2 bestS3  declared s1 s2 s3 yourBest last sessionBest
   speedo         grid       keeps speed rpm  sheds redline
-  fuel           grid       keeps level time  sheds toAdd lastLap thisLap average lapsLeft  declared level time toAdd average
+  fuel           grid       keeps level toEnd  sheds time toAdd lastLap thisLap average lapsLeft  declared level toEnd toAdd average
   energy         grid       one drawing, nothing to shed
   tyres          grid       one drawing, nothing to shed  parts footer compound
   pitView        grid       keeps refuel pitTime  parts tyres

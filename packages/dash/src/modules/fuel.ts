@@ -2,9 +2,14 @@
  * Module 5, Fuel: what is in the tank, how long it lasts, how many laps it is worth, and what a
  * stop and a lap cost.
  *
- * The lead rank is the tank, the time and the estimated laps, because the estimate is the number a
- * driver reads before deciding whether to stop. It used to sit last, behind three spellings of one
- * consumption.
+ * The lead rank is the tank, the time, the margin to the end of the race and the estimated laps,
+ * because those are the numbers a driver reads before deciding whether to stop. The rank used to sit
+ * last, behind three spellings of one consumption.
+ *
+ * The margin is the page's one answer rather than another measurement: the estimated laps beside it
+ * and the laps left on the session page are the two terms of a subtraction a driver was doing
+ * between corners, so it is drawn signed and coloured, green while the tank reaches the flag and red
+ * once it does not, and it outranks the estimate wherever a box cannot carry both (#387).
  *
  * "Refuel" is the laps left times the average consumption, less what is in the tank, and never
  * negative. It is caution amber rather than the low-fuel red because it is an instruction to the
@@ -28,6 +33,10 @@ import {
   fuelPerLap,
   fuelThisLap,
   fuelToAdd,
+  fuelToEndColour,
+  fuelToEndText,
+  fuelToEndUnit,
+  FUEL_TO_END_UNIT_WIDEST,
   fuelUnit,
   NO_VALUE,
   settledFuelTimeLeft,
@@ -85,6 +94,18 @@ export const fuel = defineModule('fuel', (ctx) => {
           // beside a range naming one. The gate is on the seconds rather than around the drawing,
           // so the absence keeps the clock's own shape and the field has one spelling of nothing.
           fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
+          // The answer, before the working. `Est. laps` and the session page's laps left are the two
+          // terms of this subtraction and a driver was doing it himself between corners; the sign is
+          // the whole of the reading, so the field is signed and coloured and the unit follows it,
+          // a margin in laps and a margin in minutes being the same box on two different grids.
+          fld(ctx, 'toEnd', 'Margin', {
+            sample: '+1.4',
+            bind: fuelToEndText(),
+            chars: CHARS.consumption,
+            fs: d.big,
+            colorBind: fuelToEndColour(),
+            follower: { text: 'laps', bind: fuelToEndUnit(), widest: FUEL_TO_END_UNIT_WIDEST },
+          }),
           fld(ctx, 'lapsLeft', 'Est. laps', {
             sample: '11.2',
             bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),

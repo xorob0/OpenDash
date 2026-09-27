@@ -50,7 +50,7 @@ namespace OpenDashPlugin
             new Module(2, "delta", "Delta", "Live delta to the reference lap on a centre-zero bar.", true),
             new Module(3, "sectors", "Sectors", "The three sectors of the last lap with their deltas.", true),
             new Module(4, "speedo", "Speedo", "Speed, RPM, redline and the shift bar.", true),
-            new Module(5, "fuel", "Fuel", "Fuel left, time left, what to add and the per-lap use.", true),
+            new Module(5, "fuel", "Fuel", "Fuel left, whether it reaches the flag, what to add and the per-lap use.", true),
             new Module(6, "energy", "Energy", "Virtual energy. Le Mans Ultimate only.", false),
             new Module(7, "tyres", "Tyres", "Temperature, pressure, wear and compound per corner.", true),
             new Module(8, "pitView", "Pit view", "The pit service order: fuel, tyres, repairs and tear-off.", true),

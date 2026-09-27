@@ -47,6 +47,10 @@ import {
   fuelLastLapIsSettled,
   fuelIsSettled,
   fuelPerLap,
+  fuelToEndColour,
+  fuelToEndText,
+  fuelToEndUnit,
+  FUEL_TO_END_UNIT_WIDEST,
   fuelUnit,
   incidents,
   lastLap,
@@ -150,10 +154,27 @@ const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VA
  * spelling of the absence, and the last lap goes through {@link fuelLastLapIsSettled}, which is the
  * narrower question the fuel module already asked, a lap that included a refuelling stop being
  * published as zero the way a lap that has not happened is.
+ *
+ * The margin is the seventh field and sits third, ahead of the estimate it is the answer to: the
+ * rank sheds from the tail, so a band that can carry only one of the two carries the signed figure
+ * saying whether the tank reaches the flag rather than the estimate a driver would have to subtract
+ * the laps left from himself. It is the one field of this page the canvas draws on neither fuel
+ * sheet, and `docs/design/zones.md` §5 records that. #387.
  */
 const fuel: readonly BandField[] = [
   { id: 'fuel', label: 'Fuel', sample: '15.12', bind: fmt(fuelLevel(), '0.00'), chars: { digits: 5, specials: 1 }, after: 'L', afterBind: fuelUnit(), afterWidest: 'GAL', color: ds.purpose.fuel.nominal },
   { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), chars: CHARS.minutesClock },
+  {
+    id: 'toEnd',
+    label: 'Margin',
+    sample: '+1.4',
+    bind: fuelToEndText(),
+    chars: CHARS.consumption,
+    colorBind: fuelToEndColour(),
+    after: 'laps',
+    afterBind: fuelToEndUnit(),
+    afterWidest: FUEL_TO_END_UNIT_WIDEST,
+  },
   { id: 'laps', label: 'Est. laps', sample: '13.1', bind: settled(fmt(fuelLapsLeft(), '0.0')), chars: CHARS.consumption },
   { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
   { id: 'perLap', label: 'Per lap', sample: '1.432', bind: settled(fmt(fuelPerLap(), '0.000')), chars: { digits: 5, specials: 1 } },
