@@ -658,12 +658,27 @@ build sheds the sixth at 1280 because the corner blocks it measures are wider th
 drawing sketches.
 
 The page has seven fields of its own since #387, the margin sitting third, which is the count the
-1920 artboard draws and one more than the band used to have. Every width therefore draws what it drew
-before and sheds one more of its tail in the margin's favour: the three 1280 bands lose the per-lap
-average, 850 and the nano lose the last lap, and the nano-portrait 600 keeps the tank, the range and
-the margin over the estimate. Third is a design decision rather than an artboard reading, for the
-reason [§5](#where-the-build-keeps-more-than-the-drawing) gives: the rank sheds from the tail, so a
-band that can carry only one of the margin and the estimated laps carries the answer.
+1920 artboard draws and one more than the band used to have. Third is a design decision rather than
+an artboard reading, for the reason [§5](#where-the-build-keeps-more-than-the-drawing) gives: the rank
+sheds from the tail, so a band that can carry only one of the margin and the estimated laps carries
+the answer. What that comes to, face by face, is what the build emits rather than what it ought to:
+
+| Band | Keeps | Sheds | Given up for the margin |
+| --- | --- | --- | --- |
+| 1920 × 480 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 1280 × 480 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap |
+| 1280 × 400 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap and last lap |
+| 1280 × 720 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap |
+| 850 × 480 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
+| 800 × 286 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
+| 600 × 686 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap and last lap |
+
+The last column is the change #387 made and not the shedding: 1280 × 480 and 1280 × 720 were already
+five fields and drew the same five less the margin, so the margin costs them one. 1280 × 400 and the
+nano-portrait 600 drew all six, so the margin costs those two both consumptions — a whole field more
+than the rest, which is the price of a signed figure in a band that was already full. Every face keeps
+the estimate; the margin outranks it in the declaration and no width has yet had to spend it.
+`bandPages.test.ts` pins this table, because nothing else would notice it going stale.
 
 **The gaps and sizes are each face's own.** Band D is padded 16 px at the sides and 12 in portrait,
 its three groups sit 22 apart, a corner block's two fields 18, and a page's fields 34 at the three
