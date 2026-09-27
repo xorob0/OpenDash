@@ -120,14 +120,20 @@ describe('what the VM says it is running', () => {
 });
 
 describe('what a recording asks SimHub for', () => {
+  // Both lists come from composing every package, which is the slow thing in this file and the
+  // reason it is asked for out here: a test body is on Bun's five-second clock and collection is
+  // not, and a loaded CI runner once took the first test below to 5.1 seconds. `propertiesRead`
+  // holds its scan, so asking twice costs one scan either way; this is about which clock it lands on.
+  const recorded = recordedProperties();
+  const read = propertiesRead();
+
   test('it is everything the packages read, plus the tick each frame came from', () => {
-    const recorded = new Set(recordedProperties());
-    for (const property of propertiesRead()) expect(recorded.has(property)).toBe(true);
-    for (const property of PROVENANCE_PROPERTIES) expect(recorded.has(property)).toBe(true);
+    const asked = new Set(recorded);
+    for (const property of read) expect(asked.has(property)).toBe(true);
+    for (const property of PROVENANCE_PROPERTIES) expect(asked.has(property)).toBe(true);
   });
 
   test('it is sorted and holds no duplicate, since it is written into a request as it is', () => {
-    const recorded = recordedProperties();
     expect(recorded).toEqual([...new Set(recorded)].sort());
   });
 });
