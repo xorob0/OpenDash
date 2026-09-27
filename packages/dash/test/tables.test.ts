@@ -20,10 +20,11 @@ import { describe, expect, test } from 'bun:test';
 import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { LEADERBOARD_COLUMNS } from '../src/modules/leaderboard.ts';
+import { fittingColumns } from '../src/modules/leaderboard.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { densityForBox, type Density } from '../src/second/density.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { columnWidths, NAME_FACE, SHORTEST_NAME_CHARS } from '../src/second/table.ts';
+import { columnWidths, DEFAULT_NAME_CHARS, NAME_FACE, NAME_SAMPLE, nameSizeForRow, rowHeightThatFills, SHORTEST_NAME_CHARS, tableRowHeight } from '../src/second/table.ts';
 import { charsThatFit } from '../src/design/advances.ts';
 import { COMPANION_SIZES, companionGeometry } from '../src/screens/index.ts';
 import { walkItems } from '../src/walk.ts';
@@ -119,27 +120,43 @@ describe('the relative lists the window it declares', () => {
   });
 
   /**
-   * The row fills the body rather than the block being centred in a pool of it.
+   * The row fills the body rather than the block being centred in a pool of it — and where it does not,
+   * the name is what it did not fill it for.
    *
    * `table()` centres a declared block, which is right for a list that ran out of cars and wrong for
    * one told to stop counting: eleven rows of 28 px in the 560 px body of the 1280 x 720 face's second
-   * arrangement is 328 px of list and 232 px of nothing. The remainder is what the division leaves,
-   * which cannot be more than the row count less one.
+   * arrangement is 328 px of list and 232 px of nothing. Filling it leaves only the remainder of one
+   * division, which is under a row.
+   *
+   * Four boxes do not fill, and they are the whole of the rule's second half. The name column is the
+   * only one that flexes, so a stretch across a type step is paid for out of it, and on the 469 px
+   * bodies that payment is a letter of `Liam Byrne`. A body left short is therefore a claim about the
+   * name, and this asserts the claim rather than the slack: the height that *would* have filled the box
+   * holds fewer characters than the height drawn.
    */
-  test('and the rows fill the body they are given, to within a row', () => {
+  test('and the rows fill the body they are given, unless filling it would cut the name', () => {
     for (const box of moduleBoxes().filter((b) => b.density !== 'companion')) {
       const items = MODULES.find((m) => m.id === 'relative')!.build({ frame: box.frame, density: box.density, prefix: '' });
       const drawn = rowsOf(items);
       const band = rowBand(items);
       const used = (drawn.count - 1) * drawn.pitch + band.height;
       const slack = box.frame.height - used;
-      // Under one row, which is the strongest thing that can be asked: the row is stretched by whole
-      // pixels and a step is refused where it would cost the name column its room, so the 800 x 286
-      // face's second arrangement keeps 15 px rather than promote its numerals for them.
-      expect({ box: box.name, used, body: box.frame.height, slack, within: slack >= 0 && slack < band.height }).toMatchObject({ within: true });
+      if (slack >= 0 && slack < band.height) continue;
+      const name = flat(items).find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.name'))!;
+      const room = charsThatFit(NAME_FACE, name.fontSize, name.rect.width);
+      const fills = rowHeightThatFills(box.frame, { density: box.density, header: false }, drawn.count);
+      expect({ box: box.name, slack, drawn: band.height, fills, room, atFills: nameRoom(box, fills), bought: nameRoom(box, fills) < room }).toMatchObject({ bought: true });
     }
   });
 });
+
+/** The characters the relative's name column holds at this row height in this box, which is what a stretch spends. */
+function nameRoom(box: { frame: Rect; density: Density }, rowHeight: number): number {
+  const kept = fittingColumns(RELATIVE_COLUMNS, box.frame.width, box.density, rowHeight);
+  const index = kept.indexOf('name');
+  if (index < 0) return 0;
+  return charsThatFit(NAME_FACE, nameSizeForRow(rowHeight), columnWidths(kept, box.frame.width, box.density, rowHeight)[index] ?? 0);
+}
 
 /**
  * The room the relative's declaration leaves the rest of the row, which is the third thing #339 asked
@@ -174,8 +191,50 @@ describe('the class chip and the car number fit the room the relative leaves the
       const room = charsThatFit(NAME_FACE, name.fontSize, name.rect.width);
       const shed = named('num').length === 0 && named('class').length === 0;
       expect({ box: box.name, fs: name.fontSize, width: name.rect.width, room, enough: room >= SHORTEST_NAME_CHARS || shed }).toMatchObject({ enough: true });
+      // And whatever the row ended up at, the stretch is not what made the name shorter. The declared
+      // row is the baseline, `Liam Byrne` is the line, and the guard is the weaker of the two: a box
+      // whose own declared row holds fewer than ten characters is held to what it had. This is the
+      // assertion the first cut of #339 would have failed on four boxes -- zone B of the 1280 x 480 and
+      // 1280 x 400 faces and zone C of the 1280 x 720 in both arrangements -- where a four-pixel taller
+      // row promoted the car number and drew `Liam Byr…` for a name the declared row drew whole.
+      const declared = nameRoom(box, tableRowHeight(box.density));
+      expect({ box: box.name, room, declared, floor: Math.min(DEFAULT_NAME_CHARS, declared), kept: room >= Math.min(DEFAULT_NAME_CHARS, declared) }).toMatchObject({ kept: true });
     });
   }
+});
+
+/**
+ * The name the default format draws, drawn whole wherever the box ever held it.
+ *
+ * The case in #385's Why and the one a reader can check against a screenshot: `Liam Byrne` is what the
+ * canvas writes in the column, what the traces carry, and what `full` -- the format a rig that never
+ * opens the setting gets -- makes of that entry. Ten characters. A box whose column is narrower than
+ * that ellipsises it and says so in the row of zones.md section 10 that tabulates the budgets; what no
+ * box may do is hold ten at the row the density declares and then lose one to a taller row.
+ */
+test('the default format draws Liam Byrne whole on every box whose declared row held it', () => {
+  const short: string[] = [];
+  for (const box of moduleBoxes()) {
+    const items = MODULES.find((m) => m.id === 'relative')!.build({ frame: box.frame, density: box.density, prefix: '' });
+    const name = flat(items).find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.name'))!;
+    const room = charsThatFit(NAME_FACE, name.fontSize, name.rect.width);
+    if (room >= NAME_SAMPLE.length) continue;
+    short.push(box.name);
+    // The column was already short of ten at the declared row, so the row is not what cost the letter.
+    expect({ box: box.name, room, declared: nameRoom(box, tableRowHeight(box.density)) }).toMatchObject({ declared: room });
+  }
+  // The five narrow boxes, named so that one being added or leaving is a diff rather than a silence:
+  // zone C of the 850 x 480, 800 x 480 and 800 x 286 faces in both arrangements, and the companion's
+  // portrait page, whose 109 px column holds eight.
+  expect(short).toEqual([
+    'OpenDash Companion portrait page',
+    'face-274x328',
+    'face-274x366',
+    'face-249x328',
+    'face-249x366',
+    'face-269x194',
+    'face-269x226',
+  ]);
 });
 
 describe('the row the canvas draws', () => {
