@@ -50,13 +50,20 @@ function cell(corner: (typeof TYRE_CORNERS)[number], sample: string, wearSample:
   };
 }
 
-/** The unit in the label; "°F" is the widest, so it is what the forms are measured by. */
+/**
+ * The unit in the label, and the form it is measured by.
+ *
+ * `°C` is the widest of the three and not `°F`, which is what this said: Barlow Medium's C is
+ * 0.607 em against F's 0.565, so a form measured from the Fahrenheit spelling is half a pixel
+ * short of the Celsius one WPF would have to draw, and WPF clips rather than shrinking. Half a
+ * pixel is not visible and a `widest` that is not the widest is wrong whatever it costs today.
+ */
 const labelUnit = perUnit(str('°F'), str('K'), str('°C'));
 
 /** Longest first: the stop note goes when the card is too narrow to hold it. */
 const labelForms = (label: string) => [
-  { sample: label, widest: 'TYRES °F · LAST STOP', bind: concat(str('TYRES '), labelUnit, str(' · LAST STOP')) },
-  { sample: 'TYRES °C', widest: 'TYRES °F', bind: concat(str('TYRES '), labelUnit) },
+  { sample: label, widest: 'TYRES °C · LAST STOP', bind: concat(str('TYRES '), labelUnit, str(' · LAST STOP')) },
+  { sample: 'TYRES °C', widest: 'TYRES °C', bind: concat(str('TYRES '), labelUnit) },
 ];
 
 export const tyreTemps = defineCard('tyreTemps', (slot, rung, prefix, meta) => {
