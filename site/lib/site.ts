@@ -20,6 +20,8 @@ export const WORDMARK = 'openDash';
 export const SITE_TAGLINE = 'Free dashboards for SimHub, built for iRacing first.';
 
 export const REPO_URL = 'https://github.com/xorob0/OpenDash';
+/** The repository as the footer prints it, so the address is written once. */
+export const REPO_LABEL = REPO_URL.replace(/^https:\/\//, '');
 export const issueUrl = (n: number): string => `${REPO_URL}/issues/${n}`;
 export const SCOPE_URL = `${REPO_URL}/blob/main/docs/scope.md`;
 /** The one link beyond the repository: CC BY attribution links its source. */
@@ -27,9 +29,14 @@ export const CAR_DATA_URL = 'https://github.com/Lovely-Sim-Racing/lovely-car-dat
 /** Linked once, on the install page, because a reader without SimHub has to get it first. */
 export const SIMHUB_URL = 'https://www.simhubdash.com/';
 
-/** The promise. The home, compare and download pages have to carry FREE_FOREVER, and a test says so. */
+/**
+ * The promise. The home, compare and download pages have to carry FREE_FOREVER, and a test says so.
+ *
+ * It is a promise rather than a price: `docs/scope.md` refuses licensing, activation and accounts,
+ * so "always will be" is a standing refusal and not a plan.
+ */
 export const FREE_HEADLINE = 'Free, forever.';
-export const FREE_FOREVER = 'OpenDash is free and always will be.';
+export const FREE_FOREVER = 'OpenDash is 100% free and always will be.';
 export const NOTHING_TO_UNLOCK = 'No licence, no account, nothing to unlock.';
 
 /** The claim about sims, which docs/scope.md limits to iRacing until #102 says otherwise. */
@@ -45,22 +52,25 @@ export const NO_TRACKING = 'No analytics, no cookies. This site records nothing 
 export const CAR_DATA_CREDIT =
   'Car light data: Car Data, by Lovely Sim Racing, ATSR and Gomez Sim Industries, CC BY-NC-SA 4.0. Fetched by the plugin, never bundled.';
 
-/** The three reasons on the first screen. */
+/**
+ * The three reasons, on the first screen and nowhere else. One sentence each, because they are
+ * read standing up: the thing nothing else offers, then what it gets you.
+ */
 export const DIFFERENTIATORS = [
   {
     id: 'free',
     title: 'Free and open source, under MIT',
-    body: 'No tier, no key, no limit on how many machines. The source is on GitHub, and a new size or feature is a pull request.',
+    body: 'No tier, no key, no limit on how many machines: the dashboards are generated from source on GitHub, so a new size or a new field is a pull request.',
   },
   {
     id: 'lights',
     title: 'LEDs and matrix panels',
-    body: 'Shift lights in your car’s own colours and order, sides that carry the flags and the spotter, and an 8 × 8 flag box. 62 strip shapes.',
+    body: 'Shift lights in your car’s own colours and order, from an open table, on any of 62 strip shapes, with the flags and the spotter down the sides and an 8 × 8 flag box.',
   },
   {
     id: 'design',
     title: 'Modern design and features',
-    body: 'A dashboard drawn for each screen, 21 pages on a wheel button, a phone companion and a pit wall.',
+    body: 'A dashboard drawn for each screen, 21 pages on a wheel button, a phone companion and a pit wall, and every file runs on its own whether the plugin is there or not.',
   },
 ] as const;
 

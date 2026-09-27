@@ -31,10 +31,10 @@ export default function Home() {
         <div className={`page ${styles.heroGrid}`}>
           <div className={styles.heroText}>
             <p className="label">
-              SimHub {SIMHUB_VERSION}+ · iRacing first · <span className={styles.alpha}>Alpha {VERSION}</span>
+              iRacing · SimHub {SIMHUB_VERSION}+ · Windows · <span className={styles.alpha}>Alpha {VERSION}</span>
             </p>
             <h1 className="display">{FREE_HEADLINE}</h1>
-            <p className={`prose ${styles.lede}`}>OpenDash is a free set of dashboards for SimHub, built for iRacing first.</p>
+            <p className={`prose ${styles.lede}`}>OpenDash is a free set of dashboards for SimHub on Windows, built for iRacing first.</p>
             <p className="prose">
               <strong>{FREE_FOREVER}</strong> {NOTHING_TO_UNLOCK}
             </p>
@@ -54,10 +54,8 @@ export default function Home() {
             </div>
           ) : null}
         </div>
-      </section>
 
-      <section id="why" className="section ruled">
-        <div className="page">
+        <div id="why" className={`page ${styles.whyWrap}`}>
           <ul className={styles.why}>
             {DIFFERENTIATORS.map((d) => (
               <li key={d.id} className={styles.reason}>
