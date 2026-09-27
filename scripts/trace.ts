@@ -13,7 +13,9 @@
  * line: a scalar when it never moves, an array of one value per frame when it does. A scenario that
  * changes the fuel load changes the fuel line and nothing else.
  *
- * `scripts/record.ts` writes them, from a real SimHub on the Windows VM; this file only reads.
+ * `scripts/record.ts` writes them, from a real SimHub on the Windows VM; this file only reads. A
+ * column that was typed rather than observed is named in the header's `asserted` list, because a
+ * committed file that mixes the two without saying so is a file a later reader has to trust blindly.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -49,6 +51,23 @@ export interface TraceHeader {
   recorded: string;
   /** The SimHub whose mapping this is. A trace is only as truthful as the build that produced it. */
   simHub: string;
+  /**
+   * Columns in this file that were written by hand rather than observed, and are therefore claims
+   * rather than recordings.
+   *
+   * Everything else in a trace came out of a real SimHub on the VM, and the rest of the header says
+   * which one and when. A hand-written column has none of that, so it says so here instead: without
+   * this field a reader replaying the file cannot tell an asserted value from a recorded one, and
+   * the `recorded` date above quietly covers both.
+   *
+   * It exists because `trace.test.ts` demands every property any binding reads, and a binding can
+   * start reading one between two trips to the VM, which this step is not always allowed to make.
+   * `record.ts` builds a header from scratch and never copies this field, so the next re-record
+   * supersedes every entry in it -- which is the point, and is the only way an entry leaves.
+   * Anything in here should be a constant: a value nobody watched cannot honestly move frame by
+   * frame.
+   */
+  asserted?: readonly string[];
 }
 
 export interface TraceColumn {
@@ -98,7 +117,20 @@ function parseHeader(line: string): TraceHeader {
   }
   if (typeof h.recorded !== 'string') throw new TraceError('the header says nothing about when it was recorded');
   if (typeof h.simHub !== 'string') throw new TraceError('the header says nothing about which SimHub produced it');
-  return { trace: h.trace, scenario: h.scenario, frames: h.frames, hz: h.hz, ticks: [ticks[0] as number, ticks[1] as number], recorded: h.recorded, simHub: h.simHub };
+  const asserted = h.asserted;
+  if (asserted !== undefined && (!Array.isArray(asserted) || !asserted.every((p) => typeof p === 'string' && p !== ''))) {
+    throw new TraceError('asserted must be a list of property names');
+  }
+  return {
+    trace: h.trace,
+    scenario: h.scenario,
+    frames: h.frames,
+    hz: h.hz,
+    ticks: [ticks[0] as number, ticks[1] as number],
+    recorded: h.recorded,
+    simHub: h.simHub,
+    ...(asserted === undefined ? {} : { asserted: asserted as string[] }),
+  };
 }
 
 /**

@@ -43,7 +43,8 @@ normalised view of the sim rather than the variables the emulator writes, and on
 knows the mapping. So `bun run record` runs each scenario past a recorder plugin once and commits
 what SimHub saw, and the preview renderer, the per-pull-request video and the goldens replay that
 file instead of claiming the VM. [traces/README.md](../traces/README.md) is the format and when to
-re-record.
+re-record -- including the header's `asserted` list, which names any column of a trace that was
+written by hand rather than observed, and which the next re-record of that scenario removes.
 
 ## Recording a clip is the same loop with a recorder in place of the camera
 
