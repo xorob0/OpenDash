@@ -147,6 +147,16 @@ export const SHEDDING: Record<string, Shedding> = {
   // three at the density's own size, and the fuel time is how long the tank lasts where the margin is
   // that same quantity measured against the race. The tank itself is never the one that goes: the
   // level and the bar under it are what the page is. zones.md §5 records both.
+  //
+  // Shedding the per-lap average instead, and keeping the time, was the obvious alternative and was
+  // measured: `level time toEnd toAdd` puts three fields in the lead rank, which draws its numerals
+  // at 34 px against this row's 46 at 250 x 290, 43 against 46 at 250 x 328, 51 against 62 at
+  // 430 x 300 and 57 against 62 at 469 x 320 -- and then sheds the average at all four regardless, so
+  // it spends a quarter of the lead rank's height on a field it does not keep. The absolute range is
+  // not lost by drawing the average: it is the tank over the per-lap figure, two numbers side by side,
+  // where the per-lap figure is what a driver acts on when the margin goes red and nothing else on a
+  // narrow page carries it. It is a choice between losses and the canvas has not been asked; zones.md
+  // §5 records the measurement so the question is reopened with it rather than without.
   fuel: fields({
     wide: ['level', 'time', 'toEnd', 'toAdd', 'lastLap', 'thisLap', 'average', 'lapsLeft'],
     grid: ['level', 'toEnd', 'toAdd', 'average'],
