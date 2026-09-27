@@ -37,14 +37,18 @@ const SHARE_UNC = '\\\\host.lan\\Data';
 
 /** The scenarios shipped beside the emulator, which is what `--scenario` may name. */
 /**
- * Scenarios that drive lights rather than a dashboard, and so are not expected to have a recorded
- * trace.
+ * Scenarios with no committed trace: the ones that will never have one, and the ones that do not
+ * have one yet.
  *
  * A trace exists so that every binding of every package can be replayed without SimHub. The flag
  * box is not a package — it is a `.ledsprofile` the user imports, and no `.djson` binding reads
  * anything it sets — so a trace of `flagbox` would carry properties nothing replays, and would
  * still have to be recorded from a real SimHub. Listed by name rather than skipped by a rule, so
  * that adding a scenario without a trace stays a decision somebody made.
+ *
+ * The second group is the honest form of a decision somebody made: recording a trace claims the VM,
+ * and a scenario can be added by a branch that cannot. `bun run record <scenario>` is what moves a
+ * name out of this list, and until then nothing replays that scenario.
  */
 export const UNTRACED_SCENARIOS: readonly string[] = [
   // flagbox drives lights, not a dashboard.
@@ -52,6 +56,9 @@ export const UNTRACED_SCENARIOS: readonly string[] = [
   // gallery exists to be photographed for the website, and clip to be filmed; nothing replays them.
   'gallery',
   'clip',
+  // Added for #406's VM pass by a branch that could not claim the VM: the game running with no
+  // session named. Worth recording — a trace of it would let the notices be replayed headlessly.
+  'nosession',
 ];
 
 /** Every scenario a run may name. */

@@ -134,7 +134,7 @@ SessionInfo:
    SessionLaps: {{RaceSessionLaps}}
    SessionTime: {{RaceSessionTime}}
    SessionNumLapsToAvg: 0
-   SessionType: Race
+   SessionType: {{RaceSessionType}}
    SessionTrackRubberState: heavy usage
    SessionName: RACE
    SessionSubType: 

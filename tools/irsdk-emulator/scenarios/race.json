@@ -14,6 +14,11 @@
   "yaml": {
     "RaceSessionLaps": "30",
     "RaceSessionTime": "2700.0000 sec",
+    // The name SimHub reads the session type from: GD_SessionTypeName in ICarsReader 9.12.6 takes
+    // it off the session whose SessionNum matches the telemetry's. A placeholder rather than a
+    // literal so that a scenario can leave it blank, which is the one state #406's notice is for
+    // and which no scenario could reach while every one of them named a session.
+    "RaceSessionType": "Race",
     "TcSetting": "3 (TC)",
     "AbsSetting": "2 (ABS)",
     // The car's own shift lights. Placeholders rather than literals since #301, so that a
