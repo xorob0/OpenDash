@@ -222,7 +222,12 @@ function quantities(corner: Corner, d: DensitySpec, density: Density): Quantity[
       sample: sample.pressure,
       bind: iff(eq(pressure, num(0)), str('--'), fmt(pressure, '0.0')),
       color: ds.purpose.tyre.pressure,
-      unit: { text: 'psi', widest: 'kPa', bind: pressureUnit() },
+      // `bar` and not `kPa`: `pressureUnit` draws one of three spellings and a unit is drawn
+      // upper-cased, where Barlow Medium gives BAR 1.867 em against KPA's 1.839, so the driver the
+      // box has to hold is the one who has set bar. The pixel of slack absorbs the difference today,
+      // and a `widest` that is not the widest is wrong whatever it costs today -- the same fault the
+      // tyre temps card's `TYRES °F` was.
+      unit: { text: 'psi', widest: 'bar', bind: pressureUnit() },
       // Wide zone page 5 is "Tyres with both pressure units", and it is the only box the catalogue
       // gives a corner enough width for a second reading; every other density draws the sim's own.
       ...(density === 'wide' ? { also: otherReading(corner, d) } : {}),

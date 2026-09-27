@@ -35,7 +35,7 @@ import { contains, rect } from '../src/design/geometry.ts';
 import type { Density } from '../src/second/density.ts';
 import type { Rect, Size } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
-import { cellOverruns, drawableGlyphs } from './monoGlyphs.ts';
+import { bindingExpression, cellOverruns, drawableGlyphs, drawableLiterals } from './monoGlyphs.ts';
 import { drawingOf } from './moduleItems.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -671,12 +671,22 @@ describe('the opponents page keeps both cars', () => {
  */
 describe('every tyre reading carries its unit', () => {
   const tyres = MODULES.find((m) => m.id === 'tyres')!;
-  /** What each reading's unit can be drawn as; a unit is drawn upper-cased. */
-  const UNITS: Record<string, readonly string[]> = {
-    temp: ['°C', '°F', 'K'],
-    pressure: ['PSI', 'KPA', 'BAR'],
-    'pressure.alt': ['PSI', 'KPA'],
-    wear: ['%'],
+  /**
+   * The widest string a unit can really draw, read off the unit's own binding.
+   *
+   * This used to be a list written beside the test -- `['PSI', 'KPA', 'BAR']` for the pressure --
+   * and the assertion asked only whether the declared `widest` was a member of it. That compares one
+   * declaration against another and never against the binding, which is how the pressure kept `kPa`
+   * while `bar`, 0.028 em wider upper-cased, was what a driver with `TyrePressureUnit = Bar` was
+   * drawn. The literals a binding can put on the screen are what `drawableGlyphs` already collects
+   * for the monospaced values, by the same reading of the expression.
+   */
+  const widestDrawn = (item: TextItem): string | undefined => {
+    const wider = (a: string, b: string): string => (measureText(faceOf(item), a, item.fontSize) > measureText(faceOf(item), b, item.fontSize) ? a : b);
+    // A unit is drawn upper-cased, bound or not, which is where the difference between KPA and BAR
+    // lives: `kPa` and `bar` are a hair apart in the case the sim sends them in.
+    const forms = drawableLiterals(bindingExpression(item, 'Text')).map((form) => form.toUpperCase());
+    return forms.length === 0 ? undefined : forms.reduce(wider);
   };
 
   for (const box of moduleBoxes()) {
@@ -691,7 +701,10 @@ describe('every tyre reading carries its unit', () => {
         for (const reading of readings) {
           const unit = texts.find((i) => i.name === `${corner}.${reading}.unit`);
           expect({ box: box.name, corner, reading, unit: unit?.widest ?? unit?.text }).toMatchObject({ unit: expect.anything() });
-          expect({ box: box.name, corner, reading, known: UNITS[reading]?.includes((unit!.widest ?? unit!.text).toUpperCase()) }).toMatchObject({ known: true });
+          // A bound unit is measured by the widest string its own binding can produce; an unbound
+          // one, the tread's `%`, is measured by itself.
+          const widest = widestDrawn(unit!);
+          if (widest !== undefined) expect({ box: box.name, corner, reading, declared: unit!.widest }).toMatchObject({ declared: widest });
         }
       }
       // And the temperature's mark follows the driver's setting rather than assuming Celsius.
