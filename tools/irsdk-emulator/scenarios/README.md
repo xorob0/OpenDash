@@ -37,6 +37,10 @@ The four shift RPMs, the redline and the forward-gear count are `{{placeholders}
 | | What it holds still |
 |---|---|
 | `nosession` | The game running with no session named, which is the state #406's notice is for: zones B and C and band D's fuel page read `… · GO INTO A SESSION` while the rest of the face draws normally. It extends `green`, so it holds as still as a capture. |
+| `untimed` | A lap-counted race that publishes no session clock, which is what iRacing publishes for one. It is the scenario for the laps form of #387's fuel margin, and for the session page counting laps rather than time. Also `green`'s held lap. |
+
+Neither has a committed trace; `UNTRACED_SCENARIOS` in [scripts/emulator.ts](../../../scripts/emulator.ts)
+says why, and `bun run record nosession untimed` is what removes them from that list.
 
 `inSession()` is `GameRunning` **and** a session type that is not blank, and every other scenario
 here inherits `race-session.yaml`, which names Practice, Lone Qualify and Race — so the notice had no
@@ -47,6 +51,32 @@ What blanks the name is one field, `SessionType` of the session whose `SessionNu
 telemetry's, which is where SimHub's iRacing reader takes `GameData.SessionTypeName` from. It is
 `{{RaceSessionType}}` in the template for that reason; the file's own comment records the rest,
 including why the telemetry's `SessionNum` is left alone.
+
+`untimed` is there because iRacing publishes no clock for a session that has none: `SessionTime` is
+`unlimited` in the session string and `SessionTimeRemain` is a week, 604800 s, which is
+`Irsdk.UnlimitedTime` here and the `UNTIMED_SECONDS` the dash compares against. The clock driver
+leaves a remaining time at or above the sentinel alone rather than counting it down.
+
+**Why `untimed` is a variant rather than a correction to `race.json`.** The base race fixture is
+wrong about iRacing and knowingly left that way: it is a 30-lap race that also publishes a
+forty-five minute `SessionTime` and twenty-five minutes of `SessionTimeRemain`, which makes it a
+race the clock would end before the laps ran out — eighteen laps at ninety-eight seconds is more
+time than it has left — so the dash draws the timed form of everything and the lap count is
+decorative. Two things stop it being corrected in place, and both are why the variant exists
+instead.
+
+The first is that five committed traces are recordings of it (`race`, `green`, `pit`, `yellow`,
+`shiftlights`) and the honest way to change a trace is a re-record on the VM. Until that happens a
+correction would leave the shipped captures, previews and clips showing a session clock the scenario
+no longer publishes.
+
+The second is that the correction has a bug behind it. `zones/bar.ts` draws its `raceTime` and
+`timeLeft` fields as `clock(sessionTimeLeft())` with no `isTimedSession()` guard, unlike the session
+card, the session module, the pit wall header and the pit wall's own time field, which all have one —
+and `raceTime` is the default of the bar's first slot. So a week of time left is drawn as
+`168:00:00`, seven digit cells in a budget of six, and WPF takes the last glyph off it. That is what
+a photograph of `untimed` shows today, on every package, and it is the bar that is wrong: every
+iRacing lap race does this already.
 
 ## The other scenarios
 
