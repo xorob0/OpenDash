@@ -453,9 +453,12 @@ Two worked examples first, because they are the two that show why it cannot be d
 
   The catalogue draws that column as a three-letter code — `KLX`, `MOR`, `TSA` — at every one of the
   four shapes, and **the build draws a name**, in whichever of four formats the rig asks for, cut in
-  the expression and closed with an ellipsis where the column cannot hold it. See §10; the code was
+  the expression and closed with an ellipsis where the column cannot hold it, the space the cut fell
+  on going with it rather than being left in front of the dots. See §10; the code was
   `left(name, 3)`, so Liam Byrne was `LIA` and Hannah Fischer `HAN`, and
-  [#385](https://github.com/xorob0/OpenDash/issues/385) is where that was decided.
+  [#385](https://github.com/xorob0/OpenDash/issues/385) is where that was decided. The name is drawn
+  upper-cased, as the code was, because at this size the raster welds the dot of a lowercase `i` to
+  its stem and the letter reads as an `l`; §10's divergence table has the measurement.
 
 The pattern holds generally: a narrow zone loses columns before it loses rows, and a tall one
 buys rows before it buys columns.
