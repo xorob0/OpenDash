@@ -138,7 +138,12 @@ jobs:
           # of the standalone tree expecting a CDN. Without it every page still answers 200 and
           # arrives with no styling, so the stylesheet the home page asks for has to be fetched
           # rather than assumed.
-          css="$(grep -o '/_next/static/css/[^"]*\.css' home.html | head -1)"
+          # head rather than grep -m1, because -m1 stops after the first matching LINE and Next
+          # emits its markup as one, so -o would hand back every stylesheet at once. `|| true`
+          # covers both ways the pipeline can fail while still being right: grep exiting empty
+          # handed, and pipefail seeing the pipe head closed on a match it did find. Either way
+          # what head printed is what is captured, and the message below reports an empty result.
+          css="$(grep -o '/_next/static/css/[^"]*\.css' home.html | head -n1 || true)"
           if [ -z "$css" ]; then
             echo "::error::the home page links no stylesheet; the site's CSS is not being emitted"
             exit 1
@@ -149,7 +154,11 @@ jobs:
           # Not empty is the whole check: the sitemap comes back as a bare <urlset> when the origin
           # was not given at build time, which is the quietest way this image goes wrong.
           curl -fsS -o sitemap.xml http://127.0.0.1:3000/sitemap.xml
-          grep -q '<loc>' sitemap.xml
+          if ! grep -q '<loc>' sitemap.xml; then
+            echo "::error::the sitemap lists no pages; NEXT_PUBLIC_SITE_URL did not reach the build"
+            cat sitemap.xml
+            exit 1
+          fi
 
           # The artifacts stage ran and its output reached the public folder. This is the part with
           # the most moving pieces behind it, and the one a reader actually clicks.
