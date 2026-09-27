@@ -153,6 +153,14 @@ export async function run(host: Host, opts: Options): Promise<number> {
       }
     }
 
+    // Before the twenty-one packages are built and installed, not at the first click: the guest being
+    // up is all this needs, and the install restarts SimHub.
+    const cannotClick = guiProblem(host);
+    if (cannotClick) {
+      console.error(cannotClick);
+      return 1;
+    }
+
     // `install` globs inside build/, so that is where these have to be written, and build/ is also
     // what `bun run package` copies wholesale into the plugin's resources. A capture package left
     // there would be embedded in the next release, so they are deleted the moment SimHub has them
@@ -177,12 +185,6 @@ export async function run(host: Host, opts: Options): Promise<number> {
     }
     if (!installed.ok) {
       console.error(installed.stderr);
-      return 1;
-    }
-
-    const cannotClick = guiProblem(host);
-    if (cannotClick) {
-      console.error(cannotClick);
       return 1;
     }
 

@@ -177,9 +177,10 @@ and it accepts nothing but a rectangle covering the desktop's working area.
 content column is a fraction of the width. On 2026-09-27 the VM came back at 1280x800 after a
 container restart and `openDashboard` clicked into empty space twice, reporting nothing but "could
 not be opened" — which sends the reader after coordinates that were right all along. The mode is now
-read before anything is clicked: `guiProblem` and `openDashboard` refuse, name the mode the guest is
-in and the one they need, and point at `/opt/winvm/shared/setres.ps1`, which has to be run in the
-interactive session because that is whose display it is. The coordinates themselves were left alone;
+read as soon as the guest answers and before anything is built: `dev`, `shots`, `clips` and `modules`
+all ask `guiProblem` there, `openDashboard` asks again at the click, and both refuse, name the mode
+the guest is in and the one they need, and point at `/opt/winvm/shared/setres.ps1`, which has to be
+run in the interactive session because that is whose display it is. The coordinates themselves were left alone;
 a fraction of the height would be a guess at a page nobody has measured at a second mode, and a guess
 opens the wrong dashboard instead of saying so.
 

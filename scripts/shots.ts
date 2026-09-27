@@ -159,6 +159,14 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
       }
     }
 
+    // Before the build and the install, not at the first click: the guest being up is all this needs,
+    // and everything between here and the first click costs minutes that a refusal would waste.
+    const cannotClick = guiProblem(host);
+    if (cannotClick) {
+      console.error(cannotClick);
+      return 1;
+    }
+
     if (!opts.noBuild) {
       console.log('building the packages');
       const b = Bun.spawnSync(['bun', 'run', 'build'], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
@@ -174,12 +182,6 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
     const installed = install(host, opts.packages);
     if (!installed.ok) {
       console.error(installed.stderr || installed.stdout);
-      return 1;
-    }
-
-    const cannotClick = guiProblem(host);
-    if (cannotClick) {
-      console.error(cannotClick);
       return 1;
     }
 
