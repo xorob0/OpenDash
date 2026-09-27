@@ -183,3 +183,11 @@ unavailable, but nothing implements that yet and no test covers it.
 
 **The round faces.** [ADR 0006](0006-the-zone-face.md) leaves them on the card model and nothing here
 changes that. A round face is an instance like any other; what its pane draws is still undecided.
+
+**Amended 2026-09-27 (#145): what the round pane draws is decided; the picker is owed with the
+conversion.** The amendment at the foot of [ADR 0006](0006-the-zone-face.md#unresolved) answers it,
+and [design/zones.md](../design/zones.md#9-what-a-round-face-is) section 9 is the written form: the
+rev arc, zone A in the middle of the disc and the catalogue zones where the card rectangles are. So
+the sentence above should be read as unbuilt rather than as open. Until the conversion, which is
+after 1.0, a round screen's pane keeps the Layout section it has and the round picker is owed with
+the rest of the conversion work.
