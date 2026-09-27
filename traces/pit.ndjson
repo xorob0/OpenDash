@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79481,6],"recorded":"2026-09-18","simHub":"9.12.6"}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79481,6],"recorded":"2026-09-18","simHub":"9.12.6","asserted":["DataCorePlugin.GameRunning"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
