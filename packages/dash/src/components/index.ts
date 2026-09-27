@@ -6,10 +6,13 @@
  * the class chip, the gauges, the sector strip, the wheel, the page dots and the table -- which is
  * a fifth structure the four-layer model of element, component, card and layout does not name. It
  * is not an oversight to be tidied away by moving those files here: a second-screen part is a
- * function of a rectangle at a density, which is not what a face component is, and the two sets
- * have never shared a caller.
+ * function of a rectangle at a density, which is not what a face component is.
+ *
+ * The wordmark is the one exception and says why it is one: it is the identity rather than a
+ * readout, and the pit wall header and every idle screen draw the same two words.
  */
 export { cardFrame, centredTop, type CardFrame } from './frame.ts';
+export { wordmark, wordmarkWidth } from './wordmark.ts';
 export { readout, readoutGeometry, type LabelSpec, type ValueSpec, type ReadoutGeometry } from './readout.ts';
 export { readoutRow, type FollowerSpec, type FollowerContext } from './readoutRow.ts';
 export { grid2x2, CORNERS, type CellSpec } from './grid2x2.ts';
