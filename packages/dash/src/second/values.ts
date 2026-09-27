@@ -927,6 +927,20 @@ export const tyreWearMin = (corner: Corner): Expr => {
 
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
+/**
+ * `°C`, `°F` or `K`, which is the temperature unit as a reading draws it rather than as SimHub
+ * spells it: `TemperatureUnit` publishes the enum name, `Celcius` included with its own spelling,
+ * and a driver reads the mark and not the enum. Kelvin takes no degree sign.
+ *
+ * Every temperature SimHub publishes is already converted to whichever of the three the driver has
+ * set, so a page drawing `TyreTemperature*` follows this and a page reading iRacing's raw telemetry
+ * does not: `LFtempCM` is degrees Celsius whatever the setting says, which is why band D's tyre
+ * page writes its own `°C` rather than asking here.
+ */
+export const temperatureMark = (): Expr => {
+  const unit = temperatureUnit();
+  return iff(eq(unit, str('Fahrenheit')), str('°F'), iff(eq(unit, str('Kelvin')), str('K'), str('°C')));
+};
 /** `Psi`, `Kpa` or `Bar`, written the way the tyre pages draw it. */
 export const pressureUnit = (): Expr => {
   const unit = isnull(game('TyrePressureUnit'), str('Psi'));
