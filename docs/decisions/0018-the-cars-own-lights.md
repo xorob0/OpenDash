@@ -7,11 +7,16 @@ reason this record exists rather than a strip-only patch. Reopens
 [ADR 0009](0009-does-the-plugin-compute.md) on the terms ADR 0009 itself set out, and extends
 [ADR 0012](0012-update-checks.md) to a second host.
 
-Amended by itself on 2026-09-21 for [#366](https://github.com/xorob0/OpenDash/issues/366), and on
-one point that reaches into part 1 below: **the fetch is a button now.** Nothing about the second
-host, the one archive or the 386 KB changed, but the sentences below saying the copy is refreshed
-weekly and that the update-check switch governs it were true until that ticket and are not now. The
-amendment is at the foot of the Decision and says what replaced them.
+Amended by itself twice, and both amendments are at the foot of the Decision.
+
+On 2026-09-21 for [#366](https://github.com/xorob0/OpenDash/issues/366), on one point that reaches
+into part 1 below: **the fetch is a button now.** Nothing about the second host, the one archive or
+the 386 KB changed, but the sentences below saying the copy is refreshed weekly and that the
+update-check switch governs it were true until that ticket and are not now.
+
+On 2026-09-27 for [#353](https://github.com/xorob0/OpenDash/issues/353), on the question this record
+left open: **a screen takes the car's thresholds and keeps OpenDash's colours.** Part 3's rung 1 is
+no longer strips-only, and the Unresolved section below is answered rather than standing.
 
 ## Context
 
@@ -162,6 +167,47 @@ Both the privacy argument in part 1 and the attribution now appear on the page. 
 archive of every car, rather than one car at a time" was reasoning a user never saw: it was in the
 source and in this record, and the panel said only that the tables followed the update check.
 
+**Amended 2026-09-27 ([#353](https://github.com/xorob0/OpenDash/issues/353)).** Part 3's rung 1 is no
+longer the strips'. **A screen lights at the instants the car's own bar lights, in OpenDash's
+colours.** The rev bar, the rev arc, the companion's speedo bar and the Redline printed beside it all
+take the car's measured thresholds, per gear, and draw them in `design/tokens.json`; the strip is
+unchanged and stays a literal copy of the car's bar, colours and all.
+
+The ticket listed three answers and this is the first of them. It was chosen against **taking the
+car's colours too** — the most faithful, and the one that makes a photograph of the rig look like the
+car — because a face is OpenDash's drawing of the car's state rather than a copy of a bar. A strip is
+the same kind of object as the thing it mirrors: sixteen lamps in a row, and the only reason it is
+not the car's own bar is that it is bolted to a different wheel. A rev bar is not; it is fifteen
+segments in a well, in a face whose every other colour comes from the tokens, and a cornflower-blue
+over-rev inside it reads as a rendering fault rather than as a Porsche. Timing is the half a driver
+learns and colour is the half they read, and adopting the timing is what stops two surfaces in one
+rig saying different things about the same engine.
+
+It was also chosen against **colour behind the same `car` style the strips obey**, which is the shape
+[ADR 0011](0011-personalisation.md) would expect and is a setting for a picture nobody has asked for.
+The one thing taken from that answer is its gate: the *timing* is behind the rig-wide rev light style
+rather than unconditional. A driver on `car` gets the car everywhere, and a driver who chose
+`leftToRight`, `meetInMiddle` or `f1` has said whose lights they want and gets the derived ladders on
+the screens as they did before. That is a departure from answer 1 as the ticket wrote it — "the bar
+takes the car's thresholds" full stop — and it is deliberate: the style is the rig's one answer to
+whose lights these are, and a screen that ignored it would be a second answer. No new setting was
+added, which the ticket's third answer would have needed.
+
+**The screens read a number, never the table.** The plugin already walks the table every frame for
+the strips, so it publishes three more values out of the same walk: how many of the car's own lamps
+are lit now, how many that gear's ladder has, and the RPM the top third of it lights at. A bar of any
+segment count lights segment `k` when `lit * count > k * lamps` — the same cross-multiplication the
+published ladder's bands use — so the fraction of the bar that is lit is the fraction of the car's
+bar that is lit, and the top band reddens on the frame the flag box's digit reaches the third band.
+`CarLadderTopRpm` is what the Redline readout prints, so the number beside the bar is still the number
+the bar goes red at, which is what `shift.ts` promises. The flash is `CarLadderOverRev`, which already
+existed for the digit.
+
+The fallback is unchanged and total, and there is now a fourth way to land on it: no plugin, no
+tables, no row for this car, a row that would not read, or a driver on one of OpenDash's own styles.
+All of them leave the screens on rungs 3 and 4, drawing exactly what they drew before — and which one
+a car is on is which layer of the bar is visible in Dash Studio, as it has been since ADR 0014.
+
 ## Alternatives considered
 
 **Bake the tables into the profiles at build time.** One `RPMSegments` per car and gear under a
@@ -214,11 +260,12 @@ bar and the rev arc still draw OpenDash's tokens at OpenDash's thresholds. This 
 ([#353](https://github.com/xorob0/OpenDash/issues/353)): the same computation that fills a strip can
 fill a bar, and rung 1 should not stay strips-only for long.
 
-### Unresolved
+### Answered, 2026-09-27
 
 Whether the rev bar should adopt the car's colours at all, or whether a screen is a place where
-OpenDash's palette should win and only the *timing* should mirror. That is a design question rather
-than a mechanical one, and it is the reason rung 1 is deliberately strips-only in this record
-instead of being pushed through `shift.ts` where the screens would have picked it up for free.
-[#353](https://github.com/xorob0/OpenDash/issues/353) is where it is decided, and it lists the three
-answers rather than assuming one.
+OpenDash's palette should win and only the *timing* should mirror. It was the reason rung 1 was
+strips-only here rather than pushed through `shift.ts` where the screens would have picked it up for
+free, and [#353](https://github.com/xorob0/OpenDash/issues/353) decided it: **the timing mirrors and
+the palette wins.** The amendment at the foot of the Decision says so and names the two answers it
+was chosen against. Rung 1 now reaches the rev bar, the rev arc, the companion's speedo and the
+Redline beside it; it still does not reach them as colour, and no part of it is read twice.
