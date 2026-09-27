@@ -55,6 +55,7 @@ const {
   ucase,
   left,
   hms,
+  ne,
 } = ncalc;
 
 /** What a value shows when the sim has not given one. */
@@ -695,6 +696,37 @@ export const GRIP_WIDEST = 'MODERATE';
 /** The track's grip, upper-cased into the label face; `--` where the sim reports none. */
 export const trackGrip = (): Expr => ucase(isnull(game('TrackGripStatus'), str(NO_VALUE)));
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
+
+/**
+ * Whether SimHub is connected to a running game.
+ *
+ * `DataCorePlugin.GameRunning` is an `AttachedProperty<int>` and not a bool -- 1 or 0, written on
+ * every `DataUpdate` from `data.GameRunning` -- so it is compared rather than used as a term.
+ * Verified in the decompiled 9.12.6 `DataCorePlugin.DeclareProperties`, which attaches it under
+ * that exact name, and `DataCorePlugin.DataUpdate`, which sets it.
+ */
+export const gameRunning = (): Expr => gt(isnull(prop('DataCorePlugin.GameRunning'), num(0)), num(0));
+
+/**
+ * Whether there is a session to draw: the game is running and has named one.
+ *
+ * This is the one definition of being in a session, and every module that needs one cites it
+ * (#406). It is deliberately the weaker of the two questions #312 tells apart: a driver in the
+ * garage is in a session and gets the timing screens, since the leaderboard and the relative are
+ * filled from the session before the car is on track. Being *in the car* is the other question,
+ * which the alerts need and this one does not answer.
+ *
+ * **Both halves are needed, and the game half is the one that is easy to drop.** `GameData.*` is
+ * declared once over a single `StatusDataBase` that `DataCorePlugin.DataUpdate` only reassigns
+ * `if (data.GameRunning)`, so after a game quits the whole block keeps the last session's values:
+ * `SessionTypeName` alone would read `Race` on a desktop with nothing running. Tested the other way
+ * round, `GameRunning` alone is true through the few seconds iRacing spends loading a session, when
+ * the name is still empty and there is nothing to draw.
+ *
+ * Read from iRacing alone, and kept here so that a second sim is a change to one line -- the
+ * per-game mapping block #312 opened was closed on 2026-09-22.
+ */
+export const inSession = (): Expr => and(gameRunning(), ne(sessionType(), str('')));
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
 export const playerClass = (): Expr => isnull(game('CarClass'), str(''));
 
