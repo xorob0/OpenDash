@@ -12,7 +12,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "fuel.label",
     "rect": {
       "height": 19,
-      "left": 475,
+      "left": 467,
       "top": 421,
       "width": 120,
     },
@@ -41,7 +41,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "fuel.value",
     "rect": {
       "height": 42,
-      "left": 475,
+      "left": 467,
       "top": 438,
       "width": 91,
     },
@@ -65,7 +65,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "fuel.unit",
     "rect": {
       "height": 17,
-      "left": 569,
+      "left": 561,
       "top": 461,
       "width": 26,
     },
@@ -84,7 +84,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "time.label",
     "rect": {
       "height": 19,
-      "left": 629,
+      "left": 621,
       "top": 421,
       "width": 73,
     },
@@ -113,7 +113,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "time.value",
     "rect": {
       "height": 42,
-      "left": 629,
+      "left": 621,
       "top": 438,
       "width": 75,
     },
@@ -131,9 +131,9 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "toEnd.label",
     "rect": {
       "height": 19,
-      "left": 736,
+      "left": 728,
       "top": 421,
-      "width": 111,
+      "width": 127,
     },
     "text": "MARGIN",
     "textColor": "#5A6069",
@@ -164,13 +164,14 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "toEnd.value",
     "rect": {
       "height": 42,
-      "left": 736,
+      "left": 728,
       "top": 438,
-      "width": 75,
+      "width": 91,
     },
     "text": "+1.4",
     "textColor": "#F5F7FA",
     "vAlign": "top",
+    "widest": "−999.9",
   },
   {
     "backgroundColor": "#00FFFFFF",
@@ -188,7 +189,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "toEnd.unit",
     "rect": {
       "height": 17,
-      "left": 814,
+      "left": 822,
       "top": 461,
       "width": 33,
     },
@@ -207,7 +208,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "laps.label",
     "rect": {
       "height": 19,
-      "left": 881,
+      "left": 889,
       "top": 421,
       "width": 73,
     },
@@ -236,7 +237,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "laps.value",
     "rect": {
       "height": 42,
-      "left": 881,
+      "left": 889,
       "top": 438,
       "width": 75,
     },
@@ -254,7 +255,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "refuel.label",
     "rect": {
       "height": 19,
-      "left": 988,
+      "left": 996,
       "top": 421,
       "width": 89,
     },
@@ -283,7 +284,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "refuel.value",
     "rect": {
       "height": 42,
-      "left": 988,
+      "left": 996,
       "top": 438,
       "width": 91,
     },
@@ -301,7 +302,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "perLap.label",
     "rect": {
       "height": 19,
-      "left": 1111,
+      "left": 1119,
       "top": 421,
       "width": 89,
     },
@@ -330,7 +331,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "perLap.value",
     "rect": {
       "height": 42,
-      "left": 1111,
+      "left": 1119,
       "top": 438,
       "width": 91,
     },
@@ -348,7 +349,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "lastLap.label",
     "rect": {
       "height": 19,
-      "left": 1234,
+      "left": 1242,
       "top": 421,
       "width": 89,
     },
@@ -377,7 +378,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "lastLap.value",
     "rect": {
       "height": 42,
-      "left": 1234,
+      "left": 1242,
       "top": 438,
       "width": 91,
     },
