@@ -3,6 +3,12 @@
  * and differing in shape, colour, name and behaviour. One shows at a time and nothing is drawn when
  * nothing is raised.
  *
+ * It draws in two phases, #380. `flagStrip` is the takeover, the whole band for the few seconds a
+ * flag has just come out or just changed; `flagCorners` is what it settles into, the same fifteen
+ * conditions in the block at each end of the band, so the page a driver was reading comes back while
+ * the flag stays out. `flagTakingBand` is the one window that decides between them, and `zones/face.ts`
+ * is where the two groups are gated against each other.
+ *
  * It reads the catalogue's bits through `conditionVisible` rather than SimHub's six normalised
  * `Flag_*` properties, which is the whole of what this file is for. Those six are a lossy summary:
  * `Flag_Yellow` folds the standing yellow, the waved yellow and both cautions into one band, and
@@ -29,9 +35,10 @@
 import type { Item, LayerItem, Rect } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc } from '../generator.ts';
-import { ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
-import { bandRaised, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, type AlertBandSpec, type FaceFlag, type FlagCondition } from '../flags.ts';
+import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, filledBand, outlinedBand, type AlertBandStyle } from './alertBand.ts';
+import { bandRaised, conditionVisible, FACE_FLAG_PRIORITY, FLAG_CATALOGUE, raisedRank, type AlertBandSpec, type FaceFlag, type FlagCondition } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
+import { measureText } from '../design/advances.ts';
 import { CHIP_WIDEST } from '../second/chip.ts';
 import { carBehindClass, carBehindPositionClass, WIDEST_BEHIND_POSITION_CLASS } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -39,7 +46,7 @@ import { ds } from '../tokens.ts';
 export { ALERT_BAND_BORDER as BLACK_FLAG_BORDER, ALERT_FLASH_MS as FLAG_BLINK_MS, ALERT_NAME_WEIGHT as FLAG_NAME_WEIGHT, ALERT_BAND_STYLES as FLAG_STRIP_STYLES } from './alertBand.ts';
 export type { AlertBandStyle as FlagStripStyle } from './alertBand.ts';
 
-const { game, eq, and, num, concat, iff, str } = ncalc;
+const { game, eq, and, changed, num, concat, iff, str } = ncalc;
 
 /**
  * SimHub flag properties in priority order, taken from `FLAG_CATALOGUE` rather than restated.
@@ -152,16 +159,92 @@ const blueFlagParts = (name: string, frame: Rect, style: AlertBandStyle, spec: A
  * the box's, where sixty-four pixels are the only thing a driver has; a driver who wants band D
  * quieter turns the flag format off instead.
  */
-const conditionLayer = (frame: Rect, style: AlertBandStyle, prefix: string, condition: FlagCondition): LayerItem => {
-  const name = `${prefix}.${condition.id}`;
-  const parts = condition.id === BLUE_FLAG_ID ? blueFlagParts : bandParts;
-  return withMoreBindings({
-    kind: 'layer',
-    name,
-    children: parts(name, frame, style, condition.band),
-  }, { Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) });
-};
+const conditionLayer = (condition: FlagCondition, name: string, children: Item[]): LayerItem =>
+  withMoreBindings({ kind: 'layer', name, children }, { Visible: conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised) });
 
 export function flagStrip(frame: Rect, style: AlertBandStyle = ALERT_BAND_STYLES.standard, prefix = 'flag'): Item[] {
-  return FLAG_CATALOGUE.map((condition) => conditionLayer(frame, style, prefix, condition));
+  return FLAG_CATALOGUE.map((condition) => {
+    const name = `${prefix}.${condition.id}`;
+    const parts = condition.id === BLUE_FLAG_ID ? blueFlagParts : bandParts;
+    return conditionLayer(condition, name, parts(name, frame, style, condition.band));
+  });
+}
+
+// --- The settled form: the flag after it has had the band for its few seconds ------------------
+
+/**
+ * How long a flag keeps the whole band before it settles into the blocks at its ends.
+ *
+ * `indicator.alert.durationMs` is the canvas's own figure for how long the highest-priority alert
+ * stands, and it is three seconds, which is the period #380 asks for. It is the same three seconds
+ * the lap-time pop-up and the change notification are out for, which is the point: the face has one
+ * answer to "how long is a driver shown a thing he did not ask for".
+ */
+export const FLAG_TAKEOVER_MS = ds.indicator.alert.durationMs;
+
+/**
+ * The flag has just come out, or has just changed: the band is its for these few seconds.
+ *
+ * `changed(ms, value)` is SimHub's own window and not a clock of ours, which is what ADR 0009
+ * admits, and the value it watches is `raisedRank`, the position of the *winning* condition rather
+ * than any one condition's bits. That is what makes a caution clearing to the yellow under it, or a
+ * yellow going green, take the band again: the winner moved even where no bit did.
+ *
+ * Two facts about SimHub's implementation matter here, both read off the decompiled
+ * `NCalcEngineBase.Function_Changed` in 9.12.6. The window lives in the engine's own `ChangeState`
+ * keyed by **the text of the value expression**, not by the item asking, and `EditorModel` builds
+ * one engine per dashboard, so the takeover group and the settled group share one window and cannot
+ * disagree about which phase the band is in -- which is the whole reason this is one expression used
+ * twice rather than a duration attached to each of two items. And the first evaluation of a key
+ * records the value and returns false, so a face that starts up under a flag opens in the settled
+ * form rather than taking the band for a flag that was already out before the dash was.
+ */
+export const flagTakingBand = (): Expr => changed(num(FLAG_TAKEOVER_MS), raisedRank(bandRaised));
+
+/** The two rectangles a settled flag keeps, which `zones/bandPages.ts` measures off the band. */
+export interface FlagCornerBlocks {
+  left: Rect;
+  right: Rect;
+}
+
+/**
+ * The flag's name fits the block it would be centred on, with the band's own border cleared at each
+ * end.
+ *
+ * Strictly, and measured in Bold, which is the face the name is drawn in: SimHub hands the box to
+ * WPF as `MaxTextWidth` and a run measured in Medium and drawn in Bold loses its last glyph. A name
+ * that does not fit is not shrunk and not clipped; it is simply not written, and the block is colour
+ * alone, which is what the nano's twelve-pixel strip already is.
+ */
+const cornerNameFits = (block: Rect, text: string): boolean =>
+  measureText('BarlowBold', text, ds.size.label) + 2 * ALERT_BAND_BORDER < block.width;
+
+/** One end of the settled flag: the condition's own shape, with its name where the block has room. */
+const cornerParts = (name: string, block: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
+  const labels = style.labels && spec.shape !== 'chequer' && cornerNameFits(block, spec.label);
+  return bandParts(name, block, { ...style, labels }, spec);
+};
+
+/**
+ * The settled flag: the same fifteen conditions, ranked the same way, drawn in the block at each end
+ * of the band instead of across the whole of it.
+ *
+ * The page underneath is back, which is the point of #380, and the flag is still out until its bits
+ * clear. A blinking flag keeps blinking, because the flash is part of what a waved yellow means and
+ * `filledBand` puts it inside the rectangle it is given, whatever that rectangle is.
+ *
+ * One thing the takeover has that this does not: the blue flag's detail. Naming the class of the car
+ * behind takes a whole band -- "BLUE FLAG · P4 GT3" is wider than any corner block at any size --
+ * and a block that wrote it on the widest face and not on the others would be a different drawing
+ * per face. The blue block writes BLUE FLAG where that fits, and the detail belongs to the seconds
+ * the flag has the band.
+ */
+export function flagCorners(blocks: FlagCornerBlocks, style: AlertBandStyle = ALERT_BAND_STYLES.standard, prefix = 'flagCorner'): Item[] {
+  return FLAG_CATALOGUE.map((condition) => {
+    const name = `${prefix}.${condition.id}`;
+    return conditionLayer(condition, name, [
+      ...cornerParts(`${name}.left`, blocks.left, style, condition.band),
+      ...cornerParts(`${name}.right`, blocks.right, style, condition.band),
+    ]);
+  });
 }

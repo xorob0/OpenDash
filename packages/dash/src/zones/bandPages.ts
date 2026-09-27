@@ -24,6 +24,7 @@ import type { Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
+import { rect } from '../design/geometry.ts';
 import { cells, monoWidth, textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
@@ -686,7 +687,8 @@ const letterRoom = (frame: Rect): number => {
 // Incidents against their limit and the track state on the left; DRS, push to pass, the spotter
 // lamps and both clocks on the right.
 //
-// Drawn at 1920x480, 1280x480, 1280x400 and 1280x720 and absent at 850x480, 800x286 and 600x686.
+// Drawn at 1920x480, 1280x480, 1280x400 and 1280x720, and absent at 850x480, 800x480, 800x286 and
+// 600x686, the second of those being the 850 redrawn narrower and inheriting its answer.
 // The threshold is those drawings rather than a round number, which is why the layout carries the
 // answer rather than this file computing one.
 
@@ -749,6 +751,36 @@ export function bandCornerWidths(frame: Rect): { left: number; right: number } {
 }
 
 const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, densityOf('zone').small, ds.size.label, LABEL_ROW, FIELD_GAP);
+
+/**
+ * The two rectangles a flag keeps at the ends of the band once it has settled there, #380.
+ *
+ * On a face that draws corner blocks they *are* those blocks, each taken whole and to the band's own
+ * edge: the flag covers the incidents and the track state at one end, the lamps and both clocks at
+ * the other, and gives the page in the middle back. That is the trade the ticket makes deliberately.
+ * A safety car period runs several minutes and the flag has said everything it has to say after two
+ * seconds, whereas what a driver decides during one is whether to pit, so the fuel page outranks a
+ * clock and the availability of DRS for the rest of the caution.
+ *
+ * On a face that draws no corners -- 850 x 480, 800 x 480, 800 x 286 and 600 x 686 -- there is none
+ * to take, and the flag keeps the side padding instead: `padX` at each end, which is the only room in
+ * the band no page is ever laid into, since `bandPageRoom` reserves it at both ends whether the face
+ * has corners or not. It is colour without a name at that width, as the nano's strip is, and it is
+ * drawn rather than left out because the ticket's own case is one of those four faces. No artboard
+ * draws it; zones.md §10 records that.
+ *
+ * Measured here rather than by the face, for the same reason `bandCornerWidths` is: the band's own
+ * table is what decides where a page stops, and a flag settling into room the page is using would be
+ * the one thing a band must never do.
+ */
+export function bandFlagBlocks(frame: Rect, corners: boolean): { left: Rect; right: Rect } {
+  const m = bandMetrics(frame);
+  const taken = corners ? bandCornerWidths(frame) : { left: m.padX, right: m.padX };
+  return {
+    left: rect(frame.left, frame.top, taken.left, frame.height),
+    right: rect(frame.left + frame.width - taken.right, frame.top, taken.right, frame.height),
+  };
+}
 
 /**
  * The room a lamp takes: the word, the 7 px either side of it, and the chip's own outline.

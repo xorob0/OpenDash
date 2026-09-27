@@ -3,8 +3,11 @@
  * The flag band: the phase of its chequer, the weight its name is set in, the border every coloured
  * state carries, and the flash that must not uncover the page beneath it.
  *
- * A flag takes band D over for as long as it is out, because an alert outranks fuel, so whatever
- * the band does it has to leave nothing of the page showing. Every artboard fills the chequered
+ * A flag takes band D over when it comes out, because an alert outranks fuel, so whatever the band
+ * does in that moment it has to leave nothing of the page showing. It takes it for a few seconds and
+ * then settles into the block at each end, #380, and the second half of this file is that: the same
+ * fifteen conditions in the same order, in two smaller rectangles, with the page a driver was reading
+ * back between them. Every artboard fills the chequered
  * state with `repeating-conic-gradient(#F5F7FA 0 25%, #0A0B0D 0 50%)` over a tile the height of the
  * band, which sweeps clockwise from twelve o'clock, so the band opens dark at its left edge and the
  * first light square begins one square in; the round faces draw the same board as marks around the
@@ -14,16 +17,18 @@
  * blinking the whole layer away.
  */
 import { describe, expect, test } from 'bun:test';
-import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT } from '../src/components/flagStrip.ts';
+import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT, FLAG_TAKEOVER_MS, flagTakingBand } from '../src/components/flagStrip.ts';
 import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
 import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
-import { FLAG_CATALOGUE } from '../src/flags.ts';
+import { bandRaised, conditionRaised, FLAG_CATALOGUE, raisedRank } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { hero } from '../src/hero/hero.ts';
 import { layout480round, layout800round, type Layout } from '../src/layouts/index.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
+import { measureText } from '../src/design/advances.ts';
+import { bandCornerWidths, bandFlagBlocks, bandMetrics, bandPageRoom } from '../src/zones/bandPages.ts';
 import { ZONE_FACES, faceItems, type ZoneLayout } from '../src/zones/index.ts';
 
 /** The two colours every artboard quotes for the chequer. */
@@ -246,5 +251,182 @@ describe('the waved yellow flash', () => {
         });
       }
     }
+  });
+});
+
+/**
+ * What the flag does once its few seconds are up: it settles into the block at each end of the band
+ * and gives the page back, #380.
+ *
+ * The ticket's own case is a safety car on the 850 x 480 face with 2.1 litres in the tank: the band
+ * read SAFETY CAR and nothing on the face said fuel, for as long as the caution lasted, which is
+ * several minutes, and a caution is exactly when a driver decides whether to pit. The flag has said
+ * everything it has to say after two seconds.
+ *
+ * The blocks are the band's own, not the flag's: `bandFlagBlocks` hands back the corner blocks on the
+ * four faces that draw them and the side padding on the three that do not, so a settled flag can
+ * never be laid into room a page is using. That is what the first test below measures, against the
+ * room the page is actually given.
+ */
+const cornerLayers = (face: ZoneLayout): Map<string, LayerItem> =>
+  new Map(
+    faceItems(face)
+      .filter((i): i is LayerItem => i.kind === 'layer' && i.name === 'flagCorner')
+      .flatMap((g) => g.children.filter((c): c is LayerItem => c.kind === 'layer'))
+      .map((l) => [l.name.slice('flagCorner.'.length), l]),
+  );
+
+const cornerLayerOf = (face: ZoneLayout, id: string): LayerItem => {
+  const layer = cornerLayers(face).get(id);
+  if (!layer) throw new Error(`no settled ${id} flag on ${face.folder}`);
+  return layer;
+};
+
+describe('the flag settles into the blocks at the ends of the band', () => {
+  for (const face of ZONE_FACES) {
+    const band = face.zones.band;
+    const blocks = bandFlagBlocks(band, face.bandCorners);
+
+    test(`${face.folder} keeps its two blocks at the band's ends and clear of the page`, () => {
+      // Full height and hard against each end: a settled flag is the end of the band, not a chip
+      // floating in it.
+      expect(blocks.left.top).toBe(band.top);
+      expect(blocks.right.top).toBe(band.top);
+      expect({ left: blocks.left.height, right: blocks.right.height }).toEqual({ left: band.height, right: band.height });
+      expect(blocks.left.left).toBe(band.left);
+      expect(blocks.right.left + blocks.right.width).toBe(band.left + band.width);
+
+      // And clear of the room the page is laid into, which is the one thing a band must never take.
+      const room = bandPageRoom(band, face.bandCorners);
+      expect(blocks.left.left + blocks.left.width).toBeLessThanOrEqual(room.left);
+      expect(blocks.right.left).toBeGreaterThanOrEqual(room.left + room.width);
+    });
+
+    test(`${face.folder} takes ${face.bandCorners ? 'the corner blocks' : 'the side padding, there being no corner block'}`, () => {
+      // The two answers, and which one a face gets is the layout's `bandCorners` rather than a
+      // threshold this file re-derives. Where there are corner blocks the flag takes them whole,
+      // incidents and track state at one end, lamps and clocks at the other, and the page is what
+      // comes back. Where there are none there is nothing to take, so the flag keeps the padding:
+      // sixteen pixels of colour at each end, which is all the room no page is ever laid into.
+      const padX = bandMetrics(band).padX;
+      const widths = face.bandCorners ? bandCornerWidths(band) : { left: padX, right: padX };
+      expect({ left: blocks.left.width, right: blocks.right.width }).toEqual(widths);
+    });
+
+    test(`${face.folder} draws every condition in both blocks, in the shape and colour it draws on the whole band`, () => {
+      for (const condition of FLAG_CATALOGUE) {
+        const layer = cornerLayerOf(face, condition.id);
+        const children = [...walkItems(layer.children)].filter((i) => i.kind !== 'layer');
+        // Both ends, always: a flag at one end of the band would read as a fault rather than a flag.
+        for (const end of ['left', 'right'] as const) {
+          const drawn = children.filter((i) => i.name.startsWith(`flagCorner.${condition.id}.${end}.`));
+          expect({ face: face.folder, id: condition.id, end, drawn: drawn.length > 0 }).toMatchObject({ drawn: true });
+          for (const item of drawn) {
+            // A name's box is a WPF line box and is taller than the block, so it is held to the
+            // block's width; everything else is inside the block outright.
+            if (item.kind === 'text') {
+              expect({ item: item.name, within: item.rect.left === blocks[end].left && item.rect.width === blocks[end].width }).toMatchObject({ within: true });
+              continue;
+            }
+            expect({ item: item.name, rect: item.rect, inside: contains(blocks[end], item.rect) }).toMatchObject({ inside: true });
+          }
+        }
+        // The ground carries the condition's own colour where the shape is the filled one, exactly as
+        // the whole band does; the outlined family and the chequer lay `surface.base` instead.
+        if (condition.band.shape === 'filled') {
+          for (const end of ['left', 'right'] as const) {
+            const ground = layer.children.find((c): c is RectangleItem => c.kind === 'rect' && c.name === `flagCorner.${condition.id}.${end}.band`)!;
+            expect({ id: condition.id, end, rect: ground.rect, colour: ground.backgroundColor }).toEqual({
+              id: condition.id,
+              end,
+              rect: blocks[end],
+              colour: condition.band.colour,
+            });
+          }
+        }
+      }
+    });
+
+    test(`${face.folder} writes a name in a block only where the name fits it`, () => {
+      // A name too wide for the block is not shrunk and not clipped: it is not written, and the
+      // block is colour alone, which is what the nano's twelve-pixel strip already is. The faces
+      // with no corner blocks are that case, sixteen pixels holding no word at all; the four with
+      // corner blocks hold every one of the fourteen names.
+      for (const condition of FLAG_CATALOGUE) {
+        const names = labelsOf(cornerLayerOf(face, condition.id).children);
+        for (const name of names) {
+          expect({ item: name.name, font: name.font, weight: name.fontWeight }).toEqual({ item: name.name, font: ds.font.label, weight: FLAG_NAME_WEIGHT });
+          const drawn = measureText('BarlowBold', name.widest ?? name.text, name.fontSize);
+          expect({ item: name.name, drawn, box: name.rect.width, fits: drawn < name.rect.width }).toMatchObject({ fits: true });
+        }
+        const room = Math.min(blocks.left.width, blocks.right.width) - 2 * BLACK_FLAG_BORDER;
+        const text = condition.band.shape === 'chequer' ? undefined : condition.band.label;
+        const expected = text !== undefined && measureText('BarlowBold', text, ds.size.label) < room ? 2 : 0;
+        expect({ face: face.folder, id: condition.id, names: names.length }).toEqual({ face: face.folder, id: condition.id, names: expected });
+      }
+      // And the blue block writes its own name and never the car behind: "BLUE FLAG · P4 GT3" is
+      // wider than any block at any size, so the detail belongs to the seconds the flag has the band.
+      expect(labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children).map((l) => l.text)).not.toContain('BLUE FLAG · GT3');
+    });
+
+    test(`${face.folder} keeps the waved yellow blinking in both blocks, and blinks nothing else`, () => {
+      // A blinking flag keeps blinking in the block: waving is what a waved yellow means, and it
+      // does not stop meaning it because the page came back.
+      const flashing = [...walkItems(cornerLayerOf(face, 'yellowWaving').children)].filter((i) => i.blink?.enabled);
+      expect(flashing.map((i) => i.name)).toEqual(['flagCorner.yellowWaving.left.flash', 'flagCorner.yellowWaving.right.flash']);
+      for (const flash of flashing) {
+        expect(flash.blink).toEqual({ enabled: true, delayMs: FLAG_BLINK_MS });
+        if (flash.kind !== 'rect') throw new Error('the flash is a band');
+        expect(flash.backgroundColor).toBe(ds.color.surface.base);
+      }
+      for (const condition of FLAG_CATALOGUE.filter((c) => c.id !== 'yellowWaving')) {
+        const layer = cornerLayerOf(face, condition.id);
+        expect({ face: face.folder, id: condition.id, blinking: [...walkItems([layer])].filter((i) => i.blink?.enabled).map((i) => i.name) }).toEqual({
+          face: face.folder,
+          id: condition.id,
+          blinking: [],
+        });
+      }
+    });
+
+    test(`${face.folder} writes no name on the settled chequer either`, () => {
+      expect(labelsOf(cornerLayerOf(face, 'chequered').children)).toEqual([]);
+    });
+  }
+});
+
+/**
+ * The clock that decides which of the two phases the band is in, which is SimHub's and not ours.
+ *
+ * `changed(ms, value)` is true for `ms` after `value` last moved, and ADR 0009 admits it for exactly
+ * this: the window is state, but it is SimHub's, kept and aged by SimHub, so a package installed
+ * without the plugin evaluates the same window. What it watches is the *rank of the winning
+ * condition* rather than any one condition's bits, and that distinction is the whole reason
+ * `raisedRank` exists: a full-course caution clearing to the local yellow underneath it never moves
+ * the yellow's bit, and the yellow is nonetheless a new thing to tell a driver.
+ */
+describe('the window that decides which phase the band is in', () => {
+  test('is the duration the canvas gives an alert, over the rank of the winning condition', () => {
+    expect(FLAG_TAKEOVER_MS).toBe(ds.indicator.alert.durationMs);
+    expect(FLAG_TAKEOVER_MS).toBe(3000);
+    expect(flagTakingBand()).toBe(`changed(${FLAG_TAKEOVER_MS}, ${raisedRank(bandRaised)})`);
+  });
+
+  test('ranks the catalogue in the catalogue’s own order, and 0 when nothing is raised', () => {
+    // Read with a stub, so that the nesting is legible: the first condition is 1, the fifteenth is
+    // 15, and nothing raised is 0.
+    const ranked = raisedRank((condition) => condition.id);
+    let expected = '0';
+    for (let i = FLAG_CATALOGUE.length - 1; i >= 0; i--) expected = `if(${FLAG_CATALOGUE[i]!.id}, ${i + 1}, ${expected})`;
+    expect(ranked).toBe(expected);
+  });
+
+  test('and reads the bits the way the band reads them, so the phase and the flag cannot disagree', () => {
+    // The band is null-safe and honours the green flag's limiter; the box is neither. A window over
+    // the box's reading would hold the band over for a green flag iRacing keeps set for a whole
+    // stint, which is the one condition this ever mattered for.
+    const green = FLAG_CATALOGUE.find((c) => c.id === 'green')!;
+    expect(raisedRank(bandRaised)).toContain(bandRaised(green));
+    expect(bandRaised(green)).not.toBe(conditionRaised(green));
   });
 });

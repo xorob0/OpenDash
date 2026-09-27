@@ -16,7 +16,9 @@
 import { describe, expect, test } from 'bun:test';
 import { zone as zoneSetting } from '../src/contract.ts';
 import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, FLAG_FULL_NAME_RATIO, flagFullNameSize } from '../src/components/flagFull.ts';
+import { flagTakingBand } from '../src/components/flagStrip.ts';
 import { bandRaised, conditionVisible, FLAG_CATALOGUE } from '../src/flags.ts';
+import { ncalc } from '../src/generator.ts';
 import { measureText } from '../src/design/advances.ts';
 import { bottom, contains, overlaps, rect, right } from '../src/design/geometry.ts';
 import type { Item, LayerItem, Rect, TextItem } from '../src/generator.ts';
@@ -72,6 +74,9 @@ const visibleOf = (item: Item): string => String(item.bindings?.Visible?.formula
 
 /** The parts a format must leave drawing, named as the face names them. The nano has no bar. */
 const keptParts = (layout: ZoneLayout, revBar: boolean): string[] => [...(revBar ? ['well'] : []), ...(layout.zones.bar ? ['bar.ground'] : []), 'band.ground'];
+
+/** The three groups a face draws a flag in: the band's two phases and the full-screen block. */
+const FLAG_GROUPS = ['flag', 'flagCorner', 'flagFull'] as const;
 
 /** The rectangles the FaceVariants sheets quote for the full-screen block, with the rev bar on. */
 const SHEET_BLOCK: Record<string, Rect> = {
@@ -150,7 +155,7 @@ describe('the format leaves the rev bar, the bar and band D alone', () => {
 
     test(`${face.folder}${revBar ? '' : ', rev bar off'} draws those parts once, outside either flag group`, () => {
       const items = faceItems(arrangement, { revBar });
-      const flagged = new Set([...walkItems([groupOf(items, 'flag'), groupOf(items, 'flagFull')])].map((i) => i.name));
+      const flagged = new Set([...walkItems(FLAG_GROUPS.map((name) => groupOf(items, name)))].map((i) => i.name));
       for (const name of keptParts(arrangement, revBar)) {
         expect({ face: face.folder, part: name, drawn: items.some((i) => i.name === name), inFlag: flagged.has(name) }).toMatchObject({ drawn: true, inFlag: false });
       }
@@ -164,13 +169,26 @@ describe('the two formats cannot both draw', () => {
       const size = sizeOf(arrangement);
       const items = faceItems(arrangement, { revBar });
       const bandGroup = groupOf(items, 'flag');
+      const cornerGroup = groupOf(items, 'flagCorner');
       const fullGroup = groupOf(items, 'flagFull');
 
-      // The two groups read the same property and compare it with the two values it can take, so
-      // whichever a driver has chosen, exactly one of the two groups draws.
-      expect(visibleOf(bandGroup)).toBe(zoneSetting.flagFormatIs(size, 'band'));
+      // The groups read the same property and compare it with the two values it can take, so
+      // whichever a driver has chosen, the band format's two phases draw or the block does.
+      const band = zoneSetting.flagFormatIs(size, 'band');
+      const taking = flagTakingBand();
+      expect(visibleOf(bandGroup)).toBe(ncalc.and(band, taking));
+      expect(visibleOf(cornerGroup)).toBe(ncalc.and(band, ncalc.not(taking)));
       expect(visibleOf(fullGroup)).toBe(zoneSetting.flagFormatIs(size, 'full'));
       expect(visibleOf(bandGroup)).not.toBe(visibleOf(fullGroup));
+      // The band's two phases are one window and its negation, and the window is one expression
+      // rather than two, which is what makes them exclusive and exhaustive: #380 splits where a flag
+      // is drawn, never whether it is. SimHub keys `changed` by the text of the value expression, so
+      // two windows written the same way would share state anyway; one is what says so.
+      expect(taking).toContain('changed(');
+      expect(visibleOf(bandGroup).split(taking)).toHaveLength(2);
+      expect(visibleOf(cornerGroup).split(taking)).toHaveLength(2);
+      expect(visibleOf(cornerGroup)).toContain(`!(${taking})`);
+      expect(visibleOf(bandGroup)).not.toContain(`!(${taking})`);
 
       // And inside them the same conditions, ranked from the one catalogue rather than from two
       // lists that could disagree about which of two live flags wins.
@@ -181,16 +199,19 @@ describe('the two formats cannot both draw', () => {
       // drew nothing at all: a driver who had chosen the format that cannot be missed saw the one
       // thing it was chosen for least. Fifteen conditions on both sides, same order, same
       // `bandRaised` reading, so the two formats differ in the rectangle and in nothing else.
-      const bandStates = bandGroup.children.filter((c): c is LayerItem => c.kind === 'layer').map((c) => c.name.slice('flag.'.length));
-      const fullStates = fullGroup.children.filter((c): c is LayerItem => c.kind === 'layer').map((c) => c.name.slice('flagFull.'.length));
-      expect(fullStates).toEqual([...STATES]);
-      expect(bandStates).toEqual([...STATES]);
+      //
+      // The settled form is the third list and is ranked the same way again, for the same reason:
+      // the phase a flag is in decides the rectangle, never which flag wins.
+      const statesIn = (group: LayerItem): string[] =>
+        group.children.filter((c): c is LayerItem => c.kind === 'layer').map((c) => c.name.slice(`${group.name}.`.length));
+      for (const group of [bandGroup, cornerGroup, fullGroup]) expect({ group: group.name, states: statesIn(group) }).toEqual({ group: group.name, states: [...STATES] });
       for (const id of STATES) {
-        expect({ id, band: stateOf(bandGroup, id).name, full: stateOf(fullGroup, id).name }).toMatchObject({ id, band: `flag.${id}`, full: `flagFull.${id}` });
         const condition = FLAG_CATALOGUE.find((c) => c.id === id)!;
         const ranked = conditionVisible(condition, false, FLAG_CATALOGUE, bandRaised);
-        expect({ id, full: visibleOf(stateOf(fullGroup, id)) }).toEqual({ id, full: ranked });
-        expect({ id, band: visibleOf(stateOf(bandGroup, id)) }).toEqual({ id, band: ranked });
+        for (const group of [bandGroup, cornerGroup, fullGroup]) {
+          expect({ id, group: group.name, name: stateOf(group, id).name }).toMatchObject({ id, group: group.name, name: `${group.name}.${id}` });
+          expect({ id, group: group.name, visible: visibleOf(stateOf(group, id)) }).toEqual({ id, group: group.name, visible: ranked });
+        }
       }
     });
   }

@@ -19,7 +19,7 @@ import { withMoreBindings } from '../bind.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
-import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
+import { flagCorners, flagStrip, flagTakingBand, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { flagFull } from '../components/flagFull.ts';
 import { pitAlerts } from '../components/pitAlerts.ts';
 import { popUps } from '../components/popUp.ts';
@@ -32,10 +32,10 @@ import { label } from '../elements/label.ts';
 import { measureText } from '../design/advances.ts';
 import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
-import { bandMetrics } from './bandPages.ts';
+import { bandFlagBlocks, bandMetrics } from './bandPages.ts';
 import { widestCounter, zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
 
-const { not } = ncalc;
+const { and, not } = ncalc;
 
 export const FACE_SCREEN_NAME = 'Main';
 /**
@@ -140,11 +140,25 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true }: { r
   // Visible is false has its children's bindings left unevaluated, so the format that is not chosen
   // costs nothing while it is not showing. That matters more than it did: the band draws all
   // fifteen now, where it drew the six properties SimHub normalises.
+  //
+  // The band format itself is two groups rather than one, #380: the flag takes the whole band for
+  // the few seconds after it comes out or changes, and then settles into the block at each end of
+  // the band, which gives the page a driver was reading back while the flag is still out. One
+  // window decides between them and it is asked twice, once per group, rather than thirty times;
+  // SimHub keys that window by the text of the expression rather than by the item asking, so the
+  // two groups share it and the band can never be in both phases or in neither.
+  const takingBand = flagTakingBand();
+  const bandFormat = zoneSetting.flagFormatIs(face, 'band');
   items.push(withMoreBindings({
     kind: 'layer',
     name: 'flag',
     children: flagStrip(z.band, FLAG_STRIP_STYLES.standard, 'flag'),
-  }, { Visible: zoneSetting.flagFormatIs(face, 'band') }));
+  }, { Visible: and(bandFormat, takingBand) }));
+  items.push(withMoreBindings({
+    kind: 'layer',
+    name: 'flagCorner',
+    children: flagCorners(bandFlagBlocks(z.band, layout.bandCorners), FLAG_STRIP_STYLES.standard, 'flagCorner'),
+  }, { Visible: and(bandFormat, not(takingBand)) }));
 
   // The other format: the flag takes zones B, A and C together, which costs the gear for as long as
   // it is out and is the trade the setting exists to offer. The rectangle is the body of whichever

@@ -423,13 +423,16 @@ describe('the parts the face draws itself', () => {
     expect(names.filter((n) => n.startsWith('revBar')).length).toBeGreaterThan(0);
   });
 
-  test('the flag takes band D rather than having a strip of its own', () => {
+  test('the flag takes band D rather than having a strip of its own, in both of its phases', () => {
     const band = zoneFace1920x480.zones.band;
-    // The band format, which is the one this is about. The face draws a second, full-screen format
-    // beside it under `flagFull.`, deliberately over zones B, A and C; `flagFormat.test.ts` holds
-    // that one, including that the two cannot draw at once.
-    const flag = all.filter((i) => i.name.startsWith('flag.'));
+    // The band format, which is the one this is about, and both phases of it: `flag.` is the
+    // takeover, the whole band for the few seconds after a flag comes out, and `flagCorner.` is what
+    // it settles into, the block at each end (#380). The face draws a second, full-screen format
+    // beside them under `flagFull.`, deliberately over zones B, A and C; `flagFormat.test.ts` holds
+    // that one, including that the formats cannot draw at once.
+    const flag = all.filter((i) => i.name.startsWith('flag.') || i.name.startsWith('flagCorner.'));
     expect(flag.length).toBeGreaterThan(0);
+    expect(all.some((i) => i.name.startsWith('flagCorner.'))).toBe(true);
     expect(all.some((i) => i.name.startsWith('flagFull.'))).toBe(true);
     // Every part of it is inside band D. The slot model drew a strip along the bottom edge and the
     // band is where that sixty pixels went, so a flag that fell outside the band would mean the

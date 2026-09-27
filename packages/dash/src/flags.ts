@@ -17,16 +17,19 @@
  * `cautionWaving` folded together, and `Flag_Black` is only the `black` bit, so a furled black and
  * a disqualification are invisible through them.
  *
- * The catalogue carries no duration. The canvas asks for a configurable three seconds per alert
- * and `design/tokens.json` states it as `indicator.alert.durationMs`, but a duration needs a clock
- * and neither NCalc nor the plugin has one under ADR 0009: a condition here shows for exactly as
- * long as its bits are set. That difference is recorded in docs/design/flag-box.md.
+ * The catalogue carries no duration, and *whether* a condition shows is still exactly as long as
+ * its bits are set: the canvas asks for a configurable three seconds per alert, and a condition
+ * that went dark on a clock while its flag was still flying would be a lie. What has a duration is
+ * *how* band D shows it -- the whole band for a few seconds and its corner blocks afterwards, #380
+ * -- and that clock is SimHub's `changed()` window rather than one of ours, which is what ADR 0009
+ * admits. `raisedRank` below is the value that window watches. The difference between the canvas's
+ * per-alert duration and the bits is recorded in docs/design/flag-box.md.
  */
 import { ncalc, type Hex } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { ds } from './tokens.ts';
 
-const { and, eq, isnull, not, num, or, prop } = ncalc;
+const { and, eq, iff, isnull, not, num, or, prop } = ncalc;
 
 /** A member of `iRacingSDK.SessionFlags`, as SimHub spells it. Camel case: the enum's own. */
 export type SessionFlagBit =
@@ -278,6 +281,25 @@ export function conditionVisible(condition: FlagCondition, criticalOnly: Critica
   const higher = only.slice(0, index).map((c) => not(conditionShown(c, criticalOnly, read)));
   return and(...higher, conditionShown(condition, criticalOnly, read));
 }
+
+/**
+ * Which condition a surface is showing, as a number: its place in the list, counting from one, and
+ * 0 when nothing is raised.
+ *
+ * It exists so that "the flag has just changed" can be asked once instead of fifteen times, and so
+ * that it is asked of the right thing. A layer's own `conditionVisible` answers whether *this*
+ * condition is winning; a clock needs a value that moves when the *winner* moves, and the two are
+ * not the same question. A full-course caution clearing to the local yellow underneath it never
+ * moves the yellow's own bit, yet what the driver is being told has changed, so the yellow is owed
+ * its moment on the whole band exactly as a fresh flag is.
+ *
+ * Ranked from the same list in the same order as `conditionVisible`, and read through the same
+ * `RaisedTest`, so the number and the layer drawing it cannot disagree about which flag is out.
+ * `if()` evaluates only the branch it takes, so the cost is the bits down to the winner rather than
+ * all of them.
+ */
+export const raisedRank = (read: RaisedTest = conditionRaised, only: readonly FlagCondition[] = FLAG_CATALOGUE): Expr =>
+  only.reduceRight<Expr>((below, condition, index) => iff(read(condition), num(index + 1), below), num(0));
 
 /** Nothing in the catalogue is being shown, which is what everything below the flags needs. */
 export const noFlagShown = (criticalOnly: CriticalOnly, only: readonly FlagCondition[] = FLAG_CATALOGUE, read: RaisedTest = conditionRaised): Expr =>
