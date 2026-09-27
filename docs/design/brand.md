@@ -102,8 +102,10 @@ came out about a fifth too wide. Same outlines, renamed on the way into a packag
 files are untouched.
 
 A package carries the faces it is drawn in rather than every weight the two families offer, which
-means Barlow Medium for labels and the display family at SemiBold and Bold for numerals, to which
-the second screens add Light for the pit wall wordmark. The restriction follows from correctness
+means Barlow Medium for labels, Barlow Bold for the one label the flag band sets in 700, the display
+family at SemiBold and Bold for numerals, and the display family at Light for the wordmark's "open" --
+which every package draws now that every package has an idle screen, and which used to be the pit
+wall header's alone. The restriction follows from correctness
 rather than from package size, since a weight drawn without its file is resolved by WPF to whatever
 it can find, and every advance in `packages/dash/src/design/advances.ts` then measures a face that
 never shipped. The build therefore refuses a package that draws a weight it does not carry, so that
@@ -190,6 +192,11 @@ quietly stop being a dash. Change the SVG first.
 
 Where it goes: the settings panel's header beside the wordmark, and the top of `README.md`. Not on
 the face, which is a driver's instrument and not a billboard.
+
+The idle screen is not an exception to that, and it is close enough to one to be worth saying which.
+It draws the **wordmark**, not the mark, and it draws it only while there is nothing to instrument: no
+game is running, the screen would otherwise be a rev bar at zero, and saying whose dashboard this is
+costs a driver nothing. The moment a game starts SimHub is back on the face, where the rule holds.
 
 ## Open questions
 

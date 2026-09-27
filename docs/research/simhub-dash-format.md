@@ -173,6 +173,40 @@ A screen carries roles and expressions in addition to its items:
 Newman zones use it to hide the pages a user has disabled. `Items` holds the item tree, where a
 `Layer` groups its children under `Childrens`.
 
+#### How the three roles actually pick a screen
+
+Decompiled from 9.12.6 for #763, since the order of the two filters is the whole of what an idle
+screen depends on.
+
+- **The expression is applied first and the role second.** `EditorModel.CheckGameModeScreen` calls
+  `UpdateScreenEnabledStatus`, which sets `ScreenEnabled` from the expression (an empty or missing
+  expression is `true`; a non-empty one is enabled while it parses above zero), and then works only
+  with the screens where `ScreenEnabled && !IsLayer`. A screen whose expression is false is not a
+  candidate for any role.
+- **The mode is one of four.** Game when `lastData.GameRunning` **and** some candidate is an
+  `InGameScreen`; Pit when that holds, `IsPitlimiterOrPitLane()` is true **and** some candidate is a
+  `PitScreen`; Idle when neither and some candidate is an `IdleScreen`; Indeterminate otherwise,
+  which picks from every candidate. So a role no enabled screen carries does not blank the display,
+  it falls through -- which is why an idle screen must be enabled in every configuration a package
+  has, or a package at rest goes back to showing its first screen.
+- **Each mode remembers its own screen.** `FindModeScreen` keeps the current screen while the mode
+  has not changed, then the screen that mode was last on, then the first candidate carrying the role.
+- **Navigation filters by role only when the roles differ.** `Dashboard.GetActiveScreens`, which
+  `SelectNextScreen`, `SelectPreviousScreen` and the simple touch mode walk, builds
+  `$"{PitScreen};{InGameScreen};{IdleScreen}"` for every enabled screen and, if every screen produces
+  the same string, keeps them all. Otherwise it keeps the pit screens (falling back to the in-game
+  ones when there are none or the car is not in the pits) while a game runs, and the idle screens
+  when none is. A dashboard whose screens all carry the same roles is therefore fully navigable in
+  every mode, which is what OpenDash's companion relied on before it had an idle screen.
+- **`MainPreviewIndex` is not ours to choose freely.** `EditorModel.UpdateMetadatas` writes the index
+  of the first `InGameScreen`, falling back to the first `IdleScreen`, and rewrites the three
+  `*ScreensIndexs` lists from the per-screen booleans. Put the idle screen last and the generated
+  metadata agrees with what SimHub would have written.
+
+SimHub's own samples say the same thing in JSON: `ControlCenter.djson` carries an `Idle` screen with
+`"InGameScreen": false, "IdleScreen": true, "PitScreen": false` and three racing screens with
+`"IdleScreen": false`, and `MobileDashWithRelativeTimings` is the same shape with one of each.
+
 ### Node types observed
 
 | Type | Seen in | Purpose |
