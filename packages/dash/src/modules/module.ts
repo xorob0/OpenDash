@@ -71,6 +71,18 @@ export interface ModuleContext {
    * the drawing wants; the companion and the pit wall pass nothing and keep their titles.
    */
   title?: boolean;
+  /**
+   * False says the caller draws the session notice itself, so the module returns its drawing bare
+   * (#406).
+   *
+   * For a caller that embeds a module in a box of its own alongside readings of its own: the pit
+   * wall's Track panel puts the track map in half its body and a column of session readings in the
+   * other half, and a notice over the map alone leaves the sentence "go into a session" sitting
+   * beside a session best lap time. So the panel gates its whole body and says it once, and the
+   * module it embeds stops saying it a second time in a corner. Every other caller passes nothing
+   * and the module answers for itself, which is the point of the declaration being in the catalogue.
+   */
+  notice?: boolean;
 }
 
 /** The shape a context is drawn at, derived from its frame unless the caller named one. */
@@ -119,7 +131,12 @@ export const sessionNotice = (page: { name: string }): string => {
 export const sessionGroupName = (prefix: string): string => `${prefix}inSession`;
 
 /**
- * A module's content and its notice, in the same rectangle, one of them on the screen at a time.
+ * Some drawing and its notice, in the same rectangle, one of them on the screen at a time.
+ *
+ * The one arrangement, so that the three places that need it -- a module, one of band D's own
+ * pages, and a pit wall panel that embeds a module -- compose it the same way rather than each
+ * spelling the gate out. `notice` is the sentence, since a band keeps its page's name where a module
+ * in a zone drops it, and a panel names itself.
  *
  * The content goes into one group whose `Visible` is the session test, rather than having the test
  * folded into every item, for two reasons. A group whose Visible is false leaves its children's
@@ -136,14 +153,15 @@ export const sessionGroupName = (prefix: string): string => `${prefix}inSession`
  * invisible *leaf* does keep evaluating its other bindings, and formatting a null once a frame puts
  * an error in SimHub's log once a frame.
  *
- * The notice is `placeholder`'s, in the same rectangle and gated the other way, so the two are
- * never on the screen together and the overlap exists only in the editor, exactly as energy's does.
+ * The notice is `placeholder`'s, in the rectangle the caller gives and gated the other way, so the
+ * two are never on the screen together and the overlap exists only in the editor, exactly as
+ * energy's does.
  */
-function withSessionNotice(meta: ModuleMeta, ctx: ModuleContext, items: Item[]): Item[] {
+export function withSessionGate(prefix: string, notice: string, frame: Rect, density: Density, items: Item[]): Item[] {
   const test = inSession();
   return [
-    withMoreBindings({ kind: 'layer', name: sessionGroupName(ctx.prefix), children: items }, { Visible: test }),
-    ...placeholder(ctx.prefix, sessionNotice(meta), ctx.frame, ctx.density).map((item) => withMoreBindings(item, { Visible: ncalc.not(test) })),
+    withMoreBindings({ kind: 'layer', name: sessionGroupName(prefix), children: items }, { Visible: test }),
+    ...placeholder(prefix, notice, frame, density).map((item) => withMoreBindings(item, { Visible: ncalc.not(test) })),
   ];
 }
 
@@ -153,8 +171,11 @@ export function defineModule(id: string, build: ModuleBuilder): Module {
   // track panel embeds the track module, and the table that applies to it is the track one.
   const page: ModuleBuilder = (ctx) => build({ ...ctx, page: id });
   // A module that needs a session says so while there is none (#406). The catalogue's declaration
-  // is what decides it, so a module added later answers the question by existing.
-  return { ...meta, build: meta.needsSession ? (ctx) => withSessionNotice(meta, ctx, page(ctx)) : page };
+  // is what decides it, so a module added later answers the question by existing -- unless the
+  // caller embedding it says it is drawing the notice itself, which is `notice: false`.
+  const gated: ModuleBuilder = (ctx) =>
+    ctx.notice === false ? page(ctx) : withSessionGate(ctx.prefix, sessionNotice(meta), ctx.frame, ctx.density, page(ctx));
+  return { ...meta, build: meta.needsSession ? gated : page };
 }
 
 /** A field of this module, its item name prefixed so it is unique on the screen. */

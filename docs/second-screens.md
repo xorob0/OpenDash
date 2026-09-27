@@ -223,16 +223,25 @@ opened and looked at before any session is joined, so the empty state is the pro
 impression, and an empty leaderboard reads exactly like a leaderboard that has failed.
 
 The declaration is `needsSession` in `MODULE_CATALOGUE`, one line per module, so a module added later
-answers the question by existing; `defineModule` composes the two halves from it. The condition is
-`inSession()` in `second/values.ts` and it is one definition that everything cites: the game is
-running and has named a session type. Both halves are needed, and `values.ts` says why in the detail
-the decompiled source gives.
+answers the question by existing; `defineModule` composes the two halves from it through
+`withSessionGate`, which is the one arrangement every caller uses. The condition is `inSession()` in
+`second/values.ts` and it is one definition that everything cites: the game is running and has named
+a session type. Both halves are needed, and `values.ts` says why in the detail the decompiled source
+gives.
 
 Band D's four timing pages get the same notice -- fuel, stint, sectors, relative -- arranged in
 `zones/pages.ts` rather than in `bandPageItems`, and so does zone A's track page, which is the track
 module itself. Zone A's other three pages, and band D's energy, tyres, weather and car, are car state
 and take nothing. The module called Session says the instruction alone rather than stuttering its own
 name in front of it.
+
+The pit wall's Track panel embeds the track module, so it says it too -- but the panel says it, not
+the module. The panel draws the map in half its body and the session best, the two temperatures and
+the three assists in the other half, and a notice over the map alone leaves "go into a session"
+sitting beside a lap time. So the module is built with `notice: false` and the panel gates its whole
+body, which is the shape the pit wall's other panels will need when they are gated in their turn;
+none of the rest is gated yet, since each has its own chrome, its own body and its own wording to
+settle.
 
 It does not collide with the idle screen (#113): the idle screen covers the game not running and
 this covers the game running with nothing to show, which is the state a driver is in while waiting to

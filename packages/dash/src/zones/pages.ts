@@ -27,16 +27,12 @@ import {
 import { measureText } from '../design/advances.ts';
 import { rect, type Size } from '../design/geometry.ts';
 import { pageBuilder } from '../modules/index.ts';
+import { sessionNotice, withSessionGate } from '../modules/module.ts';
 import { pageScreen, pagedDashboard, pagedWidget } from '../pagedDashboard.ts';
 import { zoneFrame, zoneFrameMetrics } from '../second/header.ts';
 import { densityForBox } from '../second/density.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
-import { withMoreBindings } from '../bind.ts';
-import { ncalc } from '../generator.ts';
-import { sessionGroupName, sessionNotice } from '../modules/module.ts';
-import { placeholder } from '../second/placeholder.ts';
-import { inSession } from '../second/values.ts';
 import { bandCorners, bandPageItems, bandPageRoom } from './bandPages.ts';
 import { zoneAPage } from './zoneAPages.ts';
 
@@ -133,13 +129,8 @@ export const BAND_PAGES_NEEDING_SESSION: readonly string[] = ['fuel', 'stint', '
  */
 function withBandSessionNotice(page: FaceZonePageMeta, frame: Rect, corners: boolean, items: Item[]): Item[] {
   if (!BAND_PAGES_NEEDING_SESSION.includes(page.id)) return items;
-  const test = inSession();
   const room = bandPageRoom(frame, corners);
-  const notice = placeholder(`${page.id}.`, sessionNotice(page), rect(room.left, frame.top, room.width, frame.height), 'zone');
-  return [
-    withMoreBindings({ kind: 'layer', name: sessionGroupName(`${page.id}.`), children: items }, { Visible: test }),
-    ...notice.map((item) => withMoreBindings(item, { Visible: ncalc.not(test) })),
-  ];
+  return withSessionGate(`${page.id}.`, sessionNotice(page), rect(room.left, frame.top, room.width, frame.height), 'zone', items);
 }
 
 /**
