@@ -116,7 +116,7 @@ namespace OpenDashPlugin
             var line = service.Status;
             // A copy old enough that upstream has probably moved is mentioned and not acted on: nothing
             // refetches on its own any more, so the invitation is the whole of what staleness now does.
-            if (service.Stale) line += " " + PanelLights.CarTablesStale;
+            if (service.Stale(DateTime.UtcNow)) line += " " + PanelLights.CarTablesStale;
             carTablesLine.Text = line;
             if (carTablesButton != null) carTablesButton.Content = PanelLights.CarTablesButton(service.CarCount);
         }
