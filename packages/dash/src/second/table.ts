@@ -221,11 +221,34 @@ export const NAME_FACE: MeasuredFace = 'BarlowMedium';
  */
 export const SHORTEST_NAME_CHARS = 8;
 
+/**
+ * The name the canvas writes into the driver column, and the count {@link DEFAULT_NAME_CHARS} takes
+ * from it.
+ *
+ * `Liam Byrne` is what every artboard draws there, what the `label` below draws at design time, and
+ * what the default format — `full`, which is what a rig that never opens the setting gets — makes of
+ * the entry the traces carry. So it is the one name whose fate a reader can check against a
+ * screenshot, and the count is read off the string rather than written down beside it.
+ *
+ * Ten characters is not a promise that every full name fits: `Hannah Fischer` is fourteen and
+ * ellipsises wherever the column holds ten. It is the width below which the *default* drawing of the
+ * *default* format starts losing letters, which is the one place a reader would call the ellipsis a
+ * fault rather than a trade, and it is therefore the floor a row height is not allowed to buy spacing
+ * under. `relativeRowPlan` is what enforces that.
+ */
+export const NAME_SAMPLE = 'Liam Byrne';
+
+/** The characters the default format's own sample needs: `Liam Byrne` is ten. */
+export const DEFAULT_NAME_CHARS = NAME_SAMPLE.length;
+
 /** The width a column wants before it draws a name: the shortest form's budget, with the pixel `label` leaves itself. */
 export const nameColumnFloor = (fs: number): number => Math.ceil(SHORTEST_NAME_CHARS * widestGlyph(NAME_FACE).advance * fs) + 1;
 
+/** The size a row of this height sets a name in, which is what a caller measuring the column has to measure at. */
+export const nameSizeForRow = (rowHeight: number, board = false): number => rowTypeOf(rowHeight, board).name;
+
 /** The same, for a row of this height in this drawing: what `fittingColumns` sheds a column to reach. */
-export const nameFloorForRow = (rowHeight: number, board = false): number => nameColumnFloor(rowTypeOf(rowHeight, board).name);
+export const nameFloorForRow = (rowHeight: number, board = false): number => nameColumnFloor(nameSizeForRow(rowHeight, board));
 
 interface CellContext {
   /** Item name prefix, unique within the screen. */
@@ -359,7 +382,7 @@ function cellName(ctx: CellContext): Item[] {
   const bind = iff(ctx.isPlayer, str('YOU'), ellipsised(driverName(ctx.idx), chars));
   return [
     withMoreBindings(
-      label(`${ctx.name}.name`, 'Liam Byrne', ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
+      label(`${ctx.name}.name`, NAME_SAMPLE, ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
         size: fs,
         color: ds.color.text.secondary,
         bind,
