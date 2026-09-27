@@ -835,6 +835,13 @@ the catalogue would be read off.
 middle and the catalogue zones where the card rects are. Until the conversion the round faces keep
 the Layout section they have, which assigns cards to slots.
 
+**The three obligations above have no ticket yet.** The two artboards, the round picker and the
+catalogue a 140 × 108 box leaves are the conversion's work, and the conversion is a noun in this
+section rather than an issue number: #145 is the decision and closes with it, #146 waits on the
+conversion, and nothing tracks it. Filing it is the first thing to do when #145 closes, and its
+number replaces this paragraph and the matching one in
+[ADR 0006](../decisions/0006-the-zone-face.md#unresolved).
+
 ---
 
 ## 10. Where the canvas contradicts itself
