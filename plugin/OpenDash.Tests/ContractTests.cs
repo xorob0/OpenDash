@@ -74,13 +74,14 @@ namespace OpenDashPlugin.Tests
             // and the switch on the spotter bar's movement joined the rig's own names; the eleventh is
             // the switch on the digit's redline flash, which is a panel's own for the same reason, and
             // the two after it are whether the digit is banded at all and which ladder bands it. Six
-            // of the twelve globals are settings; the other six are the car's own bar, which the
+            // of the thirteen globals are settings; the other seven are the car's own bar, which the
             // plugin computes because a table of thresholds per gear is not a thing a profile reads --
             // the band and the flash for the digit, the lit count, the ladder's length and the top
-            // band's RPM for a screen's rev bar, and whether the rig asked for the car's own lights at
-            // all, which is a reduction over the bars and so is the plugin's to answer (#353).
+            // band's RPM for a screen's rev bar, whether the car has a flash to give at all, and
+            // whether the rig asked for the car's own lights in the first place, which is a reduction
+            // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 12 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -102,8 +103,11 @@ namespace OpenDashPlugin.Tests
             // bands had to be published for the digit to read, and 338 before a screen's rev bar took
             // the car's thresholds too and needed that bar as three numbers: how many of its lamps are
             // lit, how many it has, and the RPM its top third lights at, and 341 before that bar's own
-            // gate joined them, the rig-wide style it first read being a field the panel does not write.
-            Assert.Equal(342, names.Count);
+            // gate joined them, the rig-wide style it first read being a field the panel does not write,
+            // and 342 before whether the car flashes at all had to be published beside whether it is
+            // flashing now: 47 of the 85 measured cars give no flash, and OpenDash's own redline flash
+            // was going out with them.
+            Assert.Equal(343, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));

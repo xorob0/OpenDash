@@ -272,6 +272,7 @@ OpenDash.CarLadderOverRev
 OpenDash.CarLadderLit
 OpenDash.CarLadderLamps
 OpenDash.CarLadderTopRpm
+OpenDash.CarLadderFlashes
 OpenDash.CarLadderChosen
 OpenDash.FlagBoxMatrix1Rest
 OpenDash.FlagBoxMatrix1Flags

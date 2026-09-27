@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts';
-import { CARD_CATALOGUE, CAR_LADDER_CHOSEN, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, dashProperties,
+import { CARD_CATALOGUE, CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, dashProperties,
   PROPERTY_PREFIX, zoneProperties, declaredProperties, defaultCardForSlot, secondScreenProperties } from '../src/contract.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
@@ -89,19 +89,19 @@ describe('contract', () => {
     // else. The zone properties are declared beside them and are read by the zone face from #136; the
     // module switches and the pit wall's zone pages belong to the second screens.
     //
-    // The six belong to the lights rather than to a screen, and that is deliberate (#353): five of
+    // The seven belong to the lights rather than to a screen, and that is deliberate (#353): six of
     // them are one frame of the car's own measured bar, which the plugin computes once for every
-    // surface that draws it, and the sixth is the rig's own answer to whether a surface should draw
+    // surface that draws it, and the seventh is the rig's own answer to whether a surface should draw
     // it -- a reduction over the strips, published because the style is per strip and a screen has no
     // strip. A screen reading those is not a screen reading another screen's settings, which is what
     // `foreignProperties` is about and what this assertion is here to keep true.
     const all = new Set([...propertiesIn(main), ...propertiesIn(cards)].filter((p) => p.startsWith('OpenDash.')));
     const zoneProps = new Set(zoneProperties());
-    const carBar = [CAR_LADDER_STAGE, CAR_LADDER_OVER_REV, CAR_LADDER_LIT, CAR_LADDER_LAMPS, CAR_LADDER_CHOSEN].map((n) => `${PROPERTY_PREFIX}.${n}`);
+    const carBar = [CAR_LADDER_STAGE, CAR_LADDER_OVER_REV, CAR_LADDER_LIT, CAR_LADDER_LAMPS, CAR_LADDER_FLASHES, CAR_LADDER_CHOSEN].map((n) => `${PROPERTY_PREFIX}.${n}`);
     expect([...all].sort()).toEqual([...[...dashProperties()].filter((p) => !zoneProps.has(p)), ...carBar].sort());
-    // The sixth of the group, `CarLadderTopRpm`, is deliberately not here: it is the number printed
+    // The last of the group, `CarLadderTopRpm`, is deliberately not here: it is the number printed
     // beside a bar rather than anything the bar itself needs, and the only page that prints one is the
-    // companion's speedo. It is declared all the same, as the five above are.
+    // companion's speedo. It is declared all the same, as the six above are.
     for (const p of [...carBar, `${PROPERTY_PREFIX}.${CAR_LADDER_TOP_RPM}`]) expect({ p, declared: declaredProperties().includes(p) }).toEqual({ p, declared: true });
     for (const p of secondScreenProperties()) expect(all.has(p)).toBe(false);
     for (const p of zoneProps) expect(all.has(p)).toBe(false);

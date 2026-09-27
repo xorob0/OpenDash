@@ -306,6 +306,34 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_car_that_publishes_no_flash_says_so_rather_than_merely_not_flashing_now()
+        {
+            // The two are not the same question, and the difference is what keeps OpenDash's own redline
+            // flash alight on the 47 of 85 measured cars that carry none (#353). A strip mirroring one of
+            // them does not blink, because a strip is a copy of the car's bar; a screen draws OpenDash's
+            // own bar, whose top band has flashed at redline since ADR 0004, and it falls back to the
+            // published threshold for exactly the cars this answers false for.
+            var flashing = Parsed(LeftToRight);
+            var row = CarLightMirror.GearFor(flashing, "1");
+            Assert.True(CarLightMirror.CanOverRev(flashing, row));
+            Assert.True(CarLightMirror.OverRev(flashing, row, 7000));
+            // Flashing is still a threshold: a car that has one is not over-revving below it.
+            Assert.False(CarLightMirror.OverRev(flashing, row, 6999));
+
+            // A zero blink interval is how the files spell "this car does not flash". It is false at any
+            // RPM, and it says which of the two reasons that is.
+            var silent = Parsed(MeetInMiddle);
+            var silentRow = CarLightMirror.GearFor(silent, "1");
+            Assert.False(CarLightMirror.CanOverRev(silent, silentRow));
+            Assert.False(CarLightMirror.OverRev(silent, silentRow, 99000));
+
+            // And no table or no row is the same answer as no flash, which is what sends a screen back to
+            // the published threshold rather than leaving it to guess.
+            Assert.False(CarLightMirror.CanOverRev(null, row));
+            Assert.False(CarLightMirror.CanOverRev(flashing, null));
+        }
+
+        [Fact]
         public void A_fifteen_segment_bar_reddens_on_the_frame_the_digit_reaches_the_third_band()
         {
             // The claim #353 rests on: the digit's band and the bar's top colour are one comparison, so

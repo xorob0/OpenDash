@@ -302,7 +302,9 @@ lights its own, so the band the digit is in and the third of the bar that is red
 rather than two. Both are behind the same gate, `OpenDash.CarLadderChosen`, which is the rig's own
 answer to whose lights these are; this panel's switch sits in front of that and is the only thing that
 can put the digit on a different ladder from the bar beside it, which is a driver's instruction rather
-than a drift. The colours stay OpenDash's on a screen and the car's on a strip, which is the
+than a drift. Both also share the flash, which is the table's redline for a car that has one and the
+published threshold for the 47 measured cars in 85 that publish none — `OpenDash.CarLadderFlashes` is
+which of the two, and it is why the digit no longer goes solid at the limit on those cars. The colours stay OpenDash's on a screen and the car's on a strip, which is the
 distinction that record draws: a strip is a copy of a bar and a face is a drawing of a state.
 
 There is no gear colour theme. Theming is refused in [scope.md](../scope.md) until ADR 0011 says
