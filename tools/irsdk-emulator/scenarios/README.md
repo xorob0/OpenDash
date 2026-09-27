@@ -78,6 +78,11 @@ and `raceTime` is the default of the bar's first slot. So a week of time left is
 a photograph of `untimed` shows today, on every package, and it is the bar that is wrong: every
 iRacing lap race does this already.
 
+That bug is a defect of the dashboard rather than of this directory, so it is also listed with the
+other silent failures in [docs/dev-loop.md](../../../docs/dev-loop.md), which is where somebody
+looking at a surprising capture looks. It has no ticket yet and wants one; the fix is the guard the
+other four places already write, on both bar fields, plus the snapshot refresh.
+
 ## The other scenarios
 
 `race.json` is the base: a GT3/GT4 race at Spa, 24 cars, 30 laps with 12 done, the player at
