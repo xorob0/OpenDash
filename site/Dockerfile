@@ -117,9 +117,15 @@ ENV HOSTNAME=0.0.0.0
 WORKDIR /app
 
 # Prisma's query engine links the system libssl; node itself does not need it, so the slim image
-# does not carry it, and without it the first survey request dies inside the engine rather than at
-# an obvious place. DATABASE_URL and SURVEY_ADMIN_KEY are runtime variables set in Dokploy's
-# Environment tab; docs/deploy.md has the rows.
+# does not carry it. What its absence actually costs was measured rather than assumed (#404): Prisma
+# then cannot detect an openssl version, says so and falls back from the debian-openssl-3.0.x engine
+# schema.prisma declares — left with libssl.so.3 unresolved — to its openssl-1.1.x one, which
+# answered a query against a postgres with TLS and without it. So this install is what keeps the
+# image running the engine it was built to run, rather than the difference between a working survey
+# and a broken one; .github/workflows/site-image.yml is where it is checked.
+#
+# DATABASE_URL and SURVEY_ADMIN_KEY are runtime variables set in Dokploy's Environment tab;
+# docs/deploy.md has the rows.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssl ca-certificates \
  && rm -rf /var/lib/apt/lists/*

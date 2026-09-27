@@ -177,10 +177,16 @@ jobs:
 
       # The runtime stage carries three comments about things it has to assemble by hand, and all
       # three failures leave every page answering 200, so the step above catches only the first of
-      # them. Without the openssl install the survey dies inside Prisma's query engine on the first
-      # request; without a writable .next/cache next/image re-optimises every capture on every
-      # request and logs an EACCES for each one. Both were checked by building this image with the
-      # relevant lines deleted: the four assertions above stay green, and these two do not.
+      # them. Delete the openssl install and the debian-openssl-3.0.x engine the schema declares is
+      # left with libssl.so.3 and libcrypto.so.3 unresolved, and Prisma warns that it cannot detect
+      # the openssl version at all. Delete the .next/cache mkdir and next/image re-optimises every
+      # capture on every request, logging an EACCES for each one. Both were checked against images
+      # built that way: the four assertions above stayed green, and these two did not.
+      #
+      # What the first of those does not do is take the site down, which is worth knowing before
+      # reading the failure: Prisma falls back to the openssl-1.1.x engine, and that engine answered
+      # a query against a postgres with TLS and without it. So what this proves is that the image
+      # runs the engine it was built to run, which is the thing that drifts.
       - name: What the runtime stage assembles by hand
         run: |
           set -euo pipefail
