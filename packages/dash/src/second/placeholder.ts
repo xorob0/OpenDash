@@ -61,14 +61,19 @@ function linesThatFit(text: string, frame: Rect, size: number, step: number): st
  * pixel at a time down to 8, which put the sentence under the readable floor the density ramp
  * exists to hold -- and a sentence explaining that a reading is missing, itself too small to read,
  * is the worst of both.
+ *
+ * `prefix` is the caller's item-name prefix, dot included, the same one `fld` takes: every caller
+ * passes `ctx.prefix`, so it used to have a dot appended to it here and the items came out named
+ * `damage..placeholder`. Harmless and wrong, and worth spelling right now that twelve modules draw
+ * one of these rather than three disabled ones (#406).
  */
-export function placeholder(name: string, text: string, frame: Rect, density: Density): Item[] {
+export function placeholder(prefix: string, text: string, frame: Rect, density: Density): Item[] {
   const size = densityOf(density).label;
   const step = Math.ceil(LINE_SPACING * size);
   const lines = linesThatFit(text, frame, size, step);
   const top = frame.top + (frame.height - ((lines.length - 1) * step + size)) / 2;
   return lines.map((line, i) =>
-    label(i === 0 ? `${name}.placeholder` : `${name}.placeholder${i + 1}`, line, frame.left, top + i * step, frame.width, {
+    label(i === 0 ? `${prefix}placeholder` : `${prefix}placeholder${i + 1}`, line, frame.left, top + i * step, frame.width, {
       size,
       color: ds.color.text.dim,
       hAlign: 'center',
