@@ -216,27 +216,44 @@ export function fontName(font: Font, nameId: number): string | undefined {
 export const familyOf = (font: Font): string | undefined => fontName(font, NAME_ID.typographicFamily) ?? fontName(font, NAME_ID.family);
 
 /**
- * The vertical span of each contour of a glyph, in em, or `undefined` for a composite.
+ * The vertical span of each contour of a glyph, in em, or `undefined` when the outline cannot be read.
  *
  * A bounding box says where a glyph's ink ends; this says where it stops and starts again, which is
  * the other thing a renderer can take away from a letter. Parsed here rather than inferred because
  * the gap between a tittle and its stem is a number in the outline and nothing else in the build
  * knows it.
  *
- * A composite glyph -- an accented letter, and in Barlow the full stop's relatives too -- is drawn
- * from components rather than from contours of its own, so it answers `undefined` rather than a
- * wrong list. Nothing that asks this is composite: the letters are all simple glyphs.
+ * A composite glyph -- an accented letter, and in Barlow the full stop's relatives too -- has no
+ * contours of its own: it places other glyphs. Its components are resolved, because the letters that
+ * are built that way are exactly the ones a floating mark can weld to, so answering `undefined` for
+ * them would leave the one class the question is about unmeasured. `RÄIKKÖNEN` is composite in every
+ * letter that matters.
+ *
+ * `undefined` is left for the outline this cannot honestly read: a component positioned by matching
+ * one of its points to one of the parent's rather than by an offset, which needs the parent's points
+ * resolved first, and a nesting deeper than {@link COMPONENT_DEPTH}. Neither occurs in the five
+ * bundled faces -- every component in them is an offset with no transform -- and a font swap that
+ * brought one would answer `undefined` rather than a wrong number.
  */
 export function contourSpans(font: Font, char: string): { yMin: number; yMax: number }[] | undefined {
   const glyph = font.cmap.get(char.codePointAt(0) ?? -1);
   if (glyph === undefined) return undefined;
+  const spans = glyphSpans(font, glyph, 0);
+  return spans?.map(({ yMin, yMax }) => ({ yMin: yMin / font.unitsPerEm, yMax: yMax / font.unitsPerEm }));
+}
+
+/** How deep a composite may place another composite before this gives up. Barlow reaches two. */
+const COMPONENT_DEPTH = 5;
+
+/** The same, by glyph id and in font units, which is what a composite has to add its offsets in. */
+function glyphSpans(font: Font, glyph: number, depth: number): { yMin: number; yMax: number }[] | undefined {
   const start = font.loca[glyph] ?? 0;
   const end = font.loca[glyph + 1] ?? start;
   if (end <= start) return [];
   const { data } = font;
   let at = font.glyfOffset + start;
   const numberOfContours = data.getInt16(at);
-  if (numberOfContours < 0) return undefined;
+  if (numberOfContours < 0) return componentSpans(font, at + 10, depth);
   at += 10;
   const endPoints: number[] = [];
   for (let i = 0; i < numberOfContours; i++) {
@@ -277,10 +294,52 @@ export function contourSpans(font: Font, char: string): { yMin: number; yMax: nu
   let from = 0;
   for (const endPoint of endPoints) {
     const contour = ys.slice(from, endPoint + 1);
-    spans.push({ yMin: Math.min(...contour) / font.unitsPerEm, yMax: Math.max(...contour) / font.unitsPerEm });
+    spans.push({ yMin: Math.min(...contour), yMax: Math.max(...contour) });
     from = endPoint + 1;
   }
   return spans;
+}
+
+/**
+ * The spans of a composite's components, in font units, read from the record list at `at`.
+ *
+ * Each record is a flag word, a glyph id, two arguments and an optional transform. Only the vertical
+ * matters here, so the x argument and the x half of a transform are read past: what is kept is the y
+ * offset and the y scale. The flag word ends the list when bit 5 is clear.
+ */
+function componentSpans(font: Font, at: number, depth: number): { yMin: number; yMax: number }[] | undefined {
+  if (depth >= COMPONENT_DEPTH) return undefined;
+  const { data } = font;
+  const spans: { yMin: number; yMax: number }[] = [];
+  for (;;) {
+    const flags = data.getUint16(at);
+    const component = data.getUint16(at + 2);
+    at += 4;
+    // Bit 0 sizes the two arguments, bit 1 says whether they are an offset at all. A cleared bit 1
+    // makes them point indices, which needs the parent's points and is not read here.
+    const words = (flags & 1) !== 0;
+    const dy = words ? data.getInt16(at + 2) : data.getInt8(at + 1);
+    at += words ? 4 : 2;
+    if (!(flags & 2)) return undefined;
+    // Bits 3, 6 and 7 are the three transforms, all F2Dot14. The y scale is the second of a pair and
+    // the fourth of a two-by-two.
+    let scaleY = 1;
+    if (flags & 0x0008) {
+      scaleY = data.getInt16(at) / 16384;
+      at += 2;
+    } else if (flags & 0x0040) {
+      scaleY = data.getInt16(at + 2) / 16384;
+      at += 4;
+    } else if (flags & 0x0080) {
+      scaleY = data.getInt16(at + 6) / 16384;
+      at += 8;
+    }
+    const inner = glyphSpans(font, component, depth + 1);
+    if (inner === undefined) return undefined;
+    // A negative scale reflects the component, so the two ends swap and are sorted back.
+    for (const { yMin, yMax } of inner) spans.push({ yMin: Math.min(yMin * scaleY, yMax * scaleY) + dy, yMax: Math.max(yMin * scaleY, yMax * scaleY) + dy });
+    if (!(flags & 0x0020)) return spans;
+  }
 }
 
 /**
@@ -289,7 +348,12 @@ export function contourSpans(font: Font, char: string): { yMin: number; yMax: nu
  * Zero for a letter drawn in one piece, and zero for a counter as well: the spans are merged before
  * the gaps between them are measured, so the hole in an `O` -- which is inside the letter's span and
  * not above or below it -- is not a break. What is left is the disjoint glyph: the tittle of an `i`
- * over its stem, the dot of a `!` under its stroke.
+ * over its stem, the dot of a `!` under its stroke, the acute of an `É` over its bar.
+ *
+ * The accented letter is the reason {@link contourSpans} resolves components rather than declining
+ * them. In Barlow Medium `É` breaks at 0.064 em where the lowercase `i` breaks at 0.080, so upper
+ * case is not an escape from the construction -- it is an escape from the *substitution*, an `i` with
+ * a welded tittle being a legal `l` where an `É` with a welded acute is only a misdrawn `É`.
  *
  * This is the number behind the name column's case rule. A break of `g` em drawn at `fs` px is
  * `g × fs` device pixels of background, and at a break under two pixels there is no pixel row the

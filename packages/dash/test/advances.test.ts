@@ -97,32 +97,66 @@ describe('the widest glyph, which is what a character budget is measured by', ()
  */
 describe('the break inside a glyph, which is what the name column is cased by', () => {
   for (const face of FACES) {
-    test(`${face} breaks its i and its j where the table says, and no letter else`, async () => {
+    test(`${face} breaks its i at the number the table quotes, and no letter but the j at all`, async () => {
       const { inkBreak, loadFont } = await import('../../../tools/measure-font/measure.ts');
       const font = loadFont(`packages/dash/fonts/${FILES[face]}`);
-      // Composites are drawn from components rather than contours and answer `undefined`; in these
-      // faces they are the full stop and its relatives, and no letter is one.
-      const broken = CHARACTERS.filter((ch) => (inkBreak(font, ch) ?? 0) > 0);
-      // Letters only: `!`, `?` and `;` break too and are not drawn in a name.
-      expect({ face, letters: broken.filter((ch) => /[A-Za-z]/.test(ch)) }).toMatchObject({ letters: ['i', 'j'] });
-      expect({ face, table: TITTLE_BREAK[face], font: Math.round((inkBreak(font, 'i') ?? 0) * 1000) / 1000 }).toMatchObject({ table: TITTLE_BREAK[face] });
+      // Nothing here may answer `undefined`, which is an outline the tool declined to read: a `?? 0`
+      // over one of those would turn "not measured" into "not broken" and pass.
+      const measured = CHARACTERS.map((ch) => [ch, inkBreak(font, ch)] as const);
+      expect({ face, unread: measured.filter(([, gap]) => gap === undefined).map(([ch]) => ch) }).toMatchObject({ unread: [] });
+      // Letters only: `!`, `?`, `;` and the ellipsis break too and are not letters.
+      expect({ face, letters: measured.filter(([ch, gap]) => (gap ?? 0) > 0 && /[A-Za-z]/.test(ch)).map(([ch]) => ch) }).toMatchObject({ letters: ['i', 'j'] });
+      // The one number `dottedLetterSize` divides two device pixels by, against the file it is quoted
+      // from, rounded to the three decimals the table carries. The *table* is what is asserted and the
+      // measurement is what it is asserted against, not the other way about: an entry compared with
+      // itself would be a tautology, and this number is quoted in three documents as well as in code.
+      const tittle = Math.round((inkBreak(font, 'i') ?? 0) * 1000) / 1000;
+      expect({ face, table: TITTLE_BREAK[face], font: tittle }).toMatchObject({ table: tittle });
+      // The `j` is held *against* the entry rather than to it, one number per face not being able to be
+      // both: Barlow Bold breaks its `j` at 0.058 em where its `i` breaks at 0.057. The `i` is the
+      // tighter of the two in all five faces, which is what makes the entry the bound for the pair.
+      const hook = Math.round((inkBreak(font, 'j') ?? 0) * 1000) / 1000;
+      expect({ face, table: TITTLE_BREAK[face], j: hook, holds: hook >= TITTLE_BREAK[face] }).toMatchObject({ holds: true });
     });
   }
 
-  test('no upper-case letter and no digit is drawn in two pieces, which is why upper case is the remedy', async () => {
-    // The whole of the argument for shouting a name at a small size. Shouting is not more legible in
-    // general; it is that the failure needs a glyph with a gap in it, and the upper-case alphabet has
-    // none. A counter does not count: the spans are merged before the gaps are measured, so the hole
-    // in an `O` is inside the letter and not a break.
+  test('no unaccented upper-case letter and no digit is drawn in two pieces, which is what upper case removes', async () => {
+    // The argument for shouting a name at a small size. Shouting is not more legible in general; it is
+    // that the failure needs a glyph with a gap in it, and the unaccented upper-case alphabet has none,
+    // so `LIAM BYRNE` cannot be read as another name the way `Liam Byrne` was. A counter does not
+    // count: the spans are merged before the gaps are measured, so the hole in an `O` is inside the
+    // letter and not a break.
     const { inkBreak, loadFont } = await import('../../../tools/measure-font/measure.ts');
     for (const face of FACES) {
       const font = loadFont(`packages/dash/fonts/${FILES[face]}`);
-      // `undefined` rather than 0 would be a composite glyph, which none of these are, and would make
-      // the assertion vacuous — so the answer is compared as it comes back.
+      // `undefined` rather than 0 would be an outline the tool declined, and would make the assertion
+      // vacuous — so the answer is compared as it comes back.
       for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -') {
         expect({ face, ch, break: inkBreak(font, ch) }).toMatchObject({ break: 0 });
       }
     }
+  });
+
+  test('an accented capital keeps its floating mark, so the case rule removes a substitution and not a class', async () => {
+    // The limit of the row above, in numbers rather than left to an absolute that is not one. An
+    // accented capital is a letter with a mark placed over it, so it has the same construction the
+    // lowercase `i` failed at — and four of these seven break *tighter* in the name face than the
+    // 0.080 em the `i` does, every one of them under the two device pixels 13 and 15 px can promise.
+    // RÄIKKÖNEN may therefore still come back with a mark welded to its letter.
+    //
+    // What upper case removes is the *substitution*. A welded tittle makes `Liam` a legal `Llam`, a
+    // different name that reads as itself; a welded acute makes `É` a misdrawn `É`, which is still the
+    // letter and still the name. There is no tighter bound to reach for: these are the marks the five
+    // bundled faces draw, and the alternative to drawing them is not drawing the name.
+    const { inkBreak, loadFont } = await import('../../../tools/measure-font/measure.ts');
+    const font = loadFont('packages/dash/fonts/Barlow-Medium.ttf');
+    // `-1` rather than 0 for an outline the tool declined, so a composite it stopped resolving fails
+    // here instead of reading as a letter drawn in one piece.
+    const breaks = Object.fromEntries([...'ÉÅÍÖÄÜÑ'].map((ch) => [ch, Math.round((inkBreak(font, ch) ?? -1) * 1000) / 1000]));
+    expect(breaks).toEqual({ É: 0.064, Å: 0.064, Í: 0.064, Ö: 0.076, Ä: 0.084, Ü: 0.084, Ñ: 0.084 });
+    expect({ tighterThanTheI: Object.entries(breaks).filter(([, gap]) => gap < TITTLE_BREAK.BarlowMedium).map(([ch]) => ch) }).toMatchObject({
+      tighterThanTheI: ['É', 'Å', 'Í', 'Ö'],
+    });
   });
 
   test('a heavier weight closes the gap rather than opening it', () => {
