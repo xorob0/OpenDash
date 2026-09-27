@@ -50,9 +50,24 @@ const A_WEEK = 604800;
 const fuelItems = pageItems('fuel');
 const sessionItems = pageItems('session');
 
-/** What the sim publishes, in the two shapes the margin subtracts. */
+/**
+ * What the sim publishes, in the two shapes the margin subtracts.
+ *
+ * The session is a race unless a case says otherwise, because that is the only session the margin
+ * draws in at all: a practice or qualifying session has an end and no flag, and the reading is
+ * gated on the name for that reason rather than on the length alone.
+ */
 const telemetry = (
-  opts: { lapsDone?: number; perLap?: number; fuelLaps?: number; lapsLeft?: number; fuelSeconds?: number; sessionSeconds?: number; progress?: string } = {},
+  opts: {
+    lapsDone?: number;
+    perLap?: number;
+    fuelLaps?: number;
+    lapsLeft?: number;
+    fuelSeconds?: number;
+    sessionSeconds?: number;
+    progress?: string;
+    type?: string | null;
+  } = {},
 ): Props => ({
   'DataCorePlugin.GameData.CompletedLaps': opts.lapsDone ?? 3,
   'DataCorePlugin.Computed.Fuel_LitersPerLap': opts.perLap ?? 2.84,
@@ -60,6 +75,7 @@ const telemetry = (
   'DataCorePlugin.GameData.RemainingLaps': opts.lapsLeft ?? 11,
   'DataCorePlugin.Computed.Fuel_RemainingTime': opts.fuelSeconds ?? 1500,
   'DataCorePlugin.GameData.SessionTimeLeft': opts.sessionSeconds ?? A_WEEK,
+  'DataCorePlugin.GameData.SessionTypeName': opts.type === undefined ? 'Race' : opts.type,
   ...(opts.progress === undefined ? {} : { 'OpenDash.SessionProgress': opts.progress }),
 });
 
@@ -105,10 +121,29 @@ describe('the fuel margin on the fuel module', () => {
     // The gate the estimate beside it reads: a completed lap and a consumption to derive from.
     expect(marginOn(fuelItems, telemetry({ lapsDone: 0 }))).toEqual(absent);
     expect(marginOn(fuelItems, telemetry({ perLap: 0 }))).toEqual(absent);
-    // And a race with an end to reach. A practice session would otherwise draw the whole of the
+    // And a race with an end to reach. A race with no end would otherwise draw the whole of the
     // range as spare: `+13.1` laps to a flag nobody is going to wave.
     expect(marginOn(fuelItems, telemetry({ lapsLeft: 0 }))).toEqual(absent);
     expect(marginOn(fuelItems, telemetry({ sessionSeconds: A_WEEK, progress: 'time' }))).toEqual(absent);
+  });
+
+  test('and nothing outside a race, where the end is real and the flag is not', () => {
+    const absent = { value: NO_VALUE, colour: ds.color.text.primary };
+    // A thirty-minute open practice with eight minutes of fuel: a length, so the length gate passes,
+    // and `−22` MIN in the danger red for the rest of the session if nothing else asks. A low tank in
+    // practice is a low tank, which is the same reason the low-fuel warning stays off this expression.
+    const practice = { sessionSeconds: 1800, fuelSeconds: 480 } as const;
+    expect(marginOn(fuelItems, telemetry({ ...practice, type: 'Race' })).value).toBe(`${MINUS}22`);
+    for (const type of ['Practice', 'Open Practice', 'Qualify', 'Open Qualify', 'Lone Qualify', 'Offline Testing', 'Warmup', '']) {
+      expect({ type, ...marginOn(fuelItems, telemetry({ ...practice, type })) }).toEqual({ type, ...absent });
+    }
+    // Including with the setting on laps, which is the same session read the other way round.
+    expect(marginOn(fuelItems, telemetry({ type: 'Practice', progress: 'laps' }))).toEqual(absent);
+    // A session the sim does not name reads nothing rather than a verdict: an absence says the dash
+    // cannot tell, where a red figure says the tank will not make it.
+    expect(marginOn(fuelItems, telemetry({ type: null }))).toEqual(absent);
+    // The comparison is on the upper-cased name, so a sim that shouts it is still a race.
+    expect(marginOn(fuelItems, telemetry({ type: 'RACE' })).value).toBe('+2.1');
   });
 
   test('it agrees with the estimated laps and the laps left the same frame draws', () => {

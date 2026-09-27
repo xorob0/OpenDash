@@ -631,16 +631,29 @@ export const settledFuelTimeLeft = (): Expr => iff(fuelIsSettled(), fuelTimeLeft
 const SECONDS_PER_MINUTE = 60;
 
 /**
- * Whether the race has an end for the tank to be measured against.
+ * Whether there is a race to measure the tank against: a length to run, in a session that is a race.
  *
- * A margin to the end of the race is nothing at all in a session that has no end, and a practice
- * session with a full tank would otherwise draw the whole of the range as spare: `+13.1` laps to a
- * flag nobody is going to wave. So the reading waits for a length as well as for a lap, and the
- * length it waits for is the one the page is counting down -- the time in a timed session and the
- * laps remaining in a lap-counted one -- because those are the two numbers the subtraction is
- * against and either may be missing while the other is there.
+ * Two questions, and the first one alone is not enough. A length, because a session with no end has
+ * no flag for the tank to reach and the subtraction would draw the whole of the range as spare, and
+ * the length asked for is the one the page is counting down -- the time in a timed session and the
+ * laps remaining in a lap-counted one -- since those are the two terms of the subtraction and either
+ * may be missing while the other is there.
+ *
+ * And a race, because a practice or qualifying session that *does* have a length has an end nobody
+ * waves a flag at. A thirty-minute open practice with eight minutes of fuel in the tank read `−22`
+ * MIN in the danger red, from the first completed lap to the end of the session, which is exactly the
+ * false alarm {@link tankIsLow} refuses this expression for: a low tank in practice is a low tank and
+ * nothing more, and the driver is not short of fuel for anything. `Race` is the one session name
+ * OpenDash matches with certainty and `lapReviewWanted` in `components/lapReview.ts` already compares
+ * it this way, through {@link sessionType} rather than a second spelling of the property. A session
+ * whose name the sim does not give reads nothing here, which is the right way to be wrong: an absence
+ * says the dash cannot tell, where a red figure says the tank will not make it.
+ *
+ * `Refuel` is the counter-precedent and stays as it is: it reads the race's remaining laps in
+ * practice too, but it is drawn in caution amber as an instruction to the crew rather than as a
+ * verdict, so a figure of no use in practice is not a figure that alarms there.
  */
-const raceHasAnEnd = (): Expr => iff(showsTimeLeft(), isTimedSession(), gt(lapsLeft(), num(0)));
+const raceHasAnEnd = (): Expr => and(eq(ucase(sessionType()), str('RACE')), iff(showsTimeLeft(), isTimedSession(), gt(lapsLeft(), num(0))));
 
 /**
  * Whether there is a margin to draw: a lap has said what one costs, and the race has an end.
@@ -780,7 +793,9 @@ export const lapOfTotal = (): Expr =>
  * low tank, and loud on the first lap of a long race where a car is by definition short of fuel for
  * the whole of it. The threshold is a number the driver chose, in laps, and it means the same thing
  * in every session. The margin answers a different question and answers it as a reading on the fuel
- * page and on band D, which is where a strategy is read rather than warned about.
+ * page and on band D, which is where a strategy is read rather than warned about -- and it draws
+ * nothing outside a race for the first of those two reasons, so the pair now agree about practice
+ * rather than only this one being right about it.
  */
 export const tankIsLow = (): Expr => and(fuelIsSettled(), lt(isnull(computed('Fuel_RemainingLaps'), num(999)), flagBox.lowFuelLaps()));
 
