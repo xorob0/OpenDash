@@ -64,6 +64,14 @@ choice between them is made per frame and the honest way to show a per-frame cho
 whose visibility is bound to it. `rpmBar` is the third, and is what `rpm` and `off` both fall to.
 So: three layers, two of which are the ladder and one the plain bar, and none of which is `off`.
 
+**Amended 2026-09-27 ([#353](https://github.com/xorob0/OpenDash/issues/353)).** The count moved once
+more, for the same kind of reason, and this is the record that keeps it: a rev surface now emits
+**four** layers. [ADR 0018](0018-the-cars-own-lights.md), amended that day, gave a screen the car's
+own measured bar where the rig has one and has asked for it, so the `shift` state is now *three*
+layers — `shiftLightsCar`, `shiftLights` and `shiftLightsSimHub` — and `rpmBar` is the fourth. `off`
+is still not a layer. Nothing else about this record changes: the new layer is the same fifteen
+segments in the same three token colours, and what differs is only which frame each one lights on.
+
 The rendering of the fallback layer is untouched: it is the segments this record describes, lit by
 the same three properties. One expression was tidied when the gear on the flag box came to ask the
 same question — the first segment of a band, which compared `progress * n > 0`, now compares
