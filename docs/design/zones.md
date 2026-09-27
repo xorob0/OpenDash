@@ -517,10 +517,22 @@ holding a drawing against a zone should find the argument rather than suspect a 
   quantity measured against the race, so the narrow zone carries the one that answers. The tank and
   the bar under it are never the pair that gives way; they are what the page is.
 
+  Displacing the fuel time rather than the per-lap average was reviewed and kept, and the measurement
+  is the reason: the module's lead rank is the tank, the fuel time, the margin and the estimate, so
+  keeping the time means three fields in that rank instead of two, and three do not grow. Built at
+  `grid`, the alternative draws the lead numerals at 34 px where the page draws them at 46 in a
+  250 × 290 zone, 43 against 46 at 250 × 328, 51 against 62 at 430 × 300 and 57 against 62 at
+  469 × 320 — and sheds the per-lap average at all four anyway, so it trades a quarter of the lead
+  rank's height for a field it does not keep. What survives the trade is worth saying plainly: the
+  tank's range is still on the page as the tank over the per-lap average, one division of two numbers
+  drawn side by side, whereas the per-lap figure is the instrument a negative margin calls for and
+  nothing else on a narrow page carries it.
+
   The canvas owes the redraw, on both sheets, and what it should draw is one design with the fuel
   target of [#326](https://github.com/xorob0/OpenDash/issues/326) rather than two fields added
   separately: the target says whether the lap just done was on plan and this says whether the plan
-  reaches the flag.
+  reaches the flag. The two shapes above are the first question to put to it, since the choice there
+  is between losses and the sheets have not been asked.
 - **Leaderboard at `wide`.** The best and the last lap, two columns the zone drawing does not carry
   and the companion's list does. The trade runs the other way as well: the drawing gives the row a
   rating column, and neither list declares one.
