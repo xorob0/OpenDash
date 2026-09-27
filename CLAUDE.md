@@ -49,6 +49,11 @@ box using the advances in `packages/dash/src/design/advances.ts`, which are read
 fonts; keep them passing rather than adjusting them. Measure a run in the weight it is drawn in:
 Barlow Condensed Bold is wider than SemiBold, and a box measured from the wrong face clips.
 
+A bound text is measured by its `widest`, and `packages/dash/test/widest.test.ts` holds that
+declaration to the binding it describes: every string the `Text` expression is certain to draw,
+composites included, must fit inside the declared `widest`. Declare the widest string the binding
+can produce, in the case it is drawn in, and let the test tell you when the binding outgrows it.
+
 The second screens add a second rule of the same kind. A module is a function of a rectangle, so
 it has to fit whatever rectangle it is given: `secondScreens.test.ts` builds every module into
 the seven box shapes the packages use and checks every item against the frame. When a module
