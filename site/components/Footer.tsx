@@ -1,10 +1,14 @@
 /**
  * The footer: the promise once more, every page, the repository, and the fine print the licences
  * require. The version is the one the site serves, read from the build.
+ *
+ * The repository is printed as its address beside the licence rather than listed as "GitHub" among
+ * the site's own pages: a visitor deciding whether this is a real project is looking for the source,
+ * and an address they can read is the answer.
  */
 import Link from 'next/link';
 import { VERSION } from '../lib/content.generated';
-import { CAR_DATA_CREDIT, CAR_DATA_URL, INSTALL, NAV, NO_TRACKING, REPO_URL, SITE_NAME } from '../lib/site';
+import { CAR_DATA_CREDIT, CAR_DATA_URL, INSTALL, NAV, NO_TRACKING, REPO_LABEL, REPO_URL, SITE_NAME, SITE_TAGLINE } from '../lib/site';
 import { Wordmark } from './Wordmark';
 import styles from './Footer.module.css';
 
@@ -14,7 +18,14 @@ export function Footer() {
       <div className={`page ${styles.grid}`}>
         <div className={styles.brand}>
           <Wordmark size={20} />
-          <p className={styles.line}>Free dashboards for SimHub, built for iRacing first. MIT.</p>
+          <p className={styles.line}>{SITE_TAGLINE}</p>
+          <p className={styles.line}>
+            MIT, on{' '}
+            <a href={REPO_URL} className="link" rel="noopener">
+              {REPO_LABEL}
+            </a>
+            .
+          </p>
           <p className={`num ${styles.version}`}>{VERSION}</p>
         </div>
 
@@ -32,11 +43,6 @@ export function Footer() {
               <Link href={INSTALL.href} className={styles.navLink}>
                 {INSTALL.label}
               </Link>
-            </li>
-            <li>
-              <a href={REPO_URL} className={styles.navLink} rel="noopener">
-                GitHub
-              </a>
             </li>
           </ul>
         </nav>
