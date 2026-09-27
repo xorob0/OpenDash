@@ -82,14 +82,19 @@ interface JsonItem {
  */
 const BUILD_HOOK_TIMEOUT = 60_000;
 
-let root: string;
+/**
+ * The temporary tree every build in this file writes into.
+ *
+ * Made at module scope rather than in the hook below because the reproducibility block builds at
+ * `describe` scope, and a `describe` body runs during collection, before any `beforeAll`.
+ */
+const root = mkdtempSync(join(tmpdir(), 'opendash-e2e-'));
 let widget: BuildResult;
 let inline: BuildResult;
 let second: BuildResult;
 const log: string[] = [];
 
 beforeAll(() => {
-  root = mkdtempSync(join(tmpdir(), 'opendash-e2e-'));
   // The faces and the second screens are built into separate directories so each block can assert
   // on exactly what its own build wrote.
   widget = build({ out: join(root, 'widget'), screens: [], stripShapes: [], log: (line) => log.push(line) });
@@ -506,17 +511,30 @@ describe('inline strategy', () => {
 });
 
 describe('reproducibility', () => {
+  /**
+   * The second of each pair of builds, at `describe` scope rather than inside the test that
+   * compares it.
+   *
+   * A build is about a second of work, and these two were the slowest test bodies in the suite at
+   * 1.80 s and 0.67 s against bun's five-second default. #425 was that same second of work timing
+   * a test out on a CI runner that was slower on the day, and the margin here narrows on its own,
+   * because the build is every package and each package added spends some of it. Collection is not
+   * on the per-test clock, so the work costs the job the same wall clock and costs no test its
+   * budget. It is also the pair that runs first now, which reproducibility does not care about:
+   * two builds into two directories, compared byte for byte, in either order.
+   */
+  const again = build({ out: join(root, 'again'), screens: [], stripShapes: [], log: () => {} });
+  const againSecond = build({ out: join(root, 'againSecond'), layouts: [], zoneFaces: [], stripShapes: [], log: () => {} });
+
   test('two builds produce byte-identical packages', () => {
-    const again = build({ out: join(root, 'again'), screens: [], stripShapes: [], log: () => {} });
     expect(again.packages).toHaveLength(widget.packages.length);
     again.packages.forEach((p, i) => expect(Buffer.compare(p.zipped.bytes, widget.packages[i]!.zipped.bytes)).toBe(0));
     expect(readFileSync(again.manifestPath, 'utf8')).toBe(readFileSync(widget.manifestPath, 'utf8'));
   });
 
   test('the second screens are reproducible too', () => {
-    const again = build({ out: join(root, 'againSecond'), layouts: [], zoneFaces: [], stripShapes: [], log: () => {} });
-    expect(again.packages).toHaveLength(second.packages.length);
-    again.packages.forEach((p, i) => expect(Buffer.compare(p.zipped.bytes, second.packages[i]!.zipped.bytes)).toBe(0));
+    expect(againSecond.packages).toHaveLength(second.packages.length);
+    againSecond.packages.forEach((p, i) => expect(Buffer.compare(p.zipped.bytes, second.packages[i]!.zipped.bytes)).toBe(0));
   });
 });
 
