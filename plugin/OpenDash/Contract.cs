@@ -445,6 +445,18 @@ namespace OpenDashPlugin
         /// <summary>Whether the car is past its own redline for the gear it is in.</summary>
         public const string CarLadderOverRev = "CarLadderOverRev";
 
+        /// <summary>How many of the car's own LEDs are lit this frame, out of <see cref="CarLadderLamps"/>.
+        /// What a rev bar of any segment count fills itself from (#353).</summary>
+        public const string CarLadderLit = "CarLadderLit";
+
+        /// <summary>How many LEDs the car's ladder has in the gear it is in, or 0 when no table is being
+        /// read -- which is the gate a screen falls back on.</summary>
+        public const string CarLadderLamps = "CarLadderLamps";
+
+        /// <summary>The RPM the top third of the car's own bar lights at, for the readout that prints the
+        /// number the bar goes red at.</summary>
+        public const string CarLadderTopRpm = "CarLadderTopRpm";
+
         public const string LedMirrorFit = "LedMirrorFit";
 
         /// <summary>Whether a car alongside takes the whole strip rather than the lamp at that end. Off:
@@ -1573,9 +1585,14 @@ namespace OpenDashPlugin
             // the group and is never inserted into it.
             yield return LightsLowFuelLaps;
             yield return FlagBoxSpotterAnimation;
-            // Computed rather than chosen, and read by the digit on a panel set to the car's own bar.
+            // Computed rather than chosen: the digit on a panel set to the car's own bar reads the first
+            // two, and since #353 a screen's rev bar, rev arc and Redline readout read the last three.
+            // Appended rather than placed beside the stage, for the reason LightsLowFuelLaps was.
             yield return CarLadderStage;
             yield return CarLadderOverRev;
+            yield return CarLadderLit;
+            yield return CarLadderLamps;
+            yield return CarLadderTopRpm;
             foreach (var matrix in FlagBoxMatrices)
             {
                 foreach (var name in FlagBoxMatrixProperties(matrix)) yield return name;

@@ -103,9 +103,11 @@ describe('settings', () => {
     // alongside the whole strip. It was nine and six until the
     // four settings a box owns -- critical flags only, the gear and the two temperatures -- moved
     // under the matrix that owns them.
-    // Six of the eight globals are settings; the other two are the car's own bands, computed by the
-    // plugin because a table of thresholds per gear is not something an expression can read.
-    expect(flagBoxProperties()).toHaveLength(8 + FLAG_BOX_MATRICES.length * 13);
+    // Six of the eleven globals are settings; the other five are the car's own bar, computed by the
+    // plugin because a table of thresholds per gear is not something an expression can read: the band
+    // and the flash the digit reads, and the lit count, the ladder's length and the top band's RPM a
+    // screen draws that bar from (#353).
+    expect(flagBoxProperties()).toHaveLength(11 + FLAG_BOX_MATRICES.length * 13);
     expect(ledProperties()).toEqual([
       'OpenDash.LedCentre',
       'OpenDash.LedRpmStyle',
@@ -151,8 +153,10 @@ describe('settings', () => {
     // before the pit wall was given the same three-way answer as the companion and the header's
     // flag readout, which did not work on a rig, was taken off the strip, and 328 before each matrix
     // was given its own answer to whether the digit is banded at all and to which ladder bands it,
-    // which is eight names, and the car's own bands had to be published for the digit to read.
-    expect(props).toHaveLength(338);
+    // which is eight names, and the car's own bands had to be published for the digit to read, and
+    // 338 before a screen's rev bar took the car's thresholds too and needed the same bar as three
+    // numbers: how many of its lamps are lit, how many it has, and the RPM its top third lights at.
+    expect(props).toHaveLength(341);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');

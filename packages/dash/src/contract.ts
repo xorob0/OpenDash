@@ -209,6 +209,32 @@ export const CAR_LADDER_STAGE = 'CarLadderStage';
 
 export const CAR_LADDER_OVER_REV = 'CarLadderOverRev';
 
+/**
+ * The same bar as a number a rev bar can fill itself from: how many of the car's own LEDs are lit
+ * this frame, and how many that gear's ladder has.
+ *
+ * A count and a total rather than a fraction, because a screen compares them by cross-multiplication
+ * -- `lit * segments > k * lamps` -- exactly as the published ladder's bands do, so a segment lights
+ * on the frame the car lights its own LED rather than a rounding either side of it. `lamps` at zero
+ * is every way of there being no table, and is the gate a screen falls back on.
+ *
+ * #353, [ADR 0018](../../../docs/decisions/0018-the-cars-own-lights.md) amended 2026-09-27: a screen
+ * takes the car's thresholds and keeps OpenDash's colours, so it needs the timing and none of the
+ * table.
+ */
+export const CAR_LADDER_LIT = 'CarLadderLit';
+
+export const CAR_LADDER_LAMPS = 'CarLadderLamps';
+
+/**
+ * The RPM the top third of the car's own bar lights at, per gear.
+ *
+ * The number a readout beside that bar has to print, which is `shift.ts`'s promise applied to the
+ * measured tables: the bar reddens where the car's bar reddens, so the figure beside it is that
+ * threshold and not SimHub's redline. Zero when no table is being read.
+ */
+export const CAR_LADDER_TOP_RPM = 'CarLadderTopRpm';
+
 /** The name of the setting choosing how a car's bar is fitted to a strip that is a different length. */
 export const LED_MIRROR_FIT_SETTING = 'LedMirrorFit';
 
@@ -1523,11 +1549,16 @@ export function flagBoxProperties(): string[] {
     // by index, so a new name joins the end of the group and is never inserted into it.
     LIGHTS_LOW_FUEL_LAPS_SETTING,
     FLAG_BOX_SPOTTER_ANIMATION_SETTING,
-    // Computed rather than chosen, and the only two of those the box reads: the band the car's own
-    // measured bar puts the engine in, and its redline. They sit with the flag box because it is
-    // their only reader, the way `LedMirrorReady` sits with the strips that read it.
+    // Computed rather than chosen: the band the car's own measured bar puts the engine in, its
+    // redline, and since #353 the three numbers a screen draws that bar from. They sat here because
+    // the flag box was their only reader, the way `LedMirrorReady` sits with the strips; they stay
+    // here because this list is pinned in order and a name joins the end of its group rather than
+    // moving. All five are one frame of one computation, whoever reads it.
     CAR_LADDER_STAGE,
     CAR_LADDER_OVER_REV,
+    CAR_LADDER_LIT,
+    CAR_LADDER_LAMPS,
+    CAR_LADDER_TOP_RPM,
   ];
   const perMatrix = FLAG_BOX_MATRICES.flatMap(flagBoxMatrixProperties);
   return [...global, ...perMatrix].map(propertyName);

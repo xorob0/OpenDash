@@ -329,7 +329,9 @@ namespace OpenDashPlugin
             {
                 if (BarRpmStyle(bar.Namespace) == Contract.LedRpmStyleCar) return true;
             }
-            // A rig with bars may still have a face or a box reading the rig-wide answer.
+            // A rig with bars may still have a face or a box reading the rig-wide answer -- and since
+            // #353 every installed screen does: a rev bar on the rig-wide `car` style takes the car's
+            // thresholds, so the rig-wide answer is a reason to compute the mirror on its own.
             return LedRpmStyle == Contract.LedRpmStyleCar;
         }
 

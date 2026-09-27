@@ -155,41 +155,135 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// How many of the car's own three shift bands the engine has entered: 0 below the first LED,
-        /// then 1, 2 and 3 for the thirds of the bar. -1 when this car and gear have nothing to say,
-        /// which is the caller's signal to fall back to the ladder the sim publishes.
+        /// The car's own bar as three numbers a screen can draw with, for the gear and RPM now.
         ///
-        /// <para>Thirds of the bar rather than thirds of the rev range, because that is what the rev
-        /// bar's own three colours are: <c>stageOf</c> in components/revSegments.ts splits fifteen
-        /// segments the same way, and a digit banded on one rule beside a bar banded on another is two
-        /// answers to one question. Counted as LEDs lit rather than by index, so a bar that fills from
-        /// both ends inwards bands exactly as one that fills left to right does.</para>
+        /// <para>A strip mirrors the bar LED for LED and needs colours; a rev bar is fifteen segments in
+        /// OpenDash's own palette and needs only to know how far up the car's bar the engine is (#353,
+        /// ADR 0018 amended). So this is the whole of what a screen is given: how long this gear's ladder
+        /// is, how much of it is lit, and the RPM its top third lights at. The table itself never leaves
+        /// the plugin.</para>
         ///
-        /// <para>A threshold of zero is left out of the count entirely. It means lit from idle, which
-        /// is how the files spell an LED that is not part of the ladder -- a marker, or the unlit half
-        /// of a gap -- and counting those would put a stationary car two thirds of the way up its own
-        /// bar.</para>
+        /// <para>Counted as LEDs lit rather than by index, so a bar that fills from both ends inwards
+        /// reads exactly as one that fills left to right does. A threshold of zero is left out of the
+        /// count entirely: it means lit from idle, which is how the files spell an LED that is not part
+        /// of the ladder -- a marker, or the unlit half of a gap -- and counting those would put a
+        /// stationary car two thirds of the way up its own bar.</para>
         /// </summary>
-        public static int Stage(CarLightTable table, string gear, double rpm)
+        public struct CarLadder
         {
-            if (table == null) return -1;
+            /// <summary>How many of this gear's LEDs are rungs of the ladder. Zero when there is no ladder to read.</summary>
+            public readonly int Lamps;
+
+            /// <summary>How many of them are lit at this RPM.</summary>
+            public readonly int Lit;
+
+            /// <summary>
+            /// The RPM the top third of the bar lights at, which is the number a readout beside a rev bar
+            /// has to print. Zero when there is no ladder.
+            /// </summary>
+            public readonly int TopRpm;
+
+            public CarLadder(int lamps, int lit, int topRpm)
+            {
+                Lamps = lamps;
+                Lit = lit;
+                TopRpm = topRpm;
+            }
+
+            /// <summary>
+            /// How many of the car's own three shift bands the engine has entered: 0 below the first LED,
+            /// then 1, 2 and 3 for the thirds of the bar. -1 when this car and gear have nothing to say,
+            /// which is the caller's signal to fall back to the ladder the sim publishes.
+            ///
+            /// <para>Thirds of the bar rather than thirds of the rev range, because that is what the rev
+            /// bar's own three colours are: <c>stageOf</c> in components/revSegments.ts splits fifteen
+            /// segments the same way, and a digit banded on one rule beside a bar banded on another is two
+            /// answers to one question.</para>
+            ///
+            /// <para>Derived from <see cref="Lit"/> and <see cref="Lamps"/> rather than counted a second
+            /// time, so that the digit changes band on the frame the bar's top segment lights: a screen
+            /// lights segment k of n on <c>lit * n &gt; k * lamps</c>, and at the top third that is this
+            /// same comparison.</para>
+            /// </summary>
+            public int Stage
+            {
+                get
+                {
+                    if (Lamps <= 0) return -1;
+                    if (Lit <= 0) return 0;
+                    // Rounded up, so that one LED of nine is the first band rather than none of them.
+                    var stage = (Lit * 3 + Lamps - 1) / Lamps;
+                    return stage > 3 ? 3 : stage;
+                }
+            }
+
+            /// <summary>No ladder, shared rather than made: what every way of having no table reports.</summary>
+            public static readonly CarLadder None = new CarLadder(0, 0, 0);
+        }
+
+        /// <summary>
+        /// This car and gear's ladder at this RPM, or <see cref="CarLadder.None"/> when there is nothing
+        /// to read -- no table, no row, or a row whose length disagrees with the bar's.
+        /// </summary>
+        public static CarLadder Ladder(CarLightTable table, string gear, double rpm)
+        {
+            if (table == null) return CarLadder.None;
             var row = GearFor(table, gear);
-            if (row == null || row.Thresholds == null || row.Thresholds.Length != table.LedCount) return -1;
-            var ladder = 0;
+            if (row == null || row.Thresholds == null || row.Thresholds.Length != table.LedCount) return CarLadder.None;
+            return Ladder(row, rpm);
+        }
+
+        /// <summary>One row's ladder, which is the half with no lookup in it.</summary>
+        public static CarLadder Ladder(CarLightGear row, double rpm)
+        {
+            var lamps = 0;
             var lit = 0;
             foreach (var threshold in row.Thresholds)
             {
                 if (threshold <= 0) continue;
-                ladder++;
+                lamps++;
                 // The same comparison the bar draws with, so a band is entered on the frame its first
                 // LED lights and not one either side of it.
                 if (rpm > threshold) lit++;
             }
-            if (ladder == 0) return -1;
-            if (lit == 0) return 0;
-            // Rounded up, so that one LED of nine is the first band rather than none of them.
-            var stage = (lit * 3 + ladder - 1) / ladder;
-            return stage > 3 ? 3 : stage;
+            if (lamps == 0) return CarLadder.None;
+            return new CarLadder(lamps, lit, TopRpm(row, lamps));
+        }
+
+        /// <summary>
+        /// The RPM at which the bar's top third lights: the <c>n</c>th lowest rung, where <c>n</c> is the
+        /// fewest lit LEDs that make <see cref="CarLadder.Stage"/> 3.
+        ///
+        /// <para>Found by rank rather than by sorting a copy of the row, because this runs inside a frame
+        /// and a bar is at most sixteen LEDs long. Equal thresholds -- a block of LEDs that light together
+        /// -- share a rank, which is why the test is "at or below" rather than "below".</para>
+        /// </summary>
+        private static int TopRpm(CarLightGear row, int lamps)
+        {
+            // Stage reaches 3 on `lit * 3 > 2 * lamps`, so this is the fewest lit LEDs that does it.
+            var wanted = ((2 * lamps) / 3) + 1;
+            var top = 0;
+            foreach (var threshold in row.Thresholds)
+            {
+                if (threshold <= 0) continue;
+                if (top > 0 && threshold >= top) continue;
+                var atOrBelow = 0;
+                foreach (var other in row.Thresholds)
+                {
+                    if (other > 0 && other <= threshold) atOrBelow++;
+                }
+                if (atOrBelow >= wanted) top = threshold;
+            }
+            return top;
+        }
+
+        /// <summary>
+        /// How many of the car's own three shift bands the engine has entered, from a table: the flag
+        /// box's digit asks it this way, and <see cref="CarLadder.Stage"/> is the definition.
+        /// </summary>
+        public static int Stage(CarLightTable table, string gear, double rpm)
+        {
+            return Ladder(table, gear, rpm).Stage;
         }
 
         /// <summary>The LED that lights last in this gear, which is the one a single lamp has to be.</summary>

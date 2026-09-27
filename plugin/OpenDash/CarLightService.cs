@@ -68,7 +68,7 @@ namespace OpenDashPlugin
         /// </summary>
         public int Stage
         {
-            get { return frame.Stage; }
+            get { return frame.Ladder.Stage; }
         }
 
         /// <summary>Whether the car is past its own redline for the gear it is in. False whenever
@@ -76,6 +76,34 @@ namespace OpenDashPlugin
         public bool OverRev
         {
             get { return frame.OverRev; }
+        }
+
+        /// <summary>
+        /// How many of the car's own LEDs are lit this frame, out of <see cref="Lamps"/>: what a rev bar
+        /// of any segment count fills itself from (#353).
+        ///
+        /// <para>A count and a total rather than a fraction, because a screen compares them by
+        /// cross-multiplication -- <c>lit * segments &gt; k * lamps</c> -- exactly as the published
+        /// ladder's bands do, and so lights a segment on the frame the car lights its own LED rather
+        /// than a rounding either side of it.</para>
+        /// </summary>
+        public int Lit
+        {
+            get { return frame.Ladder.Lit; }
+        }
+
+        /// <summary>How many LEDs the car's ladder has in the gear it is in. Zero when no table is being read,
+        /// which is what makes a screen fall back to the ladder the sim publishes.</summary>
+        public int Lamps
+        {
+            get { return frame.Ladder.Lamps; }
+        }
+
+        /// <summary>The RPM the top third of the car's bar lights at, which is the number a readout beside a
+        /// rev bar prints. Zero when no table is being read.</summary>
+        public int TopRpm
+        {
+            get { return frame.Ladder.TopRpm; }
         }
 
         /// <summary>The measured name of the car being mirrored, for the panel. Null when none is.</summary>
@@ -248,16 +276,16 @@ namespace OpenDashPlugin
                 var colors = CarLightMirror.Colors(table, gear, rpm, length, fit, clockMs);
                 runs[i] = colors == null ? Packed(CarLightMirror.Dark(length)) : Packed(colors);
             }
-            // The bands, for the digit on a flag box. One more lookup of a row Colors() has already
-            // found ten times this frame, and the alternative is a second entry point walking the
-            // same table.
+            // The ladder as numbers, for the digit on a flag box and for the bar on a screen. One more
+            // lookup of a row Colors() has already found ten times this frame, and the alternative is a
+            // second entry point walking the same table.
             var row = CarLightMirror.GearFor(table, gear);
             frame = new Frame
             {
                 Ready = true,
                 CarName = table.CarName,
                 Runs = runs,
-                Stage = CarLightMirror.Stage(table, gear, rpm),
+                Ladder = row == null ? CarLightMirror.CarLadder.None : CarLightMirror.Ladder(row, rpm),
                 OverRev = row != null && CarLightMirror.OverRev(table, row, rpm),
             };
         }
@@ -285,7 +313,7 @@ namespace OpenDashPlugin
             public bool Ready;
             public string CarName;
             public string[] Runs;
-            public int Stage;
+            public CarLightMirror.CarLadder Ladder;
             public bool OverRev;
 
             /// <summary>
@@ -295,7 +323,7 @@ namespace OpenDashPlugin
             /// sixty allocations a second for the whole time somebody is using one of OpenDash's own
             /// styles. It never changes, so there is one of it.</para>
             /// </summary>
-            public static readonly Frame None = new Frame { Ready = false, CarName = null, Runs = null, Stage = -1, OverRev = false };
+            public static readonly Frame None = new Frame { Ready = false, CarName = null, Runs = null, Ladder = CarLightMirror.CarLadder.None, OverRev = false };
 
             public static Frame Dark()
             {
