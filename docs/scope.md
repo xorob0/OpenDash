@@ -190,11 +190,16 @@ module switches, five pit wall zone assignments and a web view address. Because 
 SimHub properties, another dashboard or an LED profile can read them, and a change reaches the
 running dashboard at once without restarting SimHub or reopening the dashboard.
 
-`OpenDash.Slot01` to `OpenDash.Slot12` are the twelve card slots, and the only screens that read
-them are the two round faces: `OpenDash 480 round` reads the first two and `OpenDash 800 round` the
-first six. Every rectangular face is zones. They are not deprecated and no release is promised to
-remove them; the release that converts a round face to zones on a ring, which is after 1.0, is the
-one that says what becomes of them (#170).
+`OpenDash.Slot01` to `OpenDash.Slot12` are the twelve card slots. Of the faces the plugin installs
+the only readers are the two round ones: `OpenDash 480 round` reads the first two and
+`OpenDash 800 round` the first six, and every rectangular face the plugin installs is zones. The
+eight `OpenDash slots <size>` packages of the banner above read them too, four to twelve each and
+all twelve at 1920 x 480 and 1280 x 720, because they are the card faces the zone faces replaced;
+they are published rather than installed, and the csproj keeps them out of the plugin's resources.
+That is the other reason the card path is not retired at 1.0, the first being the round faces
+(#146). The twelve are not deprecated and no release is promised to remove them; the release that
+converts a round face to zones on a ring, which is after 1.0, is the one that says what becomes of
+them (#170).
 
 Every expression that reads an `OpenDash` property wraps it in `isnull()` with the default, so a
 user who installs only a `.simhubdash` gets the default layout and the default modes. That is a
