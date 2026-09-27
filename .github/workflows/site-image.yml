@@ -81,12 +81,24 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # The first stage is `bun run package` across both toolchains, which is the several minutes
-      # #397 did not want to pay on every push. The Actions cache pays it once for as long as
-      # nothing that stage copies changes, which is the common case of a site-only change; when
-      # packages/ is what moved it is a full build again, and that is exactly the change this job
-      # exists to check. Cache export failures are warnings: an evicted or unavailable cache makes
-      # the run slow, not red. Measured on the first two runs of this job: 3m02s cold, 31s warm,
-      # which is the answer to whether it is worth its runtime.
+      # #397 did not want to pay on every push. The Actions cache is the answer to that, so what it
+      # actually saves belongs here in figures rather than in a hope. Two were measured on this
+      # runner: 3m02s for the first run, with nothing cached, and 31s for a run that changed only
+      # this file — which no COPY in site/Dockerfile reads, so that run rebuilt no layer at all and
+      # is the floor rather than the price of a change to the site.
+      #
+      # What a real change costs is the layers after the COPY that carries it. Measured locally
+      # against a fully warm layer cache, so these are the build alone, without the checkout, the
+      # buildx setup or the cache transfer around it, on a machine with more cores than a runner
+      # has: a change under site/ rebuilds the site's install, `bun run generate` and `next build`,
+      # 35s; a change under packages/ rebuilds `bun run package` and the root install ahead of those,
+      # 45s. The artifacts stage is worth caching and not free to miss, and the packages/ case is
+      # exactly the change this job exists to check.
+      #
+      # The cache is scoped per ref with a read-through to the default branch, so a branch's first
+      # push reads what main last exported and writes its own; the fully warm case is the second push
+      # to the same branch. Export failures are warnings: an evicted or unavailable cache makes the
+      # run slow, not red.
       - name: Build the image
         uses: docker/build-push-action@v6
         with:
