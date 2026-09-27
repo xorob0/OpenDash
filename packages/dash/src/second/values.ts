@@ -13,6 +13,7 @@ import { ELLIPSIS } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import { flagBox, setting } from '../contract.ts';
 import { CHIP_WIDEST, chipText } from './chip.ts';
+import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
 import { ds as dsTokens } from '../tokens.ts';
 
@@ -450,8 +451,22 @@ export const hasPosition = (idx: Expr): Expr => gt(carPosition(idx), num(0));
 /** A position as digits, or `--` before the sim has placed the car: `4`, and `--` on the grid. */
 export const positionDigits = (idx: Expr): Expr => iff(hasPosition(idx), fmt(carPosition(idx), '0'), str(NO_VALUE));
 
+/**
+ * How wide {@link positionDigits} draws, for the "/ 24" that follows it on three surfaces.
+ *
+ * Beside the expression it measures rather than at each of the three, so the two cannot disagree
+ * about which branch is on the screen: a denominator placed for `--` beside a value reading `12`
+ * is the fault {@link DrawnWidth} exists to prevent, and it would be a fault nobody could see in
+ * the page that declared it.
+ */
+export const positionDrawn = (idx: Expr): DrawnFigure =>
+  drawnEither(hasPosition(idx), drawnFigure({ value: carPosition(idx), digits: CHARS.position.digits }), drawnText(NO_VALUE));
+
 /** A position with the P the drawings prefix it with, or `P--` before the sim has placed the car. */
 export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDigits(idx));
+
+/** How wide {@link positionLabelled} draws: the P, and then the digits or the placeholder. */
+export const positionLabelledDrawn = (idx: Expr): DrawnFigure => drawnAfter('P', positionDrawn(idx));
 
 /**
  * Places gained since the start, signed; 0 when the sim does not track it.
@@ -817,6 +832,24 @@ export const fuelToEnd = (): Expr => iff(showsTimeLeft(), fuelToEndMinutes(), fu
  */
 export const fuelToEndText = (): Expr =>
   iff(fuelToEndIsSettled(), iff(showsTimeLeft(), signed(fuelToEndMinutes(), '0'), signed(fuelToEndLaps(), '0.0')), str(NO_VALUE));
+
+/**
+ * How wide {@link fuelToEndText} draws, for the `laps` or `min` that follows it.
+ *
+ * Three branches, as the text has three: the absence, the whole minutes and the tenths of a lap.
+ * Built from the same two expressions the text is built from, so that the unit cannot be placed for
+ * one reading while the figure is the other.
+ */
+export const fuelToEndDrawn = (): DrawnFigure =>
+  drawnEither(
+    fuelToEndIsSettled(),
+    drawnEither(
+      showsTimeLeft(),
+      drawnFigure({ value: fuelToEndMinutes(), digits: CHARS.margin.digits - 1, signed: true }),
+      drawnFigure({ value: fuelToEndLaps(), digits: CHARS.margin.digits - 2, decimals: 1, signed: true }),
+    ),
+    drawnText(NO_VALUE),
+  );
 
 /**
  * The widest reading the margin can draw, which is what its box is measured against.

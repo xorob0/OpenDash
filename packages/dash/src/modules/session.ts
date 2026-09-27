@@ -11,6 +11,7 @@
  */
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
+import { drawnFigure } from '../second/drawn.ts';
 import { stack } from '../second/layout.ts';
 import {
   CHARS,
@@ -25,6 +26,7 @@ import {
   lapsLeft,
   player,
   playerClass,
+  positionDrawn,
   sessionTimeLeft,
   sessionType,
   showsTimeLeft,
@@ -55,6 +57,7 @@ export const session = defineModule('session', (ctx) => {
             chars: CHARS.position,
             fs: d.big,
             follower: { kind: 'denominator', text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
+            drawn: positionDrawn(player()),
           }),
           fld(ctx, 'class', 'Class', {
             sample: 'GT3 · P4',
@@ -73,6 +76,7 @@ export const session = defineModule('session', (ctx) => {
             chars: CHARS.position,
             fs: d.mid,
             follower: { kind: 'denominator', text: '/ 30', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
+            drawn: drawnFigure({ value: currentLap(), digits: CHARS.position.digits }),
           }, { visibleBind: not(time) }),
           fld(ctx, 'timeLeft', 'Time left', {
             sample: '0:42:15',

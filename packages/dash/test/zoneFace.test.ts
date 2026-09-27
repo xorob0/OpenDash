@@ -34,6 +34,7 @@ import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { rect, type Rect } from '../src/design/geometry.ts';
 import { densityForBox } from '../src/second/density.ts';
+import { textWidth } from '../src/second/drawn.ts';
 import { shapeOf } from '../src/second/shape.ts';
 import { archetypeOf, type Archetype } from '../src/modules/shedding.ts';
 import { zoneFrame, zoneFrameMetrics } from '../src/second/header.ts';
@@ -986,12 +987,14 @@ describe('the bar is drawn at the scale its artboard draws', () => {
       }
     });
 
-    test(`${face.folder} sets a denominator ${DENOMINATOR_GAP} after the value and on its baseline`, () => {
+    test(`${face.folder} sets a denominator ${DENOMINATOR_GAP} after the figure and on its baseline`, () => {
       const drawn = items();
       const lap = (part: string): TextItem => drawn.find((i) => i.name === `bar.Left1.lap.${part}`)!;
       const value = lap('value');
-      const cells = value.rect.width - boxSlack(scale.valueSize);
-      expect(lap('denominator').rect.left - (value.rect.left + cells)).toBe(DENOMINATOR_GAP);
+      // After the characters the value draws and not after the two cells it is cut from: lap 4 and
+      // lap 16 both read `/ 32` at six pixels, where the end of the budget put the two a cell apart
+      // (#387). `followerPlacement.test.ts` holds the runtime half.
+      expect(lap('denominator').rect.left - (value.rect.left + textWidth(value.text, value.monospace!))).toBe(DENOMINATOR_GAP);
       // A WPF box puts its baseline one em below its top, so two runs sit on one baseline exactly
       // when their top and their size add up to the same number.
       expect(lap('denominator').rect.top + scale.denominatorSize).toBe(value.rect.top + scale.valueSize);

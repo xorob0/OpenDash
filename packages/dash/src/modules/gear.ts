@@ -20,6 +20,7 @@ import { rowHeight } from '../second/field.ts';
 import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 import { ROW_TAIL, stack } from '../second/layout.ts';
 import { rect } from '../design/geometry.ts';
+import { drawnFigure } from '../second/drawn.ts';
 import { CHARS, rpm, speed, speedUnit } from '../second/values.ts';
 
 const { fmt } = ncalc;
@@ -53,6 +54,7 @@ export const gear = defineModule('gear', (ctx) => {
       chars: CHARS.speed,
       fs: d.big,
       follower: { text: 'km/h', bind: speedUnit(), widest: 'km/h' },
+      drawn: drawnFigure({ value: speed(), digits: CHARS.speed.digits }),
     }),
     fld(ctx, 'rpm', 'RPM', { sample: '7,420', bind: fmt(rpm(), '#,0'), chars: CHARS.rpm, fs: d.big }),
   ];

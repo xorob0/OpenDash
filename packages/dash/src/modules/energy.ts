@@ -15,7 +15,9 @@
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc, type Item } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
+import type { Chars } from '../design/metrics.ts';
 import { densityOf } from '../second/density.ts';
+import { drawnEither, drawnFigure, drawnText, type DrawnFigure } from '../second/drawn.ts';
 import { levelGauge } from '../second/gauge.ts';
 import { stack } from '../second/layout.ts';
 import { placeholder } from '../second/placeholder.ts';
@@ -39,6 +41,14 @@ const published = (member: Expr): Expr => not(isNull(member));
 const reading = (member: Expr, pattern: string): Expr => iff(published(member), fmt(member, pattern), str(NO_VALUE));
 
 /**
+ * How wide {@link reading} draws, so that the per-cent sign sits beside the figure rather than at
+ * the end of the cells the figure is cut from: 5 % and 68 % keep one gap. Beside `reading` because
+ * the two read the same guard.
+ */
+const readingDrawn = (member: Expr, chars: Chars, decimals = 0): DrawnFigure =>
+  drawnEither(published(member), drawnFigure({ value: member, digits: chars.digits - (decimals === 0 ? 0 : 1), decimals }), drawnText(NO_VALUE));
+
+/**
  * The notice, drawn only while the sim publishes nothing for this page.
  *
  * It takes the same rectangle as the readings rather than a row of its own, because a row would
@@ -60,14 +70,22 @@ export const energy = defineModule('energy', (ctx) => {
               ctx,
               'level',
               'Virtual energy',
-              { sample: '68', bind: reading(LEVEL, '0'), chars: CHARS.percent, fs: d.big, follower: { text: '%' } },
+              { sample: '68', bind: reading(LEVEL, '0'), chars: CHARS.percent, fs: d.big, follower: { text: '%' }, drawn: readingDrawn(LEVEL, CHARS.percent) },
               { visibleBind: published(LEVEL) },
             ),
             fld(
               ctx,
               'refuel',
               'Refuel',
-              { sample: '31', bind: reading(REFUEL, '0'), chars: CHARS.percent, fs: d.big, color: ds.color.caution.primary, follower: { text: '%' } },
+              {
+                sample: '31',
+                bind: reading(REFUEL, '0'),
+                chars: CHARS.percent,
+                fs: d.big,
+                color: ds.color.caution.primary,
+                follower: { text: '%' },
+                drawn: readingDrawn(REFUEL, CHARS.percent),
+              },
               { visibleBind: published(REFUEL) },
             ),
           ],
@@ -79,7 +97,14 @@ export const energy = defineModule('energy', (ctx) => {
               ctx,
               'perLap',
               'Avg per lap',
-              { sample: '5.6', bind: reading(PER_LAP, '0.0'), chars: CHARS.consumption, fs: d.mid, follower: { text: '%' } },
+              {
+                sample: '5.6',
+                bind: reading(PER_LAP, '0.0'),
+                chars: CHARS.consumption,
+                fs: d.mid,
+                follower: { text: '%' },
+                drawn: readingDrawn(PER_LAP, CHARS.consumption, 1),
+              },
               { visibleBind: published(PER_LAP) },
             ),
             fld(ctx, 'lapsLeft', 'Est. laps', { sample: '12.1', bind: reading(LAPS, '0.0'), chars: CHARS.consumption, fs: d.mid }, { visibleBind: published(LAPS) }),

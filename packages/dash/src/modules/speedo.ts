@@ -8,6 +8,7 @@ import { ncalc } from '../generator.ts';
 import { REV_WELL_PAD_X, REV_WELL_PAD_Y, revBar } from '../components/revBar.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
+import { drawnFigure } from '../second/drawn.ts';
 import { CHARS, rpm, speed, speedUnit } from '../second/values.ts';
 import { redlineRpm } from '../shift.ts';
 import { band } from '../elements/band.ts';
@@ -32,6 +33,9 @@ export const speedo = defineModule('speedo', (ctx) => {
             chars: CHARS.speed,
             fs: d.hero,
             follower: { text: 'km/h', bind: speedUnit(), widest: 'km/h' },
+            // The unit sits after the digits the car is doing, not after the three cells 299 would
+            // take: 81 km/h and 281 km/h keep one gap. `second/drawn.ts`.
+            drawn: drawnFigure({ value: speed(), digits: CHARS.speed.digits }),
           }),
           fld(ctx, 'rpm', 'RPM', { sample: '7,420', bind: fmt(rpm(), '#,0'), chars: CHARS.rpm, fs: d.big }),
           // The number the bar above it turns red at, from the same model rather than SimHub's own

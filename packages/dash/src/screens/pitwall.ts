@@ -19,6 +19,7 @@ import { flagStrip, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { flagFull } from '../components/flagFull.ts';
 import { label } from '../elements/label.ts';
 import { densityOf } from '../second/density.ts';
+import { drawnFigure } from '../second/drawn.ts';
 import { fieldRowFitted, fitFields, rowHeight, type FieldSpec } from '../second/field.ts';
 import { panel, PANEL_TITLE_HEIGHT } from '../second/header.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
@@ -28,7 +29,7 @@ import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
-  positionDigits, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
+  positionDigits, CHARS, classOpponentCount, clock, clutch, deltaColour, estimatedLap, fieldSize, isTimedSession, lapTime, lastLap, player, playerClass, positionDrawn, referenceDelta, referenceLabel, roadTemperature, rpm, sessionBestLap, sessionTimeLeft, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
@@ -103,6 +104,7 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
         // A denominator rather than a unit: the sheet scales "/ 24" with the value it follows -- 23
         // beside 34, 32 beside the landscape sheet's 46 -- where a unit is the density's 13 px.
         follower: { text: '/ 24', kind: 'denominator', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
+        drawn: positionDrawn(player()),
       }),
       fld(
         ctxOf(body, `${name}.`),
@@ -235,8 +237,22 @@ export function trackPanel(name: string, frame: Rect): Item[] {
       ...fitFields(
         [
           fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
-          fld(ctx, 'road', 'Road', { sample: '31', bind: fmt(roadTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
-          fld(ctx, 'air', 'Air', { sample: '24', bind: fmt(airTemperature(), '0'), chars: CHARS.temperature, fs: d.small, follower: { text: '°' } }),
+          fld(ctx, 'road', 'Road', {
+            sample: '31',
+            bind: fmt(roadTemperature(), '0'),
+            chars: CHARS.temperature,
+            fs: d.small,
+            follower: { text: '°' },
+            drawn: drawnFigure({ value: roadTemperature(), digits: CHARS.temperature.digits }),
+          }),
+          fld(ctx, 'air', 'Air', {
+            sample: '24',
+            bind: fmt(airTemperature(), '0'),
+            chars: CHARS.temperature,
+            fs: d.small,
+            follower: { text: '°' },
+            drawn: drawnFigure({ value: airTemperature(), digits: CHARS.temperature.digits }),
+          }),
           // Each of the three hides where the car has no such control, which is the rule the settings
           // bar and the car settings page both apply to the same readings: SimHub normalises traction
           // control and ABS into `TCLevel` and `ABSLevel` and reports 0 for a car with neither, so a

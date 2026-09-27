@@ -27,7 +27,7 @@ import { MODULES } from '../src/modules/index.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { CHARS, FUEL_TO_END_WIDEST, NO_VALUE } from '../src/second/values.ts';
-import { BAND_PAGES } from '../src/zones/bandPages.ts';
+import { BAND_PAGES, bandPageItems } from '../src/zones/bandPages.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
 /** A wide zone body, which is the shape that keeps every field of the page. */
@@ -37,7 +37,7 @@ const pageItems = (id: string): TextItem[] => {
   return items.filter((item): item is TextItem => item.kind === 'text');
 };
 
-const formulaOf = (items: readonly TextItem[], name: string, target: 'Text' | 'TextColor'): string => {
+const formulaOf = (items: readonly TextItem[], name: string, target: 'Text' | 'TextColor' | 'Left'): string => {
   const binding = items.find((item) => item.name === name)?.bindings?.[target];
   const formula = binding?.formula;
   if (typeof formula !== 'string') throw new Error(`no ${target} formula on ${name}`);
@@ -238,3 +238,55 @@ describe('every reading the margin can draw is inside the width it declares', ()
     expect(cellWidth(FUEL_TO_END_WIDEST, value.monospace!)).toBeLessThan(value.rect.width);
   });
 });
+
+/**
+ * Where the unit lands, which is the half of this reading the VM photographed as wrong.
+ *
+ * The margin is cut for `−999.9` and draws `−4`, so a mark placed at the end of the cells stood four
+ * empty ones off its own figure -- nearer `EST. LAPS` than the number it names, which is what made
+ * it read as a field of its own rather than as a unit. The gap now follows the figure, and the check
+ * is a runtime one because a design-time gap proves nothing about a bound value: the item is drawn
+ * with `+1.4` on it and the dash draws whatever the race hands it. #387.
+ */
+describe('the margin carries its unit beside the figure, not at the end of the budget', () => {
+  const bandItems = [...walkItems(bandPageItems('fuel', rect(0, 420, 1920, 60), '', true))].filter((item): item is TextItem => item.kind === 'text');
+  /** Five pixels on band D and six in a module's field, which is each drawing's own gap. */
+  const SURFACES = [
+    { name: 'the fuel module', items: fuelItems, gap: 6 },
+    { name: 'band D', items: bandItems, gap: 5 },
+  ] as const;
+
+  /** One reading per length the two forms can arrive at, from the absence to the longest race. */
+  const READINGS: readonly { name: string; props: Props }[] = [
+    { name: 'no reading yet', props: telemetry({ lapsDone: 0 }) },
+    { name: 'two laps in hand', props: telemetry({ fuelLaps: 13.1, lapsLeft: 11, progress: 'laps' }) },
+    { name: 'ten laps short', props: telemetry({ fuelLaps: 1.4, lapsLeft: 11, progress: 'laps' }) },
+    { name: 'a whole race short', props: telemetry({ fuelLaps: 1.4, lapsLeft: 199, progress: 'laps' }) },
+    { name: 'five minutes in hand', props: telemetry({ sessionSeconds: 1200, fuelSeconds: 1500, progress: 'time' }) },
+    { name: 'a day short', props: telemetry({ sessionSeconds: 86399, fuelSeconds: 0, progress: 'time' }) },
+  ];
+
+  for (const surface of SURFACES) {
+    test(`on ${surface.name}`, () => {
+      const drawn = surface.items.find((item) => item.name === 'toEnd.value')!;
+      const mono = drawn.monospace!;
+      const text = formulaOf(surface.items, 'toEnd.value', 'Text');
+      const left = formulaOf(surface.items, 'toEnd.unit', 'Left');
+      const placed = READINGS.map((reading) => {
+        const figure = String(evalNcalc(text, reading.props));
+        // Rounded to the pixel: an item's own rect is snapped to whole pixels and a binding is not.
+        const gap = Math.round(Number(evalNcalc(left, reading.props)) - (drawn.rect.left + cellsOf(figure, mono)));
+        return { reading: reading.name, figure, gap };
+      });
+      for (const each of placed) expect(each).toMatchObject({ gap: surface.gap });
+      // And the readings really do take the mark to four places, or the check above was one length.
+      expect(new Set(placed.map((each) => each.figure.length)).size).toBeGreaterThanOrEqual(4);
+    });
+  }
+});
+
+/** Width of a string in the cells an item is laid in, which is how WPF will measure it. */
+const cellsOf = (text: string, mono: { charWidth: number; specialCharsWidth: number; specialChars?: string }): number => {
+  const specials = [...text].filter((c) => mono.specialChars?.includes(c) ?? false).length;
+  return (text.length - specials) * mono.charWidth + specials * mono.specialCharsWidth;
+};

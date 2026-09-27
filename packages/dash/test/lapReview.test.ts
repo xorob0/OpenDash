@@ -32,7 +32,9 @@ import { DEFAULT_LAP_REVIEW, FACE_SIZES, LAP_REVIEW_MODES, facePropertyNames, la
 import { contains, overlaps, rect } from '../src/design/geometry.ts';
 import { measureText } from '../src/design/advances.ts';
 import { densityOf } from '../src/second/density.ts';
-import { DELTA_DEADBAND, deltaColour } from '../src/second/values.ts';
+import { UNIT_GAP } from '../src/second/field.ts';
+import { monoWidth } from '../src/design/metrics.ts';
+import { CHARS, DELTA_DEADBAND, deltaColour } from '../src/second/values.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
@@ -89,8 +91,13 @@ describe('the panel the artboard draws', () => {
     expect(rule.backgroundColor).toBe(ds.purpose.popUp.rule);
     // The side padding is the left edge of the first group and the right edge of the last.
     expect(textNamed(reference.items, 'lap.value').rect.left).toBe(REFERENCE_FRAME.left + LAP_REVIEW_PAD_X);
+    // The unit sits beside the figure rather than at the end of the cells it is cut from (#387), so
+    // what ends on the padding is the unit's box at the rightmost place its Left binding can take:
+    // a tank of 38.4 draws the mark a cell in from there, and one of 138.4 draws it here.
     const fuelLeft = textNamed(reference.items, 'fuelLeft.unit');
-    expect(fuelLeft.rect.left + fuelLeft.rect.width).toBe(REFERENCE_FRAME.left + REFERENCE_FRAME.width - LAP_REVIEW_PAD_X);
+    const level = textNamed(reference.items, 'fuelLeft.value');
+    const rightmost = level.rect.left + monoWidth(level.monospace!, CHARS.fuel) + UNIT_GAP;
+    expect(rightmost + fuelLeft.rect.width).toBe(REFERENCE_FRAME.left + REFERENCE_FRAME.width - LAP_REVIEW_PAD_X);
   });
 
   test('is out for four seconds at the line, read off the lap and not off a clock', () => {
