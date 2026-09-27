@@ -236,7 +236,7 @@ function block(ctx: ModuleContext, side: Side, box: { left: number; width: numbe
           // The cell may have been clamped to a box too narrow for what it asked for, so the budget
           // is taken from the width it actually got rather than from the width it wanted.
           const chars = charsThatFit(NAME_FACE, d.name, cell.width);
-          items.push(label(`${ctx.prefix}${side.id}.name`, nameSampleAt(d.name, 'Liam Byrne'), x, centred(d.name), cell.width, {
+          items.push(label(`${ctx.prefix}${side.id}.name`, nameSampleAt(d.name), x, centred(d.name), cell.width, {
             size: d.name,
             color: ds.color.text.primary,
             bind: nameText(idx, chars, d.name),
