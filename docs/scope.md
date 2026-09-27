@@ -60,7 +60,8 @@ the foot.
 Each zone shows **one page at a time from its own catalogue, and a wheel button cycles it**. Zone
 A chooses among four pages built around the gear; zones B and C among the twenty-one that also
 serve the companion and the pit wall; band D among eight that suit a wide short band, with a flag
-taking the band over while one is out. The bar is not a zone and does not cycle: it carries what
+taking the band over for three seconds when it comes out and then settling into the block at each
+end until it clears. The bar is not a zone and does not cycle: it carries what
 does not change during a lap, which is what earns it the space.
 
 A page is never scaled. It is laid out for the **shape** of the box it is given, and it sheds its

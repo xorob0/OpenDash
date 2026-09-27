@@ -43,7 +43,7 @@ const COPY: Record<FacePartId, Omit<AnatomyPart, 'id' | 'rect'>> = {
   band: {
     tag: 'Band D',
     name: 'Fuel by default.',
-    body: '8 pages in all. A flag takes the band over while one is out.',
+    body: '8 pages in all. A flag takes the band for three seconds, then both ends of it.',
   },
 };
 

@@ -15,7 +15,8 @@ A driver gets the gear in the middle, where the eye already goes, the revs along
 shift lights of the car being driven, and on either side of the gear a zone showing one page at a
 time: lap times, the delta, fuel, tyres, the relative, whichever of the twenty-one pages that
 driver wants there, changed with a wheel button rather than with a menu. Above them a bar holds
-what does not change during a lap, and along the foot a band gives way to a flag while one is out.
+what does not change during a lap, and along the foot a band that gives way to a flag for a few
+seconds when one comes out and then shows it at both ends until it clears.
 None of it has to be configured in order to work, since every package carries a default layout by
 itself, and the plugin is what makes that layout yours.
 
@@ -113,7 +114,8 @@ the foot.
 **Each zone shows one page at a time and a wheel button cycles it.** Zone A is the narrow middle
 column and holds the gear, because the gear is read by reflex; zones B and C flank it and choose
 among the same twenty-one pages the companion has; the band chooses among eight that suit a wide,
-short strip, and a flag takes the band over while one is out. The bar does not cycle, which is what
+short strip, and a flag takes the band over for three seconds when it comes out and then settles
+into the block at each end until it clears. The bar does not cycle, which is what
 earns it the space: it carries what does not change during a lap, two fields at each end and the
 car settings your sim publishes between them.
 

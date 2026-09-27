@@ -27,7 +27,7 @@ export interface ZoneRects {
   zoneA: Rect;
   zoneB: Rect;
   zoneC: Rect;
-  /** Band D across the foot. A flag takes it over while one is out. */
+  /** Band D across the foot. A flag takes it over for three seconds, then keeps the block at each end. */
   band: Rect;
   /** The pit limiter banner, drawn over zone A while the limiter is on. */
   pitLimiter: Rect;
