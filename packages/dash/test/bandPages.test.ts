@@ -217,6 +217,37 @@ describe('the fields the catalogue draws on each page', () => {
     expect(cells.every((i) => i.rect.left >= named(items, 'temps.label').rect.left)).toBe(true);
   });
 
+  /**
+   * Nothing on this page says which corner is which: the reader maps the four onto the car by the
+   * order they are in, so the four have to read as evenly set or the mapping is a count rather than
+   * a glance. Set against the left edge of cells cut for three digits, the VM photographed
+   * `52   113 88   95` -- 24, 8 and 24 pixels apart at 34 px, the middle two crowding into one
+   * group. Centred in the same cells they are 16, 16 and 24, half the spread, and every figure's
+   * middle lands on the 56 px pitch the cells are laid on whatever the digit count. #387.
+   */
+  test('the four are centred in their cells, so the set reads as evenly spaced', () => {
+    for (const face of Object.keys(BANDS)) {
+      const items = pageTexts(face as keyof typeof BANDS, 'tyres');
+      const cells = items.filter((i) => i.name.startsWith('temps.') && i.name !== 'temps.label');
+      if (cells.length === 0) continue;
+      expect({ face, aligned: cells.map((i) => i.hAlign) }).toMatchObject({ aligned: cells.map(() => 'center') });
+      // The boxes are one pitch apart, which is the cell and the row gap, so a reading that gains a
+      // digit still belongs to the corner it belongs to.
+      const pitch = cells.slice(1).map((cell, i) => cell.rect.left - cells[i]!.rect.left);
+      expect({ face, pitch, even: new Set(pitch).size }).toMatchObject({ even: 1 });
+      // And the ink is set no further apart than a cell and a gap, where left alignment put a whole
+      // empty cell between a two-digit reading and the three-digit one after it.
+      const centres = cells.map((cell) => cell.rect.left + cell.rect.width / 2 - textWidth(cell.text, cell.monospace!) / 2);
+      const gaps = cells.slice(1).map((cell, i) => {
+        const before = cells[i]!;
+        return centres[i + 1]! - (centres[i]! + textWidth(before.text, before.monospace!));
+      });
+      expect({ face, gaps, spread: Math.max(...gaps) - Math.min(...gaps), cell: cells[0]!.monospace!.charWidth }).toMatchObject({
+        spread: cells[0]!.monospace!.charWidth / 2,
+      });
+    }
+  });
+
   test('D7 Relative sets the position of each car beside its gap, not above it', () => {
     expect(BAND_PAGES.relative!.map((f) => f.labelWidest)).toEqual(['P99', 'P99', 'P99']);
     const items = pageTexts('1920x480', 'relative');

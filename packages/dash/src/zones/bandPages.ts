@@ -20,7 +20,7 @@
  * a rank of boxes rather than of fields and lives in `telltales.ts`; this file hands it the same
  * room it gives a page of fields and otherwise leaves it alone.
  */
-import type { Item, Monospace, Rect } from '../generator.ts';
+import type { HAlign, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
@@ -96,6 +96,9 @@ export interface BandField {
    * The catalogue's tyre page is the case: four carcass temperatures under one "TYRES °C" rather
    * than four labels and four degree signs. They share the field's `chars`, so the row is a line of
    * equal cells and a temperature that gains a digit moves nothing.
+   *
+   * Each reading is centred in its cell rather than set against its left edge, which is
+   * {@link ROW_ALIGN} and is the one thing about a row that is not the same as a field.
    */
   row?: readonly { sample: string; bind: string }[];
   /** A small unit or denominator drawn after the value. */
@@ -494,6 +497,27 @@ const FIELD_GAP = 5;
 const LABEL_ROW = 13;
 /** Gap between the numerals a field draws under one label. */
 const ROW_GAP = ds.space[2];
+
+/**
+ * A set of readings under one label is centred in its cells, where a field is set against the left
+ * edge of its own.
+ *
+ * The tyre page is the case and the only one: four corner temperatures under a single `TYRES °C`,
+ * with nothing to say which corner is which but the order they are in, so the reader maps them onto
+ * the car by position and the four have to read as evenly set. Set left in cells cut for three
+ * digits, the VM photographed `52   113 88   95`: at 34 px the gaps are 24, 8 and 24, so the middle
+ * two crowd into one group and the reader has to count rather than see.
+ *
+ * **Centred**, and the three alignments were measured before choosing. Left gives 24, 8, 24 and
+ * right gives 8, 24, 24, both sixteen pixels between the widest gap and the narrowest, which is a
+ * whole digit cell; centred gives 16, 16, 24 and eight, half of it. Centring is also the only one of
+ * the three that puts each figure's middle on the regular 56 px pitch the cells are laid on, which
+ * is what a reader maps onto a corner. The cost is that a corner crossing a hundred moves half a
+ * cell, and it is accepted here where it is refused for a field with a unit after it: this is a set
+ * read as a set, where the eye wants the positions even, and nothing follows a reading that a shift
+ * would open a gap in front of.
+ */
+const ROW_ALIGN: HAlign = 'center';
 /** Gap between the position and the gap of a field the catalogue draws on one line. */
 const INLINE_GAP = 8;
 
@@ -622,18 +646,21 @@ function bandMember(field: BandField, prefix: string, geometry: BlockGeometry): 
               color: field.color,
               colorBind: field.colorBind,
               maxWidth: cell + 4,
+              ...(field.row ? { hAlign: ROW_ALIGN } : {}),
               leftBind: at.leftAt(),
               visibleBind: at.visibleBind,
             }),
       ];
       // The numerals that share the label, each one cell further along, so a set reads as a set and
-      // a reading that gains a digit moves none of the others.
+      // a reading that gains a digit moves none of the others. Centred in that cell rather than set
+      // against its left edge: see {@link ROW_ALIGN}.
       field.row?.forEach((more, i) => {
         const dx = (i + 1) * (cell + ROW_GAP);
         items.push(
           numeral(`${prefix}${field.id}.${i + 2}`, more.sample, at.x + dx, valueTop, valueFs, field.chars, {
             bind: more.bind,
             maxWidth: cell + 4,
+            hAlign: ROW_ALIGN,
             leftBind: at.leftAt(dx),
             visibleBind: at.visibleBind,
           }),
